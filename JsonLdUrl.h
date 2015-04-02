@@ -8,6 +8,21 @@
 // import java.util.regex.Matcher;
 // import java.util.regex.Pattern;
 
+#include <boost/variant.hpp>
+
+#include <boost/logic/tribool.hpp>
+BOOST_TRIBOOL_THIRD_STATE ( bnull )
+
+#include <regex>
+#include <string>
+
+typedef std::string String;
+typedef bool boolean;
+typedef boost::tribool Boolean;
+typedef std::basic_regex<String> Pattern;
+
+static std::regex parser(("^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)"));
+
 class JsonLdUrl {
 
 public: String href = "";
@@ -27,20 +42,23 @@ public: String hash = "";
 
 	// things not populated by the regex (NOTE: i don't think it matters if
 	// these are null or "" to start with)
-public: String pathname = null;
-public: String normalizedPath = null;
-public: String authority = null;
+//these arent json nulls
+public: String pathname = NULL;
+public: String normalizedPath = NULL;
+public: String authority = NULL;
 
-private: static Pattern parser = Pattern
-	                                 .compile ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" );
 
 public: static JsonLdUrl parse ( String url ) {
-		const JsonLdUrl rval = new JsonLdUrl();
-		rval.href = url;
+		const JsonLdUrl *rval = new JsonLdUrl();
+		rval->href = url;
 
-		const Matcher matcher = parser.matcher ( url );
-		if ( matcher.matches() ) {
-			if ( matcher.group ( 1 ) != null )
+		match_results<String> match;
+
+		if ( regex_match(url, match, parser) {
+			assert(match.size() == 14);
+			std::cout << match.str(1);
+			//must make this compile and investigate..
+			if ( match.group ( 1 ) != null )
 				rval.protocol = matcher.group ( 1 );
 			if ( matcher.group ( 2 ) != null )
 				rval.host = matcher.group ( 2 );
@@ -137,14 +155,17 @@ public: static String removeDotSegments ( String path, boolean hasAuthority ) {
 		return rval;
 	}
 
-public: static String removeBase ( Object baseobj, String iri ) {
-		if ( baseobj == null )
-			return iri;
-
+public: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+		
 		JsonLdUrl base;
-		if ( baseobj.isString )
-			base = JsonLdUrl.parse ( ( String ) baseobj ); else
-			base = ( JsonLdUrl ) baseobj;
+
+                // we get either a String or a JsonLdUrl or a null, as baseobj
+		if ( String* base_as_string = boost::get<String>(baseobj) )
+			base = JsonLdUrl.parse ( base_as_string ); 
+		elif (base = boost::get<JsonLdUrl>(baseobj))
+			{;}
+		else
+			return iri;
 
 		// establish base root
 		String root = "";

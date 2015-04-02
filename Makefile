@@ -19,3 +19,7 @@ $(EXEC): $(OBJECTS)
 # To remove generated files
 clean:
 	rm -f $(EXEC) $(OBJECTS)
+
+testJsonLdUrl: # JsonLdUrl.h testJsonLdUrl.cpp
+	clang++-3.5 -std=c++11 -I/usr/include/ -L/usr/lib/i386-linux-gnu testJsonLdUrl.cpp JsonLdUrl.h 
+	clang++-3.5 -std=c++11 -L/usr/lib/i386-linux-gnu testJsonLdUrl.o -o testJsonLdUrl
