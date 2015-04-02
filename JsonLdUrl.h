@@ -21,45 +21,87 @@ typedef bool boolean;
 typedef boost::tribool Boolean;
 typedef std::basic_regex<String> Pattern;
 
-static std::regex parser ( ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" ) );
-
 class JsonLdUrl {
 
-public: String href = "";
-public: String protocol = "";
-public: String host = "";
-public: String auth = "";
-public: String user = "";
-public: String password = "";
-public: String hostname = "";
-public: String port = "";
-public: String relative = "";
-public: String path = "";
-public: String directory = "";
-public: String file = "";
-public: String query = "";
-public: String hash = "";
-
-	// things not populated by the regex (NOTE: i don't think it matters if
-	// these are null or "" to start with)
-	//these arent json nulls
-public: String pathname = NULL;
-public: String normalizedPath = NULL;
-public: String authority = NULL;
+public: String href;
+public: String protocol;
+public: String host;
+public: String auth;
+public: String user;
+public: String password;
+public: String hostname;
+public: String port;
+public: String relative;
+public: String path;
+public: String directory;
+public: String file;
+public: String query;
+public: String hash;
+// things not populated by the regex (NOTE: i don't think it matters if
+// these are null or "" to start with)
+public: String pathname;
+public: String normalizedPath;
+public: String authority;
 
 
-public: static JsonLdUrl parse ( String url ) {
-		const JsonLdUrl *rval = new JsonLdUrl();
-		rval->href = url;
+public: void debugPrint(){
+  std::cout << 
+"href = \""<<href << "\"" << std::endl << 
+"protocol = \"" << protocol << "\"" << std::endl;
+/*
+host = "";
+auth = "";
+user = "";
+password = "";
+hostname = "";
+port = "";
+relative = "";
+path = "";
+directory = "";
+file = "";
+query = "";
+hash = "";
+pathname = NULL;
+normalizedPath = NULL;
+authority = NULL;*/
+}
+  
+  
 
-		match_results<String> match;
+public: static JsonLdUrl * parse ( String url ) {
+	JsonLdUrl *rval = new JsonLdUrl();
+	rval->href = url;
 
-		if ( regex_match ( url, match, parser ) {
-		assert ( match.size() == 14 );
-			std::cout << match.str ( 1 );
-			//must make this compile and investigate..
-			if ( match.group ( 1 ) != null )
-				rval.protocol = matcher.group ( 1 );
+	std::cmatch match;
+
+	std::cout << "-- " << std::endl;
+
+        try
+        {
+          //std::regex parser ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" );
+          
+          std::regex parser ( "[a|b]" );
+          //std::regex parser ( "a|b" );
+          
+          if ( !std::regex_match ( url.c_str(), match, parser ) )
+                  return rval;
+        }
+        catch (const std::regex_error& e) 
+        {
+          std::cout << "regex_error caught: " << e.code() << '\n';
+          if (e.code() == std::regex_constants::error_brack)
+            std::cout << "brack\n";
+        }
+	
+	std::cout << "-- " << std::endl;
+	assert ( match.size() == 14 );
+
+	std::cout << "-- " << match.str ( 1 ) << std::endl;
+
+	if ( match[1] != NULL )
+		rval->protocol = match.str ( 1 );
+
+                        /*
 			if ( matcher.group ( 2 ) != null )
 				rval.host = matcher.group ( 2 );
 			if ( matcher.group ( 3 ) != null )
@@ -98,20 +140,23 @@ public: static JsonLdUrl parse ( String url ) {
 			if ( !"".equals ( rval.hash ) )
 				rval.hash = "#" + rval.hash;
 			return rval;
-		}
+		*/
 
 		return rval;
 	}
 
-	/**
-	    Removes dot segments from a JsonLdUrl path.
 
-	    @param path
-	              the path to remove dot segments from.
-	    @param hasAuthority
-	              true if the JsonLdUrl has an authority, false if not.
-	    @return The URL without the dot segments
-	*/
+
+	/*
+	//    Removes dot segments from a JsonLdUrl path.
+
+	//    @param path
+	//              the path to remove dot segments from.
+	//    @param hasAuthority
+	//              true if the JsonLdUrl has an authority, false if not.
+	//    @return The URL without the dot segments
+	
+        
 public: static String removeDotSegments ( String path, boolean hasAuthority ) {
 		String rval = "";
 
@@ -263,12 +308,12 @@ public: static String resolve ( String baseUri, String pathToResolve ) {
 		}
 	}
 
-	/**
-	    Parses the authority for the pre-parsed given JsonLdUrl.
+	
+	//    Parses the authority for the pre-parsed given JsonLdUrl.
 
-	    @param parsed
-	              the pre-parsed JsonLdUrl.
-	*/
+	//    @param parsed
+	//              the pre-parsed JsonLdUrl.
+	
 private: static void parseAuthority ( JsonLdUrl parsed ) {
 		// parse authority for unparsed relative network-path reference
 		if ( parsed.href.indexOf ( ":" ) == -1 && parsed.href.indexOf ( "//" ) == 0
@@ -290,5 +335,5 @@ private: static void parseAuthority ( JsonLdUrl parsed ) {
 				parsed.authority = parsed.auth + "@" + parsed.authority;
 		}
 	}
-}
-;
+*/
+};
