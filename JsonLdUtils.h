@@ -53,19 +53,23 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 		} else if ( v1.isList() && v2.isList() ) {
 			const List<Object> l1 = v1.list();
 			const List<Object> l2 = v2.list();
-			if ( l1.size() != l2.size() )
-
-				return false;
+			if ( l1.size() != l2.size() ) return false;
 			// used to mark members of l2 that we have already matched to avoid
 			// matching the same item twice for lists that have duplicates
-			boolean alreadyMatched[] = new boolean[l2.size()];
+			boolean* alreadyMatched = new boolean[l2.size()];
+			struct onret {
+				bool*p;
+				onret ( bool* v ) : p ( v ) {} ~onret() {
+					delete[]p;
+				}
+			} onret_ ( alreadyMatched );
 			for ( int i = 0; i < l1.size(); i++ ) {
-				const Object o1 = l1.get ( i );
+				const Object o1 = l1.at ( i );
 				Boolean gotmatch = false;
 				if ( listOrderMatters )
-					gotmatch = deepCompare ( o1, l2.get ( i ), listOrderMatters ); else {
+					gotmatch = deepCompare ( o1, l2.at ( i ), listOrderMatters ); else {
 					for ( int j = 0; j < l2.size(); j++ ) {
-						if ( !alreadyMatched[j] && deepCompare ( o1, l2.get ( j ), listOrderMatters ) ) {
+						if ( !alreadyMatched[j] && deepCompare ( o1, l2.at ( j ), listOrderMatters ) ) {
 							alreadyMatched[j] = true;
 							gotmatch = true;
 							break;
@@ -90,40 +94,38 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 		return false;
 	}
 
-	static void mergeValue ( Map<String, Object> obj, String key, Object value ) {
-		if ( obj == null )
-			return;
-		List<Object> values = ( List<Object> ) obj.get ( key );
-		if ( values == null ) {
-			values = new ArrayList<Object>();
+	static void mergeValue ( Map<String, Object>& obj, String& key, Object& value ) {
+		if ( !obj.size/*isNull*/() ) return;
+		List<Object> values = obj.get ( key ).list();
+		if ( !values.size() /* == null */ ) {
+			values = /*new*/ ArrayList<Object>();
 			obj.put ( key, values );
 		}
 		if ( "@list"s == ( key )
-		        || ( value.isMap() && ( ( Map<String, Object> ) value ).containsKey ( "@list" ) )
+		        || ( value.isMap() && value.obj().containsKey ( "@list" ) )
 		        || !deepContains ( values, value ) )
-			values.add ( value );
+			values.push_back ( value );
 	}
 
-	static void mergeCompactedValue ( Map<String, Object> obj, String key, Object value ) {
-		if ( obj == null )
-			return;
-		const Object prop = obj.get ( key );
-		if ( prop == null ) {
+	static void mergeCompactedValue ( Map<String, Object>& obj, String& key, Object& value ) {
+		if ( !obj.size() /* == null */ ) return;
+		Object prop = obj.get ( key );
+		if ( prop.is_null() ) {
 			obj.put ( key, value );
 			return;
 		}
 		if ( ! ( prop.isList() ) ) {
-			const List<Object> tmp = new ArrayList<Object>();
-			tmp.add ( prop );
+			List<Object> tmp = /*new*/ ArrayList<Object>();
+			tmp.push_back ( prop );
 		}
 		if ( value.isList() )
-			( ( List<Object> ) prop ).addAll ( ( List<Object> ) value ); else
-			( ( List<Object> ) prop ).add ( value );
+			prop .list().insert ( value.list().begin(), value.list().end(), prop.list().end() );
+		else	prop .list().push_back ( value );
 	}
 
 	static boolean isAbsoluteIri ( String value ) {
 		// TODO: this is a bit simplistic!
-		return value.contains ( ":" );
+		return value.find ( ':' ) != String::npos;
 	}
 
 	/**
@@ -139,10 +141,10 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 		// 1. It is an Object.
 		// 2. It is not a @value, @set, or @list.
 		// 3. It has more than 1 key OR any existing key is not @id.
-		if ( v.isMap
-		        && ! ( ( ( Map ) v ).containsKey ( "@value" ) || ( ( Map ) v ).containsKey ( "@set" ) || ( ( Map ) v )
+		if ( v.isMap()
+		        && ! ( v.obj().containsKey ( "@value" ) || v.obj().containsKey ( "@set" ) || v.obj()
 		               .containsKey ( "@list" ) ) )
-			return ( ( Map<String, Object> ) v ).size() > 1 || ! ( ( Map ) v ).containsKey ( "@id" );
+			return v.obj( ).size() > 1 || !v.obj( ).containsKey ( "@id" );
 		return false;
 	}
 
@@ -158,8 +160,7 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 		// Note: A value is a subject reference if all of these hold true:
 		// 1. It is an Object.
 		// 2. It has a single key: @id.
-		return ( v.isMap() && ( ( Map<String, Object> ) v ).size() == 1 && ( ( Map<String, Object> ) v )
-		         .containsKey ( "@id" ) );
+		return v.isMap() && v.obj().size() == 1 &&  v.obj() .containsKey ( "@id" ) ;
 	}
 
 	// TODO: fix this test
@@ -187,34 +188,34 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 	    @param [allowDuplicate] true if the property is a @list, false if not
 	          (default: false).
 	*/
-	static void addValue ( Map<String, Object> subject, String property, Object value,
+	static void addValue ( Map<String, Object>& subject, String property, Object& value,
 	                       boolean propertyIsArray, boolean allowDuplicate ) {
 
 		if ( isArray ( value ) ) {
-			if ( ( ( List ) value ).size() == 0 && propertyIsArray && !subject.containsKey ( property ) )
+			if ( value.list().size() == 0 && propertyIsArray && !subject.containsKey ( property ) )
 				subject.put ( property, new ArrayList<Object>() );
-			for ( const Object val : ( List ) value )
+			for ( Object val : value.list() )
 				addValue ( subject, property, val, propertyIsArray, allowDuplicate );
 		} else if ( subject.containsKey ( property ) ) {
 			// check if subject already has the value if duplicates not allowed
-			const boolean hasValue = !allowDuplicate && hasValue ( subject, property, value );
+			const boolean hasValue_ = !allowDuplicate && hasValue ( subject, property, value );
 
 			// make property an array if value not present or always an array
-			if ( !isArray ( subject.get ( property ) ) && ( !hasValue || propertyIsArray ) ) {
-				const List<Object> tmp = new ArrayList<Object>();
-				tmp.add ( subject.get ( property ) );
+			if ( !isArray ( subject.get ( property ) ) && ( !hasValue_ || propertyIsArray ) ) {
+				List<Object> tmp = /*new*/ ArrayList<Object>();
+				tmp.push_back ( subject.get ( property ) );
 				subject.put ( property, tmp );
 			}
 
 			// add new value
-			if ( !hasValue )
-				( ( List<Object> ) subject.get ( property ) ).add ( value );
+			if ( !hasValue_ )
+				subject.get ( property ).list().push_back ( value );
 		} else {
 			// add new value as a set or single value
 			Object tmp;
 			if ( propertyIsArray ) {
-				tmp = new ArrayList<Object>();
-				( ( List<Object> ) tmp ).add ( value );
+				tmp = ArrayList<Object>();
+				tmp.list().push_back ( value );
 			} else
 				tmp = value;
 			subject.put ( property, tmp );
@@ -246,7 +247,7 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 	*/
 private: static String prependBase ( Object baseobj, String iri ) {
 		// already an absolute IRI
-		if ( iri.indexOf ( ":" ) != -1 )
+		if ( iri.find ( ":" ) != String::npos )
 			return iri;
 
 		// parse base if it is a string
@@ -316,16 +317,16 @@ private: static String prependBase ( Object baseobj, String iri ) {
 			List<Object> val;
 			if ( !isArray ( languageMap.get ( key ) ) ) {
 				val = new ArrayList<Object>();
-				val.add ( languageMap.get ( key ) );
+				val.push_back ( languageMap.get ( key ) );
 			} else
 				val = ( List<Object> ) languageMap.get ( key );
 			for ( const Object item : val ) {
 				if ( !isString ( item ) )
-					throw new JsonLdError ( SYNTAX_ERROR );
+					throw JsonLdError ( SYNTAX_ERROR );
 				const Map<String, Object> tmp = newMap();
 				tmp.put ( "@value", item );
 				tmp.put ( "@language", key.toLowerCase() );
-				rval.add ( tmp );
+				rval.push_back ( tmp );
 			}
 		}
 
@@ -341,42 +342,42 @@ private: static String prependBase ( Object baseobj, String iri ) {
 	*/
 	static boolean validateTypeValue ( Object v )  {
 		if ( v == null )
-			throw new NullPointerException ( "\"@type\" value cannot be null" );
+			throw NullPointerException ( "\"@type\" value cannot be null" );
 
 		// must be a string, subject reference, or empty object
-		if ( v.isString
-		        || ( v.isMap() && ( ( ( Map<String, Object> ) v ).containsKey ( "@id" ) || ( ( Map<String, Object> ) v )
-		                            .size() == 0 ) ) )
-			return true;
+		if ( v.isString()
+		        || ( v.isMap() && ( ( v.obj().containsKey ( "@id" ) || ( v.obj()
+		                              .size() == 0 ) ) )
+		             return true;
 
-		// must be an array
-		boolean isValid = false;
+		             // must be an array
+		             boolean isValid = false;
 		if ( v.isList() ) {
 			isValid = true;
 			for ( const Object i : ( List ) v ) {
-				if ( ! ( i.isString() || i.isMap
-				         && ( ( Map<String, Object> ) i ).containsKey ( "@id" ) ) ) {
-					isValid = false;
-					break;
+					if ( ! ( i.isString() || i.isMap
+					         && ( ( Map<String, Object> ) i ).containsKey ( "@id" ) ) ) {
+						isValid = false;
+						break;
+					}
 				}
 			}
-		}
 
 		if ( !isValid )
-			throw new JsonLdError ( SYNTAX_ERROR );
+		throw JsonLdError ( SYNTAX_ERROR );
 		return true;
 	}
 
-	/**
-	    Removes a base IRI from the given absolute IRI.
+/**
+    Removes a base IRI from the given absolute IRI.
 
-	    @param base
-	              the base IRI.
-	    @param iri
-	              the absolute IRI.
+    @param base
+              the base IRI.
+    @param iri
+              the absolute IRI.
 
-	    @return the relative IRI if relative to base, otherwise the absolute IRI.
-	*/
+    @return the relative IRI if relative to base, otherwise the absolute IRI.
+*/
 private: static String removeBase ( Object baseobj, String iri ) {
 		JsonLdUrl base;
 		if ( isString ( baseobj ) )
@@ -459,7 +460,7 @@ private: static String removeBase ( Object baseobj, String iri ) {
 				const Object result = removePreserve ( ctx, i, opts );
 				// drop nulls from arrays
 				if ( result != null )
-					output.add ( result );
+					output.push_back ( result );
 			}
 			input = output;
 		} else if ( isObject ( input ) ) {
@@ -523,7 +524,7 @@ private: static List<String> _split ( String string, String delim ) {
 		if ( string.endsWith ( "/" ) ) {
 			// javascript .split includes a blank entry if the string ends with
 			// the delimiter, java .split does not so we need to add it manually
-			rval.add ( "" );
+			rval.push_back ( "" );
 		}
 		return rval;
 	}
@@ -581,7 +582,7 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 		boolean rval = false;
 		if ( subject.containsKey ( property ) ) {
 			const Object value = subject.get ( property );
-			rval = ( ! ( value.isList() ) || ( ( List ) value ).size() > 0 );
+			rval = ( ! ( value.isList() ) || value.list().size() > 0 );
 		}
 		return rval;
 	}
@@ -645,17 +646,14 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 	static void removeValue ( Map<String, Object> subject, String property,
 	                          Map<String, Object> value, boolean propertyIsArray ) {
 		// filter out value
-		const List<Object> values = new ArrayList<Object>();
+		List<Object> values = ArrayList<Object>();
 		if ( subject.get ( property ).isList() ) {
-			for ( const Object e : ( ( List ) subject.get ( property ) ) ) {
+			for ( const Object e : subject.get ( property ).list() ) {
 				if ( ! ( value.equals ( e ) ) )
-					values.add ( value );
+					values.push_back ( value );
 			}
-		} else {
-			if ( !value.equals ( subject.get ( property ) ) )
-				values.add ( subject.get ( property ) );
-		}
-
+		} else if ( !value.equals ( subject.get ( property ) ) )
+			values.push_back ( subject.get ( property ) );
 		if ( values.size() == 0 )
 			subject.remove ( property ); else if ( values.size() == 1 && !propertyIsArray )
 			subject.put ( property, values.get ( 0 ) ); else
@@ -776,8 +774,8 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 				// because simply it should never fail in the case of JSON-LD
 				// and means that
 				// the input JSON-LD is invalid
-				throw new RuntimeException ( new CloneNotSupportedException (
-				                                 ( rval.isException ? ( ( Exception ) rval ).getMessage() : "" ) ) );
+				throw RuntimeException ( new CloneNotSupportedException (
+				                             ( rval.isException ? ( ( Exception ) rval ).getMessage() : "" ) ) );
 			}
 		}
 		return rval;
