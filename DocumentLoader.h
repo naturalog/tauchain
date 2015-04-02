@@ -10,6 +10,7 @@
 
 #include "RemoteDocument.h"
 
+template<typename Object>
 class DocumentLoader {
 	void* curl;
 	static size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
@@ -39,7 +40,7 @@ public:
 		curl_easy_cleanup ( curl );
 	}
 
-	RemoteDocument loadDocument ( String url );
+	RemoteDocument<Object> loadDocument ( String url );
 	const Object& fromURL ( String url );
 };
 #endif

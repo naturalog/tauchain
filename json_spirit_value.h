@@ -46,7 +46,7 @@ public:
 	Value_impl ( Const_str_ptr      value );
 	Value_impl ( const String_type& value );
 	Value_impl ( const Object&      value );
-	Value_impl ( const Context& value );
+	Value_impl ( const Context<Object>& value );
 	Value_impl ( const Array&       value );
 	Value_impl ( bool               value );
 	Value_impl ( int                value );
@@ -79,8 +79,8 @@ public:
 
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
-	template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant ); // constructor for compatible variant types
+	template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant ); // constructor for compatible variant types
 	Value_impl ( const Value_impl& other );
 
 	bool operator== ( const Value_impl& lhs ) const;
@@ -98,7 +98,7 @@ public:
 
 	inline const String_type& get_str()    const;
 	inline const Object&      get_obj()    const;
-	inline const Context&     get_context()    const;
+	inline const Context<Object>&     get_context()    const;
 	inline const Array&       get_array()  const;
 	inline bool               get_bool()   const;
 	inline int                get_int()    const;
@@ -114,7 +114,7 @@ public:
 	inline const Object&      obj()    const {
 		return get_obj();
 	}
-	inline const Context&     obj()    const {
+	inline const Context<Object>&     ctx()    const {
 		return get_obj();
 	}
 	inline const Array&       array()  const {
@@ -149,7 +149,7 @@ public:
 
 private:
 	void check_type ( const Value_type vtype ) const;
-	typedef boost::variant<boost::recursive_wrapper<Context>, boost::recursive_wrapper<Object>, boost::recursive_wrapper<Array>,
+	typedef boost::variant<boost::recursive_wrapper<Context<Object>>, boost::recursive_wrapper<Object>, boost::recursive_wrapper<Array>,
 	        String_type, bool, boost::int64_t, double, Null, boost::uint64_t> Variant;
 	Variant v_;
 	class Variant_converter_visitor : public boost::static_visitor<Variant> {
@@ -308,8 +308,8 @@ template<class Config> Value_impl<Config>::Value_impl ( double value ) :   v_ ( 
 template<class Config> Value_impl<Config>::Value_impl ( const Value_impl<Config>& other ) :   v_ ( other.v_ ) { }
 
 template<class Config> template<class Iter> Value_impl<Config>::Value_impl ( Iter first, Iter last ) :   v_ ( Array ( first, last ) ) { }
-template<class Config> template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant )
+template<class Config> template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant )
 	:   v_ ( boost::apply_visitor ( Variant_converter_visitor(), variant ) ) {
 }
 

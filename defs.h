@@ -76,9 +76,10 @@ typedef std::string String;
 typedef bool boolean;
 typedef boost::tribool Boolean;
 //typedef std::basic_regex<String> Pattern;
-
-namespace json_spirit {
-class mValue;
-}
-typedef json_spirit::mValue Object;
+/*
+    namespace json_spirit {
+    class mValue;
+    }
+    typedef json_spirit::mValue Object;
+*/
 #endif

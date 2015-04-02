@@ -5,9 +5,13 @@
 
 template<typename Object>
 class Context : public LinkedHashMap<String, Object> {
-	JsonLdOptions options;
+	JsonLdOptions<Object> options;
 	Map<String, Object> termDefinitions;
 	typedef LinkedHashMap<String, Object> base_t;
+	void init ( JsonLdOptions<Object> options_ );
+	String getTypeMapping ( String property );
+	String getLanguageMapping ( String property );
+	Map<String, Object> getTermDefinition ( String key ) ;
 public:
 	virtual bool isContext() const {
 		return true;
@@ -15,25 +19,17 @@ public:
 	using base_t::base_t;
 	Map<String, Object> inverse;// = null;
 
-	Context ( Map<String, Object> map = base_t(), JsonLdOptions opts = JsonLdOptions() ) : base_t ( map ) {
+	Context ( Map<String, Object> map = base_t(), JsonLdOptions<Object> opts = JsonLdOptions<Object>() ) : base_t ( map ) {
 		init ( opts );
 	}
 
-	Context ( Object context, JsonLdOptions opts ) : Context ( context.isMap() ? context.obj() : base_t() /*null*/ ) {
+	Context ( Object context, JsonLdOptions<Object> opts ) : Context ( context.isMap() ? context.obj() : base_t() /*null*/ ) {
 		init ( opts );
 	}
-	Context ( JsonLdOptions opts ) {
+	Context ( JsonLdOptions<Object> opts ) {
 		init ( opts );
 	}
 
-private:
-	void init ( JsonLdOptions options_ ) {
-		options = options_;
-		if ( options.getBase().size() ) put ( "@base", options.getBase() );
-		termDefinitions = base_t();
-	}
-
-public:
 	/**
 	    Value Compaction Algorithm
 
@@ -143,7 +139,7 @@ private:
 	}
 
 	virtual Context clone() {
-		const Context rval = ( Context ) super.clone();
+		Context rval ( *this );
 		// TODO: is this shallow copy enough? probably not, but it passes all
 		// the tests!
 		rval.termDefinitions = LinkedHashMap<String, Object> ( termDefinitions );
@@ -185,51 +181,12 @@ public:
 	              The Property to get a container mapping for.
 	    @return The container mapping
 	*/
-	String getContainer ( String property ) {
-		if ( "@graph".equals ( property ) )
-			return "@set";
-		if ( JsonLdUtils.isKeyword ( property ) )
-			return property;
-		const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
-		if ( td == null )
-			return null;
-		return ( String ) td.get ( "@container" );
-	}
+	String getContainer ( String property );
+	Boolean isReverseProperty ( String property );
 
-	Boolean isReverseProperty ( String property ) {
-		const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
-		if ( td == null )
-			return false;
-		const Object reverse = td.get ( "@reverse" );
-		return reverse != null && ( Boolean ) reverse;
-	}
-
-private:
-	String getTypeMapping ( String property ) {
-		const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
-		if ( td == null )
-			return null;
-		return ( String ) td.get ( "@type" );
-	}
-
-	String getLanguageMapping ( String property ) {
-		const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
-		if ( td == null )
-			return null;
-		return ( String ) td.get ( "@language" );
-	}
-
-	Map<String, Object> getTermDefinition ( String key ) {
-		return ( ( Map<String, Object> ) termDefinitions.get ( key ) );
-	}
-
-public:
 	Object expandValue ( String activeProperty, Object value ) ;
 
-	Object getContextValue ( String activeProperty, String string )  {
-		throw new JsonLdError ( Error.NOT_IMPLEMENTED,
-		                        "getContextValue is only used by old code so far and thus isn't implemented" );
-	}
+	Object getContextValue ( String activeProperty, String string );
 
 	Map<String, Object> serialize();
 };

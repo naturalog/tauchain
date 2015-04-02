@@ -14,9 +14,8 @@ using namespace std;
 //std::wregex pattern(xxx);
 
 
-int main()
-{
-  std::string s = "Boost Libraries";
-  regex expr{"\\w+\\s\\w+"};
-  std::cout << std::boolalpha << regex_match(s, expr) << '\n';
+int main() {
+	std::string s = "Boost Libraries";
+	regex expr {"\\w+\\s\\w+"};
+	std::cout << std::boolalpha << regex_match ( s, expr ) << '\n';
 }

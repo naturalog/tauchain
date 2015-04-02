@@ -3,6 +3,7 @@
 
 #include "defs.h"
 
+template<typename Object>
 struct RemoteDocument {
 	String getDocumentUrl() {
 		return documentUrl;

@@ -766,16 +766,13 @@ String Context::selectTerm ( String iri, List<String> containers, String typeLan
 		if ( !containerMap.containsKey ( container ) )
 			continue;
 		// 2.2)
-		const Map<String, Object> typeLanguageMap = ( Map<String, Object> ) containerMap
-		        .get ( container );
+		const Map<String, Object> typeLanguageMap = ( Map<String, Object> ) containerMap .get ( container );
 		// 2.3)
-		const Map<String, Object> valueMap = ( Map<String, Object> ) typeLanguageMap
-		                                     .get ( typeLanguage );
+		const Map<String, Object> valueMap = ( Map<String, Object> ) typeLanguageMap .get ( typeLanguage );
 		// 2.4 )
 		for ( const String item : preferredValues ) {
 			// 2.4.1
-			if ( !valueMap.containsKey ( item ) )
-				continue;
+			if ( !valueMap.containsKey ( item ) ) continue;
 			// 2.4.2
 			return ( String ) valueMap.get ( item );
 		}
@@ -810,19 +807,16 @@ Object Context::expandValue ( String activeProperty, Object value )  {
 	// 3)
 	rval.put ( "@value", value );
 	// 4)
-	if ( td != null && td.containsKey ( "@type" ) )
-		rval.put ( "@type", td.get ( "@type" ) );
+	if ( td != null && td.containsKey ( "@type" ) ) rval.put ( "@type", td.get ( "@type" ) );
 	// 5)
 	else if ( value.isString() ) {
 		// 5.1)
 		if ( td != null && td.containsKey ( "@language" ) ) {
 			const String lang = ( String ) td.get ( "@language" );
-			if ( lang != null )
-				rval.put ( "@language", lang );
+			if ( lang != null ) rval.put ( "@language", lang );
 		}
 		// 5.2)
-		else if ( get ( "@language" ) != null )
-			rval.put ( "@language", get ( "@language" ) );
+		else if ( get ( "@language" ) != null ) rval.put ( "@language", get ( "@language" ) );
 	}
 	return rval;
 }
@@ -851,23 +845,60 @@ Map<String, Object> serialize() {
 			if ( ! ( term.equals ( cid ) && !reverseProperty ) )
 				defn.put ( reverseProperty ? "@reverse" : "@id", cid );
 			const String typeMapping = ( String ) definition.get ( "@type" );
-			if ( typeMapping != null ) {
+			if ( typeMapping != null )
 				defn.put ( "@type", JsonLdUtils.isKeyword ( typeMapping ) ? typeMapping
 				           : compactIri ( typeMapping, true ) );
-			}
-			if ( definition.get ( "@container" ) != null )
-				defn.put ( "@container", definition.get ( "@container" ) );
-			const Object lang = definition.get ( "@language" );
-			if ( definition.get ( "@language" ) != null )
-				defn.put ( "@language", Boolean.FALSE.equals ( lang ) ? null : lang );
-			ctx.put ( term, defn );
 		}
+		if ( definition.get ( "@container" ) != null ) defn.put ( "@container", definition.get ( "@container" ) );
+		const Object lang = definition.get ( "@language" ); if ( definition.get ( "@language" ) != null )
+			defn.put ( "@language", Boolean.FALSE.equals ( lang ) ? null : lang );
+		ctx.put ( term, defn );
 	}
-
-	const Map<String, Object> rval = newMap();
-	if ( ! ( ctx == null || ctx.isEmpty() ) )
-		rval.put ( "@context", ctx );
-	return rval;
 }
 
-};
+const Map<String, Object> rval = newMap();
+if ( ! ( ctx == null || ctx.isEmpty() ) ) rval.put ( "@context", ctx );
+return rval;
+}
+
+void Context::init ( JsonLdOptions options_ ) {
+	options = options_;
+	if ( options.getBase().size() ) put ( "@base", options.getBase() );
+	termDefinitions = base_t();
+}
+
+String Context::getTypeMapping ( String property ) {
+	const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
+	if ( td == null ) return null;
+	return ( String ) td.get ( "@type" );
+}
+
+String Context::getLanguageMapping ( String property ) {
+	const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
+	if ( td == null ) return null;
+	return ( String ) td.get ( "@language" );
+}
+
+Map<String, Object> Context::getTermDefinition ( String key ) {
+	return ( ( Map<String, Object> ) termDefinitions.get ( key ) );
+}
+
+
+String Context::getContainer ( String property ) {
+	if ( "@graph".equals ( property ) ) return "@set";
+	if ( JsonLdUtils.isKeyword ( property ) ) return property;
+	const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
+	if ( td == null ) return null;
+	return ( String ) td.get ( "@container" );
+}
+
+Boolean Cotext::isReverseProperty ( String property ) {
+	const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
+	if ( td == null ) return false;
+	const Object reverse = td.get ( "@reverse" );
+	return reverse != null && ( Boolean ) reverse;
+}
+Object Context::getContextValue ( String activeProperty, String string )  {
+	throw JsonLdError ( Error.NOT_IMPLEMENTED,
+	                    "getContextValue is only used by old code so far and thus isn't implemented" );
+}

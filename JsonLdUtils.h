@@ -28,37 +28,37 @@ private: static const int MAX_CONTEXT_URLS = 10;
 	static boolean isKeyword ( Object key ) {
 		if ( !isString ( key ) )
 			return false;
-		return "@base".equals ( key ) || "@context".equals ( key ) || "@container".equals ( key )
-		       || "@default".equals ( key ) || "@embed".equals ( key ) || "@explicit".equals ( key )
-		       || "@graph".equals ( key ) || "@id".equals ( key ) || "@index".equals ( key )
-		       || "@language".equals ( key ) || "@list".equals ( key ) || "@omitDefault".equals ( key )
-		       || "@reverse".equals ( key ) || "@preserve".equals ( key ) || "@set".equals ( key )
-		       || "@type".equals ( key ) || "@value".equals ( key ) || "@vocab".equals ( key );
+		return "@base"s == ( key.str() ) || "@context"s == ( key.str() ) || "@container"s == ( key.str() )
+		       || "@default"s == ( key.str() ) || "@embed"s == ( key.str() ) || "@explicit"s == ( key.str() )
+		       || "@graph"s == ( key.str() ) || "@id"s == ( key.str() ) || "@index"s == ( key.str() )
+		       || "@language"s == ( key.str() ) || "@list"s == ( key.str() ) || "@omitDefault"s == ( key.str() )
+		       || "@reverse"s == ( key.str() ) || "@preserve"s == ( key.str() ) || "@set"s == ( key.str() )
+		       || "@type"s == ( key.str() ) || "@value"s == ( key.str() ) || "@vocab"s == ( key.str() );
 	}
 
 public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatters ) {
 		if ( v1 == null )
 			return v2 == null; else if ( v2 == null )
-			return v1 == null; else if ( v1.isMap && v2.isMap ) {
-			const Map<String, Object> m1 = ( Map<String, Object> ) v1;
-			const Map<String, Object> m2 = ( Map<String, Object> ) v2;
+			return v1 == null; else if ( v1.isMap() && v2.isMap() ) {
+			const Map<String, Object> m1 = v1.obj();
+			const Map<String, Object> m2 = v2.obj();
 			if ( m1.size() != m2.size() )
 				return false;
-			for ( const String key : m1.keySet() ) {
-				if ( !m2.containsKey ( key )
-				        || !deepCompare ( m1.get ( key ), m2.get ( key ), listOrderMatters ) )
+			for ( /*const String key : m1.keySet()*/ auto key : m1 ) {
+				if ( !m2.containsKey ( key.first )
+				        || !deepCompare ( m1.get ( key.first ), m2.get ( key.first ), listOrderMatters ) )
 					return false;
 			}
 			return true;
-		} else if ( v1.isList && v2.isList ) {
-			const List<Object> l1 = ( List<Object> ) v1;
-			const List<Object> l2 = ( List<Object> ) v2;
+		} else if ( v1.isList() && v2.isList() ) {
+			const List<Object> l1 = v1.list();
+			const List<Object> l2 = v2.list();
 			if ( l1.size() != l2.size() )
 
 				return false;
 			// used to mark members of l2 that we have already matched to avoid
 			// matching the same item twice for lists that have duplicates
-			const boolean alreadyMatched[] = new boolean[l2.size()];
+			boolean alreadyMatched[] = new boolean[l2.size()];
 			for ( int i = 0; i < l1.size(); i++ ) {
 				const Object o1 = l1.get ( i );
 				Boolean gotmatch = false;
@@ -72,19 +72,17 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 						}
 					}
 				}
-				if ( !gotmatch )
-					return false;
+				if ( !gotmatch ) return false;
 			}
 			return true;
-		} else
-			return v1.equals ( v2 );
+		} else return v1.equals ( v2 );
 	}
 
-public: static Boolean deepCompare ( Object v1, Object v2 ) {
+	static Boolean deepCompare ( Object v1, Object v2 ) {
 		return deepCompare ( v1, v2, false );
 	}
 
-public: static boolean deepContains ( List<Object> values, Object value ) {
+	static boolean deepContains ( List<Object> values, Object value ) {
 		for ( const Object item : values ) {
 			if ( deepCompare ( item, value, false ) )
 				return true;
@@ -100,8 +98,8 @@ public: static boolean deepContains ( List<Object> values, Object value ) {
 			values = new ArrayList<Object>();
 			obj.put ( key, values );
 		}
-		if ( "@list".equals ( key )
-		        || ( value.isMap && ( ( Map<String, Object> ) value ).containsKey ( "@list" ) )
+		if ( "@list"s == ( key )
+		        || ( value.isMap() && ( ( Map<String, Object> ) value ).containsKey ( "@list" ) )
 		        || !deepContains ( values, value ) )
 			values.add ( value );
 	}
@@ -114,16 +112,16 @@ public: static boolean deepContains ( List<Object> values, Object value ) {
 			obj.put ( key, value );
 			return;
 		}
-		if ( ! ( prop.isList ) ) {
+		if ( ! ( prop.isList() ) ) {
 			const List<Object> tmp = new ArrayList<Object>();
 			tmp.add ( prop );
 		}
-		if ( value.isList )
+		if ( value.isList() )
 			( ( List<Object> ) prop ).addAll ( ( List<Object> ) value ); else
 			( ( List<Object> ) prop ).add ( value );
 	}
 
-public: static boolean isAbsoluteIri ( String value ) {
+	static boolean isAbsoluteIri ( String value ) {
 		// TODO: this is a bit simplistic!
 		return value.contains ( ":" );
 	}
@@ -160,17 +158,14 @@ public: static boolean isAbsoluteIri ( String value ) {
 		// Note: A value is a subject reference if all of these hold true:
 		// 1. It is an Object.
 		// 2. It has a single key: @id.
-		return ( v.isMap && ( ( Map<String, Object> ) v ).size() == 1 && ( ( Map<String, Object> ) v )
+		return ( v.isMap() && ( ( Map<String, Object> ) v ).size() == 1 && ( ( Map<String, Object> ) v )
 		         .containsKey ( "@id" ) );
 	}
 
 	// TODO: fix this test
-public: static boolean isRelativeIri ( String value ) {
-		if ( ! ( isKeyword ( value ) || isAbsoluteIri ( value ) ) )
-			return true;
-		return false;
+	static boolean isRelativeIri ( String value ) {
+		return ! ( isKeyword ( value ) || isAbsoluteIri ( value ) );
 	}
-
 	// //////////////////////////////////////////////////// OLD CODE BELOW
 
 	/**
@@ -266,8 +261,8 @@ private: static String prependBase ( Object baseobj, String iri ) {
 
 		// start hierarchical part
 		String hierPart = base.protocol;
-		if ( !"".equals ( rel.authority ) )
-			hierPart += "//" + rel.authority; else if ( !"".equals ( base.href ) )
+		if ( !""s == ( rel.authority ) )
+			hierPart += "//" + rel.authority; else if ( !""s == ( base.href ) )
 			hierPart += "//" + base.authority;
 
 		// per RFC3986 normalize
@@ -279,7 +274,7 @@ private: static String prependBase ( Object baseobj, String iri ) {
 			path = base.pathname;
 
 			// append relative path to the end of the last directory from base
-			if ( !"".equals ( rel.pathname ) ) {
+			if ( !""s == ( rel.pathname ) ) {
 				path = path.substring ( 0, path.lastIndexOf ( "/" ) + 1 );
 				if ( path.length() > 0 && !path.endsWith ( "/" ) )
 					path += "/";
@@ -288,18 +283,18 @@ private: static String prependBase ( Object baseobj, String iri ) {
 		}
 
 		// remove slashes anddots in path
-		path = JsonLdUrl.removeDotSegments ( path, !"".equals ( hierPart ) );
+		path = JsonLdUrl.removeDotSegments ( path, !""s == ( hierPart ) );
 
 		// add query and hash
-		if ( !"".equals ( rel.query ) )
+		if ( !""s == ( rel.query ) )
 			path += "?" + rel.query;
 
-		if ( !"".equals ( rel.hash ) )
+		if ( !""s == ( rel.hash ) )
 			path += rel.hash;
 
 		const String rval = hierPart + path;
 
-		if ( "".equals ( rval ) )
+		if ( ""s == ( rval ) )
 			return "./";
 		return rval;
 	}
@@ -350,16 +345,16 @@ private: static String prependBase ( Object baseobj, String iri ) {
 
 		// must be a string, subject reference, or empty object
 		if ( v.isString
-		        || ( v.isMap && ( ( ( Map<String, Object> ) v ).containsKey ( "@id" ) || ( ( Map<String, Object> ) v )
-		                          .size() == 0 ) ) )
+		        || ( v.isMap() && ( ( ( Map<String, Object> ) v ).containsKey ( "@id" ) || ( ( Map<String, Object> ) v )
+		                            .size() == 0 ) ) )
 			return true;
 
 		// must be an array
 		boolean isValid = false;
-		if ( v.isList ) {
+		if ( v.isList() ) {
 			isValid = true;
 			for ( const Object i : ( List ) v ) {
-				if ( ! ( i.isString || i.isMap
+				if ( ! ( i.isString() || i.isMap
 				         && ( ( Map<String, Object> ) i ).containsKey ( "@id" ) ) ) {
 					isValid = false;
 					break;
@@ -390,7 +385,7 @@ private: static String removeBase ( Object baseobj, String iri ) {
 
 		// establish base root
 		String root = "";
-		if ( !"".equals ( base.href ) )
+		if ( !""s == ( base.href ) )
 			root += ( base.protocol ) + "//" + base.authority;
 		// support network-path reference with empty base
 		else if ( iri.indexOf ( "//" ) != 0 )
@@ -422,7 +417,7 @@ private: static String removeBase ( Object baseobj, String iri ) {
 			// don't count the last segment if it isn't a path (doesn't end in
 			// '/')
 			// don't count empty first segment, it means base began with '/'
-			if ( !base.normalizedPath.endsWith ( "/" ) || "".equals ( baseSegments.get ( 0 ) ) )
+			if ( !base.normalizedPath.endsWith ( "/" ) || ""s == ( baseSegments.get ( 0 ) ) )
 				baseSegments.remove ( baseSegments.size() - 1 );
 			for ( int i = 0; i < baseSegments.size(); ++i )
 				rval += "../";
@@ -432,12 +427,12 @@ private: static String removeBase ( Object baseobj, String iri ) {
 		rval += _join ( iriSegments, "/" );
 
 		// add query and hash
-		if ( !"".equals ( rel.query ) )
+		if ( !""s == ( rel.query ) )
 			rval += "?" + rel.query;
-		if ( !"".equals ( rel.hash ) )
+		if ( !""s == ( rel.hash ) )
 			rval += rel.hash;
 
-		if ( "".equals ( rval ) )
+		if ( ""s == ( rval ) )
 			rval = "./";
 
 		return rval;
@@ -456,7 +451,7 @@ private: static String removeBase ( Object baseobj, String iri ) {
 	    @return the resulting output.
 	    @
 	*/
-	static Object removePreserve ( Context ctx, Object input, JsonLdOptions opts )  {
+	static Object removePreserve ( Context<Object> ctx, Object input, JsonLdOptions<Object> opts )  {
 		// recurse through arrays
 		if ( isArray ( input ) ) {
 			const List<Object> output = new ArrayList<Object>();
@@ -470,7 +465,7 @@ private: static String removeBase ( Object baseobj, String iri ) {
 		} else if ( isObject ( input ) ) {
 			// remove @preserve
 			if ( ( ( Map<String, Object> ) input ).containsKey ( "@preserve" ) ) {
-				if ( "@null".equals ( ( ( Map<String, Object> ) input ).get ( "@preserve" ) ) )
+				if ( "@null"s == ( ( ( Map<String, Object> ) input ).get ( "@preserve" ) ) )
 					return null;
 				return ( ( Map<String, Object> ) input ).get ( "@preserve" );
 			}
@@ -567,7 +562,7 @@ private: static List<String> _split ( String string, String delim ) {
 		if ( hasProperty ( subject, property ) ) {
 			Object val = subject.get ( property );
 			const boolean isList = isList ( val );
-			if ( isList || val.isList ) {
+			if ( isList || val.isList() ) {
 				if ( isList )
 					val = ( ( Map<String, Object> ) val ).get ( "@list" );
 				for ( const Object i : ( List ) val ) {
@@ -576,7 +571,7 @@ private: static List<String> _split ( String string, String delim ) {
 						break;
 					}
 				}
-			} else if ( ! ( value.isList ) )
+			} else if ( ! ( value.isList() ) )
 				rval = compareValues ( value, val );
 		}
 		return rval;
@@ -586,7 +581,7 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 		boolean rval = false;
 		if ( subject.containsKey ( property ) ) {
 			const Object value = subject.get ( property );
-			rval = ( ! ( value.isList ) || ( ( List ) value ).size() > 0 );
+			rval = ( ! ( value.isList() ) || ( ( List ) value ).size() > 0 );
 		}
 		return rval;
 	}
@@ -622,8 +617,8 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 		                        ( ( Map<String, Object> ) v2 ).get ( "@index" ) ) )
 			return true;
 
-		if ( ( v1.isMap && ( ( Map<String, Object> ) v1 ).containsKey ( "@id" ) )
-		        && ( v2.isMap && ( ( Map<String, Object> ) v2 ).containsKey ( "@id" ) )
+		if ( ( v1.isMap() && ( ( Map<String, Object> ) v1 ).containsKey ( "@id" ) )
+		        && ( v2.isMap() && ( ( Map<String, Object> ) v2 ).containsKey ( "@id" ) )
 		        && ( ( Map<String, Object> ) v1 ).get ( "@id" ).equals (
 		            ( ( Map<String, Object> ) v2 ).get ( "@id" ) ) )
 			return true;
@@ -651,7 +646,7 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 	                          Map<String, Object> value, boolean propertyIsArray ) {
 		// filter out value
 		const List<Object> values = new ArrayList<Object>();
-		if ( subject.get ( property ).isList ) {
+		if ( subject.get ( property ).isList() ) {
 			for ( const Object e : ( ( List ) subject.get ( property ) ) ) {
 				if ( ! ( value.equals ( e ) ) )
 					values.add ( value );
@@ -680,7 +675,7 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 		// 1. It is an Object.
 		// 2. If it has an @id key its value begins with '_:'.
 		// 3. It has no keys OR is not a @value, @set, or @list.
-		if ( v.isMap ) {
+		if ( v.isMap() ) {
 			if ( ( ( Map ) v ).containsKey ( "@id" ) )
 				return ( ( String ) ( ( Map ) v ).get ( "@id" ) ).startsWith ( "_:" ); else {
 				return ( ( Map ) v ).size() == 0
@@ -706,13 +701,13 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 	*/
 private: static boolean findContextUrls ( Object input, Map<String, Object> urls, Boolean replace ) {
 		const int count = urls.size();
-		if ( input.isList ) {
+		if ( input.isList() ) {
 			for ( const Object i : ( List ) input )
 				findContextUrls ( i, urls, replace );
 			return count < urls.size();
-		} else if ( input.isMap ) {
+		} else if ( input.isMap() ) {
 			for ( const String key : ( ( Map<String, Object> ) input ).keySet() ) {
-				if ( !"@context".equals ( key ) ) {
+				if ( !"@context"s == ( key ) ) {
 					findContextUrls ( ( ( Map ) input ).get ( key ), urls, replace );
 					continue;
 				}
@@ -721,15 +716,15 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 				const Object ctx = ( ( Map ) input ).get ( key );
 
 				// array @context
-				if ( ctx.isList ) {
+				if ( ctx.isList() ) {
 					int length = ( ( List ) ctx ).size();
 					for ( int i = 0; i < length; i++ ) {
 						Object _ctx = ( ( List ) ctx ).get ( i );
-						if ( _ctx.isString ) {
+						if ( _ctx.isString() ) {
 							// replace w/@context if requested
 							if ( replace ) {
 								_ctx = urls.get ( _ctx );
-								if ( _ctx.isList ) {
+								if ( _ctx.isList() ) {
 									// add flattened context
 									( ( List ) ctx ).remove ( i );
 									( ( List ) ctx ).addAll ( ( Collection ) _ctx );
@@ -745,7 +740,7 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 					}
 				}
 				// string @context
-				else if ( ctx.isString ) {
+				else if ( ctx.isString() ) {
 					// replace w/@context if requested
 					if ( replace )
 						( ( Map ) input ).put ( key, urls.get ( ctx ) );
@@ -771,7 +766,7 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 		}
 		if ( rval == null || rval.isException ) {
 			// the object wasn't cloneable, or an error occured
-			if ( value == null || value.isString || value.isNumber
+			if ( value == null || value.isString() || value.isNumber
 			        || value.isBoolean ) {
 				// strings numbers and booleans are immutable
 				rval = value;
@@ -796,7 +791,7 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 	    @return
 	*/
 	static Boolean isArray ( Object v ) {
-		return ( v.isList );
+		return ( v.isList() );
 	}
 
 	/**
@@ -807,7 +802,7 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 	    @return
 	*/
 	static Boolean isList ( Object v ) {
-		return ( v.isMap && ( ( Map<String, Object> ) v ).containsKey ( "@list" ) );
+		return ( v.isMap() && v.obj().containsKey ( "@list" ) );
 	}
 
 	/**
@@ -818,7 +813,7 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 	    @return
 	*/
 	static Boolean isObject ( Object v ) {
-		return ( v.isMap );
+		return ( v.isMap() );
 	}
 
 	/**
@@ -829,7 +824,7 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 	    @return
 	*/
 	static Boolean isValue ( Object v ) {
-		return ( v.isMap && ( ( Map<String, Object> ) v ).containsKey ( "@value" ) );
+		return ( v.isMap() &&  v.obj().containsKey ( "@value" ) );
 	}
 
 	/**
@@ -841,6 +836,6 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 	*/
 	static Boolean isString ( Object v ) {
 		// TODO: should this return true for arrays of strings as well?
-		return ( v.isString );
+		return ( v.isString() );
 	}
 };

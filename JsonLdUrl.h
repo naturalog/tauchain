@@ -21,7 +21,7 @@ typedef bool boolean;
 typedef boost::tribool Boolean;
 typedef std::basic_regex<String> Pattern;
 
-static std::regex parser(("^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)"));
+static std::regex parser ( ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" ) );
 
 class JsonLdUrl {
 
@@ -42,7 +42,7 @@ public: String hash = "";
 
 	// things not populated by the regex (NOTE: i don't think it matters if
 	// these are null or "" to start with)
-//these arent json nulls
+	//these arent json nulls
 public: String pathname = NULL;
 public: String normalizedPath = NULL;
 public: String authority = NULL;
@@ -54,9 +54,9 @@ public: static JsonLdUrl parse ( String url ) {
 
 		match_results<String> match;
 
-		if ( regex_match(url, match, parser) {
-			assert(match.size() == 14);
-			std::cout << match.str(1);
+		if ( regex_match ( url, match, parser ) {
+		assert ( match.size() == 14 );
+			std::cout << match.str ( 1 );
 			//must make this compile and investigate..
 			if ( match.group ( 1 ) != null )
 				rval.protocol = matcher.group ( 1 );
@@ -156,14 +156,15 @@ public: static String removeDotSegments ( String path, boolean hasAuthority ) {
 	}
 
 public: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
-		
+
 		JsonLdUrl base;
 
-                // we get either a String or a JsonLdUrl or a null, as baseobj
-		if ( String* base_as_string = boost::get<String>(baseobj) )
-			base = JsonLdUrl.parse ( base_as_string ); 
-		elif (base = boost::get<JsonLdUrl>(baseobj))
-			{;}
+		// we get either a String or a JsonLdUrl or a null, as baseobj
+		if ( String* base_as_string = boost::get<String> ( baseobj ) )
+			base = JsonLdUrl.parse ( base_as_string );
+		elif ( base = boost::get<JsonLdUrl> ( baseobj ) ) {
+			;
+		}
 		else
 			return iri;
 
