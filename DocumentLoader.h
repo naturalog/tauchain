@@ -1,8 +1,14 @@
+#ifndef __DOCUMENT_LOADER_H__
+#define __DOCUMENT_LOADER_H__
+
 #include <curl/curl.h>
+#include <curl/easy.h>
 #include <curl/easy.h>
 #include <curl/curlbuild.h>
 #include <sstream>
 #include <iostream>
+
+#include "RemoteDocument.h"
 
 class DocumentLoader {
 	void* curl;
@@ -33,38 +39,7 @@ public:
 		curl_easy_cleanup ( curl );
 	}
 
-	RemoteDocument loadDocument ( String url )  {
-		RemoteDocument doc/* = new RemoteDocument*/ ( url, null );
-		try {
-			doc.setDocument ( fromURL ( /*new URL*/ ( url ) ) );
-		} catch ( ... ) {
-			throw JsonLdError ( LOADING_REMOTE_CONTEXT_FAILED, url );
-		}
-		return doc;
-	}
-
-	Object fromURL ( String url ) {
-		Object r;
-		json_spirit::read ( download ( url ), r );
-		return r;
-		/*
-		    const MappingJsonFactory jsonFactory = new MappingJsonFactory();
-		    const InputStream in = openStreamFromURL ( url );
-		    try {
-			const JsonParser parser = jsonFactory.createParser ( in );
-			try {
-				const JsonToken token = parser.nextToken();
-				Class<?> type;
-				if ( token == JsonToken.START_OBJECT )
-					type = Map.class; else if ( token == JsonToken.START_ARRAY )
-					type = List.class; else
-					type = String.class;
-				return parser.readValueAs ( type );
-			}
-			parser.close();
-
-		    }
-		    in.close();
-		*/
-	}
+	RemoteDocument loadDocument ( String url );
+	const Object& fromURL ( String url );
 };
+#endif

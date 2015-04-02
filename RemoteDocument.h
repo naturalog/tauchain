@@ -1,4 +1,7 @@
-// package com.github.jsonldjava.core;
+#ifndef __REMOTE__DOCUMENT_H__
+#define __REMOTE__DOCUMENT_H__
+
+#include "defs.h"
 
 struct RemoteDocument {
 	String getDocumentUrl() {
@@ -9,13 +12,11 @@ struct RemoteDocument {
 		documentUrl = documentUrl_;
 	}
 
-	Object getDocument() {
+	const Object& getDocument() {
 		return document;
 	}
 
-	void setDocument ( Object document_ ) {
-		document = document_;
-	}
+	void setDocument ( const Object& document_ );
 
 	String getContextUrl() {
 		return contextUrl;
@@ -26,12 +27,9 @@ struct RemoteDocument {
 	}
 
 	String documentUrl;
-	Object document;
+	Object& document;
 	String contextUrl;
 
-	RemoteDocument ( String url, Object document_ = null, String context = "" ) :
-		documentUrl ( url ),
-		document ( document_ ),
-		contextUrl ( context ) {
-	}
+	RemoteDocument ( String url, const Object& document_ /*= null*/, String context = "" );
 };
+#endif

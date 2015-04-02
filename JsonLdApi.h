@@ -111,13 +111,13 @@ public: JsonLdApi ( JsonLdOptions opts ) {
 	               If there was an error cloning the object, or in parsing the
 	               context.
 	*/
-private: void initialize ( Object input, Object context )  {
-		if ( input.isList || input.isMap )
-			this.value = JsonLdUtils.clone ( input );
+private: void initialize ( Object input, Object context_ )  {
+		if ( input.isList() || input.isMap() )
+			value = clone ( input );
 		// TODO: string/IO input
-		this.context = new Context ( opts );
-		if ( context != null )
-			this.context = this.context.parse ( context );
+		context = Context ( opts );
+		if ( context_ != null )
+			context = context.parse ( context_ );
 	}
 
 	/***
@@ -149,7 +149,7 @@ private: void initialize ( Object input, Object context )  {
 public: Object compact ( Context activeCtx, String activeProperty, Object element,
 	                         boolean compactArrays )  {
 		// 2)
-		if ( element.isList ) {
+		if ( element.isList() ) {
 			// 2.1)
 			const List<Object> result = new ArrayList<Object>();
 			// 2.2)
@@ -169,18 +169,18 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 		}
 
 		// 3)
-		if ( element.isMap ) {
+		if ( element.isMap() ) {
 			// access helper
 			const Map<String, Object> elem = ( Map<String, Object> ) element;
 
 			// 4
 			if ( elem.containsKey ( "@value" ) || elem.containsKey ( "@id" ) ) {
 				const Object compactedValue = activeCtx.compactValue ( activeProperty, elem );
-				if ( ! ( compactedValue.isMap || compactedValue.isList ) )
+				if ( ! ( compactedValue.isMap() || compactedValue.isList() ) )
 					return compactedValue;
 			}
 			// 5)
-			const boolean insideReverse = ( "@reverse".equals ( activeProperty ) );
+			const boolean insideReverse = ( "@reverse"s == ( activeProperty ) );
 
 			// 6)
 			const Map<String, Object> result = newMap();
@@ -191,13 +191,13 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 				const Object expandedValue = elem.get ( expandedProperty );
 
 				// 7.1)
-				if ( "@id".equals ( expandedProperty ) || "@type".equals ( expandedProperty ) ) {
+				if ( "@id"s == ( expandedProperty ) || "@type"s == ( expandedProperty ) ) {
 					Object compactedValue;
 
 					// 7.1.1)
-					if ( expandedValue.isString ) {
+					if ( expandedValue.isString() ) {
 						compactedValue = activeCtx.compactIri ( ( String ) expandedValue,
-						                                        "@type".equals ( expandedProperty ) );
+						                                        "@type"s == ( expandedProperty ) );
 					}
 					// 7.1.2)
 					else {
@@ -223,7 +223,7 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 				}
 
 				// 7.2)
-				if ( "@reverse".equals ( expandedProperty ) ) {
+				if ( "@reverse"s == ( expandedProperty ) ) {
 					// 7.2.1)
 					const Map<String, Object> compactedValue = ( Map<String, Object> ) compact (
 					            activeCtx, "@reverse", expandedValue, compactArrays );
@@ -236,8 +236,8 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 						// 7.2.2.1)
 						if ( activeCtx.isReverseProperty ( property ) ) {
 							// 7.2.2.1.1)
-							if ( ( "@set".equals ( activeCtx.getContainer ( property ) ) || !compactArrays )
-							        && ! ( value.isList ) ) {
+							if ( ( "@set"s == ( activeCtx.getContainer ( property ) ) || !compactArrays )
+							        && ! ( value.isList() ) ) {
 								const List<Object> tmp = new ArrayList<Object>();
 								tmp.add ( value );
 								result.put ( property, tmp );
@@ -247,11 +247,11 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 								result.put ( property, value );
 							// 7.2.2.1.3)
 							else {
-								if ( ! ( result.get ( property ).isList ) ) {
+								if ( ! ( result.get ( property ).isList() ) ) {
 									const List<Object> tmp = new ArrayList<Object>();
 									tmp.add ( result.put ( property, tmp ) );
 								}
-								if ( value.isList ) {
+								if ( value.isList() ) {
 									( ( List<Object> ) result.get ( property ) )
 									.addAll ( ( List<Object> ) value );
 								} else
@@ -273,12 +273,12 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 				}
 
 				// 7.3)
-				if ( "@index".equals ( expandedProperty )
-				        && "@index".equals ( activeCtx.getContainer ( activeProperty ) ) )
+				if ( "@index"s == ( expandedProperty )
+				        && "@index"s == ( activeCtx.getContainer ( activeProperty ) ) )
 					continue;
 				// 7.4)
-				else if ( "@index".equals ( expandedProperty ) || "@value".equals ( expandedProperty )
-				          || "@language".equals ( expandedProperty ) ) {
+				else if ( "@index"s == ( expandedProperty ) || "@value"s == ( expandedProperty )
+				          || "@language"s == ( expandedProperty ) ) {
 					// 7.4.1)
 					const String alias = activeCtx.compactIri ( expandedProperty, true );
 					// 7.4.2)
@@ -298,7 +298,7 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 					if ( !result.containsKey ( itemActiveProperty ) )
 						result.put ( itemActiveProperty, new ArrayList<Object>() ); else {
 						const Object value = result.get ( itemActiveProperty );
-						if ( ! ( value.isList ) ) {
+						if ( ! ( value.isList() ) ) {
 							const List<Object> tmp = new ArrayList<Object>();
 							tmp.add ( value );
 							result.put ( itemActiveProperty, tmp );
@@ -315,7 +315,7 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 					const String container = activeCtx.getContainer ( itemActiveProperty );
 
 					// get @list value if appropriate
-					const boolean isList = ( expandedItem.isMap && ( ( Map<String, Object> ) expandedItem )
+					const boolean isList = ( expandedItem.isMap() && ( ( Map<String, Object> ) expandedItem )
 					                         .containsKey ( "@list" ) );
 					Object list = null;
 					if ( isList )
@@ -328,13 +328,13 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 					// 7.6.4)
 					if ( isList ) {
 						// 7.6.4.1)
-						if ( ! ( compactedItem.isList ) ) {
+						if ( ! ( compactedItem.isList() ) ) {
 							const List<Object> tmp = new ArrayList<Object>();
 							tmp.add ( compactedItem );
 							compactedItem = tmp;
 						}
 						// 7.6.4.2)
-						if ( !"@list".equals ( container ) ) {
+						if ( !"@list"s == ( container ) ) {
 							// 7.6.4.2.1)
 							const Map<String, Object> wrapper = newMap();
 							// TODO: SPEC: no mention of vocab = true
@@ -352,13 +352,13 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 						}
 						// 7.6.4.3)
 						else if ( result.containsKey ( itemActiveProperty ) ) {
-							throw new JsonLdError ( Error.COMPACTION_TO_LIST_OF_LISTS,
-							                        "There cannot be two list objects associated with an active property that has a container mapping" );
+							throw JsonLdError ( Error.COMPACTION_TO_LIST_OF_LISTS,
+							                    "There cannot be two list objects associated with an active property that has a container mapping" );
 						}
 					}
 
 					// 7.6.5)
-					if ( "@language".equals ( container ) || "@index".equals ( container ) ) {
+					if ( "@language"s == ( container ) || "@index"s == ( container ) ) {
 						// 7.6.5.1)
 						Map<String, Object> mapObject;
 						if ( result.containsKey ( itemActiveProperty ) )
@@ -368,8 +368,8 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 						}
 
 						// 7.6.5.2)
-						if ( "@language".equals ( container )
-						        && ( compactedItem.isMap && ( ( Map<String, Object> ) compactedItem )
+						if ( "@language"s == ( container )
+						        && ( compactedItem.isMap() && ( ( Map<String, Object> ) compactedItem )
 						             .containsKey ( "@value" ) ) )
 							compactedItem = ( ( Map<String, Object> ) compactedItem ).get ( "@value" );
 
@@ -380,7 +380,7 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 						if ( !mapObject.containsKey ( mapKey ) )
 							mapObject.put ( mapKey, compactedItem ); else {
 							List<Object> tmp;
-							if ( ! ( mapObject.get ( mapKey ).isList ) ) {
+							if ( ! ( mapObject.get ( mapKey ).isList() ) ) {
 								tmp = new ArrayList<Object>();
 								tmp.add ( mapObject.put ( mapKey, tmp ) );
 							} else
@@ -391,10 +391,10 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 					// 7.6.6)
 					else {
 						// 7.6.6.1)
-						const Boolean check = ( !compactArrays || "@set".equals ( container )
-						                        || "@list".equals ( container ) || "@list".equals ( expandedProperty ) || "@graph"
+						const Boolean check = ( !compactArrays || "@set"s == ( container )
+						                        || "@list"s == ( container ) || "@list"s == ( expandedProperty ) || "@graph"
 						                        .equals ( expandedProperty ) )
-						                      && ( ! ( compactedItem.isList ) );
+						                      && ( ! ( compactedItem.isList() ) );
 						if ( check ) {
 							const List<Object> tmp = new ArrayList<Object>();
 							tmp.add ( compactedItem );
@@ -403,11 +403,11 @@ public: Object compact ( Context activeCtx, String activeProperty, Object elemen
 						// 7.6.6.2)
 						if ( !result.containsKey ( itemActiveProperty ) )
 							result.put ( itemActiveProperty, compactedItem ); else {
-							if ( ! ( result.get ( itemActiveProperty ).isList ) ) {
+							if ( ! ( result.get ( itemActiveProperty ).isList() ) ) {
 								const List<Object> tmp = new ArrayList<Object>();
 								tmp.add ( result.put ( itemActiveProperty, tmp ) );
 							}
-							if ( compactedItem.isList ) {
+							if ( compactedItem.isList() ) {
 								( ( List<Object> ) result.get ( itemActiveProperty ) )
 								.addAll ( ( List<Object> ) compactedItem );
 							} else
@@ -473,7 +473,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 			return null;
 
 		// 3)
-		if ( element.isList ) {
+		if ( element.isList() ) {
 			// 3.1)
 			const List<Object> result = new ArrayList<Object>();
 			// 3.2)
@@ -481,14 +481,14 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 				// 3.2.1)
 				const Object v = expand ( activeCtx, activeProperty, item );
 				// 3.2.2)
-				if ( ( "@list".equals ( activeProperty ) || "@list".equals ( activeCtx
+				if ( ( "@list"s == ( activeProperty ) || "@list"s == ( activeCtx
 				        .getContainer ( activeProperty ) ) )
-				        && ( v.isList || ( v.isMap && ( ( Map<String, Object> ) v )
-				                           .containsKey ( "@list" ) ) ) )
-					throw new JsonLdError ( Error.LIST_OF_LISTS, "lists of lists are not permitted." );
+				        && ( v.isList() || ( v.isMap() && ( ( Map<String, Object> ) v )
+				                             .containsKey ( "@list" ) ) ) )
+					throw JsonLdError ( Error.LIST_OF_LISTS, "lists of lists are not permitted." );
 				// 3.2.3)
 				else if ( v != null ) {
-					if ( v.isList )
+					if ( v.isList() )
 						result.addAll ( ( Collection <? : public Object > ) v ); else
 						result.add ( v );
 				}
@@ -497,7 +497,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 			return result;
 		}
 		// 4)
-		else if ( element.isMap ) {
+		else if ( element.isMap() ) {
 			// access helper
 			const Map<String, Object> elem = ( Map<String, Object> ) element;
 			// 5)
@@ -523,60 +523,60 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 				// 7.4)
 				if ( isKeyword ( expandedProperty ) ) {
 					// 7.4.1)
-					if ( "@reverse".equals ( activeProperty ) ) {
-						throw new JsonLdError ( Error.INVALID_REVERSE_PROPERTY_MAP,
-						                        "a keyword cannot be used as a @reverse propery" );
+					if ( "@reverse"s == ( activeProperty ) ) {
+						throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_MAP,
+						                    "a keyword cannot be used as a @reverse propery" );
 					}
 					// 7.4.2)
 					if ( result.containsKey ( expandedProperty ) ) {
-						throw new JsonLdError ( Error.COLLIDING_KEYWORDS, expandedProperty
-						                        + " already exists in result" );
+						throw JsonLdError ( Error.COLLIDING_KEYWORDS, expandedProperty
+						                    + " already exists in result" );
 					}
 					// 7.4.3)
-					if ( "@id".equals ( expandedProperty ) ) {
-						if ( ! ( value.isString ) ) {
-							throw new JsonLdError ( Error.INVALID_ID_VALUE,
-							                        "value of @id must be a string" );
+					if ( "@id"s == ( expandedProperty ) ) {
+						if ( ! ( value.isString() ) ) {
+							throw JsonLdError ( Error.INVALID_ID_VALUE,
+							                    "value of @id must be a string" );
 						}
 						expandedValue = activeCtx
 						                .expandIri ( ( String ) value, true, false, null, null );
 					}
 					// 7.4.4)
-					else if ( "@type".equals ( expandedProperty ) ) {
-						if ( value.isList ) {
+					else if ( "@type"s == ( expandedProperty ) ) {
+						if ( value.isList() ) {
 							expandedValue = new ArrayList<String>();
 							for ( const Object v : ( List ) value ) {
-								if ( ! ( v.isString ) ) {
-									throw new JsonLdError ( Error.INVALID_TYPE_VALUE,
-									                        "@type value must be a string or array of strings" );
+								if ( ! ( v.isString() ) ) {
+									throw JsonLdError ( Error.INVALID_TYPE_VALUE,
+									                    "@type value must be a string or array of strings" );
 								}
 								( ( List<String> ) expandedValue ).add ( activeCtx.expandIri ( ( String ) v,
 								        true, true, null, null ) );
 							}
-						} else if ( value.isString ) {
+						} else if ( value.isString() ) {
 							expandedValue = activeCtx.expandIri ( ( String ) value, true, true, null,
 							                                      null );
 						}
 						// TODO: SPEC: no mention of empty map check
-						else if ( value.isMap ) {
+						else if ( value.isMap() ) {
 							if ( ( ( Map<String, Object> ) value ).size() != 0 ) {
-								throw new JsonLdError ( Error.INVALID_TYPE_VALUE,
-								                        "@type value must be a an empty object for framing" );
+								throw JsonLdError ( Error.INVALID_TYPE_VALUE,
+								                    "@type value must be a an empty object for framing" );
 							}
 							expandedValue = value;
 						} else {
-							throw new JsonLdError ( Error.INVALID_TYPE_VALUE,
-							                        "@type value must be a string or array of strings" );
+							throw JsonLdError ( Error.INVALID_TYPE_VALUE,
+							                    "@type value must be a string or array of strings" );
 						}
 					}
 					// 7.4.5)
-					else if ( "@graph".equals ( expandedProperty ) )
+					else if ( "@graph"s == ( expandedProperty ) )
 						expandedValue = expand ( activeCtx, "@graph", value );
 					// 7.4.6)
-					else if ( "@value".equals ( expandedProperty ) ) {
-						if ( value != null && ( value.isMap || value.isList ) ) {
-							throw new JsonLdError ( Error.INVALID_VALUE_OBJECT_VALUE, "value of "
-							                        + expandedProperty + " must be a scalar or null" );
+					else if ( "@value"s == ( expandedProperty ) ) {
+						if ( value != null && ( value.isMap() || value.isList() ) ) {
+							throw JsonLdError ( Error.INVALID_VALUE_OBJECT_VALUE, "value of "
+							                    + expandedProperty + " must be a scalar or null" );
 						}
 						expandedValue = value;
 						if ( expandedValue == null ) {
@@ -585,31 +585,31 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 						}
 					}
 					// 7.4.7)
-					else if ( "@language".equals ( expandedProperty ) ) {
-						if ( ! ( value.isString ) ) {
-							throw new JsonLdError ( Error.INVALID_LANGUAGE_TAGGED_STRING, "Value of "
-							                        + expandedProperty + " must be a string" );
+					else if ( "@language"s == ( expandedProperty ) ) {
+						if ( ! ( value.isString() ) ) {
+							throw JsonLdError ( Error.INVALID_LANGUAGE_TAGGED_STRING, "Value of "
+							                    + expandedProperty + " must be a string" );
 						}
 						expandedValue = ( ( String ) value ).toLowerCase();
 					}
 					// 7.4.8)
-					else if ( "@index".equals ( expandedProperty ) ) {
-						if ( ! ( value.isString ) ) {
-							throw new JsonLdError ( Error.INVALID_INDEX_VALUE, "Value of "
-							                        + expandedProperty + " must be a string" );
+					else if ( "@index"s == ( expandedProperty ) ) {
+						if ( ! ( value.isString() ) ) {
+							throw JsonLdError ( Error.INVALID_INDEX_VALUE, "Value of "
+							                    + expandedProperty + " must be a string" );
 						}
 						expandedValue = value;
 					}
 					// 7.4.9)
-					else if ( "@list".equals ( expandedProperty ) ) {
+					else if ( "@list"s == ( expandedProperty ) ) {
 						// 7.4.9.1)
-						if ( activeProperty == null || "@graph".equals ( activeProperty ) )
+						if ( activeProperty == null || "@graph"s == ( activeProperty ) )
 							continue;
 						// 7.4.9.2)
 						expandedValue = expand ( activeCtx, activeProperty, value );
 
 						// NOTE: step not in the spec yet
-						if ( ! ( expandedValue.isList ) ) {
+						if ( ! ( expandedValue.isList() ) ) {
 							const List<Object> tmp = new ArrayList<Object>();
 							tmp.add ( expandedValue );
 							expandedValue = tmp;
@@ -617,20 +617,20 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 
 						// 7.4.9.3)
 						for ( const Object o : ( List<Object> ) expandedValue ) {
-							if ( o.isMap && ( ( Map<String, Object> ) o ).containsKey ( "@list" ) ) {
-								throw new JsonLdError ( Error.LIST_OF_LISTS,
-								                        "A list may not contain another list" );
+							if ( o.isMap() && ( ( Map<String, Object> ) o ).containsKey ( "@list" ) ) {
+								throw JsonLdError ( Error.LIST_OF_LISTS,
+								                    "A list may not contain another list" );
 							}
 						}
 					}
 					// 7.4.10)
-					else if ( "@set".equals ( expandedProperty ) )
+					else if ( "@set"s == ( expandedProperty ) )
 						expandedValue = expand ( activeCtx, activeProperty, value );
 					// 7.4.11)
-					else if ( "@reverse".equals ( expandedProperty ) ) {
-						if ( ! ( value.isMap ) ) {
-							throw new JsonLdError ( Error.INVALID_REVERSE_VALUE,
-							                        "@reverse value must be an object" );
+					else if ( "@reverse"s == ( expandedProperty ) ) {
+						if ( ! ( value.isMap() ) ) {
+							throw JsonLdError ( Error.INVALID_REVERSE_VALUE,
+							                    "@reverse value must be an object" );
 						}
 						// 7.4.11.1)
 						expandedValue = expand ( activeCtx, "@reverse", value );
@@ -645,7 +645,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 								if ( !result.containsKey ( property ) )
 									result.put ( property, new ArrayList<Object>() );
 								// 7.4.11.2.2)
-								if ( item.isList ) {
+								if ( item.isList() ) {
 									( ( List<Object> ) result.get ( property ) )
 									.addAll ( ( List<Object> ) item );
 								} else
@@ -664,7 +664,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 							// 7.4.11.3.3)
 							for ( const String property : ( ( Map<String, Object> ) expandedValue )
 							        .keySet() ) {
-								if ( "@reverse".equals ( property ) )
+								if ( "@reverse"s == ( property ) )
 									continue;
 								// 7.4.11.3.3.1)
 								const List<Object> items = ( List<Object> ) ( ( Map<String, Object> ) expandedValue )
@@ -674,7 +674,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 									if ( item.isMap
 									        && ( ( ( Map<String, Object> ) item ).containsKey ( "@value" ) || ( ( Map<String, Object> ) item )
 									             .containsKey ( "@list" ) ) )
-										throw new JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
+										throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
 									// 7.4.11.3.3.1.2)
 									if ( !reverseMap.containsKey ( property ) )
 										reverseMap.put ( property, new ArrayList<Object>() );
@@ -687,11 +687,11 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 						continue;
 					}
 					// TODO: SPEC no mention of @explicit etc in spec
-					else if ( "@explicit".equals ( expandedProperty )
-					          || "@default".equals ( expandedProperty )
-					          || "@embed".equals ( expandedProperty )
-					          || "@embedChildren".equals ( expandedProperty )
-					          || "@omitDefault".equals ( expandedProperty ) )
+					else if ( "@explicit"s == ( expandedProperty )
+					          || "@default"s == ( expandedProperty )
+					          || "@embed"s == ( expandedProperty )
+					          || "@embedChildren"s == ( expandedProperty )
+					          || "@omitDefault"s == ( expandedProperty ) )
 						expandedValue = expand ( activeCtx, expandedProperty, value );
 					// 7.4.12)
 					if ( expandedValue != null )
@@ -700,14 +700,14 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 					continue;
 				}
 				// 7.5
-				else if ( "@language".equals ( activeCtx.getContainer ( key ) ) && value.isMap ) {
+				else if ( "@language"s == ( activeCtx.getContainer ( key ) ) && value.isMap() ) {
 					// 7.5.1)
 					expandedValue = new ArrayList<Object>();
 					// 7.5.2)
 					for ( const String language : ( ( Map<String, Object> ) value ).keySet() ) {
 						Object languageValue = ( ( Map<String, Object> ) value ).get ( language );
 						// 7.5.2.1)
-						if ( ! ( languageValue.isList ) ) {
+						if ( ! ( languageValue.isList() ) ) {
 							const Object tmp = languageValue;
 							languageValue = new ArrayList<Object>();
 							( ( List<Object> ) languageValue ).add ( tmp );
@@ -715,9 +715,9 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 						// 7.5.2.2)
 						for ( const Object item : ( List<Object> ) languageValue ) {
 							// 7.5.2.2.1)
-							if ( ! ( item.isString ) ) {
-								throw new JsonLdError ( Error.INVALID_LANGUAGE_MAP_VALUE, "Expected "
-								                        + item.toString() + " to be a string" );
+							if ( ! ( item.isString() ) ) {
+								throw JsonLdError ( Error.INVALID_LANGUAGE_MAP_VALUE, "Expected "
+								                    + item.toString() + " to be a string" );
 							}
 							// 7.5.2.2.2)
 							const Map<String, Object> tmp = newMap();
@@ -728,7 +728,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 					}
 				}
 				// 7.6)
-				else if ( "@index".equals ( activeCtx.getContainer ( key ) ) && value.isMap ) {
+				else if ( "@index"s == ( activeCtx.getContainer ( key ) ) && value.isMap() ) {
 					// 7.6.1)
 					expandedValue = new ArrayList<Object>();
 					// 7.6.2)
@@ -738,7 +738,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 					for ( const String index : indexKeys ) {
 						Object indexValue = ( ( Map<String, Object> ) value ).get ( index );
 						// 7.6.2.1)
-						if ( ! ( indexValue.isList ) ) {
+						if ( ! ( indexValue.isList() ) ) {
 							const Object tmp = indexValue;
 							indexValue = new ArrayList<Object>();
 							( ( List<Object> ) indexValue ).add ( tmp );
@@ -762,11 +762,11 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 				if ( expandedValue == null )
 					continue;
 				// 7.9)
-				if ( "@list".equals ( activeCtx.getContainer ( key ) ) ) {
-					if ( ! ( expandedValue.isMap )
+				if ( "@list"s == ( activeCtx.getContainer ( key ) ) ) {
+					if ( ! ( expandedValue.isMap() )
 					        || ! ( ( Map<String, Object> ) expandedValue ).containsKey ( "@list" ) ) {
 						Object tmp = expandedValue;
-						if ( ! ( tmp.isList ) ) {
+						if ( ! ( tmp.isList() ) ) {
 							tmp = new ArrayList<Object>();
 							( ( List<Object> ) tmp ).add ( expandedValue );
 						}
@@ -783,7 +783,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 					const Map<String, Object> reverseMap = ( Map<String, Object> ) result
 					                                       .get ( "@reverse" );
 					// 7.10.3)
-					if ( ! ( expandedValue.isList ) ) {
+					if ( ! ( expandedValue.isList() ) ) {
 						const Object tmp = expandedValue;
 						expandedValue = new ArrayList<Object>();
 						( ( List<Object> ) expandedValue ).add ( tmp );
@@ -794,12 +794,12 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 						if ( item.isMap
 						        && ( ( ( Map<String, Object> ) item ).containsKey ( "@value" ) || ( ( Map<String, Object> ) item )
 						             .containsKey ( "@list" ) ) )
-							throw new JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
+							throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
 						// 7.10.4.2)
 						if ( !reverseMap.containsKey ( expandedProperty ) )
 							reverseMap.put ( expandedProperty, new ArrayList<Object>() );
 						// 7.10.4.3)
-						if ( item.isList ) {
+						if ( item.isList() ) {
 							( ( List<Object> ) reverseMap.get ( expandedProperty ) )
 							.addAll ( ( List<Object> ) item );
 						} else
@@ -812,7 +812,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 					if ( !result.containsKey ( expandedProperty ) )
 						result.put ( expandedProperty, new ArrayList<Object>() );
 					// 7.11.2)
-					if ( expandedValue.isList ) {
+					if ( expandedValue.isList() ) {
 						( ( List<Object> ) result.get ( expandedProperty ) )
 						.addAll ( ( List<Object> ) expandedValue );
 					} else
@@ -830,8 +830,8 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 				const boolean langremoved = keySet.remove ( "@language" );
 				const boolean typeremoved = keySet.remove ( "@type" );
 				if ( ( langremoved && typeremoved ) || !keySet.isEmpty() ) {
-					throw new JsonLdError ( Error.INVALID_VALUE_OBJECT,
-					                        "value object has unknown keys" );
+					throw JsonLdError ( Error.INVALID_VALUE_OBJECT,
+					                    "value object has unknown keys" );
 				}
 				// 8.2)
 				const Object rval = result.get ( "@value" );
@@ -841,25 +841,25 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 					return null;
 				}
 				// 8.3)
-				if ( ! ( rval.isString ) && result.containsKey ( "@language" ) ) {
-					throw new JsonLdError ( Error.INVALID_LANGUAGE_TAGGED_VALUE,
-					                        "when @language is used, @value must be a string" );
+				if ( ! ( rval.isString() ) && result.containsKey ( "@language" ) ) {
+					throw JsonLdError ( Error.INVALID_LANGUAGE_TAGGED_VALUE,
+					                    "when @language is used, @value must be a string" );
 				}
 				// 8.4)
 				else if ( result.containsKey ( "@type" ) ) {
 					// TODO: is this enough for "is an IRI"
-					if ( ! ( result.get ( "@type" ).isString )
+					if ( ! ( result.get ( "@type" ).isString() )
 					        || ( ( String ) result.get ( "@type" ) ).startsWith ( "_:" )
 					        || ! ( ( String ) result.get ( "@type" ) ).contains ( ":" ) ) {
-						throw new JsonLdError ( Error.INVALID_TYPED_VALUE,
-						                        "value of @type must be an IRI" );
+						throw JsonLdError ( Error.INVALID_TYPED_VALUE,
+						                    "value of @type must be an IRI" );
 					}
 				}
 			}
 			// 9)
 			else if ( result.containsKey ( "@type" ) ) {
 				const Object rtype = result.get ( "@type" );
-				if ( ! ( rtype.isList ) ) {
+				if ( ! ( rtype.isList() ) ) {
 					const List<Object> tmp = new ArrayList<Object>();
 					tmp.add ( rtype );
 					result.put ( "@type", tmp );
@@ -869,8 +869,8 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 			else if ( result.containsKey ( "@set" ) || result.containsKey ( "@list" ) ) {
 				// 10.1)
 				if ( result.size() > ( result.containsKey ( "@index" ) ? 2 : 1 ) ) {
-					throw new JsonLdError ( Error.INVALID_SET_OR_LIST_OBJECT,
-					                        "@set or @list may only contain @index" );
+					throw JsonLdError ( Error.INVALID_SET_OR_LIST_OBJECT,
+					                    "@set or @list may only contain @index" );
 				}
 				// 10.2)
 				if ( result.containsKey ( "@set" ) ) {
@@ -886,7 +886,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 			if ( result.containsKey ( "@language" ) && result.size() == 1 )
 				result = null;
 			// 12)
-			if ( activeProperty == null || "@graph".equals ( activeProperty ) ) {
+			if ( activeProperty == null || "@graph"s == ( activeProperty ) ) {
 				// 12.1)
 				if ( result != null
 				        && ( result.size() == 0 || result.containsKey ( "@value" ) || result
@@ -902,7 +902,7 @@ public: Object expand ( Context activeCtx, String activeProperty, Object element
 		// 2) If element is a scalar
 		else {
 			// 2.1)
-			if ( activeProperty == null || "@graph".equals ( activeProperty ) )
+			if ( activeProperty == null || "@graph"s == ( activeProperty ) )
 				return null;
 			return activeCtx.expandValue ( activeProperty, element );
 		}
@@ -944,7 +944,7 @@ public: Object expand ( Context activeCtx, Object element )  {
 	void generateNodeMap ( Object element, Map<String, Object> nodeMap, String activeGraph,
 	                       Object activeSubject, String activeProperty, Map<String, Object> list ) {
 		// 1)
-		if ( element.isList ) {
+		if ( element.isList() ) {
 			// 1.1)
 			for ( const Object item : ( List<Object> ) element )
 				generateNodeMap ( item, nodeMap, activeGraph, activeSubject, activeProperty, list );
@@ -966,7 +966,7 @@ public: Object expand ( Context activeCtx, Object element )  {
 			// 3.1)
 			List<String> oldTypes;
 			const List<String> newTypes = new ArrayList<String>();
-			if ( elem.get ( "@type" ).isList )
+			if ( elem.get ( "@type" ).isList() )
 				oldTypes = ( List<String> ) elem.get ( "@type" ); else {
 				oldTypes = new ArrayList<String>();
 				oldTypes.add ( ( String ) elem.get ( "@type" ) );
@@ -976,7 +976,7 @@ public: Object expand ( Context activeCtx, Object element )  {
 					newTypes.add ( generateBlankNodeIdentifier ( item ) ); else
 					newTypes.add ( item );
 			}
-			if ( elem.get ( "@type" ).isList )
+			if ( elem.get ( "@type" ).isList() )
 				elem.put ( "@type", newTypes ); else
 				elem.put ( "@type", newTypes.get ( 0 ) );
 		}
@@ -1026,7 +1026,7 @@ public: Object expand ( Context activeCtx, Object element )  {
 			// various tests
 			// node = (Map<String, Object>) graph.get(id);
 			// 6.5)
-			if ( activeSubject.isMap ) {
+			if ( activeSubject.isMap() ) {
 				// 6.5.1)
 				JsonLdUtils.mergeValue ( ( Map<String, Object> ) graph.get ( id ), activeProperty,
 				                         activeSubject );
@@ -1057,7 +1057,7 @@ public: Object expand ( Context activeCtx, Object element )  {
 				const Object elemIndex = elem.remove ( "@index" );
 				if ( node.containsKey ( "@index" ) ) {
 					if ( !JsonLdUtils.deepCompare ( node.get ( "@index" ), elemIndex ) )
-						throw new JsonLdError ( Error.CONFLICTING_INDEXES );
+						throw JsonLdError ( Error.CONFLICTING_INDEXES );
 				} else
 					node.put ( "@index", elemIndex );
 			}
@@ -1265,7 +1265,7 @@ private: void frame ( FramingContext state, Map<String, Object> nodes, Map<Strin
 				const EmbedNode existing = state.embeds.get ( id );
 				embedOn = false;
 
-				if ( existing.parent.isList ) {
+				if ( existing.parent.isList() ) {
 					for ( const Object p : ( List<Object> ) existing.parent ) {
 						if ( JsonLdUtils.compareValues ( output, p ) ) {
 							embedOn = true;
@@ -1324,7 +1324,7 @@ private: void frame ( FramingContext state, Map<String, Object> nodes, Map<Strin
 					for ( const Object item : value ) {
 
 						// recurse into list
-						if ( ( item.isMap )
+						if ( ( item.isMap() )
 						        && ( ( Map<String, Object> ) item ).containsKey ( "@list" ) ) {
 							// add empty list
 							const Map<String, Object> list = newMap();
@@ -1390,7 +1390,7 @@ private: void frame ( FramingContext state, Map<String, Object> nodes, Map<Strin
 						Object def = "@null";
 						if ( propertyFrame.containsKey ( "@default" ) )
 							def = JsonLdUtils.clone ( propertyFrame.get ( "@default" ) );
-						if ( ! ( def.isList ) ) {
+						if ( ! ( def.isList() ) ) {
 							const List<Object> tmp = new ArrayList<Object>();
 							tmp.add ( def );
 							def = tmp;
@@ -1410,11 +1410,11 @@ private: void frame ( FramingContext state, Map<String, Object> nodes, Map<Strin
 
 private: Boolean getFrameFlag ( Map<String, Object> frame, String name, boolean thedefault ) {
 		Object value = frame.get ( name );
-		if ( value.isList ) {
+		if ( value.isList() ) {
 			if ( ( ( List<Object> ) value ).size() > 0 )
 				value = ( ( List<Object> ) value ).get ( 0 );
 		}
-		if ( value.isMap && ( ( Map<String, Object> ) value ).containsKey ( "@value" ) )
+		if ( value.isMap() && ( ( Map<String, Object> ) value ).containsKey ( "@value" ) )
 			value = ( ( Map<String, Object> ) value ).get ( "@value" );
 		if ( value.isBoolean )
 			return ( Boolean ) value;
@@ -1446,7 +1446,7 @@ private: static void removeEmbed ( FramingContext state, String id ) {
 			const List<Object> oldvals = ( List<Object> ) ( ( Map<String, Object> ) parent )
 			                             .get ( property );
 			for ( const Object v : oldvals ) {
-				if ( v.isMap && Obj.equals ( ( ( Map<String, Object> ) v ).get ( "@id" ), id ) )
+				if ( v.isMap() && Obj.equals ( ( ( Map<String, Object> ) v ).get ( "@id" ), id ) )
 					newvals.add ( node ); else
 					newvals.add ( v );
 			}
@@ -1461,7 +1461,7 @@ private: static void removeDependents ( Map<String, EmbedNode> embeds, String id
 		for ( const String id_dep : embeds.keySet() ) {
 			const EmbedNode e = embeds.get ( id_dep );
 			const Object p = e.parent != null ? e.parent : newMap();
-			if ( ! ( p.isMap ) )
+			if ( ! ( p.isMap() ) )
 				continue;
 			const String pid = ( String ) ( ( Map<String, Object> ) p ).get ( "@id" );
 			if ( Obj.equals ( id, pid ) ) {
@@ -1482,32 +1482,27 @@ private: Map<String, Object> filterNodes ( FramingContext state, Map<String, Obj
 		return rval;
 	}
 
-private: boolean filterNode ( FramingContext state, Map<String, Object> node,
-	                              Map<String, Object> frame )  {
-		const Object types = frame.get ( "@type" );
-		if ( types != null ) {
-			if ( ! ( types.isList ) )
-				throw new JsonLdError ( Error.SYNTAX_ERROR, "frame @type must be an array" );
+private: boolean filterNode ( FramingContext state, Map<String, Object> node, Map<String, Object> frame )  {
+		Object types;// = frame.get ( "@type" );
+		//		if ( types != null ) {
+		if ( frame.get ( "@type", types ) ) {
+			if ( !  types.isList()  ) throw JsonLdError ( Error.SYNTAX_ERROR, "frame @type must be an array" );
 			Object nodeTypes = node.get ( "@type" );
-			if ( nodeTypes == null )
-				nodeTypes = new ArrayList<Object>(); else if ( ! ( nodeTypes.isList ) )
-				throw new JsonLdError ( Error.SYNTAX_ERROR, "node @type must be an array" );
-			if ( ( ( List<Object> ) types ).size() == 1 && ( ( List<Object> ) types ).get ( 0 ).isMap
-			        && ( ( Map<String, Object> ) ( ( List<Object> ) types ).get ( 0 ) ).size() == 0 )
-				return ! ( ( List<Object> ) nodeTypes ).isEmpty(); else {
-				for ( const Object i : ( List<Object> ) nodeTypes ) {
-					for ( const Object j : ( List<Object> ) types ) {
-						if ( JsonLdUtils.deepCompare ( i, j ) )
-							return true;
-					}
-				}
+			if ( nodeTypes == null ) nodeTypes = new ArrayList<Object>();
+			else if ( ! ( nodeTypes.isList() ) ) throw JsonLdError ( Error.SYNTAX_ERROR, "node @type must be an array" );
+			if (  types.list() .size() == 1 &&  types.list().get ( 0 ) .isMap()
+			        && types.list().get ( 0 ).map().size() == 0 )
+				return ! nodeTypes.list() .isEmpty();
+			else {
+				for ( const Object i : ( List<Object> ) nodeTypes )
+					for ( const Object j : ( List<Object> ) types )
+						if ( JsonLdUtils.deepCompare ( i, j ) ) return true;
 				return false;
 			}
 		} else {
-			for ( const String key : frame.keySet() ) {
-				if ( "@id".equals ( key ) || !isKeyword ( key ) && ! ( node.containsKey ( key ) ) )
+			for ( const String key : frame.keySet() )
+				if ( "@id"s == ( key ) || !isKeyword ( key ) && ! ( node.containsKey ( key ) ) )
 					return false;
-			}
 			return true;
 		}
 	}
@@ -1526,7 +1521,7 @@ private: boolean filterNode ( FramingContext state, Map<String, Object> node,
 	*/
 private: static void addFrameOutput ( FramingContext state, Object parent, String property,
 	                                      Object output ) {
-		if ( parent.isMap ) {
+		if ( parent.isMap() ) {
 			List<Object> prop = ( List<Object> ) ( ( Map<String, Object> ) parent ).get ( property );
 			if ( prop == null ) {
 				prop = new ArrayList<Object>();
@@ -1632,17 +1627,17 @@ private: class NodeMapNode : public LinkedHashMap<String, Object> {
 			int keys = 0;
 			if ( containsKey ( RDF_FIRST ) ) {
 				keys++;
-				if ( ! ( get ( RDF_FIRST ).isList && ( ( List<Object> ) get ( RDF_FIRST ) ).size() == 1 ) )
+				if ( ! ( get ( RDF_FIRST ).isList() && ( ( List<Object> ) get ( RDF_FIRST ) ).size() == 1 ) )
 					return false;
 			}
 			if ( containsKey ( RDF_REST ) ) {
 				keys++;
-				if ( ! ( get ( RDF_REST ).isList && ( ( List<Object> ) get ( RDF_REST ) ).size() == 1 ) )
+				if ( ! ( get ( RDF_REST ).isList() && ( ( List<Object> ) get ( RDF_REST ) ).size() == 1 ) )
 					return false;
 			}
 			if ( containsKey ( "@type" ) ) {
 				keys++;
-				if ( ! ( get ( "@type" ).isList && ( ( List<Object> ) get ( "@type" ) ).size() == 1 )
+				if ( ! ( get ( "@type" ).isList() && ( ( List<Object> ) get ( "@type" ) ).size() == 1 )
 				        && RDF_LIST.equals ( ( ( List<Object> ) get ( "@type" ) ).get ( 0 ) ) )
 					return false;
 			}
@@ -1690,7 +1685,7 @@ public: List<Object> fromRDF ( const RDFDataset dataset )  {
 				nodeMap = graphMap.get ( name );
 
 			// 3.3)
-			if ( !"@default".equals ( name ) && !Obj.contains ( defaultGraph, name ) )
+			if ( !"@default"s == ( name ) && !Obj.contains ( defaultGraph, name ) )
 				defaultGraph.put ( name, new NodeMapNode ( name ) );
 
 			// 3.5)
@@ -1889,7 +1884,7 @@ public: Object normalize ( Map<String, Object> dataset )  {
 		for ( String graphName : dataset.keySet() ) {
 			const List<Map<String, Object>> triples = ( List<Map<String, Object>> ) dataset
 			                             .get ( graphName );
-			if ( "@default".equals ( graphName ) )
+			if ( "@default"s == ( graphName ) )
 				graphName = null;
 			for ( const Map<String, Object> quad : triples ) {
 				if ( graphName != null ) {
@@ -1910,8 +1905,8 @@ public: Object normalize ( Map<String, Object> dataset )  {
 				const String[] attrs = new String[] { "subject", "object", "name" };
 				for ( const String attr : attrs ) {
 					if ( quad.containsKey ( attr )
-					        && "blank node".equals ( ( ( Map<String, Object> ) quad.get ( attr ) )
-					                                 .get ( "type" ) ) ) {
+					        && "blank node"s == ( ( ( Map<String, Object> ) quad.get ( attr ) )
+					                              .get ( "type" ) ) ) {
 						const String id = ( String ) ( ( Map<String, Object> ) quad.get ( attr ) )
 						                  .get ( "value" );
 						if ( !bnodes.containsKey ( id ) ) {

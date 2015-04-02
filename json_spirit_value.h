@@ -20,7 +20,8 @@
 #include <boost/cstdint.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/variant.hpp>
-
+#include "defs.h"
+#include "Context.h"
 // comment out the value types you don't need to reduce build times and intermediate file sizes
 //#define JSON_SPIRIT_VALUE_ENABLED
 //#define JSON_SPIRIT_WVALUE_ENABLED
@@ -28,7 +29,7 @@
 //#define JSON_SPIRIT_WMVALUE_ENABLED
 
 namespace json_spirit {
-enum Value_type { obj_type, array_type, str_type, bool_type, int_type, real_type, null_type };
+enum Value_type { context_type, obj_type, array_type, str_type, bool_type, int_type, real_type, null_type };
 static std::string value_type_to_string ( Value_type vtype );
 //    struct Null{};
 template<class Config>    // Config determines whether the value uses std::string or std::wstring and
@@ -45,6 +46,7 @@ public:
 	Value_impl ( Const_str_ptr      value );
 	Value_impl ( const String_type& value );
 	Value_impl ( const Object&      value );
+	Value_impl ( const Context& value );
 	Value_impl ( const Array&       value );
 	Value_impl ( bool               value );
 	Value_impl ( int                value );
@@ -53,17 +55,32 @@ public:
 	Value_impl ( double             value );
 	Value_impl ( const Null& ) : Value_impl() {}
 
-	bool isMap()const{return type()==obj_type;}
-	bool isList()const{return type()==array_type;}
-	bool isString()const{return type()==str_type;}
-	bool isBoolean()const{return type()==bool_type;}
-	bool isInt()const{return type()==int_type;}
-	bool isDouble()const{return type()==real_type;}
+	bool isMap() const {
+		return type() == obj_type || type() == context_type;
+	}
+	bool isContext() const {
+		return type() == context_type;
+	}
+	bool isList() const {
+		return type() == array_type;
+	}
+	bool isString() const {
+		return type() == str_type;
+	}
+	bool isBoolean() const {
+		return type() == bool_type;
+	}
+	bool isInt() const {
+		return type() == int_type;
+	}
+	bool isDouble() const {
+		return type() == real_type;
+	}
 
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
-	template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
-	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant ); // constructor for compatible variant types
+	template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
+	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant ); // constructor for compatible variant types
 	Value_impl ( const Value_impl& other );
 
 	bool operator== ( const Value_impl& lhs ) const;
@@ -81,6 +98,7 @@ public:
 
 	inline const String_type& get_str()    const;
 	inline const Object&      get_obj()    const;
+	inline const Context&     get_context()    const;
 	inline const Array&       get_array()  const;
 	inline bool               get_bool()   const;
 	inline int                get_int()    const;
@@ -94,6 +112,9 @@ public:
 		return get_str();
 	}
 	inline const Object&      obj()    const {
+		return get_obj();
+	}
+	inline const Context&     obj()    const {
 		return get_obj();
 	}
 	inline const Array&       array()  const {
@@ -114,20 +135,12 @@ public:
 	inline Object& 		  obj() {
 		return get_obj();
 	}
-	inline Array&  		  array() {return get_array();	}
-	inline Array&  		  list() {return get_array();	}
-
-	//        operator const String_type&() const { return get_str(); }
-	//        operator const Object&() const { return get_obj(); }
-	//        operator const Array&() const { return get_array(); }
-	//        operator bool() const { return get_bool(); }
-	//        operator int() const { return get_int(); }
-	//        operator boost::int64_t() const { return get_int64(); }
-	//        operator boost::uint64_t() const { return get_uint64(); }
-	//        operator double() const { return get_real(); }
-	//        operator map_t<String, Object>&() { return get_obj(); }
-	//        operator const map_t<String, Object>&() const { return get_obj(); }
-	//        operator Array&() { return get_array(); }
+	inline Array&  		  array() {
+		return get_array();
+	}
+	inline Array&  		  list() {
+		return get_array();
+	}
 
 	template<typename T> T get_value() const;  // example usage: int    i = value.get_value< int >();
 	// or             double d = value.get_value< double >();
@@ -136,7 +149,7 @@ public:
 
 private:
 	void check_type ( const Value_type vtype ) const;
-	typedef boost::variant<boost::recursive_wrapper<Object>, boost::recursive_wrapper<Array>,
+	typedef boost::variant<boost::recursive_wrapper<Context>, boost::recursive_wrapper<Object>, boost::recursive_wrapper<Array>,
 	        String_type, bool, boost::int64_t, double, Null, boost::uint64_t> Variant;
 	Variant v_;
 	class Variant_converter_visitor : public boost::static_visitor<Variant> {
@@ -283,167 +296,82 @@ Value_impl<Config>::Value_impl()
 	:   v_ ( Null() ) {
 }
 
-template<class Config>
-Value_impl<Config>::Value_impl ( const Const_str_ptr value )
-	:  v_ ( String_type ( value ) ) {
-}
+template<class Config> Value_impl<Config>::Value_impl ( const Const_str_ptr value ) :  v_ ( String_type ( value ) ) { }
+template<class Config> Value_impl<Config>::Value_impl ( const String_type& value ) :   v_ ( value ) { }
+template<class Config> Value_impl<Config>::Value_impl ( const Object& value ) :   v_ ( value ) { }
+template<class Config> Value_impl<Config>::Value_impl ( const Array& value ) :   v_ ( value ) { }
+template<class Config> Value_impl<Config>::Value_impl ( bool value ) :   v_ ( value ) { }
+template<class Config> Value_impl<Config>::Value_impl ( int value ) :   v_ ( static_cast<boost::int64_t> ( value ) ) { }
+template<class Config> Value_impl<Config>::Value_impl ( boost::int64_t value ) :   v_ ( value ) { }
+template<class Config> Value_impl<Config>::Value_impl ( boost::uint64_t value ) :   v_ ( value ) { }
+template<class Config> Value_impl<Config>::Value_impl ( double value ) :   v_ ( value ) { }
+template<class Config> Value_impl<Config>::Value_impl ( const Value_impl<Config>& other ) :   v_ ( other.v_ ) { }
 
-template<class Config>
-Value_impl<Config>::Value_impl ( const String_type& value )
-	:   v_ ( value ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( const Object& value )
-	:   v_ ( value ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( const Array& value )
-	:   v_ ( value ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( bool value )
-	:   v_ ( value ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( int value )
-	:   v_ ( static_cast<boost::int64_t> ( value ) ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( boost::int64_t value )
-	:   v_ ( value ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( boost::uint64_t value )
-	:   v_ ( value ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( double value )
-	:   v_ ( value ) {
-}
-
-template<class Config>
-Value_impl<Config>::Value_impl ( const Value_impl<Config>& other )
-	:   v_ ( other.v_ ) {
-}
-
-template<class Config>
-template<class Iter>
-Value_impl<Config>::Value_impl ( Iter first, Iter last )
-	:   v_ ( Array ( first, last ) ) {
-}
-
-template<class Config>
-template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
-Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant )
+template<class Config> template<class Iter> Value_impl<Config>::Value_impl ( Iter first, Iter last ) :   v_ ( Array ( first, last ) ) { }
+template<class Config> template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
+Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant )
 	:   v_ ( boost::apply_visitor ( Variant_converter_visitor(), variant ) ) {
 }
 
-template<class Config>
-Value_impl<Config>& Value_impl<Config>::operator= ( const Value_impl& lhs ) {
+template<class Config> Value_impl<Config>& Value_impl<Config>::operator= ( const Value_impl& lhs ) {
 	Value_impl tmp ( lhs );
-
 	std::swap ( v_, tmp.v_ );
-
 	return *this;
 }
 
-template<class Config>
-bool Value_impl<Config>::operator== ( const Value_impl& lhs ) const {
+template<class Config> bool Value_impl<Config>::operator== ( const Value_impl& lhs ) const {
 	if ( this == &lhs ) return true;
-
 	if ( type() != lhs.type() ) return false;
-
 	return v_ == lhs.v_;
 }
 
-template<class Config>
-Value_type Value_impl<Config>::type() const {
-	if ( is_uint64() )
-		return int_type;
-
+template<class Config> Value_type Value_impl<Config>::type() const {
+	if ( is_uint64() ) return int_type;
 	return static_cast<Value_type> ( v_.which() );
 }
 
-template<class Config>
-bool Value_impl<Config>::is_uint64() const {
+template<class Config> bool Value_impl<Config>::is_uint64() const {
 	return v_.which() == null_type + 1;
 }
-
-template<class Config>
-bool Value_impl<Config>::is_null() const {
+template<class Config> bool Value_impl<Config>::is_null() const {
 	return type() == null_type;
 }
-
-template<class Config>
-void Value_impl<Config>::check_type ( const Value_type vtype ) const {
+template<class Config> void Value_impl<Config>::check_type ( const Value_type vtype ) const {
 	if ( type() != vtype ) {
 		std::ostringstream os;
-
 		os << "get_value< " << value_type_to_string ( vtype ) << " > called on " << value_type_to_string ( type() ) << " Value";
-
 		throw std::runtime_error ( os.str() );
 	}
 }
 
-template<class Config>
-const typename Config::String_type& Value_impl<Config>::get_str() const {
+template<class Config> const typename Config::String_type& Value_impl<Config>::get_str() const {
 	check_type ( str_type );
-
 	return *boost::get<String_type> ( &v_ );
 }
-
-template<class Config>
-const typename Value_impl<Config>::Object& Value_impl<Config>::get_obj() const {
+template<class Config> const typename Value_impl<Config>::Object& Value_impl<Config>::get_obj() const {
 	check_type ( obj_type );
-
 	return *boost::get<Object> ( &v_ );
 }
-
-template<class Config>
-const typename Value_impl<Config>::Array& Value_impl<Config>::get_array() const {
+template<class Config> const typename Value_impl<Config>::Array& Value_impl<Config>::get_array() const {
 	check_type ( array_type );
-
 	return *boost::get<Array> ( &v_ );
 }
-
-template<class Config>
-bool Value_impl<Config>::get_bool() const {
+template<class Config> bool Value_impl<Config>::get_bool() const {
 	check_type ( bool_type );
-
 	return boost::get<bool> ( v_ );
 }
-
-template<class Config>
-int Value_impl<Config>::get_int() const {
+template<class Config> int Value_impl<Config>::get_int() const {
 	check_type ( int_type );
-
 	return static_cast<int> ( get_int64() );
 }
-
-template<class Config>
-boost::int64_t Value_impl<Config>::get_int64() const {
+template<class Config> boost::int64_t Value_impl<Config>::get_int64() const {
 	check_type ( int_type );
-
-	if ( is_uint64() )
-		return static_cast<boost::int64_t> ( get_uint64() );
-
+	if ( is_uint64() ) return static_cast<boost::int64_t> ( get_uint64() );
 	return boost::get<boost::int64_t> ( v_ );
 }
-
-template<class Config>
-boost::uint64_t Value_impl<Config>::get_uint64() const {
+template<class Config> boost::uint64_t Value_impl<Config>::get_uint64() const {
 	check_type ( int_type );
-
-	if ( !is_uint64() )
-		return static_cast<boost::uint64_t> ( get_int64() );
-
+	if ( !is_uint64() ) return static_cast<boost::uint64_t> ( get_int64() );
 	return boost::get<boost::uint64_t> ( v_ );
 }
 
@@ -555,6 +483,7 @@ T Value_impl<Config>::get_value() const {
 static std::string value_type_to_string ( const Value_type vtype ) {
 	switch ( vtype ) {
 		case obj_type: return "Object";
+		case context_type: return "Context";
 		case array_type: return "Array";
 		case str_type: return "string";
 		case bool_type: return "boolean";
