@@ -463,125 +463,79 @@ private: void initialize ( Object input, Object context_ )  {
 							Map<String, Object> reverse = expandedValue.obj( ) .get ( "@reverse" ).obj();
 							for ( const String property : reverse.keySet() ) {
 								const Object item = reverse.get ( property );
-								// 7.4.11.2.1)
-								if ( !result.containsKey ( property ) ) result.put ( property, new ArrayList<Object>() );
-								// 7.4.11.2.2)
-								if ( item.isList() ) 
-									( ( List<Object> ) result.get ( property ) ) .addAll ( ( List<Object> ) item );
-								else
-									( ( List<Object> ) result.get ( property ) ).add ( item );
+								if ( !result.containsKey ( property ) ) result.put ( property, ArrayList<Object>() ); // 7.4.11.2.1)
+								if ( item.isList() ) result.get ( property ).list() .push_back ( item.list().begin(), item.list().end() ); // 7.4.11.2.2)
+								else result.get ( property ).list().push_back ( item );
 						}
 						// 7.4.11.3)
-						if ( ( ( Map<String, Object> ) expandedValue ).size() > ( ( ( Map<String, Object> ) expandedValue )
-						        .containsKey ( "@reverse" ) ? 1 : 0 ) ) {
-							// 7.4.11.3.1)
-							if ( !result.containsKey ( "@reverse" ) )
-								result.put ( "@reverse", newMap() );
-							// 7.4.11.3.2)
-							const Map<String, Object> reverseMap = ( Map<String, Object> ) result
-							                                       .get ( "@reverse" );
-							// 7.4.11.3.3)
-							for ( const String property : ( ( Map<String, Object> ) expandedValue )
-							        .keySet() ) {
-								if ( "@reverse"s == ( property ) )
-									continue;
-								// 7.4.11.3.3.1)
-								const List<Object> items = ( List<Object> ) ( ( Map<String, Object> ) expandedValue )
-								                           .get ( property );
+						if (  expandedValue.obj().size() > ( expandedValue.obj().containsKey ( "@reverse" ) ? 1 : 0 ) ) {
+							if ( !result.containsKey ( "@reverse" ) ) result.put ( "@reverse", map_t() ); // 7.4.11.3.1)
+							Map<String, Object> reverseMap = result .get ( "@reverse" ).obj(); // 7.4.11.3.2)
+							for ( auto x : expandedValue.map( )) { // 7.4.11.3.3)
+								String property = x.first;
+								if ( "@reverse"s == ( property ) ) continue;
+								List<Object> items = expandedValue.obj( ) .get ( property ).list(); // 7.4.11.3.3.1)
 								for ( const Object item : items ) {
 									// 7.4.11.3.3.1.1)
-									if ( item.isMap
-									        && ( ( ( Map<String, Object> ) item ).containsKey ( "@value" ) || ( ( Map<String, Object> ) item )
-									             .containsKey ( "@list" ) ) )
+									if ( item.isMap() && ( item.obj( ).containsKey ( "@value" ) || item.obj() .containsKey ( "@list" ) ) )
 										throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
-									// 7.4.11.3.3.1.2)
-									if ( !reverseMap.containsKey ( property ) )
-										reverseMap.put ( property, new ArrayList<Object>() );
-									// 7.4.11.3.3.1.3)
-									( ( List<Object> ) reverseMap.get ( property ) ).add ( item );
+									if ( !reverseMap.containsKey ( property ) ) reverseMap.put ( property, ArrayList<Object>() ); // 7.4.11.3.3.1.2)
+									reverseMap.get ( property ).list( ).push_back ( item ); // 7.4.11.3.3.1.3
 								}
 							}
 						}
-						// 7.4.11.4)
-						continue;
+						continue; // 7.4.11.4)
 					}
 					// TODO: SPEC no mention of @explicit etc in spec
-					else if ( "@explicit"s == ( expandedProperty )
-					          || "@default"s == ( expandedProperty )
-					          || "@embed"s == ( expandedProperty )
-					          || "@embedChildren"s == ( expandedProperty )
-					          || "@omitDefault"s == ( expandedProperty ) )
+					else if ( is(expandedProperty, { "@explicit"s, "@default"s, "@embed"s, "@embedChildren"s, "@omitDefault"s }))
 						expandedValue = expand ( activeCtx, expandedProperty, value );
-					// 7.4.12)
-					if ( expandedValue != null )
-						result.put ( expandedProperty, expandedValue );
-					// 7.4.13)
-					continue;
+					if ( expandedValue != null ) result.put ( expandedProperty, expandedValue ); // 7.4.12)
+					continue; // 7.4.13)
 				}
-				// 7.5
-				else if ( "@language"s == ( activeCtx.getContainer ( key ) ) && value.isMap() ) {
-					// 7.5.1)
-					expandedValue = new ArrayList<Object>();
-					// 7.5.2)
-					for ( const String language : ( ( Map<String, Object> ) value ).keySet() ) {
-						Object languageValue = ( ( Map<String, Object> ) value ).get ( language );
-						// 7.5.2.1)
-						if ( ! ( languageValue.isList() ) ) {
-							const Object tmp = languageValue;
-							languageValue = new ArrayList<Object>();
-							( ( List<Object> ) languageValue ).add ( tmp );
+				else if ( "@language"s == ( activeCtx.getContainer ( key ) ) && value.isMap() ) { // 7.5
+					expandedValue = ArrayList<Object>(); // 7.5.1
+					for ( auto x : value.obj( ) ) { // 7.5.2
+						String language = x.first;
+						Object languageValue = value.obj( ).get ( language );
+						if ( ! languageValue.isList() ) { // 7.5.2.1)
+							Object tmp = languageValue;
+							languageValue = ArrayList<Object>();
+							languageValue.list().push_back( tmp );
 						}
-						// 7.5.2.2)
-						for ( const Object item : ( List<Object> ) languageValue ) {
-							// 7.5.2.2.1)
-							if ( ! ( item.isString() ) ) {
-								throw JsonLdError ( Error.INVALID_LANGUAGE_MAP_VALUE, "Expected "
-								                    + item.toString() + " to be a string" );
-							}
+						for ( const Object item : languageValue.list() ) { // 7.5.2.2)
+							if ( ! item.isString() ) // 7.5.2.2.1)
+								throw JsonLdError ( Error.INVALID_LANGUAGE_MAP_VALUE, "Expected " + item.toString() + " to be a string" );
 							// 7.5.2.2.2)
-							const Map<String, Object> tmp = newMap();
+							Map<String, Object> tmp;
 							tmp.put ( "@value", item );
-							tmp.put ( "@language", language.toLowerCase() );
-							( ( List<Object> ) expandedValue ).add ( tmp );
+							tmp.put ( "@language", language.tolower() );
+							expandedValue.list().push_back ( tmp );
 						}
 					}
 				}
 				// 7.6)
 				else if ( "@index"s == ( activeCtx.getContainer ( key ) ) && value.isMap() ) {
-					// 7.6.1)
-					expandedValue = new ArrayList<Object>();
-					// 7.6.2)
-					const List<String> indexKeys = new ArrayList<String> (
-					    ( ( Map<String, Object> ) value ).keySet() );
-					Collections.sort ( indexKeys );
-					for ( const String index : indexKeys ) {
-						Object indexValue = ( ( Map<String, Object> ) value ).get ( index );
-						// 7.6.2.1)
-						if ( ! ( indexValue.isList() ) ) {
-							const Object tmp = indexValue;
-							indexValue = new ArrayList<Object>();
-							( ( List<Object> ) indexValue ).add ( tmp );
+					expandedValue = ArrayList<Object>(); // 7.6.1
+//					List<String> indexKeys = ArrayList<String> ( value().obj().keySet() ); // 7.6.2
+//					Collections.sort ( indexKeys );
+					for ( auto x : value.obj()) {  //const String index : indexKeys ) {
+						String index = x.first;
+						Object indexValue = x.second;//( ( Map<String, Object> ) value ).get ( index );
+						if ( ! indexValue.isList() ) { // 7.6.2.1
+							Object tmp = indexValue;
+							indexValue = ArrayList<Object>();
+							indexValue.list( ).push_back ( tmp );
 						}
-						// 7.6.2.2)
-						indexValue = expand ( activeCtx, key, indexValue );
-						// 7.6.2.3)
-						for ( const Map<String, Object> item : ( List<Map<String, Object>> ) indexValue ) {
-							// 7.6.2.3.1)
-							if ( !item.containsKey ( "@index" ) )
-								item.put ( "@index", index );
-							// 7.6.2.3.2)
-							( ( List<Object> ) expandedValue ).add ( item );
+						indexValue = expand ( activeCtx, key, indexValue ); // 7.6.2.2)
+						for ( Map<String, Object> item : ( List<Map<String, Object>> ) indexValue ) { // 7.6.2.3)
+							if ( !item.containsKey ( "@index" ) ) item.put ( "@index", index ); // 7.6.2.3.1)
+							expandedValue.list().push_back ( item ); // 7.6.2.3.2)
 						}
 					}
 				}
-				// 7.7)
-				else
-					expandedValue = expand ( activeCtx, key, value );
-				// 7.8)
-				if ( expandedValue == null )
-					continue;
-				// 7.9)
-				if ( "@list"s == ( activeCtx.getContainer ( key ) ) ) {
+				else expandedValue = expand ( activeCtx, key, value ); // 7.7
+				if ( expandedValue == null ) continue; // 7.8
+				if ( "@list"s == ( activeCtx.getContainer ( key ) ) ) { // 7.9
 					if ( ! ( expandedValue.isMap() )
 					        || ! ( ( Map<String, Object> ) expandedValue ).containsKey ( "@list" ) ) {
 						Object tmp = expandedValue;
@@ -589,53 +543,37 @@ private: void initialize ( Object input, Object context_ )  {
 							tmp = new ArrayList<Object>();
 							( ( List<Object> ) tmp ).add ( expandedValue );
 						}
-						expandedValue = newMap();
-						( ( Map<String, Object> ) expandedValue ).put ( "@list", tmp );
+						expandedValue = map_t();
+						expandedValue.obj( ).put ( "@list", tmp );
 					}
 				}
 				// 7.10)
 				if ( activeCtx.isReverseProperty ( key ) ) {
-					// 7.10.1)
-					if ( !result.containsKey ( "@reverse" ) )
-						result.put ( "@reverse", newMap() );
-					// 7.10.2)
-					const Map<String, Object> reverseMap = ( Map<String, Object> ) result
-					                                       .get ( "@reverse" );
-					// 7.10.3)
-					if ( ! ( expandedValue.isList() ) ) {
-						const Object tmp = expandedValue;
-						expandedValue = new ArrayList<Object>();
-						( ( List<Object> ) expandedValue ).add ( tmp );
+					if ( !result.containsKey ( "@reverse" ) ) result.put ( "@reverse", map_t ); // 7.10.1)
+					Map<String, Object> reverseMap =  result .get ( "@reverse" ).obj(); // 7.10.2)
+					if ( ! expandedValue.isList() ) { // 7.10.3)
+						Object tmp = expandedValue;
+						expandedValue = ArrayList<Object>();
+						expandedValue.list().push_back ( tmp );
 					}
 					// 7.10.4)
 					for ( const Object item : ( List<Object> ) expandedValue ) {
 						// 7.10.4.1)
-						if ( item.isMap
-						        && ( ( ( Map<String, Object> ) item ).containsKey ( "@value" ) || ( ( Map<String, Object> ) item )
-						             .containsKey ( "@list" ) ) )
+						if ( item.isMap() && (  item.obj( ).containsKey ( "@value" ) ||  item.obj() .containsKey ( "@list" ) ) )
 							throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
 						// 7.10.4.2)
-						if ( !reverseMap.containsKey ( expandedProperty ) )
-							reverseMap.put ( expandedProperty, new ArrayList<Object>() );
+						if ( !reverseMap.containsKey ( expandedProperty ) ) reverseMap.put ( expandedProperty, ArrayList<Object>() );
 						// 7.10.4.3)
-						if ( item.isList() ) {
-							( ( List<Object> ) reverseMap.get ( expandedProperty ) )
-							.addAll ( ( List<Object> ) item );
-						} else
-							( ( List<Object> ) reverseMap.get ( expandedProperty ) ).add ( item );
+						if ( item.isList() ) reverseMap.get ( expandedProperty ).list().push_back(item.list().begin(), item.list.end());
+						else reverseMap.get ( expandedProperty ) .list().push_back ( item );
 					}
 				}
-				// 7.11)
-				else {
+				else { // 7.11
 					// 7.11.1)
-					if ( !result.containsKey ( expandedProperty ) )
-						result.put ( expandedProperty, new ArrayList<Object>() );
-					// 7.11.2)
-					if ( expandedValue.isList() ) {
-						( ( List<Object> ) result.get ( expandedProperty ) )
-						.addAll ( ( List<Object> ) expandedValue );
-					} else
-						( ( List<Object> ) result.get ( expandedProperty ) ).add ( expandedValue );
+					if ( !result.containsKey ( expandedProperty ) ) result.put ( expandedProperty, ArrayList<Object>() );
+					// 7.11.2
+					if ( expandedValue.isList() ) result.get ( expandedProperty ).list().push_back(expandedValue.list().begin(), expandedValue.list().end()); 
+					else result.get ( expandedProperty ) list().push_back ( expandedValue );
 				}
 			}
 			// 8)
