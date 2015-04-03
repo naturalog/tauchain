@@ -76,7 +76,7 @@ typedef std::string String;
 typedef bool boolean;
 typedef boost::tribool Boolean;
 
-inline bool is(String s, std::vector<String> v} { return v.find(s) != v.end(); }
+inline bool is(String s, std::vector<String> v) { return v.find(s) != v.end(); }
 
 //typedef std::basic_regex<String> Pattern;
 /*
