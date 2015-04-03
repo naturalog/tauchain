@@ -1,22 +1,20 @@
 #include <iostream>
 #include <iterator>
 #include <string>
-//#include <boost/regex.hpp>
+#include <boost/regex.hpp>
+
 //#include <boost/regex/icu.hpp>
 //#include <regex>
 
 #include "JsonLdUrl.h"
 
-//using namespace std;
-
 //typedef std::wbasic_regex<std::wstring> Pattern;
 //const wchar_t xxx[6] = L"[a-\xEFFFF]";
 //std::wregex pattern(xxx);
 
-
 int main() 
 {
-	JsonLdUrl *r = JsonLdUrl::parse("http://aa.bb/cc#dd");
+	JsonLdUrl *r = JsonLdUrl::parse("http://u:p@caa.bb/cc#dd");
 	r->debugPrint();
 }
 
