@@ -57,7 +57,7 @@ public: JsonLdApi() {
 	               If there is an error initializing using the object and
 	               options.
 	*/
-public: JsonLdApi ( Object input, JsonLdOptions opts )  {
+ JsonLdApi ( Object input, JsonLdOptions opts )  {
 		this ( opts );
 		initialize ( input, null );
 	}
@@ -76,7 +76,7 @@ public: JsonLdApi ( Object input, JsonLdOptions opts )  {
 	               If there is an error initializing using the object and
 	               options.
 	*/
-public: JsonLdApi ( Object input, Object context, JsonLdOptions opts )  {
+ JsonLdApi ( Object input, Object context, JsonLdOptions opts )  {
 		this ( opts );
 		initialize ( input, null );
 	}
@@ -90,7 +90,7 @@ public: JsonLdApi ( Object input, Object context, JsonLdOptions opts )  {
 	    @param opts
 	              The JsonLdOptions to use.
 	*/
-public: JsonLdApi ( JsonLdOptions opts ) {
+ JsonLdApi ( JsonLdOptions opts ) {
 		if ( opts == null )
 			opts = new JsonLdOptions ( "" ); else
 			this.opts = opts;
@@ -146,283 +146,242 @@ private: void initialize ( Object input, Object context_ )  {
 	    @
 	               If there was an error during compaction.
 	*/
-public: Object compact ( Context activeCtx, String activeProperty, Object element,
-	                         boolean compactArrays )  {
-		// 2)
-		if ( element.isList() ) {
-			// 2.1)
-			const List<Object> result = new ArrayList<Object>();
-			// 2.2)
-			for ( const Object item : ( List<Object> ) element ) {
-				// 2.2.1)
-				const Object compactedItem = compact ( activeCtx, activeProperty, item, compactArrays );
-				// 2.2.2)
-				if ( compactedItem != null )
-					result.add ( compactedItem );
+	Object compact ( Context& activeCtx, String& activeProperty, Object& element_, boolean compactArrays )  {
+		if ( element_.isList() ) { // 2
+			List<Object> result, e = element_.list(); // 2.1
+			for ( Object item : e) { // 2.2
+				Object compactedItem = compact ( activeCtx, activeProperty, item, compactArrays ); // 2.2.1
+				if ( compactedItem != null ) result.push_back ( compactedItem ); // 2.2.2
 			}
-			// 2.3)
-			if ( compactArrays && result.size() == 1
-			        && activeCtx.getContainer ( activeProperty ) == null )
-				return result.get ( 0 );
-			// 2.4)
-			return result;
+			return ( compactArrays && result.size() == 1 && activeCtx.getContainer ( activeProperty ) == null ) ? result.get ( 0 ) : return result; // 2.3, 2.4
 		}
 
-		// 3)
-		if ( element.isMap() ) {
-			// access helper
-			const Map<String, Object> elem = ( Map<String, Object> ) element;
+		if ( !element.isMap() ) return _element; // 1
+		map_t elem = element_.obj(); // 3
+		if ( elem.containsKey ( "@value" ) || elem.containsKey ( "@id" ) ) { // 4
+			Object compactedValue = activeCtx.compactValue ( activeProperty, elem );
+			if ( ! ( compactedValue.isMap() || compactedValue.isList() ) )
+				return compactedValue;
+		}
+		const boolean insideReverse = ( "@reverse"s == activeProperty ); // 5
+		Map<String, Object> result; //6
+		for ( auto x : elem ) { // 7
+			String expandedProperty = x.first;
+			Object expandedValue = x.second; //elem.get ( expandedProperty );
 
-			// 4
-			if ( elem.containsKey ( "@value" ) || elem.containsKey ( "@id" ) ) {
-				const Object compactedValue = activeCtx.compactValue ( activeProperty, elem );
-				if ( ! ( compactedValue.isMap() || compactedValue.isList() ) )
-					return compactedValue;
+			if ( is(expandedProperty, { "@id"s, "@type"s}) ) { // 7.1
+				Object compactedValue;
+				if ( expandedValue.isString() ) // 7.1.1
+					compactedValue = activeCtx.compactIri ( expandedValue.str(), "@type"s == expandedProperty );
+				else { // 7.1.2
+					List<Object/*String*/> types;
+					for ( Object/*String*/ expandedType : expandedValue.list() )// 7.1.2.2)
+						types.push_back ( activeCtx.compactIri ( expandedType, true ) );
+					if ( types.size() == 1 ) compactedValue = types.get ( 0 ); // 7.1.2.3)
+					else compactedValue = types;
+				}
+				const String alias = activeCtx.compactIri ( expandedProperty, true );// 7.1.3)
+				result.put ( alias, compactedValue );// 7.1.4)
+				continue;
+				// TODO: old add value code, see if it's still relevant?
+				// addValue(rval, alias, compactedValue,
+				// isArray(compactedValue)
+				// && ((List<Object>) expandedValue).size() == 0);
 			}
-			// 5)
-			const boolean insideReverse = ( "@reverse"s == ( activeProperty ) );
 
-			// 6)
-			const Map<String, Object> result = newMap();
-			// 7)
-			const List<String> keys = new ArrayList<String> ( elem.keySet() );
-			Collections.sort ( keys );
-			for ( const String expandedProperty : keys ) {
-				const Object expandedValue = elem.get ( expandedProperty );
-
-				// 7.1)
-				if ( "@id"s == ( expandedProperty ) || "@type"s == ( expandedProperty ) ) {
-					Object compactedValue;
-
-					// 7.1.1)
-					if ( expandedValue.isString() ) {
-						compactedValue = activeCtx.compactIri ( ( String ) expandedValue,
-						                                        "@type"s == ( expandedProperty ) );
-					}
-					// 7.1.2)
-					else {
-						const List<String> types = new ArrayList<String>();
-						// 7.1.2.2)
-						for ( const String expandedType : ( List<String> ) expandedValue )
-							types.add ( activeCtx.compactIri ( expandedType, true ) );
-						// 7.1.2.3)
-						if ( types.size() == 1 )
-							compactedValue = types.get ( 0 ); else
-							compactedValue = types;
-					}
-
-					// 7.1.3)
-					const String alias = activeCtx.compactIri ( expandedProperty, true );
-					// 7.1.4)
-					result.put ( alias, compactedValue );
-					continue;
-					// TODO: old add value code, see if it's still relevant?
-					// addValue(rval, alias, compactedValue,
-					// isArray(compactedValue)
-					// && ((List<Object>) expandedValue).size() == 0);
-				}
-
-				// 7.2)
-				if ( "@reverse"s == ( expandedProperty ) ) {
-					// 7.2.1)
-					const Map<String, Object> compactedValue = ( Map<String, Object> ) compact (
-					            activeCtx, "@reverse", expandedValue, compactArrays );
-
-					// 7.2.2)
-					// Note: Must create a new set to avoid modifying the set we
-					// are iterating over
-					for ( const String property : new HashSet<String> ( compactedValue.keySet() ) ) {
-						const Object value = compactedValue.get ( property );
-						// 7.2.2.1)
-						if ( activeCtx.isReverseProperty ( property ) ) {
-							// 7.2.2.1.1)
-							if ( ( "@set"s == ( activeCtx.getContainer ( property ) ) || !compactArrays )
-							        && ! ( value.isList() ) ) {
-								const List<Object> tmp = new ArrayList<Object>();
-								tmp.add ( value );
-								result.put ( property, tmp );
-							}
-							// 7.2.2.1.2)
-							if ( !result.containsKey ( property ) )
-								result.put ( property, value );
-							// 7.2.2.1.3)
-							else {
-								if ( ! ( result.get ( property ).isList() ) ) {
-									const List<Object> tmp = new ArrayList<Object>();
-									tmp.add ( result.put ( property, tmp ) );
-								}
-								if ( value.isList() ) {
-									( ( List<Object> ) result.get ( property ) )
-									.addAll ( ( List<Object> ) value );
-								} else
-									( ( List<Object> ) result.get ( property ) ).add ( value );
-							}
-							// 7.2.2.1.4)
-							compactedValue.remove ( property );
-						}
-					}
-					// 7.2.3)
-					if ( !compactedValue.isEmpty() ) {
-						// 7.2.3.1)
-						const String alias = activeCtx.compactIri ( "@reverse", true );
-						// 7.2.3.2)
-						result.put ( alias, compactedValue );
-					}
-					// 7.2.4)
-					continue;
-				}
-
-				// 7.3)
-				if ( "@index"s == ( expandedProperty )
-				        && "@index"s == ( activeCtx.getContainer ( activeProperty ) ) )
-					continue;
-				// 7.4)
-				else if ( "@index"s == ( expandedProperty ) || "@value"s == ( expandedProperty )
-				          || "@language"s == ( expandedProperty ) ) {
-					// 7.4.1)
-					const String alias = activeCtx.compactIri ( expandedProperty, true );
-					// 7.4.2)
-					result.put ( alias, expandedValue );
-					continue;
-				}
-
-				// NOTE: expanded value must be an array due to expansion
-				// algorithm.
-
-				// 7.5)
-				if ( ( ( List<Object> ) expandedValue ).size() == 0 ) {
-					// 7.5.1)
-					const String itemActiveProperty = activeCtx.compactIri ( expandedProperty,
-					                                  expandedValue, true, insideReverse );
-					// 7.5.2)
-					if ( !result.containsKey ( itemActiveProperty ) )
-						result.put ( itemActiveProperty, new ArrayList<Object>() ); else {
-						const Object value = result.get ( itemActiveProperty );
-						if ( ! ( value.isList() ) ) {
+			
+			if ( "@reverse"s == expandedProperty ) {// 7.2)
+				Map<String, Object> compactedValue = compact ( activeCtx, "@reverse", expandedValue, compactArrays ).obj();// 7.2.1)
+				// Note: Must create a new set to avoid modifying the set we
+				// are iterating over
+				for ( const String property : new HashSet<String> ( compactedValue.keySet() ) ) {// 7.2.2)
+					const Object value = compactedValue.get ( property );
+					// 7.2.2.1)
+					if ( activeCtx.isReverseProperty ( property ) ) {
+						// 7.2.2.1.1)
+						if ( ( "@set"s == ( activeCtx.getContainer ( property ) ) || !compactArrays )
+						        && ! ( value.isList() ) ) {
 							const List<Object> tmp = new ArrayList<Object>();
 							tmp.add ( value );
-							result.put ( itemActiveProperty, tmp );
+							result.put ( property, tmp );
 						}
+						// 7.2.2.1.2)
+						if ( !result.containsKey ( property ) )
+							result.put ( property, value );
+						// 7.2.2.1.3)
+						else {
+							if ( ! ( result.get ( property ).isList() ) ) {
+								const List<Object> tmp = new ArrayList<Object>();
+								tmp.add ( result.put ( property, tmp ) );
+							}
+							if ( value.isList() ) {
+								( ( List<Object> ) result.get ( property ) )
+								.addAll ( ( List<Object> ) value );
+							} else
+								( ( List<Object> ) result.get ( property ) ).add ( value );
+						}
+						// 7.2.2.1.4)
+						compactedValue.remove ( property );
 					}
 				}
+				// 7.2.3)
+				if ( !compactedValue.isEmpty() ) {
+					// 7.2.3.1)
+					const String alias = activeCtx.compactIri ( "@reverse", true );
+					// 7.2.3.2)
+					result.put ( alias, compactedValue );
+				}
+				// 7.2.4)
+				continue;
+			}
 
-				// 7.6)
-				for ( const Object expandedItem : ( List<Object> ) expandedValue ) {
-					// 7.6.1)
-					const String itemActiveProperty = activeCtx.compactIri ( expandedProperty,
-					                                  expandedItem, true, insideReverse );
-					// 7.6.2)
-					const String container = activeCtx.getContainer ( itemActiveProperty );
+			// 7.3)
+			if ( "@index"s == ( expandedProperty )
+			        && "@index"s == ( activeCtx.getContainer ( activeProperty ) ) )
+				continue;
+			// 7.4)
+			else if ( "@index"s == ( expandedProperty ) || "@value"s == ( expandedProperty )
+			          || "@language"s == ( expandedProperty ) ) {
+				// 7.4.1)
+				const String alias = activeCtx.compactIri ( expandedProperty, true );
+				// 7.4.2)
+				result.put ( alias, expandedValue );
+				continue;
+			}
 
-					// get @list value if appropriate
-					const boolean isList = ( expandedItem.isMap() && ( ( Map<String, Object> ) expandedItem )
-					                         .containsKey ( "@list" ) );
-					Object list = null;
-					if ( isList )
-						list = ( ( Map<String, Object> ) expandedItem ).get ( "@list" );
+			// NOTE: expanded value must be an array due to expansion
+			// algorithm.
 
-					// 7.6.3)
-					Object compactedItem = compact ( activeCtx, itemActiveProperty, isList ? list
-					                                 : expandedItem, compactArrays );
-
-					// 7.6.4)
-					if ( isList ) {
-						// 7.6.4.1)
-						if ( ! ( compactedItem.isList() ) ) {
-							const List<Object> tmp = new ArrayList<Object>();
-							tmp.add ( compactedItem );
-							compactedItem = tmp;
-						}
-						// 7.6.4.2)
-						if ( !"@list"s == ( container ) ) {
-							// 7.6.4.2.1)
-							const Map<String, Object> wrapper = newMap();
-							// TODO: SPEC: no mention of vocab = true
-							wrapper.put ( activeCtx.compactIri ( "@list", true ), compactedItem );
-							compactedItem = wrapper;
-
-							// 7.6.4.2.2)
-							if ( ( ( Map<String, Object> ) expandedItem ).containsKey ( "@index" ) ) {
-								( ( Map<String, Object> ) compactedItem ).put (
-								    // TODO: SPEC: no mention of vocab =
-								    // true
-								    activeCtx.compactIri ( "@index", true ),
-								    ( ( Map<String, Object> ) expandedItem ).get ( "@index" ) );
-							}
-						}
-						// 7.6.4.3)
-						else if ( result.containsKey ( itemActiveProperty ) ) {
-							throw JsonLdError ( Error.COMPACTION_TO_LIST_OF_LISTS,
-							                    "There cannot be two list objects associated with an active property that has a container mapping" );
-						}
-					}
-
-					// 7.6.5)
-					if ( "@language"s == ( container ) || "@index"s == ( container ) ) {
-						// 7.6.5.1)
-						Map<String, Object> mapObject;
-						if ( result.containsKey ( itemActiveProperty ) )
-							mapObject = ( Map<String, Object> ) result.get ( itemActiveProperty ); else {
-							mapObject = newMap();
-							result.put ( itemActiveProperty, mapObject );
-						}
-
-						// 7.6.5.2)
-						if ( "@language"s == ( container )
-						        && ( compactedItem.isMap() && ( ( Map<String, Object> ) compactedItem )
-						             .containsKey ( "@value" ) ) )
-							compactedItem = ( ( Map<String, Object> ) compactedItem ).get ( "@value" );
-
-						// 7.6.5.3)
-						const String mapKey = ( String ) ( ( Map<String, Object> ) expandedItem )
-						                      .get ( container );
-						// 7.6.5.4)
-						if ( !mapObject.containsKey ( mapKey ) )
-							mapObject.put ( mapKey, compactedItem ); else {
-							List<Object> tmp;
-							if ( ! ( mapObject.get ( mapKey ).isList() ) ) {
-								tmp = new ArrayList<Object>();
-								tmp.add ( mapObject.put ( mapKey, tmp ) );
-							} else
-								tmp = ( List<Object> ) mapObject.get ( mapKey );
-							tmp.add ( compactedItem );
-						}
-					}
-					// 7.6.6)
-					else {
-						// 7.6.6.1)
-						const Boolean check = ( !compactArrays || "@set"s == ( container )
-						                        || "@list"s == ( container ) || "@list"s == ( expandedProperty ) || "@graph"
-						                        .equals ( expandedProperty ) )
-						                      && ( ! ( compactedItem.isList() ) );
-						if ( check ) {
-							const List<Object> tmp = new ArrayList<Object>();
-							tmp.add ( compactedItem );
-							compactedItem = tmp;
-						}
-						// 7.6.6.2)
-						if ( !result.containsKey ( itemActiveProperty ) )
-							result.put ( itemActiveProperty, compactedItem ); else {
-							if ( ! ( result.get ( itemActiveProperty ).isList() ) ) {
-								const List<Object> tmp = new ArrayList<Object>();
-								tmp.add ( result.put ( itemActiveProperty, tmp ) );
-							}
-							if ( compactedItem.isList() ) {
-								( ( List<Object> ) result.get ( itemActiveProperty ) )
-								.addAll ( ( List<Object> ) compactedItem );
-							} else
-								( ( List<Object> ) result.get ( itemActiveProperty ) ).add ( compactedItem );
-						}
-
+			// 7.5)
+			if ( ( ( List<Object> ) expandedValue ).size() == 0 ) {
+				// 7.5.1)
+				const String itemActiveProperty = activeCtx.compactIri ( expandedProperty,
+				                                  expandedValue, true, insideReverse );
+				// 7.5.2)
+				if ( !result.containsKey ( itemActiveProperty ) )
+					result.put ( itemActiveProperty, new ArrayList<Object>() ); else {
+					const Object value = result.get ( itemActiveProperty );
+					if ( ! ( value.isList() ) ) {
+						const List<Object> tmp = new ArrayList<Object>();
+						tmp.add ( value );
+						result.put ( itemActiveProperty, tmp );
 					}
 				}
 			}
-			// 8)
-			return result;
-		}
 
-		// 2)
-		return element;
+			// 7.6)
+			for ( const Object expandedItem : ( List<Object> ) expandedValue ) {
+				// 7.6.1)
+				const String itemActiveProperty = activeCtx.compactIri ( expandedProperty,
+				                                  expandedItem, true, insideReverse );
+				// 7.6.2)
+				const String container = activeCtx.getContainer ( itemActiveProperty );
+
+				// get @list value if appropriate
+				const boolean isList = ( expandedItem.isMap() && ( ( Map<String, Object> ) expandedItem )
+				                         .containsKey ( "@list" ) );
+				Object list = null;
+				if ( isList )
+					list = ( ( Map<String, Object> ) expandedItem ).get ( "@list" );
+
+				// 7.6.3)
+				Object compactedItem = compact ( activeCtx, itemActiveProperty, isList ? list
+				                                 : expandedItem, compactArrays );
+
+				// 7.6.4)
+				if ( isList ) {
+					// 7.6.4.1)
+					if ( ! ( compactedItem.isList() ) ) {
+						const List<Object> tmp = new ArrayList<Object>();
+						tmp.add ( compactedItem );
+						compactedItem = tmp;
+					}
+					// 7.6.4.2)
+					if ( !"@list"s == ( container ) ) {
+						// 7.6.4.2.1)
+						const Map<String, Object> wrapper = newMap();
+						// TODO: SPEC: no mention of vocab = true
+						wrapper.put ( activeCtx.compactIri ( "@list", true ), compactedItem );
+						compactedItem = wrapper;
+
+						// 7.6.4.2.2)
+						if ( ( ( Map<String, Object> ) expandedItem ).containsKey ( "@index" ) ) {
+							( ( Map<String, Object> ) compactedItem ).put (
+							    // TODO: SPEC: no mention of vocab =
+							    // true
+							    activeCtx.compactIri ( "@index", true ),
+							    ( ( Map<String, Object> ) expandedItem ).get ( "@index" ) );
+						}
+					}
+					// 7.6.4.3)
+					else if ( result.containsKey ( itemActiveProperty ) ) {
+						throw JsonLdError ( Error.COMPACTION_TO_LIST_OF_LISTS,
+						                    "There cannot be two list objects associated with an active property that has a container mapping" );
+					}
+				}
+
+				// 7.6.5)
+				if ( "@language"s == ( container ) || "@index"s == ( container ) ) {
+					// 7.6.5.1)
+					Map<String, Object> mapObject;
+					if ( result.containsKey ( itemActiveProperty ) )
+						mapObject = ( Map<String, Object> ) result.get ( itemActiveProperty ); else {
+						mapObject = newMap();
+						result.put ( itemActiveProperty, mapObject );
+					}
+
+					// 7.6.5.2)
+					if ( "@language"s == ( container )
+					        && ( compactedItem.isMap() && ( ( Map<String, Object> ) compactedItem )
+					             .containsKey ( "@value" ) ) )
+						compactedItem = ( ( Map<String, Object> ) compactedItem ).get ( "@value" );
+
+					// 7.6.5.3)
+					const String mapKey = ( String ) ( ( Map<String, Object> ) expandedItem )
+					                      .get ( container );
+					// 7.6.5.4)
+					if ( !mapObject.containsKey ( mapKey ) )
+						mapObject.put ( mapKey, compactedItem ); else {
+						List<Object> tmp;
+						if ( ! ( mapObject.get ( mapKey ).isList() ) ) {
+							tmp = new ArrayList<Object>();
+							tmp.add ( mapObject.put ( mapKey, tmp ) );
+						} else
+							tmp = ( List<Object> ) mapObject.get ( mapKey );
+						tmp.add ( compactedItem );
+					}
+				}
+				// 7.6.6)
+				else {
+					// 7.6.6.1)
+					const Boolean check = ( !compactArrays || "@set"s == ( container )
+					                        || "@list"s == ( container ) || "@list"s == ( expandedProperty ) || "@graph"
+					                        .equals ( expandedProperty ) )
+					                      && ( ! ( compactedItem.isList() ) );
+					if ( check ) {
+						const List<Object> tmp = new ArrayList<Object>();
+						tmp.add ( compactedItem );
+						compactedItem = tmp;
+					}
+					// 7.6.6.2)
+					if ( !result.containsKey ( itemActiveProperty ) )
+						result.put ( itemActiveProperty, compactedItem ); else {
+						if ( ! ( result.get ( itemActiveProperty ).isList() ) ) {
+							const List<Object> tmp = new ArrayList<Object>();
+							tmp.add ( result.put ( itemActiveProperty, tmp ) );
+						}
+						if ( compactedItem.isList() ) {
+							( ( List<Object> ) result.get ( itemActiveProperty ) )
+							.addAll ( ( List<Object> ) compactedItem );
+						} else
+							( ( List<Object> ) result.get ( itemActiveProperty ) ).add ( compactedItem );
+					}
+
+				}
+			}
+		}
+		// 8)
+		return result;
 	}
 
 	/**
