@@ -1,5 +1,8 @@
-#/bin/sh
-astyle --style=attach --indent=tab --attach-namespaces --attach-classes --attach-inlines --indent-switches  --indent-cases --indent-preproc-cond --indent-col1-comments --pad-paren --pad-header --remove-brackets --keep-one-line-statements --close-templates --remove-comment-prefix   --pad-oper  --recursive "*.h"
-astyle --style=attach --indent=tab --attach-namespaces --attach-classes --attach-inlines --indent-switches  --indent-cases --indent-preproc-cond --indent-col1-comments --pad-paren --pad-header --remove-brackets --keep-one-line-statements --close-templates --remove-comment-prefix   --pad-oper  --recursive "*.hpp"
-astyle --style=attach --indent=tab --attach-namespaces --attach-classes --attach-inlines --indent-switches  --indent-cases --indent-preproc-cond --indent-col1-comments --pad-paren --pad-header --remove-brackets --keep-one-line-statements --close-templates --remove-comment-prefix   --pad-oper  --recursive "*.cpp"
-astyle --style=attach --indent=tab --attach-namespaces --attach-classes --attach-inlines --indent-switches  --indent-cases --indent-preproc-cond --indent-col1-comments --pad-paren --pad-header --remove-brackets --keep-one-line-statements --close-templates --remove-comment-prefix   --pad-oper  --recursive "*.c"
+#!/bin/sh
+for path in "*.h" "*.hpp" "*.cpp" "*.c"
+do
+#astyle2.3 missess some options, removed:
+	astyle --style=attach --indent=tab  --indent-switches  --indent-cases --indent-col1-comments --pad-paren --pad-header  --keep-one-line-statements --close-templates   --pad-oper  --recursive "$path"
+#2.5:
+	astyle --style=attach --indent=tab --attach-namespaces --attach-classes --attach-inlines --indent-switches  --indent-cases --indent-preproc-cond --indent-col1-comments --pad-paren --pad-header --remove-brackets --keep-one-line-statements --close-templates --remove-comment-prefix   --pad-oper  --recursive "$path"
+done

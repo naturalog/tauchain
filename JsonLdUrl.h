@@ -70,9 +70,8 @@ public:
 		boost::smatch match;
 		try {
 			boost::regex parser ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" );
-			boost::regex_match ( url, match, parser );
-			//if ( !std::regex_match ( url.c_str(), match, parser ) )
-			//       return rval;
+			if ( !std::regex_match ( url.c_str(), match, parser ) )
+				return rval;
 		} catch ( const boost::regex_error& e ) {
 			std::cout << "regex_error caught: " << e.code() << '\n';
 		};
@@ -92,42 +91,38 @@ public:
 		rval.file = match[11].str ();
 		rval.query = match[12].str ();
 		rval.hash = match[13].str ();
-		//rval->hash = match[141].str ();
-		//char aa[2]; aa[4] = 's';
-
 
 		// normalize to node.js API
 		if ( rval.host.size() && rval.path.size() )
 			rval.path = "/";
 		rval.pathname = rval.path;
-		/*
-		                parseAuthority ( rval );
-		                rval.normalizedPath = removeDotSegments ( rval.pathname, !"".equals ( rval.authority ) );
-		                if ( !"".equals ( rval.query ) )
-		                        rval.path += "?" + rval.query;
-		                if ( !"".equals ( rval.protocol ) )
-		                        rval.protocol += ":";
-		                if ( !"".equals ( rval.hash ) )
-		                        rval.hash = "#" + rval.hash;
-		*/
+		parseAuthority ( rval );
+		rval.normalizedPath = removeDotSegments ( rval.pathname, rval.authority.size() );
+		if ( rval.query.size() )
+			rval.path += "?" + rval.query;
+		if ( rval.protocol.size() )
+			rval.protocol += ":";
+		if ( rval.hash.size( ) )
+			rval.hash = "#" + rval.hash;
 
 		return rval;
 	}
 
 
 
-	/*
-	    //    Removes dot segments from a JsonLdUrl path.
+	//    Removes dot segments from a JsonLdUrl path.
 
-	    //    @param path
-	    //              the path to remove dot segments from.
-	    //    @param hasAuthority
-	    //              true if the JsonLdUrl has an authority, false if not.
-	    //    @return The URL without the dot segments
+	//    @param path
+	//              the path to remove dot segments from.
+	//    @param hasAuthority
+	//              true if the JsonLdUrl has an authority, false if not.
+	//    @return The URL without the dot segments
 
 
-	    static String removeDotSegments ( String path, boolean hasAuthority ) {
-		String rval = "";
+	static String removeDotSegments ( String path, boolean hasAuthority ) {
+		/*
+
+		        String rval = "";
 
 		if ( path.indexOf ( "/" ) == 0 )
 			rval = "/";
@@ -167,142 +162,147 @@ public:
 				rval += "/" + output.get ( i );
 		}
 		return rval;
-	    }
+		*/
+	}
 
-	    static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+	static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+		/*
+				JsonLdUrl base;
 
-		JsonLdUrl base;
+				// we get either a String or a JsonLdUrl or a null, as baseobj
+				if ( String* base_as_string = boost::get<String> ( baseobj ) )
+					base = JsonLdUrl.parse ( base_as_string );
+				elif ( base = boost::get<JsonLdUrl> ( baseobj ) ) {
+					;
+				}
+				else
+					return iri;
 
-		// we get either a String or a JsonLdUrl or a null, as baseobj
-		if ( String* base_as_string = boost::get<String> ( baseobj ) )
-			base = JsonLdUrl.parse ( base_as_string );
-		elif ( base = boost::get<JsonLdUrl> ( baseobj ) ) {
-			;
-		}
-		else
-			return iri;
+				// establish base root
+				String root = "";
+				if ( !"".equals ( base.href ) )
+					root += ( base.protocol ) + "//" + base.authority;
+				// support network-path reference with empty base
+				else if ( iri.indexOf ( "//" ) != 0 )
+					root += "//";
 
-		// establish base root
-		String root = "";
-		if ( !"".equals ( base.href ) )
-			root += ( base.protocol ) + "//" + base.authority;
-		// support network-path reference with empty base
-		else if ( iri.indexOf ( "//" ) != 0 )
-			root += "//";
+				// IRI not relative to base
+				if ( iri.indexOf ( root ) != 0 )
+					return iri;
 
-		// IRI not relative to base
-		if ( iri.indexOf ( root ) != 0 )
-			return iri;
+				// remove root from IRI and parse remainder
+				const JsonLdUrl rel = JsonLdUrl.parse ( iri.substring ( root.length() ) );
 
-		// remove root from IRI and parse remainder
-		const JsonLdUrl rel = JsonLdUrl.parse ( iri.substring ( root.length() ) );
+				// remove path segments that match
+				const List<String> baseSegments = new ArrayList<String> ( Arrays.asList ( base.normalizedPath
+				        .split ( "/" ) ) );
+				if ( base.normalizedPath.endsWith ( "/" ) )
+					baseSegments.add ( "" );
+				const List<String> iriSegments = new ArrayList<String> ( Arrays.asList ( rel.normalizedPath
+				        .split ( "/" ) ) );
+				if ( rel.normalizedPath.endsWith ( "/" ) )
+					iriSegments.add ( "" );
 
-		// remove path segments that match
-		const List<String> baseSegments = new ArrayList<String> ( Arrays.asList ( base.normalizedPath
-		        .split ( "/" ) ) );
-		if ( base.normalizedPath.endsWith ( "/" ) )
-			baseSegments.add ( "" );
-		const List<String> iriSegments = new ArrayList<String> ( Arrays.asList ( rel.normalizedPath
-		        .split ( "/" ) ) );
-		if ( rel.normalizedPath.endsWith ( "/" ) )
-			iriSegments.add ( "" );
+				while ( baseSegments.size() > 0 && iriSegments.size() > 0 ) {
+					if ( !baseSegments.get ( 0 ).equals ( iriSegments.get ( 0 ) ) )
+						break;
+					if ( baseSegments.size() > 0 )
+						baseSegments.remove ( 0 );
+					if ( iriSegments.size() > 0 )
+						iriSegments.remove ( 0 );
+				}
 
-		while ( baseSegments.size() > 0 && iriSegments.size() > 0 ) {
-			if ( !baseSegments.get ( 0 ).equals ( iriSegments.get ( 0 ) ) )
-				break;
-			if ( baseSegments.size() > 0 )
-				baseSegments.remove ( 0 );
-			if ( iriSegments.size() > 0 )
-				iriSegments.remove ( 0 );
-		}
+				// use '../' for each non-matching base segment
+				String rval = "";
+				if ( baseSegments.size() > 0 ) {
+					// don't count the last segment if it isn't a path (doesn't end in
+					// '/')
+					// don't count empty first segment, it means base began with '/'
+					if ( !base.normalizedPath.endsWith ( "/" ) || "".equals ( baseSegments.get ( 0 ) ) )
+						baseSegments.remove ( baseSegments.size() - 1 );
+					for ( int i = 0; i < baseSegments.size(); ++i )
+						rval += "../";
+				}
 
-		// use '../' for each non-matching base segment
-		String rval = "";
-		if ( baseSegments.size() > 0 ) {
-			// don't count the last segment if it isn't a path (doesn't end in
-			// '/')
-			// don't count empty first segment, it means base began with '/'
-			if ( !base.normalizedPath.endsWith ( "/" ) || "".equals ( baseSegments.get ( 0 ) ) )
-				baseSegments.remove ( baseSegments.size() - 1 );
-			for ( int i = 0; i < baseSegments.size(); ++i )
-				rval += "../";
-		}
+				// prepend remaining segments
+				if ( iriSegments.size() > 0 )
+					rval += iriSegments.get ( 0 );
+				for ( int i = 1; i < iriSegments.size(); i++ )
+					rval += "/" + iriSegments.get ( i );
 
-		// prepend remaining segments
-		if ( iriSegments.size() > 0 )
-			rval += iriSegments.get ( 0 );
-		for ( int i = 1; i < iriSegments.size(); i++ )
-			rval += "/" + iriSegments.get ( i );
+				// add query and hash
+				if ( !"".equals ( rel.query ) )
+					rval += "?" + rel.query;
+				if ( !"".equals ( rel.hash ) )
+					rval += rel.hash;
 
-		// add query and hash
-		if ( !"".equals ( rel.query ) )
-			rval += "?" + rel.query;
-		if ( !"".equals ( rel.hash ) )
-			rval += rel.hash;
+				if ( "".equals ( rval ) )
+					rval = "./";
 
-		if ( "".equals ( rval ) )
-			rval = "./";
+				return rval;
+		*/
+	}
 
-		return rval;
-	    }
+	static String resolve ( String baseUri, String pathToResolve ) {
+		/*
+			// TODO: some input will need to be normalized to perform the expected
+			// result with java
+			// TODO: we can do this without using java URI!
+			if ( baseUri == null )
+				return pathToResolve;
+			if ( pathToResolve == null || "".equals ( pathToResolve.trim() ) )
+				return baseUri;
+			try {
+				URI uri = new URI ( baseUri );
+				// query string parsing
+				if ( pathToResolve.startsWith ( "?" ) ) {
+					// drop fragment from uri if it has one
+					if ( uri.getFragment() != null )
+						uri = new URI ( uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null );
+					// add query to the end manually (as URI.resolve does it wrong)
+					return uri.toString() + pathToResolve;
+				}
 
-	    static String resolve ( String baseUri, String pathToResolve ) {
-		// TODO: some input will need to be normalized to perform the expected
-		// result with java
-		// TODO: we can do this without using java URI!
-		if ( baseUri == null )
-			return pathToResolve;
-		if ( pathToResolve == null || "".equals ( pathToResolve.trim() ) )
-			return baseUri;
-		try {
-			URI uri = new URI ( baseUri );
-			// query string parsing
-			if ( pathToResolve.startsWith ( "?" ) ) {
-				// drop fragment from uri if it has one
-				if ( uri.getFragment() != null )
-					uri = new URI ( uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null );
-				// add query to the end manually (as URI.resolve does it wrong)
-				return uri.toString() + pathToResolve;
+				uri = uri.resolve ( pathToResolve );
+				// java doesn't discard unnecessary dot segments
+				String path = uri.getPath();
+				if ( path != null )
+					path = JsonLdUrl.removeDotSegments ( uri.getPath(), true );
+				return new URI ( uri.getScheme(), uri.getAuthority(), path, uri.getQuery(),
+				                 uri.getFragment() ).toString();
+			} catch ( const URISyntaxException e ) {
+				return null;
 			}
-
-			uri = uri.resolve ( pathToResolve );
-			// java doesn't discard unnecessary dot segments
-			String path = uri.getPath();
-			if ( path != null )
-				path = JsonLdUrl.removeDotSegments ( uri.getPath(), true );
-			return new URI ( uri.getScheme(), uri.getAuthority(), path, uri.getQuery(),
-			                 uri.getFragment() ).toString();
-		} catch ( const URISyntaxException e ) {
-			return null;
-		}
-	    }
+			*/
+	}
 
 
-	    //    Parses the authority for the pre-parsed given JsonLdUrl.
+	//    Parses the authority for the pre-parsed given JsonLdUrl.
 
-	    //    @param parsed
-	    //              the pre-parsed JsonLdUrl.
+	//    @param parsed
+	//              the pre-parsed JsonLdUrl.
 
-	    private: static void parseAuthority ( JsonLdUrl parsed ) {
-		// parse authority for unparsed relative network-path reference
-		if ( parsed.href.indexOf ( ":" ) == -1 && parsed.href.indexOf ( "//" ) == 0
-		        && "".equals ( parsed.host ) ) {
-			// must parse authority from pathname
-			parsed.pathname = parsed.pathname.substring ( 2 );
-			const int idx = parsed.pathname.indexOf ( "/" );
-			if ( idx == -1 ) {
-				parsed.authority = parsed.pathname;
-				parsed.pathname = "";
-			} else {
-				parsed.authority = parsed.pathname.substring ( 0, idx );
-				parsed.pathname = parsed.pathname.substring ( idx );
-			}
-		} else {
-			// construct authority
-			parsed.authority = parsed.host;
-			if ( !"".equals ( parsed.auth ) )
-				parsed.authority = parsed.auth + "@" + parsed.authority;
-		}
-	    }
-	*/
+private: static void parseAuthority ( JsonLdUrl parsed ) {
+		/*
+				// parse authority for unparsed relative network-path reference
+				if ( parsed.href.indexOf ( ":" ) == -1 && parsed.href.indexOf ( "//" ) == 0
+				        && "".equals ( parsed.host ) ) {
+					// must parse authority from pathname
+					parsed.pathname = parsed.pathname.substring ( 2 );
+					const int idx = parsed.pathname.indexOf ( "/" );
+					if ( idx == -1 ) {
+						parsed.authority = parsed.pathname;
+						parsed.pathname = "";
+					} else {
+						parsed.authority = parsed.pathname.substring ( 0, idx );
+						parsed.pathname = parsed.pathname.substring ( idx );
+					}
+				} else {
+					// construct authority
+					parsed.authority = parsed.host;
+					if ( !"".equals ( parsed.auth ) )
+						parsed.authority = parsed.auth + "@" + parsed.authority;
+				}
+				*/
+	}
 };
