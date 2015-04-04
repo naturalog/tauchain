@@ -13,7 +13,7 @@
 //std::wregex pattern(xxx);
 
 int main() {
-	JsonLdUrl r = JsonLdUrl::parse ( "http://u:p@caa.bb/cc#dd" );
+	JsonLdUrl r = JsonLdUrl::parse ( "http://u:p@caa.bb/cc/../or/this/../maybe/that#dd" );
 	r.debugPrint();
 }
 

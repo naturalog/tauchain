@@ -8,7 +8,7 @@
 // import java.util.regex.Matcher;
 // import java.util.regex.Pattern;
 
-//#include <boost/variant.hpp>
+#include <boost/variant.hpp>
 
 #include <boost/logic/tribool.hpp>
 //BOOST_TRIBOOL_THIRD_STATE ( bnull )
@@ -19,6 +19,7 @@
 typedef std::string String;
 typedef bool boolean;
 typedef boost::tribool Boolean;
+template<typename K> using List = std::vector<K>;
 
 class JsonLdUrl {
 public:
@@ -70,7 +71,7 @@ public:
 		boost::smatch match;
 		try {
 			boost::regex parser ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" );
-			if ( !std::regex_match ( url.c_str(), match, parser ) )
+			if ( !boost::regex_match ( url, match, parser ) )
 				return rval;
 		} catch ( const boost::regex_error& e ) {
 			std::cout << "regex_error caught: " << e.code() << '\n';
@@ -93,7 +94,7 @@ public:
 		rval.hash = match[13].str ();
 
 		// normalize to node.js API
-		if ( rval.host.size() && rval.path.size() )
+		if ( rval.host.size() && !rval.path.size() )
 			rval.path = "/";
 		rval.pathname = rval.path;
 		parseAuthority ( rval );
@@ -101,7 +102,7 @@ public:
 		if ( rval.query.size() )
 			rval.path += "?" + rval.query;
 		if ( rval.protocol.size() )
-			rval.protocol += ":";
+			rval.protocol += ":";//simplify the regex?
 		if ( rval.hash.size( ) )
 			rval.hash = "#" + rval.hash;
 
@@ -120,49 +121,49 @@ public:
 
 
 	static String removeDotSegments ( String path, boolean hasAuthority ) {
-		/*
+		String rval = "";
 
-		        String rval = "";
-
-		if ( path.indexOf ( "/" ) == 0 )
+		if ( path.find ( "/" ) == 0 )
 			rval = "/";
 
+
 		// RFC 3986 5.2.4 (reworked)
-		const List<String> input = new ArrayList<String> ( Arrays.asList ( path.split ( "/" ) ) );
-		if ( path.endsWith ( "/" ) ) {
-			// javascript .split includes a blank entry if the string ends with
-			// the delimiter, java .split does not so we need to add it manually
-			input.add ( "" );
-		}
-		const List<String> output = new ArrayList<String>();
+		List<String> input;
+		String item;
+		std::istringstream stream ( path );
+		while ( std::getline ( stream, item, '/' ) )
+			input.push_back ( item );
+		List<String> output;
+
 		for ( int i = 0; i < input.size(); i++ ) {
-			if ( ".".equals ( input.get ( i ) ) || ( "".equals ( input.get ( i ) ) && input.size() - i > 1 ) ) {
-				// input.remove(0);
-				continue;
-			}
-			if ( "..".equals ( input.get ( i ) ) ) {
+			//if (( "." == input[i] ) || ( "" == input[i] ) && input.size() - i > 1 ) ) {
+			// // input.remove(0);
+			//continue;
+			//}
+			if ( ".." == input[i] ) {
 				// input.remove(0);
 				if ( hasAuthority
-				        || ( output.size() > 0 && !"..".equals ( output.get ( output.size() - 1 ) ) ) ) {
+				        || ( output.size() > 0 && ".." != output[ output.size() - 1 ] ) ) {
 					// [].pop() doesn't fail, to replicate this we need to check
 					// that there is something to remove
 					if ( output.size() > 0 )
-						output.remove ( output.size() - 1 );
+						output.pop_back(); // ( output.size() - 1 );
 				} else
-					output.add ( ".." );
+					output.push_back ( ".." );
 				continue;
 			}
-			output.add ( input.get ( i ) );
-			// input.remove(0);
+			output.push_back ( input[i] );
+			// // input.remove(0);
 		}
 
 		if ( output.size() > 0 ) {
-			rval += output.get ( 0 );
+			rval += output[0];
 			for ( int i = 1; i < output.size(); i++ )
-				rval += "/" + output.get ( i );
+				rval += "/" + output[i];
 		}
+
 		return rval;
-		*/
+
 	}
 
 	static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
@@ -273,7 +274,7 @@ public:
 			} catch ( const URISyntaxException e ) {
 				return null;
 			}
-			*/
+		*/
 	}
 
 
@@ -303,6 +304,6 @@ private: static void parseAuthority ( JsonLdUrl parsed ) {
 					if ( !"".equals ( parsed.auth ) )
 						parsed.authority = parsed.auth + "@" + parsed.authority;
 				}
-				*/
+		*/
 	}
 };
