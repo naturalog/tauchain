@@ -94,6 +94,10 @@ inline String lower ( const String& s_ ) {
 
 typedef std::runtime_error NullPointerException;
 
+inline bool endsWith(const String& x, const String& y) {
+	return x.size() >= y.size() && x.substr(x.size() - y.size(), y.size()) == y;
+}
+
 //typedef std::basic_regex<String> Pattern;
 /*
     namespace json_spirit {

@@ -377,7 +377,7 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 
 	    @return the relative IRI if relative to base, otherwise the absolute IRI.
 	*/
-private: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+private: static String removeBase ( boost::variant<String, JsonLdUrl>& baseobj, String& iri ) {
 		JsonLdUrl base;
 		if ( boost::get<String> ( &baseobj ) ) base = JsonLdUrl::parse ( boost::get<String> ( baseobj ) );
 		else base = boost::get<JsonLdUrl> ( baseobj );
@@ -397,8 +397,8 @@ private: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, S
 
 		while ( baseSegments.size() > 0 && iriSegments.size() > 0 ) {
 			if ( baseSegments.at ( 0 ) != iriSegments.at ( 0 ) ) break;
-			if ( baseSegments.size() > 0 ) baseSegments.pop_head ( );
-			if ( iriSegments.size() > 0 ) iriSegments.pop_head ( );
+			if ( baseSegments.size() > 0 ) baseSegments.erase ( baseSegments.begin() );
+			if ( iriSegments.size() > 0 ) iriSegments.erase ( iriSegments.begin() );
 		}
 
 		// use '../' for each non-matching base segment
@@ -407,23 +407,16 @@ private: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, S
 			// don't count the last segment if it isn't a path (doesn't end in
 			// '/')
 			// don't count empty first segment, it means base began with '/'
-			if ( !base.normalizedPath.endsWith ( "/" ) || ""s == ( baseSegments.get ( 0 ) ) )
-				baseSegments.remove ( baseSegments.size() - 1 );
+			if ( !endsWith(base.normalizedPath, "/" ) || ""s == baseSegments.at ( 0 ) )
+				baseSegments.erase ( --baseSegments.end() );
 			for ( int i = 0; i < baseSegments.size(); ++i ) rval += "../";
 		}
-
 		// prepend remaining segments
 		rval += _join ( iriSegments, "/" );
-
 		// add query and hash
-		if ( !""s == ( rel.query ) )
-			rval += "?" + rel.query;
-		if ( !""s == ( rel.hash ) )
-			rval += rel.hash;
-
-		if ( ""s == ( rval ) )
-			rval = "./";
-
+		if ( ""s != rel.query ) rval += "?" + rel.query;
+		if ( ""s != rel.hash ) rval += rel.hash;
+		if ( ""s == rval ) rval = "./";
 		return rval;
 	}
 
@@ -440,44 +433,40 @@ private: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, S
 	    @return the resulting output.
 	    @
 	*/
-	static Object removePreserve ( Context<Object> ctx, Object input, JsonLdOptions<Object> opts )  {
+	static Object removePreserve ( Context<Object>& ctx, Object& input, JsonLdOptions<Object>& opts )  {
 		// recurse through arrays
 		if ( isArray ( input ) ) {
-			const List<Object> output = new ArrayList<Object>();
-			for ( const Object i : ( List<Object> ) input ) {
-				const Object result = removePreserve ( ctx, i, opts );
+			List<Object> output;
+			for ( Object i : input.list() ) {
+				Object result = removePreserve ( ctx, i, opts );
 				// drop nulls from arrays
-				if ( result != null )
-					output.push_back ( result );
+				if ( !result.is_null() ) output.push_back ( result );
 			}
 			input = output;
 		} else if ( isObject ( input ) ) {
 			// remove @preserve
-			if ( ( ( Map<String, Object> ) input ).containsKey ( "@preserve" ) ) {
-				if ( "@null"s == ( ( ( Map<String, Object> ) input ).get ( "@preserve" ) ) )
-					return null;
-				return ( ( Map<String, Object> ) input ).get ( "@preserve" );
+			if ( input.obj( ).containsKey ( "@preserve" ) ) {
+				if ( "@null"s == input.obj( ).get ( "@preserve" ).str() ) return null;
+				return input.obj( ).get ( "@preserve" );
 			}
-
 			// skip @values
-			if ( isValue ( input ) )
-				return input;
-
+			if ( isValue ( input ) ) return input;
 			// recurse through @lists
 			if ( isList ( input ) ) {
-				( ( Map<String, Object> ) input ).put ( "@list",
-				                                        removePreserve ( ctx, ( ( Map<String, Object> ) input ).get ( "@list" ), opts ) );
+				 input.obj( ).put ( "@list", removePreserve ( ctx, input.obj( ).get ( "@list" ), opts ) );
 				return input;
 			}
 
 			// recurse through properties
-			for ( const String prop : ( ( Map<String, Object> ) input ).keySet() ) {
-				Object result = removePreserve ( ctx, ( ( Map<String, Object> ) input ).get ( prop ), opts );
+//			for ( const String prop : ( ( Map<String, Object> ) input ).keySet() ) {
+			for (auto x : input.obj()) {
+				String prop = x.first;
+				Object result = removePreserve ( ctx, input.obj( ).get ( prop ), opts );
 				const String container = ctx.getContainer ( prop );
 				if ( opts.getCompactArrays() && isArray ( result )
-				        && ( ( List<Object> ) result ).size() == 1 && container == null )
-					result = ( ( List<Object> ) result ).get ( 0 );
-				( ( Map<String, Object> ) input ).put ( prop, result );
+				        && result.list( ).size() == 1 && !container.size() )
+					result = result.list( ).at ( 0 );
+				input.obj( ).put ( prop, result );
 			}
 		}
 		return input;
@@ -490,12 +479,12 @@ private: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, S
 	    @param string
 	    @return
 	*/
-private: static String _join ( List<String> list, String joiner ) {
+private: static String _join ( const List<String>& list, const String& joiner ) {
 		String rval = "";
 		if ( list.size() > 0 )
-			rval += list.get ( 0 );
+			rval += list.at ( 0 );
 		for ( int i = 1; i < list.size(); i++ )
-			rval += joiner + list.get ( i );
+			rval += joiner + list.at ( i );
 		return rval;
 	}
 
@@ -508,12 +497,11 @@ private: static String _join ( List<String> list, String joiner ) {
 	    @return
 	*/
 private: static List<String> _split ( String string, String delim ) {
-		const List<String> rval = new ArrayList<String> ( Arrays.asList ( string.split ( delim ) ) );
-		if ( string.endsWith ( "/" ) ) {
+		List<String> rval = string.split ( delim );
+		if ( endsWith (string, "/" ) )
 			// javascript .split includes a blank entry if the string ends with
 			// the delimiter, java .split does not so we need to add it manually
 			rval.push_back ( "" );
-		}
 		return rval;
 	}
 
@@ -528,9 +516,8 @@ private: static List<String> _split ( String string, String delim ) {
 	    @return -1 if a < b, 1 if a > b, 0 if a == b.
 	*/
 	static int compareShortestLeast ( String a, String b ) {
-		if ( a.length() < b.length() )
-			return -1; else if ( b.length() < a.length() )
-			return 1;
+		if ( a.length() < b.length() ) return -1; 
+		else if ( b.length() < a.length() ) return 1;
 		return Integer.signum ( a.compareTo ( b ) );
 	}
 
@@ -552,21 +539,20 @@ private: static List<String> _split ( String string, String delim ) {
 			Object val = subject.get ( property );
 			const boolean isList = isList ( val );
 			if ( isList || val.isList() ) {
-				if ( isList )
-					val = ( ( Map<String, Object> ) val ).get ( "@list" );
-				for ( const Object i : ( List ) val ) {
+				if ( isList ) val = val.obj( ).get ( "@list" ;
+				for ( const Object i : val.list() ) {
 					if ( compareValues ( value, i ) ) {
 						rval = true;
 						break;
 					}
 				}
-			} else if ( ! ( value.isList() ) )
+			} else if ( ! value.isList() )
 				rval = compareValues ( value, val );
 		}
 		return rval;
 	}
 
-private: static boolean hasProperty ( Map<String, Object> subject, String property ) {
+ static boolean hasProperty ( Map<String, Object> subject, String property ) {
 		boolean rval = false;
 		if ( subject.containsKey ( property ) ) {
 			const Object value = subject.get ( property );
@@ -606,10 +592,9 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 		                        ( ( Map<String, Object> ) v2 ).get ( "@index" ) ) )
 			return true;
 
-		if ( ( v1.isMap() && ( ( Map<String, Object> ) v1 ).containsKey ( "@id" ) )
-		        && ( v2.isMap() && ( ( Map<String, Object> ) v2 ).containsKey ( "@id" ) )
-		        && ( ( Map<String, Object> ) v1 ).get ( "@id" ).equals (
-		            ( ( Map<String, Object> ) v2 ).get ( "@id" ) ) )
+		if ( ( v1.isMap() &&  v1.obj( ).containsKey ( "@id" ) )
+		        && ( v2.isMap() && v2.obj( ).containsKey ( "@id" ) )
+		        &&  v1.obj( ).get ( "@id" ) == v2.obj( ).get ( "@id" ) )
 			return true;
 
 		return false;
@@ -627,7 +612,7 @@ private: static boolean hasProperty ( Map<String, Object> subject, String proper
 	    @param [options] the options to use: [propertyIsArray] true if the
 	          property is always an array, false if not (default: false).
 	*/
-	static void removeValue ( Map<String, Object> subject, String property, Map<String, Object> value ) {
+	static void removeValue ( Map<String, Object>& subject, const String& property, Map<String, Object>& value ) {
 		removeValue ( subject, property, value, false );
 	}
 
