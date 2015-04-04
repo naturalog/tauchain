@@ -12,6 +12,8 @@
 // import com.github.jsonldjava.utils.JsonLdUrl;
 // import com.github.jsonldjava.utils.Obj;
 
+#include "JsonLdUrl.h"
+
 class JsonLdUtils {
 
 private: static const int MAX_CONTEXT_URLS = 10;
@@ -253,10 +255,10 @@ private: static String prependBase ( Object baseobj, String iri ) {
 		// parse base if it is a string
 		JsonLdUrl base;
 		if ( isString ( baseobj ) )
-			base = JsonLdUrl.parse ( ( String ) baseobj ); else {
+			base = JsonLdUrl.parse ( ( String ) baseobj ); 
+		else 
 			// assume base is already a JsonLdUrl
 			base = ( JsonLdUrl ) baseobj;
-		}
 
 		const JsonLdUrl rel = JsonLdUrl.parse ( iri );
 

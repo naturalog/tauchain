@@ -8,10 +8,10 @@
 // import java.util.regex.Matcher;
 // import java.util.regex.Pattern;
 
-#include <boost/variant.hpp>
+//#include <boost/variant.hpp>
 
-#include <boost/logic/tribool.hpp>
-BOOST_TRIBOOL_THIRD_STATE ( bnull )
+//#include <boost/logic/tribool.hpp>
+//BOOST_TRIBOOL_THIRD_STATE ( bnull )
 
 #include <regex>
 #include <string>
