@@ -4,12 +4,17 @@
 #define JSON_SPIRIT_MVALUE_ENABLED
 
 #include <string>
+#include <cstring>
+#include <locale>
 #include <boost/variant/variant.hpp>
 #include <map>
 #include <list>
 //#include <regex>
 #include <stdexcept>
 #include <boost/regex.hpp>
+#include <algorithm>
+#include <utility>
+#include <cctype>
 using namespace std::string_literals;
 
 namespace json_spirit {
@@ -80,6 +85,14 @@ typedef boost::tribool Boolean;
 inline bool is ( const String& s, const std::vector<String>& v ) {
 	return std::find ( v.begin(), v.end(), s ) != v.end();
 }
+
+inline String lower ( const String& s_ ) {
+	String s = s_;
+	std::transform ( s.begin(), s.end(), s.begin(), ::tolower );
+	return s;
+}
+
+typedef std::runtime_error NullPointerException;
 
 //typedef std::basic_regex<String> Pattern;
 /*

@@ -247,61 +247,61 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 	           parser, we may need to re-implement the parser here to support
 	           the flexibility required
 	*/
-/*private: static String prependBase ( Object baseobj, String iri ) {
-		// already an absolute IRI
-		if ( iri.find ( ":" ) != String::npos )
-			return iri;
+	/*  private: static String prependBase ( Object baseobj, String iri ) {
+			// already an absolute IRI
+			if ( iri.find ( ":" ) != String::npos )
+				return iri;
 
-		// parse base if it is a string
-		JsonLdUrl base;
-		if ( baseobj.isString() )
-			base = JsonLdUrl::parse ( baseobj.str() );
-		else
-			// assume base is already a JsonLdUrl
-			base = ( JsonLdUrl ) baseobj;
+			// parse base if it is a string
+			JsonLdUrl base;
+			if ( baseobj.isString() )
+				base = JsonLdUrl::parse ( baseobj.str() );
+			else
+				// assume base is already a JsonLdUrl
+				base = ( JsonLdUrl ) baseobj;
 
-		const JsonLdUrl rel = JsonLdUrl.parse ( iri );
+			const JsonLdUrl rel = JsonLdUrl.parse ( iri );
 
-		// start hierarchical part
-		String hierPart = base.protocol;
-		if ( !""s == ( rel.authority ) )
-			hierPart += "//" + rel.authority; else if ( !""s == ( base.href ) )
-			hierPart += "//" + base.authority;
+			// start hierarchical part
+			String hierPart = base.protocol;
+			if ( !""s == ( rel.authority ) )
+				hierPart += "//" + rel.authority; else if ( !""s == ( base.href ) )
+				hierPart += "//" + base.authority;
 
-		// per RFC3986 normalize
-		String path;
+			// per RFC3986 normalize
+			String path;
 
-		// IRI represents an absolute path
-		if ( rel.pathname.indexOf ( "/" ) == 0 )
-			path = rel.pathname; else {
-			path = base.pathname;
+			// IRI represents an absolute path
+			if ( rel.pathname.indexOf ( "/" ) == 0 )
+				path = rel.pathname; else {
+				path = base.pathname;
 
-			// append relative path to the end of the last directory from base
-			if ( !""s == ( rel.pathname ) ) {
-				path = path.substring ( 0, path.lastIndexOf ( "/" ) + 1 );
-				if ( path.length() > 0 && !path.endsWith ( "/" ) )
-					path += "/";
-				path += rel.pathname;
+				// append relative path to the end of the last directory from base
+				if ( !""s == ( rel.pathname ) ) {
+					path = path.substring ( 0, path.lastIndexOf ( "/" ) + 1 );
+					if ( path.length() > 0 && !path.endsWith ( "/" ) )
+						path += "/";
+					path += rel.pathname;
+				}
 			}
+
+			// remove slashes anddots in path
+			path = JsonLdUrl.removeDotSegments ( path, !""s == ( hierPart ) );
+
+			// add query and hash
+			if ( !""s == ( rel.query ) )
+				path += "?" + rel.query;
+
+			if ( !""s == ( rel.hash ) )
+				path += rel.hash;
+
+			const String rval = hierPart + path;
+
+			if ( ""s == ( rval ) )
+				return "./";
+			return rval;
 		}
-
-		// remove slashes anddots in path
-		path = JsonLdUrl.removeDotSegments ( path, !""s == ( hierPart ) );
-
-		// add query and hash
-		if ( !""s == ( rel.query ) )
-			path += "?" + rel.query;
-
-		if ( !""s == ( rel.hash ) )
-			path += rel.hash;
-
-		const String rval = hierPart + path;
-
-		if ( ""s == ( rval ) )
-			return "./";
-		return rval;
-	}
-*/
+	*/
 	/**
 	    Expands a language map.
 
@@ -313,10 +313,10 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 	*/
 	static List<Object> expandLanguageMap ( Map<String, Object> languageMap )  {
 		List<Object> rval;
-//		List<String> keys = new ArrayList<String> ( languageMap.keySet() );
-//		Collections.sort ( keys ); // lexicographically sort languages
-//		for ( const String key : keys ) {
-		for (auto x : languageMap) {
+		//		List<String> keys = new ArrayList<String> ( languageMap.keySet() );
+		//		Collections.sort ( keys ); // lexicographically sort languages
+		//		for ( const String key : keys ) {
+		for ( auto x : languageMap ) {
 			String key = x.first;
 			List<Object> val;
 			if ( !isArray ( languageMap.get ( key ) ) )
@@ -327,7 +327,7 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 				if ( !isString ( item ) ) throw JsonLdError ( SYNTAX_ERROR );
 				Map<String, Object> tmp;
 				tmp.put ( "@value", item );
-				tmp.put ( "@language", key.lower() );
+				tmp.put ( "@language", lower ( key ) );
 				rval.push_back ( tmp );
 			}
 		}
@@ -347,71 +347,58 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 			throw NullPointerException ( "\"@type\" value cannot be null" );
 
 		// must be a string, subject reference, or empty object
-		if ( v.isString()
-		        || ( v.isMap() && ( ( v.obj().containsKey ( "@id" ) || ( v.obj()
-		                              .size() == 0 ) ) )
-		             return true;
-
-		             // must be an array
-		             boolean isValid = false;
+		if ( v.isString() || ( v.isMap() && ( v.obj().containsKey ( "@id" ) || ( v.obj() .size() == 0 ) ) ) )
+			return true;
+		// must be an array
+		boolean isValid = false;
 		if ( v.isList() ) {
 			isValid = true;
-			for ( const Object i : ( List ) v ) {
-					if ( ! ( i.isString() || i.isMap
-					         && ( ( Map<String, Object> ) i ).containsKey ( "@id" ) ) ) {
-						isValid = false;
-						break;
-					}
+			for ( const Object i : v.list() ) {
+				if ( ! ( i.isString() || ( i.isMap()
+				                           &&  i.obj( ).containsKey ( "@id" ) ) ) ) {
+					isValid = false;
+					break;
 				}
 			}
+		}
 
 		if ( !isValid )
-		throw JsonLdError ( SYNTAX_ERROR );
+			throw JsonLdError ( SYNTAX_ERROR );
 		return true;
 	}
 
-/**
-    Removes a base IRI from the given absolute IRI.
+	/**
+	    Removes a base IRI from the given absolute IRI.
 
-    @param base
-              the base IRI.
-    @param iri
-              the absolute IRI.
+	    @param base
+	              the base IRI.
+	    @param iri
+	              the absolute IRI.
 
-    @return the relative IRI if relative to base, otherwise the absolute IRI.
-*/
-private: static String removeBase ( Object baseobj, String iri ) {
+	    @return the relative IRI if relative to base, otherwise the absolute IRI.
+	*/
+private: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
 		JsonLdUrl base;
-		if ( isString ( baseobj ) )
-			base = JsonLdUrl.parse ( ( String ) baseobj ); else
-			base = ( JsonLdUrl ) baseobj;
+		if ( boost::get<String> ( &baseobj ) ) base = JsonLdUrl::parse ( boost::get<String> ( baseobj ) );
+		else base = boost::get<JsonLdUrl> ( baseobj );
 
 		// establish base root
 		String root = "";
-		if ( !""s == ( base.href ) )
-			root += ( base.protocol ) + "//" + base.authority;
+		if ( ""s != base.href ) root += ( base.protocol ) + "//" + base.authority;
 		// support network-path reference with empty base
-		else if ( iri.indexOf ( "//" ) != 0 )
-			root += "//";
-
+		else if ( iri.find ( "//" ) ) root += "//";
 		// IRI not relative to base
-		if ( iri.indexOf ( root ) != 0 )
-			return iri;
-
+		if ( iri.find ( root ) ) return iri;
 		// remove root from IRI and parse remainder
-		const JsonLdUrl rel = JsonLdUrl.parse ( iri.substring ( root.length() ) );
-
+		JsonLdUrl rel = JsonLdUrl::parse ( iri.substr ( root.length() ) );
 		// remove path segments that match
-		const List<String> baseSegments = _split ( base.normalizedPath, "/" );
-		const List<String> iriSegments = _split ( rel.normalizedPath, "/" );
+		List<String> baseSegments = _split ( base.normalizedPath, "/" );
+		List<String> iriSegments = _split ( rel.normalizedPath, "/" );
 
 		while ( baseSegments.size() > 0 && iriSegments.size() > 0 ) {
-			if ( !baseSegments.get ( 0 ).equals ( iriSegments.get ( 0 ) ) )
-				break;
-			if ( baseSegments.size() > 0 )
-				baseSegments.remove ( 0 );
-			if ( iriSegments.size() > 0 )
-				iriSegments.remove ( 0 );
+			if ( baseSegments.at ( 0 ) != iriSegments.at ( 0 ) ) break;
+			if ( baseSegments.size() > 0 ) baseSegments.pop_head ( );
+			if ( iriSegments.size() > 0 ) iriSegments.pop_head ( );
 		}
 
 		// use '../' for each non-matching base segment
@@ -422,8 +409,7 @@ private: static String removeBase ( Object baseobj, String iri ) {
 			// don't count empty first segment, it means base began with '/'
 			if ( !base.normalizedPath.endsWith ( "/" ) || ""s == ( baseSegments.get ( 0 ) ) )
 				baseSegments.remove ( baseSegments.size() - 1 );
-			for ( int i = 0; i < baseSegments.size(); ++i )
-				rval += "../";
+			for ( int i = 0; i < baseSegments.size(); ++i ) rval += "../";
 		}
 
 		// prepend remaining segments
