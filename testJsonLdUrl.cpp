@@ -14,8 +14,8 @@
 
 int main() 
 {
-	JsonLdUrl *r = JsonLdUrl::parse("http://u:p@caa.bb/cc#dd");
-	r->debugPrint();
+	JsonLdUrl r = JsonLdUrl::parse("http://u:p@caa.bb/cc#dd");
+	r.debugPrint();
 }
 
 //	std::string s = "Boost Libraries";

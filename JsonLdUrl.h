@@ -10,10 +10,10 @@
 
 //#include <boost/variant.hpp>
 
-//#include <boost/logic/tribool.hpp>
+#include <boost/logic/tribool.hpp>
 //BOOST_TRIBOOL_THIRD_STATE ( bnull )
 
-//#include <regex>
+#include <regex>
 #include <string>
 
 typedef std::string String;
@@ -21,29 +21,29 @@ typedef bool boolean;
 typedef boost::tribool Boolean;
 
 class JsonLdUrl {
-
-  public: String href;
-  public: String protocol;
-  public: String host;
-  public: String auth;
-  public: String user;
-  public: String password;
-  public: String hostname;
-  public: String port;
-  public: String relative;
-  public: String path;
-  public: String directory;
-  public: String file;
-  public: String query;
-  public: String hash;
+public:
+   String href;
+   String protocol;
+   String host;
+   String auth;
+   String user;
+   String password;
+   String hostname;
+   String port;
+   String relative;
+   String path;
+   String directory;
+   String file;
+   String query;
+   String hash;
   // things not populated by the regex (NOTE: i don't think it matters if
   // these are null or "" to start with) // lets hope it doesnt
-  public: String pathname;
-  public: String normalizedPath;
-  public: String authority;
+   String pathname;
+   String normalizedPath;
+   String authority;
 
 
-  public: void debugPrint(){
+   void debugPrint(){
     std::cout << 
     "href = \""<<href << "\"" << std::endl << 
     "protocol = \"" << protocol << "\"" << std::endl << 
@@ -64,8 +64,8 @@ class JsonLdUrl {
     "authority = \"" << authority << "\"" << std::endl;
   }
     
-  public: static JsonLdUrl parse ( String url ) {
-          JsonLdUrl &rval;
+   static JsonLdUrl parse ( String url ) {
+          JsonLdUrl rval;
           rval.href = url;
           boost::smatch match;
           try
@@ -73,7 +73,7 @@ class JsonLdUrl {
             boost::regex parser ("^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)");
             boost::regex_match ( url, match, parser );
             //if ( !std::regex_match ( url.c_str(), match, parser ) )
--             //       return rval;
+             //       return rval;
           }
           catch (const boost::regex_error& e) 
           {
@@ -129,7 +129,7 @@ class JsonLdUrl {
 	//    @return The URL without the dot segments
 	
         
-public: static String removeDotSegments ( String path, boolean hasAuthority ) {
+ static String removeDotSegments ( String path, boolean hasAuthority ) {
 		String rval = "";
 
 		if ( path.indexOf ( "/" ) == 0 )
@@ -172,7 +172,7 @@ public: static String removeDotSegments ( String path, boolean hasAuthority ) {
 		return rval;
 	}
 
-public: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+ static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
 
 		JsonLdUrl base;
 
@@ -249,7 +249,7 @@ public: static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, St
 		return rval;
 	}
 
-public: static String resolve ( String baseUri, String pathToResolve ) {
+ static String resolve ( String baseUri, String pathToResolve ) {
 		// TODO: some input will need to be normalized to perform the expected
 		// result with java
 		// TODO: we can do this without using java URI!
