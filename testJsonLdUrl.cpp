@@ -12,9 +12,8 @@
 //const wchar_t xxx[6] = L"[a-\xEFFFF]";
 //std::wregex pattern(xxx);
 
-int main() 
-{
-	JsonLdUrl r = JsonLdUrl::parse("http://u:p@caa.bb/cc#dd");
+int main() {
+	JsonLdUrl r = JsonLdUrl::parse ( "http://u:p@caa.bb/cc#dd" );
 	r.debugPrint();
 }
 

@@ -255,8 +255,8 @@ private: static String prependBase ( Object baseobj, String iri ) {
 		// parse base if it is a string
 		JsonLdUrl base;
 		if ( isString ( baseobj ) )
-			base = JsonLdUrl.parse ( ( String ) baseobj ); 
-		else 
+			base = JsonLdUrl.parse ( ( String ) baseobj );
+		else
 			// assume base is already a JsonLdUrl
 			base = ( JsonLdUrl ) baseobj;
 

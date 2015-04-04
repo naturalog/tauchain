@@ -22,114 +22,111 @@ typedef boost::tribool Boolean;
 
 class JsonLdUrl {
 public:
-   String href;
-   String protocol;
-   String host;
-   String auth;
-   String user;
-   String password;
-   String hostname;
-   String port;
-   String relative;
-   String path;
-   String directory;
-   String file;
-   String query;
-   String hash;
-  // things not populated by the regex (NOTE: i don't think it matters if
-  // these are null or "" to start with) // lets hope it doesnt
-   String pathname;
-   String normalizedPath;
-   String authority;
+	String href;
+	String protocol;
+	String host;
+	String auth;
+	String user;
+	String password;
+	String hostname;
+	String port;
+	String relative;
+	String path;
+	String directory;
+	String file;
+	String query;
+	String hash;
+	// things not populated by the regex (NOTE: i don't think it matters if
+	// these are null or "" to start with) // lets hope it doesnt
+	String pathname;
+	String normalizedPath;
+	String authority;
 
 
-   void debugPrint(){
-    std::cout << 
-    "href = \""<<href << "\"" << std::endl << 
-    "protocol = \"" << protocol << "\"" << std::endl << 
-    "host = \""<<host << "\"" << std::endl << 
-    "auth = \"" << auth << "\"" << std::endl << 
-    "user = \""<<user << "\"" << std::endl << 
-    "password = \"" << password << "\"" << std::endl << 
-    "hostname = \""<<hostname << "\"" << std::endl << 
-    "port = \"" << port << "\"" << std::endl << 
-    "relative = \""<<relative << "\"" << std::endl << 
-    "path = \"" << path << "\"" << std::endl << 
-    "directory = \""<<directory << "\"" << std::endl << 
-    "file = \"" << file << "\"" << std::endl << 
-    "query = \""<<query << "\"" << std::endl << 
-    "hash = \"" << hash << "\"" << std::endl << 
-    "pathname = \"" << pathname << "\"" << std::endl << 
-    "normalizedPath = \""<<normalizedPath << "\"" << std::endl << 
-    "authority = \"" << authority << "\"" << std::endl;
-  }
-    
-   static JsonLdUrl parse ( String url ) {
-          JsonLdUrl rval;
-          rval.href = url;
-          boost::smatch match;
-          try
-          {
-            boost::regex parser ("^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)");
-            boost::regex_match ( url, match, parser );
-            //if ( !std::regex_match ( url.c_str(), match, parser ) )
-             //       return rval;
-          }
-          catch (const boost::regex_error& e) 
-          {
-            std::cout << "regex_error caught: " << e.code() << '\n';
-          };
+	void debugPrint() {
+		std::cout <<
+		          "href = \"" << href << "\"" << std::endl <<
+		          "protocol = \"" << protocol << "\"" << std::endl <<
+		          "host = \"" << host << "\"" << std::endl <<
+		          "auth = \"" << auth << "\"" << std::endl <<
+		          "user = \"" << user << "\"" << std::endl <<
+		          "password = \"" << password << "\"" << std::endl <<
+		          "hostname = \"" << hostname << "\"" << std::endl <<
+		          "port = \"" << port << "\"" << std::endl <<
+		          "relative = \"" << relative << "\"" << std::endl <<
+		          "path = \"" << path << "\"" << std::endl <<
+		          "directory = \"" << directory << "\"" << std::endl <<
+		          "file = \"" << file << "\"" << std::endl <<
+		          "query = \"" << query << "\"" << std::endl <<
+		          "hash = \"" << hash << "\"" << std::endl <<
+		          "pathname = \"" << pathname << "\"" << std::endl <<
+		          "normalizedPath = \"" << normalizedPath << "\"" << std::endl <<
+		          "authority = \"" << authority << "\"" << std::endl;
+	}
 
-          assert ( match.size() == 14 );
+	static JsonLdUrl parse ( String url ) {
+		JsonLdUrl rval;
+		rval.href = url;
+		boost::smatch match;
+		try {
+			boost::regex parser ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" );
+			boost::regex_match ( url, match, parser );
+			//if ( !std::regex_match ( url.c_str(), match, parser ) )
+			//       return rval;
+		} catch ( const boost::regex_error& e ) {
+			std::cout << "regex_error caught: " << e.code() << '\n';
+		};
 
-          rval.protocol = match[1].str ();
-          rval.host = match[2].str ();
-          rval.auth = match[3].str ();
-          rval.user = match[4].str ();
-          rval.password = match[5].str ();
-          rval.hostname = match[6].str ();
-          rval.port = match[7].str ();
-          rval.relative = match[8].str ();
-          rval.path = match[9].str ();
-          rval.directory = match[10].str ();
-          rval.file = match[11].str ();
-          rval.query = match[12].str ();
-          rval.hash = match[13].str ();
-          //rval->hash = match[141].str ();
-          //char aa[2]; aa[4] = 's';
+		assert ( match.size() == 14 );
 
-          
-                          // normalize to node.js API
-                          if ( rval.host.size() && rval.path.size() )
-                              rval.path = "/";
-                          rval.pathname = rval.path;
-          /*
-                          parseAuthority ( rval );
-                          rval.normalizedPath = removeDotSegments ( rval.pathname, !"".equals ( rval.authority ) );
-                          if ( !"".equals ( rval.query ) )
-                                  rval.path += "?" + rval.query;
-                          if ( !"".equals ( rval.protocol ) )
-                                  rval.protocol += ":";
-                          if ( !"".equals ( rval.hash ) )
-                                  rval.hash = "#" + rval.hash;
-            */
+		rval.protocol = match[1].str ();
+		rval.host = match[2].str ();
+		rval.auth = match[3].str ();
+		rval.user = match[4].str ();
+		rval.password = match[5].str ();
+		rval.hostname = match[6].str ();
+		rval.port = match[7].str ();
+		rval.relative = match[8].str ();
+		rval.path = match[9].str ();
+		rval.directory = match[10].str ();
+		rval.file = match[11].str ();
+		rval.query = match[12].str ();
+		rval.hash = match[13].str ();
+		//rval->hash = match[141].str ();
+		//char aa[2]; aa[4] = 's';
 
-                  return rval;
-          }
+
+		// normalize to node.js API
+		if ( rval.host.size() && rval.path.size() )
+			rval.path = "/";
+		rval.pathname = rval.path;
+		/*
+		                parseAuthority ( rval );
+		                rval.normalizedPath = removeDotSegments ( rval.pathname, !"".equals ( rval.authority ) );
+		                if ( !"".equals ( rval.query ) )
+		                        rval.path += "?" + rval.query;
+		                if ( !"".equals ( rval.protocol ) )
+		                        rval.protocol += ":";
+		                if ( !"".equals ( rval.hash ) )
+		                        rval.hash = "#" + rval.hash;
+		*/
+
+		return rval;
+	}
 
 
 
 	/*
-	//    Removes dot segments from a JsonLdUrl path.
+	    //    Removes dot segments from a JsonLdUrl path.
 
-	//    @param path
-	//              the path to remove dot segments from.
-	//    @param hasAuthority
-	//              true if the JsonLdUrl has an authority, false if not.
-	//    @return The URL without the dot segments
-	
-        
- static String removeDotSegments ( String path, boolean hasAuthority ) {
+	    //    @param path
+	    //              the path to remove dot segments from.
+	    //    @param hasAuthority
+	    //              true if the JsonLdUrl has an authority, false if not.
+	    //    @return The URL without the dot segments
+
+
+	    static String removeDotSegments ( String path, boolean hasAuthority ) {
 		String rval = "";
 
 		if ( path.indexOf ( "/" ) == 0 )
@@ -170,9 +167,9 @@ public:
 				rval += "/" + output.get ( i );
 		}
 		return rval;
-	}
+	    }
 
- static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+	    static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
 
 		JsonLdUrl base;
 
@@ -247,9 +244,9 @@ public:
 			rval = "./";
 
 		return rval;
-	}
+	    }
 
- static String resolve ( String baseUri, String pathToResolve ) {
+	    static String resolve ( String baseUri, String pathToResolve ) {
 		// TODO: some input will need to be normalized to perform the expected
 		// result with java
 		// TODO: we can do this without using java URI!
@@ -278,15 +275,15 @@ public:
 		} catch ( const URISyntaxException e ) {
 			return null;
 		}
-	}
+	    }
 
-	
-	//    Parses the authority for the pre-parsed given JsonLdUrl.
 
-	//    @param parsed
-	//              the pre-parsed JsonLdUrl.
-	
-private: static void parseAuthority ( JsonLdUrl parsed ) {
+	    //    Parses the authority for the pre-parsed given JsonLdUrl.
+
+	    //    @param parsed
+	    //              the pre-parsed JsonLdUrl.
+
+	    private: static void parseAuthority ( JsonLdUrl parsed ) {
 		// parse authority for unparsed relative network-path reference
 		if ( parsed.href.indexOf ( ":" ) == -1 && parsed.href.indexOf ( "//" ) == 0
 		        && "".equals ( parsed.host ) ) {
@@ -306,6 +303,6 @@ private: static void parseAuthority ( JsonLdUrl parsed ) {
 			if ( !"".equals ( parsed.auth ) )
 				parsed.authority = parsed.auth + "@" + parsed.authority;
 		}
-	}
-*/
+	    }
+	*/
 };
