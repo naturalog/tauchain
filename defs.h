@@ -9,6 +9,7 @@
 #include <list>
 //#include <regex>
 #include <stdexcept>
+#include <boost/regex.hpp>
 using namespace std::string_literals;
 
 namespace json_spirit {

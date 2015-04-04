@@ -247,15 +247,15 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 	           parser, we may need to re-implement the parser here to support
 	           the flexibility required
 	*/
-private: static String prependBase ( Object baseobj, String iri ) {
+/*private: static String prependBase ( Object baseobj, String iri ) {
 		// already an absolute IRI
 		if ( iri.find ( ":" ) != String::npos )
 			return iri;
 
 		// parse base if it is a string
 		JsonLdUrl base;
-		if ( isString ( baseobj ) )
-			base = JsonLdUrl.parse ( ( String ) baseobj );
+		if ( baseobj.isString() )
+			base = JsonLdUrl::parse ( baseobj.str() );
 		else
 			// assume base is already a JsonLdUrl
 			base = ( JsonLdUrl ) baseobj;
@@ -301,7 +301,7 @@ private: static String prependBase ( Object baseobj, String iri ) {
 			return "./";
 		return rval;
 	}
-
+*/
 	/**
 	    Expands a language map.
 
@@ -312,22 +312,22 @@ private: static String prependBase ( Object baseobj, String iri ) {
 	    @
 	*/
 	static List<Object> expandLanguageMap ( Map<String, Object> languageMap )  {
-		const List<Object> rval = new ArrayList<Object>();
-		const List<String> keys = new ArrayList<String> ( languageMap.keySet() );
-		Collections.sort ( keys ); // lexicographically sort languages
-		for ( const String key : keys ) {
+		List<Object> rval;
+//		List<String> keys = new ArrayList<String> ( languageMap.keySet() );
+//		Collections.sort ( keys ); // lexicographically sort languages
+//		for ( const String key : keys ) {
+		for (auto x : languageMap) {
+			String key = x.first;
 			List<Object> val;
-			if ( !isArray ( languageMap.get ( key ) ) ) {
-				val = new ArrayList<Object>();
+			if ( !isArray ( languageMap.get ( key ) ) )
 				val.push_back ( languageMap.get ( key ) );
-			} else
-				val = ( List<Object> ) languageMap.get ( key );
+			else
+				val = languageMap.get ( key ).list();
 			for ( const Object item : val ) {
-				if ( !isString ( item ) )
-					throw JsonLdError ( SYNTAX_ERROR );
-				const Map<String, Object> tmp = newMap();
+				if ( !isString ( item ) ) throw JsonLdError ( SYNTAX_ERROR );
+				Map<String, Object> tmp;
 				tmp.put ( "@value", item );
-				tmp.put ( "@language", key.toLowerCase() );
+				tmp.put ( "@language", key.lower() );
 				rval.push_back ( tmp );
 			}
 		}
