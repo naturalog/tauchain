@@ -13,137 +13,109 @@
 //#include <boost/logic/tribool.hpp>
 //BOOST_TRIBOOL_THIRD_STATE ( bnull )
 
-#include <regex>
+//#include <regex>
 #include <string>
 
 typedef std::string String;
 typedef bool boolean;
 typedef boost::tribool Boolean;
-typedef std::basic_regex<String> Pattern;
 
 class JsonLdUrl {
 
-public: String href;
-public: String protocol;
-public: String host;
-public: String auth;
-public: String user;
-public: String password;
-public: String hostname;
-public: String port;
-public: String relative;
-public: String path;
-public: String directory;
-public: String file;
-public: String query;
-public: String hash;
-// things not populated by the regex (NOTE: i don't think it matters if
-// these are null or "" to start with)
-public: String pathname;
-public: String normalizedPath;
-public: String authority;
+  public: String href;
+  public: String protocol;
+  public: String host;
+  public: String auth;
+  public: String user;
+  public: String password;
+  public: String hostname;
+  public: String port;
+  public: String relative;
+  public: String path;
+  public: String directory;
+  public: String file;
+  public: String query;
+  public: String hash;
+  // things not populated by the regex (NOTE: i don't think it matters if
+  // these are null or "" to start with) // lets hope it doesnt
+  public: String pathname;
+  public: String normalizedPath;
+  public: String authority;
 
 
-public: void debugPrint(){
-  std::cout << 
-"href = \""<<href << "\"" << std::endl << 
-"protocol = \"" << protocol << "\"" << std::endl;
-/*
-host = "";
-auth = "";
-user = "";
-password = "";
-hostname = "";
-port = "";
-relative = "";
-path = "";
-directory = "";
-file = "";
-query = "";
-hash = "";
-pathname = NULL;
-normalizedPath = NULL;
-authority = NULL;*/
-}
-  
-  
+  public: void debugPrint(){
+    std::cout << 
+    "href = \""<<href << "\"" << std::endl << 
+    "protocol = \"" << protocol << "\"" << std::endl << 
+    "host = \""<<host << "\"" << std::endl << 
+    "auth = \"" << auth << "\"" << std::endl << 
+    "user = \""<<user << "\"" << std::endl << 
+    "password = \"" << password << "\"" << std::endl << 
+    "hostname = \""<<hostname << "\"" << std::endl << 
+    "port = \"" << port << "\"" << std::endl << 
+    "relative = \""<<relative << "\"" << std::endl << 
+    "path = \"" << path << "\"" << std::endl << 
+    "directory = \""<<directory << "\"" << std::endl << 
+    "file = \"" << file << "\"" << std::endl << 
+    "query = \""<<query << "\"" << std::endl << 
+    "hash = \"" << hash << "\"" << std::endl << 
+    "pathname = \"" << pathname << "\"" << std::endl << 
+    "normalizedPath = \""<<normalizedPath << "\"" << std::endl << 
+    "authority = \"" << authority << "\"" << std::endl;
+  }
+    
+  public: static JsonLdUrl parse ( String url ) {
+          JsonLdUrl &rval;
+          rval.href = url;
+          boost::smatch match;
+          try
+          {
+            boost::regex parser ("^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)");
+            boost::regex_match ( url, match, parser );
+            //if ( !std::regex_match ( url.c_str(), match, parser ) )
+-             //       return rval;
+          }
+          catch (const boost::regex_error& e) 
+          {
+            std::cout << "regex_error caught: " << e.code() << '\n';
+          };
 
-public: static JsonLdUrl * parse ( String url ) {
-	JsonLdUrl *rval = new JsonLdUrl();
-	rval->href = url;
+          assert ( match.size() == 14 );
 
-	std::cmatch match;
+          rval.protocol = match[1].str ();
+          rval.host = match[2].str ();
+          rval.auth = match[3].str ();
+          rval.user = match[4].str ();
+          rval.password = match[5].str ();
+          rval.hostname = match[6].str ();
+          rval.port = match[7].str ();
+          rval.relative = match[8].str ();
+          rval.path = match[9].str ();
+          rval.directory = match[10].str ();
+          rval.file = match[11].str ();
+          rval.query = match[12].str ();
+          rval.hash = match[13].str ();
+          //rval->hash = match[141].str ();
+          //char aa[2]; aa[4] = 's';
 
-	std::cout << "-- " << std::endl;
-
-        try
-        {
-          //std::regex parser ( "^(?:([^:\\/?#]+):)?(?:\\/\\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\\/?#]*)(?::(\\d*))?))?((((?:[^?#\\/]*\\/)*)([^?#]*))(?:\\?([^#]*))?(?:#(.*))?)" );
           
-          std::regex parser ( "[a|b]" );
-          //std::regex parser ( "a|b" );
-          
-          if ( !std::regex_match ( url.c_str(), match, parser ) )
+                          // normalize to node.js API
+                          if ( rval.host.size() && rval.path.size() )
+                              rval.path = "/";
+                          rval.pathname = rval.path;
+          /*
+                          parseAuthority ( rval );
+                          rval.normalizedPath = removeDotSegments ( rval.pathname, !"".equals ( rval.authority ) );
+                          if ( !"".equals ( rval.query ) )
+                                  rval.path += "?" + rval.query;
+                          if ( !"".equals ( rval.protocol ) )
+                                  rval.protocol += ":";
+                          if ( !"".equals ( rval.hash ) )
+                                  rval.hash = "#" + rval.hash;
+            */
+
                   return rval;
-        }
-        catch (const std::regex_error& e) 
-        {
-          std::cout << "regex_error caught: " << e.code() << '\n';
-          if (e.code() == std::regex_constants::error_brack)
-            std::cout << "brack\n";
-        }
-	
-	std::cout << "-- " << std::endl;
-	assert ( match.size() == 14 );
-
-	std::cout << "-- " << match.str ( 1 ) << std::endl;
-
-	if ( match[1] != NULL )
-		rval->protocol = match.str ( 1 );
-
-                        /*
-			if ( matcher.group ( 2 ) != null )
-				rval.host = matcher.group ( 2 );
-			if ( matcher.group ( 3 ) != null )
-				rval.auth = matcher.group ( 3 );
-			if ( matcher.group ( 4 ) != null )
-				rval.user = matcher.group ( 4 );
-			if ( matcher.group ( 5 ) != null )
-				rval.password = matcher.group ( 5 );
-			if ( matcher.group ( 6 ) != null )
-				rval.hostname = matcher.group ( 6 );
-			if ( matcher.group ( 7 ) != null )
-				rval.port = matcher.group ( 7 );
-			if ( matcher.group ( 8 ) != null )
-				rval.relative = matcher.group ( 8 );
-			if ( matcher.group ( 9 ) != null )
-				rval.path = matcher.group ( 9 );
-			if ( matcher.group ( 10 ) != null )
-				rval.directory = matcher.group ( 10 );
-			if ( matcher.group ( 11 ) != null )
-				rval.file = matcher.group ( 11 );
-			if ( matcher.group ( 12 ) != null )
-				rval.query = matcher.group ( 12 );
-			if ( matcher.group ( 13 ) != null )
-				rval.hash = matcher.group ( 13 );
-
-			// normalize to node.js API
-			if ( !"".equals ( rval.host ) && "".equals ( rval.path ) )
-				rval.path = "/";
-			rval.pathname = rval.path;
-			parseAuthority ( rval );
-			rval.normalizedPath = removeDotSegments ( rval.pathname, !"".equals ( rval.authority ) );
-			if ( !"".equals ( rval.query ) )
-				rval.path += "?" + rval.query;
-			if ( !"".equals ( rval.protocol ) )
-				rval.protocol += ":";
-			if ( !"".equals ( rval.hash ) )
-				rval.hash = "#" + rval.hash;
-			return rval;
-		*/
-
-		return rval;
-	}
+          }
 
 
 
