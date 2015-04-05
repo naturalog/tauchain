@@ -94,16 +94,20 @@ inline String lower ( const String& s_ ) {
 
 typedef std::runtime_error NullPointerException;
 
-inline bool endsWith(const String& x, const String& y) { return x.size() >= y.size() && x.substr(x.size() - y.size(), y.size()) == y; }
-inline bool startsWith(const String& x, const String& y) { return x.size() >= y.size() && x.substr(0, y.size()) == y; }
+inline bool endsWith ( const String& x, const String& y ) {
+	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
+}
+inline bool startsWith ( const String& x, const String& y ) {
+	return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
+}
 
 template<typename charT>
-inline List<String> split(const String& s, charT c) {
+inline List<String> split ( const String& s, charT c ) {
 	List<String> v;
-	for (String::size_type i = 0,  j = s.find(c); j != String::npos;) {
-		v.push_back(s.substr(i, j-i));
-		j = s.find(c, i = ++j);
-		if (j == String::npos) v.push_back(s.substr(i, s.length()));
+	for ( String::size_type i = 0,  j = s.find ( c ); j != String::npos; ) {
+		v.push_back ( s.substr ( i, j - i ) );
+		j = s.find ( c, i = ++j );
+		if ( j == String::npos ) v.push_back ( s.substr ( i, s.length() ) );
 	}
 	return v;
 }

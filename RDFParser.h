@@ -1,4 +1,4 @@
-// package com.github.jsonldjava.core;
+#include "RDFDataset.h"
 
 /**
     Interface for parsing RDF into the RDF Dataset objects to be used by
@@ -7,8 +7,7 @@
     @author Tristan
 
 */
-public: interface RDFParser {
-
+class RDFParser {
 	/**
 	    Parse the input into the internal RDF Dataset format The format is a Map
 	    with the following structure: { GRAPH_1: [ TRIPLE_1, TRIPLE_2, ...,
@@ -43,6 +42,5 @@ public: interface RDFParser {
 	    @
 	               If there was an error parsing the input
 	*/
-public: RDFDataset parse ( Object input ) ;
-}
-;
+	virtual RDFDataset parse ( Object input ) = 0;
+};

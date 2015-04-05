@@ -1,4 +1,5 @@
 #include "JsonLdOptions.h"
+#include "RDFParser.h"
 
 /**
     This class : public the <a href=
@@ -28,8 +29,8 @@ class JsonLdProcessor {
 	    @
 	               If there is an error while compacting.
 	*/
-public: 
-static Map<String, Object> compact ( Object& input, Object& context, JsonLdOptions<Object>& opts ) {
+public:
+	static Map<String, Object> compact ( Object& input, Object& context, JsonLdOptions<Object>& opts ) {
 		// 1)
 		// TODO: look into java futures/promises
 
@@ -152,12 +153,12 @@ public: static List<Object> expand ( Object& input, JsonLdOptions<Object> opts )
 	    @
 	               If there is an error while expanding.
 	*/
-public: 
-static List<Object> expand ( Object input )  {
-		return expand ( input, JsonLdOptions<Object>( "" ) );
+public:
+	static List<Object> expand ( Object input )  {
+		return expand ( input, JsonLdOptions<Object> ( "" ) );
 	}
 
- static Object flatten ( Object& input, Object& context, JsonLdOptions<Object>& opts ) {
+	static Object flatten ( Object& input, Object& context, JsonLdOptions<Object>& opts ) {
 		// 2-6) NOTE: these are all the same steps as in expand
 		const Object expanded = expand ( input, opts );
 		// 7)
@@ -297,15 +298,18 @@ public: static Map<String, Object> frame ( Object& input, Object& frame, JsonLdO
 
 	    TODO: this would fit better in the document loader class
 	*/
-private: static Map<String, RDFParser> rdfParsers = new LinkedHashMap<String, RDFParser>() {
+private:
+	Map<String, RDFParser*> rdfParsers = []() {
 		{
+			Map<String, RDFParser*> r;
 			// automatically register nquad serializer
-			put ( "application/nquads", new NQuadRDFParser() );
-			put ( "text/turtle", new TurtleRDFParser() );
-		}
+			r.put ( "application/nquads", new NQuadRDFParser() );
+			r.put ( "text/turtle", new TurtleRDFParser() );
+			return r;
+		};
 	};
 
-public: static void registerRDFParser ( String format, RDFParser parser ) {
+public: static void registerRDFParser ( String format, RDFParser* parser ) {
 		rdfParsers.put ( format, parser );
 	}
 
@@ -330,20 +334,15 @@ public: static void removeRDFParser ( String format ) {
 	    @
 	               If there is an error converting the dataset to JSON-LD.
 	*/
-public: static Object fromRDF ( Object dataset, JsonLdOptions<Object>options )  {
+	static Object fromRDF ( Object& dataset, JsonLdOptions<Object>& options )  {
 		// handle non specified serializer case
-
 		RDFParser parser = null;
-
-		if ( options.format == null && dataset.isString() ) {
+		if ( options.format == null && dataset.isString() )
 			// attempt to parse the input as nquads
 			options.format = "application/nquads";
-		}
 
-		if ( rdfParsers.containsKey ( options.format ) )
-			parser = rdfParsers.get ( options.format ); else
-			throw JsonLdError ( UNKNOWN_FORMAT, options.format );
-
+		if ( rdfParsers.containsKey ( options.format ) ) parser = rdfParsers.get ( options.format );
+		else throw JsonLdError ( UNKNOWN_FORMAT, options.format );
 		// convert from RDF
 		return fromRDF ( dataset, options, parser );
 	}
@@ -359,8 +358,8 @@ public: static Object fromRDF ( Object dataset, JsonLdOptions<Object>options )  
 	    @
 	               If there was an error converting from RDF to JSON-LD
 	*/
-public: static Object fromRDF ( Object dataset )  {
-		return fromRDF ( dataset, new JsonLdOptions<Object>( "" ) );
+	static Object fromRDF ( Object dataset )  {
+		return fromRDF ( dataset, new JsonLdOptions<Object> ( "" ) );
 	}
 
 	/**
@@ -398,7 +397,7 @@ public: static Object fromRDF ( Object input, JsonLdOptions<Object>options, RDFP
 				return compact ( rval, dataset.getContext(), options ); else if ( "flattened".equals ( options.outputForm ) )
 				return flatten ( rval, dataset.getContext(), options ); else {
 				throw JsonLdError ( UNKNOWN_ERROR, "Output form was unknown: "
-				                        + options.outputForm );
+				                    + options.outputForm );
 			}
 		}
 		return rval;
@@ -418,8 +417,8 @@ public: static Object fromRDF ( Object input, JsonLdOptions<Object>options, RDFP
 	    @
 	               If there is an error converting the dataset to JSON-LD.
 	*/
-public: static Object fromRDF ( Object input, RDFParser parser )  {
-		return fromRDF ( input, new JsonLdOptions<Object>( "" ), parser );
+	static Object fromRDF ( Object input, RDFParser parser )  {
+		return fromRDF ( input, new JsonLdOptions<Object> ( "" ), parser );
 	}
 
 	/**
@@ -442,7 +441,7 @@ public: static Object fromRDF ( Object input, RDFParser parser )  {
 	    @
 	               If there is an error converting the dataset to JSON-LD.
 	*/
-public: static Object toRDF ( Object input, JsonLdTripleCallback callback, JsonLdOptions<Object>options ) {
+	static Object toRDF ( Object& input, JsonLdTripleCallback& callback, JsonLdOptions<Object>& options ) {
 
 		const Object expandedInput = expand ( input, options );
 
@@ -468,9 +467,9 @@ public: static Object toRDF ( Object input, JsonLdTripleCallback callback, JsonL
 
 		if ( options.format != null ) {
 			if ( "application/nquads".equals ( options.format ) )
-				return new NQuadTripleCallback().call ( dataset ); 
+				return new NQuadTripleCallback().call ( dataset );
 			else if ( "text/turtle".equals ( options.format ) )
-				return new TurtleTripleCallback().call ( dataset ); 
+				return new TurtleTripleCallback().call ( dataset );
 			else
 				throw JsonLdError ( UNKNOWN_FORMAT, options.format );
 		}
@@ -491,7 +490,7 @@ public: static Object toRDF ( Object input, JsonLdTripleCallback callback, JsonL
 	    @
 	               If there is an error converting the dataset to JSON-LD.
 	*/
-public: 
+public:
 	static Object toRDF ( Object input, JsonLdOptions<Object>options )  {
 		return toRDF ( input, null, options );
 	}
@@ -510,7 +509,7 @@ public:
 	               If there is an error converting the dataset to JSON-LD.
 	*/
 public: static Object toRDF ( Object input, JsonLdTripleCallback callback )  {
-		return toRDF ( input, callback, new JsonLdOptions<Object>( "" ) );
+		return toRDF ( input, callback, new JsonLdOptions<Object> ( "" ) );
 	}
 
 	/**
@@ -524,7 +523,7 @@ public: static Object toRDF ( Object input, JsonLdTripleCallback callback )  {
 	               If there is an error converting the dataset to JSON-LD.
 	*/
 public: static Object toRDF ( Object input )  {
-		return toRDF ( input, new JsonLdOptions<Object>( "" ) );
+		return toRDF ( input, new JsonLdOptions<Object> ( "" ) );
 	}
 
 	/**
@@ -562,7 +561,7 @@ public: static Object normalize ( Object& input, JsonLdOptions<Object>options ) 
 	               If there is an error normalizing the dataset.
 	*/
 public: static Object normalize ( Object& input )  {
-		return normalize ( input, new JsonLdOptions<Object>( "" ) );
+		return normalize ( input, new JsonLdOptions<Object> ( "" ) );
 	}
 
 }
