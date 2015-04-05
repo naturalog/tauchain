@@ -458,7 +458,7 @@ private: static String removeBase ( boost::variant<String, JsonLdUrl>& baseobj, 
 			}
 
 			// recurse through properties
-//			for ( const String prop : ( ( Map<String, Object> ) input ).keySet() ) {
+//			for ( const String prop : ( input.obj()).keySet() ) {
 			for (auto x : input.obj()) {
 				String prop = x.first;
 				Object result = removePreserve ( ctx, input.obj( ).get ( prop ), opts );
@@ -496,8 +496,10 @@ private: static String _join ( const List<String>& list, const String& joiner ) 
 	    @param delim
 	    @return
 	*/
-private: static List<String> _split ( String string, String delim ) {
-		List<String> rval = string.split ( delim );
+private: 
+template<typename charT>
+static List<String> _split ( String string, charT delim ) {
+		List<String> rval = split ( delim );
 		if ( endsWith (string, "/" ) )
 			// javascript .split includes a blank entry if the string ends with
 			// the delimiter, java .split does not so we need to add it manually
@@ -518,7 +520,7 @@ private: static List<String> _split ( String string, String delim ) {
 	static int compareShortestLeast ( String a, String b ) {
 		if ( a.length() < b.length() ) return -1; 
 		else if ( b.length() < a.length() ) return 1;
-		return Integer.signum ( a.compareTo ( b ) );
+		return a < b ? -1 : a == b ? 0 : -1;
 	}
 
 	/**
@@ -537,9 +539,9 @@ private: static List<String> _split ( String string, String delim ) {
 		boolean rval = false;
 		if ( hasProperty ( subject, property ) ) {
 			Object val = subject.get ( property );
-			const boolean isList = isList ( val );
-			if ( isList || val.isList() ) {
-				if ( isList ) val = val.obj( ).get ( "@list" ;
+			const boolean isList_ = isList ( val );
+			if ( isList_ || val.isList() ) {
+				if ( isList_ ) val = val.obj( ).get ( "@list" );
 				for ( const Object i : val.list() ) {
 					if ( compareValues ( value, i ) ) {
 						rval = true;
@@ -555,7 +557,7 @@ private: static List<String> _split ( String string, String delim ) {
  static boolean hasProperty ( Map<String, Object> subject, String property ) {
 		boolean rval = false;
 		if ( subject.containsKey ( property ) ) {
-			const Object value = subject.get ( property );
+			Object value = subject.get ( property );
 			rval = ( ! ( value.isList() ) || value.list().size() > 0 );
 		}
 		return rval;
@@ -582,14 +584,14 @@ private: static List<String> _split ( String string, String delim ) {
 
 		if ( isValue ( v1 )
 		        && isValue ( v2 )
-		        && Obj.equals ( ( ( Map<String, Object> ) v1 ).get ( "@value" ),
-		                        ( ( Map<String, Object> ) v2 ).get ( "@value" ) )
-		        && Obj.equals ( ( ( Map<String, Object> ) v1 ).get ( "@type" ),
-		                        ( ( Map<String, Object> ) v2 ).get ( "@type" ) )
-		        && Obj.equals ( ( ( Map<String, Object> ) v1 ).get ( "@language" ),
-		                        ( ( Map<String, Object> ) v2 ).get ( "@language" ) )
-		        && Obj.equals ( ( ( Map<String, Object> ) v1 ).get ( "@index" ),
-		                        ( ( Map<String, Object> ) v2 ).get ( "@index" ) ) )
+		        && equals ( v1.obj( ).get ( "@value" ),
+		                        v2.obj( ).get ( "@value" ) )
+		        && equals ( v1.obj( ).get ( "@type" ),
+		                        v2.obj( ).get ( "@type" ) )
+		        && equals ( v1.obj( ).get ( "@language" ),
+		                        v2.obj( ).get ( "@language" ) )
+		        && equals ( v1.obj( ).get ( "@index" ),
+		                        v2.obj( ).get ( "@index" ) ) )
 			return true;
 
 		if ( ( v1.isMap() &&  v1.obj( ).containsKey ( "@id" ) )
@@ -616,21 +618,19 @@ private: static List<String> _split ( String string, String delim ) {
 		removeValue ( subject, property, value, false );
 	}
 
-	static void removeValue ( Map<String, Object> subject, String property,
-	                          Map<String, Object> value, boolean propertyIsArray ) {
+	static void removeValue ( Map<String, Object>& subject, String property,
+	                          Map<String, Object>& value, boolean propertyIsArray ) {
 		// filter out value
-		List<Object> values = ArrayList<Object>();
+		List<Object> values;
 		if ( subject.get ( property ).isList() ) {
-			for ( const Object e : subject.get ( property ).list() ) {
-				if ( ! ( value.equals ( e ) ) )
-					values.push_back ( value );
+			for ( Object e : subject.get ( property ).list() ) {
+				if ( value != e.obj() ) values.push_back ( value );
 			}
-		} else if ( !value.equals ( subject.get ( property ) ) )
-			values.push_back ( subject.get ( property ) );
-		if ( values.size() == 0 )
-			subject.remove ( property ); else if ( values.size() == 1 && !propertyIsArray )
-			subject.put ( property, values.get ( 0 ) ); else
-			subject.put ( property, values );
+		} else if ( value != subject.get ( property ).obj() ) values.push_back ( subject.get ( property ) );
+		if ( values.size() == 0 ) subject.remove ( property ); 
+		else if ( values.size() == 1 && !propertyIsArray )
+			subject.put ( property, values.at ( 0 ) ); 
+		else subject.put ( property, values );
 	}
 
 	/**
@@ -647,10 +647,11 @@ private: static List<String> _split ( String string, String delim ) {
 		// 2. If it has an @id key its value begins with '_:'.
 		// 3. It has no keys OR is not a @value, @set, or @list.
 		if ( v.isMap() ) {
-			if ( ( ( Map ) v ).containsKey ( "@id" ) )
-				return ( ( String ) ( ( Map ) v ).get ( "@id" ) ).startsWith ( "_:" ); else {
-				return ( ( Map ) v ).size() == 0
-				       || ! ( ( ( Map ) v ).containsKey ( "@value" ) || ( ( Map ) v ).containsKey ( "@set" ) || ( ( Map ) v )
+			if ( v.obj( ).containsKey ( "@id" ) )
+				return startsWith(v.obj().get ( "@id" ).str( ), "_:" ); 
+			else {
+				return v.obj().size() == 0
+				       || ! ( v.obj().containsKey ( "@value" ) || v.obj().containsKey ( "@set" ) || v.obj()
 				              .containsKey ( "@list" ) );
 			}
 		}
@@ -670,43 +671,43 @@ private: static List<String> _split ( String string, String delim ) {
 
 	    @return true if new URLs to resolve were found, false if not.
 	*/
-private: static boolean findContextUrls ( Object input, Map<String, Object> urls, Boolean replace ) {
+private: static boolean findContextUrls ( Object& input, Map<String, Object>& urls, Boolean replace ) {
 		const int count = urls.size();
 		if ( input.isList() ) {
-			for ( const Object i : ( List ) input )
+			for ( Object i : input.list())
 				findContextUrls ( i, urls, replace );
 			return count < urls.size();
 		} else if ( input.isMap() ) {
-			for ( const String key : ( ( Map<String, Object> ) input ).keySet() ) {
-				if ( !"@context"s == ( key ) ) {
-					findContextUrls ( ( ( Map ) input ).get ( key ), urls, replace );
+//			for ( String key : ( input.obj()).keySet() ) {
+			for (auto x : input.obj()) {
+				String key = x.first;
+				if ( "@context"s != key ) {
+					findContextUrls ( input.obj().get ( key ), urls, replace );
 					continue;
 				}
 
 				// get @context
-				const Object ctx = ( ( Map ) input ).get ( key );
+				Object ctx = ( input.obj()).get ( key );
 
 				// array @context
 				if ( ctx.isList() ) {
-					int length = ( ( List ) ctx ).size();
+					int length = ( ctx.list() ).size();
 					for ( int i = 0; i < length; i++ ) {
-						Object _ctx = ( ( List ) ctx ).get ( i );
+						Object _ctx = ctx.list().at ( i );
 						if ( _ctx.isString() ) {
 							// replace w/@context if requested
 							if ( replace ) {
-								_ctx = urls.get ( _ctx );
+								_ctx = urls.get ( _ctx.str() );
 								if ( _ctx.isList() ) {
 									// add flattened context
-									( ( List ) ctx ).remove ( i );
-									( ( List ) ctx ).addAll ( ( Collection ) _ctx );
-									i += ( ( List ) _ctx ).size();
-									length += ( ( List ) _ctx ).size();
-								} else
-									( ( List ) ctx ).set ( i, _ctx );
+									ctx.list() .erase ( ctx.list().begin()+i );
+									 ctx.list().insert (ctx.list().end(),  _ctx.list().begin(), _ctx.list().end() );
+									i +=  _ctx.list() .size();
+									length +=   _ctx.list() .size();
+								} else ctx.list()[i] =  _ctx ;
 							}
 							// @context JsonLdUrl found
-							else if ( !urls.containsKey ( _ctx ) )
-								urls.put ( ( String ) _ctx, Boolean.FALSE );
+							else if ( !urls.containsKey ( _ctx.str() ) ) urls.put (  _ctx.str(), false/*Boolean.FALSE*/ );
 						}
 					}
 				}
@@ -714,10 +715,10 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 				else if ( ctx.isString() ) {
 					// replace w/@context if requested
 					if ( replace )
-						( ( Map ) input ).put ( key, urls.get ( ctx ) );
+						 input.obj().put ( key, urls.get ( ctx.str() ) );
 					// @context JsonLdUrl found
-					else if ( !urls.containsKey ( ctx ) )
-						urls.put ( ( String ) ctx, Boolean.FALSE );
+					else if ( !urls.containsKey ( ctx.str() ) )
+						urls.put ( ctx.str(), false );
 				}
 			}
 			return ( count < urls.size() );
@@ -728,17 +729,16 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 	static Object clone ( Object value ) { // throws
 		// CloneNotSupportedException {
 		Object rval = null;
-		if ( value.isCloneable ) {
+/*		if ( value.isCloneable ) {
 			try {
 				rval = value.getClass().getMethod ( "clone" ).invoke ( value );
 			} catch ( const Exception e ) {
 				rval = e;
 			}
-		}
-		if ( rval == null || rval.isException ) {
+		}*/
+		if ( rval == null/* || rval.isException*/ ) {
 			// the object wasn't cloneable, or an error occured
-			if ( value == null || value.isString() || value.isNumber
-			        || value.isBoolean ) {
+			if ( value == null || value.isString() || value.isNumber() || value.isBoolean() ) {
 				// strings numbers and booleans are immutable
 				rval = value;
 			} else {
@@ -747,8 +747,9 @@ private: static boolean findContextUrls ( Object input, Map<String, Object> urls
 				// because simply it should never fail in the case of JSON-LD
 				// and means that
 				// the input JSON-LD is invalid
-				throw RuntimeException ( new CloneNotSupportedException (
-				                             ( rval.isException ? ( ( Exception ) rval ).getMessage() : "" ) ) );
+//				throw RuntimeException ( new CloneNotSupportedException (
+//				                             ( rval.isException ? ( ( Exception ) rval ).getMessage() : "" ) ) );
+				throw std::runtime_error("unknown clone");
 			}
 		}
 		return rval;

@@ -55,6 +55,10 @@ public:
 	Value_impl ( double             value );
 	Value_impl ( const Null& ) : Value_impl() {}
 
+	Value_type type() const;
+	bool is_uint64() const;
+	bool is_null() const;
+
 	bool isMap() const {
 		return type() == obj_type || type() == context_type;
 	}
@@ -67,15 +71,14 @@ public:
 	bool isString() const {
 		return type() == str_type;
 	}
-	bool isBoolean() const {
-		return type() == bool_type;
-	}
+	bool isBoolean() const { return type() == bool_type; }
 	bool isInt() const {
 		return type() == int_type;
 	}
 	bool isDouble() const {
 		return type() == real_type;
 	}
+	bool isNumber() const { return type() == int_type||type() == real_type || is_uint64(); }
 
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
@@ -91,10 +94,6 @@ public:
 	bool equals ( const Value_impl& lhs ) const {
 		return *this == lhs;
 	}
-
-	Value_type type() const;
-	bool is_uint64() const;
-	bool is_null() const;
 
 	inline const String_type& get_str()    const;
 	inline const Object&      get_obj()    const;
