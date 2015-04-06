@@ -1,3 +1,8 @@
+*.orig
+testJsonLdUrl
+.cproject
+.project
+
 # Compiled Object files
 *.slo
 *.lo
