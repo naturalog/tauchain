@@ -35,6 +35,7 @@ class map_t : public std::map<K, V> {
 public:
 	typedef std::map<K, V> base_t;
 	using base_t::base_t;
+	map_t() : base_t() {}
 	void put ( const K& k, const V& v ) {
 		at ( k ) = v;
 	}
@@ -55,7 +56,6 @@ public:
 	bool containsKey ( const K& k ) const {
 		return find ( k ) != base_t::end();
 	}
-
 	const V& remove ( const K& k ) {
 		auto it = find ( k );
 		if ( it == base_t::end() ) return null;
@@ -63,7 +63,6 @@ public:
 		erase ( it );
 		return v;
 	}
-	map_t() : base_t() {}
 	virtual bool isContext() const {
 		return false;
 	}

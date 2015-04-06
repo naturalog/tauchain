@@ -89,7 +89,7 @@ static Object remove ( Object map, String k1, String k2 ) {
     @return True if the objects were both null. True if both objects were not
            null and v1.equals(v2). False otherwise.
 */
-static boolean equals ( Object v1, Object v2 ) {
+static boolean equals ( const Object& v1, const Object& v2 ) {
 	return v1 == null ? v2 == null : v1.equals ( v2 );
 }
 //};
