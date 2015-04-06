@@ -1,63 +1,31 @@
-// package com.github.jsonldjava.utils;
+/*
+    #include "HttpCacheStorage.h"
+    class JarCacheStorage : public HttpCacheStorage {
 
-// import java.io.IOException;
-// import java.lang.ref.SoftReference;
-// import java.net.MalformedURLException;
-// import java.net.URI;
-// import java.net.URISyntaxException;
-// import java.net.URL;
-// import java.util.ArrayList;
-// import java.util.Date;
-// import java.util.Enumeration;
-// import java.util.Iterator;
-// import java.util.List;
-// import java.util.concurrent.ConcurrentHashMap;
-// import java.util.concurrent.ConcurrentMap;
+    private:
+    static const String JARCACHE_JSON = "jarcache.json";
 
-// import org.apache.http.Header;
-// import org.apache.http.HttpVersion;
-// import org.apache.http.client.cache.HeaderConstants;
-// import org.apache.http.client.cache.HttpCacheEntry;
-// import org.apache.http.client.cache.HttpCacheStorage;
-// import org.apache.http.client.cache.HttpCacheUpdateCallback;
-// import org.apache.http.client.cache.HttpCacheUpdateException;
-// import org.apache.http.client.cache.Resource;
-// import org.apache.http.impl.client.cache.CacheConfig;
-// import org.apache.http.impl.cookie.DateUtils;
-// import org.apache.http.message.BasicHeader;
-// import org.apache.http.message.BasicStatusLine;
-// import org.apache.http.protocol.HTTP;
-// import org.slf4j.Logger;
-// import org.slf4j.LoggerFactory;
+    const Logger log = LoggerFactory.getLogger ( getClass() );
 
-// import com.fasterxml.jackson.core.JsonProcessingException;
-// import com.fasterxml.jackson.databind.JsonNode;
-// import com.fasterxml.jackson.databind.ObjectMapper;
+    const CacheConfig cacheConfig = new CacheConfig();
+    ClassLoader classLoader;
 
-class JarCacheStorage : public HttpCacheStorage {
-
-private: static const String JARCACHE_JSON = "jarcache.json";
-
-private: const Logger log = LoggerFactory.getLogger ( getClass() );
-
-private: const CacheConfig cacheConfig = new CacheConfig();
-private: ClassLoader classLoader;
-
-public: ClassLoader getClassLoader() {
+    public:
+    ClassLoader getClassLoader() {
 		if ( classLoader != null )
 			return classLoader;
 		return Thread.currentThread().getContextClassLoader();
 	}
 
-public: void setClassLoader ( ClassLoader classLoader ) {
+    void setClassLoader ( ClassLoader classLoader ) {
 		this.classLoader = classLoader;
 	}
 
-public: JarCacheStorage() {
+    JarCacheStorage() {
 		this ( null );
 	}
 
-public: JarCacheStorage ( ClassLoader classLoader ) {
+    JarCacheStorage ( ClassLoader classLoader ) {
 		setClassLoader ( classLoader );
 		cacheConfig.setMaxObjectSize ( 0 );
 		cacheConfig.setMaxCacheEntries ( 0 );
@@ -66,7 +34,7 @@ public: JarCacheStorage ( ClassLoader classLoader ) {
 	}
 
 	virtual
-public: void putEntry ( String key, HttpCacheEntry entry )  {
+    void putEntry ( String key, HttpCacheEntry entry )  {
 		// ignored
 
 	}
@@ -74,7 +42,7 @@ public: void putEntry ( String key, HttpCacheEntry entry )  {
 	ObjectMapper mapper = new ObjectMapper();
 
 	virtual
-public: HttpCacheEntry getEntry ( String key )  {
+    HttpCacheEntry getEntry ( String key )  {
 		log.trace ( "Requesting " + key );
 		URI requestedUri;
 		try {
@@ -108,22 +76,18 @@ public: HttpCacheEntry getEntry ( String key )  {
 		return null;
 	}
 
-private: Enumeration<URL> getResources()  {
+    private:
+    Enumeration<URL> getResources()  {
 		const ClassLoader cl = getClassLoader();
 		if ( cl != null )
 			return cl.getResources ( JARCACHE_JSON ); else
 			return ClassLoader.getSystemResources ( JARCACHE_JSON );
 	}
 
-	/**
-	    Map from uri of jarcache.json (e.g. jar://blab.jar!jarcache.json) to a
-	    SoftReference to its content as JsonNode.
+    protected:
+    ConcurrentMap<URI, SoftReference<JsonNode>> jarCaches = new ConcurrentHashMap<URI, SoftReference<JsonNode>>();
 
-	    @see #getJarCache(URL)
-	*/
-protected: ConcurrentMap<URI, SoftReference<JsonNode>> jarCaches = new ConcurrentHashMap<URI, SoftReference<JsonNode>>();
-
-protected: JsonNode getJarCache ( URL url ) , JsonProcessingException {
+    JsonNode getJarCache ( URL url ) , JsonProcessingException {
 
 		URI uri;
 		try {
@@ -160,7 +124,7 @@ protected: JsonNode getJarCache ( URL url ) , JsonProcessingException {
 		return tree;
 	}
 
-protected: HttpCacheEntry cacheEntry ( URI requestedUri, URL baseURL, JsonNode cacheNode )
+    HttpCacheEntry cacheEntry ( URI requestedUri, URL baseURL, JsonNode cacheNode )
 	throws MalformedURLException, IOException {
 		const URL classpath = new URL ( baseURL, cacheNode.get ( "X-Classpath" ).asText() );
 		log.debug ( "Cache hit for " + requestedUri );
@@ -187,21 +151,21 @@ protected: HttpCacheEntry cacheEntry ( URI requestedUri, URL baseURL, JsonNode c
 		return new HttpCacheEntry ( new Date(), new Date(), new BasicStatusLine ( HttpVersion.HTTP_1_1,
 		200, "OK" ), responseHeaders.toArray ( new Header[0] ), resource );
 	}
-
+    public:
 	virtual
-public: void removeEntry ( String key )  {
+    void removeEntry ( String key )  {
 		// Ignored
 	}
 
 	virtual
-public: void updateEntry ( String key, HttpCacheUpdateCallback callback ) ,
+    void updateEntry ( String key, HttpCacheUpdateCallback callback ) ,
 	HttpCacheUpdateException {
 		// ignored
 	}
 
-public: CacheConfig getCacheConfig() {
+    CacheConfig getCacheConfig() {
 		return cacheConfig;
 	}
 
-}
-;
+    };
+*/

@@ -1,3 +1,5 @@
+#ifndef _RDFDATASET_H__
+#define _RDFDATASET_H__
 #include "JsonLdConsts.h"
 #include "JsonLdApi.h"
 #include <set>
@@ -262,10 +264,9 @@ private:
 	JsonLdApi api;
 
 public:
-	RDFDataset() {
-		super();
-		put ( "@default", new ArrayList<Quad>() );
-		context = new LinkedHashMap<String, String>();
+	RDFDataset() : LinkedHashMap<String, Node*>() {
+		put ( "@default", ArrayList<Quad>() );
+		//		context = new LinkedHashMap<String, String>();
 		// put("@context", context);
 	}
 
@@ -576,3 +577,4 @@ public:
 		return ( List<Quad> ) get ( graphName );
 	}
 };
+#endif
