@@ -10,34 +10,34 @@
 #include "defs.h"
 /*
 
-#include <boost/variant.hpp>
+    #include <boost/variant.hpp>
 
-#include <boost/logic/tribool.hpp>
-//BOOST_TRIBOOL_THIRD_STATE ( bnull )
+    #include <boost/logic/tribool.hpp>
+    //BOOST_TRIBOOL_THIRD_STATE ( bnull )
 
-#include <regex>
-#include <string>
+    #include <regex>
+    #include <string>
 
-typedef std::string String;
-typedef bool boolean;
-typedef boost::tribool Boolean;
-template<typename K> using List = std::vector<K>;
+    typedef std::string String;
+    typedef bool boolean;
+    typedef boost::tribool Boolean;
+    template<typename K> using List = std::vector<K>;
 */
 /*
-List<String> split ( String input, char delim )
-//really, c++?
-{
+    List<String> split ( String input, char delim )
+    //really, c++?
+    {
 	String item;
 	List<String> output;
 	std::istringstream stream ( input );
 	while ( std::getline ( stream, item, delim ) )
 		output.push_back ( item );
 	return output;
-}
+    }
 
-bool endsWith ( String s, char e ) {
+    bool endsWith ( String s, char e ) {
 	return s != "" && s.back() == e;
-}
+    }
 */
 class JsonLdUrl {
 public:
@@ -181,11 +181,11 @@ public:
 	}
 
 	/*
-	static String removeBase ( String base, String iri ) {
+	    static String removeBase ( String base, String iri ) {
 		return removeBase(parse(baseobj), iri);
-	}
+	    }
 
-	static String removeBase ( JsonLdUrl base, String iri ) {
+	    static String removeBase ( JsonLdUrl base, String iri ) {
 		JsonLdUrl base;
 
 		{
@@ -230,7 +230,7 @@ public:
 				if ( iriSegments.size() > 0 )
 					iriSegments..erase ( 0 );
 			}
-		/*
+
 				// use '../' for each non-matching base segment
 				String rval = "";
 				if ( baseSegments.size() > 0 ) {
@@ -261,7 +261,7 @@ public:
 		return rval;
 
 				return rval;
-		*/
+	*/
 	//	return "";
 	//}
 

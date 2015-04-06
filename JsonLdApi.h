@@ -1,5 +1,6 @@
 #ifndef __JSONLDAPI_H__
 #define __JSONLDAPI_H__
+#include "defs.h"
 #include "JsonLdOptions.h"
 /**
     A container object to maintain state relating to JsonLdOptions and the
@@ -11,17 +12,18 @@
 class JsonLdApi {
 
 	JsonLdOptions<Object> opts;
-	Object value = null;
-	Context<Object> context = null;
+	Object* value = 0;// = null;
+	Context<Object>* context = 0;// = null;
 
 	/**
 	    Constructs an empty JsonLdApi object using the default JsonLdOptions, and
 	    without initialization.
 	*/
-public: JsonLdApi() {
-		this ( new JsonLdOptions ( "" ) );
+public:
+	virtual ~JsonLdApi() {
+		if (value) delete value;
+		if (context) delete context;
 	}
-
 	/**
 	    Constructs a JsonLdApi object using the given object as the initial
 	    JSON-LD object, and the given JsonLdOptions.
@@ -34,9 +36,9 @@ public: JsonLdApi() {
 	               If there is an error initializing using the object and
 	               options.
 	*/
-	JsonLdApi ( Object input, JsonLdOptions<Object> opts )  {
-		this ( opts );
-		initialize ( input, null );
+	JsonLdApi ( Object* input, JsonLdOptions<Object>& opts_ )  :
+		JsonLdApi ( &opts_ ) {
+		initialize ( input );
 	}
 
 	/**
@@ -53,9 +55,9 @@ public: JsonLdApi() {
 	               If there is an error initializing using the object and
 	               options.
 	*/
-	JsonLdApi ( Object input, Object context, JsonLdOptions<Object> opts )  {
-		this ( opts );
-		initialize ( input, null );
+	JsonLdApi ( Object* input, Object* context, JsonLdOptions<Object>& opts_ ) :
+		JsonLdApi ( &opts_ ) {
+		initialize ( input );
 	}
 
 	/**
@@ -67,11 +69,8 @@ public: JsonLdApi() {
 	    @param opts
 	              The JsonLdOptions to use.
 	*/
-	JsonLdApi ( JsonLdOptions<Object> opts ) {
-		if ( opts == null )
-			opts = JsonLdOptions<Object> ( "" ); 
-		else
-			this.opts = opts;
+	JsonLdApi ( JsonLdOptions<Object>* opts_ = 0 ) :
+		opts ( opts_ ? JsonLdOptions<Object> ( ) : *opts_ ) {
 	}
 
 	/**
@@ -89,13 +88,11 @@ public: JsonLdApi() {
 	               If there was an error cloning the object, or in parsing the
 	               context.
 	*/
-private: void initialize ( Object input, Object context_ )  {
-		if ( input.isList() || input.isMap() )
-			value = clone ( input );
+private:
+	void initialize ( Object* input, Object* context_ = 0)  {
+		if ( input->isList() || input->isMap() ) value = new Object(*input);
 		// TODO: string/IO input
-		context = Context ( opts );
-		if ( context_ != null )
-			context = context.parse ( context_ );
+		context = context_ ? new Context<Object>(context->parse ( context_ )) : new Context<Object> ( opts );
 	}
 
 	/***
@@ -124,18 +121,18 @@ private: void initialize ( Object input, Object context_ )  {
 	    @
 	               If there was an error during compaction.
 	*/
-	Object compact ( Context<Object>& activeCtx, String& activeProperty, Object& element_, boolean compactArrays )  {
+	Object compact ( Context<Object>& activeCtx, const String& activeProperty, Object& element_, boolean compactArrays )  {
 		if ( element_.isList() ) { // 2
 			List<Object> result, e = element_.list(); // 2.1
 			for ( Object item : e ) { // 2.2
 				Object compactedItem = compact ( activeCtx, activeProperty, item, compactArrays ); // 2.2.1
-				if ( compactedItem != null ) result.push_back ( compactedItem ); // 2.2.2
+				if ( !compactedItem.is_null() ) result.push_back ( compactedItem ); // 2.2.2
 			}
-			return ( compactArrays && result.size() == 1 && activeCtx.getContainer ( activeProperty ) == null ) ? result.get ( 0 ) : result; // 2.3, 2.4
+			return ( compactArrays && result.size() == 1 && !activeCtx.getContainer ( activeProperty ) .size() ) ? result.at ( 0 ) : result; // 2.3, 2.4
 		}
 
-		if ( !element.isMap() ) return _element; // 1
-		map_t elem = element_.obj(); // 3
+		if ( !element_.isMap() ) return element_; // 1
+		auto elem = element_.obj(); // 3
 		if ( elem.containsKey ( "@value" ) || elem.containsKey ( "@id" ) ) { // 4
 			Object compactedValue = activeCtx.compactValue ( activeProperty, elem );
 			if ( ! ( compactedValue.isMap() || compactedValue.isList() ) )
@@ -154,8 +151,8 @@ private: void initialize ( Object input, Object context_ )  {
 				else { // 7.1.2
 					List<Object/*String*/> types;
 					for ( Object/*String*/ expandedType : expandedValue.list() ) // 7.1.2.2)
-						types.push_back ( activeCtx.compactIri ( expandedType, true ) );
-					if ( types.size() == 1 ) compactedValue = types.get ( 0 ); // 7.1.2.3)
+						types.push_back ( activeCtx.compactIri ( expandedType.str(), true ) );
+					if ( types.size() == 1 ) compactedValue = types.at ( 0 ).str(); // 7.1.2.3)
 					else compactedValue = types;
 				}
 				const String alias = activeCtx.compactIri ( expandedProperty, true );// 7.1.3)
@@ -167,9 +164,8 @@ private: void initialize ( Object input, Object context_ )  {
 				// && ((List<Object>) expandedValue).size() == 0);
 			}
 
-
 			if ( "@reverse"s == expandedProperty ) {// 7.2)
-				Map<String, Object> compactedValue = compact ( activeCtx, "@reverse", expandedValue, compactArrays ).obj();// 7.2.1)
+				Map<String, Object> compactedValue = compact ( activeCtx, "@reverse"s, expandedValue, compactArrays ).obj();// 7.2.1)
 				// Note: Must create a new set to avoid modifying the set we
 				// are iterating over
 				for ( auto x : compactedValue ) {// 7.2.2)
@@ -189,7 +185,7 @@ private: void initialize ( Object input, Object context_ )  {
 								List<Object> tmp;
 								tmp.push_back ( result.put ( property, tmp ) );
 							}
-							if ( value.isList() ) result.get ( property ).list().push_back ( value.list().begin(), value.list.end() );
+							if ( value.isList() ) result.get ( property ).list().push_back ( value.list().cbegin(), value.list.cend() );
 							else result.get ( property ).list().push_back ( value );
 						}
 						compactedValue.remove ( property );// 7.2.2.1.4)
@@ -201,15 +197,15 @@ private: void initialize ( Object input, Object context_ )  {
 			}
 
 			if ( "@index"s == expandedProperty && "@index"s == activeCtx.getContainer ( activeProperty ) ) continue; // 7.3
-			else if ( is ( espandedProperty, {"@index"s, "@value"s, "@language"s} ) {	// 7.4)
-			result.put ( activeCtx.compactIri ( expandedProperty, true ), expandedValue );	// 7.4.1-2)
+			else if ( is ( espandedProperty, {"@index"s, "@value"s, "@language"s} ) ) {	// 7.4)
+				result.put ( activeCtx.compactIri ( expandedProperty, true ), expandedValue );	// 7.4.1-2)
 				continue;
 			}
 
 			// NOTE: expanded value must be an array due to expansion
 			// algorithm.
 			if ( !expandedValue.list().size() ) { // 7.5
-			String itemActiveProperty = activeCtx.compactIri ( expandedProperty, expandedValue, true, insideReverse );	// 7.5.1)
+				String itemActiveProperty = activeCtx.compactIri ( expandedProperty, expandedValue, true, insideReverse );	// 7.5.1)
 				if ( !result.containsKey ( itemActiveProperty ) )	// 7.5.2)
 					result.put ( itemActiveProperty, ArrayList<Object>() );
 				else {
@@ -223,7 +219,7 @@ private: void initialize ( Object input, Object context_ )  {
 			}
 
 			for ( Object expandedItem : expandedValue.list() ) {	// 7.6)
-			String itemActiveProperty = activeCtx.compactIri ( expandedProperty, expandedItem, true, insideReverse );	// 7.6.1)
+				String itemActiveProperty = activeCtx.compactIri ( expandedProperty, expandedItem, true, insideReverse );	// 7.6.1)
 				String container = activeCtx.getContainer ( itemActiveProperty );	// 7.6.2)
 				// get @list value if appropriate
 				const boolean isList = expandedItem.isMap() && expandedItem.obj( ) .containsKey ( "@list" );
@@ -289,8 +285,7 @@ private: void initialize ( Object input, Object context_ )  {
 							}
 							if ( compactedItem.isList() )
 								result.get ( itemActiveProperty ) .list().push_back ( compactedItem.list.begin(), compactedItem.list.end() );
-							else
-								result.get ( itemActiveProperty ).list( ).push_back ( compactedItem );
+							else result.get ( itemActiveProperty ).list( ).push_back ( compactedItem );
 						}
 
 				}
@@ -315,7 +310,7 @@ private: void initialize ( Object input, Object context_ )  {
 	    @
 	               If there was an error during compaction.
 	*/
-	Object compact ( Context activeCtx, String activeProperty, Object element ) {
+	Object compact ( Context<Object>& activeCtx, const String& activeProperty, Object& element ) {
 		return compact ( activeCtx, activeProperty, element, true );
 	}
 
@@ -334,7 +329,7 @@ private: void initialize ( Object input, Object context_ )  {
 	    @
 	               If there was an error during expansion.
 	*/
-	Object expand ( Context activeCtx, String activeProperty, Object element ) {
+	Object expand ( Context<Object>& activeCtx, const String& activeProperty, Object& element ) {
 		if ( element == null ) return null; // 1
 		if ( element.isList() ) { // 3
 			List<Object> result; // 3.1
@@ -645,7 +640,7 @@ private: void initialize ( Object input, Object context_ )  {
 		    @
 		               If there was an error during expansion.
 		*/
-public: Object expand ( Context activeCtx, Object element )  {
+		Object expand ( Context<Object>& activeCtx, Object& element )  {
 			return expand ( activeCtx, null, element );
 		}
 

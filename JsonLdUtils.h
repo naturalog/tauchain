@@ -379,7 +379,7 @@ public: static Boolean deepCompare ( Object v1, Object v2, Boolean listOrderMatt
 	*/
 private: static String removeBase ( boost::variant<String, JsonLdUrl>& baseobj, String& iri ) {
 
-//hey cool, this is in JsonLdUrl.h too
+		//hey cool, this is in JsonLdUrl.h too
 
 		JsonLdUrl base;
 		if ( boost::get<String> ( &baseobj ) ) base = JsonLdUrl::parse ( boost::get<String> ( baseobj ) );

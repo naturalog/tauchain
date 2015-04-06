@@ -79,7 +79,7 @@ public:
 						rval.put ( "@type", type );
 				} else if (
 				    // http://www.w3.org/TR/xmlschema11-2/#integer
-<<<<<<< HEAD
+				    <<< <<< < HEAD
 				    ( XSD_INTEGER == type  && PATTERN_INTEGER.matcher ( value ) /*.matches()*/ )
 				    // http://www.w3.org/TR/xmlschema11-2/#nt-doubleRep
 				    || ( XSD_DOUBLE == type && PATTERN_DOUBLE.matcher ( value ) /*.matches()*/ ) ) {
@@ -105,14 +105,14 @@ public:
 class RDFDataset : public LinkedHashMap<String, Node*> {
 	//	static const long serialVersionUID = 2796344994239879165L;
 
-<<<<<<< HEAD
+	<<< <<< < HEAD
 	//	static const Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[-1-9]+$" );
 	//	static const Pattern PATTERN_DOUBLE = Pattern
 	//	                                      .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
-=======
-	static const boost::regex PATTERN_INTEGER ( "^[\\-+]?[0-9]+$" );
+	== == == =
+	    static const boost::regex PATTERN_INTEGER ( "^[\\-+]?[0-9]+$" );
 	static const boost::regex PATTERN_DOUBLE  ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
->>>>>>> a2c92c1421e50baf0c1c944ff67abe76485df887
+	>>> >>> > a2c92c1421e50baf0c1c944ff67abe76485df887
 
 	class Quad : public LinkedHashMap<String, Object> { // : public Comparable<Quad> {
 		//		static const long serialVersionUID = -7021918051975883082L;
