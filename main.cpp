@@ -32,14 +32,17 @@ typedef json_spirit::mValue Object;
 #include "JarCacheResource.h"
 #include "JsonLdApi.h"
 #include "Context.cpp"
+
 void RemoteDocument::setDocument ( const Object& document_ ) {
 	document = document_;
 }
-RRemoteDocument:: emoteDocument ( String url, const Object& document_ /*= null*/, String context ) :
+
+RemoteDocument::RemoteDocument ( String url, const Object& document_ /*= null*/, String context ) :
 	documentUrl ( url ),
 	document ( document_ ),
 	contextUrl ( context ) {
 }
+
 RemoteDocument DocumentLoader::loadDocument ( String url )  {
 	RemoteDocument doc/* = new RemoteDocument*/ ( url, Object() );
 	try {
@@ -55,12 +58,15 @@ const Object& DocumentLoader::fromURL ( String url ) {
 	json_spirit::read ( download ( url ), r );
 	return r;
 }
+
 JsonLdOptions::JsonLdOptions ( String base = "" ) : expandContext ( null ) {
 	setBase ( base );
 }
+
 void JsonLdOptions::setExpandContext ( const Object& expandContext_ ) {
 	expandContext = expandContext_;
 }
+
 const Node& RDFDataset::first = IRI ( RDF_FIRST );
 const Node& RDFDataset::rest = IRI ( RDF_REST );
 const Node& RDFDataset::nil = IRI ( RDF_NIL );

@@ -1,6 +1,6 @@
 #include "JsonLdOptions.h"
 #include "RDFParser.h"
-
+#include "JsonLdTripleCallback.h"
 /**
     This class : public the <a href=
     "http://json-ld.org/spec/latest/json-ld-api/#the-jsonldprocessor-interface"
@@ -383,13 +383,11 @@ public: static void removeRDFParser ( String format ) {
 	    @
 	               If there is an error converting the dataset to JSON-LD.
 	*/
-public: static Object fromRDF ( Object input, JsonLdOptions<Object>options, RDFParser parser ) {
-
+public:
+	static Object fromRDF ( Object& input, JsonLdOptions<Object>options, RDFParser& parser ) {
 		const RDFDataset dataset = parser.parse ( input );
-
 		// convert from RDF
 		const Object rval = new JsonLdApi ( options ).fromRDF ( dataset );
-
 		// re-process using the generated context if outputForm is set
 		if ( options.outputForm != null ) {
 			if ( "expanded".equals ( options.outputForm ) )
@@ -417,8 +415,8 @@ public: static Object fromRDF ( Object input, JsonLdOptions<Object>options, RDFP
 	    @
 	               If there is an error converting the dataset to JSON-LD.
 	*/
-	static Object fromRDF ( Object input, RDFParser parser )  {
-		return fromRDF ( input, new JsonLdOptions<Object> ( "" ), parser );
+	static Object fromRDF ( Object& input, RDFParser& parser )  {
+		return fromRDF ( input, JsonLdOptions<Object> ( "" ), parser );
 	}
 
 	/**
@@ -508,8 +506,8 @@ public:
 	    @
 	               If there is an error converting the dataset to JSON-LD.
 	*/
-public: static Object toRDF ( Object input, JsonLdTripleCallback callback )  {
-		return toRDF ( input, callback, new JsonLdOptions<Object> ( "" ) );
+public: static Object toRDF ( Object input, JsonLdTripleCallback& callback )  {
+		return toRDF ( input, callback, JsonLdOptions<Object> ( "" ) );
 	}
 
 	/**
@@ -523,7 +521,7 @@ public: static Object toRDF ( Object input, JsonLdTripleCallback callback )  {
 	               If there is an error converting the dataset to JSON-LD.
 	*/
 public: static Object toRDF ( Object input )  {
-		return toRDF ( input, new JsonLdOptions<Object> ( "" ) );
+		return toRDF ( input, JsonLdOptions<Object> ( "" ) );
 	}
 
 	/**

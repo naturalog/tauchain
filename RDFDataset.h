@@ -1,5 +1,6 @@
 #include "JsonLdConsts.h"
 #include "JsonLdApi.h"
+#include <set>
 /**
     Starting to migrate away from using plain java Maps as the internal RDF
     dataset store. Currently each item just wraps a Map based on the old format
@@ -105,14 +106,8 @@ public:
 class RDFDataset : public LinkedHashMap<String, Node*> {
 	//	static const long serialVersionUID = 2796344994239879165L;
 
-	<<< <<< < HEAD
-	//	static const Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[-1-9]+$" );
-	//	static const Pattern PATTERN_DOUBLE = Pattern
-	//	                                      .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
-	== == == =
-	    static const boost::regex PATTERN_INTEGER ( "^[\\-+]?[0-9]+$" );
-	static const boost::regex PATTERN_DOUBLE  ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
-	>>> >>> > a2c92c1421e50baf0c1c944ff67abe76485df887
+	//	    static const boost::regex PATTERN_INTEGER ( "^[\\-+]?[0-9]+$" );
+	//	static const boost::regex PATTERN_DOUBLE  ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
 
 	class Quad : public LinkedHashMap<String, Object> { // : public Comparable<Quad> {
 		//		static const long serialVersionUID = -7021918051975883082L;
@@ -522,7 +517,7 @@ public:
 	    @return the RDF literal or RDF resource.
 	*/
 private:
-	Node objectToRDF ( Object item ) {
+	Node* objectToRDF ( Object item ) {
 		// convert value object to RDF
 		if ( isValue ( item ) ) {
 			const Object value = ( ( Map<String, Object> ) item ).get ( "@value" );
@@ -572,7 +567,7 @@ private:
 	}
 
 public:
-	Set<String> graphNames() {
+	std::set<String> graphNames() {
 		// TODO Auto-generated method stub
 		return keySet();
 	}

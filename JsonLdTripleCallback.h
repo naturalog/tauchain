@@ -1,5 +1,5 @@
-// package com.github.jsonldjava.core;
-
+#ifndef __JSONLDTRIPLECALLBACK_H__
+#define __JSONLDTRIPLECALLBACK_H__
 /**
 
     @author Tristan
@@ -9,7 +9,8 @@
            graph). for the moment i'm just going to use the dataset provided by
            toRDF but this should probably change in the future
 */
-public: interface JsonLdTripleCallback {
+public:
+class JsonLdTripleCallback {
 
 	/**
 	    Construct output based on internal RDF dataset format
@@ -40,6 +41,7 @@ public: interface JsonLdTripleCallback {
 
 	    @return the resulting RDF object in the desired format
 	*/
-public: Object call ( RDFDataset dataset );
-}
-;
+public:
+	virtual Object call ( RDFDataset dataset ) = 0;
+};
+#endif

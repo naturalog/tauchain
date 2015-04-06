@@ -1,12 +1,10 @@
-// package com.github.jsonldjava.core;
-
-// import java.util.LinkedHashMap;
-// import java.util.Map;
-
+#ifndef __UNIQUE_NAMER_H__
+#define __UNIQUE_NAMER_H__
 class UniqueNamer {
-private: const String prefix;
-private: int counter;
-private: Map<String, String> existing;
+private:
+	const String prefix;
+	int counter;
+	Map<String, String> existing_;
 
 	/**
 	    Creates a new UniqueNamer. A UniqueNamer issues unique names, keeping
@@ -15,23 +13,10 @@ private: Map<String, String> existing;
 	    @param prefix
 	              the prefix to use ('&lt;prefix&gt;&lt;counter&gt;').
 	*/
-public: UniqueNamer ( String prefix ) {
-		this.prefix = prefix;
-		this.counter = 0;
-		this.existing = new LinkedHashMap<String, String>();
-	}
-
-	/**
-	    Copies this UniqueNamer.
-
-	    @return a copy of this UniqueNamer.
-	*/
-	virtual
-public: UniqueNamer clone() {
-		const UniqueNamer copy = new UniqueNamer ( this.prefix );
-		copy.counter = this.counter;
-		copy.existing = ( Map<String, String> ) JsonLdUtils.clone ( this.existing );
-		return copy;
+public:
+	UniqueNamer ( String prefix_ ) :
+		prefix ( prefix_ ),
+		counter ( 0 ) {
 	}
 
 	/**
@@ -43,7 +28,7 @@ public: UniqueNamer clone() {
 
 	    @return the new name.
 	*/
-public: String getName ( String oldName ) {
+	String getName ( String oldName ) {
 		if ( oldName != null && this.existing.containsKey ( oldName ) )
 			return this.existing.get ( oldName );
 
@@ -56,15 +41,16 @@ public: String getName ( String oldName ) {
 		return name;
 	}
 
-public: String getName() {
+	String getName() {
 		return getName ( null );
 	}
 
-public: Boolean isNamed ( String oldName ) {
-		return this.existing.containsKey ( oldName );
+	Boolean isNamed ( String oldName ) {
+		return existing.containsKey ( oldName );
 	}
 
-public: Map<String, String> existing() {
-		return existing;
+	Map<String, String> existing() {
+		return existing_;
 	}
 };
+#endif

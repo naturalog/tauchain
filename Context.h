@@ -19,7 +19,7 @@ public:
 	using base_t::base_t;
 	Map<String, Object> inverse;// = null;
 
-	Context(const Context& c);
+	Context ( const Context& c );
 	Context ( Map<String, Object> map = base_t(), JsonLdOptions<Object> opts = JsonLdOptions<Object>() ) : base_t ( map ) {
 		init ( opts );
 	}

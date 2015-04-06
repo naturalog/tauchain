@@ -21,8 +21,8 @@ class JsonLdApi {
 	*/
 public:
 	virtual ~JsonLdApi() {
-		if (value) delete value;
-		if (context) delete context;
+		if ( value ) delete value;
+		if ( context ) delete context;
 	}
 	/**
 	    Constructs a JsonLdApi object using the given object as the initial
@@ -89,10 +89,10 @@ public:
 	               context.
 	*/
 private:
-	void initialize ( Object* input, Object* context_ = 0)  {
-		if ( input->isList() || input->isMap() ) value = new Object(*input);
+	void initialize ( Object* input, Object* context_ = 0 )  {
+		if ( input->isList() || input->isMap() ) value = new Object ( *input );
 		// TODO: string/IO input
-		context = context_ ? new Context<Object>(context->parse ( context_ )) : new Context<Object> ( opts );
+		context = context_ ? new Context<Object> ( context->parse ( context_ ) ) : new Context<Object> ( opts );
 	}
 
 	/***
@@ -170,34 +170,34 @@ private:
 				// are iterating over
 				for ( auto x : compactedValue ) {// 7.2.2)
 					String property = x.first;
-					const Object value = x.second;//compactedValue.get ( property );
+					Object val = x.second;//compactedValue.get ( property );
 					if ( activeCtx.isReverseProperty ( property ) ) {	// 7.2.2.1)
 						if ( !compactArrays ||  "@set"s == ( activeCtx.getContainer ( property ) )	// 7.2.2.1.1)
-						        && !value.isList() ) {
+						        && !val.isList() ) {
 							List<Object> tmp;
-							tmp.push_back ( value );
+							tmp.push_back ( val );
 							result.put ( property, tmp );
 						}
 						if ( !result.containsKey ( property ) )	// 7.2.2.1.2)
-							result.put ( property, value );
+							result.put ( property, val );
 						else {	// 7.2.2.1.3)
 							if ( ! result.get ( property ).isList() ) {
 								List<Object> tmp;
-								tmp.push_back ( result.put ( property, tmp ) );
+								tmp.push_back ( put ( result, property, tmp ) );
 							}
-							if ( value.isList() ) result.get ( property ).list().push_back ( value.list().cbegin(), value.list.cend() );
-							else result.get ( property ).list().push_back ( value );
+							if ( val.isList() ) result.get ( property ).list().insert ( val.list().end(), val.list().begin(), val.list().end() );
+							else result.get ( property ).list().push_back ( val );
 						}
 						compactedValue.remove ( property );// 7.2.2.1.4)
 					}
 				}
-				if ( !compactedValue.isEmpty() ) // 7.2.3)
+				if ( compactedValue.size() ) // 7.2.3)
 					result.put ( activeCtx.compactIri ( "@reverse", true ), compactedValue );	// 7.2.3.1-2)
 				continue;	// 7.2.4)
 			}
 
 			if ( "@index"s == expandedProperty && "@index"s == activeCtx.getContainer ( activeProperty ) ) continue; // 7.3
-			else if ( is ( espandedProperty, {"@index"s, "@value"s, "@language"s} ) ) {	// 7.4)
+			else if ( is ( expandedProperty, {"@index"s, "@value"s, "@language"s} ) ) {	// 7.4)
 				result.put ( activeCtx.compactIri ( expandedProperty, true ), expandedValue );	// 7.4.1-2)
 				continue;
 			}
@@ -209,10 +209,10 @@ private:
 				if ( !result.containsKey ( itemActiveProperty ) )	// 7.5.2)
 					result.put ( itemActiveProperty, ArrayList<Object>() );
 				else {
-					Object value = result.get ( itemActiveProperty );
-					if ( ! value.isList() ) {
+					Object val = result.get ( itemActiveProperty );
+					if ( ! val.isList() ) {
 						List<Object> tmp;
-						tmp.push_back ( value );
+						tmp.push_back ( val );
 						result.put ( itemActiveProperty, tmp );
 					}
 				}
@@ -233,7 +233,7 @@ private:
 						compactedItem = tmp;
 					}
 					// 7.6.4.2)
-					if ( !"@list"s == container ) { // 7.6.4.2)
+					if ( "@list"s != container ) { // 7.6.4.2)
 						Map<String, Object> wrapper; // 7.6.4.2.1)
 						// TODO: SPEC: no mention of vocab = true
 						wrapper.put ( activeCtx.compactIri ( "@list", true ), compactedItem );
@@ -249,9 +249,9 @@ private:
 						throw JsonLdError ( Error.COMPACTION_TO_LIST_OF_LISTS,
 						                    "There cannot be two list objects associated with an active property that has a container mapping" );
 				}
-				if ( is ( container, { "@language"s, "@index"s } ) { // 7.6.5)
-				Map<String, Object> mapObject; // 7.6.5.1)
-				if ( result.containsKey ( itemActiveProperty ) )
+				if ( is ( container, { "@language"s, "@index"s } ) ) { // 7.6.5)
+					Map<String, Object> mapObject; // 7.6.5.1)
+					if ( result.containsKey ( itemActiveProperty ) )
 						mapObject = result.get ( itemActiveProperty ).obj();
 					else
 						result.put ( itemActiveProperty, mapObject );
@@ -640,7 +640,7 @@ private:
 		    @
 		               If there was an error during expansion.
 		*/
-		Object expand ( Context<Object>& activeCtx, Object& element )  {
+		Object expand ( Context<Object>& activeCtx, Object & element )  {
 			return expand ( activeCtx, null, element );
 		}
 
