@@ -260,14 +260,10 @@ public:
 
 		return rval;
 
-<<<<<<< HEAD
 				return rval;
 		*/
-		return "";
-=======
->>>>>>> a2c92c1421e50baf0c1c944ff67abe76485df887
-	}
-	*/
+	//	return "";
+	//}
 
 	static String resolve ( String baseUri, String pathToResolve ) {
 		/*
