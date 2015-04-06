@@ -21,6 +21,21 @@ typedef bool boolean;
 typedef boost::tribool Boolean;
 template<typename K> using List = std::vector<K>;
 
+List<String> split ( String input, char delim )
+//really, c++?
+{
+	String item;
+	List<String> output;
+	std::istringstream stream ( input );
+	while ( std::getline ( stream, item, delim ) )
+		output.push_back ( item );
+	return output;
+}
+
+bool endsWith ( String s, char e ) {
+	return s != "" && s.back() == e;
+}
+
 class JsonLdUrl {
 public:
 	String href;
@@ -128,11 +143,7 @@ public:
 
 
 		// RFC 3986 5.2.4 (reworked)
-		List<String> input;
-		String item;
-		std::istringstream stream ( path );
-		while ( std::getline ( stream, item, '/' ) )
-			input.push_back ( item );
+		List<String> input = split ( path, '/' );
 		List<String> output;
 
 		for ( int i = 0; i < input.size(); i++ ) {
@@ -167,59 +178,58 @@ public:
 	}
 
 	static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+		JsonLdUrl base;
+
+		{
+			String base_as_string;
+			// as baseobj we get either a String or a JsonLdUrl or a null
+			if ( (base_as_string = boost::get<String> ( baseobj )) != NULL )
+				base = parse ( base_as_string );
+			else if ( (base = boost::get<JsonLdUrl> ( baseobj ) ))
+				;
+			else
+				return iri;
+		}
+
+		// establish base root
+		String root = "";
+		if ( base.href.size() )
+			root += base.protocol + "//" + base.authority;
+		// support network-path reference with empty base
+		else if ( iri.find ( "//" ) != 0 )
+			root += "//";
+
+		// IRI not relative to base
+		if ( iri.find ( root ) != 0 )
+			return iri;
+
+		// remove root from IRI and parse remainder
+		const JsonLdUrl rel = JsonLdUrl.parse ( iri.substr ( root.length() , iri.length() ) );
+
+		// remove path segments that match
+		List<String> baseSegments = split ( base.normalizedPath, "/" );
+		if ( endsWith ( base.normalizedPath, '/' ) )
+			baseSegments.push_back ( "" );
+		List<String> iriSegments = split ( rel.normalizedPath, '/' );
+		if ( endsWith ( rel.normalizedPath , '/' )
+		        iriSegments.push_back ( "" );
+
+		while ( baseSegments.size() > 0 && iriSegments.size() > 0 ) {
+			if ( baseSegments[0] != iriSegments[0] )
+					break;
+				if ( baseSegments.size() > 0 )
+					baseSegments.erase ( 0 );
+				if ( iriSegments.size() > 0 )
+					iriSegments..erase ( 0 );
+			}
 		/*
-				JsonLdUrl base;
-
-				// we get either a String or a JsonLdUrl or a null, as baseobj
-				if ( String* base_as_string = boost::get<String> ( baseobj ) )
-					base = JsonLdUrl.parse ( base_as_string );
-				elif ( base = boost::get<JsonLdUrl> ( baseobj ) ) {
-					;
-				}
-				else
-					return iri;
-
-				// establish base root
-				String root = "";
-				if ( !"".equals ( base.href ) )
-					root += ( base.protocol ) + "//" + base.authority;
-				// support network-path reference with empty base
-				else if ( iri.indexOf ( "//" ) != 0 )
-					root += "//";
-
-				// IRI not relative to base
-				if ( iri.indexOf ( root ) != 0 )
-					return iri;
-
-				// remove root from IRI and parse remainder
-				const JsonLdUrl rel = JsonLdUrl.parse ( iri.substring ( root.length() ) );
-
-				// remove path segments that match
-				const List<String> baseSegments = new ArrayList<String> ( Arrays.asList ( base.normalizedPath
-				        .split ( "/" ) ) );
-				if ( base.normalizedPath.endsWith ( "/" ) )
-					baseSegments.add ( "" );
-				const List<String> iriSegments = new ArrayList<String> ( Arrays.asList ( rel.normalizedPath
-				        .split ( "/" ) ) );
-				if ( rel.normalizedPath.endsWith ( "/" ) )
-					iriSegments.add ( "" );
-
-				while ( baseSegments.size() > 0 && iriSegments.size() > 0 ) {
-					if ( !baseSegments.get ( 0 ).equals ( iriSegments.get ( 0 ) ) )
-						break;
-					if ( baseSegments.size() > 0 )
-						baseSegments.remove ( 0 );
-					if ( iriSegments.size() > 0 )
-						iriSegments.remove ( 0 );
-				}
-
 				// use '../' for each non-matching base segment
 				String rval = "";
 				if ( baseSegments.size() > 0 ) {
-					// don't count the last segment if it isn't a path (doesn't end in
-					// '/')
-					// don't count empty first segment, it means base began with '/'
-					if ( !base.normalizedPath.endsWith ( "/" ) || "".equals ( baseSegments.get ( 0 ) ) )
+				// don't count the last segment if it isn't a path (doesn't end in
+				// '/')
+				// don't count empty first segment, it means base began with '/'
+				if ( !endsWith ( base.normalizedPath, '/' ) || "".equals ( baseSegments.get ( 0 ) ) )
 						baseSegments.remove ( baseSegments.size() - 1 );
 					for ( int i = 0; i < baseSegments.size(); ++i )
 						rval += "../";
@@ -227,21 +237,21 @@ public:
 
 				// prepend remaining segments
 				if ( iriSegments.size() > 0 )
-					rval += iriSegments.get ( 0 );
-				for ( int i = 1; i < iriSegments.size(); i++ )
-					rval += "/" + iriSegments.get ( i );
+				rval += iriSegments.get ( 0 );
+				        for ( int i = 1; i < iriSegments.size(); i++ )
+					        rval += "/" + iriSegments.get ( i );
 
-				// add query and hash
-				if ( !"".equals ( rel.query ) )
-					rval += "?" + rel.query;
-				if ( !"".equals ( rel.hash ) )
-					rval += rel.hash;
+					        // add query and hash
+					        if ( !"".equals ( rel.query ) )
+						        rval += "?" + rel.query;
+						        if ( !"".equals ( rel.hash ) )
+							        rval += rel.hash;
 
-				if ( "".equals ( rval ) )
-					rval = "./";
-
-				return rval;
+							        if ( "".equals ( rval ) )
+								        rval = "./";
 		*/
+		return rval;
+
 	}
 
 	static String resolve ( String baseUri, String pathToResolve ) {
@@ -307,3 +317,4 @@ private: static void parseAuthority ( JsonLdUrl parsed ) {
 		*/
 	}
 };
+
