@@ -7,6 +7,8 @@
 // import java.util.List;
 // import java.util.regex.Matcher;
 // import java.util.regex.Pattern;
+#include "defs.h"
+/*
 
 #include <boost/variant.hpp>
 
@@ -20,7 +22,8 @@ typedef std::string String;
 typedef bool boolean;
 typedef boost::tribool Boolean;
 template<typename K> using List = std::vector<K>;
-
+*/
+/*
 List<String> split ( String input, char delim )
 //really, c++?
 {
@@ -35,7 +38,7 @@ List<String> split ( String input, char delim )
 bool endsWith ( String s, char e ) {
 	return s != "" && s.back() == e;
 }
-
+*/
 class JsonLdUrl {
 public:
 	String href;
@@ -177,13 +180,18 @@ public:
 
 	}
 
-	static String removeBase ( boost::variant<String, JsonLdUrl> baseobj, String iri ) {
+	/*
+	static String removeBase ( String base, String iri ) {
+		return removeBase(parse(baseobj), iri);
+	}
+
+	static String removeBase ( JsonLdUrl base, String iri ) {
 		JsonLdUrl base;
 
 		{
-			String base_as_string;
+			String *base_as_string;
 			// as baseobj we get either a String or a JsonLdUrl or a null
-			if ( (base_as_string = boost::get<String> ( baseobj )) != NULL )
+			if ( (base_as_string = boost::get<String> ( &baseobj )) != NULL )
 				base = parse ( base_as_string );
 			else if ( (base = boost::get<JsonLdUrl> ( baseobj ) ))
 				;
@@ -249,10 +257,11 @@ public:
 
 							        if ( "".equals ( rval ) )
 								        rval = "./";
-		*/
+
 		return rval;
 
 	}
+	*/
 
 	static String resolve ( String baseUri, String pathToResolve ) {
 		/*
