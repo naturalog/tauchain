@@ -242,6 +242,7 @@ public:
 
 				return rval;
 		*/
+		return "";
 	}
 
 	static String resolve ( String baseUri, String pathToResolve ) {
@@ -275,6 +276,7 @@ public:
 				return null;
 			}
 		*/
+		return "";
 	}
 
 

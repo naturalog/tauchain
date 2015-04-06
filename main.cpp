@@ -61,3 +61,6 @@ JsonLdOptions::JsonLdOptions ( String base = "" ) : expandContext ( null ) {
 void JsonLdOptions::setExpandContext ( const Object& expandContext_ ) {
 	expandContext = expandContext_;
 }
+const Node& RDFDataset::first = IRI ( RDF_FIRST );
+const Node& RDFDataset::rest = IRI ( RDF_REST );
+const Node& RDFDataset::nil = IRI ( RDF_NIL );

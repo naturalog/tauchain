@@ -1,5 +1,5 @@
 # Declaration of variables
-CC = g++
+CC = clang++
 CC_FLAGS = -std=c++1y
 LD_FLAGS = -lcurl
 

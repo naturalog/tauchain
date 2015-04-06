@@ -81,7 +81,8 @@ BOOST_TRIBOOL_THIRD_STATE ( bnull )
 typedef std::string String;
 typedef bool boolean;
 typedef boost::tribool Boolean;
-
+typedef double Double;
+typedef int64_t Integer;
 inline bool is ( const String& s, const std::vector<String>& v ) {
 	return std::find ( v.begin(), v.end(), s ) != v.end();
 }

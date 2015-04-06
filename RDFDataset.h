@@ -1,4 +1,5 @@
 #include "JsonLdConsts.h"
+#include "JsonLdApi.h"
 /**
     Starting to migrate away from using plain java Maps as the internal RDF
     dataset store. Currently each item just wraps a Map based on the old format
@@ -8,16 +9,28 @@
     @author Tristan
 
 */
+struct Pattern {
+	template<typename T> bool matcher ( T ) {
+		return false;
+	}
+} PATTERN_INTEGER, PATTERN_DOUBLE;
+
 class Node : public LinkedHashMap<String, Object> {
-	static const long serialVersionUID = 1460990331795672793L;
+	//	static const long serialVersionUID = 1460990331795672793L;
 
 public:
 	virtual boolean isLiteral() const = 0;
 	virtual boolean isIRI() const = 0;
 	virtual boolean isBlankNode() const = 0;
-	String getValue() const { return get ( "value" ).str(); }
-	String getDatatype() const { return get ( "datatype" ).str(); }
-	String getLanguage() const { return get ( "language" ).str(); }
+	String getValue() const {
+		return get ( "value" ).str();
+	}
+	String getDatatype() const {
+		return get ( "datatype" ).str();
+	}
+	String getLanguage() const {
+		return get ( "language" ).str();
+	}
 	bool operator< ( const Node& o ) const {
 		if ( isIRI() ) {
 			if ( !o.isIRI() ) {
@@ -61,49 +74,42 @@ public:
 						rval.put ( "@value", true );
 					else if ( "false"s == value )
 						rval.put ( "@value", false );
-					else {
-						// Else do not replace the value, and add the
+					else // Else do not replace the value, and add the
 						// boolean type in
 						rval.put ( "@type", type );
-					}
 				} else if (
 				    // http://www.w3.org/TR/xmlschema11-2/#integer
-				    ( XSD_INTEGER == type  && PATTERN_INTEGER.matcher ( value ).matches() )
+				    ( XSD_INTEGER == type  && PATTERN_INTEGER.matcher ( value ) /*.matches()*/ )
 				    // http://www.w3.org/TR/xmlschema11-2/#nt-doubleRep
-				    || ( XSD_DOUBLE == type && PATTERN_DOUBLE.matcher ( value ).matches() ) ) {
-					try {
-						const Double d = std::stod ( value );
-						if ( !isnan ( d ) && !isInfinite ( d ) ) {
-							if ( XSD_INTEGER == type ) {
-								const Integer i = d; // conversion from double to integer
-								if ( std::itos(i) == value ) rval.put ( "@value", i );
-							} else if ( XSD_DOUBLE == type )
-								rval.put ( "@value", d ); 
-							else throw std::runtime_error ( "This should never happen as we checked the type was either integer or double" );
-						}
-					} catch ( const NumberFormatException e ) {
-						// TODO: This should never happen since we match the
-						// value with regex!
-						throw new RuntimeException ( e );
+				    || ( XSD_DOUBLE == type && PATTERN_DOUBLE.matcher ( value ) /*.matches()*/ ) ) {
+					//					try {
+					Double d = std::stod ( value );
+					if ( !isnan ( d ) && !isinf ( d ) ) {
+						if ( XSD_INTEGER == type ) {
+							const Integer i = d; // conversion from double to integer
+							if ( std::to_string ( i ) == value ) rval.put ( "@value", i );
+						} else if ( XSD_DOUBLE == type )
+							rval.put ( "@value", d );
+						else throw std::runtime_error ( "This should never happen as we checked the type was either integer or double" );
 					}
-				}
-				// do not add xsd:string type
-				else rval.put ( "@type", type );
-			} else if ( XSD_STRING != type ) rval.put ( "@type", type );
+					// do not add xsd:string type
+					else rval.put ( "@type", type );
+				} else if ( XSD_STRING != type ) rval.put ( "@type", type );
+			}
 		}
 		return rval;
 	}
 };
 
 class RDFDataset : public LinkedHashMap<String, Node*> {
-	static const long serialVersionUID = 2796344994239879165L;
+	//	static const long serialVersionUID = 2796344994239879165L;
 
-	//	static const Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
+	//	static const Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[-1-9]+$" );
 	//	static const Pattern PATTERN_DOUBLE = Pattern
 	//	                                      .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
 
 	class Quad : public LinkedHashMap<String, Object> { // : public Comparable<Quad> {
-		static const long serialVersionUID = -7021918051975883082L;
+		//		static const long serialVersionUID = -7021918051975883082L;
 
 	public:
 		typedef LinkedHashMap<String, Object> base_t;
@@ -122,7 +128,7 @@ class RDFDataset : public LinkedHashMap<String, Node*> {
 		}
 
 	public:
-		Quad ( const Node subject, const Node predicate, const Node& object, const String graph ) : base_t() {
+		Quad ( const Node& subject, const Node& predicate, const Node& object, const String graph ) : base_t() {
 			put ( "subject", subject );
 			put ( "predicate", predicate );
 			put ( "object", object );
@@ -133,19 +139,19 @@ class RDFDataset : public LinkedHashMap<String, Node*> {
 			}
 		}
 
-		Node getSubject() {
+		Node& getSubject() {
 			return ( Node ) get ( "subject" );
 		}
 
-		Node getPredicate() {
+		Node& getPredicate() {
 			return ( Node ) get ( "predicate" );
 		}
 
-		Node getObject() {
+		Node& getObject() {
 			return ( Node ) get ( "object" );
 		}
 
-		Node getGraph() {
+		Node& getGraph() {
 			return ( Node ) get ( "name" );
 		}
 
@@ -171,37 +177,38 @@ class RDFDataset : public LinkedHashMap<String, Node*> {
 			if ( language != null ) put ( "language", language );
 		}
 
-		virtual boolean isLiteral() {
+		virtual boolean isLiteral() const {
 			return true;
 		}
-		virtual boolean isIRI() {
+		virtual boolean isIRI() const {
 			return false;
 		}
-		virtual  boolean isBlankNode() {
+		virtual  boolean isBlankNode() const {
 			return false;
 		}
-		virtual  int compareTo ( Node o ) {
+		bool operator< ( const Node& o ) const {
+			//		virtual  int compareTo ( Node o ) const {
 			if ( o == null )
 				// valid nodes are > null nodes
-				return 1;
+				return false;
 			if ( o.isIRI() )
 				// literals < iri
-				return -1;
+				return true;
 			if ( o.isBlankNode() )
 				// blank node < iri
-				return -1;
+				return true;
 			if ( getLanguage() == null && ( ( Literal ) o ).getLanguage() != null )
-				return -1;
+				return true;
 			else if ( getLanguage() != null && ( ( Literal ) o ).getLanguage() == null )
-				return 1;
+				return false;
 
 			if ( getDatatype() != null )
 				return getDatatype().compareTo ( ( ( Literal ) o ).getDatatype() );
 			else if ( ( ( Literal ) o ).getDatatype() != null )
-				return -1;
-			return 0;
+				return true;
+			//			return 0;
 		}
-	}
+	};
 
 	class IRI : public Node {
 		static const long serialVersionUID = 1540232072155490782L;
@@ -212,16 +219,16 @@ class RDFDataset : public LinkedHashMap<String, Node*> {
 			put ( "value", iri );
 		}
 
-		virtual  boolean isLiteral() {
+		virtual  boolean isLiteral() const {
 			return false;
 		}
-		virtual  boolean isIRI() {
+		virtual  boolean isIRI() const {
 			return true;
 		}
-		virtual  boolean isBlankNode() {
+		virtual  boolean isBlankNode() const {
 			return false;
 		}
-	}
+	};
 
 	class BlankNode : public Node {
 		static const long serialVersionUID = -2842402820440697318L;
@@ -232,21 +239,21 @@ class RDFDataset : public LinkedHashMap<String, Node*> {
 			put ( "value", attribute );
 		}
 
-		virtual boolean isLiteral() {
+		virtual boolean isLiteral() const {
 			return false;
 		}
-		virtual  boolean isIRI() {
+		virtual  boolean isIRI() const {
 			return false;
 		}
-		virtual  boolean isBlankNode() {
+		virtual  boolean isBlankNode() const {
 			return true;
 		}
 	};
 
 private:
-	static const Node first = new IRI ( RDF_FIRST );
-	static const Node rest = new IRI ( RDF_REST );
-	static const Node nil = new IRI ( RDF_NIL );
+	static const Node& first;//= IRI ( RDF_FIRST );
+	static const Node& rest;// = IRI ( RDF_REST );
+	static const Node& nil;// = IRI ( RDF_NIL );
 
 	const Map<String, String> context;
 

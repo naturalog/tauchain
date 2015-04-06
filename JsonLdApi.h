@@ -1,3 +1,6 @@
+#ifndef __JSONLDAPI_H__
+#define __JSONLDAPI_H__
+#include "JsonLdOptions.h"
 /**
     A container object to maintain state relating to JsonLdOptions and the
     current Context, and push these into the relevant algorithms in
@@ -7,9 +10,9 @@
 */
 class JsonLdApi {
 
-	JsonLdOptions opts;
+	JsonLdOptions<Object> opts;
 	Object value = null;
-	Context context = null;
+	Context<Object> context = null;
 
 	/**
 	    Constructs an empty JsonLdApi object using the default JsonLdOptions, and
@@ -31,7 +34,7 @@ public: JsonLdApi() {
 	               If there is an error initializing using the object and
 	               options.
 	*/
-	JsonLdApi ( Object input, JsonLdOptions opts )  {
+	JsonLdApi ( Object input, JsonLdOptions<Object> opts )  {
 		this ( opts );
 		initialize ( input, null );
 	}
@@ -50,7 +53,7 @@ public: JsonLdApi() {
 	               If there is an error initializing using the object and
 	               options.
 	*/
-	JsonLdApi ( Object input, Object context, JsonLdOptions opts )  {
+	JsonLdApi ( Object input, Object context, JsonLdOptions<Object> opts )  {
 		this ( opts );
 		initialize ( input, null );
 	}
@@ -64,9 +67,10 @@ public: JsonLdApi() {
 	    @param opts
 	              The JsonLdOptions to use.
 	*/
-	JsonLdApi ( JsonLdOptions opts ) {
+	JsonLdApi ( JsonLdOptions<Object> opts ) {
 		if ( opts == null )
-			opts = new JsonLdOptions ( "" ); else
+			opts = JsonLdOptions<Object> ( "" ); 
+		else
 			this.opts = opts;
 	}
 
@@ -120,14 +124,14 @@ private: void initialize ( Object input, Object context_ )  {
 	    @
 	               If there was an error during compaction.
 	*/
-	Object compact ( Context& activeCtx, String& activeProperty, Object& element_, boolean compactArrays )  {
+	Object compact ( Context<Object>& activeCtx, String& activeProperty, Object& element_, boolean compactArrays )  {
 		if ( element_.isList() ) { // 2
 			List<Object> result, e = element_.list(); // 2.1
 			for ( Object item : e ) { // 2.2
 				Object compactedItem = compact ( activeCtx, activeProperty, item, compactArrays ); // 2.2.1
 				if ( compactedItem != null ) result.push_back ( compactedItem ); // 2.2.2
 			}
-			return ( compactArrays && result.size() == 1 && activeCtx.getContainer ( activeProperty ) == null ) ? result.get ( 0 ) : return result; // 2.3, 2.4
+			return ( compactArrays && result.size() == 1 && activeCtx.getContainer ( activeProperty ) == null ) ? result.get ( 0 ) : result; // 2.3, 2.4
 		}
 
 		if ( !element.isMap() ) return _element; // 1
@@ -1598,3 +1602,4 @@ public:
 
 	}
 	;
+#endif
