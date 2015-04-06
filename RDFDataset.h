@@ -15,9 +15,15 @@ public:
 	virtual boolean isLiteral() const = 0;
 	virtual boolean isIRI() const = 0;
 	virtual boolean isBlankNode() const = 0;
-	String getValue() const { return get ( "value" ).str(); }
-	String getDatatype() const { return get ( "datatype" ).str(); }
-	String getLanguage() const { return get ( "language" ).str(); }
+	String getValue() const {
+		return get ( "value" ).str();
+	}
+	String getDatatype() const {
+		return get ( "datatype" ).str();
+	}
+	String getLanguage() const {
+		return get ( "language" ).str();
+	}
 	bool operator< ( const Node& o ) const {
 		if ( isIRI() ) {
 			if ( !o.isIRI() ) {
@@ -68,17 +74,17 @@ public:
 					}
 				} else if (
 				    // http://www.w3.org/TR/xmlschema11-2/#integer
-				    ( XSD_INTEGER == type  && PATTERN_INTEGER.matcher ( value ).matches() )
+				    ( XSD_INTEGER == type  && regex_match( value, PATTERN_INTEGER.matcher) )
 				    // http://www.w3.org/TR/xmlschema11-2/#nt-doubleRep
-				    || ( XSD_DOUBLE == type && PATTERN_DOUBLE.matcher ( value ).matches() ) ) {
+				    || ( XSD_DOUBLE == type && regex_match( value, PATTERN_DOUBLE ) ) {
 					try {
 						const Double d = std::stod ( value );
 						if ( !isnan ( d ) && !isInfinite ( d ) ) {
 							if ( XSD_INTEGER == type ) {
 								const Integer i = d; // conversion from double to integer
-								if ( std::itos(i) == value ) rval.put ( "@value", i );
+								if ( std::itos ( i ) == value ) rval.put ( "@value", i );
 							} else if ( XSD_DOUBLE == type )
-								rval.put ( "@value", d ); 
+								rval.put ( "@value", d );
 							else throw std::runtime_error ( "This should never happen as we checked the type was either integer or double" );
 						}
 					} catch ( const NumberFormatException e ) {
@@ -98,9 +104,8 @@ public:
 class RDFDataset : public LinkedHashMap<String, Node*> {
 	static const long serialVersionUID = 2796344994239879165L;
 
-	//	static const Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
-	//	static const Pattern PATTERN_DOUBLE = Pattern
-	//	                                      .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
+	static const boost::regex PATTERN_INTEGER ( "^[\\-+]?[0-9]+$" );
+	static const boost::regex PATTERN_DOUBLE  ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
 
 	class Quad : public LinkedHashMap<String, Object> { // : public Comparable<Quad> {
 		static const long serialVersionUID = -7021918051975883082L;
