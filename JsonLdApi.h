@@ -246,7 +246,7 @@ private:
 							    expandedItem.obj( ).get ( "@index" ) );
 						}
 					} else if ( result.containsKey ( itemActiveProperty ) ) // 7.6.4.3)
-						throw JsonLdError ( Error.COMPACTION_TO_LIST_OF_LISTS,
+						throw JsonLdError ( COMPACTION_TO_LIST_OF_LISTS,
 						                    "There cannot be two list objects associated with an active property that has a container mapping" );
 				}
 				if ( is ( container, { "@language"s, "@index"s } ) ) { // 7.6.5)
@@ -269,24 +269,24 @@ private:
 				}
 				else { // 7.6.6)
 					Boolean check = !compactArrays; // 7.6.6.1)
-					check |= is ( container, { "@set"s, "@list"s} ) || is ( expandedProperty, { "@list"s, "@graph"s} ) );
+					check |= is ( container, { "@set"s, "@list"s} ) || is ( expandedProperty, { "@list"s, "@graph"s} ) ;
 					check &= !compactedItem.isList();
 					if ( check ) {
-					List<Object> tmp;
-					tmp.push_back ( compactedItem );
+						List<Object> tmp;
+						tmp.push_back ( compactedItem );
 						compactedItem = tmp;
 					}
 					if ( !result.containsKey ( itemActiveProperty ) ) // 7.6.6.2)
 						result.put ( itemActiveProperty, compactedItem );
-						else {
-							if ( ! result.get ( itemActiveProperty ).isList() ) {
-								List<Object> tmp; // TODO: UNUSED
-								tmp.push_back ( result.put ( itemActiveProperty, tmp ) );
-							}
-							if ( compactedItem.isList() )
-								result.get ( itemActiveProperty ) .list().push_back ( compactedItem.list.begin(), compactedItem.list.end() );
-							else result.get ( itemActiveProperty ).list( ).push_back ( compactedItem );
+					else {
+						if ( ! result.get ( itemActiveProperty ).isList() ) {
+							List<Object> tmp; // TODO: UNUSED
+							tmp.push_back ( result.put ( itemActiveProperty, tmp ) );
 						}
+						if ( compactedItem.isList() )
+							result.get ( itemActiveProperty ) .list().push_back ( compactedItem.list.begin(), compactedItem.list.end() );
+						else result.get ( itemActiveProperty ).list( ).push_back ( compactedItem );
+					}
 
 				}
 			}
@@ -335,16 +335,14 @@ private:
 			List<Object> result; // 3.1
 			for ( Object item : element.list() ) { // 3.2
 				Object v = expand ( activeCtx, activeProperty, item ); // 3.2.1
-				if ( ( "@list"s == ( activeProperty ) || "@list"s == ( activeCtx // 3.2.2
+				if ( ( "@list"s == activeProperty || "@list"s == ( activeCtx // 3.2.2
 				        .getContainer ( activeProperty ) ) )
 				        && ( v.isList() || ( v.isMap() && v.obj( )
 				                             .containsKey ( "@list" ) ) ) )
-					throw JsonLdError ( Error.LIST_OF_LISTS, "lists of lists are not permitted." );
+					throw JsonLdError ( LIST_OF_LISTS, "lists of lists are not permitted." );
 				else if ( v != null ) { // 3.2.3
-					if ( v.isList() )
-						result.push_back ( v.list().begin(), v.list().end() );
-					else
-						result.push_back ( v );
+					if ( v.isList() ) result.push_back ( v.list().begin(), v.list().end() );
+					else result.push_back ( v );
 				}
 			}
 			return result; // 3.3)
@@ -364,17 +362,17 @@ private:
 				        || ( expandedProperty.find ( ':' ) == String::npos && !isKeyword ( expandedProperty ) ) ) continue;
 				if ( isKeyword ( expandedProperty ) ) { // 7.4
 					if ( "@reverse"s ==  activeProperty  ) // 7.4.1
-						throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_MAP, "a keyword cannot be used as a @reverse propery" );
+						throw JsonLdError ( INVALID_REVERSE_PROPERTY_MAP, "a keyword cannot be used as a @reverse propery" );
 					if ( result.containsKey ( expandedProperty ) ) // 7.4.2
-						throw JsonLdError ( Error.COLLIDING_KEYWORDS, expandedProperty + " already exists in result" );
+						throw JsonLdError ( COLLIDING_KEYWORDS, expandedProperty + " already exists in result" );
 					if ( "@id"s ==  expandedProperty ) { // 7.4.3
-						if ( !  value.isString()  ) throw JsonLdError ( Error.INVALID_ID_VALUE, "value of @id must be a string" );
+						if ( !  value.isString()  ) throw JsonLdError ( INVALID_ID_VALUE, "value of @id must be a string" );
 						expandedValue = activeCtx .expandIri ( ( String ) value, true, false, null, null );
 					} else if ( "@type"s == ( expandedProperty ) ) { // 7.4.4)
 						if ( value.isList() ) {
 							expandedValue = ArrayList<String>();
 							for ( const Object v :  value.list() ) {
-								if ( ! v.isString() ) throw JsonLdError ( Error.INVALID_TYPE_VALUE, "@type value must be a string or array of strings" );
+								if ( ! v.isString() ) throw JsonLdError ( INVALID_TYPE_VALUE, "@type value must be a string or array of strings" );
 								expandedValue.list( ).push_back ( activeCtx.expandIri ( ( String ) v,
 								                                  true, true, null, null ) );
 							}
@@ -383,14 +381,13 @@ private:
 						// TODO: SPEC: no mention of empty map check
 						else if ( value.isMap() ) {
 							if (  value.obj( ).size() != 0 )
-								throw JsonLdError ( Error.INVALID_TYPE_VALUE, "@type value must be a an empty object for framing" );
+								throw JsonLdError ( INVALID_TYPE_VALUE, "@type value must be a an empty object for framing" );
 							expandedValue = value;
-						} else
-							throw JsonLdError ( Error.INVALID_TYPE_VALUE, "@type value must be a string or array of strings" );
+						} else throw JsonLdError ( INVALID_TYPE_VALUE, "@type value must be a string or array of strings" );
 					} else if ( "@graph"s == expandedProperty ) expandedValue = expand ( activeCtx, "@graph", value ); // 7.4.5
 					else if ( "@value"s == ( expandedProperty ) ) { // 7.4.6
 						if ( value != null && ( value.isMap() || value.isList() ) )
-							throw JsonLdError ( Error.INVALID_VALUE_OBJECT_VALUE, "value of "
+							throw JsonLdError ( INVALID_VALUE_OBJECT_VALUE, "value of "
 							                    + expandedProperty + " must be a scalar or null" );
 						expandedValue = value;
 						if ( expandedValue == null ) {
@@ -399,10 +396,10 @@ private:
 						}
 					} else if ( "@language"s == expandedProperty ) { // 7.4.7
 						if ( ! ( value.isString() ) )
-							throw JsonLdError ( Error.INVALID_LANGUAGE_TAGGED_STRING, "Value of " + expandedProperty + " must be a string" );
+							throw JsonLdError ( INVALID_LANGUAGE_TAGGED_STRING, "Value of " + expandedProperty + " must be a string" );
 						expandedValue = value.str( ).tolower();
 					} else if ( "@index"s == expandedProperty ) { // 7.4.8
-						if ( ! value.isString() ) throw JsonLdError ( Error.INVALID_INDEX_VALUE, "Value of " + expandedProperty + " must be a string" );
+						if ( ! value.isString() ) throw JsonLdError ( INVALID_INDEX_VALUE, "Value of " + expandedProperty + " must be a string" );
 						expandedValue = value;
 					} else if ( "@list"s == ( expandedProperty ) ) { // 7.4.9
 						if ( activeProperty == null || "@graph"s == ( activeProperty ) ) continue; // 7.4.9.1
@@ -417,10 +414,10 @@ private:
 
 						for ( const Object o : expandedValue.list() ) // 7.4.9.3
 							if ( o.isMap() && o.obj( ).containsKey ( "@list" ) )
-								throw JsonLdError ( Error.LIST_OF_LISTS, "A list may not contain another list" );
+								throw JsonLdError ( LIST_OF_LISTS, "A list may not contain another list" );
 					} else if ( "@set"s == expandedProperty ) expandedValue = expand ( activeCtx, activeProperty, value ); // 7.4.10
 					else if ( "@reverse"s == expandedProperty ) { // 7.4.11
-						if ( ! value.isMap() ) throw JsonLdError ( Error.INVALID_REVERSE_VALUE, "@reverse value must be an object" );
+						if ( ! value.isMap() ) throw JsonLdError ( INVALID_REVERSE_VALUE, "@reverse value must be an object" );
 						expandedValue = expand ( activeCtx, "@reverse", value ); // 7.4.11.1)
 						// NOTE: algorithm assumes the result is a map
 						// 7.4.11.2)
@@ -443,7 +440,7 @@ private:
 									for ( const Object item : items ) {
 										// 7.4.11.3.3.1.1)
 										if ( item.isMap() && ( item.obj( ).containsKey ( "@value" ) || item.obj() .containsKey ( "@list" ) ) )
-											throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
+											throw JsonLdError ( INVALID_REVERSE_PROPERTY_VALUE );
 										if ( !reverseMap.containsKey ( property ) ) reverseMap.put ( property, ArrayList<Object>() ); // 7.4.11.3.3.1.2)
 										reverseMap.get ( property ).list( ).push_back ( item ); // 7.4.11.3.3.1.3
 									}
@@ -468,7 +465,7 @@ private:
 							}
 							for ( const Object item : languageValue.list() ) { // 7.5.2.2)
 								if ( ! item.isString() ) // 7.5.2.2.1)
-									throw JsonLdError ( Error.INVALID_LANGUAGE_MAP_VALUE, "Expected " + item.toString() + " to be a string" );
+									throw JsonLdError ( INVALID_LANGUAGE_MAP_VALUE, "Expected " + item.toString() + " to be a string" );
 								// 7.5.2.2.2)
 								Map<String, Object> tmp;
 								tmp.put ( "@value", item );
@@ -523,7 +520,7 @@ private:
 						for ( const Object item : ( List<Object> ) expandedValue ) {
 							// 7.10.4.1)
 							if ( item.isMap() && (  item.obj( ).containsKey ( "@value" ) ||  item.obj() .containsKey ( "@list" ) ) )
-								throw JsonLdError ( Error.INVALID_REVERSE_PROPERTY_VALUE );
+								throw JsonLdError ( INVALID_REVERSE_PROPERTY_VALUE );
 							// 7.10.4.2)
 							if ( !reverseMap.containsKey ( expandedProperty ) ) reverseMap.put ( expandedProperty, ArrayList<Object>() );
 							// 7.10.4.3)
@@ -549,7 +546,7 @@ private:
 					const boolean langremoved = keySet.remove ( "@language" );
 					const boolean typeremoved = keySet.remove ( "@type" );
 					if ( ( langremoved && typeremoved ) || !keySet.isEmpty() ) {
-						throw JsonLdError ( Error.INVALID_VALUE_OBJECT,
+						throw JsonLdError ( INVALID_VALUE_OBJECT,
 						                    "value object has unknown keys" );
 					}
 					// 8.2)
@@ -561,7 +558,7 @@ private:
 					}
 					// 8.3)
 					if ( ! ( rval.isString() ) && result.containsKey ( "@language" ) ) {
-						throw JsonLdError ( Error.INVALID_LANGUAGE_TAGGED_VALUE,
+						throw JsonLdError ( INVALID_LANGUAGE_TAGGED_VALUE,
 						                    "when @language is used, @value must be a string" );
 					}
 					// 8.4)
@@ -570,7 +567,7 @@ private:
 						if ( ! ( result.get ( "@type" ).isString() )
 						        || ( ( String ) result.get ( "@type" ) ).startsWith ( "_:" )
 						        || ! ( ( String ) result.get ( "@type" ) ).contains ( ":" ) ) {
-							throw JsonLdError ( Error.INVALID_TYPED_VALUE,
+							throw JsonLdError ( INVALID_TYPED_VALUE,
 							                    "value of @type must be an IRI" );
 						}
 					}
@@ -588,7 +585,7 @@ private:
 				else if ( result.containsKey ( "@set" ) || result.containsKey ( "@list" ) ) {
 					// 10.1)
 					if ( result.size() > ( result.containsKey ( "@index" ) ? 2 : 1 ) ) {
-						throw JsonLdError ( Error.INVALID_SET_OR_LIST_OBJECT,
+						throw JsonLdError ( INVALID_SET_OR_LIST_OBJECT,
 						                    "@set or @list may only contain @index" );
 					}
 					// 10.2)
@@ -776,7 +773,7 @@ private:
 					const Object elemIndex = elem.remove ( "@index" );
 					if ( node.containsKey ( "@index" ) ) {
 						if ( !JsonLdUtils.deepCompare ( node.get ( "@index" ), elemIndex ) )
-							throw JsonLdError ( Error.CONFLICTING_INDEXES );
+							throw JsonLdError ( CONFLICTING_INDEXES );
 					} else
 						node.put ( "@index", elemIndex );
 				}
@@ -1200,10 +1197,10 @@ private: void frame ( FramingContext state, Map<String, Object> nodes, Map<Strin
 			Object types;// = frame.get ( "@type" );
 			//		if ( types != null ) {
 			if ( frame.get ( "@type", types ) ) {
-				if ( !  types.isList()  ) throw JsonLdError ( Error.SYNTAX_ERROR, "frame @type must be an array" );
+				if ( !  types.isList()  ) throw JsonLdError ( SYNTAX_ERROR, "frame @type must be an array" );
 				Object nodeTypes = node.get ( "@type" );
-				if ( nodeTypes == null ) nodeTypes = new ArrayList<Object>();
-				else if ( ! ( nodeTypes.isList() ) ) throw JsonLdError ( Error.SYNTAX_ERROR, "node @type must be an array" );
+				if ( nodeTypes == null ) nodeTypes = ArrayList<Object>();
+				else if ( ! ( nodeTypes.isList() ) ) throw JsonLdError ( SYNTAX_ERROR, "node @type must be an array" );
 				if (  types.list() .size() == 1 &&  types.list().get ( 0 ) .isMap()
 				        && types.list().get ( 0 ).map().size() == 0 )
 					return ! nodeTypes.list() .isEmpty();
@@ -1233,17 +1230,16 @@ private: void frame ( FramingContext state, Map<String, Object> nodes, Map<Strin
 		    @param output
 		              the output to add.
 		*/
-private: static void addFrameOutput ( FramingContext & state, Object & parent, String & property,
-		                                      Object & output ) {
+private:
+		static void addFrameOutput ( FramingContext & state, Object & parent, String & property, Object & output ) {
 			if ( parent.isMap() ) {
-				List<Object> prop = ( List<Object> ) ( ( Map<String, Object> ) parent ).get ( property );
+				List<Object> prop = parent.obj( ).get ( property ).list();
 				if ( prop == null ) {
 					prop = new ArrayList<Object>();
-					( ( Map<String, Object> ) parent ).put ( property, prop );
+					parent.obj( ).put ( property, prop );
 				}
 				prop.push_back ( output );
-			} else
-				parent.list().push_back ( output );
+			} else parent.list().push_back ( output );
 		}
 
 		/**
@@ -1276,14 +1272,13 @@ private: static void addFrameOutput ( FramingContext & state, Object & parent, S
 						state.embeds.put ( sid, embed );
 
 						// recurse into subject
-						o = newMap();
-						Map<String, Object> s = ( Map<String, Object> ) this.nodeMap.get ( sid );
-						if ( s == null )
-							s = newMap ( "@id", sid );
+						o = Map<String, Object>();
+						Map<String, Object> s = nodeMap.get ( sid ).obj();
+						if ( s == null ) s = newMap ( "@id", sid );
 						for ( const String prop : s.keySet() ) {
 							// copy keywords
 							if ( isKeyword ( prop ) ) {
-								( ( Map<String, Object> ) o ).put ( prop, JsonLdUtils.clone ( s.get ( prop ) ) );
+								o.obj( ).put ( prop, JsonLdUtils<Object>::clone ( s.get ( prop ) ) );
 								continue;
 							}
 							embedValues ( state, s, prop, o );
@@ -1292,8 +1287,7 @@ private: static void addFrameOutput ( FramingContext & state, Object & parent, S
 					addFrameOutput ( state, output, property, o );
 				}
 				// copy non-subject value
-				else
-					addFrameOutput ( state, output, property, JsonLdUtils.clone ( o ) );
+				else addFrameOutput ( state, output, property, JsonLdUtils<Object>::clone ( o ) );
 			}
 		}
 

@@ -1,17 +1,5 @@
-// package com.github.jsonldjava.core;
-
-// import static com.github.jsonldjava.utils.Obj.newMap;
-
-// import java.util.ArrayList;
-// import java.util.Arrays;
-// import java.util.Collection;
-// import java.util.Collections;
-// import java.util.List;
-// import java.util.Map;
-
-// import com.github.jsonldjava.utils.JsonLdUrl;
-// import com.github.jsonldjava.utils.Obj;
-
+#ifndef __JSONLDUTILS_H__
+#define __JSONLDUTILS_H__
 #include "JsonLdUrl.h"
 #include "defs.h"
 #include "Context.h"
@@ -763,3 +751,4 @@ private: static boolean findContextUrls ( Object& input, Map<String, Object>& ur
 		return ( v.isString() );
 	}
 };
+#endif

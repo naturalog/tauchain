@@ -223,8 +223,7 @@ public:
 		return result;
 	}
 
-	void createTermDefinition ( Map<String, Object> context, String term,
-	                            Map<String, Boolean> defined )  {
+	void createTermDefinition ( Map<String, Object>& context, String term, Map<String, Boolean>& defined )  {
 		if ( defined.containsKey ( term ) ) {
 			if ( defined.get ( term ) ) return;
 			throw JsonLdError ( CYCLIC_IRI_MAPPING, term );
@@ -680,44 +679,43 @@ public:
 		}
 		return rval;
 	}
-
-	Map<String, Object> serialize() {
-		const Map<String, Object> ctx = newMap();
-		if ( base_t::get ( "@base" ) != null && base_t::get ( "@base" ) != options.getBase() ) ctx.put ( "@base", get ( "@base" ) );
-		if ( base_t::get ( "@language" ) != null ) ctx.put ( "@language", get ( "@language" ) );
-		if ( base_t::get ( "@vocab" ) != null ) ctx.put ( "@vocab", get ( "@vocab" ) );
-//		for ( const String term : termDefinitions.keySet() ) {
-		for (auto x : termDefinitions) {
-			String term = x.first;
-			const Map<String, Object> definition = x.second.obj*(;//termDefinitions.get ( term ).obj();
-			if ( definition.get ( "@language" ) == null
-			        && definition.get ( "@container" ) == null
-			        && definition.get ( "@type" ) == null
-			        && ( definition.get ( "@reverse" ) == null || !definition .get ( "@reverse" ).boolean()))
-				const String cid = compactIri ( ( String ) definition.get ( "@id" ) );
-				ctx.put ( term, term.equals ( cid ) ? definition.get ( "@id" ) : cid );
-			} else {
-				const Map<String, Object> defn = newMap();
-				const String cid = compactIri ( ( String ) definition.get ( "@id" ) );
-				const Boolean reverseProperty = Boolean.TRUE.equals ( definition.get ( "@reverse" ) );
-				if ( ! ( term.equals ( cid ) && !reverseProperty ) )
-					defn.put ( reverseProperty ? "@reverse" : "@id", cid );
-				const String typeMapping = ( String ) definition.get ( "@type" );
-				if ( typeMapping != null )
-					defn.put ( "@type", JsonLdUtils<Object>::isKeyword ( typeMapping ) ? typeMapping
-					           : compactIri ( typeMapping, true ) );
+	/*
+		Map<String, Object> serialize() {
+			Map<String, Object> ctx;// = newMap();
+			if ( base_t::get ( "@base" ) != null && base_t::get ( "@base" ) != options.getBase() ) ctx.put ( "@base", get ( "@base" ) );
+			if ( base_t::get ( "@language" ) != null ) ctx.put ( "@language", get ( "@language" ) );
+			if ( base_t::get ( "@vocab" ) != null ) ctx.put ( "@vocab", get ( "@vocab" ) );
+	    //		for ( const String term : termDefinitions.keySet() ) {
+			for (auto x : termDefinitions) {
+				String term = x.first;
+				const Map<String, Object> definition = x.second.obj*(;//termDefinitions.get ( term ).obj();
+				if ( definition.get ( "@language" ) == null
+				        && definition.get ( "@container" ) == null
+				        && definition.get ( "@type" ) == null
+				        && ( definition.get ( "@reverse" ) == null || !definition .get ( "@reverse" ).boolean()))
+					const String cid = compactIri ( ( String ) definition.get ( "@id" ) );
+					ctx.put ( term, term.equals ( cid ) ? definition.get ( "@id" ) : cid );
+				} else {
+					Map<String, Object> defn;// = newMap();
+					String cid = compactIri ( definition.get ( "@id" ) ).str();
+					Boolean reverseProperty = definition.get ( "@reverse" ).boolean();
+					if (  term != cid  && !reverseProperty ) ) defn.put ( reverseProperty ? "@reverse" : "@id", cid );
+					if ( definition.has_str("@type") ) {
+						String typeMapping = definition.get ( "@type" ).str();
+						defn.put ( "@type", JsonLdUtils<Object>::isKeyword ( typeMapping ) ? typeMapping : compactIri ( typeMapping, true ) );
+					}
+				}
+				if ( definition.get ( "@container" ) != null ) defn.put ( "@container", definition.get ( "@container" ) );
+				const Object lang = definition.get ( "@language" );
+				if ( definition.get ( "@language" ) != null ) defn.put ( "@language", !lang ? null : lang );
+				ctx.put ( term, defn );
 			}
-			if ( definition.get ( "@container" ) != null ) defn.put ( "@container", definition.get ( "@container" ) );
-			const Object lang = definition.get ( "@language" ); 
-			if ( definition.get ( "@language" ) != null ) defn.put ( "@language", !lang ? null : lang );
-			ctx.put ( term, defn );
+
+			Map<String, Object> rval;
+			if ( !ctx.size() ) rval.put ( "@context", ctx );
+			return rval;
 		}
-
-		Map<String, Object> rval;
-		if ( ! ( ctx == null || !ctx.size() ) ) rval.put ( "@context", ctx );
-		return rval;
-	}
-
+	*/
 	String getContainer ( String property ) {
 		if ( "@graph"s == property ) return "@set";
 		if ( JsonLdUtils<Object>::isKeyword ( property ) ) return property;

@@ -300,20 +300,19 @@ public: static Map<String, Object> frame ( Object& input, Object& frame, JsonLdO
 	*/
 private:
 	Map<String, RDFParser*> rdfParsers = []() {
-		{
-			Map<String, RDFParser*> r;
-			// automatically register nquad serializer
-			r.put ( "application/nquads", new NQuadRDFParser() );
-			r.put ( "text/turtle", new TurtleRDFParser() );
-			return r;
-		};
-	};
+		Map<String, RDFParser*> r;
+		// automatically register nquad serializer
+		r.put ( "application/nquads", new NQuadRDFParser() );
+		r.put ( "text/turtle", new TurtleRDFParser() );
+		return r;
+	}();
 
-public: static void registerRDFParser ( String format, RDFParser* parser ) {
+public:
+	static void registerRDFParser ( String format, RDFParser* parser ) {
 		rdfParsers.put ( format, parser );
 	}
 
-public: static void removeRDFParser ( String format ) {
+	static void removeRDFParser ( String format ) {
 		rdfParsers.remove ( format );
 	}
 

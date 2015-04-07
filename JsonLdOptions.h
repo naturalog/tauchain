@@ -16,9 +16,16 @@ class JsonLdOptions {
 	Boolean useRdfType = false;
 	Boolean useNativeTypes = false;
 public:
-	JsonLdOptions ( String base = "" );
 	Boolean compactArrays = true;
 	const Object& expandContext;
+
+	JsonLdOptions ( String base = "" ) : expandContext ( null ) {
+		setBase ( base );
+	}
+
+	void setExpandContext ( const Object& expandContext_ ) {
+		expandContext = expandContext_;
+	}
 	Boolean getEmbed() {
 		return embed;
 	}
@@ -46,7 +53,6 @@ public:
 	const Object& getExpandContext() {
 		return expandContext;
 	}
-	void setExpandContext ( const Object& expandContext_ );
 	String getProcessingMode() {
 		return processingMode;
 	}

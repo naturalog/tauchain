@@ -36,26 +36,33 @@ public:
 	typedef std::map<K, V> base_t;
 	using base_t::base_t;
 	map_t() : base_t() {}
-	void put ( const K& k, const V& v ) {
-		at ( k ) = v;
+	bool has ( const K& k ) {
+		auto cached = base_t::find ( k );
+		return cached != base_t::cend();
+	}
+	V& put ( const K& k, const V& v ) {
+		return at ( k ) = v;
 	}
 	//	void put(const K& k, const V& v) { at(k) = v; }
-	//V& get ( const K& k ) { return at ( k ); }
+	V& get ( const K& k ) {
+		return /*(cached != base_t::cend() && cached.first == k) ? cached.second :*/ at ( k );
+	}
 	const V& get ( const K& k ) const {
-		return at ( k );
+		return /*(cached != base_t::cend() && cached.first == k) ? cached.second :*/ at ( k );
 	}
 	bool get ( const K& k, V& v ) {
 		auto it = find ( k );
 		if ( it != base_t::end() ) {
 			v = it->second;
 			return true;
-		} return false;
+		}
+		return false;
 	}
-	V& get ( const K& k ) {
-		auto it = find ( k );
-		if ( it != base_t::end() ) return it->second;
-		return "";
-	}
+	//	V& get ( const K& k ) {
+	//		auto it = find ( k );
+	//		if ( it != base_t::end() ) return it->second;
+	//		return "";
+	//	}
 	bool containsKey ( const K& k ) const {
 		return find ( k ) != base_t::end();
 	}
@@ -69,6 +76,8 @@ public:
 	virtual bool isContext() const {
 		return false;
 	}
+	//private:
+	//	decltype(base_t::cend()) cached = base_t::cend();
 };
 
 template<typename K, typename V> using Map = map_t<K, V>;

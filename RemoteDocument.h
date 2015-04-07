@@ -5,6 +5,15 @@
 
 template<typename Object>
 struct RemoteDocument {
+	void setDocument ( const Object& document_ ) {
+		document = document_;
+	}
+
+	RemoteDocument ( String url, const Object& document_ /*= null*/, String context = "" ) :
+		documentUrl ( url ),
+		document ( document_ ),
+		contextUrl ( context ) {
+	}
 	String getDocumentUrl() {
 		return documentUrl;
 	}
@@ -16,8 +25,6 @@ struct RemoteDocument {
 	const Object& getDocument() {
 		return document;
 	}
-
-	void setDocument ( const Object& document_ );
 
 	String getContextUrl() {
 		return contextUrl;
@@ -31,6 +38,5 @@ struct RemoteDocument {
 	Object& document;
 	String contextUrl;
 
-	RemoteDocument ( String url, const Object& document_ /*= null*/, String context = "" );
 };
 #endif

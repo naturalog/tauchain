@@ -1,3 +1,5 @@
+#ifndef __JSONLDERROR_H__
+#define __JSONLDERROR_H__
 const String LOADING_DOCUMENT_FAILED = "loading document failed";
 const String LIST_OF_LISTS = "list of lists";
 const String INVALID_INDEX_VALUE = "invalid @index value";
@@ -77,3 +79,4 @@ public:
 		return type;//.toString();
 	}
 };
+#endif

@@ -9,9 +9,31 @@
 #include <iostream>
 
 #include "RemoteDocument.h"
+#include "JsonLdError.h"
+
+namespace json_spirit {
+template<typename Object>
+void read ( String, Object& );
+}
 
 template<typename Object>
 class DocumentLoader {
+	RemoteDocument<Object> loadDocument ( String url )  {
+		RemoteDocument<Object> doc/* = new RemoteDocument*/ ( url, Object() );
+		try {
+			doc.setDocument ( fromURL ( /*new URL*/ ( url ) ) );
+		} catch ( ... ) {
+			throw JsonLdError ( LOADING_REMOTE_CONTEXT_FAILED, url );
+		}
+		return doc;
+	}
+
+	const Object& fromURL ( String url ) {
+		Object r;
+		json_spirit::read ( download ( url ), r );
+		return r;
+	}
+
 	void* curl;
 	static size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
 		String data ( ( const char* ) ptr, ( size_t ) size * n );
@@ -39,8 +61,5 @@ public:
 	virtual ~DocumentLoader() {
 		curl_easy_cleanup ( curl );
 	}
-
-	RemoteDocument<Object> loadDocument ( String url );
-	const Object& fromURL ( String url );
 };
 #endif
