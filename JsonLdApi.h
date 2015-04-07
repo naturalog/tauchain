@@ -340,8 +340,8 @@ private:
 				        && ( v.isList() || ( v.isMap() && v.obj( )
 				                             .containsKey ( "@list" ) ) ) )
 					throw JsonLdError ( LIST_OF_LISTS, "lists of lists are not permitted." );
-				else if ( v != null ) { // 3.2.3
-					if ( v.isList() ) result.push_back ( v.list().begin(), v.list().end() );
+				else if ( v.is_null() ) { // 3.2.3
+					if ( v.isList() ) result.insert (result.end(), v.list().begin(), v.list().end() );
 					else result.push_back ( v );
 				}
 			}
@@ -356,7 +356,7 @@ private:
 				String key = x.first;
 				const Object value = x.second;//elem.get ( key );
 				if ( key.equals ( "@context" ) ) continue; // 7.1
-				const String expandedProperty = activeCtx.expandIri ( key, false, true, null, null ); // 7.2
+				const String expandedProperty = activeCtx.expandIri ( key, false, true, Map<String, Object>(), Map<String, Boolean>() ); // 7.2
 				Object expandedValue;
 				if ( expandedProperty == null // 7.3
 				        || ( expandedProperty.find ( ':' ) == String::npos && !isKeyword ( expandedProperty ) ) ) continue;
@@ -373,7 +373,7 @@ private:
 							expandedValue = ArrayList<String>();
 							for ( const Object v :  value.list() ) {
 								if ( ! v.isString() ) throw JsonLdError ( INVALID_TYPE_VALUE, "@type value must be a string or array of strings" );
-								expandedValue.list( ).push_back ( activeCtx.expandIri ( ( String ) v,
+								expandedValue.list( ).push_back ( activeCtx.expandIri ( v.str(),
 								                                  true, true, null, null ) );
 							}
 						} else if ( value.isString() )
@@ -426,7 +426,10 @@ private:
 							for ( const String property : reverse.keySet() ) {
 								const Object item = reverse.get ( property );
 								if ( !result.containsKey ( property ) ) result.put ( property, ArrayList<Object>() ); // 7.4.11.2.1)
-								if ( item.isList() ) result.get ( property ).list() .push_back ( item.list().begin(), item.list().end() ); // 7.4.11.2.2)
+								if ( item.isList() ) { 
+									auto l = result.get ( property ).list();
+									l.insert (l.begin(), item.list().begin(), item.list().end() ); // 7.4.11.2.2)
+								}
 								else result.get ( property ).list().push_back ( item );
 							}
 							// 7.4.11.3)

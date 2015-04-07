@@ -114,9 +114,8 @@ public:
 	inline const String_type& str()    const {
 		return get_str();
 	}
-	inline const Object&      obj()    const {
-		return get_obj();
-	}
+	inline const Object&      obj()    const { return get_obj(); }
+	inline const Object&      map()    const { return get_obj(); }
 	inline const Context<Object>&     ctx()    const {
 		return get_obj();
 	}
