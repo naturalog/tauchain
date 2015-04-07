@@ -10,9 +10,9 @@ class JsonLdOptions {
 	boolean produceGeneralizedRdf = false;
 	String processingMode = "json-ld-1.0";
 	DocumentLoader<Object> documentLoader;// = new DocumentLoader();
-	Boolean embed = bnull;
-	Boolean Explicit = bnull;
-	Boolean omitDefault = bnull;
+	tBoolean embed = bnull;
+	tBoolean Explicit = bnull;
+	tBoolean omitDefault = bnull;
 	Boolean useRdfType = false;
 	Boolean useNativeTypes = false;
 public:
