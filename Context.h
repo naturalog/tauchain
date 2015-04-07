@@ -338,8 +338,8 @@ public:
 		// 17)
 		if ( val.containsKey ( "@language" ) && !val.containsKey ( "@type" ) ) {
 			if ( val.get ( "@language" ) == null || val.get ( "@language" ).isString() ) {
-				const String language = ( String ) val.get ( "@language" );
-				definition.put ( "@language", language != null ? language.toLowerCase() : null );
+				const String language = val.get ( "@language" ).str();
+				definition.put ( "@language", lower(language) );
 			} else throw JsonLdError ( INVALID_LANGUAGE_MAPPING, "@language must be a string or null" );
 		}
 
@@ -361,21 +361,14 @@ public:
 	    @return
 	    @
 	*/
-	String expandIri ( String& value, boolean relative, boolean vocab, Map<String, Object>& context,
-	                   Map<String, Boolean>& defined )  {
-		// 1)
-		if ( value == null || JsonLdUtils<Object>::isKeyword ( value ) ) return value;
-		// 2)
-		if ( context != null && context.containsKey ( value )
-		        && !Boolean.TRUE.equals ( defined.get ( value ) ) )
+	String expandIri ( String& value, boolean relative, boolean vocab, Map<String, Object>& context, Map<String, Boolean>& defined )  {
+		if ( value == null || JsonLdUtils<Object>::isKeyword ( value ) ) return value; // 1
+		if ( context != null && context.containsKey ( value ) && !defined.get ( value ) ) // 2
 			createTermDefinition ( context, value, defined );
 		// 3)
 		if ( vocab && termDefinitions.containsKey ( value ) ) {
-			const Map<String, Object> td = ( LinkedHashMap<String, Object> ) termDefinitions
-			                               .get ( value );
-			if ( td != null )
-				return ( String ) td.get ( "@id" ); else
-				return null;
+			const Map<String, Object> td = termDefinitions .get ( value ).obj();
+			return td == null ? null : td.get ( "@id" ).str();
 		}
 		// 4)
 		const int colIndex = value.indexOf ( ":" );
@@ -384,24 +377,18 @@ public:
 			const String prefix = value.substring ( 0, colIndex );
 			const String suffix = value.substring ( colIndex + 1 );
 			// 4.2)
-			if ( "_".equals ( prefix ) || suffix.startsWith ( "//" ) )
-				return value;
+			if ( "_"s == prefix || startsWith (suffix, "//" ) ) return value;
 			// 4.3)
-			if ( context != null && context.containsKey ( prefix )
-			        && ( !defined.containsKey ( prefix ) || defined.get ( prefix ) == false ) )
+			if ( context != null && context.containsKey ( prefix ) && ( !defined.containsKey ( prefix ) || !defined.get ( prefix ) ) )
 				createTermDefinition ( context, prefix, defined );
 			// 4.4)
-			if ( termDefinitions.containsKey ( prefix ) ) {
-				return ( String ) ( ( LinkedHashMap<String, Object> ) termDefinitions.get ( prefix ) )
-				       .get ( "@id" ) + suffix;
-			}
-			// 4.5)
-			return value;
+			if ( termDefinitions.containsKey ( prefix ) ) return termDefinitions.get ( prefix ).obj( ) .get ( "@id" ).str() + suffix;
+			return value; // 4.5
 		}
 		// 5)
 		if ( vocab && containsKey ( "@vocab" ) ) return get ( "@vocab" ) + value;
 		// 6)
-		if ( relative ) return JsonLdUrl.resolve ( ( String ) get ( "@base" ), value ); 
+		if ( relative ) return JsonLdUrl.resolve ( get ( "@base" ).str(), value ); 
 		if ( context != null && JsonLdUtils<Object>::isRelativeIri ( value ) ) throw JsonLdError ( INVALID_IRI_MAPPING, "not an absolute IRI: " + value );
 		// 7)
 		return value;
@@ -428,40 +415,21 @@ public:
 	    @return the compacted term, prefix, keyword alias, or the original IRI.
 	*/
 	String compactIri ( String iri, Object value, boolean relativeToVocab, boolean reverse ) {
-		// 1)
-		if ( iri == null )
-			return null;
-
-		// 2)
-		if ( relativeToVocab && getInverse().containsKey ( iri ) ) {
-			// 2.1)
-			String defaultLanguage = ( String ) get ( "@language" );
-			if ( defaultLanguage == null )
-				defaultLanguage = "@none";
-
-			// 2.2)
-			const List<String> containers = new ArrayList<String>();
-			// 2.3)
-			String typeLanguage = "@language";
-			String typeLanguageValue = "@null";
-
-			// 2.4)
-			if ( value.isMap() && ( ( Map<String, Object> ) value ).containsKey ( "@index" ) )
-				containers.push_back ( "@index" );
-
-			// 2.5)
-			if ( reverse ) {
+		if ( iri == null ) return null; // 1
+		if ( relativeToVocab && getInverse().containsKey ( iri ) ) { // 2
+			String defaultLanguage = get ( "@language" ).str(), typeLanguage = "@language", typeLanguageValue = "@null"; // 2.1,2.3
+			List<String> containers; // 2.2
+			if ( defaultLanguage == null ) defaultLanguage = "@none";
+			if ( value.isMap() && value.obj( ).containsKey ( "@index" ) ) containers.push_back ( "@index" ); // 2.4
+			if ( reverse ) { // 2.5
 				typeLanguage = "@type";
 				typeLanguageValue = "@reverse";
 				containers.push_back ( "@set" );
 			}
 			// 2.6)
-			else if ( value.isMap() && ( ( Map<String, Object> ) value ).containsKey ( "@list" ) ) {
-				// 2.6.1)
-				if ( ! ( ( Map<String, Object> ) value ).containsKey ( "@index" ) )
-					containers.push_back ( "@list" );
-				// 2.6.2)
-				const List<Object> list = ( List<Object> ) ( ( Map<String, Object> ) value ).get ( "@list" );
+			else if ( value.isMap() && value.obj( ).containsKey ( "@list" ) ) {
+				if ( !  value.obj( ).containsKey ( "@index" ) ) containers.push_back ( "@list" ); // 2.6.1
+				List<Object> list = value.obj( ).get ( "@list" ).list(); // 2.6.2
 				// 2.6.3)
 				String commonLanguage = ( list.size() == 0 ) ? defaultLanguage : null;
 				String commonType = null;
@@ -479,55 +447,36 @@ public:
 						else if ( ( ( Map<String, Object> ) item ).containsKey ( "@type" ) )
 							itemType = ( String ) ( ( Map<String, Object> ) item ).get ( "@type" );
 						// 2.6.4.2.3)
-						else
-							itemLanguage = "@null";
+						else itemLanguage = "@null";
 					}
-					// 2.6.4.3)
-					else
-						itemType = "@id";
-					// 2.6.4.4)
-					if ( commonLanguage == null )
-						commonLanguage = itemLanguage;
-					// 2.6.4.5)
-					else if ( !commonLanguage.equals ( itemLanguage ) && JsonLdUtils<Object>::isValue ( item ) )
+					else itemType = "@id"; // 2.6.4.3
+					if ( commonLanguage == null ) commonLanguage = itemLanguage; // 2.6.4.4
+					else if ( !commonLanguage.equals ( itemLanguage ) && JsonLdUtils<Object>::isValue ( item ) ) // 2.6.4.5
 						commonLanguage = "@none";
-					// 2.6.4.6)
-					if ( commonType == null )
-						commonType = itemType;
-					// 2.6.4.7)
-					else if ( !commonType.equals ( itemType ) )
-						commonType = "@none";
-					// 2.6.4.8)
-					if ( "@none".equals ( commonLanguage ) && "@none".equals ( commonType ) )
-						break;
+					if ( commonType == null ) commonType = itemType; // 2.6.4.6
+					else if ( !commonType.equals ( itemType ) ) commonType = "@none";// 2.6.4.7)
+					if ( "@none".equals ( commonLanguage ) && "@none".equals ( commonType ) ) break; // 2.6.4.8
 				}
-				// 2.6.5)
-				commonLanguage = ( commonLanguage != null ) ? commonLanguage : "@none";
-				// 2.6.6)
-				commonType = ( commonType != null ) ? commonType : "@none";
-				// 2.6.7)
-				if ( !"@none".equals ( commonType ) ) {
+				commonLanguage = ( commonLanguage != null ) ? commonLanguage : "@none"; // 2.6.5)
+				commonType = ( commonType != null ) ? commonType : "@none"; // 2.6.6
+				if ( !"@none"s == commonType ) { // 2.6.7
 					typeLanguage = "@type";
 					typeLanguageValue = commonType;
 				}
-				// 2.6.8)
-				else
-					typeLanguageValue = commonLanguage;
+				else typeLanguageValue = commonLanguage; // 2.6.8
 			}
-			// 2.7)
-			else {
+			else { // 2.7
 				// 2.7.1)
-				if ( value.isMap() && ( ( Map<String, Object> ) value ).containsKey ( "@value" ) ) {
+				if ( value.isMap() && value.obj( ).containsKey ( "@value" ) ) {
 					// 2.7.1.1)
-					if ( ( ( Map<String, Object> ) value ).containsKey ( "@language" )
-					        && ! ( ( Map<String, Object> ) value ).containsKey ( "@index" ) ) {
+					if ( value.obj( ).containsKey ( "@language" ) && ! value.obj( ).containsKey ( "@index" ) ) {
 						containers.push_back ( "@language" );
-						typeLanguageValue = ( String ) ( ( Map<String, Object> ) value ).get ( "@language" );
+						typeLanguageValue = value.obj( ).get ( "@language" ).str();
 					}
 					// 2.7.1.2)
-					else if ( ( ( Map<String, Object> ) value ).containsKey ( "@type" ) ) {
+					else if ( value.obj( ).containsKey ( "@type" ) ) {
 						typeLanguage = "@type";
-						typeLanguageValue = ( String ) ( ( Map<String, Object> ) value ).get ( "@type" );
+						typeLanguageValue = value.obj( ).get ( "@type" ).str();
 					}
 				}
 				// 2.7.2)
