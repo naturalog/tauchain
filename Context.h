@@ -107,36 +107,21 @@ public:
 public:
 
 	Object compactValue ( String activeProperty, Map<String, Object> value ) {
-		// 1)
-		int numberMembers = value.size();
-		// 2)
-		if ( value.containsKey ( "@index" ) && "@index"s ==  getContainer ( activeProperty )  )
-			numberMembers--;
-		// 3)
-		if ( numberMembers > 2 )
-			return value;
-		// 4)
-		const String typeMapping = getTypeMapping ( activeProperty );
+		int numberMembers = value.size(); // 1
+		if ( value.containsKey ( "@index" ) && "@index"s ==  getContainer ( activeProperty )  ) numberMembers--; // 2
+		if ( numberMembers > 2 ) return value; // 3
+		const String typeMapping = getTypeMapping ( activeProperty ); // 4
 		const String languageMapping = getLanguageMapping ( activeProperty );
 		if ( value.containsKey ( "@id" ) ) {
-			// 4.1)
-			if ( numberMembers == 1 && "@id"s == ( typeMapping ) )
-				return compactIri ( value.get ( "@id" ).str() );
-			// 4.2)
-			if ( numberMembers == 1 && "@vocab"s == ( typeMapping ) )
-				return compactIri ( value.get ( "@id" ).str(), true );
-			// 4.3)
-			return value;
+			if ( numberMembers == 1 && "@id"s == typeMapping ) return compactIri ( value.get ( "@id" ).str() ); // 4.1
+			if ( numberMembers == 1 && "@vocab"s == typeMapping ) return compactIri ( value.get ( "@id" ).str(), true ); // 4.2
+			return value; // 4.3
 		}
 		const Object valueValue = value.get ( "@value" );
-		// 5)
-		if ( value.containsKey ( "@type" ) && equals ( value.get ( "@type" ), typeMapping ) )
-			return valueValue;
-		// 6)
-		if ( value.containsKey ( "@language" ) ) {
+		if ( value.containsKey ( "@type" ) && equals ( value.get ( "@type" ), typeMapping ) ) return valueValue; // 5
+		if ( value.containsKey ( "@language" ) ) { // 6
 			// TODO: SPEC: doesn't specify to check default language as well
-			if ( equals ( value.get ( "@language" ), languageMapping )
-			        || equals ( value.get ( "@language" ), base_t::get ( "@language" ) ) )
+			if ( equals ( value.get ( "@language" ), languageMapping ) || equals ( value.get ( "@language" ), base_t::get ( "@language" ) ) )
 				return valueValue;
 		}
 		// 7)
@@ -144,8 +129,7 @@ public:
 		        && ( ! ( valueValue.isString() ) || !base_t::containsKey ( "@language" ) || ( termDefinitions.containsKey ( activeProperty )
 		                && getTermDefinition ( activeProperty ).containsKey ( "@language" ) && !languageMapping.size() /* == null */ ) ) )
 			return valueValue;
-		// 8)
-		return value;
+		return value; // 8
 	}
 
 	/**
@@ -515,7 +499,7 @@ public:
 			if ( !termDefinition.size() || iri == termDefinition.get ( "@id" ).str() || !startsWith ( iri, termDefinition.get ( "@id" ).str() ) ) continue;
 			const String candidate = term + ":" + iri.substr ( termDefinition.get ( "@id" ).str().length() ); // 5.3
 			// 5.4)
-			if ( ( !compactIRI.size() || compareShortestLeast ( candidate, compactIRI ) < 0 )
+			if ( ( !compactIRI.size() || JsonLdUtils<Object>::compareShortestLeast ( candidate, compactIRI ) < 0 )
 			        && ( !termDefinitions.containsKey ( candidate ) || ( iri == termDefinitions.get ( candidate ).obj( ) .get ( "@id" ) && value == null ) ) )
 				compactIRI = candidate;
 
@@ -550,8 +534,8 @@ public:
 			if ( termDefinition == null ) continue;
 			String id = termDefinition.get ( "@id" ).str();
 			if ( !id.size() ) continue;
-			if ( startsWith ( term,"@" ) || startsWith (id, "@" ) ) continue;
-			if ( !onlyCommonPrefixes || endsWith (id, "/" ) || endsWith (id, "#" ) ) prefixes.put ( term, id );
+			if ( startsWith ( term, "@" ) || startsWith ( id, "@" ) ) continue;
+			if ( !onlyCommonPrefixes || endsWith ( id, "/" ) || endsWith ( id, "#" ) ) prefixes.put ( term, id );
 		}
 		return prefixes;
 	}
@@ -573,69 +557,55 @@ public:
 	Map<String, Object> getInverse() {
 		// lazily create inverse
 		if ( inverse != null ) return inverse;
-		inverse = newMap(); // 1
+		inverse = Map<String, Object>(); // 1
 		String defaultLanguage = base_t::get ( "@language" ).str(); // 2
 		if ( !defaultLanguage.size() ) defaultLanguage = "@none";
 
 		// create term selections for each mapping in the context, ordererd by
 		// shortest and then lexicographically least
-		List<String> terms ( termDefinitions.keySet() );
-		Collections.sort ( terms, new Comparator<String>() {
-			virtual int compare ( String a, String b ) {
-				return compareShortestLeast ( a, b );
-			}
+		List<String> terms; for ( auto x : termDefinitions ) terms.push_back ( x.first );
+		std::sort ( terms.begin(), terms.end(), [] ( String a, String b ) {
+			return JsonLdUtils<Object>::compareShortestLeast ( a, b );
 		} );
 
 		for ( String term : terms ) {
-			Map<String, Object> definition = ( termDefinitions.get ( term ).obj();
-			                                   // 3.1)
-			                                   if ( definition == null )
-			                                   continue;
-
-			                                   // 3.2)
-			                                   String container = ( String ) definition.get ( "@container" );
-			                                   if ( container == null )
-				                                   container = "@none";
-
-				                                   // 3.3)
-				                                   const String iri = ( String ) definition.get ( "@id" );
-
-				                                   // 3.4 + 3.5)
-				                                   Map<String, Object> containerMap = ( Map<String, Object> ) inverse.get ( iri );
-				if ( containerMap == null ) {
-					containerMap = newMap();
-						inverse.put ( iri, containerMap );
-					}
+			Map<String, Object> definition = termDefinitions.get ( term ).obj();
+			if ( definition == null ) continue; // 3.1
+			String container = ( String ) definition.get ( "@container" ).str(); // 3.2
+			if ( !container.size() ) container = "@none";
+			const String iri = ( String ) definition.get ( "@id" ).str(); // 3.3
+			Map<String, Object> containerMap = inverse.get ( iri ).obj(); // 3.4,3.5
+			if ( !containerMap.size() ) {
+				containerMap = Map<String, Object>();//newMap();
+				inverse.put ( iri, containerMap );
+			}
 
 			Map<String, Object> typeLanguageMap = containerMap.get ( container ).obj(); // 3.6,3.7
-			if ( typeLanguageMap == null ) {
-			typeLanguageMap = newMap();
-				typeLanguageMap.put ( "@language", newMap() );
-				typeLanguageMap.put ( "@type", newMap() );
+			if ( !typeLanguageMap.size() ) {
+				typeLanguageMap = Map<String, Object>();
+				typeLanguageMap.put ( "@language", Map<String, Object>() );
+				typeLanguageMap.put ( "@type", Map<String, Object>() );
 				containerMap.put ( container, typeLanguageMap );
 			}
 
 			if ( definition.get ( "@reverse" ) ) { // 3.8
-			Map<String, Object> typeMap = typeLanguageMap .get ( "@type" ).obj();
-				if ( !typeMap.containsKey ( "@reverse" ) )
-					typeMap.put ( "@reverse", term );
+				Map<String, Object> typeMap = typeLanguageMap .get ( "@type" ).obj();
+				if ( !typeMap.containsKey ( "@reverse" ) ) typeMap.put ( "@reverse", term );
 			} else if ( definition.containsKey ( "@type" ) ) { // 3.9
-			const Map<String, Object> typeMap = typeLanguageMap
-				                                    .get ( "@type" ).obj();
+				Map<String, Object> typeMap = typeLanguageMap .get ( "@type" ).obj();
 				if ( !typeMap.containsKey ( definition.get ( "@type" ) ) )
 					typeMap.put ( definition.get ( "@type" ).str(), term );
 			} else if ( definition.containsKey ( "@language" ) ) { // 3.10
-			const Map<String, Object> languageMap = typeLanguageMap
-				                                        .get ( "@language" ).obj();
+				Map<String, Object> languageMap = typeLanguageMap .get ( "@language" ).obj();
 				String language = definition.get ( "@language" ).str();
-				if ( language == null ) language = "@null";
+				if ( !language.size() ) language = "@null";
 				if ( !languageMap.containsKey ( language ) ) languageMap.put ( language, term );
 				// 3.11)
 			} else {
 				Map<String, Object> languageMap = typeLanguageMap .get ( "@language" ).obj(); // 3.11.1
 				if ( !languageMap.containsKey ( "@language" ) ) languageMap.put ( "@language", term ); // 3.11.2
 				if ( !languageMap.containsKey ( "@none" ) ) languageMap.put ( "@none", term ); // 3.11.3
-				Map<String, Object> typeMap = typeLanguageMap .get ( "@type" ).obj(); // 3.11.4 
+				Map<String, Object> typeMap = typeLanguageMap .get ( "@type" ).obj(); // 3.11.4
 				if ( !typeMap.containsKey ( "@none" ) ) typeMap.put ( "@none", term ); // 3.11.5
 			}
 		}
@@ -679,17 +649,17 @@ public:
 	    @return The container mapping
 	*/
 	Object expandValue ( String activeProperty, Object value )  {
-		const Map<String, Object> rval = newMap();
+		const Map<String, Object> rval;
 		const Map<String, Object> td = getTermDefinition ( activeProperty );
 		// 1)
-		if ( td != null && "@id".equals ( td.get ( "@type" ) ) ) {
+		if ( td != null && "@id"s == td.get ( "@type" ) )  {
 			// TODO: i'm pretty sure value should be a string if the @type is
 			// @id
 			rval.put ( "@id", expandIri ( value.toString(), true, false, null, null ) );
 			return rval;
 		}
 		// 2)
-		if ( td != null && "@vocab".equals ( td.get ( "@type" ) ) ) {
+		if ( td != null && "@vocab"s == td.get ( "@type" ) ) {
 			// TODO: same as above
 			rval.put ( "@id", expandIri ( value.toString(), true, true, null, null ) );
 			return rval;
@@ -702,26 +672,28 @@ public:
 		else if ( value.isString() ) {
 			// 5.1)
 			if ( td != null && td.containsKey ( "@language" ) ) {
-				const String lang = ( String ) td.get ( "@language" );
-				if ( lang != null ) rval.put ( "@language", lang );
+				const String lang = td.get ( "@language" ).str();
+				if ( lang.size() ) rval.put ( "@language", lang );
 			}
 			// 5.2)
-			else if ( get ( "@language" ) != null ) rval.put ( "@language", get ( "@language" ) );
+			else if ( base_t::get ( "@language" ) != null ) rval.put ( "@language", base_t::get ( "@language" ) );
 		}
 		return rval;
 	}
 
 	Map<String, Object> serialize() {
 		const Map<String, Object> ctx = newMap();
-		if ( get ( "@base" ) != null && !get ( "@base" ).equals ( options.getBase() ) ) ctx.put ( "@base", get ( "@base" ) );
-		if ( get ( "@language" ) != null ) ctx.put ( "@language", get ( "@language" ) );
-		if ( get ( "@vocab" ) != null ) ctx.put ( "@vocab", get ( "@vocab" ) );
-		for ( const String term : termDefinitions.keySet() ) {
-			const Map<String, Object> definition = ( Map<String, Object> ) termDefinitions.get ( term );
+		if ( base_t::get ( "@base" ) != null && base_t::get ( "@base" ) != options.getBase() ) ctx.put ( "@base", get ( "@base" ) );
+		if ( base_t::get ( "@language" ) != null ) ctx.put ( "@language", get ( "@language" ) );
+		if ( base_t::get ( "@vocab" ) != null ) ctx.put ( "@vocab", get ( "@vocab" ) );
+//		for ( const String term : termDefinitions.keySet() ) {
+		for (auto x : termDefinitions) {
+			String term = x.first;
+			const Map<String, Object> definition = x.second.obj*(;//termDefinitions.get ( term ).obj();
 			if ( definition.get ( "@language" ) == null
 			        && definition.get ( "@container" ) == null
 			        && definition.get ( "@type" ) == null
-			        && ( definition.get ( "@reverse" ) == null || Boolean.FALSE.equals ( definition .get ( "@reverse" ) ) ) ) {
+			        && ( definition.get ( "@reverse" ) == null || !definition .get ( "@reverse" ).boolean()))
 				const String cid = compactIri ( ( String ) definition.get ( "@id" ) );
 				ctx.put ( term, term.equals ( cid ) ? definition.get ( "@id" ) : cid );
 			} else {
@@ -736,22 +708,22 @@ public:
 					           : compactIri ( typeMapping, true ) );
 			}
 			if ( definition.get ( "@container" ) != null ) defn.put ( "@container", definition.get ( "@container" ) );
-			const Object lang = definition.get ( "@language" ); if ( definition.get ( "@language" ) != null )
-				defn.put ( "@language", Boolean.FALSE.equals ( lang ) ? null : lang );
+			const Object lang = definition.get ( "@language" ); 
+			if ( definition.get ( "@language" ) != null ) defn.put ( "@language", !lang ? null : lang );
 			ctx.put ( term, defn );
 		}
 
-		Map<String, Object> rval = newMap();
-		if ( ! ( ctx == null || ctx.isEmpty() ) ) rval.put ( "@context", ctx );
+		Map<String, Object> rval;
+		if ( ! ( ctx == null || !ctx.size() ) ) rval.put ( "@context", ctx );
 		return rval;
 	}
 
 	String getContainer ( String property ) {
-		if ( "@graph".equals ( property ) ) return "@set";
+		if ( "@graph"s == property ) return "@set";
 		if ( JsonLdUtils<Object>::isKeyword ( property ) ) return property;
-		const Map<String, Object> td = ( Map<String, Object> ) termDefinitions.get ( property );
+		const Map<String, Object> td = termDefinitions.get ( property ).obj();
 		if ( td == null ) return null;
-		return ( String ) td.get ( "@container" );
+		return td.get ( "@container" ).str();
 	}
 
 	Boolean isReverseProperty ( String property ) {
