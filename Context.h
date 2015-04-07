@@ -521,7 +521,7 @@ public:
 
 		}
 		if ( compactIRI.size() ) return compactIRI; // 6
-		if ( !relativeToVocab ) return JsonLdUrl::removeBase ( get ( "@base" ), iri ); // 7
+		if ( !relativeToVocab ) return JsonLdUrl::removeBase ( base_t::get ( "@base" ), iri ); // 7
 		return iri; // 8
 	}
 
@@ -542,15 +542,16 @@ public:
 	    @return A map from prefix string to IRI string
 	*/
 	Map<String, String> getPrefixes ( boolean onlyCommonPrefixes ) {
-		const Map<String, String> prefixes = new LinkedHashMap<String, String>();
-		for ( const String term : termDefinitions.keySet() ) {
-			if ( term.contains ( ":" ) ) continue;
-			const Map<String, Object> termDefinition = ( Map<String, Object> ) termDefinitions .get ( term );
+		Map<String, String> prefixes;
+		for ( auto x : termDefinitions ) {
+			String term = x.first;
+			if ( term.find ( ":" ) != String::npos ) continue;
+			Map<String, Object> termDefinition = termDefinitions .get ( term ).obj();
 			if ( termDefinition == null ) continue;
-			const String id = ( String ) termDefinition.get ( "@id" );
-			if ( id == null ) continue;
-			if ( term.startsWith ( "@" ) || id.startsWith ( "@" ) ) continue;
-			if ( !onlyCommonPrefixes || id.endsWith ( "/" ) || id.endsWith ( "#" ) ) prefixes.put ( term, id );
+			String id = termDefinition.get ( "@id" ).str();
+			if ( !id.size() ) continue;
+			if ( startsWith ( term,"@" ) || startsWith (id, "@" ) ) continue;
+			if ( !onlyCommonPrefixes || endsWith (id, "/" ) || endsWith (id, "#" ) ) prefixes.put ( term, id );
 		}
 		return prefixes;
 	}
@@ -570,18 +571,11 @@ public:
 	    @return the inverse context.
 	*/
 	Map<String, Object> getInverse() {
-
 		// lazily create inverse
-		if ( inverse != null )
-			return inverse;
-
-		// 1)
-		inverse = newMap();
-
-		// 2)
-		String defaultLanguage = ( String ) get ( "@language" );
-		if ( defaultLanguage == null )
-			defaultLanguage = "@none";
+		if ( inverse != null ) return inverse;
+		inverse = newMap(); // 1
+		String defaultLanguage = base_t::get ( "@language" ).str(); // 2
+		if ( !defaultLanguage.size() ) defaultLanguage = "@none";
 
 		// create term selections for each mapping in the context, ordererd by
 		// shortest and then lexicographically least
@@ -613,8 +607,7 @@ public:
 						inverse.put ( iri, containerMap );
 					}
 
-			// 3.6 + 3.7)
-			Map<String, Object> typeLanguageMap = ( Map<String, Object> ) containerMap.get ( container );
+			Map<String, Object> typeLanguageMap = containerMap.get ( container ).obj(); // 3.6,3.7
 			if ( typeLanguageMap == null ) {
 			typeLanguageMap = newMap();
 				typeLanguageMap.put ( "@language", newMap() );
@@ -622,44 +615,28 @@ public:
 				containerMap.put ( container, typeLanguageMap );
 			}
 
-			// 3.8)
-			if ( Boolean.TRUE.equals ( definition.get ( "@reverse" ) ) ) {
-			const Map<String, Object> typeMap = ( Map<String, Object> ) typeLanguageMap
-				                                    .get ( "@type" );
+			if ( definition.get ( "@reverse" ) ) { // 3.8
+			Map<String, Object> typeMap = typeLanguageMap .get ( "@type" ).obj();
 				if ( !typeMap.containsKey ( "@reverse" ) )
 					typeMap.put ( "@reverse", term );
-				// 3.9)
-			} else if ( definition.containsKey ( "@type" ) ) {
-			const Map<String, Object> typeMap = ( Map<String, Object> ) typeLanguageMap
-				                                    .get ( "@type" );
+			} else if ( definition.containsKey ( "@type" ) ) { // 3.9
+			const Map<String, Object> typeMap = typeLanguageMap
+				                                    .get ( "@type" ).obj();
 				if ( !typeMap.containsKey ( definition.get ( "@type" ) ) )
-					typeMap.put ( ( String ) definition.get ( "@type" ), term );
-				// 3.10)
-			} else if ( definition.containsKey ( "@language" ) ) {
-			const Map<String, Object> languageMap = ( Map<String, Object> ) typeLanguageMap
-				                                        .get ( "@language" );
-				String language = ( String ) definition.get ( "@language" );
-				if ( language == null )
-					language = "@null";
-				if ( !languageMap.containsKey ( language ) )
-					languageMap.put ( language, term );
+					typeMap.put ( definition.get ( "@type" ).str(), term );
+			} else if ( definition.containsKey ( "@language" ) ) { // 3.10
+			const Map<String, Object> languageMap = typeLanguageMap
+				                                        .get ( "@language" ).obj();
+				String language = definition.get ( "@language" ).str();
+				if ( language == null ) language = "@null";
+				if ( !languageMap.containsKey ( language ) ) languageMap.put ( language, term );
 				// 3.11)
 			} else {
-				// 3.11.1)
-				const Map<String, Object> languageMap = ( Map<String, Object> ) typeLanguageMap
-				                                        .get ( "@language" );
-				// 3.11.2)
-				if ( !languageMap.containsKey ( "@language" ) )
-					languageMap.put ( "@language", term );
-				// 3.11.3)
-				if ( !languageMap.containsKey ( "@none" ) )
-					languageMap.put ( "@none", term );
-				// 3.11.4)
-				const Map<String, Object> typeMap = ( Map<String, Object> ) typeLanguageMap
-				                                    .get ( "@type" );
-				// 3.11.5)
-				if ( !typeMap.containsKey ( "@none" ) )
-					typeMap.put ( "@none", term );
+				Map<String, Object> languageMap = typeLanguageMap .get ( "@language" ).obj(); // 3.11.1
+				if ( !languageMap.containsKey ( "@language" ) ) languageMap.put ( "@language", term ); // 3.11.2
+				if ( !languageMap.containsKey ( "@none" ) ) languageMap.put ( "@none", term ); // 3.11.3
+				Map<String, Object> typeMap = typeLanguageMap .get ( "@type" ).obj(); // 3.11.4 
+				if ( !typeMap.containsKey ( "@none" ) ) typeMap.put ( "@none", term ); // 3.11.5
 			}
 		}
 		// 4)
@@ -679,30 +656,19 @@ public:
 
 	    @return the selected term.
 	*/
-	String selectTerm ( String iri, List<String> containers, String typeLanguage,
-	                    List<String> preferredValues ) {
+	String selectTerm ( String iri, List<String> containers, String typeLanguage, List<String> preferredValues ) {
 		const Map<String, Object> inv = getInverse();
-		// 1)
-		const Map<String, Object> containerMap = ( Map<String, Object> ) inv.get ( iri );
-		// 2)
-		for ( const String container : containers ) {
-			// 2.1)
-			if ( !containerMap.containsKey ( container ) )
-				continue;
-			// 2.2)
-			const Map<String, Object> typeLanguageMap = ( Map<String, Object> ) containerMap .get ( container );
-			// 2.3)
-			const Map<String, Object> valueMap = ( Map<String, Object> ) typeLanguageMap .get ( typeLanguage );
-			// 2.4 )
-			for ( const String item : preferredValues ) {
-				// 2.4.1
-				if ( !valueMap.containsKey ( item ) ) continue;
-				// 2.4.2
-				return ( String ) valueMap.get ( item );
+		const Map<String, Object> containerMap = ( Map<String, Object> ) inv.get ( iri ); // 1
+		for ( const String container : containers ) { // 2
+			if ( !containerMap.containsKey ( container ) ) continue; // 2.1
+			const Map<String, Object> typeLanguageMap = containerMap .get ( container ).obj(); // 2.2
+			const Map<String, Object> valueMap = typeLanguageMap .get ( typeLanguage ).obj(); // 2.3
+			for ( const String item : preferredValues ) { // 2.4
+				if ( !valueMap.containsKey ( item ) ) continue; // 2.4.1
+				return ( String ) valueMap.get ( item ); // 2.4.2
 			}
 		}
-		// 3)
-		return null;
+		return String(); // 3
 	}
 
 	/**
