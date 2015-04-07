@@ -54,11 +54,11 @@ public:
 	String normalizedPath;
 	String authority;
 
-	String toString()
-	{ //crap
+	String toString() {
+		//crap
 		String r = protocol + host;
-		if (port.size())
-				r+=port;
+		if ( port.size() )
+			r += port;
 		r += normalizedPath + query + hash;
 		return r;
 	}
@@ -153,16 +153,15 @@ public:
 
 		for ( int i = 0; i < input.size(); i++ ) {
 			//if this isnt the last element
-			if (input.size() - i > 1 )
-			{
+			if ( input.size() - i > 1 ) {
 				if ( ( "." == input[i] ) || ( "" == input[i] ) ) {
-					input.erase(input.begin() + i);
+					input.erase ( input.begin() + i );
 					continue;
 				}
 			}
 			if ( ".." == input[i] ) {
 				// input.remove(0);
-				if ( hasAuthority || ( output.size() && (".." != output.back() ) ) ) {
+				if ( hasAuthority || ( output.size() && ( ".." != output.back() ) ) ) {
 					// [].pop() doesn't fail, to replicate this we need to check
 					// that there is something to remove
 					if ( output.size() > 0 )
@@ -268,41 +267,41 @@ public:
 	//}
 
 	static String resolve ( String baseUri, String pathToResolve ) {
-/*
-			// TODO: some input will need to be normalized to perform the expected
-			// result with java
-			// TODO: we can do this without using java URI!
+		/*
+					// TODO: some input will need to be normalized to perform the expected
+					// result with java
+					// TODO: we can do this without using java URI!
 
 
-		//figure out a "calling convention" for this yourself
-			if ( baseUri == null )
-				return pathToResolve;
-			if ( pathToResolve == null || "".equals ( pathToResolve.trim() ) )
-				return baseUri;
+				//figure out a "calling convention" for this yourself
+					if ( baseUri == null )
+						return pathToResolve;
+					if ( pathToResolve == null || "".equals ( pathToResolve.trim() ) )
+						return baseUri;
 
 
-			//try { //we have an url class..might as well try using it
-				JsonLdUrl base = parse ( baseUri );
-				// look for a query string
-				if ( startsWith(pathToResolve, "?" ) ) {
-					// drop fragment from uri if it has one
-					base.hash = "";
-					// add query to the end manually (as URI.resolve does it wrong)
-					return base.toString() + pathToResolve;
-				}
+					//try { //we have an url class..might as well try using it
+						JsonLdUrl base = parse ( baseUri );
+						// look for a query string
+						if ( startsWith(pathToResolve, "?" ) ) {
+							// drop fragment from uri if it has one
+							base.hash = "";
+							// add query to the end manually (as URI.resolve does it wrong)
+							return base.toString() + pathToResolve;
+						}
 
-				//uri = uri.resolve ( pathToResolve );
-				//naive attempt, this used java URI.resolve
-				//download.java.net/jdk7/archive/b123/docs/api/java/net/URI.html#resolve(java.net.URI
-				JsonLdUrl uri = parse(base.toString() + "/" + pathToResolve);
+						//uri = uri.resolve ( pathToResolve );
+						//naive attempt, this used java URI.resolve
+						//download.java.net/jdk7/archive/b123/docs/api/java/net/URI.html#resolve(java.net.URI
+						JsonLdUrl uri = parse(base.toString() + "/" + pathToResolve);
 
-				// java doesn't discard unnecessary dot segments
-				uri.path = removeDotSegments ( uri.path, true );
+						// java doesn't discard unnecessary dot segments
+						uri.path = removeDotSegments ( uri.path, true );
 
-				return uri.toString();
-			} catch ( const URISyntaxException e ) {
-				return null;
-			}
+						return uri.toString();
+					} catch ( const URISyntaxException e ) {
+						return null;
+					}
 		*/
 		return "";
 	}
@@ -315,25 +314,25 @@ public:
 
 private: static void parseAuthority ( JsonLdUrl parsed ) {
 
-				// parse authority for unparsed relative network-path reference
-				if ( parsed.href.find ( ":" ) == String::npos && parsed.href.find ( "//" ) == 0
-				        && "" == parsed.host ) {
-					// must parse authority from pathname
-					parsed.pathname = parsed.pathname.substr ( 2, parsed.pathname.size() );
-					const int idx = parsed.pathname.find ( "/" );
-					if ( idx == String::npos ) {
-						parsed.authority = parsed.pathname;
-						parsed.pathname = "";
-					} else {
-						parsed.authority = parsed.pathname.substr ( 0, idx );
-						parsed.pathname = parsed.pathname.substr ( idx, parsed.pathname.size() );
-					}
-				} else {
-					// construct authority
-					parsed.authority = parsed.host;
-					if ( "" != parsed.auth )
-						parsed.authority = parsed.auth + "@" + parsed.authority;
-				}
+		// parse authority for unparsed relative network-path reference
+		if ( parsed.href.find ( ":" ) == String::npos && parsed.href.find ( "//" ) == 0
+		        && "" == parsed.host ) {
+			// must parse authority from pathname
+			parsed.pathname = parsed.pathname.substr ( 2, parsed.pathname.size() );
+			const int idx = parsed.pathname.find ( "/" );
+			if ( idx == String::npos ) {
+				parsed.authority = parsed.pathname;
+				parsed.pathname = "";
+			} else {
+				parsed.authority = parsed.pathname.substr ( 0, idx );
+				parsed.pathname = parsed.pathname.substr ( idx, parsed.pathname.size() );
+			}
+		} else {
+			// construct authority
+			parsed.authority = parsed.host;
+			if ( "" != parsed.auth )
+				parsed.authority = parsed.auth + "@" + parsed.authority;
+		}
 	}
 };
 #endif

@@ -165,7 +165,7 @@ public:
 		//		if ( !remoteContexts.size()/* == null*/ )
 		//			remoteContexts = new ArrayList<String>();
 		// 1. Initialize result to the result of cloning active context.
-		Context<Object> result(*this); // TODO: clone?
+		Context<Object> result ( *this ); // TODO: clone?
 		// 2)
 		if ( !localContext.isList() ) {
 			Object temp = localContext;
@@ -184,7 +184,7 @@ public:
 				String uri = result.get ( "@base" ).str();
 				uri = JsonLdUrl::resolve ( uri, context.str() );
 				// 3.2.2
-				if ( std::find(remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() )
+				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() )
 					throw JsonLdError ( RECURSIVE_CONTEXT_INCLUSION, uri );
 				remoteContexts.push_back ( uri );
 				// 3.2.3: Dereference context
@@ -200,10 +200,10 @@ public:
 			// 3.4
 			if ( !remoteContexts.size() && context.obj().containsKey ( "@base" ) ) {
 				Object value = context.obj().get ( "@base" );
-				if ( value == null ) result.remove ( "@base" ); 
+				if ( value == null ) result.remove ( "@base" );
 				else if ( value.isString() ) {
 					if ( JsonLdUtils<Object>::isAbsoluteIri ( value.str( ) ) )
-						result.put ( "@base", value ); 
+						result.put ( "@base", value );
 					else {
 						String baseUri = result.get ( "@base" ).str();
 						if ( !JsonLdUtils<Object>::isAbsoluteIri ( baseUri ) ) throw JsonLdError ( INVALID_BASE_IRI, baseUri );
@@ -217,23 +217,22 @@ public:
 				if ( value == null )
 					result.remove ( "@vocab" ); else if ( value.isString() ) {
 					if ( JsonLdUtils<Object>::isAbsoluteIri ( ( String ) value ) )
-						result.put ( "@vocab", value ); else {
+						result.put ( "@vocab", value ); else
 						throw JsonLdError ( INVALID_VOCAB_MAPPING, "@value must be an absolute IRI" );
-					}
 				} else throw JsonLdError ( INVALID_VOCAB_MAPPING, "@vocab must be a string or null" );
 			}
 			// 3.6
 			if ( context.obj().containsKey ( "@language" ) ) {
 				const Object value = context.obj().get ( "@language" );
-				if ( value == null ) result.remove ( "@language" ); 
-				else if ( value.isString() ) result.put ( "@language", lower(value.str( )) ); 
+				if ( value == null ) result.remove ( "@language" );
+				else if ( value.isString() ) result.put ( "@language", lower ( value.str( ) ) );
 				else throw JsonLdError ( INVALID_DEFAULT_LANGUAGE, value );
 			}
 			// 3.7
 			Map<String, Boolean> defined;// = new LinkedHashMap<String, Boolean>();
-			for ( auto x : context.obj()){//const String key : context.obj().keySet() ) {
+			for ( auto x : context.obj() ) { //const String key : context.obj().keySet() ) {
 				String key = x.first;
-				if ( is(key, { "@base"s, "@vocab", "@language"s } ) ) continue;
+				if ( is ( key, { "@base"s, "@vocab", "@language"s } ) ) continue;
 				result.createTermDefinition ( context.obj(), key, defined );
 			}
 		}
@@ -256,8 +255,8 @@ public:
 			return;
 		}
 
-		if ( value.isString() ) value = newMap ( "@id", value ); 
-		if ( ! value.isMap() ) throw JsonLdError ( INVALID_TERM_DEFINITION, value ); 
+		if ( value.isString() ) value = newMap ( "@id", value );
+		if ( ! value.isMap() ) throw JsonLdError ( INVALID_TERM_DEFINITION, value );
 		// casting the value so it doesn't have to be done below everytime
 		const Map<String, Object> val = value.obj();
 		// 9) create a new term definition
@@ -274,26 +273,26 @@ public:
 			}
 			// TODO: fix check for absoluteIri (blank nodes shouldn't count, at
 			// least not here!)
-			if ( "@id"s == type  || "@vocab"s == type 
-			        || ( !startsWith (type, "_:" ) && JsonLdUtils<Object>::isAbsoluteIri ( type ) ) )
-				definition.put ( "@type", type ); 
+			if ( "@id"s == type  || "@vocab"s == type
+			        || ( !startsWith ( type, "_:" ) && JsonLdUtils<Object>::isAbsoluteIri ( type ) ) )
+				definition.put ( "@type", type );
 			else throw JsonLdError ( INVALID_TYPE_MAPPING, type );
 		}
 		// 11)
 		if ( val.containsKey ( "@reverse" ) ) {
 			if ( val.containsKey ( "@id" ) ) throw JsonLdError ( INVALID_REVERSE_PROPERTY, val );
-			if ( !  val.get ( "@reverse" ).isString()  ) 
+			if ( !  val.get ( "@reverse" ).isString()  )
 				throw JsonLdError ( INVALID_IRI_MAPPING,
-				                        "Expected String for @reverse value. got "
-				                        + ( val.get ( "@reverse" ) == null ? "null" : val.get ( "@reverse" )
-				                            .getClass() ) );
-			
+				                    "Expected String for @reverse value. got "
+				                    + ( val.get ( "@reverse" ) == null ? "null" : val.get ( "@reverse" )
+				                        .getClass() ) );
+
 			const String reverse = expandIri ( val.get ( "@reverse" ).str(), false, true, context, defined );
 			if ( !JsonLdUtils<Object>::isAbsoluteIri ( reverse ) ) throw JsonLdError ( INVALID_IRI_MAPPING, "Non-absolute @reverse IRI: " + reverse );
 			definition.put ( "@id", reverse );
 			if ( val.containsKey ( "@container" ) ) {
 				const String container = val.get ( "@container" ).str();
-				if ( !container.size() || is(container, { "@set"s, "@index"s} )) definition.put ( "@container", container ); 
+				if ( !container.size() || is ( container, { "@set"s, "@index"s} ) ) definition.put ( "@container", container );
 				else throw JsonLdError ( INVALID_REVERSE_PROPERTY, "reverse properties only support set- and index-containers" );
 			}
 			definition.put ( "@reverse", true );
@@ -312,7 +311,7 @@ public:
 			if ( JsonLdUtils<Object>::isKeyword ( res ) || JsonLdUtils<Object>::isAbsoluteIri ( res ) ) {
 				if ( "@context"s == res ) throw JsonLdError ( INVALID_KEYWORD_ALIAS, "cannot alias @context" );
 				definition.put ( "@id", res );
-			} else 
+			} else
 				throw JsonLdError ( INVALID_IRI_MAPPING, "resulting IRI mapping should be a keyword, absolute IRI or blank node" );
 		}
 
@@ -322,15 +321,15 @@ public:
 			const String prefix = term.substr ( 0, colIndex );
 			const String suffix = term.substr ( colIndex + 1 );
 			if ( context.containsKey ( prefix ) ) createTermDefinition ( context, prefix, defined );
-			 definition.put ( "@id", termDefinitions.containsKey ( prefix ) ? termDefinitions.get ( prefix ).obj( ).get ( "@id" ) + suffix : term);
+			definition.put ( "@id", termDefinitions.containsKey ( prefix ) ? termDefinitions.get ( prefix ).obj( ).get ( "@id" ) + suffix : term );
 			// 15)
-		} else if ( base_t::containsKey ( "@vocab" ) ) definition.put ( "@id", base_t::get ( "@vocab" ) + term ); 
+		} else if ( base_t::containsKey ( "@vocab" ) ) definition.put ( "@id", base_t::get ( "@vocab" ) + term );
 		else throw JsonLdError ( INVALID_IRI_MAPPING, "relative term definition without vocab mapping" );
 
 		// 16)
 		if ( val.containsKey ( "@container" ) ) {
 			String container = ( String ) val.get ( "@container" ).str();
-			if ( !is(container, { "@list"s, "@set"s, "@index"s, "@language"s} ) )
+			if ( !is ( container, { "@list"s, "@set"s, "@index"s, "@language"s} ) )
 				throw JsonLdError ( INVALID_CONTAINER_MAPPING, "@container must be either @list, @set, @index, or @language" );
 			definition.put ( "@container", container );
 		}
@@ -339,7 +338,7 @@ public:
 		if ( val.containsKey ( "@language" ) && !val.containsKey ( "@type" ) ) {
 			if ( val.get ( "@language" ) == null || val.get ( "@language" ).isString() ) {
 				const String language = val.get ( "@language" ).str();
-				definition.put ( "@language", lower(language) );
+				definition.put ( "@language", lower ( language ) );
 			} else throw JsonLdError ( INVALID_LANGUAGE_MAPPING, "@language must be a string or null" );
 		}
 
@@ -362,8 +361,8 @@ public:
 	    @
 	*/
 	String expandIri ( String& value, boolean relative, boolean vocab, Map<String, Object>& context, Map<String, Boolean>& defined )  {
-		if ( value == null || JsonLdUtils<Object>::isKeyword ( value ) ) return value; // 1
-		if ( context != null && context.containsKey ( value ) && !defined.get ( value ) ) // 2
+		if ( !value.size() || JsonLdUtils<Object>::isKeyword ( value ) ) return value; // 1
+		if ( /* context != null &&*/ context.containsKey ( value ) && !defined.get ( value ) ) // 2
 			createTermDefinition ( context, value, defined );
 		// 3)
 		if ( vocab && termDefinitions.containsKey ( value ) ) {
@@ -371,13 +370,13 @@ public:
 			return td == null ? null : td.get ( "@id" ).str();
 		}
 		// 4)
-		const int colIndex = value.indexOf ( ":" );
+		const int colIndex = value.find ( ":" );
 		if ( colIndex >= 0 ) {
 			// 4.1)
-			const String prefix = value.substring ( 0, colIndex );
-			const String suffix = value.substring ( colIndex + 1 );
+			const String prefix = value.substr ( 0, colIndex );
+			const String suffix = value.substr ( colIndex + 1 );
 			// 4.2)
-			if ( "_"s == prefix || startsWith (suffix, "//" ) ) return value;
+			if ( "_"s == prefix || startsWith ( suffix, "//" ) ) return value;
 			// 4.3)
 			if ( context != null && context.containsKey ( prefix ) && ( !defined.containsKey ( prefix ) || !defined.get ( prefix ) ) )
 				createTermDefinition ( context, prefix, defined );
@@ -385,10 +384,9 @@ public:
 			if ( termDefinitions.containsKey ( prefix ) ) return termDefinitions.get ( prefix ).obj( ) .get ( "@id" ).str() + suffix;
 			return value; // 4.5
 		}
-		// 5)
-		if ( vocab && containsKey ( "@vocab" ) ) return get ( "@vocab" ) + value;
+		if ( vocab && base_t::containsKey ( "@vocab" ) ) return base_t::get ( "@vocab" ) + value; // 5
 		// 6)
-		if ( relative ) return JsonLdUrl.resolve ( get ( "@base" ).str(), value ); 
+		if ( relative ) return JsonLdUrl::resolve ( base_t::get ( "@base" ).str(), value );
 		if ( context != null && JsonLdUtils<Object>::isRelativeIri ( value ) ) throw JsonLdError ( INVALID_IRI_MAPPING, "not an absolute IRI: " + value );
 		// 7)
 		return value;
@@ -415,11 +413,12 @@ public:
 	    @return the compacted term, prefix, keyword alias, or the original IRI.
 	*/
 	String compactIri ( String iri, Object value, boolean relativeToVocab, boolean reverse ) {
-		if ( iri == null ) return null; // 1
+		//		if ( iri == null ) return null; // 1
+		if ( !iri.size() ) return String();
 		if ( relativeToVocab && getInverse().containsKey ( iri ) ) { // 2
-			String defaultLanguage = get ( "@language" ).str(), typeLanguage = "@language", typeLanguageValue = "@null"; // 2.1,2.3
+			String defaultLanguage = base_t::get ( "@language" ).str(), typeLanguage = "@language", typeLanguageValue = "@null"; // 2.1,2.3
 			List<String> containers; // 2.2
-			if ( defaultLanguage == null ) defaultLanguage = "@none";
+			if ( !defaultLanguage.size() ) defaultLanguage = "@none";
 			if ( value.isMap() && value.obj( ).containsKey ( "@index" ) ) containers.push_back ( "@index" ); // 2.4
 			if ( reverse ) { // 2.5
 				typeLanguage = "@type";
@@ -430,103 +429,70 @@ public:
 			else if ( value.isMap() && value.obj( ).containsKey ( "@list" ) ) {
 				if ( !  value.obj( ).containsKey ( "@index" ) ) containers.push_back ( "@list" ); // 2.6.1
 				List<Object> list = value.obj( ).get ( "@list" ).list(); // 2.6.2
-				// 2.6.3)
-				String commonLanguage = ( list.size() == 0 ) ? defaultLanguage : null;
-				String commonType = null;
-				// 2.6.4)
-				for ( const Object item : list ) {
-					// 2.6.4.1)
-					String itemLanguage = "@none";
-					String itemType = "@none";
-					// 2.6.4.2)
-					if ( JsonLdUtils<Object>::isValue ( item ) ) {
-						// 2.6.4.2.1)
-						if ( ( ( Map<String, Object> ) item ).containsKey ( "@language" ) )
-							itemLanguage = ( String ) ( ( Map<String, Object> ) item ).get ( "@language" );
-						// 2.6.4.2.2)
-						else if ( ( ( Map<String, Object> ) item ).containsKey ( "@type" ) )
-							itemType = ( String ) ( ( Map<String, Object> ) item ).get ( "@type" );
-						// 2.6.4.2.3)
-						else itemLanguage = "@null";
-					}
-					else itemType = "@id"; // 2.6.4.3
-					if ( commonLanguage == null ) commonLanguage = itemLanguage; // 2.6.4.4
-					else if ( !commonLanguage.equals ( itemLanguage ) && JsonLdUtils<Object>::isValue ( item ) ) // 2.6.4.5
+				String commonType, commonLanguage;// 2.6.3
+				if ( !list.size() ) commonLanguage = defaultLanguage;
+				for ( const Object item : list ) {// 2.6.4
+					String itemLanguage = "@none", itemType = "@none"; // 2.6.4.1
+					if ( JsonLdUtils<Object>::isValue ( item ) ) { // 2.6.4.2
+						if ( item.obj( ).containsKey ( "@language" ) ) itemLanguage = item.obj( ).get ( "@language" ).str(); // 2.6.4.2.1
+						else if ( item.obj( ).containsKey ( "@type" ) ) itemType = item.obj( ).get ( "@type" ).str(); // 2.6.4.2.2
+						else itemLanguage = "@null"; // 2.6.4.2.3
+					} else itemType = "@id"; // 2.6.4.3
+					if ( !commonLanguage.size() ) commonLanguage = itemLanguage; // 2.6.4.4
+					else if ( commonLanguage != itemLanguage && JsonLdUtils<Object>::isValue ( item ) ) // 2.6.4.5
 						commonLanguage = "@none";
-					if ( commonType == null ) commonType = itemType; // 2.6.4.6
-					else if ( !commonType.equals ( itemType ) ) commonType = "@none";// 2.6.4.7)
-					if ( "@none".equals ( commonLanguage ) && "@none".equals ( commonType ) ) break; // 2.6.4.8
+					if ( !commonType.size() ) commonType = itemType; // 2.6.4.6
+					else if ( commonType != itemType ) commonType = "@none";// 2.6.4.7)
+					if ( "@none"s == commonLanguage && "@none"s == commonType ) break; // 2.6.4.8
 				}
-				commonLanguage = ( commonLanguage != null ) ? commonLanguage : "@none"; // 2.6.5)
-				commonType = ( commonType != null ) ? commonType : "@none"; // 2.6.6
-				if ( !"@none"s == commonType ) { // 2.6.7
+				commonLanguage = commonLanguage.size() ? commonLanguage : "@none"; // 2.6.5)
+				commonType = commonType.size() ? commonType : "@none"; // 2.6.6
+				if ( "@none"s != commonType ) { // 2.6.7
 					typeLanguage = "@type";
 					typeLanguageValue = commonType;
-				}
-				else typeLanguageValue = commonLanguage; // 2.6.8
-			}
-			else { // 2.7
+				} else typeLanguageValue = commonLanguage; // 2.6.8
+			} else { // 2.7
 				// 2.7.1)
 				if ( value.isMap() && value.obj( ).containsKey ( "@value" ) ) {
 					// 2.7.1.1)
 					if ( value.obj( ).containsKey ( "@language" ) && ! value.obj( ).containsKey ( "@index" ) ) {
 						containers.push_back ( "@language" );
 						typeLanguageValue = value.obj( ).get ( "@language" ).str();
-					}
-					// 2.7.1.2)
-					else if ( value.obj( ).containsKey ( "@type" ) ) {
+					} else if ( value.obj( ).containsKey ( "@type" ) ) { // 2.7.1.2
 						typeLanguage = "@type";
 						typeLanguageValue = value.obj( ).get ( "@type" ).str();
 					}
-				}
-				// 2.7.2)
-				else {
+				} else { // 2.7.2
 					typeLanguage = "@type";
 					typeLanguageValue = "@id";
 				}
-				// 2.7.3)
-				containers.push_back ( "@set" );
+				containers.push_back ( "@set" ); // 2.7.3
 			}
 
-			// 2.8)
-			containers.push_back ( "@none" );
-			// 2.9)
-			if ( typeLanguageValue == null )
-				typeLanguageValue = "@null";
-			// 2.10)
-			const List<String> preferredValues = new ArrayList<String>();
-			// 2.11)
-			if ( "@reverse".equals ( typeLanguageValue ) )
-				preferredValues.push_back ( "@reverse" );
+			containers.push_back ( "@none" ); // 2.8
+			if ( typeLanguageValue == null ) typeLanguageValue = "@null"; // 2.9
+			List<String> preferredValues; // 2.10
+			if ( "@reverse"s == typeLanguageValue ) preferredValues.push_back ( "@reverse" ); // 2.11
 			// 2.12)
-			if ( ( "@reverse".equals ( typeLanguageValue ) || "@id".equals ( typeLanguageValue ) )
-			&& ( value.isMap() ) && ( value.map().containsKey ( "@id" ) ) {
+			if ( is ( typeLanguageValue, { "@reverse"s, "@id"s} ) && ( value.isMap() ) && ( value.map().containsKey ( "@id" ) ) {
 			// 2.12.1)
-			const String result = compactIri (
-			                          value.map.get ( "@id" ).str(), null, true, true );
+			const String result = compactIri ( value.map.get ( "@id" ).str(), null, true, true );
 				if ( termDefinitions.containsKey ( result )
 				        && termDefinitions.map().get ( result ) .map().containsKey ( "@id" )
 				        && value.map() .get ( "@id" ).equals (
 				            termDefinitions.map().get ( result ).map() .get ( "@id" ) ) ) {
 					preferredValues.push_back ( "@vocab" );
 					preferredValues.push_back ( "@id" );
-				}
-				// 2.12.2)
-				else {
+				} else { // 2.12.2
 					preferredValues.push_back ( "@id" );
 					preferredValues.push_back ( "@vocab" );
 				}
 			}
-			// 2.13)
-			else
-				preferredValues.push_back ( typeLanguageValue );
+			else preferredValues.push_back ( typeLanguageValue ); // 2.13
 				preferredValues.push_back ( "@none" );
 
-				// 2.14)
-				const String term = selectTerm ( iri, containers, typeLanguage, preferredValues );
-				                    // 2.15)
-				                    if ( term != null )
-				                    return term;
+				String term = selectTerm ( iri, containers, typeLanguage, preferredValues ); // 2.14
+				              if ( term.size() ) return term; // 2.15
 			}
 
 	// 3)

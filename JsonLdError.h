@@ -44,12 +44,12 @@ class JsonLdError : public std::exception {
 public:
 	typedef String Error;
 private:
-//	Map<String, Object> details;
+	//	Map<String, Object> details;
 	String type;
 	const String error;
 public:
 	// TODO: Complete class
-//	JsonLdError ( Error type_, Object detail ) : type ( type_ ) {} //, details(detail) {}
+	//	JsonLdError ( Error type_, Object detail ) : type ( type_ ) {} //, details(detail) {}
 	JsonLdError ( String type_ ) : type ( type_ ) {}
 	JsonLdError ( String type_, String detail ) : error ( detail ) {}
 
@@ -66,9 +66,9 @@ public:
 		return type;
 	}
 
-//	Map<String, Object> getDetails() const {
-//		return details;
-//	}
+	//	Map<String, Object> getDetails() const {
+	//		return details;
+	//	}
 
 	virtual String getMessage() const {
 		//		const String msg = super.getMessage();

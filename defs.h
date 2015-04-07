@@ -40,9 +40,7 @@ public:
 		at ( k ) = v;
 	}
 	//	void put(const K& k, const V& v) { at(k) = v; }
-	V& get ( const K& k ) {
-		return at ( k );
-	}
+	//V& get ( const K& k ) { return at ( k ); }
 	const V& get ( const K& k ) const {
 		return at ( k );
 	}
@@ -52,6 +50,11 @@ public:
 			v = it->second;
 			return true;
 		} return false;
+	}
+	V& get ( const K& k ) {
+		auto it = find ( k );
+		if ( it != base_t::end() ) return it->second;
+		return "";
 	}
 	bool containsKey ( const K& k ) const {
 		return find ( k ) != base_t::end();
