@@ -470,13 +470,13 @@ public:
 			}
 
 			containers.push_back ( "@none" ); // 2.8
-			if ( typeLanguageValue == null ) typeLanguageValue = "@null"; // 2.9
+			if ( !typeLanguageValue.size() ) typeLanguageValue = "@null"; // 2.9
 			List<String> preferredValues; // 2.10
 			if ( "@reverse"s == typeLanguageValue ) preferredValues.push_back ( "@reverse" ); // 2.11
 			// 2.12)
-			if ( is ( typeLanguageValue, { "@reverse"s, "@id"s} ) && ( value.isMap() ) && ( value.map().containsKey ( "@id" ) ) {
-			// 2.12.1)
-			const String result = compactIri ( value.map.get ( "@id" ).str(), null, true, true );
+			if ( is ( typeLanguageValue, { "@reverse"s, "@id"s} ) && ( value.isMap() ) && value.map().containsKey ( "@id" ) ) {
+				// 2.12.1)
+				const String result = compactIri ( value.map.get ( "@id" ).str(), null, true, true );
 				if ( termDefinitions.containsKey ( result )
 				        && termDefinitions.map().get ( result ) .map().containsKey ( "@id" )
 				        && value.map() .get ( "@id" ).equals (
@@ -489,54 +489,40 @@ public:
 				}
 			}
 			else preferredValues.push_back ( typeLanguageValue ); // 2.13
-				preferredValues.push_back ( "@none" );
+			preferredValues.push_back ( "@none" );
 
-				String term = selectTerm ( iri, containers, typeLanguage, preferredValues ); // 2.14
-				              if ( term.size() ) return term; // 2.15
-			}
-
-	// 3)
-	if ( relativeToVocab && containsKey ( "@vocab" ) ) {
-			// determine if vocab is a prefix of the iri
-			const String vocab = ( String ) get ( "@vocab" );
-			// 3.1)
-			if ( iri.indexOf ( vocab ) == 0 && !iri.equals ( vocab ) ) {
-				// use suffix as relative iri if it is not a term in the
-				// active context
-				const String suffix = iri.substring ( vocab.length() );
-				if ( !termDefinitions.containsKey ( suffix ) )
-					return suffix;
-			}
+			String term = selectTerm ( iri, containers, typeLanguage, preferredValues ); // 2.14
+			if ( term.size() ) return term; // 2.15
 		}
 
-		// 4)
-		String compactIRI = null;
-		// 5)
-		for ( const String term : termDefinitions.keySet() ) {
-			Map<String, Object> termDefinition = termDefinitions map().get ( term ).map();
-			// 5.1)
-			if ( term.contains ( ":" ) ) continue;
+		if ( relativeToVocab && base_t::containsKey ( "@vocab" ) ) { // 3
+			// determine if vocab is a prefix of the iri
+			const String vocab = base_t::get ( "@vocab" ).str();
+			// 3.1)
+			if ( iri.find ( vocab ) == 0 && iri != vocab ) {
+				// use suffix as relative iri if it is not a term in the
+				// active context
+				const String suffix = iri.substr ( vocab.length() );
+				if ( !termDefinitions.containsKey ( suffix ) ) return suffix;
+			}
+		}
+		String compactIRI; // 4
+		for ( auto x : termDefinitions ) { // 5
+			String term = x.first;
+			Map<String, Object> termDefinition = x.second.obj();//termDefinitions.map().get ( term ).map();
+			if ( term.find ( ":" ) != String::npos ) continue; // 5.1
 			// 5.2)
-			if ( termDefinition == null || iri.equals ( termDefinition.get ( "@id" ) )
-			        || !iri.startsWith ( ( String ) termDefinition.get ( "@id" ) ) )
-				continue;
-			// 5.3)
-			const String candidate = term + ":"
-			                         + iri.substring ( ( ( String ) termDefinition.get ( "@id" ) ).length() );
+			if ( !termDefinition.size() || iri == termDefinition.get ( "@id" ).str() || !startsWith ( iri, termDefinition.get ( "@id" ).str() ) ) continue;
+			const String candidate = term + ":" + iri.substr ( termDefinition.get ( "@id" ).str().length() ); // 5.3
 			// 5.4)
-			if ( ( compactIRI == null || compareShortestLeast ( candidate, compactIRI ) < 0 )
-			        && ( !termDefinitions.containsKey ( candidate ) || ( iri
-			                .equals ( ( ( Map<String, Object> ) termDefinitions.get ( candidate ) )
-			                          .get ( "@id" ) ) && value == null ) ) )
+			if ( ( !compactIRI.size() || compareShortestLeast ( candidate, compactIRI ) < 0 )
+			        && ( !termDefinitions.containsKey ( candidate ) || ( iri == termDefinitions.get ( candidate ).obj( ) .get ( "@id" ) && value == null ) ) )
 				compactIRI = candidate;
 
 		}
-		// 6)
-		if ( compactIRI != null ) return compactIRI;
-		// 7)
-		if ( !relativeToVocab ) return JsonLdUrl.removeBase ( get ( "@base" ), iri );
-		// 8)
-		return iri;
+		if ( compactIRI.size() ) return compactIRI; // 6
+		if ( !relativeToVocab ) return JsonLdUrl::removeBase ( get ( "@base" ), iri ); // 7
+		return iri; // 8
 	}
 
 	/**
