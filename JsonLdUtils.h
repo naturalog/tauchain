@@ -13,10 +13,11 @@
 // import com.github.jsonldjava.utils.Obj;
 
 #include "JsonLdUrl.h"
-
+#include "defs.h"
+#include "Context.h"
+template<typename Object>
 class JsonLdUtils {
-
-private: static const int MAX_CONTEXT_URLS = 10;
+	static const int MAX_CONTEXT_URLS = 10;
 
 	/**
 	    Returns whether or not the given value is a keyword (or a keyword alias).
@@ -28,8 +29,7 @@ private: static const int MAX_CONTEXT_URLS = 10;
 	    @return true if the value is a keyword, false if not.
 	*/
 	static boolean isKeyword ( Object key ) {
-		if ( !isString ( key ) )
-			return false;
+		if ( !isString ( key ) ) return false;
 		return "@base"s == ( key.str() ) || "@context"s == ( key.str() ) || "@container"s == ( key.str() )
 		       || "@default"s == ( key.str() ) || "@embed"s == ( key.str() ) || "@explicit"s == ( key.str() )
 		       || "@graph"s == ( key.str() ) || "@id"s == ( key.str() ) || "@index"s == ( key.str() )
@@ -423,57 +423,6 @@ private: static String removeBase ( boost::variant<String, JsonLdUrl>& baseobj, 
 		return rval;
 	}
 
-	/**
-	    Removes the @preserve keywords as the last step of the framing algorithm.
-
-	    @param ctx
-	              the active context used to compact the input.
-	    @param input
-	              the framed, compacted output.
-	    @param options
-	              the compaction options used.
-
-	    @return the resulting output.
-	    @
-	*/
-	static Object removePreserve ( Context<Object>& ctx, Object& input, JsonLdOptions<Object>& opts )  {
-		// recurse through arrays
-		if ( isArray ( input ) ) {
-			List<Object> output;
-			for ( Object i : input.list() ) {
-				Object result = removePreserve ( ctx, i, opts );
-				// drop nulls from arrays
-				if ( !result.is_null() ) output.push_back ( result );
-			}
-			input = output;
-		} else if ( isObject ( input ) ) {
-			// remove @preserve
-			if ( input.obj( ).containsKey ( "@preserve" ) ) {
-				if ( "@null"s == input.obj( ).get ( "@preserve" ).str() ) return null;
-				return input.obj( ).get ( "@preserve" );
-			}
-			// skip @values
-			if ( isValue ( input ) ) return input;
-			// recurse through @lists
-			if ( isList ( input ) ) {
-				input.obj( ).put ( "@list", removePreserve ( ctx, input.obj( ).get ( "@list" ), opts ) );
-				return input;
-			}
-
-			// recurse through properties
-			//			for ( const String prop : ( input.obj()).keySet() ) {
-			for ( auto x : input.obj() ) {
-				String prop = x.first;
-				Object result = removePreserve ( ctx, input.obj( ).get ( prop ), opts );
-				const String container = ctx.getContainer ( prop );
-				if ( opts.getCompactArrays() && isArray ( result )
-				        && result.list( ).size() == 1 && !container.size() )
-					result = result.list( ).at ( 0 );
-				input.obj( ).put ( prop, result );
-			}
-		}
-		return input;
-	}
 
 	/**
 	    replicate javascript .join because i'm too lazy to keep doing it manually

@@ -268,7 +268,7 @@ public:
 	//}
 
 	static String resolve ( String baseUri, String pathToResolve ) {
-
+/*
 			// TODO: some input will need to be normalized to perform the expected
 			// result with java
 			// TODO: we can do this without using java URI!
@@ -300,7 +300,7 @@ public:
 				uri.path = removeDotSegments ( uri.path, true );
 
 				return uri.toString();
-			/*} catch ( const URISyntaxException e ) {
+			} catch ( const URISyntaxException e ) {
 				return null;
 			}
 		*/

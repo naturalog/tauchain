@@ -45,12 +45,13 @@ public:
 	typedef String Error;
 private:
 //	Map<String, Object> details;
-	Error type;
+	String type;
 	const String error;
 public:
 	// TODO: Complete class
 //	JsonLdError ( Error type_, Object detail ) : type ( type_ ) {} //, details(detail) {}
-	JsonLdError ( Error type_ ) : type ( type_ ) {}
+	JsonLdError ( String type_ ) : type ( type_ ) {}
+	JsonLdError ( String type_, String detail ) : error ( detail ) {}
 
 	virtual String toString() const {
 		return error;
