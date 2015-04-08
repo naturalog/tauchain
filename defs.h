@@ -44,11 +44,11 @@ public:
 		return at ( k ) = v;
 	}
 	//	void put(const K& k, const V& v) { at(k) = v; }
-	V& get ( const K& k ) {
-		return /*(cached != base_t::cend() && cached.first == k) ? cached.second :*/ at ( k );
+	V* get ( const K& k ) {
+		return /*(cached != base_t::cend() && cached.first == k) ? cached.second :*/ &at ( k );
 	}
-	const V& get ( const K& k ) const {
-		return /*(cached != base_t::cend() && cached.first == k) ? cached.second :*/ at ( k );
+	const V* get ( const K& k ) const {
+		return /*(cached != base_t::cend() && cached.first == k) ? cached.second :*/ &at ( k );
 	}
 	bool get ( const K& k, V& v ) {
 		auto it = find ( k );

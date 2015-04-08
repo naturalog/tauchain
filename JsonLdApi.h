@@ -283,9 +283,9 @@ private:
 							List<Object> tmp; // TODO: UNUSED
 							tmp.push_back ( result.put ( itemActiveProperty, tmp ) );
 						}
-						if ( compactedItem.isList() )
-							result.get ( itemActiveProperty ) .list().push_back ( compactedItem.list.begin(), compactedItem.list.end() );
-						else result.get ( itemActiveProperty ).list( ).push_back ( compactedItem );
+						auto x = result.get ( itemActiveProperty ) .list();
+						if ( compactedItem.isList() ) x.insert ( x.end(), compactedItem.list().begin(), compactedItem.list().end() );
+						else x.push_back ( compactedItem );
 					}
 
 				}
@@ -329,7 +329,7 @@ private:
 	    @
 	               If there was an error during expansion.
 	*/
-	Object expand ( Context<Object>& activeCtx, const String& activeProperty, Object& element ) {
+	Object expand ( Context<Object> activeCtx, const String& activeProperty, Object& element ) {
 		if ( element == null ) return null; // 1
 		if ( element.isList() ) { // 3
 			List<Object> result; // 3.1
@@ -341,7 +341,7 @@ private:
 				                             .containsKey ( "@list" ) ) ) )
 					throw JsonLdError ( LIST_OF_LISTS, "lists of lists are not permitted." );
 				else if ( v.is_null() ) { // 3.2.3
-					if ( v.isList() ) result.insert (result.end(), v.list().begin(), v.list().end() );
+					if ( v.isList() ) result.insert ( result.end(), v.list().begin(), v.list().end() );
 					else result.push_back ( v );
 				}
 			}
@@ -426,11 +426,10 @@ private:
 							for ( const String property : reverse.keySet() ) {
 								const Object item = reverse.get ( property );
 								if ( !result.containsKey ( property ) ) result.put ( property, ArrayList<Object>() ); // 7.4.11.2.1)
-								if ( item.isList() ) { 
+								if ( item.isList() ) {
 									auto l = result.get ( property ).list();
-									l.insert (l.begin(), item.list().begin(), item.list().end() ); // 7.4.11.2.2)
-								}
-								else result.get ( property ).list().push_back ( item );
+									l.insert ( l.begin(), item.list().begin(), item.list().end() ); // 7.4.11.2.2)
+								} else result.get ( property ).list().push_back ( item );
 							}
 							// 7.4.11.3)
 							if (  expandedValue.obj().size() > ( expandedValue.obj().containsKey ( "@reverse" ) ? 1 : 0 ) ) {

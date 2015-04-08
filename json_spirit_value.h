@@ -86,8 +86,8 @@ public:
 
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
-	template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
-	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant ); // constructor for compatible variant types
+	template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
+	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant ); // constructor for compatible variant types
 	Value_impl ( const Value_impl& other );
 
 	bool operator== ( const Value_impl& lhs ) const;
@@ -114,8 +114,12 @@ public:
 	inline const String_type& str()    const {
 		return get_str();
 	}
-	inline const Object&      obj()    const { return get_obj(); }
-	inline const Object&      map()    const { return get_obj(); }
+	inline const Object&      obj()    const {
+		return get_obj();
+	}
+	inline const Object&      map()    const {
+		return get_obj();
+	}
 	inline const Context<Object>&     ctx()    const {
 		return get_obj();
 	}
@@ -313,8 +317,8 @@ template<class Config> Value_impl<Config>::Value_impl ( double value ) :   v_ ( 
 template<class Config> Value_impl<Config>::Value_impl ( const Value_impl<Config>& other ) :   v_ ( other.v_ ) { }
 
 template<class Config> template<class Iter> Value_impl<Config>::Value_impl ( Iter first, Iter last ) :   v_ ( Array ( first, last ) ) { }
-template<class Config> template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
-Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant )
+template<class Config> template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
+Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant )
 	:   v_ ( boost::apply_visitor ( Variant_converter_visitor(), variant ) ) {
 }
 

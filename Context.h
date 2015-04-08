@@ -13,10 +13,10 @@ class Context : public LinkedHashMap<String, Object> {
 	JsonLdOptions<Object> options;
 	Map<String, Object> termDefinitions;
 	typedef LinkedHashMap<String, Object> base_t;
-	void init ( JsonLdOptions<Object> options_ );
-	String getTypeMapping ( String property );
-	String getLanguageMapping ( String property );
-	Map<String, Object> getTermDefinition ( String key ) ;
+	//	void init ( JsonLdOptions<Object> options_ );
+	//	String getTypeMapping ( String property );
+	//	String getLanguageMapping ( String property );
+	//	Map<String, Object> getTermDefinition ( String key ) ;
 public:
 	virtual bool isContext() const {
 		return true;
@@ -105,7 +105,6 @@ public:
 	}
 
 public:
-
 	Object compactValue ( String activeProperty, Map<String, Object> value ) {
 		int numberMembers = value.size(); // 1
 		if ( value.containsKey ( "@index" ) && "@index"s ==  getContainer ( activeProperty )  ) numberMembers--; // 2
@@ -504,7 +503,7 @@ public:
 
 		}
 		if ( compactIRI.size() ) return compactIRI; // 6
-		if ( !relativeToVocab ) return JsonLdUrl::removeBase ( base_t::get ( "@base" ), iri ); // 7
+		if ( !relativeToVocab ) return JsonLdUtils<Object>::removeBase ( base_t::get ( "@base" ), iri ); // 7
 		return iri; // 8
 	}
 
@@ -734,5 +733,20 @@ public:
 		throw JsonLdError ( NOT_IMPLEMENTED,
 		                    "getContextValue is only used by old code so far and thus isn't implemented" );
 	}
+private:
+	String getTypeMapping ( String property ) {
+		Object o;
+		if ( !termDefinitions.get ( property, o ) ) return String();
+		if ( !o.is_str() ) return String();
+		return o.obj().get ( "@type" ).str();
+	}
+	String getLanguageMapping ( String property ) {
+		Object o;
+		if ( !termDefinitions.get ( property, o ) ) return String();
+		if ( !o.is_str() ) return String();
+		return o.obj().get ( "@language" ).str();
+	}
+	Map<String, Object> getTermDefinition(String key) { return termDefinitions.get(key).obj(); }
+
 };
 #endif

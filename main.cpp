@@ -34,6 +34,6 @@ typedef json_spirit::mValue Object;
 #include "Context.cpp"
 
 
-const Node& RDFDataset::first = IRI ( RDF_FIRST );
-const Node& RDFDataset::rest = IRI ( RDF_REST );
-const Node& RDFDataset::nil = IRI ( RDF_NIL );
+//const Node& RDFDataset::first = IRI ( RDF_FIRST );
+//const Node& RDFDataset::rest = IRI ( RDF_REST );
+//const Node& RDFDataset::nil = IRI ( RDF_NIL );
