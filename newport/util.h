@@ -1,7 +1,9 @@
 
 template<typename T>
-inline bool is ( const T& s, const std::vector<T>& v ) {
-	return std::find ( v.begin(), v.end(), s ) != v.end();
+inline bool is ( const T& s, const std::vector<T>& v, std::string exception = std::string() ) {
+	bool rc = std::find ( v.begin(), v.end(), s ) != v.end();
+	if ( exception.size() && !rc ) throw exception;
+	return rc;
 }
 
 inline string lower ( const string& s_ ) {
@@ -28,6 +30,12 @@ inline vector<string> split ( const string& s, charT c ) {
 	return v;
 }
 
-template<typename C, typename K> bool has(const C& c, const K& k) { return /*std::find(c.begin(), c.end(), k)*/c.find(k) != c.end(); }
-template<typename C, typename K> bool has(const std::shared_ptr<C>& c, const K& k) { return c && has<C,K>(*c,k); }
-template<typename C, typename K> bool has(const std::shared_ptr<C>& c, const std::shared_ptr<K>& k) { return k && has<C,K>(c,*k); }
+template<typename C, typename K> bool has ( const C& c, const K& k ) {
+	return /*std::find(c.begin(), c.end(), k)*/c.find ( k ) != c.end();
+}
+template<typename C, typename K> bool has ( const std::shared_ptr<C>& c, const K& k ) {
+	return c && has<C, K> ( *c, k );
+}
+template<typename C, typename K> bool has ( const std::shared_ptr<C>& c, const std::shared_ptr<K>& k ) {
+	return k && has<C, K> ( c, *k );
+}

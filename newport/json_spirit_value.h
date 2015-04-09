@@ -26,7 +26,8 @@
 #define JSON_SPIRIT_MVALUE_ENABLED
 //#define JSON_SPIRIT_WMVALUE_ENABLED
 
-namespace json_spirit { struct Null{};
+namespace json_spirit {
+struct Null {};
 enum Value_type { context_type, obj_type, array_type, str_type, bool_type, int_type, real_type, null_type };
 static std::string value_type_to_string ( Value_type vtype );
 //    struct Null{};
@@ -80,8 +81,8 @@ public:
 
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
-	template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant ); // constructor for compatible variant types
+	template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant ); // constructor for compatible variant types
 	Value_impl ( const Value_impl& other );
 
 	bool operator== ( const Value_impl& lhs ) const;
@@ -307,8 +308,8 @@ template<class Config> Value_impl<Config>::Value_impl ( double value ) :   v_ ( 
 template<class Config> Value_impl<Config>::Value_impl ( const Value_impl<Config>& other ) :   v_ ( other.v_ ) { }
 
 template<class Config> template<class Iter> Value_impl<Config>::Value_impl ( Iter first, Iter last ) :   v_ ( Array ( first, last ) ) { }
-template<class Config> template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant )
+template<class Config> template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant )
 	:   v_ ( boost::apply_visitor ( Variant_converter_visitor(), variant ) ) {
 }
 

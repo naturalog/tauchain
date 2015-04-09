@@ -41,5 +41,11 @@ const string INVALID_INPUT = "invalid input";
 const string PARSE_ERROR = "parse error";
 const string UNKNOWN_ERROR = "unknown error";
 
-template<typename M, typename K, typename E> inline bool throw_if_contains(const M& m, const K& k, const E& err) { if (m.find(k) == m.end()) throw err; return true; }
-template<typename M, typename K, typename E> inline bool throw_if_not_contains(const M& m, const K& k, const E& err) { if (m.find(k) != m.end()) throw err; return true; }
+template<typename M, typename K, typename E> inline bool throw_if_contains ( const M& m, const K& k, const E& err ) {
+	if ( m.find ( k ) == m.end() ) throw err;
+	return true;
+}
+template<typename M, typename K, typename E> inline bool throw_if_not_contains ( const M& m, const K& k, const E& err ) {
+	if ( m.find ( k ) != m.end() ) throw err;
+	return true;
+}
