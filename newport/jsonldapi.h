@@ -348,10 +348,19 @@ public:
 		return false;
 	}
 
+	static void mergeValue ( psomap obj, pstring key, pobj value ) {
+		if ( obj && key ) mergeValue ( *obj, *key, value );
+	}
 	static void mergeValue ( psomap obj, string key, pobj value ) {
-		if ( !obj ) return;
-		polist values = obj->at ( key )->LIST();
-		if ( !values ) (*obj)[key] = values = make_shared<olist_obj>();
+		if ( obj ) mergeValue ( *obj, key, value );
+	}
+	static void mergeValue ( somap obj, pstring key, pobj value ) {
+		if ( key ) mergeValue ( obj, *key, value );
+	}
+
+	static void mergeValue ( somap obj, string key, pobj value ) {
+		polist values = obj[key]->LIST();
+		if ( !values ) obj[key] = make_shared<olist_obj>(values = make_shared<olist>());
 		if ( key == "@list" || ( value->MAP() && has ( value->MAP(), "@list" ) ) || !deepContains ( values, value ) )
 			values->push_back ( value );
 	}
@@ -364,11 +373,14 @@ public:
 		generateNodeMap ( element, nodeMap, activeGraph, 0, 0, 0 );
 	}
 
-    string gen_bnode_id(string id) {
-	        if (has(bnode_id_map, id)) return bnode_id_map[id];
-        	string bnid = "_:b" + blankNodeCounter++;
-	        bnode_id_map[id] = bnid;
-    	}
+	string gen_bnode_id ( string id = "" ) {
+		if ( has ( bnode_id_map, id ) ) return bnode_id_map[id];
+		string bnid = "_:b" + blankNodeCounter++;
+		bnode_id_map[id] = bnid;
+	}
+
+	size_t blankNodeCounter = 0;
+	map<string, string> bnode_id_map;
 
 	void generateNodeMap ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring activeProperty, psomap list ) {
 		if ( element->LIST() ) {
@@ -380,7 +392,7 @@ public:
 		psomap graph = nodeMap->at ( activeGraph )->MAP(), node = activeSubject ? graph->at ( *activeSubject->STR() )->MAP() : 0;
 		if ( has ( elem, "@type" ) ) {
 			vector<string> oldTypes, newTypes;
-			if ( elem->at ( "@type" )->LIST() ) oldTypes = vec2vec(elem->at ( "@type" )->LIST());
+			if ( elem->at ( "@type" )->LIST() ) oldTypes = vec2vec ( elem->at ( "@type" )->LIST() );
 			else {
 				oldTypes = vector<string>();//make_shared<olist_obj>();
 				oldTypes.push_back ( *elem->at ( "@type" )->STR() );
@@ -389,59 +401,70 @@ public:
 				if ( startsWith ( item, "_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
 				else newTypes.push_back ( item );
 			}
-			if ( elem->at ( "@type" )->LIST() ) elem->at ( "@type" ) = newTypes;
-			else elem->at ( "@type" ) = newTypes.get ( 0 );
+			if ( elem->at ( "@type" )->LIST() ) elem->at ( "@type" ) = make_shared<olist_obj>(vec2vec ( newTypes ));
+			else elem->at ( "@type" ) = make_shared<string_obj> ( newTypes[0] );
 		}
 		if ( has ( elem, "@value" ) ) {
-			if ( !list ) merge_value ( node, activeProperty, elem );
-			else merge_value ( list, "@list", elem );
-		} else if ( elem.containsKey ( "@list" ) ) {
-			final Map<String, Object> result = newMap ( "@list", new ArrayList<Object>() );
-			generateNodeMap ( elem.get ( "@list" ), nodeMap, activeGraph, activeSubject, activeProperty, result );
-			JsonLdUtils.mergeValue ( node, activeProperty, result );
+			if ( !list ) mergeValue ( node, activeProperty, element );
+			else mergeValue ( list, "@list", element );
+		} else if ( has ( elem, "@list" ) ) {
+			psomap result = make_shared<somap>();
+			( *result ) [ "@list"] = make_shared<olist_obj>();
+			generateNodeMap ( elem->at ( "@list" ), nodeMap, activeGraph, activeSubject, activeProperty, result );
+			mergeValue ( node, activeProperty, make_shared<somap_obj> ( result ) );
 		} else {
-			String id = ( String ) elem.remove ( "@id" );
-			if ( id != null ) {
-				if ( id.startsWith ( "_:" ) ) id = generateBlankNodeIdentifier ( id );
-			} else id = generateBlankNodeIdentifier ( null );
-			if ( !graph.containsKey ( id ) ) {
-				final Map<String, Object> tmp = newMap ( "@id", id );
-				graph.put ( id, tmp );
+			string id;
+			if ( has ( elem, "@id" ) && elem->at ( "@id" )->STR() ) {
+				string id = *elem->at ( "@id" )->STR();
+				elem->erase ( "@id" );
+				if ( startsWith ( id, "_:" ) ) id = gen_bnode_id ( id );
+			} else id = gen_bnode_id ( );
+			if ( !has ( graph, id ) ) {
+				somap tmp;
+				tmp[ "@id"] = make_shared<string_obj> ( id );
+				graph->at ( id ) = make_shared<somap_obj> ( tmp );
 			}
-			if ( activeSubject instanceof Map ) JsonLdUtils.mergeValue ( ( Map<String, Object> ) graph.get ( id ), activeProperty, activeSubject );
-			else if ( activeProperty != null ) {
-				final Map<String, Object> reference = newMap ( "@id", id );
-				if ( list == null ) JsonLdUtils.mergeValue ( node, activeProperty, reference );
-				else JsonLdUtils.mergeValue ( list, "@list", reference );
+			if ( activeSubject->MAP() ) mergeValue ( graph->at ( id )->MAP(), activeProperty, activeSubject );
+			else if ( activeProperty ) {
+				somap ref;
+				ref[ "@id"] = make_shared<string_obj> ( id );
+				if ( !list ) mergeValue ( node, activeProperty, make_shared<somap_obj> ( ref ) );
+				else mergeValue ( list, "@list", make_shared<somap_obj> ( ref ) );
 			}
-			node = ( Map<String, Object> ) graph.get ( id );
-			if ( elem.containsKey ( "@type" ) ) {
-				for ( final Object type : ( List<Object> ) elem.remove ( "@type" ) )
-					JsonLdUtils.mergeValue ( node, "@type", type );
+			node = graph->at ( id )->MAP();
+			if ( has ( elem, "@type" ) ) {
+				for ( pobj type : *elem->at ( "@type" )->LIST() ) mergeValue ( node, "@type", type );
+				elem->erase ( "@type" );
 			}
-			if ( elem.containsKey ( "@index" ) ) {
-				final Object elemIndex = elem.remove ( "@index" );
-				if ( node.containsKey ( "@index" ) ) {
-					if ( !JsonLdUtils.deepCompare ( node.get ( "@index" ), elemIndex ) )
-						throw CONFLICTING_INDEXES;
-				} else node.put ( "@index", elemIndex );
+			if ( has ( elem, "@index" ) ) {
+				pobj elemIndex  = elem->at ( "@index" );
+				elem->erase ( "@index" );
+				if ( has ( node, "@index" ) ) {
+					if ( !deepCompare ( node->at ( "@index" ), elemIndex ) ) throw CONFLICTING_INDEXES;
+				} else node->at ( "@index" ) = elemIndex ;
 			}
-			if ( elem.containsKey ( "@reverse" ) ) {
-				final Map<String, Object> referencedNode = newMap ( "@id", id );
-				final Map<String, Object> reverseMap = ( Map<String, Object> ) elem .remove ( "@reverse" );
-				for ( final String property : reverseMap.keySet() ) {
-					final List<Object> values = ( List<Object> ) reverseMap.get ( property );
-					for ( final Object value : values ) generateNodeMap ( value, nodeMap, activeGraph, referencedNode, property, null );
+			if ( has ( elem, "@reverse" ) ) {
+				psomap refnode = make_shared<somap>(), revmap = elem->at ( "@reverse" )->MAP();
+				( *refnode ) ["@id"] = make_shared<string_obj> ( id );
+				elem->erase ( "@reverse" );
+				for ( auto x : *revmap ) {
+					string prop = x.first;
+					polist values = revmap->at ( prop )->LIST();
+					for ( pobj value : *values ) generateNodeMap ( value, nodeMap, activeGraph, make_shared<somap_obj> ( refnode ), make_shared<string> ( prop ), 0 );
 				}
 			}
-			if ( elem.containsKey ( "@graph" ) ) generateNodeMap ( elem.remove ( "@graph" ), nodeMap, id, null, null, null );
-			final List<String> keys = new ArrayList<String> ( elem.keySet() );
-			Collections.sort ( keys );
-			for ( String property : keys ) {
-				final Object value = elem.get ( property );
-				if ( property.startsWith ( "_:" ) ) property = generateBlankNodeIdentifier ( property );
-				if ( !node.containsKey ( property ) ) node.put ( property, new ArrayList<Object>() );
-				generateNodeMap ( value, nodeMap, activeGraph, id, property, null );
+			if ( has ( elem, "@graph" ) ) {
+				generateNodeMap ( elem->at ( "@graph" ), nodeMap, id, 0, 0, 0 );
+				elem->erase ( "@graph" );
+			}
+			//			final List<String> keys = new ArrayList<String> ( elem.keySet() );
+			//			Collections.sort ( keys );
+			for ( auto z : *elem ) {
+				string property = z.first;
+				pobj value = z.second;
+				if ( startsWith ( property, "_:" ) ) property = gen_bnode_id ( property );
+				if ( !has ( node, property ) ) node->at ( property ) = make_shared<olist_obj>();
+				generateNodeMap ( value, nodeMap, activeGraph, make_shared<string_obj>(id), make_shared<string>(property), 0 );
 			}
 		}
 	}
@@ -526,10 +549,10 @@ throws JsonLdError {
 	if ( elem.containsKey ( "@value" ) ) {
 		// 4.1)
 		if ( list == null )
-			JsonLdUtils.mergeValue ( node, activeProperty, elem );
+			mergeValue ( node, activeProperty, elem );
 		// 4.2)
 		else
-			JsonLdUtils.mergeValue ( list, "@list", elem );
+			mergeValue ( list, "@list", elem );
 	}
 
 	// 5)
@@ -544,7 +567,7 @@ throws JsonLdError {
 		generateNodeMap ( elem.get ( "@list" ), nodeMap, activeGraph, activeSubject, activeProperty,
 		                  result );
 		// 5.3)
-		JsonLdUtils.mergeValue ( node, activeProperty, result );
+		mergeValue ( node, activeProperty, result );
 	}
 
 	// 6)
@@ -569,7 +592,7 @@ throws JsonLdError {
 		// 6.5)
 		if ( activeSubject->MAP() ) {
 			// 6.5.1)
-			JsonLdUtils.mergeValue ( ( Map<String, Object> ) graph.get ( id ), activeProperty,
+			mergeValue ( ( Map<String, Object> ) graph.get ( id ), activeProperty,
 			activeSubject );
 		}
 		// 6.6)
@@ -578,12 +601,12 @@ throws JsonLdError {
 			// 6.6.2)
 			if ( list == null ) {
 				// 6.6.2.1+2)
-				JsonLdUtils.mergeValue ( node, activeProperty, reference );
+				mergeValue ( node, activeProperty, reference );
 			}
 			// 6.6.3) TODO: SPEC says to add ELEMENT to @list member, should
 			// be REFERENCE
 			else
-				JsonLdUtils.mergeValue ( list, "@list", reference );
+				mergeValue ( list, "@list", reference );
 		}
 		// TODO: SPEC this is removed in the spec now, but it's still needed
 		// (see 6.4)
@@ -591,7 +614,7 @@ throws JsonLdError {
 		// 6.7)
 		if ( elem.containsKey ( "@type" ) ) {
 			for ( final Object type : ( List<Object> ) elem.remove ( "@type" ) )
-				JsonLdUtils.mergeValue ( node, "@type", type );
+				mergeValue ( node, "@type", type );
 		}
 		// 6.8)
 		if ( elem.containsKey ( "@index" ) ) {
@@ -1256,7 +1279,7 @@ public List<Object> fromRDF ( final RDFDataset dataset ) throws JsonLdError {
 			// 3.5.4)
 			if ( RDF_TYPE.equals ( predicate ) && ( object.isIRI() || object.isBlankNode() )
 			        && !opts.getUseRdfType() ) {
-				JsonLdUtils.mergeValue ( node, "@type", object.getValue() );
+				mergeValue ( node, "@type", object.getValue() );
 				continue;
 			}
 
@@ -1264,7 +1287,7 @@ public List<Object> fromRDF ( final RDFDataset dataset ) throws JsonLdError {
 			final Map<String, Object> value = object.toObject ( opts.getUseNativeTypes() );
 
 			// 3.5.6+7)
-			JsonLdUtils.mergeValue ( node, predicate, value );
+			mergeValue ( node, predicate, value );
 
 			// 3.5.8)
 			if ( object.isBlankNode() || object.isIRI() ) {
