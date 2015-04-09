@@ -149,15 +149,15 @@ pobj newMap ( const string& k, pobj v ) {
 }
 
 //template<typename obj>
-class Context : public somap {
+class Context : public somap_obj {
 private:
 	jsonld_options options;
 	psomap term_defs = make_shared<somap>();
 public:
 	psomap inverse = 0;
 
-	Context ( const jsonld_options& o = jsonld_options() ) : options ( o ) {
-		if ( options.base ) at ( "@base" ) = make_shared<string_obj> ( *options.base );
+	Context ( const jsonld_options& o = jsonld_options() ) : somap_obj(), options ( o ) {
+		if ( options.base ) MAP()->at ( "@base" ) = make_shared<string_obj> ( *options.base );
 	}
 
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
@@ -167,7 +167,7 @@ public:
 		for ( auto context : *localContext->LIST() ) {
 			if ( context->Null() ) result = Context ( options );
 			else if ( pstring s = context->STR() ) {
-				string uri = resolve ( *result["@base"]->STR(), *s ); // REVISE
+				string uri = resolve ( * ( *result.MAP() ) ["@base"]->STR(), *s ); // REVISE
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
 				remoteContexts.push_back ( uri );
 
@@ -182,29 +182,29 @@ public:
 			auto it = cm.find ( "@base" );
 			if ( !remoteContexts.size() && it != cm.end() ) {
 				pobj value = it->second;
-				if ( value->Null() ) result.erase ( "@base" );
+				if ( value->Null() ) result.MAP()->erase ( "@base" );
 				else if ( pstring s = value->STR() ) {
-					if ( is_abs_iri ( *s ) ) result["@base"] = value;
+					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@base"] = value;
 					else {
-						string baseUri = *result["@base"]->STR();
+						string baseUri = * ( *result.MAP() ) ["@base"]->STR();
 						if ( !is_abs_iri ( baseUri ) ) throw INVALID_BASE_IRI + "\t" + baseUri;
-						result["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
+						( *result.MAP() ) ["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 					}
 				} else throw INVALID_BASE_IRI + "\t" + "@base must be a string";
 			}
 			// 3.5
 			if ( ( it = cm.find ( "@vocab" ) ) != cm.end() ) {
 				pobj value = it->second;
-				if ( value->Null() ) result.erase ( it );
+				if ( value->Null() ) result.MAP()->erase ( it );
 				else if ( pstring s = value->STR() ) {
-					if ( is_abs_iri ( *s ) ) result["@vocab"] = value;
+					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@vocab"] = value;
 					else throw INVALID_VOCAB_MAPPING + "\t" + "@value must be an absolute IRI";
 				} else throw INVALID_VOCAB_MAPPING + "\t" + "@vocab must be a string or null";
 			}
 			if ( ( it = cm.find ( "@language" ) ) != cm.end() ) {
 				pobj value = it->second;
-				if ( value->Null() ) result.erase ( it );
-				else if ( pstring s = value->STR() ) result["@language"] = make_shared<string_obj> ( lower ( *s ) );
+				if ( value->Null() ) result.MAP()->erase ( it );
+				else if ( pstring s = value->STR() ) ( *result.MAP() ) ["@language"] = make_shared<string_obj> ( lower ( *s ) );
 				else throw INVALID_DEFAULT_LANGUAGE + "\t";// + value;
 			}
 			pdefined_t defined = make_shared<defined_t>();
@@ -274,8 +274,8 @@ public:
 			if ( ( it = term_defs->find ( prefix ) ) != term_defs->end() )
 				defn ["@id"] = make_shared<string_obj> ( *it->second->MAP()->at ( "@id" )->STR() + suffix );
 			else defn["@id"] = make_shared<string_obj> ( term );
-		} else if ( ( it = find ( "@vocab" ) ) != end() )
-			defn ["@id"] = make_shared<string_obj> ( *at ( "@vocab" )->STR() + term );
+		} else if ( ( it = MAP()->find ( "@vocab" ) ) != MAP()->end() )
+			defn ["@id"] = make_shared<string_obj> ( *MAP()->at ( "@vocab" )->STR() + term );
 		else throw INVALID_IRI_MAPPING + "relative term defn without vocab mapping";
 
 		// 16
@@ -310,8 +310,8 @@ public:
 			if ( has ( term_defs, prefix ) ) return make_shared<string> ( *term_defs->at ( prefix )->MAP()->at ( "@id" )->STR() + suffix );
 			return value;
 		}
-		if ( vocab && find ( "@vocab" ) != end() ) return make_shared<string> ( *at ( "@vocab" )->STR() + *value );
-		if ( relative ) return make_shared<string> ( resolve ( *at ( "@base" )->STR(), *value ) );
+		if ( vocab && MAP()->find ( "@vocab" ) != MAP()->end() ) return make_shared<string> ( *MAP()->at ( "@vocab" )->STR() + *value );
+		if ( relative ) return make_shared<string> ( resolve ( *MAP()->at ( "@base" )->STR(), *value ) );
 		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + *value;
 		return value;
 	}
