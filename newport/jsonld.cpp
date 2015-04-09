@@ -93,85 +93,32 @@ typedef obj::somap somap;
 typedef obj::olist olist;
 typedef std::shared_ptr<string> pstring;
 typedef std::shared_ptr<somap> psomap;
+typedef std::shared_ptr<bool> pbool;
 typedef map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
 
-string resolve ( const string&, const string& );
+string resolve ( const string&, const string& ) { return ""; }
 
-struct remote_doc_t {
-	string url;
-	pstring context_url;
-	pobj document;
-	remote_doc_t ( string url_, const pobj& document_ = 0, pstring context = 0 ) : url ( url_ ), document ( document_ ), context_url ( context ) { }
-};
-
-class doc_loader_t {
-	void* curl;
-public:
-	remote_doc_t loadDocument ( const string& url )  {
-		pobj p;
-		remote_doc_t doc( url, p );
-		try {
-			doc.setDocument ( fromURL ( /*new URL*/ ( url ) ) );
-		} catch ( ... ) {
-			throw JsonLdError ( LOADING_REMOTE_CONTEXT_FAILED, url );
-		}
-		return doc;
-	}
-
-	pobj fromURL ( const string& url ) {
-		json_spirit::mValue r;
-		json_spirit::read ( download ( url ), r );
-
-		return r;
-	}
-
-	static size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
-		string data ( ( const char* ) ptr, ( size_t ) size * n );
-		* ( ( std::stringstream* ) stream ) << data << std::endl;
-		return size * n;
-	}
-
-	string download ( const string& url ) {
-		curl_easy_setopt ( curl, CURLOPT_URL, url.c_str() );
-		curl_easy_setopt ( curl, CURLOPT_FOLLOWLOCATION, 1L );
-		curl_easy_setopt ( curl, CURLOPT_NOSIGNAL, 1 );
-		curl_easy_setopt ( curl, CURLOPT_ACCEPT_ENCODING, "deflate" );
-		std::stringstream out;
-		curl_easy_setopt ( curl, CURLOPT_WRITEFUNCTION, write_data );
-		curl_easy_setopt ( curl, CURLOPT_WRITEDATA, &out );
-		CURLcode res = curl_easy_perform ( curl );
-		if ( res != CURLE_OK ) throw std::runtime_error ( "curl_easy_perform() failed: "s + curl_easy_strerror ( res ) );
-		return out.str();
-	}
-
-	doc_loader_t() {
-		curl = curl_easy_init();
-	}
-	virtual ~doc_loader_t() {
-		curl_easy_cleanup ( curl );
-	}
-};
+#include "loader.h"
 
 // http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
-struct options {
-    options() {}
-    options(string base_) : base(make_shared<string>(base_)){}
-    pstring base = 0;
-    pbool compactArrays = make_shared<bool>(true);
-    pobj expandContext = 0;
-    pstring processingMode = "json-ld-1.0";
-    doc_loader_t doc_loader;
-    pbool embed = 0;
-    pbool explicit = 0;
-    pbool omitDefault = 0;
-    pbool useRdfType = make_shared<bool>(false);
-    pbool useNativeTypes = make_shared<bool>(false);
-    pbool produceGeneralizedRdf = make_shared<bool>(false);
-    pstring format = 0;
-    pbool useNamespaces = make_shared<bool>(false);
-    pstring outputForm = 0;
-}
+struct jsonld_options {
+	jsonld_options() {}
+	jsonld_options ( string base_ ) : base ( make_shared<string> ( base_ ) ) {}
+	pstring base = 0;
+	pbool compactArrays = make_shared<bool> ( true );
+	pobj expandContext = 0;
+	pstring processingMode = make_shared<string> ( "json-ld-1.0" );
+	pbool embed = 0;
+	pbool isexplicit = 0;
+	pbool omitDefault = 0;
+	pbool useRdfType = make_shared<bool> ( false );
+	pbool useNativeTypes = make_shared<bool> ( false );
+	pbool produceGeneralizedRdf = make_shared<bool> ( false );
+	pstring format = 0;
+	pbool useNamespaces = make_shared<bool> ( false );
+	pstring outputForm = 0;
+};
 
 bool keyword ( const string& key ) {
 	return "@base"s == key || "@context"s == key || "@container"s == key
@@ -201,16 +148,15 @@ pobj newMap ( const string& k, pobj v ) {
 
 //template<typename obj>
 class Context : public somap {
-public:
-	pobj load ( const string& );
 private:
 	jsonld_options options;
 	psomap term_defs = make_shared<somap>();
 public:
 	psomap inverse = 0;
 
-	Context();
-	Context ( const jsonld_options& );
+	Context ( const jsonld_options& o = jsonld_options() ) : options(o) {
+		if (options.base) at("@base") = make_shared<string_obj>(*options.base);
+	}
 
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
 	Context parse ( pobj localContext, vector<string>& remoteContexts ) {
@@ -223,7 +169,7 @@ public:
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
 				remoteContexts.push_back ( uri );
 
-				pobj remoteContext = load ( uri );
+				pobj remoteContext = fromURL ( uri );
 				somap* p;
 				if ( !remoteContext->map_and_has ( "@context" ) ) throw INVALID_REMOTE_CONTEXT + "\t"; // + context;
 				context = ( *remoteContext->MAP() ) ["@context"];
