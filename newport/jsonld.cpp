@@ -117,8 +117,11 @@ inline pstring pstr ( const string& s ) {
 	return make_shared<string> ( s );
 }
 
-pstring removeBase ( pobj o, pstring iri ) {
+pstring removeBase ( pobj o, string iri ) {
 	return pstr ( "" );
+}
+pstring removeBase ( pobj o, pstring iri ) {
+	return removeBase ( o, *iri );
 }
 #include "loader.h"
 
@@ -178,6 +181,23 @@ pobj newMap ( const string& k, pobj v ) {
 	pobj r = make_shared<somap_obj>();
 	( *r->MAP() ) [k] = v;
 	return r;
+}
+
+polist vec2vec ( const vector<string>& x ) {
+	polist res = make_shared<olist>();
+	for ( auto t : x ) res->push_back ( make_shared<string_obj> ( x ) );
+	return res;
+}
+
+void make_list_if_not(pobj& o) {
+	if (o->LIST()) return;
+	pobj t = o->clone();
+	o = make_shared<olist_obj>(olist(1, t));
+}
+							
+void add_all(polist l, pobj v) {
+	if ( v->LIST() ) l->insert ( l.end(), v->LIST()->begin(), v->LIST()->end() );
+	else l->push_back ( v );
 }
 
 //template<typename obj>
@@ -459,12 +479,17 @@ public:
 		return 0;
 	}
 
-	pstring compactIri ( pstring iri, bool relativeToVocab ) {
+	pstring compactIri ( string iri, bool relativeToVocab ) {
 		return compactIri ( iri, 0, relativeToVocab, false );
 	}
-	// http://json-ld.org/spec/latest/json-ld-api/#iri-compaction
+	pstring compactIri ( pstring iri, bool relativeToVocab ) {
+		return !iri ? 0 : compactIri ( *iri, 0, relativeToVocab, false );
+	}
 	pstring compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse ) {
-		if ( !iri ) return 0;
+		return !iri ? 0 : compactIri ( *iri, value, relativeToVocab, reverse );
+	}
+	// http://json-ld.org/spec/latest/json-ld-api/#iri-compaction
+	pstring compactIri ( string iri, pobj value, bool relativeToVocab, bool reverse ) {
 		if ( relativeToVocab && has ( inverse->MAP(), iri ) ) {
 			auto it = MAP()->find ( "@language" );
 			pstring defaultLanguage = 0;
@@ -538,13 +563,13 @@ public:
 				}
 			} else preferredValues.push_back ( *type_lang_val );
 			preferredValues.push_back ( "@none" );
-			pstring term = selectTerm ( *iri, containers, *type_lang, preferredValues );
+			pstring term = selectTerm ( iri, containers, *type_lang, preferredValues );
 			if ( term  ) return term;
 		}
 		if ( relativeToVocab && has ( MAP(), "@vocab" ) ) {
 			pstring vocab = MAP()->at ( "@vocab" )->STR();
-			if ( vocab && iri->find ( *vocab ) == 0 && *iri != *vocab ) {
-				string suffix = iri->substr ( vocab->length() );
+			if ( vocab && iri.find ( *vocab ) == 0 && iri != *vocab ) {
+				string suffix = iri.substr ( vocab->length() );
 				if ( !has ( term_defs, suffix ) ) return pstr ( suffix );
 			}
 		}
@@ -554,17 +579,17 @@ public:
 			psomap termDefinition = x.second->MAP();
 			if ( term.find ( ":" ) != string::npos ) continue;
 			if ( !termDefinition// || iri == termDefinition->at ( "@id" )->STR()
-			        || !startsWith ( *iri,  *termDefinition->at ( "@id" )->STR() ) )
+			        || !startsWith ( iri,  *termDefinition->at ( "@id" )->STR() ) )
 				continue;
 
-			string candidate = term + ":" + iri->substr ( termDefinition->at ( "@id" )->STR()->length() );
+			string candidate = term + ":" + iri.substr ( termDefinition->at ( "@id" )->STR()->length() );
 			if ( ( !compactIRI || compareShortestLeast ( candidate, compactIRI ) < 0 )
-			        && ( !has ( term_defs, candidate ) || ( *iri == *term_defs->at ( candidate )->MAP() ->at ( "@id" )->STR() ) && !value ) )
+			        && ( !has ( term_defs, candidate ) || ( iri == *term_defs->at ( candidate )->MAP() ->at ( "@id" )->STR() ) && !value ) )
 				compactIRI = pstr ( candidate );
 		}
 		if ( !compactIRI  ) return compactIRI;
 		if ( !relativeToVocab ) return removeBase ( MAP()->at ( "@base" ), iri );
-		return iri;
+		return make_shared<string> ( iri );
 	}
 
 	// http://json-ld.org/spec/latest/json-ld-api/#value-compaction
