@@ -22,7 +22,7 @@ using namespace boost;
 #include "err.h"
 #include "util.h"
 
-class null {};
+typedef nullptr_t null;
 
 class obj {
 protected:
@@ -68,6 +68,8 @@ public:
 		auto it = m->find ( k );
 		return it != m->end() && it->second->Null();
 	}
+	virtual string type_str() const = 0;
+	virtual bool equals(const obj& o) const = 0;
 };
 
 #define OBJ_IMPL(type, getter) \
@@ -77,6 +79,13 @@ public: \
 	type##_obj(const type& o = type()) { data = make_shared<type>(); *data = o; } \
 	type##_obj(const std::shared_ptr<type> o) : data(o) { } \
 	virtual std::shared_ptr<type> getter() { return data; } \
+	virtual string type_str() const { return #type; } \
+	virtual bool equals(const obj& o) const { \
+		if ( type_str() != o.type_str() ) return false; \
+		auto od = ((const type##_obj&)o).data; \
+		if ( !data || !od) return data == od; \
+		return *data == *od; \
+	}\
 }
 
 OBJ_IMPL ( int64_t, INT );
@@ -102,6 +111,11 @@ string resolve ( const string&, const string& ) {
 }
 
 #include "loader.h"
+
+bool equals(const obj& a, const obj& b) { return a.equals(b); }
+bool equals(const pobj& a, const pobj& b) { return a->equals(*b); }
+bool equals(const pobj& a, const obj& b) { return a->equals(b); }
+bool equals(const obj& a, const pobj& b) { return a.equals(*b); }
 
 // http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
 struct jsonld_options {
@@ -316,6 +330,29 @@ public:
 		return value;
 	}
 };
+
+
+    // http://json-ld.org/spec/latest/json-ld-api/#value-compaction
+    pobj compactValue(pstring activeProperty, somap_obj value_) {
+	psomap& value = value_.MAP();
+        int nvals = value->size();
+        if (value->find("@index") != value->end() && getContainer(activeProperty) == "@index") nvals--;
+        if (nvals > 2) { return value_; }
+        string type_map = getTypeMapping(activeProperty), lang_map = getLanguageMapping(activeProperty);
+        if ((auto it = value->find("@id")) != value->end() && nvals == 1)
+		return type_map == "@id" && nval == 1 ? compactIri(value->at("@id")->STR()) : type_map == "@vocab" && nval == 1 ? compactIri(value->at("@id")->STR(), true) : value;
+        pobj valval = value.get("@value");
+	auto it = value->find("@type");
+        if (it != value->end() && equals(it->second, type_map)) return valval;
+        if ((it = value->find("@language")) != value->end()) // TODO: SPEC: doesn't specify to check default language as well
+            if (equals(it->second, lang_map) || equals(it->second, MAP()->at("@language"))) 
+                return valval;
+        if (nvals == 1
+                && (!valval->STR() || has(MAP(), "@language") || (term_defs.find(activeProperty) == term_defs.end()
+                        && has(getTermDefinition(activeProperty), "@language") && lang_map == null))) 
+            return valval;
+        return value;
+    }
 
 
 int main() {
