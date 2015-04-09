@@ -86,7 +86,7 @@ public: \
 		if ( !data || !od) return data == od; \
 		return *data == *od; \
 	}\
-}
+};typedef std::shared_ptr<type##_obj> p##type##_obj
 
 OBJ_IMPL ( int64_t, INT );
 OBJ_IMPL ( uint64_t, UINT );
@@ -102,6 +102,7 @@ typedef obj::somap somap;
 typedef obj::olist olist;
 typedef std::shared_ptr<string> pstring;
 typedef std::shared_ptr<somap> psomap;
+typedef std::shared_ptr<olist> polist;
 typedef std::shared_ptr<bool> pbool;
 typedef map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
@@ -109,6 +110,8 @@ typedef std::shared_ptr<defined_t> pdefined_t;
 string resolve ( const string&, const string& ) {
 	return "";
 }
+
+inline pstring pstr(const string& s) { return make_shared<string>(s); }
 
 #include "loader.h"
 
@@ -128,11 +131,11 @@ bool equals ( const obj& a, const pobj& b ) {
 // http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
 struct jsonld_options {
 	jsonld_options() {}
-	jsonld_options ( string base_ ) : base ( make_shared<string> ( base_ ) ) {}
+	jsonld_options ( string base_ ) : base ( pstr ( base_ ) ) {}
 	pstring base = 0;
 	pbool compactArrays = make_shared<bool> ( true );
 	pobj expandContext = 0;
-	pstring processingMode = make_shared<string> ( "json-ld-1.0" );
+	pstring processingMode = pstr ( "json-ld-1.0" );
 	pbool embed = 0;
 	pbool isexplicit = 0;
 	pbool omitDefault = 0;
@@ -176,15 +179,15 @@ private:
 	jsonld_options options;
 	psomap term_defs = make_shared<somap>();
 public:
-	psomap inverse = 0;
+	psomap_obj inverse = 0;
 
 	Context ( const jsonld_options& o = jsonld_options() ) : somap_obj(), options ( o ) {
 		if ( options.base ) MAP()->at ( "@base" ) = make_shared<string_obj> ( *options.base );
 	}
 
 	pstring getContainer ( string prop ) {
-		if ( prop == "@graph" ) return make_shared<string> ( "@set" );
-		if ( keyword ( prop ) ) return make_shared<string> ( prop );
+		if ( prop == "@graph" ) return pstr ( "@set" );
+		if ( keyword ( prop ) ) return pstr ( prop );
 		auto it = term_defs->find ( prop );
 		return it == term_defs->end() ? 0 : it->second->STR();
 	}
@@ -338,11 +341,11 @@ public:
 			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return value;
 			if ( context && has ( context, prefix ) && ( !has ( pdefined, prefix ) || !defined.at ( prefix ) ) )
 				createTermDefinition ( context, prefix, pdefined );
-			if ( has ( term_defs, prefix ) ) return make_shared<string> ( *term_defs->at ( prefix )->MAP()->at ( "@id" )->STR() + suffix );
+			if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( "@id" )->STR() + suffix );
 			return value;
 		}
-		if ( vocab && MAP()->find ( "@vocab" ) != MAP()->end() ) return make_shared<string> ( *MAP()->at ( "@vocab" )->STR() + *value );
-		if ( relative ) return make_shared<string> ( resolve ( *MAP()->at ( "@base" )->STR(), *value ) );
+		if ( vocab && MAP()->find ( "@vocab" ) != MAP()->end() ) return pstr ( *MAP()->at ( "@vocab" )->STR() + *value );
+		if ( relative ) return pstr ( resolve ( *MAP()->at ( "@base" )->STR(), *value ) );
 		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + *value;
 		return value;
 	}
@@ -361,46 +364,95 @@ public:
 		return term_defs->at ( key )->MAP();
 	}
 
+	// http://json-ld.org/spec/latest/json-ld-api/#inverse-context-creation
+	psomap_obj getInverse() {
+		if ( inverse ) return inverse;
+		inverse = make_shared<somap_obj>();
+		pstring defaultLanguage = MAP()->at ( "@language" )->STR();
+		if ( !defaultLanguage ) defaultLanguage = pstr ( "@none" );
+
+		for ( auto x : *term_defs ) {
+			string term = x.first;
+			auto it = term_defs->find ( term );
+			psomap definition = it == term_defs->end() || !it->second ? 0 : it->second->MAP();
+			if ( !definition ) continue;
+			pstring container = ( ( it = definition->find ( "@container" ) ) == definition->end() || !it->second ) ? 0 : it->second->STR();
+			if ( !container ) container = pstr ( "@none" );
+			pstring iri = ( ( it = definition->find ( "@id" ) ) == definition->end() ) || !it->second ? 0 : it->second->STR();
+
+			psomap containerMap = iri ? inverse->MAP()->at ( *iri )->MAP() : 0;
+			if ( !containerMap ) {
+				containerMap = make_shared<somap_obj>();
+				inverse->MAP()->at ( *iri ) = containerMap;
+			}
+			psomap typeLanguageMap = container ? containerMap->at ( *container )->MAP() : 0;
+			if ( !typeLanguageMap ) {
+				typeLanguageMap = make_shared<somap_obj>();
+				typeLanguageMap->at ( "@language" ) = make_shared<somap_obj>();
+				typeLanguageMap->at ( "@type" ) = make_shared<somap_obj>();
+				containerMap->at ( *container ) = typeLanguageMap;
+			}
+			if ( definition->at ( "@reverse" )->BOOL() ) {
+				psomap typeMap = typeLanguageMap->at ( "@type" )->MAP();
+				if ( !has ( typeMap, "@reverse" ) ) typeMap->at ( "@reverse" ) = make_shared<string_obj>(term);
+			} else if ( has ( definition, "@type" ) ) {
+				psomap typeMap = typeLanguageMap->at ( "@type" )->MAP();
+				if ( !has ( typeMap, definition->at ( "@type" ) ) ) typeMap->at ( *definition->at ( "@type" )->STR() ) = make_shared<string_obj>(term);
+			} else if ( has ( definition, "@language" ) ) {
+				psomap languageMap = typeLanguageMap->at ( "@type" )->MAP();
+				pstring language = definition->at ( "@language" )->STR();
+				if ( !language ) language = pstr ( "@null" );
+				if ( !has ( languageMap, language ) ) languageMap->at ( *language ) = make_shared<string_obj>(term);
+			} else {
+				psomap languageMap = typeLanguageMap->at ( "@language" )->MAP();
+				if ( !has ( languageMap, "@language" ) ) languageMap->at ( "@language" ) = make_shared<string_obj>(term);
+				if ( !has ( languageMap, "@none" ) ) languageMap->at ( "@none" ) = make_shared<string_obj>(term);
+				psomap typeMap = typeLanguageMap->at ( "@type" )->MAP();
+				if ( !has ( typeMap, "@none" ) ) typeMap->at ( "@none" ) = make_shared<string_obj>(term);
+			}
+		}
+		return inverse;
+	}
+
+	bool isvalue(pobj v) { return v && v->MAP() && has(v->MAP(), "@value"); }
+
 	// http://json-ld.org/spec/latest/json-ld-api/#iri-compaction
 	pstring compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse ) {
 		if ( !iri ) return 0;
-		if ( relativeToVocab && getInverse().containsKey ( iri ) ) {
+		if ( relativeToVocab && has(inverse, iri ) ) {
 			auto it = MAP()->find ( "@language" );
 			pstring defaultLanguage = 0;
 			if ( it != MAP()->end() && it->second ) defaultLanguage = it->second->STR();
-			if ( !defaultLanguage ) defaultLanguage = make_shared<string> ( "@none" );
+			if ( !defaultLanguage ) defaultLanguage = pstr ( "@none" );
 			vector<string> containers;
-			string type_lang = "@language", type_lang_val = "@null";
+			pstring type_lang = pstr("@language"), type_lang_val = pstr("@null");
 			if ( value->MAP() && has ( value, "@index" ) ) containers.push_back ( "@index" );
 			if ( reverse ) {
-				type_lang = "@type";
-				type_lang_val = "@reverse";
+				type_lang = pstr("@type");
+				type_lang_val = pstr("@reverse");
 				containers.push_back ( "@set" );
 			} else if ( value->MAP() && has ( value->MAP(),  "@list" ) ) {
-				if ( ! has ( value->MAP(),  "@index" ) )
-					containers.push_back ( "@list" );
-				// 2.6.2)
-				final List<Object> list = ( List<Object> ) value->MAP( ).at ( "@list" );
-				// 2.6.3)
-				pstring common_lang = ( list.size() == 0 ) ? defaultLanguage : 0, common_type = 0;
+				if ( ! has ( value->MAP(),  "@index" ) ) containers.push_back ( "@list" );
+				polist list = value->MAP( )->at ( "@list" )->LIST();
+				pstring common_lang = ( list->size() == 0 ) ? defaultLanguage : 0, common_type = 0;
 				// 2.6.4)
-				for ( pobj item : list ) {
-					string itemLanguage = "@none", itemType = "@none";
+				for ( pobj item : *list ) {
+					pstring itemLanguage = pstr("@none"), itemType = pstr("@none");
 					if ( isvalue ( item ) ) {
 						if ( ( it = item->MAP()->find ( "@language" ) ) != item->MAP()->end() ) itemLanguage = it->second->STR();
 						else if (  ( it = item->MAP()->find ( "@type" ) ) != item->MAP()->end()  ) itemType = it->second->STR();
-						else itemLanguage = "@null";
-					} else itemType = "@id";
+						else itemLanguage = pstr("@null");
+					} else itemType = pstr("@id");
 					if ( !common_lang ) common_lang = itemLanguage;
-					else if ( !common_lang.equals ( itemLanguage ) && JsonLdUtils.isValue ( item ) ) common_lang = "@none";
-					if ( common_type == null ) common_type = itemType;
-					else if ( !common_type.equals ( itemType ) ) common_type = "@none";
-					if ( "@none"s == ( common_lang ) && "@none"s == ( common_type ) ) break;
+					else if ( common_lang != itemLanguage && isvalue ( item ) ) common_lang = pstr("@none");
+					if ( !common_type ) common_type = itemType;
+					else if ( common_type!= itemType  ) common_type = pstr("@none");
+					if ( "@none"s ==*common_lang  && "@none"s == * common_type  ) break;
 				}
-				common_lang = ( common_lang != null ) ? common_lang : "@none";
-				common_type = ( common_type != null ) ? common_type : "@none";
-				if ( !"@none"s == ( common_type ) ) {
-					type_lang = "@type";
+				common_lang =  common_lang  ? common_lang : pstr("@none");
+				common_type =  common_type  ? common_type : pstr("@none");
+				if ("@none"s != *common_type )  {
+					type_lang = pstr("@type");
 					type_lang_val = common_type;
 				} else type_lang_val = common_lang;
 			} else {
@@ -408,54 +460,43 @@ public:
 					if ( has ( value->MAP(),  "@language" )
 					        && ! has ( value->MAP(),  "@index" ) ) {
 						containers.push_back ( "@language" );
-						type_lang_val = ( String ) value->MAP( ).at ( "@language" );
+						type_lang_val = value->MAP( )->at ( "@language" )->STR();
 					} else if ( has ( value->MAP(),  "@type" ) ) {
-						type_lang = "@type";
-						type_lang_val = ( String ) value->MAP( ).at ( "@type" );
+						type_lang = pstr("@type");
+						type_lang_val = value->MAP( )->at ( "@type" )->STR();
 					}
 				} else {
-					type_lang = "@type";
-					type_lang_val = "@id";
+					type_lang = pstr("@type");
+					type_lang_val = pstr("@id");
 				}
 				containers.push_back ( "@set" );
 			}
 
 			containers.push_back ( "@none" );
-			if ( !type_lang_val ) type_lang_val = make_shared<string> ( "@null" );
+			if ( !type_lang_val ) type_lang_val = pstr ( "@null" );
 			vector<string> preferredValues;
-			if ( "@reverse"s ==  *type_lang_val  ) preferredValues.add ( "@reverse" );
-			// 2.12)
-			if ( ( "@reverse"s ==  type_lang_val  || "@id"s ==  type_lang_val  )
+			if ( "@reverse"s ==  *type_lang_val  ) preferredValues.push_back ( "@reverse" );
+			if ( ( "@reverse"s ==  *type_lang_val  || "@id"s ==  *type_lang_val  )
 			        && ( value->MAP() ) && has ( value->MAP(),  "@id" ) ) {
-				// 2.12.1)
-				final String result = this.compactIri (
-				                          ( String ) value->MAP( ).at ( "@id" ), null, true, true );
-				if ( termDefinitions.containsKey ( result )
-				        && ( ( Map<String, Object> ) termDefinitions.get ( result ) ).containsKey ( "@id" )
-				        && value->MAP( ).at ( "@id" ).equals (
-				            ( ( Map<String, Object> ) termDefinitions.get ( result ) ).get ( "@id" ) ) ) {
-					preferredValues.add ( "@vocab" );
-					preferredValues.add ( "@id" );
+				pstring result = compactIri (  value->MAP( )->at ( "@id" )->STR(), 0, true, true );
+				auto it = term_defs->find(result);
+				if ( it != term_defs->end()
+				        && has(it->second->MAP(), "@id" )
+				        && equals(value->MAP( )->at ( "@id" ), 
+				            term_defs->at ( result )->MAP( )->at ( "@id" ) ) ) {
+					preferredValues.push_back ( "@vocab" );
+					preferredValues.push_back ( "@id" );
 				}
-				// 2.12.2)
 				else {
-					preferredValues.add ( "@id" );
-					preferredValues.add ( "@vocab" );
+					preferredValues.push_back ( "@id" );
+					preferredValues.push_back ( "@vocab" );
 				}
 			}
-			// 2.13)
-			else
-				preferredValues.add ( type_lang_val );
-			preferredValues.add ( "@none" );
-
-			// 2.14)
-			final String term = selectTerm ( iri, containers, type_lang, preferredValues );
-			// 2.15)
-			if ( term != null )
-				return term;
+			else preferredValues.push_back ( type_lang_val );
+			preferredValues.push_back ( "@none" );
+			pstring term = selectTerm ( iri, containers, type_lang, preferredValues );
+			if ( term  ) return term;
 		}
-
-		// 3)
 		if ( relativeToVocab && this.containsKey ( "@vocab" ) ) {
 			// determine if vocab is a prefix of the iri
 			final String vocab = ( String ) this.get ( "@vocab" );
@@ -468,25 +509,16 @@ public:
 					return suffix;
 			}
 		}
-
-		// 4)
-		String compactIRI = null;
-		// 5)
+		pstring compactIRI = 0;
 		for ( final String term : termDefinitions.keySet() ) {
 			final Map<String, Object> termDefinition = ( Map<String, Object> ) termDefinitions
 			        .get ( term );
-			// 5.1)
-			if ( term.contains ( ":" ) )
-				continue;
-			// 5.2)
+			if ( term.find ( ":" ) != string::npos ) continue;
 			if ( termDefinition == null || iri.equals ( termDefinition.get ( "@id" ) )
 			        || !iri.startsWith ( ( String ) termDefinition.get ( "@id" ) ) )
 				continue;
 
-			// 5.3)
-			final String candidate = term + ":"
-			                         + iri.substring ( ( ( String ) termDefinition.get ( "@id" ) ).length() );
-			// 5.4)
+			string candidate = term + ":" + iri.substr ( termDefinition->at ( "@id" )->STR().length() );
 			if ( ( compactIRI == null || compareShortestLeast ( candidate, compactIRI ) < 0 )
 			        && ( !termDefinitions.containsKey ( candidate ) || ( iri
 			                .equals ( ( ( Map<String, Object> ) termDefinitions.get ( candidate ) )
@@ -494,16 +526,8 @@ public:
 				compactIRI = candidate;
 
 		}
-
-		// 6)
-		if ( compactIRI != null )
-			return compactIRI;
-
-		// 7)
-		if ( !relativeToVocab )
-			return JsonLdUrl.removeBase ( this.get ( "@base" ), iri );
-
-		// 8)
+		if ( !compactIRI  ) return compactIRI; 
+		if ( !relativeToVocab ) return removeBase ( MAP()->at ( "@base" ), iri );
 		return iri;
 	}
 
