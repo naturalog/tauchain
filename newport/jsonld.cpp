@@ -111,6 +111,7 @@ OBJ_IMPL ( somap, MAP );
 OBJ_IMPL ( olist, LIST );
 OBJ_IMPL ( null, Null );
 
+
 typedef obj::pobj pobj;
 typedef obj::somap somap;
 typedef obj::olist olist;
@@ -120,6 +121,13 @@ typedef std::shared_ptr<olist> polist;
 typedef std::shared_ptr<bool> pbool;
 typedef map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
+
+template<typename T> psomap_obj mk_somap_obj(T t) { return make_shared<somap_obj>(t); }
+psomap_obj mk_somap_obj() { return make_shared<somap_obj>(); }
+template<typename T> polist_obj mk_olist_obj(T t) { return make_shared<olist_obj>(t); }
+polist_obj mk_olist_obj() { return make_shared<olist_obj>(); }
+template<typename T> polist mk_olist(T t) { return make_shared<olist>(t); }
+polist mk_olist() { return make_shared<olist>(); }
 
 string resolve ( const string&, const string& ) {
 	return "";
@@ -178,6 +186,29 @@ bool keyword ( const string& key ) {
 	       || "@type"s == key || "@value"s == key || "@vocab"s == key;
 }
 
+#define KW_SHORTCUTS(x) \
+const string kw##x = "@"s + #x;\
+template<typename T> bool has##x(T t) { return has(t,kw##x); } \
+pobj& get##x(pobj p) { return p->MAP()->at(kw##x); } \
+pobj& get##x(obj& p) { return p.MAP()->at(kw##x); } \
+pobj& get##x(psomap p) { return p->at(kw##x); } \
+pobj& get##x(somap p) { return p.at(kw##x); }
+KW_SHORTCUTS(base);
+KW_SHORTCUTS(id);
+KW_SHORTCUTS(index);
+KW_SHORTCUTS(set);
+KW_SHORTCUTS(list);
+KW_SHORTCUTS(type);
+KW_SHORTCUTS(reverse);
+KW_SHORTCUTS(value);
+KW_SHORTCUTS(vocab);
+KW_SHORTCUTS(none);
+template<typename T> bool haslang(T t) { return has(t,"@language"); }
+pobj& getlang(pobj p) { return p->MAP()->at("@language"); }
+pobj& getlang(obj& p) { return p.MAP()->at("@language"); }
+pobj& getlang(psomap p) { return p->at("@language"); }
+pobj& getlang(somap p) { return p.at("@language"); }
+
 bool keyword ( pobj p ) {
 	if ( !p || !p->STR() ) return false;
 	return keyword ( *p->STR() );
@@ -190,13 +221,13 @@ bool is_rel_iri ( const string& s ) {
 	return !keyword ( s ) || !is_abs_iri ( s );
 }
 pobj newMap ( const string& k, pobj v ) {
-	pobj r = make_shared<somap_obj>();
+	pobj r = mk_somap_obj();
 	( *r->MAP() ) [k] = v;
 	return r;
 }
 
 polist vec2vec ( const vector<string>& x ) {
-	polist res = make_shared<olist>();
+	polist res = mk_olist();
 	for ( auto t : x ) res->push_back ( make_shared<string_obj> ( t ) );
 	return res;
 }
@@ -210,7 +241,7 @@ vector<string> vec2vec ( polist x ) {
 void make_list_if_not ( pobj& o ) {
 	if ( o->LIST() ) return;
 	pobj t = o->clone();
-	o = make_shared<olist_obj> ( olist ( 1, t ) );
+	o = mk_olist_obj ( olist ( 1, t ) );
 }
 
 void add_all ( polist l, pobj v ) {
@@ -244,7 +275,7 @@ public:
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
 	pcontext parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
 		context_t result ( *this );
-		if ( !localContext->LIST() ) localContext = make_shared<olist_obj> ( olist ( 1, localContext ) );
+		if ( !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
 			if ( context->Null() ) result = context_t ( options );
 			else if ( pstring s = context->STR() ) {
@@ -285,7 +316,7 @@ public:
 			if ( ( it = cm.find ( "@language" ) ) != cm.end() ) {
 				pobj value = it->second;
 				if ( value->Null() ) result.MAP()->erase ( it );
-				else if ( pstring s = value->STR() ) ( *result.MAP() ) ["@language"] = make_shared<string_obj> ( lower ( *s ) );
+				else if ( pstring s = value->STR() ) getlang(result) = make_shared<string_obj> ( lower ( *s ) );
 				else throw INVALID_DEFAULT_LANGUAGE + "\t";// + value;
 			}
 			pdefined_t defined = make_shared<defined_t>();
@@ -336,7 +367,7 @@ public:
 			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { "@set"s, "@index"s }, INVALID_REVERSE_PROPERTY + "reverse properties only support set- and index-containers" ) )
 				defn ["@container"] = it->second;
 			defn["@reverse"] = make_shared<bool_obj> ( ( *pdefined ) [term] = true );
-			( *term_defs ) [term] = make_shared<somap_obj> ( defn );
+			( *term_defs ) [term] = mk_somap_obj ( defn );
 			return;
 		}
 		defn["@reverse"] = make_shared<bool_obj> ( false );
@@ -366,11 +397,11 @@ public:
 		auto i1 = val.find ( "@language" ), i2 = val.find ( "type" );
 		pstring lang;
 		if ( i1 != val.end() && i2 == val.end() ) {
-			if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) defn["@language"] = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
+			if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) getlang(defn) = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
 			else throw INVALID_LANGUAGE_MAPPING + "@language must be a string or null";
 		}
 
-		( *term_defs ) [term] = make_shared<somap_obj> ( defn );
+		( *term_defs ) [term] = mk_somap_obj ( defn );
 		( *pdefined ) [term] = true;
 	}
 
@@ -404,12 +435,12 @@ public:
 
 	pstring get_type_map ( const string& prop ) {
 		auto td = term_defs->find ( prop );
-		return td == term_defs->end() || !td->second->MAP() ? 0 : td->second->MAP()->at ( "@type" )->STR();
+		return td == term_defs->end() || !td->second->MAP() ? 0 : gettype(td->second)->STR();
 	}
 
 	pstring get_lang_map ( const string& prop ) {
 		auto td = term_defs->find ( prop );
-		return td == term_defs->end() || !td->second->MAP() ? 0 : td->second->MAP()->at ( "@language" )->STR();
+		return td == term_defs->end() || !td->second->MAP() ? 0 : getlang(td->second)->STR();
 	}
 
 	psomap get_term_def ( const string& key ) {
@@ -419,8 +450,8 @@ public:
 	// http://json-ld.org/spec/latest/json-ld-api/#inverse-context-creation
 	psomap_obj getInverse() {
 		if ( inverse ) return inverse;
-		inverse = make_shared<somap_obj>();
-		pstring defaultLanguage = MAP()->at ( "@language" )->STR();
+		inverse = mk_somap_obj();
+		pstring defaultLanguage = getlang(MAP())->STR();
 		if ( !defaultLanguage ) defaultLanguage = pstr ( "@none" );
 
 		for ( auto x : *term_defs ) {
@@ -432,42 +463,42 @@ public:
 			if ( !container ) container = pstr ( "@none" );
 			pstring iri = ( ( it = definition->find ( "@id" ) ) == definition->end() ) || !it->second ? 0 : it->second->STR();
 
-			psomap_obj containerMap = make_shared<somap_obj> ( iri ? inverse->MAP()->at ( *iri )->MAP() : 0 );
+			psomap_obj containerMap = mk_somap_obj ( iri ? inverse->MAP()->at ( *iri )->MAP() : 0 );
 			if ( !containerMap ) {
-				containerMap = make_shared<somap_obj>();
+				containerMap = mk_somap_obj();
 				inverse->MAP()->at ( *iri ) = containerMap;
 			}
-			psomap_obj typeLanguageMap = make_shared<somap_obj> ( container ? containerMap->MAP()->at ( *container )->MAP() : 0 );
-			if ( !typeLanguageMap ) {
-				typeLanguageMap = make_shared<somap_obj>();
-				typeLanguageMap->MAP()->at ( "@language" ) = make_shared<somap_obj>();
-				typeLanguageMap->MAP()->at ( "@type" ) = make_shared<somap_obj>();
-				containerMap->MAP()->at ( *container ) = typeLanguageMap;
+			psomap_obj type_lang_map = mk_somap_obj ( container ? containerMap->MAP()->at ( *container )->MAP() : 0 );
+			if ( !type_lang_map ) {
+				type_lang_map = mk_somap_obj();
+				getlang(type_lang_map) = mk_somap_obj();
+				gettype(type_lang_map) = mk_somap_obj();
+				containerMap->MAP()->at ( *container ) = type_lang_map;
 			}
 			if ( definition->at ( "@reverse" )->BOOL() ) {
-				psomap typeMap = typeLanguageMap->MAP()->at ( "@type" )->MAP();
-				if ( !has ( typeMap, "@reverse" ) ) typeMap->at ( "@reverse" ) = make_shared<string_obj> ( term );
-			} else if ( has ( definition, "@type" ) ) {
-				psomap typeMap = typeLanguageMap->MAP()->at ( "@type" )->MAP();
-				if ( !has ( typeMap, definition->at ( "@type" )->STR() ) ) typeMap->at ( *definition->at ( "@type" )->STR() ) = make_shared<string_obj> ( term );
-			} else if ( has ( definition, "@language" ) ) {
-				psomap languageMap = typeLanguageMap->MAP()->at ( "@type" )->MAP();
-				pstring language = definition->at ( "@language" )->STR();
+				psomap typeMap = type_lang_map->MAP()->at ( "@type" )->MAP();
+				if ( !hasreverse ( typeMap ) ) getreverse(typeMap) = make_shared<string_obj> ( term );
+			} else if ( hastype ( definition ) ) {
+				psomap typeMap = gettype(type_lang_map)->MAP();
+				if ( !has ( typeMap, gettype(definition)->STR() ) ) typeMap->at ( *gettype(definition)->STR() ) = make_shared<string_obj> ( term );
+			} else if ( haslang ( definition ) ) {
+				psomap lang_map = gettype(type_lang_map)->MAP();
+				pstring language = getlang(definition)->STR();
 				if ( !language ) language = pstr ( "@null" );
-				if ( !has ( languageMap, language ) ) languageMap->at ( *language ) = make_shared<string_obj> ( term );
+				if ( !has ( lang_map, language ) ) lang_map->at ( *language ) = make_shared<string_obj> ( term );
 			} else {
-				psomap languageMap = typeLanguageMap->MAP()->at ( "@language" )->MAP();
-				if ( !has ( languageMap, "@language" ) ) languageMap->at ( "@language" ) = make_shared<string_obj> ( term );
-				if ( !has ( languageMap, "@none" ) ) languageMap->at ( "@none" ) = make_shared<string_obj> ( term );
-				psomap typeMap = typeLanguageMap->MAP()->at ( "@type" )->MAP();
-				if ( !has ( typeMap, "@none" ) ) typeMap->at ( "@none" ) = make_shared<string_obj> ( term );
+				psomap lang_map = getlang(type_lang_map)->MAP();
+				if ( !haslang ( lang_map ) ) getlang(lang_map) = make_shared<string_obj> ( term );
+				if ( !hasnone ( lang_map ) ) getnone(lang_map) = make_shared<string_obj> ( term );
+				psomap typeMap = gettype(type_lang_map)->MAP();
+				if ( !hasnone ( typeMap ) ) getnone(typeMap) = make_shared<string_obj> ( term );
 			}
 		}
 		return inverse;
 	}
 
 	bool isvalue ( pobj v ) {
-		return v && v->MAP() && has ( v->MAP(), "@value" );
+		return v && v->MAP() && hasvalue ( v->MAP() );
 	}
 
 	int compareShortestLeast ( const string& a, const string& b ) {
@@ -491,8 +522,8 @@ public:
 		auto containerMap = inv->MAP()->at ( iri )->MAP();
 		for ( string container : containers ) {
 			if ( !has ( containerMap, container ) ) continue;
-			auto typeLanguageMap = containerMap->at ( container )->MAP();
-			auto valueMap = typeLanguageMap ->at ( typeLanguage )->MAP();
+			auto type_lang_map = containerMap->at ( container )->MAP();
+			auto valueMap = type_lang_map ->at ( typeLanguage )->MAP();
 			for ( string item : preferredValues ) {
 				if ( !has ( valueMap, item ) ) continue;
 				return valueMap->at ( item )->STR();
@@ -550,13 +581,13 @@ public:
 				} else type_lang_val = common_lang;
 			} else {
 				if ( value->MAP() && has ( value->MAP(),  "@value" ) ) {
-					if ( has ( value->MAP(),  "@language" )
-					        && ! has ( value->MAP(),  "@index" ) ) {
+					if ( hasvalue ( value->MAP() )
+					        && ! hasindex ( value->MAP() ) ) {
 						containers.push_back ( "@language" );
-						type_lang_val = value->MAP( )->at ( "@language" )->STR();
-					} else if ( has ( value->MAP(),  "@type" ) ) {
+						type_lang_val = getlang(value)->STR();
+					} else if ( hastype ( value->MAP() ) ) {
 						type_lang = pstr ( "@type" );
-						type_lang_val = value->MAP( )->at ( "@type" )->STR();
+						type_lang_val = gettype(value)->STR();
 					}
 				} else {
 					type_lang = pstr ( "@type" );
@@ -588,8 +619,8 @@ public:
 			pstring term = selectTerm ( iri, containers, *type_lang, preferredValues );
 			if ( term  ) return term;
 		}
-		if ( relativeToVocab && has ( MAP(), "@vocab" ) ) {
-			pstring vocab = MAP()->at ( "@vocab" )->STR();
+		if ( relativeToVocab && hasvocab ( MAP() ) ) {
+			pstring vocab = getvocab(MAP())->STR();
 			if ( vocab && iri.find ( *vocab ) == 0 && iri != *vocab ) {
 				string suffix = iri.substr ( vocab->length() );
 				if ( !has ( term_defs, suffix ) ) return pstr ( suffix );
@@ -598,20 +629,20 @@ public:
 		pstring compactIRI = 0;
 		for ( auto x : *term_defs ) {
 			string term = x.first;
-			psomap termDefinition = x.second->MAP();
+			psomap term_def = x.second->MAP();
 			if ( term.find ( ":" ) != string::npos ) continue;
-			if ( !termDefinition// || iri == termDefinition->at ( "@id" )->STR()
-			        || !startsWith ( iri,  *termDefinition->at ( "@id" )->STR() ) )
+			if ( !term_def// || iri == term_def->at ( "@id" )->STR()
+			        || !startsWith ( iri,  *getid(term_def)->STR() ) )
 				continue;
 
-			string candidate = term + ":" + iri.substr ( termDefinition->at ( "@id" )->STR()->length() );
+			string candidate = term + ":" + iri.substr ( getid(term_def)->STR()->length() );
 			// TODO: verify && and ||
 			if ( ( !compactIRI || compareShortestLeast ( candidate, compactIRI ) < 0 )
-			        && ( !has ( term_defs, candidate ) || ( iri == *term_defs->at ( candidate )->MAP() ->at ( "@id" )->STR() ) && !value ) )
+			        && ( !has ( term_defs, candidate ) || ( iri == *getid(term_defs->at ( candidate ) )->STR() ) && !value ) )
 				compactIRI = pstr ( candidate );
 		}
 		if ( !compactIRI  ) return compactIRI;
-		if ( !relativeToVocab ) return removeBase ( MAP()->at ( "@base" ), iri );
+		if ( !relativeToVocab ) return removeBase ( getbase(MAP()), iri );
 		return make_shared<string> ( iri );
 	}
 
@@ -621,7 +652,7 @@ public:
 		int nvals = value->size();
 		auto p = getContainer ( activeProperty );
 		if ( value->find ( "@index" ) != value->end() && p && *p == "@index" ) nvals--;
-		if ( nvals > 2 ) return value_;//make_shared<somap_obj> ( value_ );
+		if ( nvals > 2 ) return value_;//mk_somap_obj ( value_ );
 		pstring type_map = get_type_map ( activeProperty ), lang_map = get_lang_map ( activeProperty );
 		auto it = value->find ( "@id" );
 		if ( it != value->end() && nvals == 1 )
@@ -630,17 +661,17 @@ public:
 			else {
 				if ( type_map && *type_map == "@vocab" && nvals == 1 )
 					return make_shared<string_obj> ( compactIri ( value->at ( "@id" )->STR(), 0, true, false ) );
-				else return  make_shared<somap_obj> ( value );
+				else return  mk_somap_obj ( value );
 			}
 		pobj valval = value->at ( "@value" );
 		it = value->find ( "@type" );
 		if ( it != value->end() &&  *it->second->STR() == *type_map  ) return valval;
 		if ( ( it = value->find ( "@language" ) ) != value->end() ) // TODO: SPEC: doesn't specify to check default language as well
-			if ( *it->second->STR() == * lang_map  || ::equals ( it->second, MAP()->at ( "@language" ) ) )
+			if ( *it->second->STR() == * lang_map  || ::equals ( it->second, getlang(MAP()) ) )
 				return valval;
 		if ( nvals == 1
-		        && ( !valval->STR() || has ( MAP(), "@language" ) || ( term_defs->find ( activeProperty ) == term_defs->end()
-		                && has ( get_term_def ( activeProperty ), "@language" ) && !lang_map ) ) )
+		        && ( !valval->STR() || haslang ( MAP() ) || ( term_defs->find ( activeProperty ) == term_defs->end()
+		                && haslang ( get_term_def ( activeProperty ) ) && !lang_map ) ) )
 			return valval;
 		return value_;
 	}
@@ -655,23 +686,23 @@ public:
 	pobj expandValue ( string activeProperty, pobj value )  {
 		somap rval;
 		psomap td = term_defs->at ( activeProperty )->MAP();
-		if ( td && *td->at ( "@type" )->STR() == "@id" ) {
+		if ( td && *gettype(td )->STR() == "@id" ) {
 			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
-			return make_shared<somap_obj> ( rval );
+			return mk_somap_obj ( rval );
 		}
-		if ( td && *td->at ( "@type" )->STR() == "@vocab" ) {
+		if ( td && *gettype(td )->STR() == "@vocab" ) {
 			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, true, 0, 0 ) );
-			return make_shared<somap_obj> ( rval );
+			return mk_somap_obj ( rval );
 		}
 		rval[ "@value" ] = value;
-		if ( td && has ( td, "@type" ) ) rval[ "@type" ] = td->at ( "@type" );
+		if ( td && hastype ( td) ) rval[ "@type" ] = gettype(td);
 		else if ( value->STR() ) {
-			if ( td && has ( td, "@language" ) ) {
-				pstring lang = td->at ( "@language" )->STR();
+			if ( td && haslang ( td ) ) {
+				pstring lang = getlang(td)->STR();
 				if ( lang ) rval[ "@language"] = make_shared<string_obj> ( lang );
-			} else if ( has ( MAP(), "@language" ) ) rval[ "@language" ] = MAP()->at ( "@language" );
+			} else if ( haslang ( MAP() ) ) rval[ "@language" ] = getlang(MAP());
 		}
-		return make_shared<somap_obj> ( rval );
+		return mk_somap_obj ( rval );
 	}
 };
 
