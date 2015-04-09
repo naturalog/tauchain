@@ -122,12 +122,24 @@ typedef std::shared_ptr<bool> pbool;
 typedef map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
 
-template<typename T> psomap_obj mk_somap_obj(T t) { return make_shared<somap_obj>(t); }
-psomap_obj mk_somap_obj() { return make_shared<somap_obj>(); }
-template<typename T> polist_obj mk_olist_obj(T t) { return make_shared<olist_obj>(t); }
-polist_obj mk_olist_obj() { return make_shared<olist_obj>(); }
-template<typename T> polist mk_olist(T t) { return make_shared<olist>(t); }
-polist mk_olist() { return make_shared<olist>(); }
+template<typename T> psomap_obj mk_somap_obj ( T t ) {
+	return make_shared<somap_obj> ( t );
+}
+psomap_obj mk_somap_obj() {
+	return make_shared<somap_obj>();
+}
+template<typename T> polist_obj mk_olist_obj ( T t ) {
+	return make_shared<olist_obj> ( t );
+}
+polist_obj mk_olist_obj() {
+	return make_shared<olist_obj>();
+}
+template<typename T> polist mk_olist ( T t ) {
+	return make_shared<olist> ( t );
+}
+polist mk_olist() {
+	return make_shared<olist>();
+}
 
 string resolve ( const string&, const string& ) {
 	return "";
@@ -193,21 +205,31 @@ pobj& get##x(pobj p) { return p->MAP()->at(kw##x); } \
 pobj& get##x(obj& p) { return p.MAP()->at(kw##x); } \
 pobj& get##x(psomap p) { return p->at(kw##x); } \
 pobj& get##x(somap p) { return p.at(kw##x); }
-KW_SHORTCUTS(base);
-KW_SHORTCUTS(id);
-KW_SHORTCUTS(index);
-KW_SHORTCUTS(set);
-KW_SHORTCUTS(list);
-KW_SHORTCUTS(type);
-KW_SHORTCUTS(reverse);
-KW_SHORTCUTS(value);
-KW_SHORTCUTS(vocab);
-KW_SHORTCUTS(none);
-template<typename T> bool haslang(T t) { return has(t,"@language"); }
-pobj& getlang(pobj p) { return p->MAP()->at("@language"); }
-pobj& getlang(obj& p) { return p.MAP()->at("@language"); }
-pobj& getlang(psomap p) { return p->at("@language"); }
-pobj& getlang(somap p) { return p.at("@language"); }
+KW_SHORTCUTS ( base );
+KW_SHORTCUTS ( id );
+KW_SHORTCUTS ( index );
+KW_SHORTCUTS ( set );
+KW_SHORTCUTS ( list );
+KW_SHORTCUTS ( type );
+KW_SHORTCUTS ( reverse );
+KW_SHORTCUTS ( value );
+KW_SHORTCUTS ( vocab );
+KW_SHORTCUTS ( none );
+template<typename T> bool haslang ( T t ) {
+	return has ( t, "@language" );
+}
+pobj& getlang ( pobj p ) {
+	return p->MAP()->at ( "@language" );
+}
+pobj& getlang ( obj& p ) {
+	return p.MAP()->at ( "@language" );
+}
+pobj& getlang ( psomap p ) {
+	return p->at ( "@language" );
+}
+pobj& getlang ( somap p ) {
+	return p.at ( "@language" );
+}
 
 bool keyword ( pobj p ) {
 	if ( !p || !p->STR() ) return false;
@@ -316,7 +338,7 @@ public:
 			if ( ( it = cm.find ( "@language" ) ) != cm.end() ) {
 				pobj value = it->second;
 				if ( value->Null() ) result.MAP()->erase ( it );
-				else if ( pstring s = value->STR() ) getlang(result) = make_shared<string_obj> ( lower ( *s ) );
+				else if ( pstring s = value->STR() ) getlang ( result ) = make_shared<string_obj> ( lower ( *s ) );
 				else throw INVALID_DEFAULT_LANGUAGE + "\t";// + value;
 			}
 			pdefined_t defined = make_shared<defined_t>();
@@ -397,7 +419,7 @@ public:
 		auto i1 = val.find ( "@language" ), i2 = val.find ( "type" );
 		pstring lang;
 		if ( i1 != val.end() && i2 == val.end() ) {
-			if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) getlang(defn) = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
+			if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) getlang ( defn ) = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
 			else throw INVALID_LANGUAGE_MAPPING + "@language must be a string or null";
 		}
 
@@ -435,12 +457,12 @@ public:
 
 	pstring get_type_map ( const string& prop ) {
 		auto td = term_defs->find ( prop );
-		return td == term_defs->end() || !td->second->MAP() ? 0 : gettype(td->second)->STR();
+		return td == term_defs->end() || !td->second->MAP() ? 0 : gettype ( td->second )->STR();
 	}
 
 	pstring get_lang_map ( const string& prop ) {
 		auto td = term_defs->find ( prop );
-		return td == term_defs->end() || !td->second->MAP() ? 0 : getlang(td->second)->STR();
+		return td == term_defs->end() || !td->second->MAP() ? 0 : getlang ( td->second )->STR();
 	}
 
 	psomap get_term_def ( const string& key ) {
@@ -451,7 +473,7 @@ public:
 	psomap_obj getInverse() {
 		if ( inverse ) return inverse;
 		inverse = mk_somap_obj();
-		pstring defaultLanguage = getlang(MAP())->STR();
+		pstring defaultLanguage = getlang ( MAP() )->STR();
 		if ( !defaultLanguage ) defaultLanguage = pstr ( "@none" );
 
 		for ( auto x : *term_defs ) {
@@ -471,27 +493,27 @@ public:
 			psomap_obj type_lang_map = mk_somap_obj ( container ? containerMap->MAP()->at ( *container )->MAP() : 0 );
 			if ( !type_lang_map ) {
 				type_lang_map = mk_somap_obj();
-				getlang(type_lang_map) = mk_somap_obj();
-				gettype(type_lang_map) = mk_somap_obj();
+				getlang ( type_lang_map ) = mk_somap_obj();
+				gettype ( type_lang_map ) = mk_somap_obj();
 				containerMap->MAP()->at ( *container ) = type_lang_map;
 			}
 			if ( definition->at ( "@reverse" )->BOOL() ) {
 				psomap typeMap = type_lang_map->MAP()->at ( "@type" )->MAP();
-				if ( !hasreverse ( typeMap ) ) getreverse(typeMap) = make_shared<string_obj> ( term );
+				if ( !hasreverse ( typeMap ) ) getreverse ( typeMap ) = make_shared<string_obj> ( term );
 			} else if ( hastype ( definition ) ) {
-				psomap typeMap = gettype(type_lang_map)->MAP();
-				if ( !has ( typeMap, gettype(definition)->STR() ) ) typeMap->at ( *gettype(definition)->STR() ) = make_shared<string_obj> ( term );
+				psomap typeMap = gettype ( type_lang_map )->MAP();
+				if ( !has ( typeMap, gettype ( definition )->STR() ) ) typeMap->at ( *gettype ( definition )->STR() ) = make_shared<string_obj> ( term );
 			} else if ( haslang ( definition ) ) {
-				psomap lang_map = gettype(type_lang_map)->MAP();
-				pstring language = getlang(definition)->STR();
+				psomap lang_map = gettype ( type_lang_map )->MAP();
+				pstring language = getlang ( definition )->STR();
 				if ( !language ) language = pstr ( "@null" );
 				if ( !has ( lang_map, language ) ) lang_map->at ( *language ) = make_shared<string_obj> ( term );
 			} else {
-				psomap lang_map = getlang(type_lang_map)->MAP();
-				if ( !haslang ( lang_map ) ) getlang(lang_map) = make_shared<string_obj> ( term );
-				if ( !hasnone ( lang_map ) ) getnone(lang_map) = make_shared<string_obj> ( term );
-				psomap typeMap = gettype(type_lang_map)->MAP();
-				if ( !hasnone ( typeMap ) ) getnone(typeMap) = make_shared<string_obj> ( term );
+				psomap lang_map = getlang ( type_lang_map )->MAP();
+				if ( !haslang ( lang_map ) ) getlang ( lang_map ) = make_shared<string_obj> ( term );
+				if ( !hasnone ( lang_map ) ) getnone ( lang_map ) = make_shared<string_obj> ( term );
+				psomap typeMap = gettype ( type_lang_map )->MAP();
+				if ( !hasnone ( typeMap ) ) getnone ( typeMap ) = make_shared<string_obj> ( term );
 			}
 		}
 		return inverse;
@@ -584,10 +606,10 @@ public:
 					if ( hasvalue ( value->MAP() )
 					        && ! hasindex ( value->MAP() ) ) {
 						containers.push_back ( "@language" );
-						type_lang_val = getlang(value)->STR();
+						type_lang_val = getlang ( value )->STR();
 					} else if ( hastype ( value->MAP() ) ) {
 						type_lang = pstr ( "@type" );
-						type_lang_val = gettype(value)->STR();
+						type_lang_val = gettype ( value )->STR();
 					}
 				} else {
 					type_lang = pstr ( "@type" );
@@ -620,7 +642,7 @@ public:
 			if ( term  ) return term;
 		}
 		if ( relativeToVocab && hasvocab ( MAP() ) ) {
-			pstring vocab = getvocab(MAP())->STR();
+			pstring vocab = getvocab ( MAP() )->STR();
 			if ( vocab && iri.find ( *vocab ) == 0 && iri != *vocab ) {
 				string suffix = iri.substr ( vocab->length() );
 				if ( !has ( term_defs, suffix ) ) return pstr ( suffix );
@@ -632,17 +654,17 @@ public:
 			psomap term_def = x.second->MAP();
 			if ( term.find ( ":" ) != string::npos ) continue;
 			if ( !term_def// || iri == term_def->at ( "@id" )->STR()
-			        || !startsWith ( iri,  *getid(term_def)->STR() ) )
+			        || !startsWith ( iri,  *getid ( term_def )->STR() ) )
 				continue;
 
-			string candidate = term + ":" + iri.substr ( getid(term_def)->STR()->length() );
+			string candidate = term + ":" + iri.substr ( getid ( term_def )->STR()->length() );
 			// TODO: verify && and ||
 			if ( ( !compactIRI || compareShortestLeast ( candidate, compactIRI ) < 0 )
-			        && ( !has ( term_defs, candidate ) || ( iri == *getid(term_defs->at ( candidate ) )->STR() ) && !value ) )
+			        && ( !has ( term_defs, candidate ) || ( iri == *getid ( term_defs->at ( candidate ) )->STR() ) && !value ) )
 				compactIRI = pstr ( candidate );
 		}
 		if ( !compactIRI  ) return compactIRI;
-		if ( !relativeToVocab ) return removeBase ( getbase(MAP()), iri );
+		if ( !relativeToVocab ) return removeBase ( getbase ( MAP() ), iri );
 		return make_shared<string> ( iri );
 	}
 
@@ -667,7 +689,7 @@ public:
 		it = value->find ( "@type" );
 		if ( it != value->end() &&  *it->second->STR() == *type_map  ) return valval;
 		if ( ( it = value->find ( "@language" ) ) != value->end() ) // TODO: SPEC: doesn't specify to check default language as well
-			if ( *it->second->STR() == * lang_map  || ::equals ( it->second, getlang(MAP()) ) )
+			if ( *it->second->STR() == * lang_map  || ::equals ( it->second, getlang ( MAP() ) ) )
 				return valval;
 		if ( nvals == 1
 		        && ( !valval->STR() || haslang ( MAP() ) || ( term_defs->find ( activeProperty ) == term_defs->end()
@@ -686,21 +708,21 @@ public:
 	pobj expandValue ( string activeProperty, pobj value )  {
 		somap rval;
 		psomap td = term_defs->at ( activeProperty )->MAP();
-		if ( td && *gettype(td )->STR() == "@id" ) {
+		if ( td && *gettype ( td )->STR() == "@id" ) {
 			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
 			return mk_somap_obj ( rval );
 		}
-		if ( td && *gettype(td )->STR() == "@vocab" ) {
+		if ( td && *gettype ( td )->STR() == "@vocab" ) {
 			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, true, 0, 0 ) );
 			return mk_somap_obj ( rval );
 		}
 		rval[ "@value" ] = value;
-		if ( td && hastype ( td) ) rval[ "@type" ] = gettype(td);
+		if ( td && hastype ( td ) ) rval[ "@type" ] = gettype ( td );
 		else if ( value->STR() ) {
 			if ( td && haslang ( td ) ) {
-				pstring lang = getlang(td)->STR();
+				pstring lang = getlang ( td )->STR();
 				if ( lang ) rval[ "@language"] = make_shared<string_obj> ( lang );
-			} else if ( haslang ( MAP() ) ) rval[ "@language" ] = getlang(MAP());
+			} else if ( haslang ( MAP() ) ) rval[ "@language" ] = getlang ( MAP() );
 		}
 		return mk_somap_obj ( rval );
 	}

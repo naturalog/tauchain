@@ -290,19 +290,19 @@ public:
 				if ( langremoved ) ks.erase ( "@language" );
 				if ( typeremoved ) ks.erase ( "@type" );
 				if ( ( langremoved && typeremoved ) || ks.size() ) throw INVALID_VALUE_OBJECT + "\t" + "value object has unknown keys";
-				pobj rval = getvalue(result);
+				pobj rval = getvalue ( result );
 				if ( !rval ) return 0;
 				if ( ! rval->STR() && haslang ( result ) ) throw INVALID_LANGUAGE_TAGGED_VALUE + "\t" + "when @language is used, @value must be a string";
 				else if ( hastype ( result ) )
-					if ( ! ( gettype(result )->STR() ) || startsWith ( *gettype(result)->STR(), "_:" ) || gettype(result)->STR()->find ( ":" ) == string::npos )
+					if ( ! ( gettype ( result )->STR() ) || startsWith ( *gettype ( result )->STR(), "_:" ) || gettype ( result )->STR()->find ( ":" ) == string::npos )
 						throw INVALID_TYPED_VALUE + "\t" + "value of @type must be an IRI";
 			} else if ( hastype ( result ) ) {
-				pobj rtype = gettype(result);
-				if ( !rtype->LIST() ) gettype(result) = mk_olist_obj ( olist ( 1, rtype ) ) ;
+				pobj rtype = gettype ( result );
+				if ( !rtype->LIST() ) gettype ( result ) = mk_olist_obj ( olist ( 1, rtype ) ) ;
 			} else if ( hasset ( result ) || haslist ( result ) ) {
 				if ( result->size() > ( hasindex ( result ) ? 2 : 1 ) )
 					throw INVALID_SET_OR_LIST_OBJECT + "\t" + "@set or @list may only contain @index";
-				if ( hasset ( result) ) return getset(result);
+				if ( hasset ( result ) ) return getset ( result );
 			}
 			if ( ( haslang ( result ) && result->size() == 1 ) ||  ( activeProperty == "@graph" ) && result && ( ( !result->size() || hasvalue ( result ) || haslist ( result ) ) ) ||
 			        ( hasid ( result ) && result->size() == 1 ) ) result = 0;
@@ -360,7 +360,7 @@ public:
 
 	static void mergeValue ( somap obj, string key, pobj value ) {
 		polist values = obj[key]->LIST();
-		if ( !values ) obj[key] = mk_olist_obj(values = mk_olist());
+		if ( !values ) obj[key] = mk_olist_obj ( values = mk_olist() );
 		if ( key == "@list" || ( value->MAP() && has ( value->MAP(), "@list" ) ) || !deepContains ( values, value ) )
 			values->push_back ( value );
 	}
@@ -392,7 +392,7 @@ public:
 		psomap graph = nodeMap->at ( activeGraph )->MAP(), node = activeSubject ? graph->at ( *activeSubject->STR() )->MAP() : 0;
 		if ( hastype ( elem ) ) {
 			vector<string> oldTypes, newTypes;
-			if ( gettype(elem )->LIST() ) oldTypes = vec2vec ( gettype(elem)->LIST() );
+			if ( gettype ( elem )->LIST() ) oldTypes = vec2vec ( gettype ( elem )->LIST() );
 			else {
 				oldTypes = vector<string>();//mk_olist_obj();
 				oldTypes.push_back ( *elem->at ( "@type" )->STR() );
@@ -401,8 +401,8 @@ public:
 				if ( startsWith ( item, "_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
 				else newTypes.push_back ( item );
 			}
-			if ( gettype(elem)->LIST() ) gettype(elem) = mk_olist_obj(vec2vec ( newTypes ));
-			else gettype(elem) = make_shared<string_obj> ( newTypes[0] );
+			if ( gettype ( elem )->LIST() ) gettype ( elem ) = mk_olist_obj ( vec2vec ( newTypes ) );
+			else gettype ( elem ) = make_shared<string_obj> ( newTypes[0] );
 		}
 		if ( hasvalue ( elem ) ) {
 			if ( !list ) mergeValue ( node, activeProperty, element );
@@ -410,11 +410,11 @@ public:
 		} else if ( haslist ( elem ) ) {
 			psomap result = make_shared<somap>();
 			( *result ) [ "@list"] = mk_olist_obj();
-			generateNodeMap ( getlist(elem), nodeMap, activeGraph, activeSubject, activeProperty, result );
+			generateNodeMap ( getlist ( elem ), nodeMap, activeGraph, activeSubject, activeProperty, result );
 			mergeValue ( node, activeProperty, mk_somap_obj ( result ) );
 		} else {
 			string id;
-			if ( hasid ( elem ) && getid(elem)->STR() ) {
+			if ( hasid ( elem ) && getid ( elem )->STR() ) {
 				string id = *elem->at ( "@id" )->STR();
 				elem->erase ( "@id" );
 				if ( startsWith ( id, "_:" ) ) id = gen_bnode_id ( id );
@@ -433,15 +433,15 @@ public:
 			}
 			node = graph->at ( id )->MAP();
 			if ( hastype ( elem ) ) {
-				for ( pobj type : *gettype(elem)->LIST() ) mergeValue ( node, "@type", type );
+				for ( pobj type : *gettype ( elem )->LIST() ) mergeValue ( node, "@type", type );
 				elem->erase ( "@type" );
 			}
 			if ( hasindex ( elem ) ) {
-				pobj elemIndex  = getindex(elem);
+				pobj elemIndex  = getindex ( elem );
 				elem->erase ( "@index" );
 				if ( hasindex ( node ) ) {
-					if ( !deepCompare ( getindex(node), elemIndex ) ) throw CONFLICTING_INDEXES;
-				} else getindex(node) = elemIndex ;
+					if ( !deepCompare ( getindex ( node ), elemIndex ) ) throw CONFLICTING_INDEXES;
+				} else getindex ( node ) = elemIndex ;
 			}
 			if ( hasreverse ( elem ) ) {
 				psomap refnode = make_shared<somap>(), revmap = elem->at ( "@reverse" )->MAP();
@@ -464,7 +464,7 @@ public:
 				pobj value = z.second;
 				if ( startsWith ( property, "_:" ) ) property = gen_bnode_id ( property );
 				if ( !has ( node, property ) ) node->at ( property ) = mk_olist_obj();
-				generateNodeMap ( value, nodeMap, activeGraph, make_shared<string_obj>(id), make_shared<string>(property), 0 );
+				generateNodeMap ( value, nodeMap, activeGraph, make_shared<string_obj> ( id ), make_shared<string> ( property ), 0 );
 			}
 		}
 	}
