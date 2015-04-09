@@ -189,14 +189,14 @@ polist vec2vec ( const vector<string>& x ) {
 	return res;
 }
 
-void make_list_if_not(pobj& o) {
-	if (o->LIST()) return;
+void make_list_if_not ( pobj& o ) {
+	if ( o->LIST() ) return;
 	pobj t = o->clone();
-	o = make_shared<olist_obj>(olist(1, t));
+	o = make_shared<olist_obj> ( olist ( 1, t ) );
 }
-							
-void add_all(polist l, pobj v) {
-	if ( v->LIST() ) l->insert ( l.end(), v->LIST()->begin(), v->LIST()->end() );
+
+void add_all ( polist l, pobj v ) {
+	if ( v->LIST() ) l->insert ( l->end(), v->LIST()->begin(), v->LIST()->end() );
 	else l->push_back ( v );
 }
 
@@ -222,8 +222,9 @@ public:
 		return getContainer ( *prop );
 	}
 
+	typedef std::shared_ptr<context_t> pcontext;
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
-	context_t parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
+	pcontext parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
 		context_t result ( *this );
 		if ( !localContext->LIST() ) localContext = make_shared<olist_obj> ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
@@ -237,7 +238,7 @@ public:
 				somap* p;
 				if ( !remoteContext->map_and_has ( "@context" ) ) throw INVALID_REMOTE_CONTEXT + "\t"; // + context;
 				context = ( *remoteContext->MAP() ) ["@context"];
-				result = result.parse ( context, remoteContexts );
+				result = *result.parse ( context, remoteContexts );
 				continue;
 			} else if ( !context->MAP() ) throw INVALID_LOCAL_CONTEXT + "\t"; // + context;
 			somap& cm = *context->MAP();
@@ -275,7 +276,7 @@ public:
 				result.createTermDefinition ( context->MAP(), it.first, defined ); // REVISE
 			}
 		}
-		return result;
+		return make_shared<context_t> ( result );
 	}
 	// Create Term Definition Algorithm
 	void createTermDefinition ( const psomap context, const string term, pdefined_t pdefined ) {
@@ -356,28 +357,31 @@ public:
 	}
 
 
-	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
 	pstring expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
-		if ( !value || keyword ( *value ) ) return value;
+		return value ? expandIri ( value, relative, vocab, context, pdefined ) : 0;
+	}
+	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
+	pstring expandIri ( string value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
+		if ( keyword ( value ) ) return make_shared<string> ( value );
 		const defined_t& defined = *pdefined;
-		if ( context && has ( context, value ) && !defined.at ( *value ) ) createTermDefinition ( context, *value, pdefined );
+		if ( context && has ( context, value ) && !defined.at ( value ) ) createTermDefinition ( context, value, pdefined );
 		if ( vocab && has ( term_defs, value ) ) {
 			psomap td;
-			return ( td = term_defs->at ( *value )->MAP() ) ? td->at ( "@id" )->STR() : 0;
+			return ( td = term_defs->at ( value )->MAP() ) ? td->at ( "@id" )->STR() : 0;
 		}
-		size_t colIndex = value->find ( ":" );
+		size_t colIndex = value.find ( ":" );
 		if ( colIndex != string::npos ) {
-			string prefix = value->substr ( 0, colIndex ), suffix = value->substr ( colIndex + 1 );
-			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return value;
+			string prefix = value.substr ( 0, colIndex ), suffix = value.substr ( colIndex + 1 );
+			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return make_shared<string> ( value );
 			if ( context && has ( context, prefix ) && ( !has ( pdefined, prefix ) || !defined.at ( prefix ) ) )
 				createTermDefinition ( context, prefix, pdefined );
 			if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( "@id" )->STR() + suffix );
-			return value;
+			return make_shared<string> ( value );
 		}
-		if ( vocab && MAP()->find ( "@vocab" ) != MAP()->end() ) return pstr ( *MAP()->at ( "@vocab" )->STR() + *value );
-		if ( relative ) return pstr ( resolve ( *MAP()->at ( "@base" )->STR(), *value ) );
-		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + *value;
-		return value;
+		if ( vocab && MAP()->find ( "@vocab" ) != MAP()->end() ) return pstr ( *MAP()->at ( "@vocab" )->STR() + value );
+		if ( relative ) return pstr ( resolve ( *MAP()->at ( "@base" )->STR(), value ) );
+		if ( context && is_rel_iri ( value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + value;
+		return make_shared<string> ( value );
 	}
 
 	pstring get_type_map ( const string& prop ) {
@@ -593,13 +597,13 @@ public:
 	}
 
 	// http://json-ld.org/spec/latest/json-ld-api/#value-compaction
-	pobj compactValue ( pstring activeProperty, psomap_obj value_ ) {
+	pobj compactValue ( string activeProperty, psomap_obj value_ ) {
 		psomap value = value_->MAP();
 		int nvals = value->size();
-		auto p = getContainer ( *activeProperty );
+		auto p = getContainer ( activeProperty );
 		if ( value->find ( "@index" ) != value->end() && p && *p == "@index" ) nvals--;
 		if ( nvals > 2 ) return value_;//make_shared<somap_obj> ( value_ );
-		pstring type_map = get_type_map ( *activeProperty ), lang_map = get_lang_map ( *activeProperty );
+		pstring type_map = get_type_map ( activeProperty ), lang_map = get_lang_map ( activeProperty );
 		auto it = value->find ( "@id" );
 		if ( it != value->end() && nvals == 1 )
 			if ( type_map && *type_map == "@id" && nvals == 1 )
@@ -616,10 +620,17 @@ public:
 			if ( *it->second->STR() == * lang_map  || ::equals ( it->second, MAP()->at ( "@language" ) ) )
 				return valval;
 		if ( nvals == 1
-		        && ( !valval->STR() || has ( MAP(), "@language" ) || ( term_defs->find ( *activeProperty ) == term_defs->end()
-		                && has ( get_term_def ( *activeProperty ), "@language" ) && !lang_map ) ) )
+		        && ( !valval->STR() || has ( MAP(), "@language" ) || ( term_defs->find ( activeProperty ) == term_defs->end()
+		                && has ( get_term_def ( activeProperty ), "@language" ) && !lang_map ) ) )
 			return valval;
 		return value_;
+	}
+
+	bool isReverseProperty ( string prop ) {
+		auto it = term_defs->find ( prop );
+		if ( it == term_defs->end() || !it->second->MAP() ) return false;
+		auto r = it->second->MAP()->at ( "@reverse" );
+		return r && r->BOOL() && *r->BOOL();
 	}
 };
 

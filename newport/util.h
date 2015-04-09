@@ -6,6 +6,11 @@ inline bool is ( const T& s, const std::vector<T>& v, std::string exception = st
 	return rc;
 }
 
+template<typename T> inline bool is ( const std::shared_ptr<T>& s, const std::vector<T>& v, std::string exception = std::string() ) {
+	return is<T> ( *s, v, exception );
+}
+
+
 inline string lower ( const string& s_ ) {
 	string s = s_;
 	std::transform ( s.begin(), s.end(), s.begin(), ::tolower );
