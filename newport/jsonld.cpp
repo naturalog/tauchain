@@ -8,6 +8,12 @@
 #include <boost/variant.hpp>
 #include "json_spirit_reader.h"
 #include "json_spirit_writer.h"
+#include <curl/curl.h>
+#include <curl/easy.h>
+#include <curl/easy.h>
+#include <curl/curlbuild.h>
+#include <sstream>
+#include <iostream>
 
 using namespace std;
 using namespace std::string_literals;
@@ -90,13 +96,103 @@ typedef std::shared_ptr<somap> psomap;
 typedef map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
 
-class jsonld_options {};
-bool keyword ( const string& );
-bool is_abs_uri ( const string& );
-bool is_abs_iri ( const string& );
 string resolve ( const string&, const string& );
-bool is_rel_iri ( const string& );
 
+struct remote_doc_t {
+	string url;
+	pstring context_url;
+	pobj document;
+	remote_doc_t ( string url_, const pobj& document_ = 0, pstring context = 0 ) : url ( url_ ), document ( document_ ), context_url ( context ) { }
+};
+
+class doc_loader_t {
+	void* curl;
+public:
+	remote_doc_t loadDocument ( const string& url )  {
+		pobj p;
+		remote_doc_t doc( url, p );
+		try {
+			doc.setDocument ( fromURL ( /*new URL*/ ( url ) ) );
+		} catch ( ... ) {
+			throw JsonLdError ( LOADING_REMOTE_CONTEXT_FAILED, url );
+		}
+		return doc;
+	}
+
+	pobj fromURL ( const string& url ) {
+		json_spirit::mValue r;
+		json_spirit::read ( download ( url ), r );
+
+		return r;
+	}
+
+	static size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
+		string data ( ( const char* ) ptr, ( size_t ) size * n );
+		* ( ( std::stringstream* ) stream ) << data << std::endl;
+		return size * n;
+	}
+
+	string download ( const string& url ) {
+		curl_easy_setopt ( curl, CURLOPT_URL, url.c_str() );
+		curl_easy_setopt ( curl, CURLOPT_FOLLOWLOCATION, 1L );
+		curl_easy_setopt ( curl, CURLOPT_NOSIGNAL, 1 );
+		curl_easy_setopt ( curl, CURLOPT_ACCEPT_ENCODING, "deflate" );
+		std::stringstream out;
+		curl_easy_setopt ( curl, CURLOPT_WRITEFUNCTION, write_data );
+		curl_easy_setopt ( curl, CURLOPT_WRITEDATA, &out );
+		CURLcode res = curl_easy_perform ( curl );
+		if ( res != CURLE_OK ) throw std::runtime_error ( "curl_easy_perform() failed: "s + curl_easy_strerror ( res ) );
+		return out.str();
+	}
+
+	doc_loader_t() {
+		curl = curl_easy_init();
+	}
+	virtual ~doc_loader_t() {
+		curl_easy_cleanup ( curl );
+	}
+};
+
+// http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
+struct options {
+    options() {}
+    options(string base_) : base(make_shared<string>(base_)){}
+    pstring base = 0;
+    pbool compactArrays = make_shared<bool>(true);
+    pobj expandContext = 0;
+    pstring processingMode = "json-ld-1.0";
+    doc_loader_t doc_loader;
+    pbool embed = 0;
+    pbool explicit = 0;
+    pbool omitDefault = 0;
+    pbool useRdfType = make_shared<bool>(false);
+    pbool useNativeTypes = make_shared<bool>(false);
+    pbool produceGeneralizedRdf = make_shared<bool>(false);
+    pstring format = 0;
+    pbool useNamespaces = make_shared<bool>(false);
+    pstring outputForm = 0;
+}
+
+bool keyword ( const string& key ) {
+	return "@base"s == key || "@context"s == key || "@container"s == key
+	       || "@default"s == key || "@embed"s == key || "@explicit"s == key
+	       || "@graph"s == key || "@id"s == key || "@index"s == key
+	       || "@language"s == key || "@list"s == key || "@omitDefault"s == key
+	       || "@reverse"s == key || "@preserve"s == key || "@set"s == key
+	       || "@type"s == key || "@value"s == key || "@vocab"s == key;
+}
+
+bool keyword ( pobj p ) {
+	if ( !p || !p->STR() ) return false;
+	return keyword ( *p->STR() );
+}
+
+bool is_abs_iri ( const string& s ) {
+	return s.find ( ':' ) != string::npos;
+}
+bool is_rel_iri ( const string& s ) {
+	return !keyword ( s ) || !is_abs_iri ( s );
+}
 pobj newMap ( const string& k, pobj v ) {
 	pobj r = make_shared<somap_obj>();
 	( *r->MAP() ) [k] = v;
@@ -140,10 +236,10 @@ public:
 				pobj value = it->second;
 				if ( value->Null() ) result.erase ( "@base" );
 				else if ( pstring s = value->STR() ) {
-					if ( is_abs_uri ( *s ) ) result["@base"] = value;
+					if ( is_abs_iri ( *s ) ) result["@base"] = value;
 					else {
 						string baseUri = *result["@base"]->STR();
-						if ( !is_abs_uri ( baseUri ) ) throw INVALID_BASE_IRI + "\t" + baseUri;
+						if ( !is_abs_iri ( baseUri ) ) throw INVALID_BASE_IRI + "\t" + baseUri;
 						result["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 					}
 				} else throw INVALID_BASE_IRI + "\t" + "@base must be a string";
@@ -153,7 +249,7 @@ public:
 				pobj value = it->second;
 				if ( value->Null() ) result.erase ( it );
 				else if ( pstring s = value->STR() ) {
-					if ( is_abs_uri ( *s ) ) result["@vocab"] = value;
+					if ( is_abs_iri ( *s ) ) result["@vocab"] = value;
 					else throw INVALID_VOCAB_MAPPING + "\t" + "@value must be an absolute IRI";
 				} else throw INVALID_VOCAB_MAPPING + "\t" + "@vocab must be a string or null";
 			}
@@ -207,45 +303,45 @@ public:
 				throw INVALID_IRI_MAPPING + "\t" + "Expected String for @reverse value.";
 			string reverse = *expandIri ( val.at ( "@reverse" )->STR(), false, true, context, pdefined );
 			if ( !is_abs_iri ( reverse ) ) throw INVALID_IRI_MAPPING + "Non-absolute @reverse IRI: " + reverse;
-			defn ["@id"] = make_shared<string_obj>(reverse);
+			defn ["@id"] = make_shared<string_obj> ( reverse );
 			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { "@set"s, "@index"s }, INVALID_REVERSE_PROPERTY + "reverse properties only support set- and index-containers" ) )
 				defn ["@container"] = it->second;
-			defn["@reverse"] = make_shared<bool_obj>(( *pdefined ) [term] = true);
-			(*term_defs)[term] = make_shared<somap_obj>(defn);
+			defn["@reverse"] = make_shared<bool_obj> ( ( *pdefined ) [term] = true );
+			( *term_defs ) [term] = make_shared<somap_obj> ( defn );
 			return;
 		}
-		defn["@reverse"] = make_shared<bool_obj>(false);
+		defn["@reverse"] = make_shared<bool_obj> ( false );
 		size_t colIndex;
 		if ( ( it = val.find ( "@id" ) ) != val.end() && it->second->STR() && *it->second->STR() != term ) {
 			if ( ! it->second->STR() ) throw INVALID_IRI_MAPPING + "expected value of @id to be a string";
 			pstring res = expandIri ( it->second->STR(), false, true, context, pdefined );
 			if ( res && keyword ( *res ) || is_abs_iri ( *res ) ) {
 				if ( *res == "@context" ) throw INVALID_KEYWORD_ALIAS + "cannot alias @context";
-				defn ["@id"] = make_shared<string_obj>(res);
+				defn ["@id"] = make_shared<string_obj> ( res );
 			} else throw INVALID_IRI_MAPPING + "resulting IRI mapping should be a keyword, absolute IRI or blank node";
 		} else if ( ( colIndex = term.find ( ":" ) ) != string::npos ) {
 			string prefix = term.substr ( 0, colIndex );
 			string suffix = term.substr ( colIndex + 1 );
 			if ( context->find ( prefix ) != context->end() ) createTermDefinition ( context, prefix, pdefined );
 			if ( ( it = term_defs->find ( prefix ) ) != term_defs->end() )
-				defn ["@id"] = make_shared<string_obj>(*it->second->MAP()->at ( "@id" )->STR() + suffix);
-			else defn["@id"] = make_shared<string_obj>(term);
+				defn ["@id"] = make_shared<string_obj> ( *it->second->MAP()->at ( "@id" )->STR() + suffix );
+			else defn["@id"] = make_shared<string_obj> ( term );
 		} else if ( ( it = find ( "@vocab" ) ) != end() )
-			defn ["@id"] = make_shared<string_obj>(*at ( "@vocab" )->STR() + term);
+			defn ["@id"] = make_shared<string_obj> ( *at ( "@vocab" )->STR() + term );
 		else throw INVALID_IRI_MAPPING + "relative term defn without vocab mapping";
 
 		// 16
 		bool tmp = ( ( it = val.find ( "@container" ) ) != val.end() ) && it->second->STR() &&
-		         is ( *it->second->STR(), { "@list"s, "@set"s, "@index"s, "@language"s }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
+		           is ( *it->second->STR(), { "@list"s, "@set"s, "@index"s, "@language"s }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
 
 		auto i1 = val.find ( "@language" ), i2 = val.find ( "type" );
 		pstring lang;
 		if ( i1 != val.end() && i2 == val.end() ) {
-			if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) defn["@language"] = lang ? make_shared<string_obj>(lower(*lang)) : 0;
+			if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) defn["@language"] = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
 			else throw INVALID_LANGUAGE_MAPPING + "@language must be a string or null";
 		}
 
-		( *term_defs ) [term] = make_shared<somap_obj>(defn);
+		( *term_defs ) [term] = make_shared<somap_obj> ( defn );
 		( *pdefined ) [term] = true;
 	}
 	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
