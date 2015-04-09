@@ -69,7 +69,7 @@ public:
 		return it != m->end() && it->second->Null();
 	}
 	virtual string type_str() const = 0;
-	virtual bool equals(const obj& o) const = 0;
+	virtual bool equals ( const obj& o ) const = 0;
 };
 
 #define OBJ_IMPL(type, getter) \
@@ -112,10 +112,18 @@ string resolve ( const string&, const string& ) {
 
 #include "loader.h"
 
-bool equals(const obj& a, const obj& b) { return a.equals(b); }
-bool equals(const pobj& a, const pobj& b) { return a->equals(*b); }
-bool equals(const pobj& a, const obj& b) { return a->equals(b); }
-bool equals(const obj& a, const pobj& b) { return a.equals(*b); }
+bool equals ( const obj& a, const obj& b ) {
+	return a.equals ( b );
+}
+bool equals ( const pobj& a, const pobj& b ) {
+	return a->equals ( *b );
+}
+bool equals ( const pobj& a, const obj& b ) {
+	return a->equals ( b );
+}
+bool equals ( const obj& a, const pobj& b ) {
+	return a.equals ( *b );
+}
 
 // http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
 struct jsonld_options {
@@ -172,6 +180,13 @@ public:
 
 	Context ( const jsonld_options& o = jsonld_options() ) : somap_obj(), options ( o ) {
 		if ( options.base ) MAP()->at ( "@base" ) = make_shared<string_obj> ( *options.base );
+	}
+
+	pstring getContainer ( string prop ) {
+		if ( prop == "@graph" ) return make_shared<string> ( "@set" );
+		if ( keyword ( prop ) ) return make_shared<string> ( prop );
+		auto it = term_defs->find ( prop );
+		return it == term_defs->end() ? 0 : it->second->STR();
 	}
 
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
@@ -306,6 +321,8 @@ public:
 		( *term_defs ) [term] = make_shared<somap_obj> ( defn );
 		( *pdefined ) [term] = true;
 	}
+
+
 	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
 	pstring expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
 		if ( !value || keyword ( *value ) ) return value;
@@ -329,31 +346,251 @@ public:
 		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + *value;
 		return value;
 	}
+
+	pstring get_type_map ( const string& prop ) {
+		auto td = term_defs->find ( prop );
+		return td == term_defs->end() || !td->second->MAP() ? 0 : td->second->MAP()->at ( "@type" )->STR();
+	}
+
+	pstring get_lang_map ( const string& prop ) {
+		auto td = term_defs->find ( prop );
+		return td == term_defs->end() || !td->second->MAP() ? 0 : td->second->MAP()->at ( "@language" )->STR();
+	}
+
+	psomap get_term_def ( const string& key ) {
+		return term_defs->at ( key )->MAP();
+	}
+
+	// http://json-ld.org/spec/latest/json-ld-api/#iri-compaction
+	String compactIri ( String iri, Object value, boolean relativeToVocab, boolean reverse ) {
+		// 1)
+		if ( iri == null )
+			return null;
+
+		// 2)
+		if ( relativeToVocab && getInverse().containsKey ( iri ) ) {
+			// 2.1)
+			String defaultLanguage = ( String ) this.get ( "@language" );
+			if ( defaultLanguage == null )
+				defaultLanguage = "@none";
+
+			// 2.2)
+			final List<String> containers = new ArrayList<String>();
+			// 2.3)
+			String typeLanguage = "@language";
+			String typeLanguageValue = "@null";
+
+			// 2.4)
+			if ( value instanceof Map && ( ( Map<String, Object> ) value ).containsKey ( "@index" ) )
+				containers.add ( "@index" );
+
+			// 2.5)
+			if ( reverse ) {
+				typeLanguage = "@type";
+				typeLanguageValue = "@reverse";
+				containers.add ( "@set" );
+			}
+			// 2.6)
+			else if ( value instanceof Map && ( ( Map<String, Object> ) value ).containsKey ( "@list" ) ) {
+				// 2.6.1)
+				if ( ! ( ( Map<String, Object> ) value ).containsKey ( "@index" ) )
+					containers.add ( "@list" );
+				// 2.6.2)
+				final List<Object> list = ( List<Object> ) ( ( Map<String, Object> ) value ).get ( "@list" );
+				// 2.6.3)
+				String commonLanguage = ( list.size() == 0 ) ? defaultLanguage : null;
+				String commonType = null;
+				// 2.6.4)
+				for ( final Object item : list ) {
+					// 2.6.4.1)
+					String itemLanguage = "@none";
+					String itemType = "@none";
+					// 2.6.4.2)
+					if ( JsonLdUtils.isValue ( item ) ) {
+						// 2.6.4.2.1)
+						if ( ( ( Map<String, Object> ) item ).containsKey ( "@language" ) )
+							itemLanguage = ( String ) ( ( Map<String, Object> ) item ).get ( "@language" );
+						// 2.6.4.2.2)
+						else if ( ( ( Map<String, Object> ) item ).containsKey ( "@type" ) )
+							itemType = ( String ) ( ( Map<String, Object> ) item ).get ( "@type" );
+						// 2.6.4.2.3)
+						else
+							itemLanguage = "@null";
+					}
+					// 2.6.4.3)
+					else
+						itemType = "@id";
+					// 2.6.4.4)
+					if ( commonLanguage == null )
+						commonLanguage = itemLanguage;
+					// 2.6.4.5)
+					else if ( !commonLanguage.equals ( itemLanguage ) && JsonLdUtils.isValue ( item ) )
+						commonLanguage = "@none";
+					// 2.6.4.6)
+					if ( commonType == null )
+						commonType = itemType;
+					// 2.6.4.7)
+					else if ( !commonType.equals ( itemType ) )
+						commonType = "@none";
+					// 2.6.4.8)
+					if ( "@none".equals ( commonLanguage ) && "@none".equals ( commonType ) )
+						break;
+				}
+				// 2.6.5)
+				commonLanguage = ( commonLanguage != null ) ? commonLanguage : "@none";
+				// 2.6.6)
+				commonType = ( commonType != null ) ? commonType : "@none";
+				// 2.6.7)
+				if ( !"@none".equals ( commonType ) ) {
+					typeLanguage = "@type";
+					typeLanguageValue = commonType;
+				}
+				// 2.6.8)
+				else
+					typeLanguageValue = commonLanguage;
+			}
+			// 2.7)
+			else {
+				// 2.7.1)
+				if ( value instanceof Map && ( ( Map<String, Object> ) value ).containsKey ( "@value" ) ) {
+					// 2.7.1.1)
+					if ( ( ( Map<String, Object> ) value ).containsKey ( "@language" )
+					        && ! ( ( Map<String, Object> ) value ).containsKey ( "@index" ) ) {
+						containers.add ( "@language" );
+						typeLanguageValue = ( String ) ( ( Map<String, Object> ) value ).get ( "@language" );
+					}
+					// 2.7.1.2)
+					else if ( ( ( Map<String, Object> ) value ).containsKey ( "@type" ) ) {
+						typeLanguage = "@type";
+						typeLanguageValue = ( String ) ( ( Map<String, Object> ) value ).get ( "@type" );
+					}
+				}
+				// 2.7.2)
+				else {
+					typeLanguage = "@type";
+					typeLanguageValue = "@id";
+				}
+				// 2.7.3)
+				containers.add ( "@set" );
+			}
+
+			// 2.8)
+			containers.add ( "@none" );
+			// 2.9)
+			if ( typeLanguageValue == null )
+				typeLanguageValue = "@null";
+			// 2.10)
+			final List<String> preferredValues = new ArrayList<String>();
+			// 2.11)
+			if ( "@reverse".equals ( typeLanguageValue ) )
+				preferredValues.add ( "@reverse" );
+			// 2.12)
+			if ( ( "@reverse".equals ( typeLanguageValue ) || "@id".equals ( typeLanguageValue ) )
+			        && ( value instanceof Map ) && ( ( Map<String, Object> ) value ).containsKey ( "@id" ) ) {
+				// 2.12.1)
+				final String result = this.compactIri (
+				                          ( String ) ( ( Map<String, Object> ) value ).get ( "@id" ), null, true, true );
+				if ( termDefinitions.containsKey ( result )
+				        && ( ( Map<String, Object> ) termDefinitions.get ( result ) ).containsKey ( "@id" )
+				        && ( ( Map<String, Object> ) value ).get ( "@id" ).equals (
+				            ( ( Map<String, Object> ) termDefinitions.get ( result ) ).get ( "@id" ) ) ) {
+					preferredValues.add ( "@vocab" );
+					preferredValues.add ( "@id" );
+				}
+				// 2.12.2)
+				else {
+					preferredValues.add ( "@id" );
+					preferredValues.add ( "@vocab" );
+				}
+			}
+			// 2.13)
+			else
+				preferredValues.add ( typeLanguageValue );
+			preferredValues.add ( "@none" );
+
+			// 2.14)
+			final String term = selectTerm ( iri, containers, typeLanguage, preferredValues );
+			// 2.15)
+			if ( term != null )
+				return term;
+		}
+
+		// 3)
+		if ( relativeToVocab && this.containsKey ( "@vocab" ) ) {
+			// determine if vocab is a prefix of the iri
+			final String vocab = ( String ) this.get ( "@vocab" );
+			// 3.1)
+			if ( iri.indexOf ( vocab ) == 0 && !iri.equals ( vocab ) ) {
+				// use suffix as relative iri if it is not a term in the
+				// active context
+				final String suffix = iri.substring ( vocab.length() );
+				if ( !termDefinitions.containsKey ( suffix ) )
+					return suffix;
+			}
+		}
+
+		// 4)
+		String compactIRI = null;
+		// 5)
+		for ( final String term : termDefinitions.keySet() ) {
+			final Map<String, Object> termDefinition = ( Map<String, Object> ) termDefinitions
+			        .get ( term );
+			// 5.1)
+			if ( term.contains ( ":" ) )
+				continue;
+			// 5.2)
+			if ( termDefinition == null || iri.equals ( termDefinition.get ( "@id" ) )
+			        || !iri.startsWith ( ( String ) termDefinition.get ( "@id" ) ) )
+				continue;
+
+			// 5.3)
+			final String candidate = term + ":"
+			                         + iri.substring ( ( ( String ) termDefinition.get ( "@id" ) ).length() );
+			// 5.4)
+			if ( ( compactIRI == null || compareShortestLeast ( candidate, compactIRI ) < 0 )
+			        && ( !termDefinitions.containsKey ( candidate ) || ( iri
+			                .equals ( ( ( Map<String, Object> ) termDefinitions.get ( candidate ) )
+			                          .get ( "@id" ) ) && value == null ) ) )
+				compactIRI = candidate;
+
+		}
+
+		// 6)
+		if ( compactIRI != null )
+			return compactIRI;
+
+		// 7)
+		if ( !relativeToVocab )
+			return JsonLdUrl.removeBase ( this.get ( "@base" ), iri );
+
+		// 8)
+		return iri;
+	}
+
+	// http://json-ld.org/spec/latest/json-ld-api/#value-compaction
+	pobj compactValue ( pstring activeProperty, somap_obj value_ ) {
+		psomap value = value_.MAP();
+		int nvals = value->size();
+		auto p = getContainer ( *activeProperty );
+		if ( value->find ( "@index" ) != value->end() && p && *p == "@index" ) nvals--;
+		if ( nvals > 2 ) return make_shared<somap_obj> ( value_ );
+		pstring type_map = get_type_map ( *activeProperty ), lang_map = get_lang_map ( *activeProperty );
+		auto it = value->find ( "@id" );
+		if ( it != value->end() && nvals == 1 )
+			return type_map && *type_map == "@id" && nvals == 1 ? compactIri ( value->at ( "@id" )->STR() ) : type_map && *type_map == "@vocab" && nvals == 1 ? compactIri ( value->at ( "@id" )->STR(), true ) : value;
+		pobj valval = value->at ( "@value" );
+		auto it = value->find ( "@type" );
+		if ( it != value->end() && equals ( it->second, type_map ) ) return valval;
+		if ( ( it = value->find ( "@language" ) ) != value->end() ) // TODO: SPEC: doesn't specify to check default language as well
+			if ( equals ( it->second, lang_map ) || equals ( it->second, MAP()->at ( "@language" ) ) )
+				return valval;
+		if ( nvals == 1
+		        && ( !valval->STR() || has ( MAP(), "@language" ) || ( term_defs.find ( activeProperty ) == term_defs.end()
+		                && has ( getTermDefinition ( activeProperty ), "@language" ) && lang_map == null ) ) )
+			return valval;
+		return value;
+	}
 };
-
-
-    // http://json-ld.org/spec/latest/json-ld-api/#value-compaction
-    pobj compactValue(pstring activeProperty, somap_obj value_) {
-	psomap& value = value_.MAP();
-        int nvals = value->size();
-        if (value->find("@index") != value->end() && getContainer(activeProperty) == "@index") nvals--;
-        if (nvals > 2) { return value_; }
-        string type_map = getTypeMapping(activeProperty), lang_map = getLanguageMapping(activeProperty);
-        if ((auto it = value->find("@id")) != value->end() && nvals == 1)
-		return type_map == "@id" && nval == 1 ? compactIri(value->at("@id")->STR()) : type_map == "@vocab" && nval == 1 ? compactIri(value->at("@id")->STR(), true) : value;
-        pobj valval = value.get("@value");
-	auto it = value->find("@type");
-        if (it != value->end() && equals(it->second, type_map)) return valval;
-        if ((it = value->find("@language")) != value->end()) // TODO: SPEC: doesn't specify to check default language as well
-            if (equals(it->second, lang_map) || equals(it->second, MAP()->at("@language"))) 
-                return valval;
-        if (nvals == 1
-                && (!valval->STR() || has(MAP(), "@language") || (term_defs.find(activeProperty) == term_defs.end()
-                        && has(getTermDefinition(activeProperty), "@language") && lang_map == null))) 
-            return valval;
-        return value;
-    }
-
 
 int main() {
 	Context c;
