@@ -362,137 +362,77 @@ public:
 	}
 
 	// http://json-ld.org/spec/latest/json-ld-api/#iri-compaction
-	String compactIri ( String iri, Object value, boolean relativeToVocab, boolean reverse ) {
-		// 1)
-		if ( iri == null )
-			return null;
-
-		// 2)
+	pstring compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse ) {
+		if ( !iri ) return 0;
 		if ( relativeToVocab && getInverse().containsKey ( iri ) ) {
-			// 2.1)
-			String defaultLanguage = ( String ) this.get ( "@language" );
-			if ( defaultLanguage == null )
-				defaultLanguage = "@none";
-
-			// 2.2)
-			final List<String> containers = new ArrayList<String>();
-			// 2.3)
-			String typeLanguage = "@language";
-			String typeLanguageValue = "@null";
-
-			// 2.4)
-			if ( value instanceof Map && ( ( Map<String, Object> ) value ).containsKey ( "@index" ) )
-				containers.add ( "@index" );
-
-			// 2.5)
+			auto it = MAP()->find ( "@language" );
+			pstring defaultLanguage = 0;
+			if ( it != MAP()->end() && it->second ) defaultLanguage = it->second->STR();
+			if ( !defaultLanguage ) defaultLanguage = make_shared<string> ( "@none" );
+			vector<string> containers;
+			string type_lang = "@language", type_lang_val = "@null";
+			if ( value->MAP() && has ( value, "@index" ) ) containers.push_back ( "@index" );
 			if ( reverse ) {
-				typeLanguage = "@type";
-				typeLanguageValue = "@reverse";
-				containers.add ( "@set" );
-			}
-			// 2.6)
-			else if ( value instanceof Map && ( ( Map<String, Object> ) value ).containsKey ( "@list" ) ) {
-				// 2.6.1)
-				if ( ! ( ( Map<String, Object> ) value ).containsKey ( "@index" ) )
-					containers.add ( "@list" );
+				type_lang = "@type";
+				type_lang_val = "@reverse";
+				containers.push_back ( "@set" );
+			} else if ( value->MAP() && has ( value->MAP(),  "@list" ) ) {
+				if ( ! has ( value->MAP(),  "@index" ) )
+					containers.push_back ( "@list" );
 				// 2.6.2)
-				final List<Object> list = ( List<Object> ) ( ( Map<String, Object> ) value ).get ( "@list" );
+				final List<Object> list = ( List<Object> ) value->MAP( ).at ( "@list" );
 				// 2.6.3)
-				String commonLanguage = ( list.size() == 0 ) ? defaultLanguage : null;
-				String commonType = null;
+				pstring common_lang = ( list.size() == 0 ) ? defaultLanguage : 0, common_type = 0;
 				// 2.6.4)
-				for ( final Object item : list ) {
-					// 2.6.4.1)
-					String itemLanguage = "@none";
-					String itemType = "@none";
-					// 2.6.4.2)
-					if ( JsonLdUtils.isValue ( item ) ) {
-						// 2.6.4.2.1)
-						if ( ( ( Map<String, Object> ) item ).containsKey ( "@language" ) )
-							itemLanguage = ( String ) ( ( Map<String, Object> ) item ).get ( "@language" );
-						// 2.6.4.2.2)
-						else if ( ( ( Map<String, Object> ) item ).containsKey ( "@type" ) )
-							itemType = ( String ) ( ( Map<String, Object> ) item ).get ( "@type" );
-						// 2.6.4.2.3)
-						else
-							itemLanguage = "@null";
+				for ( pobj item : list ) {
+					string itemLanguage = "@none", itemType = "@none";
+					if ( isvalue ( item ) ) {
+						if ( ( it = item->MAP()->find ( "@language" ) ) != item->MAP()->end() ) itemLanguage = it->second->STR();
+						else if (  ( it = item->MAP()->find ( "@type" ) ) != item->MAP()->end()  ) itemType = it->second->STR();
+						else itemLanguage = "@null";
+					} else itemType = "@id";
+					if ( !common_lang ) common_lang = itemLanguage;
+					else if ( !common_lang.equals ( itemLanguage ) && JsonLdUtils.isValue ( item ) ) common_lang = "@none";
+					if ( common_type == null ) common_type = itemType;
+					else if ( !common_type.equals ( itemType ) ) common_type = "@none";
+					if ( "@none"s == ( common_lang ) && "@none"s == ( common_type ) ) break;
+				}
+				common_lang = ( common_lang != null ) ? common_lang : "@none";
+				common_type = ( common_type != null ) ? common_type : "@none";
+				if ( !"@none"s == ( common_type ) ) {
+					type_lang = "@type";
+					type_lang_val = common_type;
+				} else type_lang_val = common_lang;
+			} else {
+				if ( value->MAP() && has ( value->MAP(),  "@value" ) ) {
+					if ( has ( value->MAP(),  "@language" )
+					        && ! has ( value->MAP(),  "@index" ) ) {
+						containers.push_back ( "@language" );
+						type_lang_val = ( String ) value->MAP( ).at ( "@language" );
+					} else if ( has ( value->MAP(),  "@type" ) ) {
+						type_lang = "@type";
+						type_lang_val = ( String ) value->MAP( ).at ( "@type" );
 					}
-					// 2.6.4.3)
-					else
-						itemType = "@id";
-					// 2.6.4.4)
-					if ( commonLanguage == null )
-						commonLanguage = itemLanguage;
-					// 2.6.4.5)
-					else if ( !commonLanguage.equals ( itemLanguage ) && JsonLdUtils.isValue ( item ) )
-						commonLanguage = "@none";
-					// 2.6.4.6)
-					if ( commonType == null )
-						commonType = itemType;
-					// 2.6.4.7)
-					else if ( !commonType.equals ( itemType ) )
-						commonType = "@none";
-					// 2.6.4.8)
-					if ( "@none".equals ( commonLanguage ) && "@none".equals ( commonType ) )
-						break;
+				} else {
+					type_lang = "@type";
+					type_lang_val = "@id";
 				}
-				// 2.6.5)
-				commonLanguage = ( commonLanguage != null ) ? commonLanguage : "@none";
-				// 2.6.6)
-				commonType = ( commonType != null ) ? commonType : "@none";
-				// 2.6.7)
-				if ( !"@none".equals ( commonType ) ) {
-					typeLanguage = "@type";
-					typeLanguageValue = commonType;
-				}
-				// 2.6.8)
-				else
-					typeLanguageValue = commonLanguage;
-			}
-			// 2.7)
-			else {
-				// 2.7.1)
-				if ( value instanceof Map && ( ( Map<String, Object> ) value ).containsKey ( "@value" ) ) {
-					// 2.7.1.1)
-					if ( ( ( Map<String, Object> ) value ).containsKey ( "@language" )
-					        && ! ( ( Map<String, Object> ) value ).containsKey ( "@index" ) ) {
-						containers.add ( "@language" );
-						typeLanguageValue = ( String ) ( ( Map<String, Object> ) value ).get ( "@language" );
-					}
-					// 2.7.1.2)
-					else if ( ( ( Map<String, Object> ) value ).containsKey ( "@type" ) ) {
-						typeLanguage = "@type";
-						typeLanguageValue = ( String ) ( ( Map<String, Object> ) value ).get ( "@type" );
-					}
-				}
-				// 2.7.2)
-				else {
-					typeLanguage = "@type";
-					typeLanguageValue = "@id";
-				}
-				// 2.7.3)
-				containers.add ( "@set" );
+				containers.push_back ( "@set" );
 			}
 
-			// 2.8)
-			containers.add ( "@none" );
-			// 2.9)
-			if ( typeLanguageValue == null )
-				typeLanguageValue = "@null";
-			// 2.10)
-			final List<String> preferredValues = new ArrayList<String>();
-			// 2.11)
-			if ( "@reverse".equals ( typeLanguageValue ) )
-				preferredValues.add ( "@reverse" );
+			containers.push_back ( "@none" );
+			if ( !type_lang_val ) type_lang_val = make_shared<string> ( "@null" );
+			vector<string> preferredValues;
+			if ( "@reverse"s ==  *type_lang_val  ) preferredValues.add ( "@reverse" );
 			// 2.12)
-			if ( ( "@reverse".equals ( typeLanguageValue ) || "@id".equals ( typeLanguageValue ) )
-			        && ( value instanceof Map ) && ( ( Map<String, Object> ) value ).containsKey ( "@id" ) ) {
+			if ( ( "@reverse"s ==  type_lang_val  || "@id"s ==  type_lang_val  )
+			        && ( value->MAP() ) && has ( value->MAP(),  "@id" ) ) {
 				// 2.12.1)
 				final String result = this.compactIri (
-				                          ( String ) ( ( Map<String, Object> ) value ).get ( "@id" ), null, true, true );
+				                          ( String ) value->MAP( ).at ( "@id" ), null, true, true );
 				if ( termDefinitions.containsKey ( result )
 				        && ( ( Map<String, Object> ) termDefinitions.get ( result ) ).containsKey ( "@id" )
-				        && ( ( Map<String, Object> ) value ).get ( "@id" ).equals (
+				        && value->MAP( ).at ( "@id" ).equals (
 				            ( ( Map<String, Object> ) termDefinitions.get ( result ) ).get ( "@id" ) ) ) {
 					preferredValues.add ( "@vocab" );
 					preferredValues.add ( "@id" );
@@ -505,11 +445,11 @@ public:
 			}
 			// 2.13)
 			else
-				preferredValues.add ( typeLanguageValue );
+				preferredValues.add ( type_lang_val );
 			preferredValues.add ( "@none" );
 
 			// 2.14)
-			final String term = selectTerm ( iri, containers, typeLanguage, preferredValues );
+			final String term = selectTerm ( iri, containers, type_lang, preferredValues );
 			// 2.15)
 			if ( term != null )
 				return term;
