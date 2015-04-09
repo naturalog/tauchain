@@ -70,6 +70,7 @@ public:
 	}
 	virtual string type_str() const = 0;
 	virtual bool equals ( const obj& o ) const = 0;
+	virtual pobj clone() const = 0;
 };
 
 #define OBJ_IMPL(type, getter) \
@@ -86,6 +87,7 @@ public: \
 		if ( !data || !od) return data == od; \
 		return *data == *od; \
 	}\
+	virtual pobj clone() const { return make_shared<type##_obj>(*data);  }\
 };typedef std::shared_ptr<type##_obj> p##type##_obj
 
 OBJ_IMPL ( int64_t, INT );
@@ -177,14 +179,14 @@ pobj newMap ( const string& k, pobj v ) {
 }
 
 //template<typename obj>
-class Context : public somap_obj {
+class context_t : public somap_obj {
 private:
 	jsonld_options options;
 	psomap term_defs = make_shared<somap>();
 public:
 	psomap_obj inverse = 0;
 
-	Context ( const jsonld_options& o = jsonld_options() ) : somap_obj(), options ( o ) {
+	context_t ( const jsonld_options& o = jsonld_options() ) : somap_obj(), options ( o ) {
 		if ( options.base ) MAP()->at ( "@base" ) = make_shared<string_obj> ( *options.base );
 	}
 
@@ -194,13 +196,14 @@ public:
 		auto it = term_defs->find ( prop );
 		return it == term_defs->end() ? 0 : it->second->STR();
 	}
+	pstring getContainer ( pstring prop ) { return getContainer(*prop); }
 
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
-	Context parse ( pobj localContext, vector<string>& remoteContexts ) {
-		Context result ( *this );
+	context_t parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
+		context_t result ( *this );
 		if ( !localContext->LIST() ) localContext = make_shared<olist_obj> ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
-			if ( context->Null() ) result = Context ( options );
+			if ( context->Null() ) result = context_t ( options );
 			else if ( pstring s = context->STR() ) {
 				string uri = resolve ( * ( *result.MAP() ) ["@base"]->STR(), *s ); // REVISE
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
@@ -452,6 +455,7 @@ public:
 		return 0;
 	}
 
+	pstring compactIri ( pstring iri, bool relativeToVocab ) { return compactIri(iri, 0, relativeToVocab, false); }
 	// http://json-ld.org/spec/latest/json-ld-api/#iri-compaction
 	pstring compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse ) {
 		if ( !iri ) return 0;
@@ -551,7 +555,6 @@ public:
 			if ( ( !compactIRI || compareShortestLeast ( candidate, compactIRI ) < 0 )
 			        && ( !has ( term_defs, candidate ) || ( *iri == *term_defs->at ( candidate )->MAP() ->at ( "@id" )->STR() ) && !value ) )
 				compactIRI = pstr ( candidate );
-
 		}
 		if ( !compactIRI  ) return compactIRI;
 		if ( !relativeToVocab ) return removeBase ( MAP()->at ( "@base" ), iri );
@@ -589,8 +592,11 @@ public:
 	}
 };
 
+typedef std::shared_ptr<context_t> pcontext;
+#include "jsonldapi.h"
+
 int main() {
-	Context c;
+	context_t c;
 	vector<string> v;
 	c.parse ( 0, v );
 	return 0;
