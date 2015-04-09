@@ -117,7 +117,9 @@ inline pstring pstr ( const string& s ) {
 	return make_shared<string> ( s );
 }
 
-pstring removeBase(pobj o, pstring iri) { return pstr(""); }
+pstring removeBase ( pobj o, pstring iri ) {
+	return pstr ( "" );
+}
 #include "loader.h"
 
 bool equals ( const obj& a, const obj& b ) {
@@ -196,7 +198,9 @@ public:
 		auto it = term_defs->find ( prop );
 		return it == term_defs->end() ? 0 : it->second->STR();
 	}
-	pstring getContainer ( pstring prop ) { return getContainer(*prop); }
+	pstring getContainer ( pstring prop ) {
+		return getContainer ( *prop );
+	}
 
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
 	context_t parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
@@ -455,7 +459,9 @@ public:
 		return 0;
 	}
 
-	pstring compactIri ( pstring iri, bool relativeToVocab ) { return compactIri(iri, 0, relativeToVocab, false); }
+	pstring compactIri ( pstring iri, bool relativeToVocab ) {
+		return compactIri ( iri, 0, relativeToVocab, false );
+	}
 	// http://json-ld.org/spec/latest/json-ld-api/#iri-compaction
 	pstring compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse ) {
 		if ( !iri ) return 0;
