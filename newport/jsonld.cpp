@@ -97,7 +97,9 @@ typedef std::shared_ptr<bool> pbool;
 typedef map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
 
-string resolve ( const string&, const string& ) { return ""; }
+string resolve ( const string&, const string& ) {
+	return "";
+}
 
 #include "loader.h"
 
@@ -154,8 +156,8 @@ private:
 public:
 	psomap inverse = 0;
 
-	Context ( const jsonld_options& o = jsonld_options() ) : options(o) {
-		if (options.base) at("@base") = make_shared<string_obj>(*options.base);
+	Context ( const jsonld_options& o = jsonld_options() ) : options ( o ) {
+		if ( options.base ) at ( "@base" ) = make_shared<string_obj> ( *options.base );
 	}
 
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
