@@ -115,6 +115,7 @@ inline pstring pstr ( const string& s ) {
 	return make_shared<string> ( s );
 }
 
+pstring removeBase(pobj o, pstring iri) { return pstr(""); }
 #include "loader.h"
 
 bool equals ( const obj& a, const obj& b ) {
