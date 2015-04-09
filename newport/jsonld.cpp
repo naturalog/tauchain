@@ -71,6 +71,18 @@ public:
 	virtual string type_str() const = 0;
 	virtual bool equals ( const obj& o ) const = 0;
 	virtual pobj clone() const = 0;
+	string toString() {
+		stringstream ss;
+		if ( MAP() ) for ( auto x : *MAP() ) ss << x.first << ',' << x.second->toString() << endl;
+		else if ( LIST() ) for ( auto x : *LIST() ) ss << x << endl;
+		else if ( BOOL() ) ss << *BOOL();
+		else if ( DOUBLE() ) ss << *DOUBLE();
+		else if ( Null() ) ss << "(null)";
+		else if ( STR() ) ss << *STR();
+		else if ( INT() ) ss << *INT();
+		else if ( UINT() ) ss << *UINT();
+		return ss.str();
+	}
 };
 
 #define OBJ_IMPL(type, getter) \
@@ -185,7 +197,7 @@ pobj newMap ( const string& k, pobj v ) {
 
 polist vec2vec ( const vector<string>& x ) {
 	polist res = make_shared<olist>();
-	for ( auto t : x ) res->push_back ( make_shared<string_obj> ( x ) );
+	for ( auto t : x ) res->push_back ( make_shared<string_obj> ( t ) );
 	return res;
 }
 
@@ -326,7 +338,7 @@ public:
 		if ( ( it = val.find ( "@id" ) ) != val.end() && it->second->STR() && *it->second->STR() != term ) {
 			if ( ! it->second->STR() ) throw INVALID_IRI_MAPPING + "expected value of @id to be a string";
 			pstring res = expandIri ( it->second->STR(), false, true, context, pdefined );
-			if ( res && keyword ( *res ) || is_abs_iri ( *res ) ) {
+			if ( res && ( keyword ( *res ) || is_abs_iri ( *res ) ) ) {
 				if ( *res == "@context" ) throw INVALID_KEYWORD_ALIAS + "cannot alias @context";
 				defn ["@id"] = make_shared<string_obj> ( res );
 			} else throw INVALID_IRI_MAPPING + "resulting IRI mapping should be a keyword, absolute IRI or blank node";
@@ -587,6 +599,7 @@ public:
 				continue;
 
 			string candidate = term + ":" + iri.substr ( termDefinition->at ( "@id" )->STR()->length() );
+			// TODO: verify && and ||
 			if ( ( !compactIRI || compareShortestLeast ( candidate, compactIRI ) < 0 )
 			        && ( !has ( term_defs, candidate ) || ( iri == *term_defs->at ( candidate )->MAP() ->at ( "@id" )->STR() ) && !value ) )
 				compactIRI = pstr ( candidate );
@@ -631,6 +644,28 @@ public:
 		if ( it == term_defs->end() || !it->second->MAP() ) return false;
 		auto r = it->second->MAP()->at ( "@reverse" );
 		return r && r->BOOL() && *r->BOOL();
+	}
+public:
+	pobj expandValue ( string activeProperty, pobj value )  {
+		somap rval;
+		psomap td = term_defs->at ( activeProperty )->MAP();
+		if ( td && *td->at ( "@type" )->STR() == "@id" ) {
+			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
+			return make_shared<somap_obj> ( rval );
+		}
+		if ( td && *td->at ( "@type" )->STR() == "@vocab" ) {
+			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, true, 0, 0 ) );
+			return make_shared<somap_obj> ( rval );
+		}
+		rval[ "@value" ] = value;
+		if ( td && has ( td, "@type" ) ) rval[ "@type" ] = td->at ( "@type" );
+		else if ( value->STR() ) {
+			if ( td && has ( td, "@language" ) ) {
+				pstring lang = td->at ( "@language" )->STR();
+				if ( lang ) rval[ "@language"] = make_shared<string_obj> ( lang );
+			} else if ( has ( MAP(), "@language" ) ) rval[ "@language" ] = MAP()->at ( "@language" );
+		}
+		return make_shared<somap_obj> ( rval );
 	}
 };
 
