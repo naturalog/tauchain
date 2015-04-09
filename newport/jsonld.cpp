@@ -201,6 +201,12 @@ polist vec2vec ( const vector<string>& x ) {
 	return res;
 }
 
+vector<string> vec2vec ( polist x ) {
+	vector<string> res;
+	for ( auto t : *x ) res.push_back ( *t->STR() );
+	return res;
+}
+
 void make_list_if_not ( pobj& o ) {
 	if ( o->LIST() ) return;
 	pobj t = o->clone();

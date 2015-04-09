@@ -311,6 +311,140 @@ public:
 		if ( activeProperty == "@graph" ) return 0;
 		return activeCtx->expandValue ( activeProperty, element );
 	}
+
+	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false ) {
+		if ( !v1 ) return !v2;
+		if ( !v2 ) return !v1;
+		if ( v1->MAP() && v2->MAP() ) {
+			psomap m1 = v1->MAP(), m2 = v2->MAP();
+			if ( m1->size() != m2->size() ) return false;
+			for ( auto x : *m1 ) if ( !has ( m2, x.first ) || !deepCompare ( x.second, m2->at ( x.first ), listOrderMatters ) ) return false;
+			return true;
+		} else if ( v1->LIST() && v2->LIST() ) {
+			polist l1 = v1->LIST(), l2 = v2->LIST();
+			if ( l1->size() != l2->size() ) return false;
+			// used to mark members of l2 that we have already matched to avoid
+			// matching the same item twice for lists that have duplicates
+			bool *alreadyMatched = new bool[l2->size()];
+			for ( size_t i = 0; i < l1->size(); ++i ) {
+				pobj o1 = l1->at ( i );
+				bool gotmatch = false;
+				if ( listOrderMatters ) gotmatch = deepCompare ( o1, l2->at ( i ), listOrderMatters );
+				else for ( int j = 0; j < l2->size(); j++ )
+						if ( !alreadyMatched[j] && deepCompare ( o1, l2->at ( j ), listOrderMatters ) ) {
+							alreadyMatched[j] = true;
+							gotmatch = true;
+							break;
+						}
+				delete[] alreadyMatched;
+				if ( !gotmatch ) return false;
+			}
+			return true;
+		} else return equals ( v1, v2 );
+	}
+
+	static bool deepContains ( polist values, pobj value ) {
+		for ( pobj item : *values ) if ( deepCompare ( item, value, false ) ) return true;
+		return false;
+	}
+
+	static void mergeValue ( psomap obj, string key, pobj value ) {
+		if ( !obj ) return;
+		polist values = obj->at ( key )->LIST();
+		if ( !values ) (*obj)[key] = values = make_shared<olist_obj>();
+		if ( key == "@list" || ( value->MAP() && has ( value->MAP(), "@list" ) ) || !deepContains ( values, value ) )
+			values->push_back ( value );
+	}
+
+	void generateNodeMap ( pobj element, psomap nodeMap )  {
+		generateNodeMap ( element, nodeMap, "@default", 0, 0, 0 );
+	}
+
+	void generateNodeMap ( pobj element, psomap nodeMap, string activeGraph ) {
+		generateNodeMap ( element, nodeMap, activeGraph, 0, 0, 0 );
+	}
+
+    string gen_bnode_id(string id) {
+	        if (has(bnode_id_map, id)) return bnode_id_map[id];
+        	string bnid = "_:b" + blankNodeCounter++;
+	        bnode_id_map[id] = bnid;
+    	}
+
+	void generateNodeMap ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring activeProperty, psomap list ) {
+		if ( element->LIST() ) {
+			for ( pobj item : *element->LIST() ) generateNodeMap ( item, nodeMap, activeGraph, activeSubject, activeProperty, list );
+			return;
+		}
+		psomap elem = element->MAP();
+		if ( !has ( nodeMap, activeGraph ) ) nodeMap->at ( activeGraph ) = make_shared<somap_obj>();
+		psomap graph = nodeMap->at ( activeGraph )->MAP(), node = activeSubject ? graph->at ( *activeSubject->STR() )->MAP() : 0;
+		if ( has ( elem, "@type" ) ) {
+			vector<string> oldTypes, newTypes;
+			if ( elem->at ( "@type" )->LIST() ) oldTypes = vec2vec(elem->at ( "@type" )->LIST());
+			else {
+				oldTypes = vector<string>();//make_shared<olist_obj>();
+				oldTypes.push_back ( *elem->at ( "@type" )->STR() );
+			}
+			for ( string item : oldTypes ) {
+				if ( startsWith ( item, "_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
+				else newTypes.push_back ( item );
+			}
+			if ( elem->at ( "@type" )->LIST() ) elem->at ( "@type" ) = newTypes;
+			else elem->at ( "@type" ) = newTypes.get ( 0 );
+		}
+		if ( has ( elem, "@value" ) ) {
+			if ( !list ) merge_value ( node, activeProperty, elem );
+			else merge_value ( list, "@list", elem );
+		} else if ( elem.containsKey ( "@list" ) ) {
+			final Map<String, Object> result = newMap ( "@list", new ArrayList<Object>() );
+			generateNodeMap ( elem.get ( "@list" ), nodeMap, activeGraph, activeSubject, activeProperty, result );
+			JsonLdUtils.mergeValue ( node, activeProperty, result );
+		} else {
+			String id = ( String ) elem.remove ( "@id" );
+			if ( id != null ) {
+				if ( id.startsWith ( "_:" ) ) id = generateBlankNodeIdentifier ( id );
+			} else id = generateBlankNodeIdentifier ( null );
+			if ( !graph.containsKey ( id ) ) {
+				final Map<String, Object> tmp = newMap ( "@id", id );
+				graph.put ( id, tmp );
+			}
+			if ( activeSubject instanceof Map ) JsonLdUtils.mergeValue ( ( Map<String, Object> ) graph.get ( id ), activeProperty, activeSubject );
+			else if ( activeProperty != null ) {
+				final Map<String, Object> reference = newMap ( "@id", id );
+				if ( list == null ) JsonLdUtils.mergeValue ( node, activeProperty, reference );
+				else JsonLdUtils.mergeValue ( list, "@list", reference );
+			}
+			node = ( Map<String, Object> ) graph.get ( id );
+			if ( elem.containsKey ( "@type" ) ) {
+				for ( final Object type : ( List<Object> ) elem.remove ( "@type" ) )
+					JsonLdUtils.mergeValue ( node, "@type", type );
+			}
+			if ( elem.containsKey ( "@index" ) ) {
+				final Object elemIndex = elem.remove ( "@index" );
+				if ( node.containsKey ( "@index" ) ) {
+					if ( !JsonLdUtils.deepCompare ( node.get ( "@index" ), elemIndex ) )
+						throw CONFLICTING_INDEXES;
+				} else node.put ( "@index", elemIndex );
+			}
+			if ( elem.containsKey ( "@reverse" ) ) {
+				final Map<String, Object> referencedNode = newMap ( "@id", id );
+				final Map<String, Object> reverseMap = ( Map<String, Object> ) elem .remove ( "@reverse" );
+				for ( final String property : reverseMap.keySet() ) {
+					final List<Object> values = ( List<Object> ) reverseMap.get ( property );
+					for ( final Object value : values ) generateNodeMap ( value, nodeMap, activeGraph, referencedNode, property, null );
+				}
+			}
+			if ( elem.containsKey ( "@graph" ) ) generateNodeMap ( elem.remove ( "@graph" ), nodeMap, id, null, null, null );
+			final List<String> keys = new ArrayList<String> ( elem.keySet() );
+			Collections.sort ( keys );
+			for ( String property : keys ) {
+				final Object value = elem.get ( property );
+				if ( property.startsWith ( "_:" ) ) property = generateBlankNodeIdentifier ( property );
+				if ( !node.containsKey ( property ) ) node.put ( property, new ArrayList<Object>() );
+				generateNodeMap ( value, nodeMap, activeGraph, id, property, null );
+			}
+		}
+	}
 };
 #ifdef AAA
 /**
