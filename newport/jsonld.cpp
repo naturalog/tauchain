@@ -730,65 +730,66 @@ public:
 
 typedef map<string, string> ssmap;
 typedef std::shared_ptr<ssmap> pssmap;
+#define AAA
 #ifdef AAA
-class Node : public ssmap {
+
+const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURI", XSD_STRING = XSD_NS + "string", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
+
+class node;
+typedef std::shared_ptr<node> pnode;
+typedef map<string, pnode> snmap;
+typedef std::shared_ptr<snmap> psnmap;
+
+class node : public snmap {
 public:
-	virtual bool isLiteral() = 0;
-	virtual bool isIRI() = 0;
-	virtual bool isBlankNode() = 0;
+	virtual bool isLiteral() const = 0;
+	virtual bool isIRI() const = 0;
+	virtual bool isBlanknode() const = 0;
 	//		string value() { return at ( "value" ); }
 	//		string datatype() { return at ( "datatype" ); }
 	//		string language() { return at ( "language" ); }
 
-	int compareTo ( Node o ) {
-		if ( this.isIRI() ) {
+	virtual int compareTo ( const pnode& o ) const {
+		return o ? compareTo ( *o ) : 1;
+	}
+	virtual int compareTo ( const node& o ) const {
+		if ( isIRI() ) {
 			if ( !o.isIRI() ) return 1;
-		} else if ( this.isBlankNode() ) {
+		} else if ( isBlanknode() ) {
 			if ( o.isIRI() ) return -1;
 			else if ( o.isLiteral() ) return 1;
 		}
-		return value().compareTo ( o.getValue() );
+		return at ( "value" )->compareTo ( o.at ( "value" ) );
 	}
 
-	somap toObject ( pbool useNativeTypes ) {
-		if ( isIRI() || isBlankNode() ) return newMap ( "@id", getValue() );
-		somap rval = newMap ( "@value", getValue() );
-		if ( getLanguage() != null ) rval.put ( "@language", getLanguage() );
+	somap toObject ( bool useNativeTypes ) {
+		if ( isIRI() || isBlanknode() ) return newMap ( "@id", at ( "value" ) );
+		somap rval;
+		rval[ "@value" ] = at ( "value" );
+		auto it = find ( "language" );
+		if ( it != end() ) rval[ "@language" ] = it->second;
 		else {
-			string type = getDatatype();
-			string value = getValue();
+			string type = at ( "datatype" ), value = at ( "value" );
 			if ( useNativeTypes ) {
-				if ( XSD_STRING.equals ( type ) ) {
-				} else if ( XSD_BOOLEAN.equals ( type ) ) {
-					if ( "true".equals ( value ) ) rval.put ( "@value", Boolean.TRUE );
-					else if ( "false".equals ( value ) ) rval.put ( "@value", Boolean.FALSE );
-					else rval.put ( "@type", type );
-				} else if (
-				    // http://www.w3.org/TR/xmlschema11-2/#integer
-				    ( XSD_INTEGER.equals ( type ) && PATTERN_INTEGER.matcher ( value ).matches() )
-				    // http://www.w3.org/TR/xmlschema11-2/#nt-doubleRep
-				    || ( XSD_DOUBLE.equals ( type ) && PATTERN_DOUBLE.matcher ( value ).matches() ) ) {
-					try {
-						final Double d = Double.parseDouble ( value );
-						if ( !Double.isNaN ( d ) && !Double.isInfinite ( d ) ) {
-							if ( XSD_INTEGER.equals ( type ) ) {
-								final Integer i = d.intValue();
-								if ( i.tostring().equals ( value ) )
-									rval.put ( "@value", i );
-							} else if ( XSD_DOUBLE.equals ( type ) )
-								rval.put ( "@value", d ); else {
-								throw new RuntimeException (
-								    "This should never happen as we checked the type was either integer or double" );
-							}
-						}
-					} catch ( final NumberFormatException e ) {
-						// TODO: This should never happen since we match the
-						// value with regex!
-						throw new RuntimeException ( e );
+				if ( XSD_STRING == type ) {
+				} else if ( XSD_BOOLEAN == type  ) {
+					if ( value == "true"  ) rval[ "@value"] = make_shared<bool_obj> ( true );
+					else if ( value == "false" ) rval[ "@value"] = make_shared<bool_obj> ( false );
+					else rval[ "@type"] type;
+				} else if ( ( XSD_INTEGER == type && is_int ( value ) ) ( XSD_DOUBLE == type && is_double ( value ) ) ) {
+					double d = std::stod ( value );
+					if ( !isnan ( d ) && !isinf ( d ) ) {
+						if ( XSD_INTEGER == type ) {
+							int64_t i = d;
+							if ( tostring ( i ) == value )
+								rval[ "@value"] = make_shared<uint64_t_obj> ( i );
+						} else if ( XSD_DOUBLE == type )
+							rval[ "@value"] = make_shared<double_obj> ( d );
+						else
+							throw "This should never happen as we checked the type was either integer or double";
 					}
-				} else rval.put ( "@type", type );
-			} else if ( !XSD_STRING.equals ( type ) )
-				rval.put ( "@type", type );
+				} else rval["@type"] = mk_str_obj ( type );
+			} else if ( !XSD_STRING == type  ) rval["@type"] = mk_str_obj ( type );
 		}
 		return rval;
 	}
@@ -798,8 +799,8 @@ class rdf_dataset : public somap_obj {
 	//	static Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
 	//	static Pattern PATTERN_DOUBLE = Pattern .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
 public:
-	class Quad : public map<string, class Node*> {
-			Quad ( string subject, string predicate, Node object, string graph ) :
+	class Quad : public map<string, class node*> {
+			Quad ( string subject, string predicate, node object, string graph ) :
 				Quad ( startsWith ( subject, "_:" ) ? make_shared<bnode> ( subject ) : make_shared<IRI> ( subject ), make_shared<IRI> ( predicate ), object, graph ) {}
 		public:
 			Quad ( string subject, string predicate, string object, string graph ) :
@@ -814,16 +815,16 @@ public:
 			}
 
 			pnode subject() {
-				return ( Node ) get ( "subject" );
+				return ( node ) get ( "subject" );
 			}
 			pnode predicate() {
-				return ( Node ) get ( "predicate" );
+				return ( node ) get ( "predicate" );
 			}
 			pnode object() {
-				return ( Node ) get ( "object" );
+				return ( node ) get ( "object" );
 			}
 			pnode graph() {
-				return ( Node ) get ( "name" );
+				return ( node ) get ( "name" );
 			}
 
 			int compareTo ( Quad o ) {
@@ -839,7 +840,7 @@ public:
 		};
 
 
-	class Literal : public Node {
+	class Literal : public node {
 	public:
 		Literal ( string value, string datatype, string language ) {
 			super();
@@ -848,19 +849,19 @@ public:
 			put ( "datatype", datatype != null ? datatype : XSD_STRING );
 			if ( language != null ) put ( "language", language );
 		}
-		bool isLiteral() {
+		bool isLiteral() const {
 			return true;
 		}
-		bool isIRI() {
+		bool isIRI() const {
 			return false;
 		}
-		bool isBlankNode() {
+		bool isBlanknode() const {
 			return false;
 		}
-		int compareTo ( Node o ) {
+		virtual int compareTo ( const node& o ) const {
 			if ( o == null ) return 1;
 			if ( o.isIRI() ) return -1;
-			if ( o.isBlankNode() ) return -1;
+			if ( o.isBlanknode() ) return -1;
 			if ( this.getLanguage() == null && ( ( Literal ) o ).getLanguage() != null ) return -1;
 			else if ( this.getLanguage() != null && ( ( Literal ) o ).getLanguage() == null ) return 1;
 			if ( this.getDatatype() != null ) return this.getDatatype().compareTo ( ( ( Literal ) o ).getDatatype() );
@@ -869,47 +870,45 @@ public:
 		}
 	};
 
-	class IRI : public Node {
+	class IRI : public node {
 	public:
-		IRI ( string iri ) {
-			super();
-			put ( "type", "IRI" );
-			put ( "value", iri );
+		IRI ( string iri ) : node() {
+			at ( "type" ) = "IRI";
+			at ( "value" ) = iri;
 		}
-		bool isLiteral() {
+		bool isLiteral() const {
 			return false;
 		}
-		bool isIRI() {
+		bool isIRI() const {
 			return true;
 		}
-		bool isBlankNode() {
+		bool isBlanknode() const {
 			return false;
 		}
 	};
 
-	class bnode : public Node {
+	class bnode : public node {
 	public:
-		bnode ( string attribute ) {
-			super();
-			put ( "type", "blank node" );
-			put ( "value", attribute );
+		bnode ( string attribute ) : node() {
+			at ( "type" ) = "blank node" ;
+			at ( "value" ) = attribute ;
 		}
-		bool isLiteral() {
+		bool isLiteral() const {
 			return false;
 		}
-		bool isIRI() {
+		bool isIRI() const {
 			return false;
 		}
-		bool isBlankNode() {
+		bool isBlanknode() const {
 			return true;
 		}
 	};
 
 private:
-	static const Node first = new IRI ( RDF_FIRST );
-	static const  Node rest = new IRI ( RDF_REST );
-	static const Node nil = new IRI ( RDF_NIL );
-	const Map<string, string> context;
+	static const pnode first = make_shared<IRI> ( RDF_FIRST );
+	static const  pnode rest = make_shared<IRI> ( RDF_REST );
+	static const pnode nil = make_shared<IRI> ( RDF_NIL );
+	ssmap context;
 	JsonLdApi api;
 
 public:
@@ -920,88 +919,72 @@ public:
 		// put("@context", context);
 	}
 
-	rdf_db ( JsonLdApi jsonLdApi ) {
-		this();
-		this.api = jsonLdApi;
-	}
+	rdf_db ( JsonLdApi jsonLdApi ) : rdf_db(), api ( jsonLdApi ) {}
 
 	void setNamespace ( string ns, string prefix ) {
-		context.put ( ns, prefix );
+		context[ns] = prefix ;
 	}
 	string getNamespace ( string ns ) {
-		return context.get ( ns );
+		return context[ ns ];
 	}
 	void clearNamespaces() {
 		context.clear();
 	}
-	Map<string, string> getNamespaces() {
+	ssmap& getNamespaces() {
 		return context;
 	}
-	Map<string, Object> getContext() {
-		final Map<string, Object> rval = newMap();
-		rval.putAll ( context );
-		// replace "" with "@vocab"
-		if ( rval.containsKey ( "" ) )
-			rval.put ( "@vocab", rval.remove ( "" ) );
+	somap getContext() {
+		somap rval;
+		for ( auto x : context ) rval[x.first] = mk_str_obj ( x.second );
+		if ( has ( rval, "" ) ) {
+			rval[ "@vocab"] = rval[""];
+			rval.erase ( "" );
+		}
 		return rval;
 	}
 
-	void parseContext ( Object contextLike ) {
-		Context context;
-		if ( api != null )
-			context = new Context ( api.opts ); else
-			context = new Context();
-		// Context will do our recursive parsing and initial IRI resolution
+	void parseContext ( pobj contextLike ) {
+		context_t context;
+		//		if ( api ) context = new Context ( api.opts );
+		//		else context = new Context();
 		context = context.parse ( contextLike );
-		// And then leak to us the potential 'prefixes'
-		final Map<string, string> prefixes = context.getPrefixes ( true );
+		ssmap prefixes = context.getPrefixes ( true );
 
-		for ( final string key : prefixes.keySet() ) {
-			final string val = prefixes.get ( key );
-			if ( "@vocab".equals ( key ) ) {
-				if ( val == null || isstring ( val ) )
-					setNamespace ( "", val ); else {
-				}
-			} else if ( !isKeyword ( key ) ) {
-				setNamespace ( key, val );
-				// TODO: should we make sure val is a valid URI prefix (i.e. it
-				// ends with /# or ?)
-				// or is it ok that full URIs for terms are used?
-			}
+		for ( auto x : prefixes ) {
+			string key& = x.first, val& = x.second;
+			if ( key == "@vocab" ) setNamespace ( "", val );
+			else if ( !keyword ( key ) ) setNamespace ( key, val );
 		}
 	}
 
-	void addTriple ( final string subject, final string predicate, final string value,
-	                 final string datatype, final string language ) {
+	void addTriple ( string subject, string predicate, string value, string datatype, string language ) {
 		addQuad ( subject, predicate, value, datatype, language, "@default" );
 	}
 
-	void addQuad ( final string s, final string p, final string value, final string datatype,
-	               final string language, string graph ) {
-		if ( graph == null )
-			graph = "@default";
-		if ( !containsKey ( graph ) )
-			put ( graph, new ArrayList<Quad>() );
+	void addQuad ( string s, string p, string value, string datatype,
+	               string language, pstring graph ) {
+		if ( !graph ) graph = pstr ( "@default" );
+		if ( find ( *graph ) == end() ) put ( graph, new ArrayList<Quad>() );
 		( ( ArrayList<Quad> ) get ( graph ) ).add ( new Quad ( s, p, value, datatype, language, graph ) );
 	}
 
-	void addTriple ( final string subject, final string predicate, final string object ) {
+	void addTriple ( string subject, string predicate, string object ) {
 		addQuad ( subject, predicate, object, "@default" );
 	}
 
-	void addQuad ( final string subject, final string predicate, final string object,
-	               string graph ) {
-		if ( graph == null )
-			graph = "@default";
+	void addQuad ( string subject, string predicate, string object,
+	               pstring graph ) {
+		if ( !graph )
+			graph = pstr ( "@default" );
 		if ( !containsKey ( graph ) )
 			put ( graph, new ArrayList<Quad>() );
 		( ( ArrayList<Quad> ) get ( graph ) ).add ( new Quad ( subject, predicate, object, graph ) );
 	}
 
-	void graphToRDF ( string graphName, Map<string, Object> graph ) {
+	void graphToRDF ( string graphName, somap& graph ) {
 		// 4.2)
-		final List<Quad> triples = new ArrayList<Quad>();
-		final List<string> subjects = new ArrayList<string> ( graph.keySet() );
+		vector<Quad> triples;
+		vector<string> subjects = new ArrayList<string> ( graph.keySet() );
 		for ( final string id : subjects ) {
 			if ( JsonLdUtils.isRelativeIri ( id ) ) continue;
 			final Map<string, Object> node = ( Map<string, Object> ) graph.get ( id );
@@ -1017,43 +1000,43 @@ public:
 				else if ( JsonLdUtils.isRelativeIri ( property ) ) continue;
 				else values = ( List<Object> ) node.get ( property );
 
-				Node subject;
+				node subject;
 				if ( id.indexOf ( "_:" ) == 0 ) {
-					subject = new BlankNode ( id );
+					subject = new Blanknode ( id );
 					else subject = new IRI ( id );
 
 					// RDF predicates
-					Node predicate;
-					if ( property.startsWith ( "_:" ) ) predicate = new BlankNode ( property );
+					node predicate;
+					if ( property.startsWith ( "_:" ) ) predicate = new Blanknode ( property );
 					else predicate = new IRI ( property );
 
-					for ( final Object item : values ) {
+					for ( Object item : values ) {
 						// convert @list to triples
 						if ( isList ( item ) ) {
-							final List<Object> list = ( List<Object> ) ( ( Map<string, Object> ) item )
-							                          .get ( "@list" );
-							Node last = null;
-							Node firstBNode = nil;
+							polist list = ( List<Object> ) ( ( Map<string, Object> ) item )
+							              .get ( "@list" );
+							node last = null;
+							node firstBnode = nil;
 							if ( !list.isEmpty() ) {
 								last = objectToRDF ( list.get ( list.size() - 1 ) );
-								firstBNode = new BlankNode ( api.generateBlankNodeIdentifier() );
+								firstBnode = new Blanknode ( api.generateBlanknodeIdentifier() );
 							}
-							triples.add ( new Quad ( subject, predicate, firstBNode, graphName ) );
+							triples.add ( new Quad ( subject, predicate, firstBnode, graphName ) );
 							for ( int i = 0; i < list.size() - 1; i++ ) {
-								final Node object = objectToRDF ( list.get ( i ) );
-								triples.add ( new Quad ( firstBNode, first, object, graphName ) );
-								final Node restBNode = new BlankNode ( api.generateBlankNodeIdentifier() );
-								triples.add ( new Quad ( firstBNode, rest, restBNode, graphName ) );
-								firstBNode = restBNode;
+								node object = objectToRDF ( list.get ( i ) );
+								triples.add ( new Quad ( firstBnode, first, object, graphName ) );
+								node restBnode = new Blanknode ( api.generateBlanknodeIdentifier() );
+								triples.add ( new Quad ( firstBnode, rest, restBnode, graphName ) );
+								firstBnode = restBnode;
 							}
 							if ( last != null ) {
-								triples.add ( new Quad ( firstBNode, first, last, graphName ) );
-								triples.add ( new Quad ( firstBNode, rest, nil, graphName ) );
+								triples.add ( new Quad ( firstBnode, first, last, graphName ) );
+								triples.add ( new Quad ( firstBnode, rest, nil, graphName ) );
 							}
 						}
 						// convert value or node object to triple
 						else {
-							final Node object = objectToRDF ( item );
+							node object = objectToRDF ( item );
 							if ( object != null )
 								triples.add ( new Quad ( subject, predicate, object, graphName ) );
 						}
@@ -1065,19 +1048,19 @@ public:
 	}
 
 private:
-	Node objectToRDF ( Object item ) {
+	node objectToRDF ( Object item ) {
 		if ( isValue ( item ) ) {
-			final Object value = ( ( Map<string, Object> ) item ).get ( "@value" );
-			final Object datatype = ( ( Map<string, Object> ) item ).get ( "@type" );
+			Object value = ( ( Map<string, Object> ) item ).get ( "@value" );
+			Object datatype = ( ( Map<string, Object> ) item ).get ( "@type" );
 			if ( value instanceof Boolean || value instanceof Number ) {
 				if ( value instanceof Boolean ) return new Literal ( value.tostring(), datatype == null ? XSD_BOOLEAN : ( string ) datatype, null );
 				else if ( value instanceof Double || value instanceof Float
 				          || XSD_DOUBLE.equals ( datatype ) ) {
-					final DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
+					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
 					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
 					return new Literal ( df.format ( value ), datatype == null ? XSD_DOUBLE : ( string ) datatype, null );
 				} else {
-					final DecimalFormat df = new DecimalFormat ( "0" );
+					DecimalFormat df = new DecimalFormat ( "0" );
 					return new Literal ( df.format ( value ), datatype == null ? XSD_INTEGER : ( string ) datatype, null );
 				}
 			} else if ( ( ( Map<string, Object> ) item ).containsKey ( "@language" ) )
@@ -1091,17 +1074,17 @@ private:
 				id = ( string ) ( ( Map<string, Object> ) item ).get ( "@id" );
 				if ( is_rel_iri ( id ) ) return null;
 			} else id = ( string ) item;
-			if ( id.indexOf ( "_:" ) == 0 ) return new BlankNode ( id );
+			if ( id.indexOf ( "_:" ) == 0 ) return new Blanknode ( id );
 			else return new IRI ( id );
 
 		}
 	}
 
 public:
-	Set<string> graphNames() {
+	set<string> graphNames() {
 		return keySet();
 	}
-	List<Quad> getQuads ( string graphName ) {
+	vector<Quad> getQuads ( string graphName ) {
 		return ( List<Quad> ) get ( graphName );
 	}
 };
