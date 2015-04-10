@@ -468,4 +468,16 @@ public:
 			}
 		}
 	}
+
+	rdf_db toRDF() {
+		somap nodeMap;
+		nodeMap["@default"] = mk_somap_obj();
+		generateNodeMap ( value, nodeMap );
+		rdf_db r;
+		for ( auto g : nodeMap->MAP() ) {
+			if ( is_rel_iri ( g.first ) ) continue;
+			r.graph2rdf ( g.first, g.second->MAP() );
+		}
+		return r;
+	}
 };

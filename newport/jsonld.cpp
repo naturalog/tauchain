@@ -728,12 +728,368 @@ public:
 	}
 };
 
-typedef std::shared_ptr<context_t> pcontext;
+class rdf_dataset : public somap_obj {
+	static Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
+	static Pattern PATTERN_DOUBLE = Pattern .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
+	Quad ( final string subject, final string predicate, final Node object,
+	       final string graph ) {
+		this ( subject.startsWith ( "_:" ) ? new BlankNode ( subject ) : new IRI ( subject ), new IRI ( predicate ), object, graph );
+	};
+public:
+	class Quad : public somap_obj {
+	public:
+		Quad ( string subject, final string predicate, final string object,
+		       final string graph ) {
+			this ( subject, predicate, object.startsWith ( "_:" ) ? new BlankNode ( object ) : new IRI (
+			           object ), graph );
+		};
+
+		Quad ( final string subject, final string predicate, final string value,
+		       final string datatype, final string language, final string graph ) {
+			this ( subject, predicate, new Literal ( value, datatype, language ), graph );
+		};
+
+		Quad ( final Node subject, final Node predicate, final Node object, final string graph ) {
+			super();
+			put ( "subject", subject );
+			put ( "predicate", predicate );
+			put ( "object", object );
+			if ( graph != null && !"@default".equals ( graph ) ) put ( "name", graph.startsWith ( "_:" ) ? new BlankNode ( graph ) : new IRI ( graph ) );
+		}
+
+		Node getSubject() { return ( Node ) get ( "subject" ); } 
+		Node getPredicate() { return ( Node ) get ( "predicate" ); } 
+		Node getObject() { return ( Node ) get ( "object" ); } 
+		Node getGraph() { return ( Node ) get ( "name" ); }
+
+		int compareTo ( Quad o ) {
+			if ( o == null ) return 1;
+			int rval = getGraph().compareTo ( o.getGraph() );
+			if ( rval != 0 ) return rval;
+			rval = getSubject().compareTo ( o.getSubject() );
+			if ( rval != 0 ) return rval;
+			rval = getPredicate().compareTo ( o.getPredicate() );
+			if ( rval != 0 ) return rval;
+			return getObject().compareTo ( o.getObject() );
+		}
+	};
+
+	class Node : public somap_obj {
+	public:
+		virtual bool isLiteral() = 0;
+		virtual bool isIRI() = 0;
+		virtual bool isBlankNode() = 0;
+		string getValue() { return ( string ) get ( "value" ); }
+		string getDatatype() { return ( string ) get ( "datatype" ); }
+		string getLanguage() { return ( string ) get ( "language" ); }
+
+		int compareTo ( Node o ) {
+			if ( this.isIRI() ) {
+				if ( !o.isIRI() ) return 1;
+			} else if ( this.isBlankNode() ) {
+				if ( o.isIRI() ) return -1;
+				else if ( o.isLiteral() ) return 1;
+			}
+			return this.getValue().compareTo ( o.getValue() );
+		}
+
+		somap toObject ( Boolean useNativeTypes ) {
+			if ( isIRI() || isBlankNode() ) return newMap ( "@id", getValue() );
+			somap rval = newMap ( "@value", getValue() );
+			if ( getLanguage() != null ) rval.put ( "@language", getLanguage() );
+			else {
+				string type = getDatatype();
+				string value = getValue();
+				if ( useNativeTypes ) {
+					if ( XSD_STRING.equals ( type ) ) {
+					} else if ( XSD_BOOLEAN.equals ( type ) ) {
+						if ( "true".equals ( value ) ) rval.put ( "@value", Boolean.TRUE );
+						else if ( "false".equals ( value ) ) rval.put ( "@value", Boolean.FALSE );
+						else rval.put ( "@type", type );
+					} else if (
+					    // http://www.w3.org/TR/xmlschema11-2/#integer
+					    ( XSD_INTEGER.equals ( type ) && PATTERN_INTEGER.matcher ( value ).matches() )
+					    // http://www.w3.org/TR/xmlschema11-2/#nt-doubleRep
+					    || ( XSD_DOUBLE.equals ( type ) && PATTERN_DOUBLE.matcher ( value ).matches() ) ) {
+						try {
+							final Double d = Double.parseDouble ( value );
+							if ( !Double.isNaN ( d ) && !Double.isInfinite ( d ) ) {
+								if ( XSD_INTEGER.equals ( type ) ) {
+									final Integer i = d.intValue();
+									if ( i.tostring().equals ( value ) )
+										rval.put ( "@value", i );
+								} else if ( XSD_DOUBLE.equals ( type ) )
+									rval.put ( "@value", d ); else {
+									throw new RuntimeException (
+									    "This should never happen as we checked the type was either integer or double" );
+								}
+							}
+						} catch ( final NumberFormatException e ) {
+							// TODO: This should never happen since we match the
+							// value with regex!
+							throw new RuntimeException ( e );
+						}
+					} else rval.put ( "@type", type );
+				} else if ( !XSD_STRING.equals ( type ) )
+					rval.put ( "@type", type );
+			}
+			return rval;
+		}
+	};
+
+	class Literal : public Node {
+	public:
+		Literal ( string value, string datatype, string language ) {
+			super();
+			put ( "type", "literal" );
+			put ( "value", value );
+			put ( "datatype", datatype != null ? datatype : XSD_STRING );
+			if ( language != null ) put ( "language", language );
+		}
+		bool isLiteral() { return true; }
+		bool isIRI() { return false; }
+		bool isBlankNode() { return false; }
+		int compareTo ( Node o ) {
+			if ( o == null ) return 1;
+			if ( o.isIRI() ) return -1;
+			if ( o.isBlankNode() ) return -1;
+			if ( this.getLanguage() == null && ( ( Literal ) o ).getLanguage() != null ) return -1;
+			else if ( this.getLanguage() != null && ( ( Literal ) o ).getLanguage() == null ) return 1;
+			if ( this.getDatatype() != null ) return this.getDatatype().compareTo ( ( ( Literal ) o ).getDatatype() );
+			else if ( ( ( Literal ) o ).getDatatype() != null ) return -1;
+			return 0;
+		}
+	};
+
+	class IRI : public Node {
+	public:
+		IRI ( string iri ) {
+			super();
+			put ( "type", "IRI" );
+			put ( "value", iri );
+		}
+		bool isLiteral() { return false; }
+		bool isIRI() { return true; }
+		bool isBlankNode() { return false; }
+	};
+
+	class bnode : public Node {
+	public:
+		bnode ( string attribute ) {
+			super();
+			put ( "type", "blank node" );
+			put ( "value", attribute );
+		}
+		bool isLiteral() { return false; }
+		bool isIRI() { return false; }
+		bool isBlankNode() { return true; }
+	};
+
+private:
+	static const Node first = new IRI ( RDF_FIRST );
+	static const  Node rest = new IRI ( RDF_REST );
+	static const Node nil = new IRI ( RDF_NIL );
+	const Map<string, string> context;
+	JsonLdApi api;
+
+public:
+	rdf_db() {
+		super();
+		put ( "@default", new ArrayList<Quad>() );
+		context = new LinkedHashMap<string, string>();
+		// put("@context", context);
+	}
+
+	rdf_db ( JsonLdApi jsonLdApi ) {
+		this();
+		this.api = jsonLdApi;
+	}
+
+	void setNamespace ( string ns, string prefix ) {
+		context.put ( ns, prefix );
+	}
+	string getNamespace ( string ns ) {
+		return context.get ( ns );
+	}
+	void clearNamespaces() {
+		context.clear();
+	}
+	Map<string, string> getNamespaces() {
+		return context;
+	}
+	Map<string, Object> getContext() {
+		final Map<string, Object> rval = newMap();
+		rval.putAll ( context );
+		// replace "" with "@vocab"
+		if ( rval.containsKey ( "" ) )
+			rval.put ( "@vocab", rval.remove ( "" ) );
+		return rval;
+	}
+
+	void parseContext ( Object contextLike ) {
+		Context context;
+		if ( api != null )
+			context = new Context ( api.opts ); else
+			context = new Context();
+		// Context will do our recursive parsing and initial IRI resolution
+		context = context.parse ( contextLike );
+		// And then leak to us the potential 'prefixes'
+		final Map<string, string> prefixes = context.getPrefixes ( true );
+
+		for ( final string key : prefixes.keySet() ) {
+			final string val = prefixes.get ( key );
+			if ( "@vocab".equals ( key ) ) {
+				if ( val == null || isstring ( val ) )
+					setNamespace ( "", val ); else {
+				}
+			} else if ( !isKeyword ( key ) ) {
+				setNamespace ( key, val );
+				// TODO: should we make sure val is a valid URI prefix (i.e. it
+				// ends with /# or ?)
+				// or is it ok that full URIs for terms are used?
+			}
+		}
+	}
+
+	void addTriple ( final string subject, final string predicate, final string value,
+	                 final string datatype, final string language ) {
+		addQuad ( subject, predicate, value, datatype, language, "@default" );
+	}
+
+	void addQuad ( final string s, final string p, final string value, final string datatype,
+	               final string language, string graph ) {
+		if ( graph == null )
+			graph = "@default";
+		if ( !containsKey ( graph ) )
+			put ( graph, new ArrayList<Quad>() );
+		( ( ArrayList<Quad> ) get ( graph ) ).add ( new Quad ( s, p, value, datatype, language, graph ) );
+	}
+
+	void addTriple ( final string subject, final string predicate, final string object ) {
+		addQuad ( subject, predicate, object, "@default" );
+	}
+
+	void addQuad ( final string subject, final string predicate, final string object,
+	               string graph ) {
+		if ( graph == null )
+			graph = "@default";
+		if ( !containsKey ( graph ) )
+			put ( graph, new ArrayList<Quad>() );
+		( ( ArrayList<Quad> ) get ( graph ) ).add ( new Quad ( subject, predicate, object, graph ) );
+	}
+
+	void graphToRDF ( string graphName, Map<string, Object> graph ) {
+		// 4.2)
+		final List<Quad> triples = new ArrayList<Quad>();
+		final List<string> subjects = new ArrayList<string> ( graph.keySet() );
+		for ( final string id : subjects ) {
+			if ( JsonLdUtils.isRelativeIri ( id ) ) continue;
+			final Map<string, Object> node = ( Map<string, Object> ) graph.get ( id );
+			final List<string> properties = new ArrayList<string> ( node.keySet() );
+			Collections.sort ( properties );
+			for ( string property : properties ) {
+				final List<Object> values;
+				if ( "@type".equals ( property ) ) {
+					values = ( List<Object> ) node.get ( "@type" );
+					property = RDF_TYPE;
+				} else if ( isKeyword ( property ) ) continue;
+				else if ( property.startsWith ( "_:" ) && !api.opts.getProduceGeneralizedRdf() ) continue;
+				else if ( JsonLdUtils.isRelativeIri ( property ) ) continue;
+				else values = ( List<Object> ) node.get ( property );
+
+				Node subject;
+				if ( id.indexOf ( "_:" ) == 0 ) {
+					subject = new BlankNode ( id );
+					else subject = new IRI ( id );
+
+					// RDF predicates
+					Node predicate;
+					if ( property.startsWith ( "_:" ) ) predicate = new BlankNode ( property );
+					else predicate = new IRI ( property );
+
+					for ( final Object item : values ) {
+						// convert @list to triples
+						if ( isList ( item ) ) {
+							final List<Object> list = ( List<Object> ) ( ( Map<string, Object> ) item )
+							                          .get ( "@list" );
+							Node last = null;
+							Node firstBNode = nil;
+							if ( !list.isEmpty() ) {
+								last = objectToRDF ( list.get ( list.size() - 1 ) );
+								firstBNode = new BlankNode ( api.generateBlankNodeIdentifier() );
+							}
+							triples.add ( new Quad ( subject, predicate, firstBNode, graphName ) );
+							for ( int i = 0; i < list.size() - 1; i++ ) {
+								final Node object = objectToRDF ( list.get ( i ) );
+								triples.add ( new Quad ( firstBNode, first, object, graphName ) );
+								final Node restBNode = new BlankNode ( api.generateBlankNodeIdentifier() );
+								triples.add ( new Quad ( firstBNode, rest, restBNode, graphName ) );
+								firstBNode = restBNode;
+							}
+							if ( last != null ) {
+								triples.add ( new Quad ( firstBNode, first, last, graphName ) );
+								triples.add ( new Quad ( firstBNode, rest, nil, graphName ) );
+							}
+						}
+						// convert value or node object to triple
+						else {
+							final Node object = objectToRDF ( item );
+							if ( object != null )
+								triples.add ( new Quad ( subject, predicate, object, graphName ) );
+						}
+					}
+				}
+			}
+			put ( graphName, triples );
+		}
+
+private:
+		Node objectToRDF ( Object item ) {
+			if ( isValue ( item ) ) {
+				final Object value = ( ( Map<string, Object> ) item ).get ( "@value" );
+				final Object datatype = ( ( Map<string, Object> ) item ).get ( "@type" );
+				if ( value instanceof Boolean || value instanceof Number ) {
+					if ( value instanceof Boolean ) return new Literal ( value.tostring(), datatype == null ? XSD_BOOLEAN : ( string ) datatype, null );
+					else if ( value instanceof Double || value instanceof Float
+					          || XSD_DOUBLE.equals ( datatype ) ) {
+						final DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
+						df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
+						return new Literal ( df.format ( value ), datatype == null ? XSD_DOUBLE : ( string ) datatype, null );
+					} else {
+						final DecimalFormat df = new DecimalFormat ( "0" );
+						return new Literal ( df.format ( value ), datatype == null ? XSD_INTEGER : ( string ) datatype, null );
+					}
+				} else if ( ( ( Map<string, Object> ) item ).containsKey ( "@language" ) )
+					return new Literal ( ( string ) value, datatype == null ? RDF_LANGSTRING : ( string ) datatype, ( string ) ( ( Map<string, Object> ) item ).get ( "@language" ) );
+				else return new Literal ( ( string ) value, datatype == null ? XSD_STRING : ( string ) datatype, null );
+			}
+			// convert string/node object to RDF
+			else {
+				final string id;
+				if ( isObject ( item ) ) {
+					id = ( string ) ( ( Map<string, Object> ) item ).get ( "@id" );
+					if ( is_rel_iri ( id ) ) return null;
+				} else id = ( string ) item;
+				if ( id.indexOf ( "_:" ) == 0 ) return new BlankNode ( id );
+				else return new IRI ( id );
+
+			}
+		}
+
+public:
+		Set<string> graphNames() {
+			return keySet();
+		}
+		List<Quad> getQuads ( string graphName ) {
+			return ( List<Quad> ) get ( graphName );
+		}
+	};
+	typedef std::shared_ptr<context_t> pcontext;
 #include "jsonldapi.h"
 
-int main() {
-	context_t c;
-	vector<string> v;
-	c.parse ( 0, v );
-	return 0;
-}
+	int main() {
+		context_t c;
+		vector<string> v;
+		c.parse ( 0, v );
+		return 0;
+	}
