@@ -469,6 +469,7 @@ public:
 		}
 	}
 
+#ifdef AAA
 	rdf_db toRDF() {
 		somap nodeMap;
 		nodeMap["@default"] = mk_somap_obj();
@@ -480,4 +481,5 @@ public:
 		}
 		return r;
 	}
+#endif
 };

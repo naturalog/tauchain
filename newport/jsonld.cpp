@@ -728,114 +728,116 @@ public:
 	}
 };
 
-class rdf_dataset : public somap_obj {
-	static Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
-	static Pattern PATTERN_DOUBLE = Pattern .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
-	Quad ( final string subject, final string predicate, final Node object,
-	       final string graph ) {
-		this ( subject.startsWith ( "_:" ) ? new BlankNode ( subject ) : new IRI ( subject ), new IRI ( predicate ), object, graph );
-	};
+typedef map<string, string> ssmap;
+typedef std::shared_ptr<ssmap> pssmap;
+#ifdef AAA
+class Node : public ssmap {
 public:
-	class Quad : public somap_obj {
-	public:
-		Quad ( string subject, final string predicate, final string object,
-		       final string graph ) {
-			this ( subject, predicate, object.startsWith ( "_:" ) ? new BlankNode ( object ) : new IRI (
-			           object ), graph );
-		};
+	virtual bool isLiteral() = 0;
+	virtual bool isIRI() = 0;
+	virtual bool isBlankNode() = 0;
+	//		string value() { return at ( "value" ); }
+	//		string datatype() { return at ( "datatype" ); }
+	//		string language() { return at ( "language" ); }
 
-		Quad ( final string subject, final string predicate, final string value,
-		       final string datatype, final string language, final string graph ) {
-			this ( subject, predicate, new Literal ( value, datatype, language ), graph );
-		};
-
-		Quad ( final Node subject, final Node predicate, final Node object, final string graph ) {
-			super();
-			put ( "subject", subject );
-			put ( "predicate", predicate );
-			put ( "object", object );
-			if ( graph != null && !"@default".equals ( graph ) ) put ( "name", graph.startsWith ( "_:" ) ? new BlankNode ( graph ) : new IRI ( graph ) );
+	int compareTo ( Node o ) {
+		if ( this.isIRI() ) {
+			if ( !o.isIRI() ) return 1;
+		} else if ( this.isBlankNode() ) {
+			if ( o.isIRI() ) return -1;
+			else if ( o.isLiteral() ) return 1;
 		}
+		return value().compareTo ( o.getValue() );
+	}
 
-		Node getSubject() { return ( Node ) get ( "subject" ); } 
-		Node getPredicate() { return ( Node ) get ( "predicate" ); } 
-		Node getObject() { return ( Node ) get ( "object" ); } 
-		Node getGraph() { return ( Node ) get ( "name" ); }
-
-		int compareTo ( Quad o ) {
-			if ( o == null ) return 1;
-			int rval = getGraph().compareTo ( o.getGraph() );
-			if ( rval != 0 ) return rval;
-			rval = getSubject().compareTo ( o.getSubject() );
-			if ( rval != 0 ) return rval;
-			rval = getPredicate().compareTo ( o.getPredicate() );
-			if ( rval != 0 ) return rval;
-			return getObject().compareTo ( o.getObject() );
-		}
-	};
-
-	class Node : public somap_obj {
-	public:
-		virtual bool isLiteral() = 0;
-		virtual bool isIRI() = 0;
-		virtual bool isBlankNode() = 0;
-		string getValue() { return ( string ) get ( "value" ); }
-		string getDatatype() { return ( string ) get ( "datatype" ); }
-		string getLanguage() { return ( string ) get ( "language" ); }
-
-		int compareTo ( Node o ) {
-			if ( this.isIRI() ) {
-				if ( !o.isIRI() ) return 1;
-			} else if ( this.isBlankNode() ) {
-				if ( o.isIRI() ) return -1;
-				else if ( o.isLiteral() ) return 1;
-			}
-			return this.getValue().compareTo ( o.getValue() );
-		}
-
-		somap toObject ( Boolean useNativeTypes ) {
-			if ( isIRI() || isBlankNode() ) return newMap ( "@id", getValue() );
-			somap rval = newMap ( "@value", getValue() );
-			if ( getLanguage() != null ) rval.put ( "@language", getLanguage() );
-			else {
-				string type = getDatatype();
-				string value = getValue();
-				if ( useNativeTypes ) {
-					if ( XSD_STRING.equals ( type ) ) {
-					} else if ( XSD_BOOLEAN.equals ( type ) ) {
-						if ( "true".equals ( value ) ) rval.put ( "@value", Boolean.TRUE );
-						else if ( "false".equals ( value ) ) rval.put ( "@value", Boolean.FALSE );
-						else rval.put ( "@type", type );
-					} else if (
-					    // http://www.w3.org/TR/xmlschema11-2/#integer
-					    ( XSD_INTEGER.equals ( type ) && PATTERN_INTEGER.matcher ( value ).matches() )
-					    // http://www.w3.org/TR/xmlschema11-2/#nt-doubleRep
-					    || ( XSD_DOUBLE.equals ( type ) && PATTERN_DOUBLE.matcher ( value ).matches() ) ) {
-						try {
-							final Double d = Double.parseDouble ( value );
-							if ( !Double.isNaN ( d ) && !Double.isInfinite ( d ) ) {
-								if ( XSD_INTEGER.equals ( type ) ) {
-									final Integer i = d.intValue();
-									if ( i.tostring().equals ( value ) )
-										rval.put ( "@value", i );
-								} else if ( XSD_DOUBLE.equals ( type ) )
-									rval.put ( "@value", d ); else {
-									throw new RuntimeException (
-									    "This should never happen as we checked the type was either integer or double" );
-								}
+	somap toObject ( pbool useNativeTypes ) {
+		if ( isIRI() || isBlankNode() ) return newMap ( "@id", getValue() );
+		somap rval = newMap ( "@value", getValue() );
+		if ( getLanguage() != null ) rval.put ( "@language", getLanguage() );
+		else {
+			string type = getDatatype();
+			string value = getValue();
+			if ( useNativeTypes ) {
+				if ( XSD_STRING.equals ( type ) ) {
+				} else if ( XSD_BOOLEAN.equals ( type ) ) {
+					if ( "true".equals ( value ) ) rval.put ( "@value", Boolean.TRUE );
+					else if ( "false".equals ( value ) ) rval.put ( "@value", Boolean.FALSE );
+					else rval.put ( "@type", type );
+				} else if (
+				    // http://www.w3.org/TR/xmlschema11-2/#integer
+				    ( XSD_INTEGER.equals ( type ) && PATTERN_INTEGER.matcher ( value ).matches() )
+				    // http://www.w3.org/TR/xmlschema11-2/#nt-doubleRep
+				    || ( XSD_DOUBLE.equals ( type ) && PATTERN_DOUBLE.matcher ( value ).matches() ) ) {
+					try {
+						final Double d = Double.parseDouble ( value );
+						if ( !Double.isNaN ( d ) && !Double.isInfinite ( d ) ) {
+							if ( XSD_INTEGER.equals ( type ) ) {
+								final Integer i = d.intValue();
+								if ( i.tostring().equals ( value ) )
+									rval.put ( "@value", i );
+							} else if ( XSD_DOUBLE.equals ( type ) )
+								rval.put ( "@value", d ); else {
+								throw new RuntimeException (
+								    "This should never happen as we checked the type was either integer or double" );
 							}
-						} catch ( final NumberFormatException e ) {
-							// TODO: This should never happen since we match the
-							// value with regex!
-							throw new RuntimeException ( e );
 						}
-					} else rval.put ( "@type", type );
-				} else if ( !XSD_STRING.equals ( type ) )
-					rval.put ( "@type", type );
-			}
-			return rval;
+					} catch ( final NumberFormatException e ) {
+						// TODO: This should never happen since we match the
+						// value with regex!
+						throw new RuntimeException ( e );
+					}
+				} else rval.put ( "@type", type );
+			} else if ( !XSD_STRING.equals ( type ) )
+				rval.put ( "@type", type );
 		}
-	};
+		return rval;
+	}
+};
+
+class rdf_dataset : public somap_obj {
+	//	static Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
+	//	static Pattern PATTERN_DOUBLE = Pattern .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
+public:
+	class Quad : public map<string, class Node*> {
+			Quad ( string subject, string predicate, Node object, string graph ) :
+				Quad ( startsWith ( subject, "_:" ) ? make_shared<bnode> ( subject ) : make_shared<IRI> ( subject ), make_shared<IRI> ( predicate ), object, graph ) {}
+		public:
+			Quad ( string subject, string predicate, string object, string graph ) :
+				Quad ( subject, predicate, startsWith ( object, "_:" ) ?  make_shared<bnode> ( object ) : make_shared<IRI> ( object ), graph ) {}
+			Quad ( string subject, string predicate, string value, string datatype, string language, string graph )
+			Quad ( subject, predicate, make_shared<literal> ( value, datatype, language ), graph ) {}
+			Quad ( pnode subject, pnode predicate, pnode object, pstring graph ) : somap_obj() {
+				MAP->at ( "subject" ) = subject ;
+				MAP->at ( "predicate" ) = predicate ;
+				MAP->at ( "object" ) = object ;
+				if ( graph && graph == "@default" ) MAP()->at ( "name" ) = startsWith ( *graph, "_:" ) ? make_shared<bnode> ( graph ) : make_shared<IRI> ( graph ) ;
+			}
+
+			pnode subject() {
+				return ( Node ) get ( "subject" );
+			}
+			pnode predicate() {
+				return ( Node ) get ( "predicate" );
+			}
+			pnode object() {
+				return ( Node ) get ( "object" );
+			}
+			pnode graph() {
+				return ( Node ) get ( "name" );
+			}
+
+			int compareTo ( Quad o ) {
+				if ( o == null ) return 1;
+				int rval = getGraph().compareTo ( o.getGraph() );
+				if ( rval != 0 ) return rval;
+				rval = getSubject().compareTo ( o.getSubject() );
+				if ( rval != 0 ) return rval;
+				rval = getPredicate().compareTo ( o.getPredicate() );
+				if ( rval != 0 ) return rval;
+				return getObject().compareTo ( o.getObject() );
+			}
+		};
+
 
 	class Literal : public Node {
 	public:
@@ -846,9 +848,15 @@ public:
 			put ( "datatype", datatype != null ? datatype : XSD_STRING );
 			if ( language != null ) put ( "language", language );
 		}
-		bool isLiteral() { return true; }
-		bool isIRI() { return false; }
-		bool isBlankNode() { return false; }
+		bool isLiteral() {
+			return true;
+		}
+		bool isIRI() {
+			return false;
+		}
+		bool isBlankNode() {
+			return false;
+		}
 		int compareTo ( Node o ) {
 			if ( o == null ) return 1;
 			if ( o.isIRI() ) return -1;
@@ -868,9 +876,15 @@ public:
 			put ( "type", "IRI" );
 			put ( "value", iri );
 		}
-		bool isLiteral() { return false; }
-		bool isIRI() { return true; }
-		bool isBlankNode() { return false; }
+		bool isLiteral() {
+			return false;
+		}
+		bool isIRI() {
+			return true;
+		}
+		bool isBlankNode() {
+			return false;
+		}
 	};
 
 	class bnode : public Node {
@@ -880,9 +894,15 @@ public:
 			put ( "type", "blank node" );
 			put ( "value", attribute );
 		}
-		bool isLiteral() { return false; }
-		bool isIRI() { return false; }
-		bool isBlankNode() { return true; }
+		bool isLiteral() {
+			return false;
+		}
+		bool isIRI() {
+			return false;
+		}
+		bool isBlankNode() {
+			return true;
+		}
 	};
 
 private:
@@ -1042,54 +1062,56 @@ public:
 			}
 			put ( graphName, triples );
 		}
+	}
 
 private:
-		Node objectToRDF ( Object item ) {
-			if ( isValue ( item ) ) {
-				final Object value = ( ( Map<string, Object> ) item ).get ( "@value" );
-				final Object datatype = ( ( Map<string, Object> ) item ).get ( "@type" );
-				if ( value instanceof Boolean || value instanceof Number ) {
-					if ( value instanceof Boolean ) return new Literal ( value.tostring(), datatype == null ? XSD_BOOLEAN : ( string ) datatype, null );
-					else if ( value instanceof Double || value instanceof Float
-					          || XSD_DOUBLE.equals ( datatype ) ) {
-						final DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
-						df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
-						return new Literal ( df.format ( value ), datatype == null ? XSD_DOUBLE : ( string ) datatype, null );
-					} else {
-						final DecimalFormat df = new DecimalFormat ( "0" );
-						return new Literal ( df.format ( value ), datatype == null ? XSD_INTEGER : ( string ) datatype, null );
-					}
-				} else if ( ( ( Map<string, Object> ) item ).containsKey ( "@language" ) )
-					return new Literal ( ( string ) value, datatype == null ? RDF_LANGSTRING : ( string ) datatype, ( string ) ( ( Map<string, Object> ) item ).get ( "@language" ) );
-				else return new Literal ( ( string ) value, datatype == null ? XSD_STRING : ( string ) datatype, null );
-			}
-			// convert string/node object to RDF
-			else {
-				final string id;
-				if ( isObject ( item ) ) {
-					id = ( string ) ( ( Map<string, Object> ) item ).get ( "@id" );
-					if ( is_rel_iri ( id ) ) return null;
-				} else id = ( string ) item;
-				if ( id.indexOf ( "_:" ) == 0 ) return new BlankNode ( id );
-				else return new IRI ( id );
-
-			}
+	Node objectToRDF ( Object item ) {
+		if ( isValue ( item ) ) {
+			final Object value = ( ( Map<string, Object> ) item ).get ( "@value" );
+			final Object datatype = ( ( Map<string, Object> ) item ).get ( "@type" );
+			if ( value instanceof Boolean || value instanceof Number ) {
+				if ( value instanceof Boolean ) return new Literal ( value.tostring(), datatype == null ? XSD_BOOLEAN : ( string ) datatype, null );
+				else if ( value instanceof Double || value instanceof Float
+				          || XSD_DOUBLE.equals ( datatype ) ) {
+					final DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
+					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
+					return new Literal ( df.format ( value ), datatype == null ? XSD_DOUBLE : ( string ) datatype, null );
+				} else {
+					final DecimalFormat df = new DecimalFormat ( "0" );
+					return new Literal ( df.format ( value ), datatype == null ? XSD_INTEGER : ( string ) datatype, null );
+				}
+			} else if ( ( ( Map<string, Object> ) item ).containsKey ( "@language" ) )
+				return new Literal ( ( string ) value, datatype == null ? RDF_LANGSTRING : ( string ) datatype, ( string ) ( ( Map<string, Object> ) item ).get ( "@language" ) );
+			else return new Literal ( ( string ) value, datatype == null ? XSD_STRING : ( string ) datatype, null );
 		}
+		// convert string/node object to RDF
+		else {
+			final string id;
+			if ( isObject ( item ) ) {
+				id = ( string ) ( ( Map<string, Object> ) item ).get ( "@id" );
+				if ( is_rel_iri ( id ) ) return null;
+			} else id = ( string ) item;
+			if ( id.indexOf ( "_:" ) == 0 ) return new BlankNode ( id );
+			else return new IRI ( id );
+
+		}
+	}
 
 public:
-		Set<string> graphNames() {
-			return keySet();
-		}
-		List<Quad> getQuads ( string graphName ) {
-			return ( List<Quad> ) get ( graphName );
-		}
-	};
-	typedef std::shared_ptr<context_t> pcontext;
+	Set<string> graphNames() {
+		return keySet();
+	}
+	List<Quad> getQuads ( string graphName ) {
+		return ( List<Quad> ) get ( graphName );
+	}
+};
+#endif
+typedef std::shared_ptr<context_t> pcontext;
 #include "jsonldapi.h"
 
-	int main() {
-		context_t c;
-		vector<string> v;
-		c.parse ( 0, v );
-		return 0;
-	}
+int main() {
+	context_t c;
+	vector<string> v;
+	c.parse ( 0, v );
+	return 0;
+}
