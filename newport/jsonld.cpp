@@ -1012,45 +1012,44 @@ public:
 		}
 		put ( graphName, triples );
 	}
-}
 
 private:
-pnode objectToRDF ( pobj item ) {
-	if ( isvalue ( item ) ) {
-		pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
-		if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
-			if ( value->BOOL ) return make_shared<Literal> ( *value->BOOL() ? "(true)" : "(false)", datatype ? *datatype->STR() : XSD_BOOLEAN,  0 );
-			else if ( value->DOUBLE() || XSD_DOUBLE = *datatype->STR() ) {
-				DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
-				df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
-				return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
-			} else {
-				DecimalFormat df = new DecimalFormat ( "0" );
-				return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
-			}
-		} else if ( haslang ( item ) )
-			return make_shared<Literal> ( *value->STR(), datatype ? *datatype->STR() : RDF_LANGSTRING, *getlang ( item )->STR() );
-		else return make_shaerd<Literal> ( value->STR(), ? *datatype->STR() : XSD_STRING, 0 );
+	pnode objectToRDF ( pobj item ) {
+		if ( isvalue ( item ) ) {
+			pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
+			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
+				if ( value->BOOL ) return make_shared<Literal> ( *value->BOOL() ? "(true)" : "(false)", datatype ? *datatype->STR() : XSD_BOOLEAN,  0 );
+				else if ( value->DOUBLE() || XSD_DOUBLE = *datatype->STR() ) {
+					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
+					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
+					return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
+				} else {
+					DecimalFormat df = new DecimalFormat ( "0" );
+					return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
+				}
+			} else if ( haslang ( item ) )
+				return make_shared<Literal> ( *value->STR(), datatype ? *datatype->STR() : RDF_LANGSTRING, *getlang ( item )->STR() );
+			else return make_shared<Literal> ( value->STR(), ? *datatype->STR() : XSD_STRING, 0 );
+		}
+		// convert string/node object to RDF
+		else {
+			string id;
+			if (  item->MAP( ) ) {
+				id = * getid ( item )->STR();
+				if ( is_rel_iri ( id ) ) return 0;
+			} else id = * item->STR();
+			if ( id.find ( "_:" ) == 0 ) return make_shared<bnode> ( id );
+			else return make_shared<IRI> ( id );
+		}
 	}
-	// convert string/node object to RDF
-	else {
-		string id;
-		if (  item->MAP( ) ) {
-			id = * getid ( item )->STR();
-			if ( is_rel_iri ( id ) ) return 0;
-		} else id = * item->STR();
-		if ( id.find ( "_:" ) == 0 ) return make_shared<bnode> ( id );
-		else return make_shared<IRI> ( id );
-	}
-}
 
 public:
-set<string> graphNames() {
-	return keySet();
-}
-vector<Quad> getQuads ( string graphName ) {
-	return ( List<Quad> ) get ( graphName );
-}
+	set<string> graphNames() {
+		return keySet();
+	}
+	vector<Quad> getQuads ( string graphName ) {
+		return ( List<Quad> ) get ( graphName );
+	}
 };
 #endif
 typedef std::shared_ptr<context_t> pcontext;
