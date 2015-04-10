@@ -750,7 +750,7 @@ public:
 	enum node_type { LITERAL, IRI, BNODE };
 	const node_type type;
 private:
-	node(const node_type& t) : type(t){}
+	node ( const node_type& t ) : type ( t ) {}
 public:
 	//		string value() { return at ( "value" ); }
 	//		string datatype() { return at ( "datatype" ); }
@@ -759,8 +759,8 @@ public:
 		return o ? compareTo ( *o ) : 1;
 	}
 	int compareTo ( const node& o ) const {
-		if (type == LITERAL) {
-//			if ( o == null ) return 1;
+		if ( type == LITERAL ) {
+			//			if ( o == null ) return 1;
 			if ( o.type == IRI ) return -1;
 			if ( o.type == BNODE ) return -1;
 			if ( !at ( "language" ) && o.at ( "language" ) ) return -1;
@@ -812,21 +812,21 @@ public:
 	*/
 
 	static pnode mkliteral ( string value, pstring datatype, pstring language ) {
-		pnode r = make_shared<node>(LITERAL);
+		pnode r = make_shared<node> ( LITERAL );
 		r->at ( "type" ) = "literal" ;
 		r->at ( "value" ) = value ;
 		r->at ( "datatype" ) datatype ? *datatype : XSD_STRING ;
 		if ( language ) r->at ( "language" ) = *language;
 		return r;
 	}
-	static pnode mkiri( string iri ) {
-		pnode r = make_shared<node>(IRI);
+	static pnode mkiri ( string iri ) {
+		pnode r = make_shared<node> ( IRI );
 		r->at ( "type" ) = "IRI";
 		r->at ( "value" ) = iri;
 		return r;
 	}
 	static pnode mkbnode ( string attribute ) {
-		pnode r = make_shared<node>(BNODE);
+		pnode r = make_shared<node> ( BNODE );
 		r->at ( "type" ) = "blank node" ;
 		r->at ( "value" ) = attribute ;
 		return r;
@@ -885,7 +885,7 @@ class rdf_dataset : public somap_obj {
 	JsonLdApi api;
 public:
 	rdf_db() : somap_obj {
-		at ( "@default")= new ArrayList<Quad>() ;
+		at ( "@default" ) = new ArrayList<Quad>() ;
 		context = new LinkedHashMap<string, string>();
 		// put("@context", context);
 	}
@@ -959,102 +959,98 @@ public:
 		for ( final string id : subjects ) {
 			if ( JsonLdUtils.isRelativeIri ( id ) ) continue;
 			final Map<string, Object> node = ( Map<string, Object> ) graph.get ( id );
-			final List<string> properties = new ArrayList<string> ( node.keySet() );
-			Collections.sort ( properties );
-			for ( string property : properties ) {
+			//			final List<string> properties = new ArrayList<string> ( node.keySet() );
+			//			Collections.sort ( properties );
+			//			for ( string property : properties ) {
+			for ( auto x : node ) {
+				string property = x.first;
 				final List<Object> values;
 				if ( "@type".equals ( property ) ) {
-					values = ( List<Object> ) node.get ( "@type" );
+					values = ( List<Object> ) gettype ( node );
 					property = RDF_TYPE;
-				} else if ( isKeyword ( property ) ) continue;
-				else if ( property.startsWith ( "_:" ) && !api.opts.getProduceGeneralizedRdf() ) continue;
-				else if ( JsonLdUtils.isRelativeIri ( property ) ) continue;
-				else values = ( List<Object> ) node.get ( property );
+				} else if ( keyword ( property ) ) continue;
+				else if ( startsWith ( property, "_:" ) && !api.opts.getProduceGeneralizedRdf() ) continue;
+				else if ( is_rel_iri ( property ) ) continue;
+				else values = ( List<Object> ) node->at ( property );
 
-				node subject;
-				if ( id.indexOf ( "_:" ) == 0 ) {
-					subject = new Blanknode ( id );
-					else subject = new IRI ( id );
+				pnode subject;
+				if ( id.find ( "_:" ) == 0 ) subject = node::mkbnode ( id );
+				else subject = node::mkiri ( id );
 
-					// RDF predicates
-					node predicate;
-					if ( property.startsWith ( "_:" ) ) predicate = new Blanknode ( property );
-					else predicate = new IRI ( property );
+				// RDF predicates
+				pnode predicate;
+				if ( startsWith ( property, "_:" ) ) predicate = node::mkbnode ( property );
+				else predicate = node::mkiri ( property );
 
-					for ( Object item : values ) {
-						// convert @list to triples
-						if ( isList ( item ) ) {
-							polist list = ( List<Object> ) ( ( Map<string, Object> ) item )
-							              .get ( "@list" );
-							node last = null;
-							node firstBnode = nil;
-							if ( !list.isEmpty() ) {
-								last = objectToRDF ( list.get ( list.size() - 1 ) );
-								firstBnode = new Blanknode ( api.generateBlanknodeIdentifier() );
-							}
-							triples.add ( new Quad ( subject, predicate, firstBnode, graphName ) );
-							for ( int i = 0; i < list.size() - 1; i++ ) {
-								node object = objectToRDF ( list.get ( i ) );
-								triples.add ( new Quad ( firstBnode, first, object, graphName ) );
-								node restBnode = new Blanknode ( api.generateBlanknodeIdentifier() );
-								triples.add ( new Quad ( firstBnode, rest, restBnode, graphName ) );
-								firstBnode = restBnode;
-							}
-							if ( last != null ) {
-								triples.add ( new Quad ( firstBnode, first, last, graphName ) );
-								triples.add ( new Quad ( firstBnode, rest, nil, graphName ) );
-							}
+				for ( Object item : values ) {
+					// convert @list to triples
+					if ( isList ( item ) ) {
+						polist list =  item->MAP( )->at ( "@list" )->LIST();
+						pnode last = 0;
+						pnode firstBnode = nil;
+						if ( list->size() ) {
+							last = objectToRDF ( *list->rbegin() );
+							firstBnode = node::mkbnode ( api.generateBlanknodeIdentifier() );
 						}
-						// convert value or node object to triple
-						else {
-							node object = objectToRDF ( item );
-							if ( object != null )
-								triples.add ( new Quad ( subject, predicate, object, graphName ) );
+						triples.push_back ( new Quad ( subject, predicate, firstBnode, graphName ) );
+						for ( int i = 0; i < list.size() - 1; i++ ) {
+							node object = objectToRDF ( list.get ( i ) );
+							triples.push_back ( new Quad ( firstBnode, first, object, graphName ) );
+							node restBnode = node::mkbnode ( api.generateBlanknodeIdentifier() );
+							triples.push_back ( new Quad ( firstBnode, rest, restBnode, graphName ) );
+							firstBnode = restBnode;
+						}
+						if ( last ) {
+							triples.push_back ( new Quad ( firstBnode, first, last, graphName ) );
+							triples.push_back ( new Quad ( firstBnode, rest, nil, graphName ) );
 						}
 					}
+					// convert value or node object to triple
+					else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( new Quad ( subject, predicate, object, graphName ) );
 				}
 			}
-			put ( graphName, triples );
 		}
+		put ( graphName, triples );
 	}
+}
 
 private:
-	pnode objectToRDF ( pobj item ) {
-		if ( isvalue ( item ) ) {
-			pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
-			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
-				if ( value->BOOL ) return make_shared<Literal> ( *value->BOOL() ? "(true)" : "(false)", datatype ? *datatype->STR() : XSD_BOOLEAN,  0 );
-				else if ( value->DOUBLE() || XSD_DOUBLE = *datatype->STR() ) {
-					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
-					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
-					return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
-				} else {
-					DecimalFormat df = new DecimalFormat ( "0" );
-					return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
-				}
-			} else if ( haslang ( item ) )
-				return make_shared<Literal> ( *value->STR(), datatype ? *datatype->STR() : RDF_LANGSTRING, *getlang ( item )->STR() );
-			else return make_shaerd<Literal> ( value->STR(), ? *datatype->STR() : XSD_STRING, 0 );
-		}
-		// convert string/node object to RDF
-		else {
-			string id;
-			if (  item->MAP( ) ) {
-				id = * getid ( item )->STR();
-				if ( is_rel_iri ( id ) ) return 0;
-			} else id = * item->STR();
-			if ( id.find ( "_:" ) == 0 ) return make_shared<bnode> ( id );
-			else return make_shared<IRI> ( id );
-		}
+pnode objectToRDF ( pobj item ) {
+	if ( isvalue ( item ) ) {
+		pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
+		if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
+			if ( value->BOOL ) return make_shared<Literal> ( *value->BOOL() ? "(true)" : "(false)", datatype ? *datatype->STR() : XSD_BOOLEAN,  0 );
+			else if ( value->DOUBLE() || XSD_DOUBLE = *datatype->STR() ) {
+				DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
+				df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
+				return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
+			} else {
+				DecimalFormat df = new DecimalFormat ( "0" );
+				return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
+			}
+		} else if ( haslang ( item ) )
+			return make_shared<Literal> ( *value->STR(), datatype ? *datatype->STR() : RDF_LANGSTRING, *getlang ( item )->STR() );
+		else return make_shaerd<Literal> ( value->STR(), ? *datatype->STR() : XSD_STRING, 0 );
 	}
+	// convert string/node object to RDF
+	else {
+		string id;
+		if (  item->MAP( ) ) {
+			id = * getid ( item )->STR();
+			if ( is_rel_iri ( id ) ) return 0;
+		} else id = * item->STR();
+		if ( id.find ( "_:" ) == 0 ) return make_shared<bnode> ( id );
+		else return make_shared<IRI> ( id );
+	}
+}
 
 public:
-	set<string> graphNames() {
-		return keySet();
-	}
-	vector<Quad> getQuads ( string graphName ) {
-		return ( List<Quad> ) get ( graphName );
-	}
+set<string> graphNames() {
+	return keySet();
+}
+vector<Quad> getQuads ( string graphName ) {
+	return ( List<Quad> ) get ( graphName );
+}
 };
 #endif
 typedef std::shared_ptr<context_t> pcontext;
