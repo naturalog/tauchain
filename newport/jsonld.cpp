@@ -745,7 +745,9 @@ typedef std::shared_ptr<node> pnode;
 typedef map<string, pnode> snmap;
 typedef std::shared_ptr<snmap> psnmap;
 
-class node : public snmap {
+const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURI", XSD_STRING = XSD_NS + "string", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
+
+class node : public ssmap {
 public:
 	enum node_type { LITERAL, IRI, BNODE };
 	const node_type type;
@@ -763,10 +765,12 @@ public:
 			//			if ( o == null ) return 1;
 			if ( o.type == IRI ) return -1;
 			if ( o.type == BNODE ) return -1;
-			if ( !at ( "language" ) && o.at ( "language" ) ) return -1;
-			else if ( at ( "language" ) && o.at ( "language" ) == 0 ) return 1;
-			if ( at ( "datatype" ) ) return at ( "datatype" )->compareTo ( o.at ( "datatype" ) );
-			else if ( o.at ( "datatype" ) ) return -1;
+			if ( !has ( *this, "language" ) && has ( o, "language" ) ) return -1;
+			else if ( has ( *this, "language" ) && !has ( o,  "language" ) ) return 1;
+			if ( has ( *this, "datatype" ) ) {
+				auto x = at ( "datatype" ), y = o.at ( "datatype" );
+				return x == y ? 0 : x < y ? -1 : 1;
+			} else if ( has ( o, "datatype" ) ) return -1;
 			return 0;
 		}
 		if ( type == IRI ) {
@@ -775,7 +779,8 @@ public:
 			if ( o.type == BNODE ) return -1;
 			else if ( o.type == LITERAL ) return 1;
 		}
-		return at ( "value" )->compareTo ( o.at ( "value" ) );
+		auto x = at ( "datatype" ), y = o.at ( "datatype" );
+		return x == y ? 0 : x < y ? -1 : 1;
 	}
 	/*
 		somap toObject ( bool useNativeTypes ) {
@@ -815,7 +820,7 @@ public:
 		pnode r = make_shared<node> ( LITERAL );
 		r->at ( "type" ) = "literal" ;
 		r->at ( "value" ) = value ;
-		r->at ( "datatype" ) datatype ? *datatype : XSD_STRING ;
+		r->at ( "datatype" ) = datatype ? *datatype : XSD_STRING;
 		if ( language ) r->at ( "language" ) = *language;
 		return r;
 	}
@@ -833,52 +838,51 @@ public:
 	}
 };
 
-class Quad : public map<string, class node*> {
-		Quad ( string subject, string predicate, pnode object, pstring graph ) :
-			Quad ( startsWith ( subject, "_:" ) ? make_shared<bnode> ( subject ) : make_shared<IRI> ( subject ), make_shared<IRI> ( predicate ), object, graph ) {}
-	public:
-		Quad ( string subject, string predicate, string object, pstring graph ) :
-			Quad ( subject, predicate, startsWith ( object, "_:" ) ?  make_shared<bnode> ( object ) : make_shared<IRI> ( object ), graph ) {}
-		Quad ( string subject, string predicate, string value, string datatype, string language, pstring graph ) :
-			Quad ( subject, predicate, make_shared<literal> ( value, datatype, language ), graph ) {}
-		Quad ( pnode subject, pnode predicate, pnode object, pstring graph ) : somap_obj() {
-			MAP->at ( "subject" ) = subject ;
-			MAP->at ( "predicate" ) = predicate ;
-			MAP->at ( "object" ) = object ;
-			if ( graph && graph == "@default" ) MAP()->at ( "name" ) = startsWith ( *graph, "_:" ) ? make_shared<bnode> ( graph ) : make_shared<IRI> ( graph ) ;
-		}
+class Quad : public map<string, pnode> {
+	Quad ( string subject, string predicate, pnode object, pstring graph ) :
+		Quad ( startsWith ( subject, "_:" ) ? node::mkbnode ( subject ) : node::mkiri ( subject ), node::mkiri ( predicate ), object, graph ) {}
+public:
+	Quad ( string subject, string predicate, string object, pstring graph ) :
+		Quad ( subject, predicate, startsWith ( object, "_:" ) ?  node::mkbnode ( object ) : node::mkiri ( object ), graph ) {}
+	Quad ( string subject, string predicate, string value, pstring datatype, pstring language, pstring graph ) :
+		Quad ( subject, predicate, node::mkliteral ( value, datatype, language ), graph ) {}
+	Quad ( pnode subject, pnode predicate, pnode object, pstring graph ) : map<string, pnode> () {
+		at ( "subject" ) = subject ;
+		at ( "predicate" ) = predicate ;
+		at ( "object" ) = object ;
+		if ( graph && *graph == "@default" ) at ( "name" ) = startsWith ( *graph, "_:" ) ? node::mkbnode ( *graph ) : node::mkiri ( *graph ) ;
+	}
 
-		pnode subject() {
-			return ( node ) get ( "subject" );
-		}
-		pnode predicate() {
-			return ( node ) get ( "predicate" );
-		}
-		pnode object() {
-			return ( node ) get ( "object" );
-		}
-		pnode graph() {
-			return ( node ) get ( "name" );
-		}
+	pnode subject() {
+		return at ( "subject" );
+	}
+	pnode predicate() {
+		return at ( "predicate" );
+	}
+	pnode object() {
+		return at ( "object" );
+	}
+	pnode graph() {
+		return at ( "name" );
+	}
 
-		int compareTo ( Quad o ) {
-			if ( o == null ) return 1;
-			int rval = getGraph().compareTo ( o.getGraph() );
-			if ( rval != 0 ) return rval;
-			rval = getSubject().compareTo ( o.getSubject() );
-			if ( rval != 0 ) return rval;
-			rval = getPredicate().compareTo ( o.getPredicate() );
-			if ( rval != 0 ) return rval;
-			return getObject().compareTo ( o.getObject() );
-		}
-	};
+	/*		int compareTo ( Quad o ) {
+				if ( o == null ) return 1;
+				int rval = getGraph().compareTo ( o.getGraph() );
+				if ( rval != 0 ) return rval;
+				rval = getSubject().compareTo ( o.getSubject() );
+				if ( rval != 0 ) return rval;
+				rval = getPredicate().compareTo ( o.getPredicate() );
+				if ( rval != 0 ) return rval;
+				return getObject().compareTo ( o.getObject() );
+			}*/
+};
 
-const pnode first = make_shared<IRI> ( RDF_FIRST );
-const  pnode rest = make_shared<IRI> ( RDF_REST );
-const pnode nil = make_shared<IRI> ( RDF_NIL );
-const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURI", XSD_STRING = XSD_NS + "string", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
+const pnode first = node::mkiri ( RDF_FIRST );
+const  pnode rest = node::mkiri ( RDF_REST );
+const pnode nil = node::mkiri ( RDF_NIL );
 
-class rdf_dataset : public somap_obj {
+class rdf_db : public somap_obj {
 	//	static Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
 	//	static Pattern PATTERN_DOUBLE = Pattern .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
 	ssmap context;
@@ -1018,18 +1022,18 @@ private:
 		if ( isvalue ( item ) ) {
 			pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
-				if ( value->BOOL ) return make_shared<Literal> ( *value->BOOL() ? "(true)" : "(false)", datatype ? *datatype->STR() : XSD_BOOLEAN,  0 );
+				if ( value->BOOL ) return node::mkliteral ( *value->BOOL() ? "(true)" : "(false)", datatype ? *datatype->STR() : XSD_BOOLEAN,  0 );
 				else if ( value->DOUBLE() || XSD_DOUBLE = *datatype->STR() ) {
 					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
 					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
-					return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
+					return node::mkliteral ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
 				} else {
 					DecimalFormat df = new DecimalFormat ( "0" );
-					return make_shared<Literal> ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
+					return node::mkliteral ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
 				}
 			} else if ( haslang ( item ) )
-				return make_shared<Literal> ( *value->STR(), datatype ? *datatype->STR() : RDF_LANGSTRING, *getlang ( item )->STR() );
-			else return make_shared<Literal> ( value->STR(), ? *datatype->STR() : XSD_STRING, 0 );
+				return node::mkliteral ( *value->STR(), datatype ? *datatype->STR() : RDF_LANGSTRING, *getlang ( item )->STR() );
+			else return node::mkliteral ( value->STR(), ? *datatype->STR() : XSD_STRING, 0 );
 		}
 		// convert string/node object to RDF
 		else {
@@ -1038,8 +1042,8 @@ private:
 				id = * getid ( item )->STR();
 				if ( is_rel_iri ( id ) ) return 0;
 			} else id = * item->STR();
-			if ( id.find ( "_:" ) == 0 ) return make_shared<bnode> ( id );
-			else return make_shared<IRI> ( id );
+			if ( id.find ( "_:" ) == 0 ) return node::mkbnode ( id );
+			else return node::mkiri ( id );
 		}
 	}
 
