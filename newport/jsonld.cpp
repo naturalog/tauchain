@@ -747,22 +747,33 @@ typedef std::shared_ptr<snmap> psnmap;
 
 class node : public snmap {
 public:
-	virtual bool isLiteral() const = 0;
-	virtual bool isIRI() const = 0;
-	virtual bool isBlanknode() const = 0;
+	enum node_type { LITERAL, IRI, BNODE };
+	const node_type type;
+private:
+	node(const node_type& t) : type(t){}
+public:
 	//		string value() { return at ( "value" ); }
 	//		string datatype() { return at ( "datatype" ); }
 	//		string language() { return at ( "language" ); }
-
-	virtual int compareTo ( const pnode& o ) const {
+	int compareTo ( const pnode& o ) const {
 		return o ? compareTo ( *o ) : 1;
 	}
-	virtual int compareTo ( const node& o ) const {
-		if ( isIRI() ) {
-			if ( !o.isIRI() ) return 1;
-		} else if ( isBlanknode() ) {
-			if ( o.isIRI() ) return -1;
-			else if ( o.isLiteral() ) return 1;
+	int compareTo ( const node& o ) const {
+		if (type == LITERAL) {
+//			if ( o == null ) return 1;
+			if ( o.type == IRI ) return -1;
+			if ( o.type == BNODE ) return -1;
+			if ( !at ( "language" ) && o.at ( "language" ) ) return -1;
+			else if ( at ( "language" ) && o.at ( "language" ) == 0 ) return 1;
+			if ( at ( "datatype" ) ) return at ( "datatype" )->compareTo ( o.at ( "datatype" ) );
+			else if ( o.at ( "datatype" ) ) return -1;
+			return 0;
+		}
+		if ( type == IRI ) {
+			if ( !o.type == IRI ) return 1;
+		} else if ( type == BNODE ) {
+			if ( o.type == BNODE ) return -1;
+			else if ( o.type == LITERAL ) return 1;
 		}
 		return at ( "value" )->compareTo ( o.at ( "value" ) );
 	}
@@ -799,69 +810,26 @@ public:
 			return rval;
 		}
 	*/
-};
 
-
-class Literal : public node {
-public:
-	Literal ( string value, pstring datatype, pstring language ) : node() {
-		at ( "type" ) = "literal" ;
-		at ( "value" ) = value ;
-		at ( "datatype" ) datatype ? *datatype : XSD_STRING ;
-		if ( language ) at ( "language" ) = *language ;
+	static pnode mkliteral ( string value, pstring datatype, pstring language ) {
+		pnode r = make_shared<node>(LITERAL);
+		r->at ( "type" ) = "literal" ;
+		r->at ( "value" ) = value ;
+		r->at ( "datatype" ) datatype ? *datatype : XSD_STRING ;
+		if ( language ) r->at ( "language" ) = *language;
+		return r;
 	}
-	bool isLiteral() const {
-		return true;
+	static pnode mkiri( string iri ) {
+		pnode r = make_shared<node>(IRI);
+		r->at ( "type" ) = "IRI";
+		r->at ( "value" ) = iri;
+		return r;
 	}
-	bool isIRI() const {
-		return false;
-	}
-	bool isBlanknode() const {
-		return false;
-	}
-	virtual int compareTo ( const node& o ) const {
-		if ( o == null ) return 1;
-		if ( o.isIRI() ) return -1;
-		if ( o.isBlanknode() ) return -1;
-		if ( !at ( "language" ) && o->literal()->at ( "language" ) ) return -1;
-		else if ( this->at ( "language" ) && o->literal()->at ( "language" ) == 0 ) return 1;
-		if ( this->at ( "datatype" ) != null ) return this->at ( "datatype" ).compareTo ( o->literal()->at ( "datatype" ) );
-		else if ( o->literal()->at ( "datatype" ) != null ) return -1;
-		return 0;
-	}
-};
-
-class IRI : public node {
-public:
-	IRI ( string iri ) : node() {
-		at ( "type" ) = "IRI";
-		at ( "value" ) = iri;
-	}
-	bool isLiteral() const {
-		return false;
-	}
-	bool isIRI() const {
-		return true;
-	}
-	bool isBlanknode() const {
-		return false;
-	}
-};
-
-class bnode : public node {
-public:
-	bnode ( string attribute ) : node() {
-		at ( "type" ) = "blank node" ;
-		at ( "value" ) = attribute ;
-	}
-	bool isLiteral() const {
-		return false;
-	}
-	bool isIRI() const {
-		return false;
-	}
-	bool isBlanknode() const {
-		return true;
+	static pnode mkbnode ( string attribute ) {
+		pnode r = make_shared<node>(BNODE);
+		r->at ( "type" ) = "blank node" ;
+		r->at ( "value" ) = attribute ;
+		return r;
 	}
 };
 
