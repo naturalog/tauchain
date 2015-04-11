@@ -5,6 +5,7 @@
 #include <utility>
 #include <memory>
 #include <list>
+#include <set>
 #include <boost/variant.hpp>
 #include "json_spirit_reader.h"
 #include "json_spirit_writer.h"
@@ -253,6 +254,10 @@ pobj newMap ( const string& k, pobj v ) {
 	pobj r = mk_somap_obj();
 	( *r->MAP() ) [k] = v;
 	return r;
+}
+
+bool isvalue ( pobj v ) {
+	return v && v->MAP() && hasvalue ( v->MAP() );
 }
 
 polist vec2vec ( const vector<string>& x ) {
@@ -526,9 +531,6 @@ public:
 		return inverse;
 	}
 
-	bool isvalue ( pobj v ) {
-		return v && v->MAP() && hasvalue ( v->MAP() );
-	}
 
 	int compareShortestLeast ( const string& a, const string& b ) {
 		if ( a.length() < b.length() ) return -1;
@@ -733,12 +735,25 @@ public:
 		}
 		return mk_somap_obj ( rval );
 	}
+	map<string, string> getPrefixes ( bool onlyCommonPrefixes ) {
+		map<string, string> prefixes;
+		for ( auto x : *term_defs ) {
+			string term = x.first;
+			if ( term.find ( ":" ) != string::npos ) continue;
+			psomap td = term_defs->at ( term )->MAP();
+			if ( !td ) continue;
+			pstring id = td->at ( "@id" )->STR();
+			if ( !id ) continue;
+			if ( startsWith ( term, "@" ) || startsWith ( *id, "@" ) ) continue;
+			if ( !onlyCommonPrefixes || endsWith ( *id, "/" ) || endsWith ( *id, "#" ) ) prefixes[term] = *id;
+		}
+		return prefixes;
+	}
 };
 
+typedef std::shared_ptr<context_t> pcontext;
 typedef map<string, string> ssmap;
 typedef std::shared_ptr<ssmap> pssmap;
-#define AAA
-#ifdef AAA
 
 class node;
 typedef std::shared_ptr<node> pnode;
@@ -878,23 +893,31 @@ public:
 			}*/
 };
 
+typedef std::shared_ptr<Quad> pquad;
+typedef vector<pquad> qlist;
+typedef std::shared_ptr<qlist> pqlist;
+typedef map<string, pqlist> qdb;
+
 const pnode first = node::mkiri ( RDF_FIRST );
 const  pnode rest = node::mkiri ( RDF_REST );
 const pnode nil = node::mkiri ( RDF_NIL );
 
-class rdf_db : public somap_obj {
+pqlist mk_qlist() {
+	return make_shared<qlist>();
+}
+
+class rdf_db : public qdb {
 	//	static Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
 	//	static Pattern PATTERN_DOUBLE = Pattern .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
 	ssmap context;
-	JsonLdApi api;
+	jsonld_options opts;
 public:
-	rdf_db() : somap_obj {
-		at ( "@default" ) = new ArrayList<Quad>() ;
-		context = new LinkedHashMap<string, string>();
+	rdf_db() : qdb() {
+		at ( "@default" ) = mk_qlist();
 		// put("@context", context);
 	}
 
-	rdf_db ( JsonLdApi jsonLdApi ) : rdf_db(), api ( jsonLdApi ) {}
+	rdf_db ( jsonld_options opts_ ) : rdf_db(), opts ( opts_ ) {}
 
 	void setNamespace ( string ns, string prefix ) {
 		context[ns] = prefix ;
@@ -919,63 +942,58 @@ public:
 	}
 
 	void parseContext ( pobj contextLike ) {
-		context_t context;
+		pcontext context;
 		//		if ( api ) context = new Context ( api.opts );
 		//		else context = new Context();
-		context = context.parse ( contextLike );
-		ssmap prefixes = context.getPrefixes ( true );
+		context = context->parse ( contextLike );
+		ssmap prefixes = context->getPrefixes ( true );
 
 		for ( auto x : prefixes ) {
-			string key& = x.first, val& = x.second;
+			const string &key = x.first, &val = x.second;
 			if ( key == "@vocab" ) setNamespace ( "", val );
 			else if ( !keyword ( key ) ) setNamespace ( key, val );
 		}
 	}
 
-	void addTriple ( string subject, string predicate, string value, string datatype, string language ) {
-		addQuad ( subject, predicate, value, datatype, language, "@default" );
+	void addTriple ( string subject, string predicate, string value, pstring datatype, pstring language ) {
+		addQuad ( subject, predicate, value, datatype, language, pstr ( "@default" ) );
 	}
 
-	void addQuad ( string s, string p, string value, string datatype,
-	               string language, pstring graph ) {
+	void addQuad ( string s, string p, string value, pstring datatype, pstring language, pstring graph ) {
 		if ( !graph ) graph = pstr ( "@default" );
-		if ( find ( *graph ) == end() ) put ( graph, new ArrayList<Quad>() );
-		( ( ArrayList<Quad> ) get ( graph ) ).add ( new Quad ( s, p, value, datatype, language, graph ) );
+		if ( find ( *graph ) == end() ) at ( *graph ) = mk_qlist();
+		at ( *graph )->push_back ( make_shared<Quad> ( s, p, value, datatype, language, graph ) );
 	}
 
 	void addTriple ( string subject, string predicate, string object ) {
-		addQuad ( subject, predicate, object, "@default" );
+		addQuad ( subject, predicate, object, pstr ( "@default" ) );
 	}
 
-	void addQuad ( string subject, string predicate, string object,
-	               pstring graph ) {
-		if ( !graph )
-			graph = pstr ( "@default" );
-		if ( !containsKey ( graph ) )
-			put ( graph, new ArrayList<Quad>() );
-		( ( ArrayList<Quad> ) get ( graph ) ).add ( new Quad ( subject, predicate, object, graph ) );
+	void addQuad ( string subject, string predicate, string object, pstring graph ) {
+		if ( !graph ) graph = pstr ( "@default" );
+		if ( !has ( *this, *graph ) ) at ( *graph ) = mk_qlist();
+		at ( *graph )->push_back ( make_shared<Quad> ( subject, predicate, object, graph ) );
 	}
 
 	void graphToRDF ( string graphName, somap& graph ) {
 		// 4.2)
-		vector<Quad> triples;
-		vector<string> subjects = new ArrayList<string> ( graph.keySet() );
-		for ( final string id : subjects ) {
-			if ( JsonLdUtils.isRelativeIri ( id ) ) continue;
-			final Map<string, Object> node = ( Map<string, Object> ) graph.get ( id );
-			//			final List<string> properties = new ArrayList<string> ( node.keySet() );
-			//			Collections.sort ( properties );
-			//			for ( string property : properties ) {
-			for ( auto x : node ) {
+		qlist triples;
+		//		vector<string> subjects = new ArrayList<string> ( graph.keySet() );
+		//		for ( string id : subjects ) {
+		for ( auto y : graph ) {
+			string id = y.first;
+			if ( is_rel_iri ( id ) ) continue;
+			psomap node = y.second->MAP();
+			for ( auto x : *node ) {
 				string property = x.first;
-				final List<Object> values;
-				if ( "@type".equals ( property ) ) {
-					values = ( List<Object> ) gettype ( node );
+				polist values;
+				if ( property == "@type" ) {
+					values =  gettype ( node )->LIST();
 					property = RDF_TYPE;
 				} else if ( keyword ( property ) ) continue;
-				else if ( startsWith ( property, "_:" ) && !api.opts.getProduceGeneralizedRdf() ) continue;
+				else if ( startsWith ( property, "_:" ) && !opts.getProduceGeneralizedRdf() ) continue;
 				else if ( is_rel_iri ( property ) ) continue;
-				else values = ( List<Object> ) node->at ( property );
+				else values = node->at ( property )->LIST();
 
 				pnode subject;
 				if ( id.find ( "_:" ) == 0 ) subject = node::mkbnode ( id );
@@ -986,35 +1004,35 @@ public:
 				if ( startsWith ( property, "_:" ) ) predicate = node::mkbnode ( property );
 				else predicate = node::mkiri ( property );
 
-				for ( Object item : values ) {
+				for ( auto item : *values ) {
 					// convert @list to triples
-					if ( isList ( item ) ) {
+					if ( item->MAP() && haslist ( item->MAP() ) ) {
 						polist list =  item->MAP( )->at ( "@list" )->LIST();
 						pnode last = 0;
 						pnode firstBnode = nil;
 						if ( list->size() ) {
 							last = objectToRDF ( *list->rbegin() );
-							firstBnode = node::mkbnode ( api.generateBlanknodeIdentifier() );
+							firstBnode = node::mkbnode ( opts.generateBlanknodeIdentifier() );
 						}
-						triples.push_back ( new Quad ( subject, predicate, firstBnode, graphName ) );
-						for ( int i = 0; i < list.size() - 1; i++ ) {
-							node object = objectToRDF ( list.get ( i ) );
-							triples.push_back ( new Quad ( firstBnode, first, object, graphName ) );
-							node restBnode = node::mkbnode ( api.generateBlanknodeIdentifier() );
-							triples.push_back ( new Quad ( firstBnode, rest, restBnode, graphName ) );
+						triples.push_back ( make_shared<Quad> ( subject, predicate, firstBnode, pstr ( graphName ) ) );
+						for ( int i = 0; i < list->size() - 1; i++ ) {
+							pnode object = objectToRDF ( list->at ( i ) );
+							triples.push_back ( make_shared<Quad> ( firstBnode, first, object, pstr ( graphName ) ) );
+							pnode restBnode = node::mkbnode ( opts.generateBlanknodeIdentifier() );
+							triples.push_back ( make_shared<Quad> ( firstBnode, rest, restBnode, pstr ( graphName ) ) );
 							firstBnode = restBnode;
 						}
 						if ( last ) {
-							triples.push_back ( new Quad ( firstBnode, first, last, graphName ) );
-							triples.push_back ( new Quad ( firstBnode, rest, nil, graphName ) );
+							triples.push_back ( make_shared<Quad> ( firstBnode, first, last, pstr ( graphName ) ) );
+							triples.push_back ( make_shared<Quad> ( firstBnode, rest, nil, pstr ( graphName ) ) );
 						}
 					}
 					// convert value or node object to triple
-					else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( new Quad ( subject, predicate, object, graphName ) );
+					else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( make_shared<Quad> ( subject, predicate, object, pstr ( graphName ) ) );
 				}
 			}
 		}
-		put ( graphName, triples );
+		at ( graphName ) = make_shared<qlist> ( triples );
 	}
 
 private:
@@ -1022,8 +1040,8 @@ private:
 		if ( isvalue ( item ) ) {
 			pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
-				if ( value->BOOL ) return node::mkliteral ( *value->BOOL() ? "(true)" : "(false)", datatype ? *datatype->STR() : XSD_BOOLEAN,  0 );
-				else if ( value->DOUBLE() || XSD_DOUBLE = *datatype->STR() ) {
+				if ( value->BOOL() ) return node::mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
+				else if ( value->DOUBLE() || XSD_DOUBLE == *datatype->STR() ) {
 					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
 					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
 					return node::mkliteral ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
@@ -1031,9 +1049,9 @@ private:
 					DecimalFormat df = new DecimalFormat ( "0" );
 					return node::mkliteral ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
 				}
-			} else if ( haslang ( item ) )
-				return node::mkliteral ( *value->STR(), datatype ? *datatype->STR() : RDF_LANGSTRING, *getlang ( item )->STR() );
-			else return node::mkliteral ( value->STR(), ? *datatype->STR() : XSD_STRING, 0 );
+			} else if ( haslang ( item->MAP() ) )
+				return node::mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
+			else return node::mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
 		}
 		// convert string/node object to RDF
 		else {
@@ -1048,15 +1066,14 @@ private:
 	}
 
 public:
-	set<string> graphNames() {
-		return keySet();
-	}
-	vector<Quad> getQuads ( string graphName ) {
-		return ( List<Quad> ) get ( graphName );
-	}
+	/*	 set<string> graphNames() {
+			return keySet();
+		}
+		vector<Quad> getQuads ( string graphName ) {
+			return ( List<Quad> ) get ( graphName );
+		}*/
 };
-#endif
-typedef std::shared_ptr<context_t> pcontext;
+
 #include "jsonldapi.h"
 
 int main() {
