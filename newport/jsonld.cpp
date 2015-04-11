@@ -1036,12 +1036,12 @@ private:
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 				if ( value->BOOL() ) return node::mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
 				else if ( value->DOUBLE() || XSD_DOUBLE == *datatype->STR() ) {
-					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
-					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
-					return node::mkliteral ( df.format ( value ), datatype ? *datatype->STR() : XSD_DOUBLE, 0 );
+					///					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
+					//					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
+					return node::mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
 				} else {
-					DecimalFormat df = new DecimalFormat ( "0" );
-					return node::mkliteral ( df.format ( value ), datatype ? *datatype->STR() : XSD_INTEGER, null );
+					//DecimalFormat df = new DecimalFormat ( "0" );
+					return node::mkliteral ( value->INT() ? tostr ( *value->INT() ) : tostr ( *value->UINT() ), pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
 				}
 			} else if ( haslang ( item->MAP() ) )
 				return node::mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );

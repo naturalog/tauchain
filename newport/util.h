@@ -44,3 +44,9 @@ template<typename C, typename K> bool has ( std::shared_ptr<C> c, const K& k ) {
 template<typename C, typename K> bool has ( std::shared_ptr<C> c, std::shared_ptr<K> k ) {
 	return k && has<C, K> ( c, *k );
 }
+
+template<typename T> string tostr ( T t ) {
+	stringstream s;
+	s << t;
+	return s.str();
+}
