@@ -1022,9 +1022,7 @@ public:
 							triples.push_back ( make_shared<Quad> ( firstBnode, first, last, pstr ( graphName ) ) );
 							triples.push_back ( make_shared<Quad> ( firstBnode, rest, nil, pstr ( graphName ) ) );
 						}
-					}
-					// convert value or node object to triple
-					else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( make_shared<Quad> ( subject, predicate, object, pstr ( graphName ) ) );
+					} else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( make_shared<Quad> ( subject, predicate, object, pstr ( graphName ) ) );
 				}
 			}
 		}
@@ -1070,6 +1068,17 @@ public:
 		}*/
 };
 
+std::shared_ptr<rdf_db> jsonld_api::toRDF() {
+	psomap nodeMap = make_shared<somap>();
+	( *nodeMap ) ["@default"] = mk_somap_obj();
+	generateNodeMap ( value, nodeMap );
+	rdf_db r;
+	for ( auto g : *nodeMap ) {
+		if ( is_rel_iri ( g.first ) ) continue;
+		r.graphToRDF ( g.first, *g.second->MAP() );
+	}
+	return make_shared<rdf_db> ( r );
+}
 
 int main() {
 	context_t c;
