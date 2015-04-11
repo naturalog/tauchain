@@ -766,9 +766,7 @@ class node : public ssmap {
 public:
 	enum node_type { LITERAL, IRI, BNODE };
 	const node_type type;
-private:
 	node ( const node_type& t ) : type ( t ) {}
-public:
 	//		string value() { return at ( "value" ); }
 	//		string datatype() { return at ( "datatype" ); }
 	//		string language() { return at ( "language" ); }
@@ -905,19 +903,17 @@ const pnode nil = node::mkiri ( RDF_NIL );
 pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
-
+class rdf_db;
+#include "jsonldapi.h"
 class rdf_db : public qdb {
 	//	static Pattern PATTERN_INTEGER = Pattern.compile ( "^[\\-+]?[0-9]+$" );
 	//	static Pattern PATTERN_DOUBLE = Pattern .compile ( "^(\\+|-)?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([Ee](\\+|-)?[0-9]+)?$" );
 	ssmap context;
-	jsonld_options opts;
+	jsonld_api api;
 public:
-	rdf_db() : qdb() {
+	rdf_db ( jsonld_api api_ = jsonld_api() ) : qdb(), api ( api_ ) {
 		at ( "@default" ) = mk_qlist();
-		// put("@context", context);
 	}
-
-	rdf_db ( jsonld_options opts_ ) : rdf_db(), opts ( opts_ ) {}
 
 	void setNamespace ( string ns, string prefix ) {
 		context[ns] = prefix ;
@@ -991,7 +987,7 @@ public:
 					values =  gettype ( node )->LIST();
 					property = RDF_TYPE;
 				} else if ( keyword ( property ) ) continue;
-				else if ( startsWith ( property, "_:" ) && !opts.getProduceGeneralizedRdf() ) continue;
+				else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
 				else if ( is_rel_iri ( property ) ) continue;
 				else values = node->at ( property )->LIST();
 
@@ -1012,13 +1008,13 @@ public:
 						pnode firstBnode = nil;
 						if ( list->size() ) {
 							last = objectToRDF ( *list->rbegin() );
-							firstBnode = node::mkbnode ( opts.generateBlanknodeIdentifier() );
+							firstBnode = node::mkbnode ( api.gen_bnode_id () );
 						}
 						triples.push_back ( make_shared<Quad> ( subject, predicate, firstBnode, pstr ( graphName ) ) );
 						for ( int i = 0; i < list->size() - 1; i++ ) {
 							pnode object = objectToRDF ( list->at ( i ) );
 							triples.push_back ( make_shared<Quad> ( firstBnode, first, object, pstr ( graphName ) ) );
-							pnode restBnode = node::mkbnode ( opts.generateBlanknodeIdentifier() );
+							pnode restBnode = node::mkbnode ( api.gen_bnode_id() );
 							triples.push_back ( make_shared<Quad> ( firstBnode, rest, restBnode, pstr ( graphName ) ) );
 							firstBnode = restBnode;
 						}
@@ -1074,7 +1070,6 @@ public:
 		}*/
 };
 
-#include "jsonldapi.h"
 
 int main() {
 	context_t c;
