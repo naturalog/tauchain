@@ -316,10 +316,10 @@ bool keyword ( const string& key ) {
 #define KW_SHORTCUTS(x) \
 const string kw##x = "@"s + #x;\
 template<typename T> bool has##x(T t) { return has(t,kw##x); } \
-pobj& get##x(pobj p) { return p->MAP()->at(kw##x); } \
-pobj& get##x(obj& p) { return p.MAP()->at(kw##x); } \
-pobj& get##x(psomap p) { return p->at(kw##x); } \
-pobj& get##x(somap p) { return p.at(kw##x); }
+const pobj& get##x(pobj p) { return p->MAP()->at(kw##x); } \
+const pobj& get##x(obj& p) { return p.MAP()->at(kw##x); } \
+const pobj& get##x(psomap p) { return p->at(kw##x); } \
+const pobj& get##x(somap p) { return p.at(kw##x); }
 KW_SHORTCUTS ( base );
 KW_SHORTCUTS ( id );
 KW_SHORTCUTS ( index );
@@ -481,7 +481,7 @@ public:
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
 	pcontext parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
 		context_t result ( *this );
-		if ( !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
+		if ( !localContext || !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
 			if ( context->Null() ) result = context_t ( options );
 			else if ( pstring s = context->STR() ) {
@@ -1369,7 +1369,7 @@ public:
 						throw INVALID_TYPED_VALUE + "\t" + "value of @type must be an IRI";
 			} else if ( hastype ( result ) ) {
 				pobj rtype = gettype ( result );
-				if ( !rtype->LIST() ) gettype ( result ) = mk_olist_obj ( olist ( 1, rtype ) ) ;
+				if ( !rtype->LIST() ) ( *result )["@type"] = mk_olist_obj ( olist ( 1, rtype ) ) ;
 			} else if ( hasset ( result ) || haslist ( result ) ) {
 				if ( result->size() > ( hasindex ( result ) ? 2 : 1 ) )
 					throw INVALID_SET_OR_LIST_OBJECT + "\t" + "@set or @list may only contain @index";
@@ -1430,7 +1430,8 @@ public:
 	}
 
 	static void mergeValue ( somap obj, string key, pobj value ) {
-		polist values = obj[key]->LIST();
+		auto x = obj[key];
+		polist values = x ? obj[key]->LIST() : 0;
 		if ( !values ) obj[key] = mk_olist_obj ( values = mk_olist() );
 		if ( key == "@list" || ( value->MAP() && has ( value->MAP(), "@list" ) ) || !deepContains ( values, value ) )
 			values->push_back ( value );
@@ -1513,7 +1514,7 @@ public:
 				elem->erase ( "@index" );
 				if ( hasindex ( node ) ) {
 					if ( !deepCompare ( getindex ( node ), elemIndex ) ) throw CONFLICTING_INDEXES;
-				} else getindex ( node ) = elemIndex ;
+				} else ( *node )["@index"] = elemIndex ;
 			}
 			if ( hasreverse ( elem ) ) {
 				psomap refnode = make_shared<somap>(), revmap = elem->at ( "@reverse" )->MAP();
@@ -1747,13 +1748,13 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 
 
 std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
-	psomap node_map = make_shared<somap>();
-	a.gen_node_map ( o, node_map );
+//	psomap node_map = make_shared<somap>();
+//	a.gen_node_map ( o, node_map );
 	return a.toRDF();
 }
 
 int main ( int argc, char** argv ) {
-	if ( argc != 2 ) cout << "Usage: jsonld++ <JSON-LD input filename>" << endl;
+	if ( argc != 2 ) { cout << "Usage: jsonld++ <JSON-LD input filename>" << endl; return 1; }
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
@@ -1769,12 +1770,13 @@ int main ( int argc, char** argv ) {
 	/*pbool*/ o.useNamespaces = make_shared<bool> ( true );
 	/*pstring*/ o.outputForm = 0;
 
-	jsonld_api a ( o );
 
 	json_spirit::mValue v;
 	ifstream ifs ( argv[1] );
 	json_spirit::read ( ifs, v );
-	auto r = *to_rdf ( a, convert ( v ) );
+	auto c = convert(v);
+	jsonld_api a ( c, o );
+	auto r = *to_rdf ( a, c );
 	cout << ( r.tostring() ) << endl;
 
 	return 0;
