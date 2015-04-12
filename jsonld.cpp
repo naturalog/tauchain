@@ -935,7 +935,7 @@ typedef std::shared_ptr<snmap> psnmap;
 
 const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURI", XSD_STRING = XSD_NS + "string", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
 
-class node { //: public ssmap {
+class node { 
 public:
 	string type, value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE };
@@ -980,26 +980,18 @@ pnode mkliteral ( string value, pstring datatype, pstring language ) {
 	r ->value = value ;
 	r-> datatype = datatype ? *datatype : XSD_STRING;
 	if ( language ) r->lang = *language;
-	//	( *r ) [ "type" ] = "literal" ;
-	//	( *r ) [ "value" ] = value ;
-	//	( *r ) [ "datatype" ] = datatype ? *datatype : XSD_STRING;
-	//	if ( language ) r->at ( "language" ) = *language;
 	return r;
 }
 pnode mkiri ( string iri ) {
 	pnode r = make_shared<node> ( node::IRI );
 	r ->type = "IRI";
 	r->value = iri;
-	//	( *r ) [ "type" ] = "IRI";
-	//	( *r ) [ "value" ] = iri;
 	return r;
 }
 pnode mkbnode ( string attribute ) {
 	pnode r = make_shared<node> ( node::BNODE );
 	r->type = "blank node" ;
 	r->value = attribute ;
-	//	( *r ) [ "type" ] = "blank node" ;
-	//	( *r ) [ "value" ] = attribute ;
 	return r;
 }
 
@@ -1015,23 +1007,9 @@ public:
 		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
 	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
 		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
-	pnode subj() {
-		return std::get<0> ( *this );
-	}
-	pnode pred() {
-		return std::get<1> ( *this );
-	}
-	pnode object() {
-		return std::get<2> ( *this );
-	}
-	pnode graph() {
-		return std::get<3> ( *this );
-	}
-	string tostring() {
-		stringstream o;
-		o << "<C> " << graph()->value << "<S> " << subj()->value << "\t<P> " << pred()->value << "\t<O> " << object()->value << "\t";
-		return o.str();
-	}
+	pnode &subj = std::get<0> ( *this ),&pred = std::get<1> ( *this ),&object = std::get<2> ( *this ),&graph = std::get<3> ( *this );
+
+	string tostring() { return "<C> "s+graph->value+":\t<S> "+subj->value+"\t<P> "+pred->value+"\t<O> "+object->value; }
 };
 
 typedef std::shared_ptr<quad> pquad;
@@ -1539,7 +1517,7 @@ public:
 		for ( auto x : *this ) {
 			o << ( s = "Graph: "s + x.first ) << endl;
 			for ( size_t n = s.size(); n > 0; --n ) o << '='; o << endl;
-			for ( pquad q : *x.second ) o << q->tostring();
+			for ( pquad q : *x.second ) o << q->tostring() << endl;
 		}
 		return o.str();
 	}

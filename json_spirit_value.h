@@ -59,8 +59,8 @@ public:
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
 
-	template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant ); // constructor for compatible variant types
+	template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant ); // constructor for compatible variant types
 
 	Value_impl ( const Value_impl& other );
 
@@ -323,8 +323,8 @@ Value_impl<Config>::Value_impl ( Iter first, Iter last )
 }
 
 template<class Config>
-template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant )
+template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant )
 	:   v_ ( boost::apply_visitor ( Variant_converter_visitor(), variant ) ) {
 }
 
