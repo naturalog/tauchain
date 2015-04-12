@@ -355,7 +355,7 @@ bool is_abs_iri ( const string& s ) {
 	return s.find ( ':' ) != string::npos;
 }
 bool is_rel_iri ( const string& s ) {
-	return !(keyword ( s ) || is_abs_iri ( s ));
+	return ! ( keyword ( s ) || is_abs_iri ( s ) );
 }
 pobj newMap ( const string& k, pobj v ) {
 	pobj r = mk_somap_obj();
@@ -483,8 +483,10 @@ public:
 		context_t result ( *this );
 		if ( !localContext || !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
-			if ( !context || context->Null() ) { result = context_t ( options ); continue; }
-			else if ( pstring s = context->STR() ) {
+			if ( !context || context->Null() ) {
+				result = context_t ( options );
+				continue;
+			} else if ( pstring s = context->STR() ) {
 				string uri = resolve ( * ( *result.MAP() ) ["@base"]->STR(), *s ); // REVISE
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
 				remoteContexts.push_back ( uri );
@@ -933,137 +935,113 @@ typedef std::shared_ptr<snmap> psnmap;
 
 const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURI", XSD_STRING = XSD_NS + "string", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
 
-class node : public ssmap {
+class node { //: public ssmap {
 public:
+	string type, value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE };
-	const node_type type;
-	node ( const node_type& t ) : type ( t ) {}
-	int compareTo ( const pnode& o ) const {
-		return o ? compareTo ( *o ) : 1;
-	}
-	int compareTo ( const node& o ) const {
-		if ( type == LITERAL ) {
-			if ( o.type == IRI ) return -1;
-			if ( o.type == BNODE ) return -1;
-			if ( !has ( *this, "language" ) && has ( o, "language" ) ) return -1;
-			else if ( has ( *this, "language" ) && !has ( o,  "language" ) ) return 1;
-			if ( has ( *this, "datatype" ) ) {
-				auto x = at ( "datatype" ), y = o.at ( "datatype" );
-				return x == y ? 0 : x < y ? -1 : 1;
-			} else if ( has ( o, "datatype" ) ) return -1;
-			return 0;
-		}
-		if ( type == IRI ) {
-			if ( !o.type == IRI ) return 1;
-		} else if ( type == BNODE ) {
-			if ( o.type == BNODE ) return -1;
-			else if ( o.type == LITERAL ) return 1;
-		}
-		auto x = at ( "datatype" ), y = o.at ( "datatype" );
-		return x == y ? 0 : x < y ? -1 : 1;
-	}
-	/*
-		somap toObject ( bool useNativeTypes ) {
-			if ( type==IRI || type==BNODE ) { somap r; r["@id"]=mk_str_obj(at("value"));return r; }
-			somap rval;
-			rval[ "@value" ] = mk_str_obj(at ( "value" ));
-			auto it = find ( "language" );
-			if ( it != end() ) rval[ "@language" ] = mk_str_obj(it->second);
-			else {
-				string type = at ( "datatype" ), value = at ( "value" );
-				if ( useNativeTypes ) {
-					if ( XSD_STRING == type ) {
-					} else if ( XSD_BOOLEAN == type  ) {
-						if ( value == "true"  ) rval[ "@value"] = make_shared<bool_obj> ( true );
-						else if ( value == "false" ) rval[ "@value"] = make_shared<bool_obj> ( false );
-						else rval[ "@type"] = mk_str_obj(type);
-					} else if ( ( XSD_INTEGER == type && is_int ( value ) ) ( XSD_DOUBLE == type && is_double ( value ) ) ) {
-						double d = std::stod ( value );
-						if ( !::isnan ( d ) && !::isinf ( d ) ) {
-							if ( XSD_INTEGER == type ) {
-								int64_t i = d;
-								if ( tostr ( i ) == value ) rval[ "@value"] = make_shared<uint64_t_obj> ( i );
-							} else if ( XSD_DOUBLE == type )
-								rval[ "@value"] = make_shared<double_obj> ( d );
-							else throw "This should never happen as we checked the type was either integer or double";
-						}
-					} else rval["@type"] = mk_str_obj ( type );
-				} else if ( XSD_STRING != type  ) rval["@type"] = mk_str_obj ( type );
-			}
-			return rval;
-		}
-	*/
-
-	static pnode mkliteral ( string value, pstring datatype, pstring language ) {
-		pnode r = make_shared<node> ( LITERAL );
-		(*r)[ "type" ] = "literal" ;
-		(*r)[ "value" ] = value ;
-		(*r)[ "datatype" ] = datatype ? *datatype : XSD_STRING;
-		if ( language ) r->at ( "language" ) = *language;
-		return r;
-	}
-	static pnode mkiri ( string iri ) {
-		pnode r = make_shared<node> ( IRI );
-		( *r ) [ "type" ] = "IRI";
-		( *r ) [ "value" ] = iri;
-		return r;
-	}
-	static pnode mkbnode ( string attribute ) {
-		pnode r = make_shared<node> ( BNODE );
-		(*r)[ "type" ] = "blank node" ;
-		(*r)[ "value" ] = attribute ;
-		return r;
-	}
+	const node_type _type;
+	node ( const node_type& t ) : _type ( t ) {}
 };
+/*
+	somap node::toObject ( bool useNativeTypes ) {
+		if ( type==IRI || type==BNODE ) { somap r; r["@id"]=mk_str_obj(at("value"));return r; }
+		somap rval;
+		rval[ "@value" ] = mk_str_obj(at ( "value" ));
+		auto it = find ( "language" );
+		if ( it != end() ) rval[ "@language" ] = mk_str_obj(it->second);
+		else {
+			string type = at ( "datatype" ), value = at ( "value" );
+			if ( useNativeTypes ) {
+				if ( XSD_STRING == type ) {
+				} else if ( XSD_BOOLEAN == type  ) {
+					if ( value == "true"  ) rval[ "@value"] = make_shared<bool_obj> ( true );
+					else if ( value == "false" ) rval[ "@value"] = make_shared<bool_obj> ( false );
+					else rval[ "@type"] = mk_str_obj(type);
+				} else if ( ( XSD_INTEGER == type && is_int ( value ) ) ( XSD_DOUBLE == type && is_double ( value ) ) ) {
+					double d = std::stod ( value );
+					if ( !::isnan ( d ) && !::isinf ( d ) ) {
+						if ( XSD_INTEGER == type ) {
+							int64_t i = d;
+							if ( tostr ( i ) == value ) rval[ "@value"] = make_shared<uint64_t_obj> ( i );
+						} else if ( XSD_DOUBLE == type )
+							rval[ "@value"] = make_shared<double_obj> ( d );
+						else throw "This should never happen as we checked the type was either integer or double";
+					}
+				} else rval["@type"] = mk_str_obj ( type );
+			} else if ( XSD_STRING != type  ) rval["@type"] = mk_str_obj ( type );
+		}
+		return rval;
+	}
+*/
 
-class Quad : public map<string, pnode> {
-	Quad ( string subject, string predicate, pnode object, pstring graph ) :
-		Quad ( startsWith ( subject, "_:" ) ? node::mkbnode ( subject ) : node::mkiri ( subject ), node::mkiri ( predicate ), object, graph ) {}
+pnode mkliteral ( string value, pstring datatype, pstring language ) {
+	pnode r = make_shared<node> ( node::LITERAL );
+	r->type = "literal" ;
+	r ->value = value ;
+	r-> datatype = datatype ? *datatype : XSD_STRING;
+	if ( language ) r->lang = *language;
+	//	( *r ) [ "type" ] = "literal" ;
+	//	( *r ) [ "value" ] = value ;
+	//	( *r ) [ "datatype" ] = datatype ? *datatype : XSD_STRING;
+	//	if ( language ) r->at ( "language" ) = *language;
+	return r;
+}
+pnode mkiri ( string iri ) {
+	pnode r = make_shared<node> ( node::IRI );
+	r ->type = "IRI";
+	r->value = iri;
+	//	( *r ) [ "type" ] = "IRI";
+	//	( *r ) [ "value" ] = iri;
+	return r;
+}
+pnode mkbnode ( string attribute ) {
+	pnode r = make_shared<node> ( node::BNODE );
+	r->type = "blank node" ;
+	r->value = attribute ;
+	//	( *r ) [ "type" ] = "blank node" ;
+	//	( *r ) [ "value" ] = attribute ;
+	return r;
+}
+
+typedef std::tuple<pnode, pnode, pnode, pnode>  quad_base;
+
+class quad : public quad_base { //map<string, pnode> {
+	quad ( string subj, string pred, pnode object, pstring graph ) :
+		quad ( startsWith ( subj, "_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {}
 public:
-	Quad ( string subject, string predicate, string object, pstring graph ) :
-		Quad ( subject, predicate, startsWith ( object, "_:" ) ?  node::mkbnode ( object ) : node::mkiri ( object ), graph ) {}
-	Quad ( string subject, string predicate, string value, pstring datatype, pstring language, pstring graph ) :
-		Quad ( subject, predicate, node::mkliteral ( value, datatype, language ), graph ) {}
-	Quad ( pnode subject, pnode predicate, pnode object, pstring graph ) : map<string, pnode> () {
-		(*this)[ "subject" ] = subject ;
-		(*this)[ "predicate" ] = predicate ;
-		(*this)[ "object" ] = object ;
-		if ( graph && *graph == "@default" ) (*this)[ "name" ] = (startsWith ( *graph, "_:" ) ? node::mkbnode ( *graph ) : node::mkiri ( *graph )) ;
+	quad ( string subj, string pred, string object, pstring graph ) :
+		quad ( subj, pred, startsWith ( object, "_:" ) ?  mkbnode ( object ) : mkiri ( object ), graph ) {}
+	quad ( string subj, string pred, string value, pstring datatype, pstring language, pstring graph ) :
+		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
+	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
+		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
+	pnode subj() {
+		return std::get<0> ( *this );
 	}
-
-	pnode subject() {
-		return at ( "subject" );
-	}
-	pnode predicate() {
-		return at ( "predicate" );
+	pnode pred() {
+		return std::get<1> ( *this );
 	}
 	pnode object() {
-		return at ( "object" );
+		return std::get<2> ( *this );
 	}
 	pnode graph() {
-		return at ( "name" );
+		return std::get<3> ( *this );
 	}
-
-	/*		int compareTo ( Quad o ) {
-				if ( o == null ) return 1;
-				int rval = getGraph().compareTo ( o.getGraph() );
-				if ( rval != 0 ) return rval;
-				rval = getSubject().compareTo ( o.getSubject() );
-				if ( rval != 0 ) return rval;
-				rval = getPredicate().compareTo ( o.getPredicate() );
-				if ( rval != 0 ) return rval;
-				return getObject().compareTo ( o.getObject() );
-			}*/
+	string tostring() {
+		stringstream o;
+		o << "<C> " << graph()->value << "<S> " << subj()->value << "\t<P> " << pred()->value << "\t<O> " << object()->value << "\t";
+		return o.str();
+	}
 };
 
-typedef std::shared_ptr<Quad> pquad;
+typedef std::shared_ptr<quad> pquad;
 typedef vector<pquad> qlist;
 typedef std::shared_ptr<qlist> pqlist;
 typedef map<string, pqlist> qdb;
 
-const pnode first = node::mkiri ( RDF_FIRST );
-const  pnode rest = node::mkiri ( RDF_REST );
-const pnode nil = node::mkiri ( RDF_NIL );
+const pnode first = mkiri ( RDF_FIRST );
+const  pnode rest = mkiri ( RDF_REST );
+const pnode nil = mkiri ( RDF_NIL );
 
 pqlist mk_qlist() {
 	return make_shared<qlist>();
@@ -1369,7 +1347,7 @@ public:
 						throw INVALID_TYPED_VALUE + "\t" + "value of @type must be an IRI";
 			} else if ( hastype ( result ) ) {
 				pobj rtype = gettype ( result );
-				if ( !rtype->LIST() ) ( *result )["@type"] = mk_olist_obj ( olist ( 1, rtype ) ) ;
+				if ( !rtype->LIST() ) ( *result ) ["@type"] = mk_olist_obj ( olist ( 1, rtype ) ) ;
 			} else if ( hasset ( result ) || haslist ( result ) ) {
 				if ( result->size() > ( hasindex ( result ) ? 2 : 1 ) )
 					throw INVALID_SET_OR_LIST_OBJECT + "\t" + "@set or @list may only contain @index";
@@ -1514,7 +1492,7 @@ public:
 				elem->erase ( "@index" );
 				if ( hasindex ( node ) ) {
 					if ( !deepCompare ( getindex ( node ), elemIndex ) ) throw CONFLICTING_INDEXES;
-				} else ( *node )["@index"] = elemIndex ;
+				} else ( *node ) ["@index"] = elemIndex ;
 			}
 			if ( hasreverse ( elem ) ) {
 				psomap refnode = make_shared<somap>(), revmap = elem->at ( "@reverse" )->MAP();
@@ -1552,33 +1530,18 @@ class rdf_db : public qdb {
 	jsonld_api api;
 public:
 	rdf_db ( jsonld_api api_ = jsonld_api() ) : qdb(), api ( api_ ) {
-		(*this)[ "@default" ] = mk_qlist();
+		( *this ) [ "@default" ] = mk_qlist();
 	}
 
 	string tostring() {
+		string s;
 		stringstream o;
 		for ( auto x : *this ) {
-			o << "Context:\t" << x.first << endl;
-			for ( auto y : *x.second ) {
-				for ( auto z : *y ) {
-					o << "Quad: " << endl << z.first << endl << "Node: " << endl;
-					for ( auto t : *z.second ) o << t.first << '\t' << t.second << endl;
-				}
-			}
+			o << ( s = "Graph: "s + x.first ) << endl;
+			for ( size_t n = s.size(); n > 0; --n ) o << '='; o << endl;
+			for ( pquad q : *x.second ) o << q->tostring();
 		}
 		return o.str();
-	}
-	ostream& operator<< ( ostream& o ) {
-		for ( auto x : *this ) {
-			o << "Context:\t" << x.first << endl;
-			for ( auto y : *x.second ) {
-				for ( auto z : *y ) {
-					o << "Quad: " << endl << z.first << endl << "Node: " << endl;
-					for ( auto t : *z.second ) o << t.first << '\t' << t.second << endl;
-				}
-			}
-		}
-		return o;
 	}
 
 	void setNamespace ( string ns, string prefix ) {
@@ -1605,8 +1568,6 @@ public:
 
 	void parseContext ( pobj contextLike ) {
 		pcontext context;
-		//		if ( api ) context = new Context ( api.opts );
-		//		else context = new Context();
 		context = context->parse ( contextLike );
 		ssmap prefixes = context->getPrefixes ( true );
 
@@ -1617,31 +1578,28 @@ public:
 		}
 	}
 
-	void addTriple ( string subject, string predicate, string value, pstring datatype, pstring language ) {
-		addQuad ( subject, predicate, value, datatype, language, pstr ( "@default" ) );
+	void addTriple ( string subj, string pred, string value, pstring datatype, pstring language ) {
+		addquad ( subj, pred, value, datatype, language, pstr ( "@default" ) );
 	}
 
-	void addQuad ( string s, string p, string value, pstring datatype, pstring language, pstring graph ) {
+	void addquad ( string s, string p, string value, pstring datatype, pstring language, pstring graph ) {
 		if ( !graph ) graph = pstr ( "@default" );
-		if ( find ( *graph ) == end() ) at ( *graph ) = mk_qlist();
-		at ( *graph )->push_back ( make_shared<Quad> ( s, p, value, datatype, language, graph ) );
+		if ( find ( *graph ) == end() ) ( *this ) [ *graph ] = mk_qlist();
+		at ( *graph )->push_back ( make_shared<quad> ( s, p, value, datatype, language, graph ) );
 	}
 
-	void addTriple ( string subject, string predicate, string object ) {
-		addQuad ( subject, predicate, object, pstr ( "@default" ) );
+	void addTriple ( string subj, string pred, string object ) {
+		addquad ( subj, pred, object, pstr ( "@default" ) );
 	}
 
-	void addQuad ( string subject, string predicate, string object, pstring graph ) {
+	void addquad ( string subj, string pred, string object, pstring graph ) {
 		if ( !graph ) graph = pstr ( "@default" );
 		if ( !has ( *this, *graph ) ) ( *this ) [ *graph ] = mk_qlist();
-		at ( *graph )->push_back ( make_shared<Quad> ( subject, predicate, object, graph ) );
+		at ( *graph )->push_back ( make_shared<quad> ( subj, pred, object, graph ) );
 	}
 
-	void graphToRDF ( string graphName, somap& graph ) {
-		// 4.2)
+	void graphToRDF ( string graph_name, somap& graph ) {
 		qlist triples;
-		//		vector<string> subjects = new ArrayList<string> ( graph.keySet() );
-		//		for ( string id : subjects ) {
 		for ( auto y : graph ) {
 			string id = y.first;
 			if ( is_rel_iri ( id ) ) continue;
@@ -1657,14 +1615,8 @@ public:
 				else if ( is_rel_iri ( property ) ) continue;
 				else values = node->at ( property )->LIST();
 
-				pnode subject;
-				if ( id.find ( "_:" ) == 0 ) subject = node::mkbnode ( id );
-				else subject = node::mkiri ( id );
-
-				// RDF predicates
-				pnode predicate;
-				if ( startsWith ( property, "_:" ) ) predicate = node::mkbnode ( property );
-				else predicate = node::mkiri ( property );
+				pnode subj = id.find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
+				pnode pred = startsWith ( property, "_:" ) ? mkbnode ( property ) :  mkiri ( property );
 
 				for ( auto item : *values ) {
 					// convert @list to triples
@@ -1674,25 +1626,25 @@ public:
 						pnode firstBnode = nil;
 						if ( list->size() ) {
 							last = objectToRDF ( *list->rbegin() );
-							firstBnode = node::mkbnode ( api.gen_bnode_id () );
+							firstBnode = mkbnode ( api.gen_bnode_id () );
 						}
-						triples.push_back ( make_shared<Quad> ( subject, predicate, firstBnode, pstr ( graphName ) ) );
+						triples.push_back ( make_shared<quad> ( subj, pred, firstBnode, pstr ( graph_name ) ) );
 						for ( size_t i = 0; i < list->size() - 1; i++ ) {
 							pnode object = objectToRDF ( list->at ( i ) );
-							triples.push_back ( make_shared<Quad> ( firstBnode, first, object, pstr ( graphName ) ) );
-							pnode restBnode = node::mkbnode ( api.gen_bnode_id() );
-							triples.push_back ( make_shared<Quad> ( firstBnode, rest, restBnode, pstr ( graphName ) ) );
+							triples.push_back ( make_shared<quad> ( firstBnode, first, object, pstr ( graph_name ) ) );
+							pnode restBnode = mkbnode ( api.gen_bnode_id() );
+							triples.push_back ( make_shared<quad> ( firstBnode, rest, restBnode, pstr ( graph_name ) ) );
 							firstBnode = restBnode;
 						}
 						if ( last ) {
-							triples.push_back ( make_shared<Quad> ( firstBnode, first, last, pstr ( graphName ) ) );
-							triples.push_back ( make_shared<Quad> ( firstBnode, rest, nil, pstr ( graphName ) ) );
+							triples.push_back ( make_shared<quad> ( firstBnode, first, last, pstr ( graph_name ) ) );
+							triples.push_back ( make_shared<quad> ( firstBnode, rest, nil, pstr ( graph_name ) ) );
 						}
-					} else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( make_shared<Quad> ( subject, predicate, object, pstr ( graphName ) ) );
+					} else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( make_shared<quad> ( subj, pred, object, pstr ( graph_name ) ) );
 				}
 			}
 		}
-		at ( graphName ) = make_shared<qlist> ( triples );
+		at ( graph_name ) = make_shared<qlist> ( triples );
 	}
 
 private:
@@ -1700,18 +1652,18 @@ private:
 		if ( isvalue ( item ) ) {
 			pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
-				if ( value->BOOL() ) return node::mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
+				if ( value->BOOL() ) return mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
 				else if ( value->DOUBLE() || XSD_DOUBLE == *datatype->STR() ) {
 					///					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
 					//					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
-					return node::mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
+					return mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
 				} else {
 					//DecimalFormat df = new DecimalFormat ( "0" );
-					return node::mkliteral ( value->INT() ? tostr ( *value->INT() ) : tostr ( *value->UINT() ), pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
+					return mkliteral ( value->INT() ? tostr ( *value->INT() ) : tostr ( *value->UINT() ), pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
 				}
 			} else if ( haslang ( item->MAP() ) )
-				return node::mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
-			else return node::mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
+				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
+			else return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
 		}
 		// convert string/node object to RDF
 		else {
@@ -1720,17 +1672,17 @@ private:
 				id = * getid ( item )->STR();
 				if ( is_rel_iri ( id ) ) return 0;
 			} else id = * item->STR();
-			if ( id.find ( "_:" ) == 0 ) return node::mkbnode ( id );
-			else return node::mkiri ( id );
+			if ( id.find ( "_:" ) == 0 ) return mkbnode ( id );
+			else return mkiri ( id );
 		}
 	}
 
 public:
-	/*	 set<string> graphNames() {
+	/*	 set<string> graph_names() {
 			return keySet();
 		}
-		vector<Quad> getQuads ( string graphName ) {
-			return ( List<Quad> ) get ( graphName );
+		vector<quad> getquads ( string graph_name ) {
+			return ( List<quad> ) get ( graph_name );
 		}*/
 };
 
@@ -1740,8 +1692,7 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	gen_node_map ( value, nodeMap );
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
-		if ( is_rel_iri ( g.first ) ) 
-			continue;
+		if ( is_rel_iri ( g.first ) ) continue;
 		r.graphToRDF ( g.first, *g.second->MAP() );
 	}
 	return make_shared<rdf_db> ( r );
@@ -1749,13 +1700,16 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 
 
 std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
-//	psomap node_map = make_shared<somap>();
-//	a.gen_node_map ( o, node_map );
+	//	psomap node_map = make_shared<somap>();
+	//	a.gen_node_map ( o, node_map );
 	return a.toRDF();
 }
 
 int main ( int argc, char** argv ) {
-	if ( argc != 2 ) { cout << "Usage: jsonld++ <JSON-LD input filename>" << endl; return 1; }
+	if ( argc != 2 ) {
+		cout << "Usage: jsonld++ <JSON-LD input filename>" << endl;
+		return 1;
+	}
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
@@ -1775,10 +1729,10 @@ int main ( int argc, char** argv ) {
 	json_spirit::mValue v;
 	ifstream ifs ( argv[1] );
 	json_spirit::read ( ifs, v );
-	auto c = convert(v);
+	auto c = convert ( v );
 	jsonld_api a ( c, o );
-	auto r = *to_rdf ( a, c );
-	cout << ( r.tostring() ) << endl;
+	auto r = *a.toRDF ( );
+	cout << r.tostring() << endl;
 
 	return 0;
 }
