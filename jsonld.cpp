@@ -590,7 +590,7 @@ public:
 
 		// 16
 		( ( it = val.find ( "@container" ) ) != val.end() ) && it->second->STR() &&
-		           is ( *it->second->STR(), { "@list"s, "@set"s, "@index"s, "@language"s }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
+		is ( *it->second->STR(), { "@list"s, "@set"s, "@index"s, "@language"s }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
 
 		auto i1 = val.find ( "@language" ), i2 = val.find ( "type" );
 		pstring lang;
@@ -931,15 +931,11 @@ public:
 	enum node_type { LITERAL, IRI, BNODE };
 	const node_type type;
 	node ( const node_type& t ) : type ( t ) {}
-	//		string value() { return at ( "value" ); }
-	//		string datatype() { return at ( "datatype" ); }
-	//		string language() { return at ( "language" ); }
 	int compareTo ( const pnode& o ) const {
 		return o ? compareTo ( *o ) : 1;
 	}
 	int compareTo ( const node& o ) const {
 		if ( type == LITERAL ) {
-			//			if ( o == null ) return 1;
 			if ( o.type == IRI ) return -1;
 			if ( o.type == BNODE ) return -1;
 			if ( !has ( *this, "language" ) && has ( o, "language" ) ) return -1;
@@ -961,11 +957,11 @@ public:
 	}
 	/*
 		somap toObject ( bool useNativeTypes ) {
-			if ( isIRI() || isBlanknode() ) { somap r; r["@id"]=mk_str_obj(at("value"));return r; }
+			if ( type==IRI || type==BNODE ) { somap r; r["@id"]=mk_str_obj(at("value"));return r; }
 			somap rval;
-			rval[ "@value" ] = at ( "value" );
+			rval[ "@value" ] = mk_str_obj(at ( "value" ));
 			auto it = find ( "language" );
-			if ( it != end() ) rval[ "@language" ] = it->second;
+			if ( it != end() ) rval[ "@language" ] = mk_str_obj(it->second);
 			else {
 				string type = at ( "datatype" ), value = at ( "value" );
 				if ( useNativeTypes ) {
@@ -973,21 +969,19 @@ public:
 					} else if ( XSD_BOOLEAN == type  ) {
 						if ( value == "true"  ) rval[ "@value"] = make_shared<bool_obj> ( true );
 						else if ( value == "false" ) rval[ "@value"] = make_shared<bool_obj> ( false );
-						else rval[ "@type"] type;
+						else rval[ "@type"] = mk_str_obj(type);
 					} else if ( ( XSD_INTEGER == type && is_int ( value ) ) ( XSD_DOUBLE == type && is_double ( value ) ) ) {
 						double d = std::stod ( value );
-						if ( !isnan ( d ) && !isinf ( d ) ) {
+						if ( !::isnan ( d ) && !::isinf ( d ) ) {
 							if ( XSD_INTEGER == type ) {
 								int64_t i = d;
-								if ( tostring ( i ) == value )
-									rval[ "@value"] = make_shared<uint64_t_obj> ( i );
+								if ( tostr ( i ) == value ) rval[ "@value"] = make_shared<uint64_t_obj> ( i );
 							} else if ( XSD_DOUBLE == type )
 								rval[ "@value"] = make_shared<double_obj> ( d );
-							else
-								throw "This should never happen as we checked the type was either integer or double";
+							else throw "This should never happen as we checked the type was either integer or double";
 						}
 					} else rval["@type"] = mk_str_obj ( type );
-				} else if ( !XSD_STRING == type  ) rval["@type"] = mk_str_obj ( type );
+				} else if ( XSD_STRING != type  ) rval["@type"] = mk_str_obj ( type );
 			}
 			return rval;
 		}
@@ -1003,8 +997,8 @@ public:
 	}
 	static pnode mkiri ( string iri ) {
 		pnode r = make_shared<node> ( IRI );
-		r->at ( "type" ) = "IRI";
-		r->at ( "value" ) = iri;
+		( *r ) [ "type" ] = "IRI";
+		( *r ) [ "value" ] = iri;
 		return r;
 	}
 	static pnode mkbnode ( string attribute ) {
@@ -1552,6 +1546,32 @@ public:
 		at ( "@default" ) = mk_qlist();
 	}
 
+	string tostring() {
+		stringstream o;
+		for ( auto x : *this ) {
+			o << "Context:\t" << x.first << endl;
+			for ( auto y : *x.second ) {
+				for ( auto z : *y ) {
+					o << "Quad: " << endl << z.first << endl << "Node: " << endl;
+					for ( auto t : *z.second ) o << t.first << '\t' << t.second << endl;
+				}
+			}
+		}
+		return o.str();
+	}
+	ostream& operator<< ( ostream& o ) {
+		for ( auto x : *this ) {
+			o << "Context:\t" << x.first << endl;
+			for ( auto y : *x.second ) {
+				for ( auto z : *y ) {
+					o << "Quad: " << endl << z.first << endl << "Node: " << endl;
+					for ( auto t : *z.second ) o << t.first << '\t' << t.second << endl;
+				}
+			}
+		}
+		return o;
+	}
+
 	void setNamespace ( string ns, string prefix ) {
 		context[ns] = prefix ;
 	}
@@ -1717,9 +1737,36 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	return make_shared<rdf_db> ( r );
 }
 
-int main() {
-	context_t c;
-	vector<string> v;
-	c.parse ( 0, v );
+
+std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
+	psomap node_map = make_shared<somap>();
+	a.generateNodeMap ( o, node_map );
+	return a.toRDF();
+}
+
+int main ( int argc, char** argv ) {
+	if ( argc != 2 ) cout << "Usage: jsonld++ <JSON-LD input filename>" << endl;
+	jsonld_options o;
+	/*pstring*/ o.base = 0;
+	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
+	/*pobj*/ o.expandContext = 0;
+	/*pstring*/ o.processingMode = pstr ( "json-ld-1.0" );
+	/*pbool*/ o.embed = 0;
+	/*pbool*/ o.isexplicit = 0;
+	/*pbool*/ o.omitDefault = 0;
+	/*pbool*/ o.useRdfType = make_shared<bool> ( true );
+	/*pbool*/ o.useNativeTypes = make_shared<bool> ( true );
+	/*pbool*/ o.produceGeneralizedRdf = make_shared<bool> ( true );
+	/*pstring*/ o.format = 0;
+	/*pbool*/ o.useNamespaces = make_shared<bool> ( true );
+	/*pstring*/ o.outputForm = 0;
+
+	jsonld_api a ( o );
+
+	json_spirit::mValue v;
+	json_spirit::read ( argv[1], v );
+	auto r = *to_rdf ( a, convert ( v ) );
+	cout << ( r.tostring() ) << endl;
+
 	return 0;
 }
