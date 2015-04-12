@@ -291,7 +291,7 @@ struct jsonld_options {
 	jsonld_options ( string base_ ) : base ( pstr ( base_ ) ) {}
 	pstring base = 0;
 	pbool compactArrays = make_shared<bool> ( true );
-	pobj expandContext = 0;
+//obj expandContext = 0;
 	pstring processingMode = pstr ( "json-ld-1.0" );
 	pbool embed = 0;
 	pbool isexplicit = 0;
@@ -935,7 +935,7 @@ typedef std::shared_ptr<snmap> psnmap;
 
 const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURI", XSD_STRING = XSD_NS + "string", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
 
-class node { 
+class node {
 public:
 	string type, value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE };
@@ -1007,9 +1007,11 @@ public:
 		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
 	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
 		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
-	pnode &subj = std::get<0> ( *this ),&pred = std::get<1> ( *this ),&object = std::get<2> ( *this ),&graph = std::get<3> ( *this );
+	pnode &subj = std::get<0> ( *this ), &pred = std::get<1> ( *this ), &object = std::get<2> ( *this ), &graph = std::get<3> ( *this );
 
-	string tostring() { return "<C> "s+graph->value+":\t<S> "+subj->value+"\t<P> "+pred->value+"\t<O> "+object->value; }
+	string tostring() {
+		return "<C> "s + graph->value + ":\t<S> " + subj->value + "\t<P> " + pred->value + "\t<O> " + object->value;
+	}
 };
 
 typedef std::shared_ptr<quad> pquad;
@@ -1691,7 +1693,7 @@ int main ( int argc, char** argv ) {
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
-	/*pobj*/ o.expandContext = 0;
+//	/*pobj*/ o.expandContext = 0;
 	/*pstring*/ o.processingMode = pstr ( "json-ld-1.0" );
 	/*pbool*/ o.embed = 0;
 	/*pbool*/ o.isexplicit = 0;
