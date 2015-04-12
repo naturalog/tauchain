@@ -355,7 +355,7 @@ bool is_abs_iri ( const string& s ) {
 	return s.find ( ':' ) != string::npos;
 }
 bool is_rel_iri ( const string& s ) {
-	return !keyword ( s ) || !is_abs_iri ( s );
+	return !(keyword ( s ) || is_abs_iri ( s ));
 }
 pobj newMap ( const string& k, pobj v ) {
 	pobj r = mk_somap_obj();
@@ -483,7 +483,7 @@ public:
 		context_t result ( *this );
 		if ( !localContext || !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
-			if ( context->Null() ) result = context_t ( options );
+			if ( !context || context->Null() ) { result = context_t ( options ); continue; }
 			else if ( pstring s = context->STR() ) {
 				string uri = resolve ( * ( *result.MAP() ) ["@base"]->STR(), *s ); // REVISE
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
@@ -996,9 +996,9 @@ public:
 
 	static pnode mkliteral ( string value, pstring datatype, pstring language ) {
 		pnode r = make_shared<node> ( LITERAL );
-		r->at ( "type" ) = "literal" ;
-		r->at ( "value" ) = value ;
-		r->at ( "datatype" ) = datatype ? *datatype : XSD_STRING;
+		(*r)[ "type" ] = "literal" ;
+		(*r)[ "value" ] = value ;
+		(*r)[ "datatype" ] = datatype ? *datatype : XSD_STRING;
 		if ( language ) r->at ( "language" ) = *language;
 		return r;
 	}
@@ -1010,8 +1010,8 @@ public:
 	}
 	static pnode mkbnode ( string attribute ) {
 		pnode r = make_shared<node> ( BNODE );
-		r->at ( "type" ) = "blank node" ;
-		r->at ( "value" ) = attribute ;
+		(*r)[ "type" ] = "blank node" ;
+		(*r)[ "value" ] = attribute ;
 		return r;
 	}
 };
@@ -1025,10 +1025,10 @@ public:
 	Quad ( string subject, string predicate, string value, pstring datatype, pstring language, pstring graph ) :
 		Quad ( subject, predicate, node::mkliteral ( value, datatype, language ), graph ) {}
 	Quad ( pnode subject, pnode predicate, pnode object, pstring graph ) : map<string, pnode> () {
-		at ( "subject" ) = subject ;
-		at ( "predicate" ) = predicate ;
-		at ( "object" ) = object ;
-		if ( graph && *graph == "@default" ) at ( "name" ) = startsWith ( *graph, "_:" ) ? node::mkbnode ( *graph ) : node::mkiri ( *graph ) ;
+		(*this)[ "subject" ] = subject ;
+		(*this)[ "predicate" ] = predicate ;
+		(*this)[ "object" ] = object ;
+		if ( graph && *graph == "@default" ) (*this)[ "name" ] = (startsWith ( *graph, "_:" ) ? node::mkbnode ( *graph ) : node::mkiri ( *graph )) ;
 	}
 
 	pnode subject() {
@@ -1552,7 +1552,7 @@ class rdf_db : public qdb {
 	jsonld_api api;
 public:
 	rdf_db ( jsonld_api api_ = jsonld_api() ) : qdb(), api ( api_ ) {
-		at ( "@default" ) = mk_qlist();
+		(*this)[ "@default" ] = mk_qlist();
 	}
 
 	string tostring() {
@@ -1740,7 +1740,8 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	gen_node_map ( value, nodeMap );
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
-		if ( is_rel_iri ( g.first ) ) continue;
+		if ( is_rel_iri ( g.first ) ) 
+			continue;
 		r.graphToRDF ( g.first, *g.second->MAP() );
 	}
 	return make_shared<rdf_db> ( r );
