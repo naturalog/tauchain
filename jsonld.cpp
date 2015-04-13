@@ -9,6 +9,8 @@
 #include <boost/variant.hpp>
 #include "json_spirit_reader.h"
 #include "json_spirit_writer.h"
+#include "json_spirit_reader_template.h"
+#include "json_spirit_writer_template.h"
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <curl/easy.h>
@@ -440,7 +442,7 @@ string download ( const string& url ) {
 
 pobj fromURL ( const string& url ) {
 	json_spirit::mValue r;
-	json_spirit::read ( download ( url ), r );
+	json_spirit::read_string ( download ( url ), r );
 	return convert ( r );
 }
 
@@ -1708,7 +1710,7 @@ int main ( int argc, char** argv ) {
 
 	json_spirit::mValue v;
 	ifstream ifs ( argv[1] );
-	json_spirit::read ( ifs, v );
+	json_spirit::read_stream ( ifs, v );
 	auto c = convert ( v );
 	jsonld_api a ( c, o );
 	auto r = *a.toRDF ( );
