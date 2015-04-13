@@ -7,10 +7,7 @@
 #include <list>
 #include <set>
 #include <boost/variant.hpp>
-#include "json_spirit_reader.h"
-#include "json_spirit_writer.h"
-#include "json_spirit_reader_template.h"
-#include "json_spirit_writer_template.h"
+#include "json_spirit.h"
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <curl/easy.h>
@@ -293,7 +290,7 @@ struct jsonld_options {
 	jsonld_options ( string base_ ) : base ( pstr ( base_ ) ) {}
 	pstring base = 0;
 	pbool compactArrays = make_shared<bool> ( true );
-//obj expandContext = 0;
+	//obj expandContext = 0;
 	pstring processingMode = pstr ( "json-ld-1.0" );
 	pbool embed = 0;
 	pbool isexplicit = 0;
@@ -1695,7 +1692,7 @@ int main ( int argc, char** argv ) {
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
-//	/*pobj*/ o.expandContext = 0;
+	//	/*pobj*/ o.expandContext = 0;
 	/*pstring*/ o.processingMode = pstr ( "json-ld-1.0" );
 	/*pbool*/ o.embed = 0;
 	/*pbool*/ o.isexplicit = 0;
