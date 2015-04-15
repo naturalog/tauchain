@@ -1008,8 +1008,8 @@ public:
 		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
 	pnode &subj = std::get<0> ( *this ), &pred = std::get<1> ( *this ), &object = std::get<2> ( *this ), &graph = std::get<3> ( *this );
 
-	string tostring() {
-		return "<C> "s + graph->value + ":\t<S> " + subj->value + "\t<P> " + pred->value + "\t<O> " + object->value;
+	string tostring(string ctx) {
+		return "< "s + ctx + " > : < " + subj->value + " > <" + pred->value + " > < " + object->value + " > .";
 	}
 };
 
@@ -1515,11 +1515,7 @@ public:
 	string tostring() {
 		string s;
 		stringstream o;
-		for ( auto x : *this ) {
-			o << ( s = "Graph: "s + x.first ) << endl;
-			for ( size_t n = s.size(); n > 0; --n ) o << '='; o << endl;
-			for ( pquad q : *x.second ) o << q->tostring() << endl;
-		}
+		for ( auto x : *this ) for ( pquad q : *x.second ) o << q->tostring(x.first) << endl;
 		return o.str();
 	}
 
@@ -1623,13 +1619,13 @@ public:
 				}
 			}
 		}
-		at ( graph_name ) = make_shared<qlist> ( triples );
+		(*this) [ graph_name ] = make_shared<qlist> ( triples );
 	}
 
 private:
 	pnode objectToRDF ( pobj item ) {
 		if ( isvalue ( item ) ) {
-			pobj value = item->MAP( )->at ( "@value" ), datatype = item->MAP( )->at ( "@type" );
+			pobj value = item->MAP( )->at ( "@value" ), datatype = hastype(item->MAP()) ? item->MAP( )->at ( "@type" ) : pobj(0);
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 				if ( value->BOOL() ) return mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
 				else if ( value->DOUBLE() || XSD_DOUBLE == *datatype->STR() ) {
