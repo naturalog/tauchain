@@ -11,7 +11,7 @@ struct pred_t {
 	vector<pred_t> args;
 };
 
-typedef map<pred_t, pred_t> env_t;
+typedef map<string, pred_t> env_t;
 
 struct rule_t {
 	pred_t head;
@@ -32,10 +32,10 @@ struct s1 {
 	ground_t ground;
 };
 
-int builtin(pred_t, s1);
+int builtin ( pred_t, s1 );
 typedef map<string, vector<rule_t>> evidence_t;
 
-pred_t evaluate ( pred_t& t, env_t& env );
+pred_t evaluate ( pred_t t, env_t& env );
 bool unify ( pred_t s, env_t senv, pred_t d, env_t denv, bool f );
 
 template<typename ret_t>
@@ -79,57 +79,67 @@ ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
 			queue.push_back ( r );
 			continue;
 		} else if ( !b ) continue;
-		map<, vector<rule_t>> cases;
+		map<string, vector<rule_t>> cases;
 		if ( cases.find ( t.pred ) == cases.end() ) continue;
-		var src = 0;
-		for ( var k = 0; k < cases[t.pred].size(); k++ ) {
+		size_t src = 0;
+		for ( size_t k = 0; k < cases[t.pred].size(); k++ ) {
 			rule_t rl = cases[t.pred][k];
 			src++;
 			ground_t g = c.ground;
-			if ( rl.body.size() == 0 ) g.push ( {rl, {}} );
-			s1 r {rl, src, 0, c, {}, g};
-			if ( unify ( t, c.env, rl.head, r.env, true ) ) {
-				var ep = c;  // euler path
-				while ( ep = ep.parent ) if ( ep.src == c.src && unify ( ep.rule.head, ep.env, c.rule.head, c.env, false ) ) break;
-				if ( ep == null ) queue.unshift ( r );
-			}
+			s2 tmp;
+			if ( rl.body.size() == 0 ) g.push_back ( tmp = {rl, vector<pred_t>() } );
+			s1 r = {rl, src, 0, c, {}, g};
+			if ( unify ( t, c.env, rl.head, r.env, true ) )
+				for ( s1 ep = c; ; ep = ep.parent ) {
+					if ( ep.src == c.src && unify ( ep.rule.head, ep.env, c.rule.head, c.env, false ) ) break;
+					if ( !ep.parent ) {
+						queue.push_front ( r );
+						break;
+					}
+				}
 		}
 	}
 }
 
 bool unify ( pred_t s, env_t senv, pred_t d, env_t denv, bool f ) {
 	if ( s.pred[0] == '?' ) {
-		pred_t sval = evaluate ( s, senv );
-		if ( sval != null ) return unify ( sval, senv, d, denv, f );
-		else return true;
-	} else if ( d.pred[0] == '?' ) {
-		var dval = evaluate ( d, denv );
-		if ( dval != null ) return unify ( s, senv, dval, denv, f );
-		else {
-			if ( f != null ) denv[d.pred] = evaluate ( s, senv );
+		try {
+			pred_t sval = evaluate ( s, senv );
+			return unify ( sval, senv, d, denv, f );
+		} catch ( ... ) {
 			return true;
 		}
-	} else if ( s.pred == d.pred && s.args.size() == d.args.size() ) {
-		for ( var i = 0; i < s.args.size(); i++ ) if ( !unify ( s.args[i], senv, d.args[i], denv, f ) ) return false;
+	}
+	if ( d.pred[0] == '?' )
+		try {
+			pred_t dval = evaluate ( d, denv );
+			return unify ( s, senv, dval, denv, f );
+		} catch ( ... ) {
+			if ( f ) denv[d.pred] = evaluate ( s, senv );
+			return true;
+		}
+	if ( s.pred == d.pred && s.args.size() == d.args.size() ) {
+		for ( size_t i = 0; i < s.args.size(); i++ ) if ( !unify ( s.args[i], senv, d.args[i], denv, f ) ) return false;
 		return true;
 	}
 	return false;
 }
 
-pred_t evaluate ( pred_t& t, env_t& env ) {
-	if ( t.pred[0]=='?' ) {
-		auto it = env.find(t.pred);
-		if ( it != env.end() ) return evaluate ( *it, env );
-		else return pred_t();
+pred_t evaluate ( pred_t t, env_t& env ) {
+	if ( t.pred[0] == '?' ) {
+		auto it = env.find ( t.pred );
+		if ( it != env.end() ) return evaluate ( it->second, env );
+		else throw 0;
 	} else if ( t.args.size() == 0 ) return t;
 	else {
 		pred_t tmp;
 		vector<pred_t> n;
-		for ( size_t i = 0; i < t.args.size(); ++i ) {
-			pred_t a = evaluate ( t.args[i], env );
-			if ( a ) n.back ( *a );
-			else n.push_back ( tmp = { t.args[i].pred, vector<pred_t>() } );
-		}
+		for ( size_t i = 0; i < t.args.size(); ++i )
+			try {
+				n.push_back ( evaluate ( t.args[i], env ) );
+			} catch ( ... ) {
+				n.push_back ( tmp = { t.args[i].pred, vector<pred_t>() } );
+			}
 		return {t.pred, n};
 	}
 }
