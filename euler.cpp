@@ -32,7 +32,180 @@ struct s1 {
 	ground_t ground;
 };
 
-int builtin ( pred_t, s1 );
+int builtin ( pred_t, s1 ) {
+/*  if (t.pred == "GND") return 1;
+  pred_t t0 = evaluate(t.args[0], c.env), t1 = evaluate(t.args[1], c.env);
+  if (t.pred == "log:equalTo") {
+    if (t0 != null && t1 != null && t0.pred == t1.pred) return 1;
+    else return 0;
+  }
+  else if (t.pred == "log:notEqualTo") {
+    if (t0 != null && t1 != null && t0.pred != t1.pred) return 1;
+    else return 0;
+  }
+  else if (t.pred == "log:semantics") {
+    if (typeof(document) == "undefined") {
+      defineClass("euler.Support");
+      eval("var s = " + new Support().fromWeb(t0.pred));
+    }
+    else {
+      var r = window.XMLHttpRequest?new XMLHttpRequest():new ActiveXObject("Msxml2.XMLHTTP");
+      r.open("get", t0.pred, false);
+      r.send(null);
+      if (r.status == 200) eval("var s = " + r.responseText);
+    }
+    if (unify(s, c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:absoluteValue") {
+    if (t0 != null && !isVar(t0.pred)) {
+      var a = Math.abs(parseFloat(t0.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    }
+    else return 0;
+  }
+  else if (t.pred == "math:cos") {
+    if (t0 != null && !isVar(t0.pred)) {
+      var a = Math.cos(parseFloat(t0.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    }
+    else if (t1 != null && !isVar(t1.pred)) {
+      var a = Math.acos(parseFloat(t1.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[0], c.env, true)) return 1;
+    }
+    else return 0;
+  }
+  else if (t.pred == "math:degrees") {
+    if (t0 != null && !isVar(t0.pred)) {
+      var a = parseFloat(t0.pred) * 180 / Math.PI;
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    }
+    else if (t1 != null && !isVar(t1.pred)) {
+      var a = parseFloat(t0.pred) * Math.PI / 180;
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[0], c.env, true)) return 1;
+    }
+    else return 0;
+  }
+  else if (t.pred == "math:equalTo") {
+    if (t0 != null && t1 != null && parseFloat(t0.pred) == parseFloat(t1.pred)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:greaterThan") {
+    if (t0 != null && t1 != null && parseFloat(t0.pred) > parseFloat(t1.pred)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:lessThan") {
+    if (t0 != null && t1 != null && parseFloat(t0.pred) < parseFloat(t1.pred)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:notEqualTo") {
+    if (t0 != null && t1 != null && parseFloat(t0.pred) != parseFloat(t1.pred)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:notLessThan") {
+    if (t0 != null && t1 != null && parseFloat(t0.pred) >= parseFloat(t1.pred)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:notGreaterThan") {
+    if (t0 != null && t1 != null && parseFloat(t0.pred) <= parseFloat(t1.pred)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:difference" && t0 != null) {
+    var a = parseFloat(evaluate(t0.args[0], c.env).pred);
+    for (var ti = t0.args[1]; ti.args.length != 0; ti = ti.args[1]) a -= parseFloat(evaluate(ti.args[0], c.env).pred);
+    if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:exponentiation" && t0 != null) {
+    var a = parseFloat(evaluate(t0.args[0], c.env).pred);
+    for (var ti = t0.args[1]; ti.args.length != 0; ti = ti.args[1]) var a = Math.pow(a, parseFloat(evaluate(ti.args[0], c.env).pred));
+    if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:integerQuotient" && t0 != null) {
+    var a = parseFloat(evaluate(t0.args[0], c.env).pred);
+    for (var ti = t0.args[1]; ti.args.length != 0; ti = ti.args[1]) a /= parseFloat(evaluate(ti.args[0], c.env).pred);
+    if (unify({pred:Math.floor(a).toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:negation") {
+    if (t0 != null && !isVar(t0.pred)) {
+      var a = -parseFloat(t0.pred);
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    }
+    else if (t1 != null && !isVar(t1.pred)) {
+      var a = -parseFloat(t1.pred);
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[0], c.env, true)) return 1;
+    }
+    else return 0;
+  }
+  else if (t.pred == "math:product" && t0 != null) {
+    var a = parseFloat(evaluate(t0.args[0], c.env).pred);
+    for (var ti = t0.args[1]; ti.args.length != 0; ti = ti.args[1]) a *= parseFloat(evaluate(ti.args[0], c.env).pred);
+    if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:quotient" && t0 != null) {
+    var a = parseFloat(evaluate(t0.args[0], c.env).pred);
+    for (var ti = t0.args[1]; ti.args.length != 0; ti = ti.args[1]) a /= parseFloat(evaluate(ti.args[0], c.env).pred);
+    if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:remainder" && t0 != null) {
+    var a = parseFloat(evaluate(t0.args[0], c.env).pred);
+    for (var ti = t0.args[1]; ti.args.length != 0; ti = ti.args[1]) a %= parseFloat(evaluate(ti.args[0], c.env).pred);
+    if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    else return 0
+  }
+  else if (t.pred == "math:rounded") {
+    if (t0 != null && !isVar(t0.pred)) {
+      var a = Math.round(parseFloat(t0.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    }
+    else return 0;
+  }
+  else if (t.pred == "math:sin") {
+    if (t0 != null && !isVar(t0.pred)) {
+      var a = Math.sin(parseFloat(t0.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    }
+    else if (t1 != null && !isVar(t1.pred)) {
+      var a = Math.asin(parseFloat(t1.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[0], c.env, true)) return 1;
+    }
+    else return 0;
+  }
+  else if (t.pred == "math:sum" && t0 != null) {
+    var a = parseFloat(evaluate(t0.args[0], c.env).pred);
+    for (var ti = t0.args[1]; ti.args.length != 0; ti = ti.args[1]) a += parseFloat(evaluate(ti.args[0], c.env).pred);
+    if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "math:tan") {
+    if (t0 != null && !isVar(t0.pred)) {
+      var a = Math.tan(parseFloat(t0.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[1], c.env, true)) return 1;
+    }
+    else if (t1 != null && !isVar(t1.pred)) {
+      var a = Math.atan(parseFloat(t1.pred));
+      if (unify({pred:a.toString(), args:[]}, c.env, t.args[0], c.env, true)) return 1;
+    }
+    else return 0;
+  }
+  else if (t.pred == "rdf:first" && t0 != null && t0.pred == "." && t0.args.length != 0) {
+    if (unify(t0.args[0], c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "rdf:rest" && t0 != null && t0.pred == "." && t0.args.length != 0) {
+    if (unify(t0.args[1], c.env, t.args[1], c.env, true)) return 1;
+    else return 0;
+  }
+  else if (t.pred == "a" && t1 != null && t1.pred == "rdf:List" && t0 != null && t0.pred == ".") return 1;
+  else if (t.pred == "a" && t1 != null && t1.pred == "rdfs:Resource") return 1;
+  return -1;
+  */
+}
+
 typedef map<string, vector<rule_t>> evidence_t;
 
 pred_t evaluate ( pred_t t, env_t& env );
@@ -52,16 +225,13 @@ ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) return "";
 		if ( c.ind >= c.rule.body.size() ) {
 			if ( !c.parent ) {
-				rule_t tmp;
-				pred_t tpred;
 				for ( size_t i = 0; i < c.rule.body.size(); i++ ) {
-					pred_t t = evaluate ( c.rule.body[i], c.env );
-					evidence[t.pred].emplace_back ( tmp = {t, tpred = { "GND", c.ground} } );
+					pred_t pred = evaluate ( c.rule.body[i], c.env);
+					evidence[pred.pred].emplace_back ( rule_t{pred, pred_t{ "GND", c.ground} } );
 				}
 				continue;
 			}
-			s2 tmp;
-			if ( c.rule.body.size() != 0 ) g.push_back ( tmp = {c.rule, c.env} );
+			if ( c.rule.body.size() ) g.push_back ( s2{c.rule, c.env} );
 			s1 r = {c.parent->rule, c.parent->src, c.parent->ind, c.parent->parent, c.parent->env, g};
 			unify ( c.rule.head, c.env, r.rule.body[r.ind], r.env, true );
 			r.ind++;
@@ -71,9 +241,7 @@ ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
 		pred_t t = c.rule.body[c.ind];
 		size_t b = builtin ( t, c );
 		if ( b == 1 ) {
-			s2 tmp;
-			rule_t rtmp;
-			g.emplace_back ( tmp = { rtmp = { evaluate ( t, c.env ), vector<pred_t>() }, env_t() } );
+			g.emplace_back ( s2{ rule_t{ evaluate ( t, c.env ), vector<pred_t>() }, env_t() } );
 			s1 r = {c.rule, c.src, c.ind, c.parent, c.env, g};
 			r.ind++;
 			queue.push_back ( r );
@@ -81,13 +249,10 @@ ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
 		} else if ( !b ) continue;
 		map<string, vector<rule_t>> cases;
 		if ( cases.find ( t.pred ) == cases.end() ) continue;
-		size_t src = 0;
-		for ( size_t k = 0; k < cases[t.pred].size(); k++ ) {
-			rule_t rl = cases[t.pred][k];
-			src++;
+		for ( size_t src = 0; src < cases[t.pred].size();) {
+			rule_t rl = cases[t.pred][src++];
 			ground_t g = c.ground;
-			s2 tmp;
-			if ( rl.body.size() == 0 ) g.push_back ( tmp = {rl, vector<pred_t>() } );
+			if ( !rl.body.size() ) g.push_back ( s2{rl, vector<pred_t>() } );
 			s1 r = {rl, src, 0, c, {}, g};
 			if ( unify ( t, c.env, rl.head, r.env, true ) )
 				for ( s1 ep = c; ; ep = ep.parent ) {
@@ -132,13 +297,12 @@ pred_t evaluate ( pred_t t, env_t& env ) {
 		else throw 0;
 	} else if ( t.args.size() == 0 ) return t;
 	else {
-		pred_t tmp;
 		vector<pred_t> n;
 		for ( size_t i = 0; i < t.args.size(); ++i )
 			try {
 				n.push_back ( evaluate ( t.args[i], env ) );
 			} catch ( ... ) {
-				n.push_back ( tmp = { t.args[i].pred, vector<pred_t>() } );
+				n.push_back ( pred_t{ t.args[i].pred, vector<pred_t>() } );
 			}
 		return {t.pred, n};
 	}
