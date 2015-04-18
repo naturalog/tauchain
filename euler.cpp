@@ -18,21 +18,21 @@ struct rule_t {
 	vector<pred_t> body;
 };
 
-struct s2 {
+struct ground_t {
 	rule_t src;
 	env_t env;
 };
-typedef vector<s2> ground_t;
+typedef vector<ground_t> grounds;
 
-struct s1 {
+struct proof_trace_item {
 	rule_t rule;
 	int src, ind;
-	s1* parent;
+	proof_trace_item* parent;
 	env_t env;
-	ground_t ground;
+	grounds ground;
 };
 
-int builtin ( pred_t, s1 ) {
+int builtin ( pred_t, proof_trace_item ) {
 /*  if (t.pred == "GND") return 1;
   pred_t t0 = evaluate(t.args[0], c.env), t1 = evaluate(t.args[1], c.env);
   if (t.pred == "log:equalTo") {
@@ -213,14 +213,14 @@ bool unify ( pred_t s, env_t senv, pred_t d, env_t denv, bool f );
 
 template<typename ret_t>
 ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
-	deque<s1> queue;
-	s1 s = { goal, 0, 0, 0, env_t(), ground_t() };
+	deque<proof_trace_item> queue;
+	proof_trace_item s = { goal, 0, 0, 0, env_t(), grounds() };
 	queue.emplace_back ( s );
 	size_t step;
 	evidence_t evidence;
 	while ( queue.size() > 0 ) {
-		s1 c = queue.pop_front();
-		ground_t g = c.ground;
+		proof_trace_item c = queue.pop_front();
+		grounds g = c.ground;
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) return "";
 		if ( c.ind >= c.rule.body.size() ) {
@@ -231,8 +231,8 @@ ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
 				}
 				continue;
 			}
-			if ( c.rule.body.size() ) g.push_back ( s2{c.rule, c.env} );
-			s1 r = {c.parent->rule, c.parent->src, c.parent->ind, c.parent->parent, c.parent->env, g};
+			if ( c.rule.body.size() ) g.push_back ( ground_t{c.rule, c.env} );
+			proof_trace_item r = {c.parent->rule, c.parent->src, c.parent->ind, c.parent->parent, c.parent->env, g};
 			unify ( c.rule.head, c.env, r.rule.body[r.ind], r.env, true );
 			r.ind++;
 			queue.push_back ( r );
@@ -241,8 +241,8 @@ ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
 		pred_t t = c.rule.body[c.ind];
 		size_t b = builtin ( t, c );
 		if ( b == 1 ) {
-			g.emplace_back ( s2{ rule_t{ evaluate ( t, c.env ), vector<pred_t>() }, env_t() } );
-			s1 r = {c.rule, c.src, c.ind, c.parent, c.env, g};
+			g.emplace_back ( ground_t{ rule_t{ evaluate ( t, c.env ), vector<pred_t>() }, env_t() } );
+			proof_trace_item r = {c.rule, c.src, c.ind, c.parent, c.env, g};
 			r.ind++;
 			queue.push_back ( r );
 			continue;
@@ -251,11 +251,11 @@ ret_t prove ( pred_t goal, int maxNumberOfSteps ) {
 		if ( cases.find ( t.pred ) == cases.end() ) continue;
 		for ( size_t src = 0; src < cases[t.pred].size();) {
 			rule_t rl = cases[t.pred][src++];
-			ground_t g = c.ground;
-			if ( !rl.body.size() ) g.push_back ( s2{rl, vector<pred_t>() } );
-			s1 r = {rl, src, 0, c, {}, g};
+			grounds g = c.ground;
+			if ( !rl.body.size() ) g.push_back ( ground_t{rl, vector<pred_t>() } );
+			proof_trace_item r = {rl, src, 0, c, {}, g};
 			if ( unify ( t, c.env, rl.head, r.env, true ) )
-				for ( s1 ep = c; ; ep = ep.parent ) {
+				for ( proof_trace_item ep = c; ; ep = ep.parent ) {
 					if ( ep.src == c.src && unify ( ep.rule.head, ep.env, c.rule.head, c.env, false ) ) break;
 					if ( !ep.parent ) {
 						queue.push_front ( r );
