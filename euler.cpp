@@ -13,7 +13,7 @@ bool DEBUG = true;
 struct pred_t {
 	string pred;
 	vector<pred_t> args;
-};
+};          
 
 int _indent = 0;
 
@@ -25,11 +25,19 @@ string indent() {
 }
 
 void print(pred_t p) {
-  cout << p.pred << "(";
-  for(auto a : p.args) {
-    print(a);
+  cout << p.pred;
+  if (p.args.size())
+  {
+    cout << "(";
+    for(auto a : p.args) {
+      print(a);
+      pred_t *aa = &a;
+      pred_t *bb = &p.args.back();
+      if (aa != bb) // doesnt work.
+	cout << ", ";
+    }
+    cout << ")";
   }
-  cout << ")";
 }
 void print(pred_t *p) {print(*p);}
 
@@ -46,7 +54,7 @@ void print(env_t *r) {print(*r);}
 
 struct rule_t {
 	pred_t head;
-	vector<pred_t> body;
+	  vector<pred_t> body;
 };
 
 void print(rule_t r) {
@@ -98,7 +106,7 @@ void print(s1 s) {
   cout << s.src << "," << s.ind << "(";
   if(s.parent != (s1*)0)
     print(*s.parent);
-  cout << ") {"; print(s.env); cout << "}[[";
+  cout << ") {"; print(s.env); cout << "}[[ground:";
   print(s.ground);
   cout << "]]";
 }
@@ -133,9 +141,9 @@ bool prove ( pred_t goal, int maxNumberOfSteps ) {
 		  return true;
 		}
 		trace(
-  		cout << "c.ind: " << c->ind << endl;
-  		cout << "c.rule.body.size(): " << c->rule.body.size() << endl;
-  	)
+		  cout << "c.ind: " << c->ind << endl;
+		  cout << "c.rule.body.size(): " << c->rule.body.size() << endl;
+		)
 		if ( c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
 			  trace(cout << "no parent!" << endl;)
