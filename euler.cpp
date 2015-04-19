@@ -29,11 +29,10 @@ void print(pred_t p) {
   if (p.args.size())
   {
     cout << "(";
-    for(auto a : p.args) {
-      print(a);
-      pred_t *aa = &a;
-      pred_t *bb = &p.args.back();
-      if (aa != bb) // doesnt work.
+    for (vector<pred_t>::iterator a = p.args.begin(); a != p.args.end(); ++a)
+    {
+     print(*a);
+     if (&(*a) != &p.args.back())
 	cout << ", ";
     }
     cout << ")";
@@ -44,6 +43,7 @@ void print(pred_t *p) {print(*p);}
 typedef map<string, pred_t> env_t;
 
 void print(env_t r) {
+  cout << "env of size "<<r.size();
   cout << "{";
   for(auto& rr : r) {
     cout << rr.first << ": "; print(rr.second); cout << "; ";
@@ -106,7 +106,7 @@ void print(s1 s) {
   cout << s.src << "," << s.ind << "(";
   if(s.parent != (s1*)0)
     print(*s.parent);
-  cout << ") {"; print(s.env); cout << "}[[ground:";
+  cout << ") {env:"; print(s.env); cout << "}[[ground:";
   print(s.ground);
   cout << "]]";
 }
@@ -244,7 +244,7 @@ bool unify ( pred_t s, env_t *senv, pred_t d, env_t *denv, bool f ) {
 			return r;
 		} catch ( ... ) {
 		  _indent--;
-		  trace(cout << indent() << " Match!" << endl;)
+		  trace(cout << indent() << " Match(free var)!" << endl;)
 			return true;
 		}
 	}
@@ -260,7 +260,7 @@ bool unify ( pred_t s, env_t *senv, pred_t d, env_t *denv, bool f ) {
 			//if ( f )
 			  (*denv)[d.pred] = evaluate ( s, senv );
 			trace(_indent--;)
-		  trace(cout << indent() << " Match!" << endl;)
+		  trace(cout << indent() << " Match!(free var)" << endl;)
 			return true;
 		}
 	}
@@ -289,6 +289,7 @@ bool unify ( pred_t s, env_t *senv, pred_t d, env_t *denv, bool f ) {
 pred_t evaluate ( pred_t t, env_t *env ) {
   trace(cout << indent() << "Eval "; print(t); cout << " in "; print(env); cout << endl;)
 	if ( t.pred[0] == '?' ) {
+		trace(cout<<"(";print(t); cout << " is a var..)" << endl;);
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) { return evaluate ( it->second, env ); }
 		else {throw 0; }
