@@ -7,7 +7,7 @@
 #include <iostream>
 using namespace std;
 
-//#define DEBUG 1
+bool DEBUG = true;
 #define trace(x) if(DEBUG) { x }
 
 struct pred_t {
