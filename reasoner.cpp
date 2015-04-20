@@ -23,10 +23,10 @@ void print ( pred_t p ) {
 	cout << p.pred;
 	if ( p.args.size() ) {
 		cout << "(";
-		for ( vector<pred_t>::iterator a = p.args.begin(); a != p.args.end(); ++a ) {
+		for ( auto a = p.args.begin();;) {
 			print ( *a );
-			if ( & ( *a ) != &p.args.back() )
-				cout << ", ";
+			if ( ++a != p.args.end() ) cout << ", ";
+			else break;
 		}
 		cout << ")";
 	}
@@ -36,6 +36,7 @@ void print ( pred_t *p ) {
 }
 
 typedef map<string, pred_t> env_t;
+typedef std::shared_ptr<env_t> penv_t;
 
 void print ( env_t r ) {
 	cout << "env of size " << r.size();
@@ -67,19 +68,20 @@ void print ( rule_t *r ) {
 
 struct s2 {
 	rule_t src;
-	env_t *env;
+	penv_t env;
 };
-typedef vector<s2*> ground_t;
+typedef vector<s2> ground_t;
+typedef std::shared_ptr<ground_t> pground_t;
 
-ground_t* aCopy ( ground_t *f ) {
-	ground_t *r = new ground_t;
+pground_t aCopy ( pground_t f ) {
+	pground_t r = make_shared<ground_t>();
 	*r = *f;
 	return r;
 }
 
 void print ( s2 s ) {
 	print ( s.src ); cout << " {";
-	print ( s.env );
+	print ( *s.env );
 	cout << "} ";
 }
 void print ( s2 *s ) {
@@ -95,29 +97,29 @@ void print ( ground_t *g ) {
 	print ( *g );
 }
 
-struct s1 {
+struct proof_trace_item {
 	rule_t rule;
 	int src, ind;
-	s1* parent;
-	env_t *env;
-	ground_t *ground;
+	std::shared_ptr<proof_trace_item> parent;
+	std::shared_ptr<env_t> env;
+	std::shared_ptr<ground_t> ground;
 };
+typedef std::shared_ptr<proof_trace_item> ppti;
 
-void print ( s1 s ) {
+void print ( proof_trace_item s ) {
 	cout << "<<";
 	print ( s.rule );
 	cout << s.src << "," << s.ind << "(";
-	if ( s.parent != ( s1* ) 0 )
-		print ( *s.parent );
-	cout << ") {env:"; print ( s.env ); cout << "}[[ground:";
-	print ( s.ground );
+	if ( s.parent ) print ( *s.parent );
+	cout << ") {env:"; print ( *s.env ); cout << "}[[ground:";
+	print ( *s.ground );
 	cout << "]]";
 }
-void print ( s1 *s ) {
+void print ( proof_trace_item *s ) {
 	print ( *s );
 }
 
-int builtin ( pred_t, s1 ) {
+int builtin ( pred_t, proof_trace_item ) {
 	return -1;
 }
 typedef map<string, vector<rule_t>> evidence_t;
@@ -125,23 +127,23 @@ evidence_t evidence;
 evidence_t cases;
 size_t step = 0;
 
-pred_t evaluate ( pred_t t, env_t *env );
-bool unify ( pred_t s, env_t *senv, pred_t d, env_t *denv, bool f );
+pred_t evaluate ( pred_t t, penv_t env );
+bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f );
 
-ground_t *gnd = new ground_t();
+pground_t gnd = make_shared<ground_t>();
 
 bool prove ( pred_t goal, int maxNumberOfSteps ) {
-	deque<s1*> queue;
-	s1 *s = new s1 ( { {goal, {goal}}, 0, 0, ( s1* ) 0, new env_t(), gnd } ); //TODO: don't deref null parent ;-)
+	deque<ppti> queue;
+	ppti s = make_shared<proof_trace_item> ( proof_trace_item{ {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)
 	queue.emplace_back ( s );
 	//queue.push_back(s);
 	trace ( cout << "Goal: "; print ( goal ); cout << endl; )
 	while ( queue.size() > 0 ) {
 		trace ( cout << "=======" << endl; )
-		s1 *c = queue.front();
+		ppti c = queue.front();
 		trace ( cout << "  c: "; print ( *c ); cout << endl; )
 		queue.pop_front();
-		ground_t *g = aCopy ( c->ground );
+		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
 			trace ( cout << "TIMEOUT!" << endl; )
@@ -166,12 +168,11 @@ bool prove ( pred_t goal, int maxNumberOfSteps ) {
 				continue;
 			}
 			trace ( cout << "Q parent: "; )
-			s2 *tmp = new s2 ( {c->rule, c->env} );
-			if ( c->rule.body.size() != 0 ) g->push_back ( tmp );
-			s1 *r = new s1 ( {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, c->parent->env, g} );
+			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
+			ppti r = make_shared<proof_trace_item> ( proof_trace_item{c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, c->parent->env, g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env, true );
 			r->ind++;
-			trace ( print ( r ); cout << endl; )
+			trace ( print ( *r ); cout << endl; )
 			queue.push_back ( r );
 			continue;
 		}
@@ -179,10 +180,8 @@ bool prove ( pred_t goal, int maxNumberOfSteps ) {
 		pred_t t = c->rule.body[c->ind];
 		size_t b = builtin ( t, *c );
 		if ( b == 1 ) {
-			rule_t rtmp = { evaluate ( t, c->env ), vector<pred_t>() };
-			s2 *tmp = new s2 ( { rtmp, new env_t() } );
-			g->emplace_back ( tmp );
-			s1 *r = new s1 ( {c->rule, c->src, c->ind, c->parent, c->env, g} );
+			g->emplace_back ( s2{ { evaluate ( t, c->env ), vector<pred_t>() }, make_shared<env_t>() } );
+			ppti r = make_shared<proof_trace_item> ( proof_trace_item{c->rule, c->src, c->ind, c->parent, c->env, g} );
 			r->ind++;
 			queue.push_back ( r );
 			continue;
@@ -199,15 +198,14 @@ bool prove ( pred_t goal, int maxNumberOfSteps ) {
 		for ( size_t k = 0; k < cases[t.pred].size(); k++ ) {
 			rule_t rl = cases[t.pred][k];
 			src++;
-			ground_t *g = aCopy ( c->ground );
-			s2 *tmp = new s2 ( {rl, new env_t() } );
+			pground_t g = aCopy ( c->ground );
 			trace ( cout << "Check rule: "; print ( rl ); cout << endl; )
 			if ( rl.body.size() == 0 )
-				g->push_back ( tmp );
-			s1 *r = new s1 ( {rl, ( int ) src, 0, c, new env_t(), g} );
+				g->push_back ( {rl, make_shared<env_t>() } );
+			ppti r = make_shared<proof_trace_item> ( proof_trace_item{rl, ( int ) src, 0, c, make_shared<env_t>(), g} );
 			if ( unify ( t, c->env, rl.head, r->env, true ) ) {
-				s1 *ep = c;
-				while ( ( ep = ep->parent ) != ( s1* ) 0 ) {
+				ppti ep = c;
+				while ( ( ep = ep->parent ) ) {
 					trace (
 					    cout << "  ep.src: " << ep->src << endl;
 					    cout << "  c.src: " << c->src << endl;
@@ -218,8 +216,8 @@ bool prove ( pred_t goal, int maxNumberOfSteps ) {
 					}
 					trace ( cout << "  ~~  ~~  ~~" << endl; )
 				}
-				if ( ep == ( s1* ) 0 ) {
-					trace ( cout << "Adding to queue: "; print ( r ); cout << endl << flush; )
+				if ( !ep ) {
+					trace ( cout << "Adding to queue: "; print ( *r ); cout << endl << flush; )
 					queue.push_front ( r );
 					//break;
 				} else {
@@ -235,7 +233,7 @@ bool prove ( pred_t goal, int maxNumberOfSteps ) {
 	return false;
 }
 
-bool unify ( pred_t s, env_t *senv, pred_t d, env_t *denv, bool f ) {
+bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 	trace (
 	    cout << indent() << "Unify:" << endl << flush;
 	    cout << indent() << "  s: "; print ( s ); cout << " in "; print ( *senv ); cout << endl << flush;
@@ -293,8 +291,8 @@ bool unify ( pred_t s, env_t *senv, pred_t d, env_t *denv, bool f ) {
 	return false;
 }
 
-pred_t evaluate ( pred_t t, env_t *env ) {
-	trace ( cout << indent() << "Eval "; print ( t ); cout << " in "; print ( env ); cout << endl; )
+pred_t evaluate ( pred_t t, penv_t env ) {
+	trace ( cout << indent() << "Eval "; print ( t ); cout << " in "; print ( *env ); cout << endl; )
 	if ( t.pred[0] == '?' ) {
 		trace ( cout << "("; print ( t ); cout << " is a var..)" << endl; );
 		auto it = env->find ( t.pred );
@@ -318,28 +316,24 @@ pred_t evaluate ( pred_t t, env_t *env ) {
 	}
 }
 
+inline pred_t mk_res(string r) { return {r, {}}; }
+
 void funtest() {
-	vector<rule_t> kb;
-	pred_t socrates = {":socrates", {}};
-	pred_t Male = {":Male", {}};
-	pred_t Man = {":Man", {}};
-	pred_t Mortal = {":Mortal", {}};
-	pred_t Morrrrtal = {":Morrrrtal", {}};
-	pred_t _x = {"?x", {}};
-	pred_t _y = {"?y", {}};
-	vector<pred_t> True;
-	cases["a"].push_back ( {{"a", {socrates, Male}}, True} );
+	pred_t Socrates = mk_res("Socrates"),
+		Man = mk_res("Man"),
+		Mortal = mk_res("Mortal"),
+		Morrtal = mk_res("Morrtal"),
+		Male = mk_res("Male"),
+		 _x = mk_res("?x"),
+		 _y = mk_res("?y");
+	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
 	cases["a"].push_back ( {
 		{"a", {_x, Mortal}},
-		{
-			{"a", {_x, Man}},
-		}
+		{ {"a", {_x, Man}}, }
 	} );
 	cases["a"].push_back ( {
 		{"a", {_x, Man}},
-		{
-			{"a", {_x, Male}},
-		}
+		{ {"a", {_x, Male}}, }
 	} );
 
 	bool p = prove ( {"a", {_y, Mortal}}, 10 );

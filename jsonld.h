@@ -1014,7 +1014,7 @@ public:
 };
 
 typedef std::shared_ptr<quad> pquad;
-typedef vector<pquad> qlist;
+typedef list<pquad> qlist;
 typedef std::shared_ptr<qlist> pqlist;
 typedef map<string, pqlist> qdb;
 
