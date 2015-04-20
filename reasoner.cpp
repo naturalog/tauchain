@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	auto kb = jsonld::load_jsonld(argv[1]);
-
+	cout<<kb.tostring()<<endl;
 	if (argc == 2) return 0;
 	auto it = kb.find(argv[2]) ;
 	if (it == kb.end()) { cerr<<"No such graph."<<endl; return 1; }

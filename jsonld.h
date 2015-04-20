@@ -1685,7 +1685,7 @@ std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
 	return a.toRDF();
 }
 
-qdb load_jsonld( string fname ) {
+rdf_db load_jsonld( string fname ) {
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
