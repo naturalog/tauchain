@@ -312,7 +312,7 @@ void funtest() {
 int main(int argc, char** argv) {
 	funtest();
 	return 0;
-	if ( argc != 2 && argc != 6) {
+	if ( argc != 2 && argc != 3 && argc != 6) {
 		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
 		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
 		return 1;
@@ -330,7 +330,8 @@ int main(int argc, char** argv) {
 		cases[p].push_back( rule);
 		cout << (string)rule << endl;
 	}
-	bool p = prove(pred_t{argv[4],{{argv[3],{}},{argv[5],{}}}}, -1, evidence, cases);
+	if (argc == 3) return 0;
+	bool p = prove(pred_t{argv[4],{{argv[3],{}},{argv[5],{}}}}, -1, cases, evidence); //really
 	cout << "Prove returned " << p << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
