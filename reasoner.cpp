@@ -13,7 +13,7 @@ struct pred_t {
 	ostream& write(ostream& o) const {
 		o << pred;
 		if ( args.size() ) {
-			cout << "(";
+			o << "(";
 			for ( auto a = args.cbegin();;) {
 				a->write(o);
 				if ( ++a != args.cend() ) o << ", ";
@@ -287,12 +287,7 @@ void funtest() {
 }
 
 int main(int argc, char** argv) {
-
-	if (argc == 1)
-	{
-	    funtest();
-	}
-
+	if (argc == 1) funtest();
 	if ( argc != 2 && argc != 3 && argc != 6) {
 		cout << "Usage:"<<endl<<"\t"<<argv[0]<<" [<JSON-LD kb file> [<Graph Name> [<Goal's subject> <Goal's predicate> <Goal's object>]]]" << endl;
 		cout << "think about socrates, or load a file, or also print a graph from it, or try to prove a triple."<< endl;
@@ -301,7 +296,7 @@ int main(int argc, char** argv) {
 
 	cout<<"input:"<<argv[1]<<endl;
 	auto kb = jsonld::load_jsonld(argv[1], true);
-	cout<<kb.tostring()<<endl;
+//	cout<<kb.tostring()<<endl;
 
 	if (argc == 2) return 0;
 	auto it = kb.find(argv[2]) ;
@@ -310,14 +305,18 @@ int main(int argc, char** argv) {
 	evidence_t evidence, cases;
 	for (auto quad : *it->second) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		rule_t rule = { pred_t{ p, { pred_t{s,{}}, pred_t{o,{}}}},{}};
-		cases[p].push_back( rule);
+		rule_t rule;
+//	if (p == "a" || p == "log:implies" || jsonld::endsWith(p, "log#implies")) goal = { p, { { s, {} }, { o, {} } } };
+		rule = { pred_t{ p, {}}, { pred_t{s,{}}, pred_t{o,{}}}};
+		cases[p].push_back(rule);
 		cout << (string)rule << endl;
 	}
 
 	if (argc == 3) return 0;
-	bool p = prove(pred_t{argv[4],{{argv[3],{}},{argv[5],{}}}}, -1, cases, evidence); //really
-	cout << "Prove returned " << p << endl;
+	const string s = argv[3], p = argv[4], o = argv[5];
+	pred_t goal = {p,{{s,{}},{o,{}}}};
+	bool b = prove(goal, -1, cases, evidence);
+	cout << "Prove returned " << b << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		cout << "  " << e.first << ":" << endl;
