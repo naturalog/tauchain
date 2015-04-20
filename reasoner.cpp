@@ -287,8 +287,11 @@ void funtest() {
 }
 
 int main(int argc, char** argv) {
-	funtest();
-	return 0;
+	if (argc == 1)
+	{
+	    funtest();
+	    return 0;
+	}
 	if ( argc != 2 && argc != 3 && argc != 6) {
 		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
 		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
