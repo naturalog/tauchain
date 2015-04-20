@@ -128,8 +128,6 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		if ( c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
 				trace ( cout << "no parent!" << endl; )
-				//rule_t tmp;
-				//pred_t tpred;
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };
@@ -166,21 +164,16 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue;
 		}
 		size_t src = 0;
-		for ( size_t k = 0; k < cases[t.pred].size(); k++ ) {
-			rule_t rl = cases[t.pred][k];
+		for (rule_t rl : cases[t.pred]) {
 			src++;
 			pground_t g = aCopy ( c->ground );
 			trace ( cout << "Check rule: "<< (string)rl << endl; )
-			if ( rl.body.size() == 0 )
-				g->push_back ( {rl, make_shared<env_t>() } );
+			if ( rl.body.size() == 0 ) g->push_back ( { rl, make_shared<env_t>() } );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item{rl, ( int ) src, 0, c, make_shared<env_t>(), g} );
 			if ( unify ( t, c->env, rl.head, r->env, true ) ) {
 				ppti ep = c;
 				while ( ( ep = ep->parent ) ) {
-					trace (
-					    cout << "  ep.src: " << ep->src << endl;
-					    cout << "  c.src: " << c->src << endl;
-					)
+					trace ( cout << "  ep.src: " << ep->src << endl << "  c.src: " << c->src << endl;)
 					if ( ep->src == c->src && unify ( ep->rule.head, ep->env, c->rule.head, c->env, false ) ) {
 						trace ( cout << "  ~~ match ~~ " << endl; )
 						break;
@@ -190,14 +183,9 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				if ( !ep ) {
 					trace ( cout << "Adding to queue: "<< (string)( *r ) << endl << flush; )
 					queue.push_front ( r );
-					//break;
-				} else {
-					trace ( cout << "didn't reach top" << endl; )
-				}
+				} else trace ( cout << "didn't reach top" << endl; )
 				trace ( cout << "Done euler loop" << endl; )
-			} else {
-				trace ( cout << "No loop here" << endl; )
-			}
+			} else trace ( cout << "No loop here" << endl; )
 		}
 		trace ( cout << "done rule checks, looping" << endl; )
 	}
@@ -205,11 +193,8 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 }
 
 bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
-	trace (
-	    cout << indent() << "Unify:" << endl << flush;
-	    cout << indent() << "  s: " << (string)s << " in " << ( *senv ) << endl << flush;
-	    cout << indent() << "  d: " << (string)d << " in " << ( *denv ) << endl << flush;
-	)
+	trace ( cout << indent() << "Unify:" << endl << flush << indent() << "  s: " << (string)s << " in " << ( *senv ) << endl << flush;
+	    cout << indent() << "  d: " << (string)d << " in " << ( *denv ) << endl << flush;)
 	if ( s.pred[0] == '?' ) {
 		trace ( cout << indent() << "  source is var" << endl << flush; )
 		try {
@@ -233,7 +218,6 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 			trace ( _indent--; )
 			return b;
 		} catch ( ... ) {
-			//if ( f )
 			( *denv ) [d.pred] = evaluate ( s, senv );
 			trace ( _indent--; )
 			trace ( cout << indent() << " Match!(free var)" << endl; )
@@ -245,15 +229,10 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 		for ( size_t i = 0; i < s.args.size(); i++ ) {
 			trace ( _indent++; )
 			if ( !unify ( s.args[i], senv, d.args[i], denv, f ) ) {
-				trace ( _indent--;
-				        cout << indent() << "    " << (string)s.args[i] << " != " << (string) d.args[i] << endl << flush;
-				      )
+				trace ( _indent--; cout << indent() << "    " << (string)s.args[i] << " != " << (string) d.args[i] << endl << flush;)
 				return false;
 			}
-			trace (
-			    _indent--;
-			    cout << indent() << "    " << (string)s.args[i] << " == " << (string)d.args[i] << endl << flush;
-			)
+			trace ( _indent--; cout << indent() << "    " << (string)s.args[i] << " == " << (string)d.args[i] << endl << flush;)
 		}
 		trace ( cout << indent() << "  Equal!" << endl << flush; )
 		return true;
@@ -269,15 +248,13 @@ pred_t evaluate ( pred_t t, penv_t env ) {
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) return evaluate ( it->second, env );
 		else throw 0;
-	} else if ( t.args.size() == 0 )
-		return t;
-	pred_t tmp;
+	} else if ( t.args.size() == 0 ) return t;
 	vector<pred_t> n;
 	for ( size_t i = 0; i < t.args.size(); ++i ) {
 		try {
 			n.push_back ( evaluate ( t.args[i], env ) );
 		} catch ( ... ) {
-			n.push_back ( tmp = { t.args[i].pred, vector<pred_t>() } );
+			n.push_back ( { t.args[i].pred, vector<pred_t>() } );
 		}
 	}
 	return {t.pred, n};
