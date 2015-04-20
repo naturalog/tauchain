@@ -327,7 +327,7 @@ void prove(pred_t goal) {
 }
 */
 int main(int argc, char** argv) {
-	if ( argc != 2 && argc != 6) {
+	if ( argc != 2 && argc != 3 && argc != 6) {
 		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
 		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
 		return 1;
@@ -341,9 +341,14 @@ int main(int argc, char** argv) {
 	evidence_t evidence, cases;
 	for (auto quad : *it->second) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		cases[p].push_back( rule_t{ pred_t{ p, { pred_t{s,{}}, pred_t{o,{}}}},{}});
+		rule_t rule { pred_t{ p, { pred_t{s,{}}, pred_t{o,{}}}},{}};
+		cases[p].push_back( rule );
+		print(rule); cout << endl;
 	}
-	bool p = prove(pred_t{argv[4],{{argv[3],{}},{argv[5],{}}}}, -1, evidence, cases);
+	if (argc == 3) return 0;
+
+	pred_t goal {argv[4],{{argv[3],{}},{argv[5],{}}}};
+	bool p = prove(goal, -1, cases, evidence);
 	cout << "Prove returned " << p << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
