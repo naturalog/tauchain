@@ -101,7 +101,6 @@ int builtin ( pred_t, proof_trace_item ) {
 	return -1;
 }
 typedef map<string, vector<rule_t>> evidence_t;
-size_t step = 0;
 
 pred_t evaluate ( pred_t t, penv_t env );
 bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f );
@@ -109,6 +108,7 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f );
 pground_t gnd = make_shared<ground_t>();
 
 bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
+	int step = 0;
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)
 	queue.emplace_back ( s );
@@ -129,7 +129,7 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		    cout << "c.ind: " << c->ind << endl;
 		    cout << "c.rule.body.size(): " << c->rule.body.size() << endl;
 		)
-		if ( c->ind >= c->rule.body.size() ) {
+		if ( (size_t)c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
 				trace ( cout << "no parent!" << endl; )
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
@@ -302,7 +302,7 @@ int main ( int argc, char** argv ) {
 
 	cout << "input:" << argv[1] << endl;
 	auto kb = jsonld::load_jsonld ( argv[1], true );
-	//	cout<<kb.tostring()<<endl;
+	cout<<kb.tostring()<<endl;
 
 	if ( argc == 2 ) return 0;
 	auto it = kb.find ( argv[2] ) ;
