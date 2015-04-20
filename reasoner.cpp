@@ -287,16 +287,16 @@ void funtest() {
 }
 
 int main(int argc, char** argv) {
-	if ( argc != 1 && argc != 2 && argc != 3 && argc != 6) {
-		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
-		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
-		return 1;
-	}
 
 	if (argc == 1)
 	{
 	    funtest();
-	    return 0;
+	}
+
+	if ( argc != 2 && argc != 3 && argc != 6) {
+		cout << "Usage:"<<endl<<"\t"<<argv[0]<<" [<JSON-LD kb file> [<Graph Name> [<Goal's subject> <Goal's predicate> <Goal's object>]]]" << endl;
+		cout << "think about socrates, or load a file, or also print a graph from it, or try to prove a triple."<< endl;
+		return 1;
 	}
 
 	cout<<"input:"<<argv[1]<<endl;
