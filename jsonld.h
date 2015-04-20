@@ -1468,7 +1468,7 @@ public:
 			}
 			node = graph->at ( id )->MAP();
 			if ( hastype ( elem ) ) {
-				for ( pobj type : *gettype ( elem )->LIST() ) if ( type ) mergeValue ( node, "@type", type );
+				if (gettype(elem)->LIST()) for ( pobj type : *gettype ( elem )->LIST() ) if ( type ) mergeValue ( node, "@type", type );
 				elem->erase ( "@type" );
 			}
 			if ( hasindex ( elem ) ) {
@@ -1494,7 +1494,7 @@ public:
 			}
 			//			final List<String> keys = new ArrayList<String> ( elem.keySet() );
 			//			Collections.sort ( keys );
-			for ( auto z : *elem ) {
+			if (elem) for ( auto z : *elem ) {
 				string property = z.first;
 				pobj value = z.second;
 				if ( startsWith ( property, "_:" ) ) property = gen_bnode_id ( property );
