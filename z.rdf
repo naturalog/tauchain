@@ -1,0 +1,96 @@
+
+<!-- Processed by Id: cwm.py,v 1.197 2007/12/13 15:38:39 syosi Exp -->
+<!--     using base file:///home/kook/test/z.n3-->
+
+
+<rdf:RDF xmlns="http://www.w3.org/2004/06/rei#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+
+    <rdf:Description>
+        <rdf:type rdf:resource="http://www.w3.org/2000/10/swap/log#Truth"/>
+        <existentials rdf:parseType="Resource">
+            <owl:oneOf rdf:parseType="Resource">
+                <rdf:first rdf:nodeID="b1"/>
+                <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+            </owl:oneOf>
+        </existentials>
+        <statements rdf:parseType="Resource">
+            <owl:oneOf rdf:parseType="Resource">
+                <rdf:first rdf:parseType="Resource">
+                    <object rdf:parseType="Resource">
+                        <uri>file:///home/kook/test/z.n3#banana</uri>
+                    </object>
+                    <predicate rdf:parseType="Resource">
+                        <uri>http://www.w3.org/1999/02/22-rdf-syntax-ns#type</uri>
+                    </predicate>
+                    <subject rdf:nodeID="b1"/>
+                </rdf:first>
+                <rdf:rest rdf:parseType="Resource">
+                    <rdf:first rdf:parseType="Resource">
+                        <object rdf:parseType="Resource">
+                            <existentials rdf:parseType="Resource">
+                                <owl:oneOf rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+                            </existentials>
+                            <statements rdf:parseType="Resource">
+                                <owl:oneOf rdf:parseType="Resource">
+                                    <rdf:first rdf:parseType="Resource">
+                                        <object rdf:parseType="Resource">
+                                            <uri>file:///home/kook/test/z.n3#fruit</uri>
+                                        </object>
+                                        <predicate rdf:parseType="Resource">
+                                            <uri>http://www.w3.org/1999/02/22-rdf-syntax-ns#type</uri>
+                                        </predicate>
+                                        <subject rdf:nodeID="b2"/>
+                                    </rdf:first>
+                                    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+                                </owl:oneOf>
+                            </statements>
+                            <universals rdf:parseType="Resource">
+                                <owl:oneOf rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+                            </universals>
+                        </object>
+                        <predicate rdf:parseType="Resource">
+                            <uri>http://www.w3.org/2000/10/swap/log#implies</uri>
+                        </predicate>
+                        <subject rdf:parseType="Resource">
+                            <existentials rdf:parseType="Resource">
+                                <owl:oneOf rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+                            </existentials>
+                            <statements rdf:parseType="Resource">
+                                <owl:oneOf rdf:parseType="Resource">
+                                    <rdf:first rdf:parseType="Resource">
+                                        <object rdf:parseType="Resource">
+                                            <uri>file:///home/kook/test/z.n3#banana</uri>
+                                        </object>
+                                        <predicate rdf:parseType="Resource">
+                                            <uri>http://www.w3.org/1999/02/22-rdf-syntax-ns#type</uri>
+                                        </predicate>
+                                        <subject rdf:nodeID="b2"/>
+                                    </rdf:first>
+                                    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+                                </owl:oneOf>
+                            </statements>
+                            <universals rdf:parseType="Resource">
+                                <owl:oneOf rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+                            </universals>
+                        </subject>
+                    </rdf:first>
+                    <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+                </rdf:rest>
+            </owl:oneOf>
+        </statements>
+        <universals rdf:parseType="Resource">
+            <owl:oneOf rdf:parseType="Resource">
+                <rdf:first rdf:nodeID="b2"/>
+                <rdf:rest rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"/>
+            </owl:oneOf>
+        </universals>
+    </rdf:Description>
+
+    <BlankNode rdf:nodeID="b1">
+    </BlankNode>
+
+    <BlankNode rdf:nodeID="b2">
+    </BlankNode>
+</rdf:RDF>

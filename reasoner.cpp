@@ -287,21 +287,22 @@ void funtest() {
 }
 
 int main(int argc, char** argv) {
-	cout<<argv[1]<<endl;
-	jsonld::load_jsonld(argv[1], false);
-	return 0;
+	if ( argc != 1 && argc != 2 && argc != 3 && argc != 6) {
+		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
+		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
+		return 1;
+	}
+
 	if (argc == 1)
 	{
 	    funtest();
 	    return 0;
 	}
-	if ( argc != 2 && argc != 3 && argc != 6) {
-		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
-		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
-		return 1;
-	}
-//	cout<<kb.tostring()<<endl;
-	auto kb = jsonld::load_jsonld(argv[1]);
+
+	cout<<"input:"<<argv[1]<<endl;
+	auto kb = jsonld::load_jsonld(argv[1], true);
+	cout<<kb.tostring()<<endl;
+
 	if (argc == 2) return 0;
 	auto it = kb.find(argv[2]) ;
 	if (it == kb.end()) { cerr<<"No such graph."<<endl; return 1; }
@@ -313,6 +314,7 @@ int main(int argc, char** argv) {
 		cases[p].push_back( rule);
 		cout << (string)rule << endl;
 	}
+
 	if (argc == 3) return 0;
 	bool p = prove(pred_t{argv[4],{{argv[3],{}},{argv[5],{}}}}, -1, cases, evidence); //really
 	cout << "Prove returned " << p << endl;

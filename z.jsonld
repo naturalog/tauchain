@@ -1,0 +1,208 @@
+{
+  "@context": {
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@graph": [
+    {
+      "@id": "_:N6bfbbfa2e3e1418aab86d590ba0b37ea",
+      "http://www.w3.org/2004/06/rei#uri": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    },
+    {
+      "@id": "_:N638c7877c9cc4bb6922f04dba5eb1dca",
+      "http://www.w3.org/2004/06/rei#existentials": {
+        "@id": "_:N9995e26bf5d04a979f237415f1393f41"
+      },
+      "http://www.w3.org/2004/06/rei#statements": {
+        "@id": "_:N417bc0a06d1645bdaf8b6a495b8ab290"
+      },
+      "http://www.w3.org/2004/06/rei#universals": {
+        "@id": "_:N1c6f236b4c81482faa21945f5b04afef"
+      }
+    },
+    {
+      "@id": "_:Nc509ae4c7c294d449e472f6442353b18",
+      "http://www.w3.org/2004/06/rei#uri": "file:///home/kook/test/z.n3#fruit"
+    },
+    {
+      "@id": "_:N417bc0a06d1645bdaf8b6a495b8ab290",
+      "owl:oneOf": {
+        "@list": [
+          {
+            "@id": "_:Nbb69eeae31f548d7801f084dafa169e5"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "_:Nee729903e6cb4332a5ea308a34a9b6b8",
+      "@type": "http://www.w3.org/2004/06/rei#BlankNode"
+    },
+    {
+      "@id": "_:Nbb8b69184d8944e5aef8fdd6fa4fda38",
+      "http://www.w3.org/2004/06/rei#uri": "http://www.w3.org/2000/10/swap/log#implies"
+    },
+    {
+      "@id": "_:N6701e4cc84864016a331981f81d1487c",
+      "owl:oneOf": {
+        "@list": [
+          {
+            "@id": "_:Nee729903e6cb4332a5ea308a34a9b6b8"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "_:N1c6f236b4c81482faa21945f5b04afef",
+      "owl:oneOf": {
+        "@list": []
+      }
+    },
+    {
+      "@id": "_:Nc55fd180068c4eaca7c98431fddd4286",
+      "http://www.w3.org/2004/06/rei#existentials": {
+        "@id": "_:Ncf819e96f98f46dea8017cd3cd362a3a"
+      },
+      "http://www.w3.org/2004/06/rei#statements": {
+        "@id": "_:N4587a85f4e984b5eac550e9ffb2b966c"
+      },
+      "http://www.w3.org/2004/06/rei#universals": {
+        "@id": "_:Nfbc3c2064123406eb28246acb9f6555d"
+      }
+    },
+    {
+      "@id": "_:N112c56fada6f48468a2bc6c14c54b5ac",
+      "@type": "http://www.w3.org/2004/06/rei#BlankNode"
+    },
+    {
+      "@id": "_:N9ca633e6a27344ff9c8099921a7d2c5b",
+      "http://www.w3.org/2004/06/rei#uri": "file:///home/kook/test/z.n3#banana"
+    },
+    {
+      "@id": "_:N7f411f0691da4afe9caddddddf4117bd",
+      "owl:oneOf": {
+        "@list": [
+          {
+            "@id": "_:N112c56fada6f48468a2bc6c14c54b5ac"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "_:N1ebcc8c9cb0a43ecbc3ccd80c84e75fa",
+      "http://www.w3.org/2004/06/rei#uri": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    },
+    {
+      "@id": "_:Nbb69eeae31f548d7801f084dafa169e5",
+      "http://www.w3.org/2004/06/rei#object": {
+        "@id": "_:Nc509ae4c7c294d449e472f6442353b18"
+      },
+      "http://www.w3.org/2004/06/rei#predicate": {
+        "@id": "_:N6bfbbfa2e3e1418aab86d590ba0b37ea"
+      },
+      "http://www.w3.org/2004/06/rei#subject": {
+        "@id": "_:Nee729903e6cb4332a5ea308a34a9b6b8"
+      }
+    },
+    {
+      "@id": "_:N0c6d80ff43d346eb8e9faf8af7d2bb08",
+      "http://www.w3.org/2004/06/rei#uri": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+    },
+    {
+      "@id": "_:Ne705f54a3391496b91d9b4c530c83875",
+      "@type": "http://www.w3.org/2000/10/swap/log#Truth",
+      "http://www.w3.org/2004/06/rei#existentials": {
+        "@id": "_:N7f411f0691da4afe9caddddddf4117bd"
+      },
+      "http://www.w3.org/2004/06/rei#statements": {
+        "@id": "_:N97d03ceeee60468e9bd428e365c875d4"
+      },
+      "http://www.w3.org/2004/06/rei#universals": {
+        "@id": "_:N6701e4cc84864016a331981f81d1487c"
+      }
+    },
+    {
+      "@id": "_:Nfbc3c2064123406eb28246acb9f6555d",
+      "owl:oneOf": {
+        "@list": []
+      }
+    },
+    {
+      "@id": "_:Na3a7a067083a4811bf6277e187656de6",
+      "http://www.w3.org/2004/06/rei#object": {
+        "@id": "_:N9ca633e6a27344ff9c8099921a7d2c5b"
+      },
+      "http://www.w3.org/2004/06/rei#predicate": {
+        "@id": "_:N1ebcc8c9cb0a43ecbc3ccd80c84e75fa"
+      },
+      "http://www.w3.org/2004/06/rei#subject": {
+        "@id": "_:N112c56fada6f48468a2bc6c14c54b5ac"
+      }
+    },
+    {
+      "@id": "_:Ndae87f6eb0274dedac5baf8d4c264599",
+      "http://www.w3.org/2004/06/rei#object": {
+        "@id": "_:N83fbd5b4c72d40f2a2c1f971cb969fca"
+      },
+      "http://www.w3.org/2004/06/rei#predicate": {
+        "@id": "_:N0c6d80ff43d346eb8e9faf8af7d2bb08"
+      },
+      "http://www.w3.org/2004/06/rei#subject": {
+        "@id": "_:Nee729903e6cb4332a5ea308a34a9b6b8"
+      }
+    },
+    {
+      "@id": "_:N4587a85f4e984b5eac550e9ffb2b966c",
+      "owl:oneOf": {
+        "@list": [
+          {
+            "@id": "_:Ndae87f6eb0274dedac5baf8d4c264599"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "_:N83fbd5b4c72d40f2a2c1f971cb969fca",
+      "http://www.w3.org/2004/06/rei#uri": "file:///home/kook/test/z.n3#banana"
+    },
+    {
+      "@id": "_:Nd60157cdae16484890dd071e9daa2060",
+      "http://www.w3.org/2004/06/rei#object": {
+        "@id": "_:N638c7877c9cc4bb6922f04dba5eb1dca"
+      },
+      "http://www.w3.org/2004/06/rei#predicate": {
+        "@id": "_:Nbb8b69184d8944e5aef8fdd6fa4fda38"
+      },
+      "http://www.w3.org/2004/06/rei#subject": {
+        "@id": "_:Nc55fd180068c4eaca7c98431fddd4286"
+      }
+    },
+    {
+      "@id": "_:N9995e26bf5d04a979f237415f1393f41",
+      "owl:oneOf": {
+        "@list": []
+      }
+    },
+    {
+      "@id": "_:N97d03ceeee60468e9bd428e365c875d4",
+      "owl:oneOf": {
+        "@list": [
+          {
+            "@id": "_:Na3a7a067083a4811bf6277e187656de6"
+          },
+          {
+            "@id": "_:Nd60157cdae16484890dd071e9daa2060"
+          }
+        ]
+      }
+    },
+    {
+      "@id": "_:Ncf819e96f98f46dea8017cd3cd362a3a",
+      "owl:oneOf": {
+        "@list": []
+      }
+    }
+  ]
+}
