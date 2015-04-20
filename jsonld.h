@@ -1450,7 +1450,7 @@ public:
 			mergeValue ( node, activeProperty, mk_somap_obj ( result ) );
 		} else {
 			string id;
-			if ( hasid ( elem ) && getid ( elem )->STR() ) {
+			if ( hasid ( elem ) &&  elem->at("@id") && elem->at("@id")->STR() ) {
 				/*string*/ id = *elem->at ( "@id" )->STR();
 				elem->erase ( "@id" );
 				if ( startsWith ( id, "_:" ) ) id = gen_bnode_id ( id );
