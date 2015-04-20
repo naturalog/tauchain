@@ -9,60 +9,59 @@ bool DEBUG = true;
 struct pred_t {
 	string pred;
 	vector<pred_t> args;
+
+	ostream& write(ostream& o) const {
+		o << pred;
+		if ( args.size() ) {
+			cout << "(";
+			for ( auto a = args.cbegin();;) {
+				a->write(o);
+				if ( ++a != args.cend() ) o << ", ";
+				else return o << ")";
+			}
+		}
+		return o;
+	}
+
+	operator string() const { stringstream ss; write(ss); return ss.str(); }
 };
 
 int _indent = 0;
 
 string indent() {
-	for ( int i = 0; i < _indent; i++ )
-		cout << "##";
-	return "";
-}
-
-void print ( pred_t p ) {
-	cout << p.pred;
-	if ( p.args.size() ) {
-		cout << "(";
-		for ( auto a = p.args.begin();;) {
-			print ( *a );
-			if ( ++a != p.args.end() ) cout << ", ";
-			else break;
-		}
-		cout << ")";
-	}
-}
-void print ( pred_t *p ) {
-	print ( *p );
+	stringstream ss;
+	for ( int i = 0; i < _indent; i++ ) ss << "##";
+	return ss.str();
 }
 
 typedef map<string, pred_t> env_t;
 typedef std::shared_ptr<env_t> penv_t;
 
-void print ( env_t r ) {
-	cout << "env of size " << r.size();
-	cout << "{";
-	for ( auto& rr : r ) {
-		cout << rr.first << ": "; print ( rr.second ); cout << "; ";
-	}
-	cout << "}";
+ostream& operator<< (ostream& o, env_t const& r ) {
+	o << "env of size " << r.size() << "{";
+	for ( auto rr : r ) o << rr.first << ": " << (string)rr.second << "; "; 
+	return o << "}";
 }
 
 struct rule_t {
 	pred_t head;
 	vector<pred_t> body;
-};
-
-void print ( rule_t r ) {
-	print ( r.head );
-	cout << " :- ";
-	for ( auto b : r.body ) {
-		print ( b ); cout << "; ";
+	operator string() const {
+		stringstream o;
+		o << (string)head << " :- ";
+		for ( auto b : body ) o << (string)b << "; ";
+		return o.str();
 	}
-}
+};
 
 struct rule_env {
 	rule_t src;
 	penv_t env;
+	operator string() const {
+		stringstream o;
+		o << (string)src << " {" << *env << "} ";
+		return o.str();
+	}
 };
 typedef vector<rule_env> ground_t;
 typedef std::shared_ptr<ground_t> pground_t;
@@ -73,16 +72,9 @@ pground_t aCopy ( pground_t f ) {
 	return r;
 }
 
-void print ( rule_env s ) {
-	print ( s.src ); cout << " {";
-	print ( *s.env );
-	cout << "} ";
-}
-
-void print ( ground_t g ) {
-	for ( auto gg : g ) {
-		cout << "_"; print ( gg ); cout << "_";
-	}
+ostream& operator<< (ostream& o, ground_t const& g ) {
+	for ( auto gg : g ) o << "_" << (string)gg << "_";
+	return o;
 }
 
 struct proof_trace_item {
@@ -91,18 +83,15 @@ struct proof_trace_item {
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
+	operator string() const {
+		stringstream o;
+		o << "<<" << (string)rule << src << "," << ind << "(";
+		if ( parent ) o << (string)( *parent );
+		o << ") {env:" << ( *env ) << "}[[ground:" << ( *ground ) << "]]";
+		return o.str();
+	}
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
-
-void print ( proof_trace_item s ) {
-	cout << "<<";
-	print ( s.rule );
-	cout << s.src << "," << s.ind << "(";
-	if ( s.parent ) print ( *s.parent );
-	cout << ") {env:"; print ( *s.env ); cout << "}[[ground:";
-	print ( *s.ground );
-	cout << "]]";
-}
 
 int builtin ( pred_t, proof_trace_item ) {
 	return -1;
@@ -120,11 +109,11 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item{ {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)
 	queue.emplace_back ( s );
 	//queue.push_back(s);
-	trace ( cout << "Goal: "; print ( goal ); cout << endl; )
+	trace ( cout << "Goal: " << (string)goal << endl; )
 	while ( queue.size() > 0 ) {
 		trace ( cout << "=======" << endl; )
 		ppti c = queue.front();
-		trace ( cout << "  c: "; print ( *c ); cout << endl; )
+		trace ( cout << "  c: " << (string)( *c ) << endl; )
 		queue.pop_front();
 		pground_t g = aCopy ( c->ground );
 		step++;
@@ -143,9 +132,8 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				//pred_t tpred;
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
-					pred_t tpred = { "GND", {}};
-					rule_t tmp = {t, {tpred} };
-					trace ( cout << "Adding evidence for " << t.pred << ": "; print ( tmp ); cout << endl; )
+					rule_t tmp = {t, {{ "GND", {}}} };
+					trace ( cout << "Adding evidence for " << (string)t.pred << ": " << (string)tmp << endl; )
 					evidence[t.pred].push_back ( tmp );
 				}
 				continue;
@@ -155,7 +143,7 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item{c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, c->parent->env, g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env, true );
 			r->ind++;
-			trace ( print ( *r ); cout << endl; )
+			trace ( cout<<(string)( *r ) << endl; )
 			queue.push_back ( r );
 			continue;
 		}
@@ -182,7 +170,7 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			rule_t rl = cases[t.pred][k];
 			src++;
 			pground_t g = aCopy ( c->ground );
-			trace ( cout << "Check rule: "; print ( rl ); cout << endl; )
+			trace ( cout << "Check rule: "<< (string)rl << endl; )
 			if ( rl.body.size() == 0 )
 				g->push_back ( {rl, make_shared<env_t>() } );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item{rl, ( int ) src, 0, c, make_shared<env_t>(), g} );
@@ -200,7 +188,7 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 					trace ( cout << "  ~~  ~~  ~~" << endl; )
 				}
 				if ( !ep ) {
-					trace ( cout << "Adding to queue: "; print ( *r ); cout << endl << flush; )
+					trace ( cout << "Adding to queue: "<< (string)( *r ) << endl << flush; )
 					queue.push_front ( r );
 					//break;
 				} else {
@@ -219,8 +207,8 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 	trace (
 	    cout << indent() << "Unify:" << endl << flush;
-	    cout << indent() << "  s: "; print ( s ); cout << " in "; print ( *senv ); cout << endl << flush;
-	    cout << indent() << "  d: "; print ( d ); cout << " in "; print ( *denv ); cout << endl << flush;
+	    cout << indent() << "  s: " << (string)s << " in " << ( *senv ) << endl << flush;
+	    cout << indent() << "  d: " << (string)d << " in " << ( *denv ) << endl << flush;
 	)
 	if ( s.pred[0] == '?' ) {
 		trace ( cout << indent() << "  source is var" << endl << flush; )
@@ -231,7 +219,7 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 			_indent--;
 			return r;
 		} catch ( ... ) {
-			_indent--;
+			if (_indent) _indent--;
 			trace ( cout << indent() << " Match(free var)!" << endl; )
 			return true;
 		}
@@ -258,13 +246,13 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 			trace ( _indent++; )
 			if ( !unify ( s.args[i], senv, d.args[i], denv, f ) ) {
 				trace ( _indent--;
-				        cout << indent() << "    "; print ( s.args[i] ); cout << " != "; print ( d.args[i] ); cout << endl << flush;
+				        cout << indent() << "    " << (string)s.args[i] << " != " << (string) d.args[i] << endl << flush;
 				      )
 				return false;
 			}
 			trace (
 			    _indent--;
-			    cout << indent() << "    "; print ( s.args[i] ); cout << " == "; print ( d.args[i] ); cout << endl << flush;
+			    cout << indent() << "    " << (string)s.args[i] << " == " << (string)d.args[i] << endl << flush;
 			)
 		}
 		trace ( cout << indent() << "  Equal!" << endl << flush; )
@@ -275,33 +263,30 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 }
 
 pred_t evaluate ( pred_t t, penv_t env ) {
-	trace ( cout << indent() << "Eval "; print ( t ); cout << " in "; print ( *env ); cout << endl; )
+	trace ( cout << indent() << "Eval " << (string)t << " in " << ( *env ) << endl; )
 	if ( t.pred[0] == '?' ) {
-		trace ( cout << "("; print ( t ); cout << " is a var..)" << endl; );
+		trace ( cout << "(" << (string)t << " is a var..)" << endl; );
 		auto it = env->find ( t.pred );
-		if ( it != env->end() )
-			return evaluate ( it->second, env );
-		else
-			throw 0;
+		if ( it != env->end() ) return evaluate ( it->second, env );
+		else throw 0;
 	} else if ( t.args.size() == 0 )
 		return t;
-	else {
-		pred_t tmp;
-		vector<pred_t> n;
-		for ( size_t i = 0; i < t.args.size(); ++i ) {
-			try {
-				n.push_back ( evaluate ( t.args[i], env ) );
-			} catch ( ... ) {
-				n.push_back ( tmp = { t.args[i].pred, vector<pred_t>() } );
-			}
+	pred_t tmp;
+	vector<pred_t> n;
+	for ( size_t i = 0; i < t.args.size(); ++i ) {
+		try {
+			n.push_back ( evaluate ( t.args[i], env ) );
+		} catch ( ... ) {
+			n.push_back ( tmp = { t.args[i].pred, vector<pred_t>() } );
 		}
-		return {t.pred, n};
 	}
+	return {t.pred, n};
 }
 
 inline pred_t mk_res(string r) { return {r, {}}; }
-/*
-void prove(pred_t goal) {
+
+void funtest() {
+	evidence_t evidence, cases;
 	pred_t Socrates = mk_res("Socrates"), Man = mk_res("Man"), Mortal = mk_res("Mortal"), Morrtal = mk_res("Morrtal"), Male = mk_res("Male"), _x = mk_res("?x"), _y = mk_res("?y");
 	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
 	cases["a"].push_back ( {
@@ -313,21 +298,21 @@ void prove(pred_t goal) {
 		{ {"a", {_x, Male}}, }
 	} );
 
-	bool p = prove ( goal, -1, cases, evidence );
+	bool p = prove ( {"a", {_y, Mortal}}, -1, cases, evidence );
 	cout << "Prove returned " << p << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		cout << "  " << e.first << ":" << endl;
-		for ( auto ee : e.second ) {
-			cout << "    "; print ( ee ); cout << endl;
-		}
+		for ( auto ee : e.second ) cout << "    " << (string) ee << endl; 
 		cout << endl << "---" << endl;
 	}
 	cout << "QED!" << endl;
 }
-*/
+
 int main(int argc, char** argv) {
-	if ( argc != 2 && argc != 3 && argc != 6) {
+	funtest();
+	return 0;
+	if ( argc != 2 && argc != 6) {
 		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
 		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
 		return 1;
@@ -341,21 +326,16 @@ int main(int argc, char** argv) {
 	evidence_t evidence, cases;
 	for (auto quad : *it->second) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		rule_t rule { pred_t{ p, { pred_t{s,{}}, pred_t{o,{}}}},{}};
-		cases[p].push_back( rule );
-		print(rule); cout << endl;
+		rule_t rule = { pred_t{ p, { pred_t{s,{}}, pred_t{o,{}}}},{}};
+		cases[p].push_back( rule);
+		cout << (string)rule << endl;
 	}
-	if (argc == 3) return 0;
-
-	pred_t goal {argv[4],{{argv[3],{}},{argv[5],{}}}};
-	bool p = prove(goal, -1, cases, evidence);
+	bool p = prove(pred_t{argv[4],{{argv[3],{}},{argv[5],{}}}}, -1, evidence, cases);
 	cout << "Prove returned " << p << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		cout << "  " << e.first << ":" << endl;
-		for ( auto ee : e.second ) {
-			cout << "    "; print ( ee ); cout << endl;
-		}
+		for ( auto ee : e.second ) cout << "    " << (string)ee << endl;
 		cout << endl << "---" << endl;
 	}
 	return 0;
