@@ -1680,7 +1680,7 @@ std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
 	return a.toRDF();
 }
 
-int main ( int argc, char** argv ) {
+int jsonld_main ( int argc, char** argv ) {
 	if ( argc != 2 ) {
 		cout << "Usage: jsonld++ <JSON-LD input filename>" << endl;
 		return 1;

@@ -1,6 +1,2 @@
-tau: jsonld.cpp json_spirit.h
-	g++ -std=c++1y jsonld.cpp -lcurl -otau -Wall -ggdb
-
-euler: euler.cpp
-	g++ -std=c++1y euler.cpp   -Wall -ggdb -o euler
-
+tau:
+	g++ -std=c++1y reasoner.cpp -lcurl -otau -Wall -ggdb

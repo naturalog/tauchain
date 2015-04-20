@@ -1,10 +1,6 @@
-#include <string>
-#include <vector>
-#include <map>
-#include <utility>
-#include <algorithm>
+// c++ port of euler (EYE) js reasoner
 #include <deque>
-#include <iostream>
+#include "jsonld.h"
 using namespace std;
 
 bool DEBUG = true;
