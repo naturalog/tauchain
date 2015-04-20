@@ -272,10 +272,7 @@ void funtest() {
 	evidence_t evidence, cases;
 	pred_t Socrates = mk_res ( "Socrates" ), Man = mk_res ( "Man" ), Mortal = mk_res ( "Mortal" ), Morrtal = mk_res ( "Morrtal" ), Male = mk_res ( "Male" ), _x = mk_res ( "?x" ), _y = mk_res ( "?y" );
 	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
-	cases["a"].push_back ( {
-		{"a", {_x, Mortal}},
-		{ {"a", {_x, Man}}, }
-	} );
+	cases["a"].push_back ( {{"a", {_x, Mortal}}    , { {"a", {_x, Man}}, } } );
 	cases["a"].push_back ( {
 		{"a", {_x, Man}},
 		{ {"a", {_x, Male}}, }
@@ -315,7 +312,7 @@ int main ( int argc, char** argv ) {
 	for ( auto quad : *it->second ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		rule_t rule;
-		//	if (p == "a" || p == "log:implies" || jsonld::endsWith(p, "log#implies")) goal = { p, { { s, {} }, { o, {} } } };
+		if (p == "a" || p == "log:implies" || jsonld::endsWith(p, "log#implies")) rule = { pred_t{ p, { pred_t{s, {}}, pred_t{o, {}}}}};
 		rule = { pred_t{ p, {}}, { pred_t{s, {}}, pred_t{o, {}}}};
 		cases[p].push_back ( rule );
 		cout << ( string ) rule << endl;

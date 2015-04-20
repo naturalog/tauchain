@@ -180,7 +180,7 @@ public:
 	string toString() {
 		stringstream ss;
 		if ( MAP() ) for ( auto x : *MAP() ) ss << x.first << ',' << x.second->toString() << endl;
-		else if ( LIST() ) for ( auto x : *LIST() ) ss << x << endl;
+		else if ( LIST() ) for ( auto x : *LIST() ) ss << x->toString() << endl;
 		else if ( BOOL() ) ss << *BOOL();
 		else if ( DOUBLE() ) ss << *DOUBLE();
 		else if ( Null() ) ss << "(null)";
@@ -316,6 +316,7 @@ bool keyword ( const string& key ) {
 	       || "@reverse"s == key || "@preserve"s == key || "@set"s == key
 	       || "@type"s == key || "@value"s == key || "@vocab"s == key;
 }
+bool keyword ( pstring key ) { return key ? keyword(*key) : false; }
 
 #define KW_SHORTCUTS(x) \
 const string kw##x = "@"s + #x;\
@@ -403,23 +404,24 @@ struct remote_doc_t {
 
 void* curl = curl_easy_init();
 pobj convert ( const json_spirit::mValue& v ) {
-	if ( v.is_uint64() ) return make_shared<uint64_t_obj> ( v.get_uint64() );
-	if ( v.isInt() ) return make_shared<int64_t_obj> ( v.get_int64() );
-	if ( v.isString() ) return make_shared<string_obj> ( v.get_str() );
-	if ( v.isDouble() ) return make_shared<double_obj> ( v.get_real() );
-	if ( v.isBoolean() ) return make_shared<bool_obj> ( v.get_bool() );
-	if ( v.is_null() ) return 0; //make_shared<null_obj>();
 	pobj r;
-	if ( v.isList() ) {
+	if ( v.is_uint64() ) r= make_shared<uint64_t_obj> ( v.get_uint64() );
+	else if ( v.isInt() ) r= make_shared<int64_t_obj> ( v.get_int64() );
+	else if ( v.isString() ) r= make_shared<string_obj> ( v.get_str() );
+	else if ( v.isDouble() ) r= make_shared<double_obj> ( v.get_real() );
+	else if ( v.isBoolean() ) r= make_shared<bool_obj> ( v.get_bool() );
+	else if ( v.is_null() ) r= 0; //make_shared<null_obj>();
+	else if ( v.isList() ) {
 		r = make_shared<olist_obj>();
 		auto a = v.get_array();
 		for ( auto x : a ) r->LIST()->push_back ( convert ( x ) );
-		return r;
+	} else {
+		if ( !v.isMap() ) throw "logic error";
+		r = make_shared<somap_obj>();
+		auto a = v.get_obj();
+		for ( auto x : a ) ( *r->MAP() ) [x.first] = convert ( x.second );
 	}
-	if ( !v.isMap() ) throw "logic error";
-	r = make_shared<somap_obj>();
-	auto a = v.get_obj();
-	for ( auto x : a ) ( *r->MAP() ) [x.first] = convert ( x.second );
+//	cout<<"converted: "<<endl<<r->toString()<<endl;
 	return r;
 }
 
@@ -484,13 +486,16 @@ public:
 	typedef std::shared_ptr<context_t> pcontext;
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
 	pcontext parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
+		pdefined_t defined = make_shared<defined_t>();
 		context_t result ( options );
 		if ( !localContext || !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
 			if ( !context || context->Null() ) {
 				result = context_t ( options );
 				continue;
-			} else if ( pstring s = context->STR() ) {
+			}
+			if ( context->STR() ) {
+				pstring s = context->STR();
 				string uri = resolve ( * ( *result.MAP() ) ["@base"]->STR(), *s ); // REVISE
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
 				remoteContexts.push_back ( uri );
@@ -500,7 +505,8 @@ public:
 				context = ( *remoteContext->MAP() ) ["@context"];
 				result = *result.parse ( context, remoteContexts );
 				continue;
-			} else if ( !context->MAP() ) throw INVALID_LOCAL_CONTEXT + "\t"; // + context;
+			}
+			if ( !context->MAP() ) throw INVALID_LOCAL_CONTEXT + "\t"; // + context;
 			somap& cm = *context->MAP();
 			auto it = cm.find ( "@base" );
 			if ( !remoteContexts.size() && it != cm.end() ) {
@@ -530,7 +536,6 @@ public:
 				else if ( pstring s = value->STR() ) getlang ( result ) = make_shared<string_obj> ( lower ( *s ) );
 				else throw INVALID_DEFAULT_LANGUAGE + "\t";// + value;
 			}
-			pdefined_t defined = make_shared<defined_t>();
 			for ( auto it : cm ) {
 				if ( is ( it.first, { "@base"s, "@vocab"s, "@language"s } ) ) continue;
 				result.createTermDefinition ( context->MAP(), it.first, defined ); // REVISE
@@ -1219,7 +1224,10 @@ public:
 			return result;
 		} else if ( element->MAP() ) {
 			psomap elem = element->MAP();
-			if ( has ( elem, "@context" ) ) act_ctx = act_ctx->parse ( elem->at ( "@context" ) );
+			if (elem->find("@context") != elem->end()) {
+				cout<<"CONTEXT FOUND: "<<endl<<elem->at("@context")->toString()<<endl;
+				act_ctx = act_ctx->parse ( elem->at ( "@context" ) );
+			}
 			psomap result = make_shared<somap>();
 			for ( auto x : *elem ) {
 				string key = x.first;
@@ -1375,7 +1383,7 @@ public:
 			}
 			return mk_somap_obj ( result );
 		}
-		if ( act_prop && *act_prop == "@graph" ) return 0;
+		if ( !act_prop || *act_prop == "@graph" ) return 0;
 		return act_ctx->expandValue ( *act_prop, element );
 	}
 
@@ -1687,7 +1695,7 @@ private:
 				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
 			else {
 				string s = value->type_str();
-				cout<<s<<endl;
+//				cout<<s<<endl;
 				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
 			}
 		}
@@ -1722,13 +1730,13 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 		input = load ( *input->STR() ).document;
 		if ( !opts.base ) opts.base = pstr ( *input->STR() );
 	}
-	context_t act_ctx ( opts );
+	std::shared_ptr<context_t> act_ctx = make_shared<context_t> ( opts );
 	if ( opts.expandContext ) {
 		if ( opts.expandContext->MAP() && has ( opts.expandContext->MAP(), "@context" ) )
 			opts.expandContext = opts.expandContext->MAP()->at ( "@context" );
-		act_ctx = *act_ctx.parse ( opts.expandContext );
+		act_ctx = act_ctx->parse ( opts.expandContext );
 	}
-	auto expanded = jsonld_api ( opts ).expand ( make_shared<context_t> ( act_ctx ), 0, input);
+	auto expanded = jsonld_api ( opts ).expand ( act_ctx, 0, input);
 	if ( expanded->MAP() && has ( expanded->MAP(), "@graph" ) ) expanded = expanded->MAP()->at ( "@graph" );
 	else if ( !expanded ) expanded = mk_olist_obj();
 	if ( !expanded->LIST() ) expanded = mk_olist_obj ( olist ( 1, expanded ) );
@@ -1736,22 +1744,29 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 }
 
 std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
+//	cout<<"before expand: "<<endl<<input->toString()<<endl;
 	pobj expandedInput = ( jsonld::expand ( input, options ) );
+//	cout<<"after expand: "<<endl<<expandedInput->toString()<<endl;
 
 	jsonld_api api ( expandedInput, options );
-	auto dataset = api.toRDF();
+	std::shared_ptr<rdf_db> dataset = api.toRDF();
 
 	// generate namespaces from context
 	if ( options.useNamespaces ) {
 		polist _input;
-		if ( input->LIST() ) _input = input->LIST();
+		if ( expandedInput->LIST() ) _input = expandedInput->LIST();
 		else {
 			_input = mk_olist();
-			_input->push_back ( input );
+			_input->push_back ( expandedInput );
 		}
-		for ( auto e : *_input )
-			if ( has ( e->MAP(), "@context" ) )
-				dataset->parseContext ( e->MAP()->at ( "@context" ) );
+		for ( auto e : *_input ) 
+			if (e->MAP()) {
+//				for (auto x : *e->MAP()) cout<<"$$ "<<x.first<<'\t'<<x.second->type_str()<<endl;
+				if ( e->MAP()->find("@context") != e->MAP()->end() ) {
+					cout<<"parsing context..."<<endl;
+					dataset->parseContext ( e->MAP()->at ( "@context" ) );
+				}
+			}
 	}
 	return dataset;
 }
