@@ -403,7 +403,7 @@ struct remote_doc_t {
 void* curl = curl_easy_init();
 pobj convert ( const json_spirit::mValue& v ) {
 	if ( v.is_uint64() ) return make_shared<uint64_t_obj> ( v.get_uint64() );
-	if ( v.isInt() ) make_shared<int64_t_obj> ( v.get_int64() );
+	if ( v.isInt() ) return make_shared<int64_t_obj> ( v.get_int64() );
 	if ( v.isString() ) return make_shared<string_obj> ( v.get_str() );
 	if ( v.isDouble() ) return make_shared<double_obj> ( v.get_real() );
 	if ( v.isBoolean() ) return make_shared<bool_obj> ( v.get_bool() );
@@ -1424,7 +1424,7 @@ public:
 		}
 		psomap elem = element->MAP();
 		if ( !has ( nodeMap, activeGraph ) ) ( *nodeMap ) [ activeGraph ] = mk_somap_obj();
-		psomap graph = nodeMap->at ( activeGraph )->MAP(), node = activeSubject ? graph->at ( *activeSubject->STR() )->MAP() : 0;
+		psomap graph = nodeMap->at ( activeGraph )->MAP(), node = (activeSubject && activeSubject->STR()) ? graph->at ( *activeSubject->STR() )->MAP() : 0;
 		if ( hastype ( elem ) ) {
 			vector<string> oldTypes, newTypes;
 			if ( gettype ( elem )->LIST() ) oldTypes = vec2vec ( gettype ( elem )->LIST() );
@@ -1483,10 +1483,10 @@ public:
 				psomap refnode = make_shared<somap>(), revmap = elem->at ( "@reverse" )->MAP();
 				( *refnode ) ["@id"] = make_shared<string_obj> ( id );
 				elem->erase ( "@reverse" );
-				for ( auto x : *revmap ) {
+				if (revmap) for ( auto x : *revmap ) {
 					string prop = x.first;
 					polist values = revmap->at ( prop )->LIST();
-					for ( pobj value : *values ) gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared<string> ( prop ), 0 );
+					if (values) for ( pobj value : *values ) gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared<string> ( prop ), 0 );
 				}
 			}
 			if ( has ( elem, "@graph" ) ) {
@@ -1610,7 +1610,7 @@ public:
 							firstBnode = mkbnode ( api.gen_bnode_id () );
 						}
 						triples.push_back ( make_shared<quad> ( subj, pred, firstBnode, pstr ( graph_name ) ) );
-						for ( size_t i = 0; i < list->size() - 1; i++ ) {
+						for ( int i = 0; i < ((int)list->size()) - 1; ++i ) {
 							pnode object = objectToRDF ( list->at ( i ) );
 							triples.push_back ( make_shared<quad> ( firstBnode, first, object, pstr ( graph_name ) ) );
 							pnode restBnode = mkbnode ( api.gen_bnode_id() );
@@ -1632,9 +1632,10 @@ private:
 	pnode objectToRDF ( pobj item ) {
 		if ( isvalue ( item ) ) {
 			pobj value = item->MAP( )->at ( "@value" ), datatype = hastype ( item->MAP() ) ? item->MAP( )->at ( "@type" ) : pobj ( 0 );
+			if (!value) return 0;
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 				if ( value->BOOL() ) return mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
-				else if ( value->DOUBLE() || XSD_DOUBLE == *datatype->STR() ) {
+				else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() )) {
 					///					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
 					//					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
 					return mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
@@ -1657,14 +1658,6 @@ private:
 			else return mkiri ( id );
 		}
 	}
-
-public:
-	/*	 set<string> graph_names() {
-			return keySet();
-		}
-		vector<quad> getquads ( string graph_name ) {
-			return ( List<quad> ) get ( graph_name );
-		}*/
 };
 
 std::shared_ptr<rdf_db> jsonld_api::toRDF() {
@@ -1686,7 +1679,7 @@ std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
 	return a.toRDF();
 }
 
-rdf_db load_jsonld( string fname ) {
+rdf_db load_jsonld( string fname, bool print = true ) {
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
@@ -1708,8 +1701,10 @@ rdf_db load_jsonld( string fname ) {
 	auto c = convert ( v );
 	jsonld_api a ( c, o );
 	auto r = *a.toRDF ( );
-	cout<<"Loaded graphs:"<<endl;
-	for (auto x : r) cout<<x.first<<endl;
+	if (print) {
+		cout<<"Loaded graphs:"<<endl;
+		for (auto x : r) cout<<x.first<<endl;
+	}
 //	cout << r.tostring() << endl;
 	return r;
 }

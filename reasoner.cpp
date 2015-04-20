@@ -287,6 +287,9 @@ void funtest() {
 }
 
 int main(int argc, char** argv) {
+	cout<<argv[1]<<endl;
+	jsonld::load_jsonld(argv[1], false);
+	return 0;
 	if (argc == 1)
 	{
 	    funtest();
@@ -297,10 +300,8 @@ int main(int argc, char** argv) {
 		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
 		return 1;
 	}
-	cout<<argv[1]<<endl;
-	auto kb = jsonld::load_jsonld(argv[1]);
 //	cout<<kb.tostring()<<endl;
-	return 0;
+	auto kb = jsonld::load_jsonld(argv[1]);
 	if (argc == 2) return 0;
 	auto it = kb.find(argv[2]) ;
 	if (it == kb.end()) { cerr<<"No such graph."<<endl; return 1; }
