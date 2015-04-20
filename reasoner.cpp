@@ -46,9 +46,6 @@ void print ( env_t r ) {
 	}
 	cout << "}";
 }
-void print ( env_t *r ) {
-	print ( *r );
-}
 
 struct rule_t {
 	pred_t head;
@@ -62,15 +59,12 @@ void print ( rule_t r ) {
 		print ( b ); cout << "; ";
 	}
 }
-void print ( rule_t *r ) {
-	print ( *r );
-}
 
-struct s2 {
+struct rule_env {
 	rule_t src;
 	penv_t env;
 };
-typedef vector<s2> ground_t;
+typedef vector<rule_env> ground_t;
 typedef std::shared_ptr<ground_t> pground_t;
 
 pground_t aCopy ( pground_t f ) {
@@ -79,22 +73,16 @@ pground_t aCopy ( pground_t f ) {
 	return r;
 }
 
-void print ( s2 s ) {
+void print ( rule_env s ) {
 	print ( s.src ); cout << " {";
 	print ( *s.env );
 	cout << "} ";
-}
-void print ( s2 *s ) {
-	print ( *s );
 }
 
 void print ( ground_t g ) {
 	for ( auto gg : g ) {
 		cout << "_"; print ( gg ); cout << "_";
 	}
-}
-void print ( ground_t *g ) {
-	print ( *g );
 }
 
 struct proof_trace_item {
@@ -115,16 +103,11 @@ void print ( proof_trace_item s ) {
 	print ( *s.ground );
 	cout << "]]";
 }
-void print ( proof_trace_item *s ) {
-	print ( *s );
-}
 
 int builtin ( pred_t, proof_trace_item ) {
 	return -1;
 }
 typedef map<string, vector<rule_t>> evidence_t;
-evidence_t evidence;
-evidence_t cases;
 size_t step = 0;
 
 pred_t evaluate ( pred_t t, penv_t env );
@@ -132,7 +115,7 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f );
 
 pground_t gnd = make_shared<ground_t>();
 
-bool prove ( pred_t goal, int maxNumberOfSteps ) {
+bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item{ {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)
 	queue.emplace_back ( s );
@@ -180,7 +163,7 @@ bool prove ( pred_t goal, int maxNumberOfSteps ) {
 		pred_t t = c->rule.body[c->ind];
 		size_t b = builtin ( t, *c );
 		if ( b == 1 ) {
-			g->emplace_back ( s2{ { evaluate ( t, c->env ), vector<pred_t>() }, make_shared<env_t>() } );
+			g->emplace_back ( rule_env{ { evaluate ( t, c->env ), vector<pred_t>() }, make_shared<env_t>() } );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item{c->rule, c->src, c->ind, c->parent, c->env, g} );
 			r->ind++;
 			queue.push_back ( r );
@@ -317,15 +300,9 @@ pred_t evaluate ( pred_t t, penv_t env ) {
 }
 
 inline pred_t mk_res(string r) { return {r, {}}; }
-
-void funtest() {
-	pred_t Socrates = mk_res("Socrates"),
-		Man = mk_res("Man"),
-		Mortal = mk_res("Mortal"),
-		Morrtal = mk_res("Morrtal"),
-		Male = mk_res("Male"),
-		 _x = mk_res("?x"),
-		 _y = mk_res("?y");
+/*
+void prove(pred_t goal) {
+	pred_t Socrates = mk_res("Socrates"), Man = mk_res("Man"), Mortal = mk_res("Mortal"), Morrtal = mk_res("Morrtal"), Male = mk_res("Male"), _x = mk_res("?x"), _y = mk_res("?y");
 	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
 	cases["a"].push_back ( {
 		{"a", {_x, Mortal}},
@@ -336,7 +313,7 @@ void funtest() {
 		{ {"a", {_x, Male}}, }
 	} );
 
-	bool p = prove ( {"a", {_y, Mortal}}, 10 );
+	bool p = prove ( goal, -1, cases, evidence );
 	cout << "Prove returned " << p << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
@@ -348,8 +325,33 @@ void funtest() {
 	}
 	cout << "QED!" << endl;
 }
+*/
+int main(int argc, char** argv) {
+	if ( argc != 2 && argc != 6) {
+		cout << "Usage:"<<endl<<"\ttau <JSON-LD kb file> <Graph Name> <Goal's subject> <Goal's predicate> <Goal's object>" << endl;
+		cout << "Or to list all available graphs:"<<endl<<"\ttau <JSON-LD input file>"<< endl;
+		return 1;
+	}
+	auto kb = jsonld::load_jsonld(argv[1]);
 
-int main() {
-	funtest();
+	if (argc == 2) return 0;
+	auto it = kb.find(argv[2]) ;
+	if (it == kb.end()) { cerr<<"No such graph."<<endl; return 1; }
+
+	evidence_t evidence, cases;
+	for (auto quad : *it->second) {
+		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+		cases[p].push_back( rule_t{ pred_t{ p, { pred_t{s,{}}, pred_t{o,{}}}},{}});
+	}
+	bool p = prove(pred_t{argv[4],{{argv[3],{}},{argv[5],{}}}}, -1, evidence, cases);
+	cout << "Prove returned " << p << endl;
+	cout << "evidence: " << evidence.size() << " items..." << endl;
+	for ( auto e : evidence ) {
+		cout << "  " << e.first << ":" << endl;
+		for ( auto ee : e.second ) {
+			cout << "    "; print ( ee ); cout << endl;
+		}
+		cout << endl << "---" << endl;
+	}
 	return 0;
 }

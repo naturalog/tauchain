@@ -20,6 +20,10 @@ using namespace std;
 using namespace std::string_literals;
 using namespace boost;
 
+
+
+namespace jsonld {
+
 const string LOADING_DOCUMENT_FAILED = "loading document failed";
 const string LIST_OF_LISTS = "list of lists";
 const string INVALID_INDEX_VALUE = "invalid @index value";
@@ -809,7 +813,7 @@ public:
 				auto it = term_defs->find ( *result );
 				if ( it != term_defs->end()
 				        && has ( it->second->MAP(), "@id" )
-				        && ::equals ( value->MAP( )->at ( "@id" ),
+				        && jsonld::equals ( value->MAP( )->at ( "@id" ),
 				                      term_defs->at ( *result )->MAP( )->at ( "@id" ) ) ) {
 					preferredValues.push_back ( "@vocab" );
 					preferredValues.push_back ( "@id" );
@@ -870,7 +874,7 @@ public:
 		it = value->find ( "@type" );
 		if ( it != value->end() &&  *it->second->STR() == *type_map  ) return valval;
 		if ( ( it = value->find ( "@language" ) ) != value->end() ) // TODO: SPEC: doesn't specify to check default language as well
-			if ( *it->second->STR() == * lang_map  || ::equals ( it->second, getlang ( MAP() ) ) )
+			if ( *it->second->STR() == * lang_map  || jsonld::equals ( it->second, getlang ( MAP() ) ) )
 				return valval;
 		if ( nvals == 1
 		        && ( !valval->STR() || haslang ( MAP() ) || ( term_defs->find ( activeProperty ) == term_defs->end()
@@ -1000,13 +1004,14 @@ class quad : public quad_base { //map<string, pnode> {
 	quad ( string subj, string pred, pnode object, pstring graph ) :
 		quad ( startsWith ( subj, "_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {}
 public:
+	pnode &subj = std::get<0> ( *this ), &pred = std::get<1> ( *this ), &object = std::get<2> ( *this ), &graph = std::get<3> ( *this );
+
 	quad ( string subj, string pred, string object, pstring graph ) :
 		quad ( subj, pred, startsWith ( object, "_:" ) ?  mkbnode ( object ) : mkiri ( object ), graph ) {}
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, pstring graph ) :
 		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
 	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
 		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
-	pnode &subj = std::get<0> ( *this ), &pred = std::get<1> ( *this ), &object = std::get<2> ( *this ), &graph = std::get<3> ( *this );
 
 	string tostring ( string ctx ) {
 		return "< "s + ctx + " > : < " + subj->value + " > <" + pred->value + " > < " + object->value + " > .";
@@ -1680,11 +1685,7 @@ std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
 	return a.toRDF();
 }
 
-int jsonld_main ( int argc, char** argv ) {
-	if ( argc != 2 ) {
-		cout << "Usage: jsonld++ <JSON-LD input filename>" << endl;
-		return 1;
-	}
+qdb load_jsonld( string fname ) {
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
@@ -1700,14 +1701,15 @@ int jsonld_main ( int argc, char** argv ) {
 	/*pbool*/ o.useNamespaces = make_shared<bool> ( true );
 	/*pstring*/ o.outputForm = 0;
 
-
 	json_spirit::mValue v;
-	ifstream ifs ( argv[1] );
+	ifstream ifs ( fname );
 	json_spirit::read_stream ( ifs, v );
 	auto c = convert ( v );
 	jsonld_api a ( c, o );
 	auto r = *a.toRDF ( );
-	cout << r.tostring() << endl;
-
-	return 0;
+	cout<<"Loaded graphs:"<<endl;
+	for (auto x : r) cout<<x.first<<endl;
+//	cout << r.tostring() << endl;
+	return r;
+}
 }
