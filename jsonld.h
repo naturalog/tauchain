@@ -980,20 +980,23 @@ public:
 pnode mkliteral ( string value, pstring datatype, pstring language ) {
 	pnode r = make_shared<node> ( node::LITERAL );
 	r->type = "literal" ;
-	r ->value = value ;
+	r->value = value ;
+//	cout<<"mkliteral value: "<<value<<endl;
 	r-> datatype = datatype ? *datatype : XSD_STRING;
 	if ( language ) r->lang = *language;
 	return r;
 }
 pnode mkiri ( string iri ) {
 	pnode r = make_shared<node> ( node::IRI );
-	r ->type = "IRI";
+	r->type = "IRI";
 	r->value = iri;
+//	cout<<"mkiri value: "<<iri<<endl;
 	return r;
 }
 pnode mkbnode ( string attribute ) {
 	pnode r = make_shared<node> ( node::BNODE );
 	r->type = "blank node" ;
+//	cout<<"mkbnode value: "<<attribute<<endl;
 	r->value = attribute ;
 	return r;
 }
@@ -1014,7 +1017,13 @@ public:
 		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
 
 	string tostring ( string ctx ) {
-		return "< "s + ctx + " > : < " + subj->value + " > <" + pred->value + " > < " + object->value + " > .";
+		string s = "\< "s + ctx + " \> : \< "s;
+		if (subj) s += subj->value; else s += "\<null\>"s;
+		s+= " \> \<";
+		if (pred) s+= pred->value;else s+= "\<null\>"s;
+		s+= " \> \< ";
+		if (object) s+= object->value;else s+= "\<null\>"s;
+		return s+= " \> .";
 	}
 };
 
@@ -1409,8 +1418,9 @@ public:
 
 	string gen_bnode_id ( string id = "" ) {
 		if ( has ( bnode_id_map, id ) ) return bnode_id_map[id];
-		string bnid = "_:b" + blankNodeCounter++;
-		return bnode_id_map[id] = bnid;
+		stringstream ss;
+		ss << "_:b" << (blankNodeCounter++);
+		return bnode_id_map[id] = ss.str();
 	}
 
 	size_t blankNodeCounter = 0;
@@ -1521,7 +1531,11 @@ public:
 	string tostring() {
 		string s;
 		stringstream o;
-		for ( auto x : *this ) for ( pquad q : *x.second ) o << q->tostring ( x.first ) << endl;
+		o<<"#Graphs: "<<size()<<endl;
+		for ( auto x : *this ) {
+			o<<"#Triples: "<<x.second->size()<<endl;
+			for ( pquad q : *x.second ) o << q->tostring ( x.first ) << endl;
+		}
 		return o.str();
 	}
 
@@ -1667,6 +1681,7 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;
+		if (!g.second || !g.second->MAP()) throw 0;
 		r.graphToRDF ( g.first, *g.second->MAP() );
 	}
 	return make_shared<rdf_db> ( r );
