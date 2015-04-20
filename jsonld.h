@@ -294,7 +294,7 @@ struct jsonld_options {
 	jsonld_options ( string base_ ) : base ( pstr ( base_ ) ) {}
 	pstring base = 0;
 	pbool compactArrays = make_shared<bool> ( true );
-	//obj expandContext = 0;
+	pobj expandContext = 0;
 	pstring processingMode = pstr ( "json-ld-1.0" );
 	pbool embed = 0;
 	pbool isexplicit = 0;
@@ -483,7 +483,7 @@ public:
 	typedef std::shared_ptr<context_t> pcontext;
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
 	pcontext parse ( pobj localContext, vector<string> remoteContexts = vector<string>() ) {
-		context_t result ( *this );
+		context_t result ( options );
 		if ( !localContext || !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
 		for ( auto context : *localContext->LIST() ) {
 			if ( !context || context->Null() ) {
@@ -814,7 +814,7 @@ public:
 				if ( it != term_defs->end()
 				        && has ( it->second->MAP(), "@id" )
 				        && jsonld::equals ( value->MAP( )->at ( "@id" ),
-				                      term_defs->at ( *result )->MAP( )->at ( "@id" ) ) ) {
+				                            term_defs->at ( *result )->MAP( )->at ( "@id" ) ) ) {
 					preferredValues.push_back ( "@vocab" );
 					preferredValues.push_back ( "@id" );
 				} else {
@@ -981,7 +981,7 @@ pnode mkliteral ( string value, pstring datatype, pstring language ) {
 	pnode r = make_shared<node> ( node::LITERAL );
 	r->type = "literal" ;
 	r->value = value ;
-//	cout<<"mkliteral value: "<<value<<endl;
+	//	cout<<"mkliteral value: "<<value<<endl;
 	r-> datatype = datatype ? *datatype : XSD_STRING;
 	if ( language ) r->lang = *language;
 	return r;
@@ -990,13 +990,13 @@ pnode mkiri ( string iri ) {
 	pnode r = make_shared<node> ( node::IRI );
 	r->type = "IRI";
 	r->value = iri;
-//	cout<<"mkiri value: "<<iri<<endl;
+	//	cout<<"mkiri value: "<<iri<<endl;
 	return r;
 }
 pnode mkbnode ( string attribute ) {
 	pnode r = make_shared<node> ( node::BNODE );
 	r->type = "blank node" ;
-//	cout<<"mkbnode value: "<<attribute<<endl;
+	//	cout<<"mkbnode value: "<<attribute<<endl;
 	r->value = attribute ;
 	return r;
 }
@@ -1018,12 +1018,12 @@ public:
 
 	string tostring ( string ctx ) {
 		string s = "\< "s + ctx + " \> : \< "s;
-		if (subj) s += subj->value; else s += "\<null\>"s;
-		s+= " \> \<";
-		if (pred) s+= pred->value;else s+= "\<null\>"s;
-		s+= " \> \< ";
-		if (object) s+= object->value;else s+= "\<null\>"s;
-		return s+= " \> .";
+		if ( subj ) s += subj->value; else s += "\<null\>"s;
+		s += " \> \<";
+		if ( pred ) s += pred->value; else s += "\<null\>"s;
+		s += " \> \< ";
+		if ( object ) s += object->value; else s += "\<null\>"s;
+		return s += " \> .";
 	}
 };
 
@@ -1055,7 +1055,7 @@ public:
 	jsonld_api ( jsonld_options opts_ = jsonld_options ( "" ) ) : opts ( opts_ ) {}
 private:
 	void initialize ( pobj input, pobj context_ ) {
-		if ( input && (input->LIST() || input->MAP() )) value = input->clone();
+		if ( input && ( input->LIST() || input->MAP() ) ) value = input->clone();
 		context = make_shared<context_t>();
 		if ( context ) context = context->parse ( context_ );
 	}
@@ -1182,7 +1182,7 @@ public:
 	}
 
 	// http://json-ld.org/spec/latest/json-ld-api/#expansion-algorithm
-	pobj expand ( pcontext& activeCtx, const string& activeProperty, pobj& element ) {
+	pobj expand ( pcontext activeCtx, const string& activeProperty, pobj element ) {
 		if ( !element )  return 0;
 		if ( element->LIST() ) {
 			polist_obj result = mk_olist_obj();
@@ -1419,22 +1419,22 @@ public:
 	string gen_bnode_id ( string id = "" ) {
 		if ( has ( bnode_id_map, id ) ) return bnode_id_map[id];
 		stringstream ss;
-		ss << "_:b" << (blankNodeCounter++);
+		ss << "_:b" << ( blankNodeCounter++ );
 		return bnode_id_map[id] = ss.str();
 	}
 
-	size_t blankNodeCounter = 0;
-	map<string, string> bnode_id_map;
+	static size_t blankNodeCounter;
+	static map<string, string> bnode_id_map;
 
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring activeProperty, psomap list ) {
-		if (!element) return;
+		if ( !element ) return;
 		if ( element->LIST() ) {
 			for ( pobj item : *element->LIST() ) gen_node_map ( item, nodeMap, activeGraph, activeSubject, activeProperty, list );
 			return;
 		}
 		psomap elem = element->MAP();
 		if ( !has ( nodeMap, activeGraph ) ) ( *nodeMap ) [ activeGraph ] = mk_somap_obj();
-		psomap graph = nodeMap->at ( activeGraph )->MAP(), node = (activeSubject && activeSubject->STR()) ? graph->at ( *activeSubject->STR() )->MAP() : 0;
+		psomap graph = nodeMap->at ( activeGraph )->MAP(), node = ( activeSubject && activeSubject->STR() ) ? graph->at ( *activeSubject->STR() )->MAP() : 0;
 		if ( hastype ( elem ) ) {
 			vector<string> oldTypes, newTypes;
 			if ( gettype ( elem )->LIST() ) oldTypes = vec2vec ( gettype ( elem )->LIST() );
@@ -1460,7 +1460,7 @@ public:
 			mergeValue ( node, activeProperty, mk_somap_obj ( result ) );
 		} else {
 			string id;
-			if ( hasid ( elem ) &&  elem->at("@id") && elem->at("@id")->STR() ) {
+			if ( hasid ( elem ) &&  elem->at ( "@id" ) && elem->at ( "@id" )->STR() ) {
 				/*string*/ id = *elem->at ( "@id" )->STR();
 				elem->erase ( "@id" );
 				if ( startsWith ( id, "_:" ) ) id = gen_bnode_id ( id );
@@ -1479,7 +1479,7 @@ public:
 			}
 			node = graph->at ( id )->MAP();
 			if ( hastype ( elem ) ) {
-				if (gettype(elem)->LIST()) for ( pobj type : *gettype ( elem )->LIST() ) if ( type ) mergeValue ( node, "@type", type );
+				if ( gettype ( elem )->LIST() ) for ( pobj type : *gettype ( elem )->LIST() ) if ( type ) mergeValue ( node, "@type", type );
 				elem->erase ( "@type" );
 			}
 			if ( hasindex ( elem ) ) {
@@ -1493,11 +1493,11 @@ public:
 				psomap refnode = make_shared<somap>(), revmap = elem->at ( "@reverse" )->MAP();
 				( *refnode ) ["@id"] = make_shared<string_obj> ( id );
 				elem->erase ( "@reverse" );
-				if (revmap) for ( auto x : *revmap ) {
-					string prop = x.first;
-					polist values = revmap->at ( prop )->LIST();
-					if (values) for ( pobj value : *values ) gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared<string> ( prop ), 0 );
-				}
+				if ( revmap ) for ( auto x : *revmap ) {
+						string prop = x.first;
+						polist values = revmap->at ( prop )->LIST();
+						if ( values ) for ( pobj value : *values ) gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared<string> ( prop ), 0 );
+					}
 			}
 			if ( has ( elem, "@graph" ) ) {
 				gen_node_map ( elem->at ( "@graph" ), nodeMap, id, 0, 0, 0 );
@@ -1505,17 +1505,18 @@ public:
 			}
 			//			final List<String> keys = new ArrayList<String> ( elem.keySet() );
 			//			Collections.sort ( keys );
-			if (elem) for ( auto z : *elem ) {
-				string property = z.first;
-				pobj value = z.second;
-				if ( startsWith ( property, "_:" ) ) property = gen_bnode_id ( property );
-				if ( !has ( node, property ) ) ( *node ) [ property ] = mk_olist_obj();
-				gen_node_map ( value, nodeMap, activeGraph, make_shared<string_obj> ( id ), make_shared<string> ( property ), 0 );
-			}
+			if ( elem ) for ( auto z : *elem ) {
+					string property = z.first;
+					pobj value = z.second;
+					if ( startsWith ( property, "_:" ) ) property = gen_bnode_id ( property );
+					if ( !has ( node, property ) ) ( *node ) [ property ] = mk_olist_obj();
+					gen_node_map ( value, nodeMap, activeGraph, make_shared<string_obj> ( id ), make_shared<string> ( property ), 0 );
+				}
 		}
 	}
 
 	std::shared_ptr<rdf_db> toRDF();
+	std::shared_ptr<rdf_db> toRDF ( pobj input, jsonld_options options );
 };
 
 class rdf_db : public qdb {
@@ -1531,9 +1532,9 @@ public:
 	string tostring() {
 		string s;
 		stringstream o;
-		o<<"#Graphs: "<<size()<<endl;
+		o << "#Graphs: " << size() << endl;
 		for ( auto x : *this ) {
-			o<<"#Triples: "<<x.second->size()<<endl;
+			o << "#Triples: " << x.second->size() << endl;
 			for ( pquad q : *x.second ) o << q->tostring ( x.first ) << endl;
 		}
 		return o.str();
@@ -1624,7 +1625,7 @@ public:
 							firstBnode = mkbnode ( api.gen_bnode_id () );
 						}
 						triples.push_back ( make_shared<quad> ( subj, pred, firstBnode, pstr ( graph_name ) ) );
-						for ( int i = 0; i < ((int)list->size()) - 1; ++i ) {
+						for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
 							pnode object = objectToRDF ( list->at ( i ) );
 							triples.push_back ( make_shared<quad> ( firstBnode, first, object, pstr ( graph_name ) ) );
 							pnode restBnode = mkbnode ( api.gen_bnode_id() );
@@ -1646,10 +1647,10 @@ private:
 	pnode objectToRDF ( pobj item ) {
 		if ( isvalue ( item ) ) {
 			pobj value = item->MAP( )->at ( "@value" ), datatype = hastype ( item->MAP() ) ? item->MAP( )->at ( "@type" ) : pobj ( 0 );
-			if (!value) return 0;
+			if ( !value ) return 0;
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 				if ( value->BOOL() ) return mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
-				else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() )) {
+				else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() ) ) {
 					///					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
 					//					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
 					return mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
@@ -1681,10 +1682,49 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;
-		if (!g.second || !g.second->MAP()) throw 0;
+		if ( !g.second || !g.second->MAP() ) throw 0;
 		r.graphToRDF ( g.first, *g.second->MAP() );
 	}
 	return make_shared<rdf_db> ( r );
+}
+
+pobj expand ( pobj& input, jsonld_options opts ) {
+	if ( input->STR() && input->STR()->find ( ":" ) != string::npos ) {
+		input = load ( *input->STR() ).document;
+		if ( !opts.base ) opts.base = pstr ( *input->STR() );
+	}
+	context_t activeCtx ( opts );
+	if ( opts.expandContext ) {
+		if ( opts.expandContext->MAP() && has ( opts.expandContext->MAP(), "@context" ) )
+			opts.expandContext = opts.expandContext->MAP()->at ( "@context" );
+		activeCtx = *activeCtx.parse ( opts.expandContext );
+	}
+	auto expanded = jsonld_api ( opts ).expand ( make_shared<context_t> ( activeCtx ), *input->STR(), 0 );
+	if ( expanded->MAP() && has ( expanded->MAP(), "@graph" ) ) expanded = expanded->MAP()->at ( "@graph" );
+	else if ( !expanded ) expanded = mk_olist_obj();
+	if ( !expanded->LIST() ) expanded = mk_olist_obj ( olist ( 1, expanded ) );
+	return expanded;//->LIST();
+}
+
+std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
+	pobj expandedInput = ( jsonld::expand ( input, options ) );
+
+	jsonld_api api ( expandedInput, options );
+	auto dataset = api.toRDF();
+
+	// generate namespaces from context
+	if ( options.useNamespaces ) {
+		polist _input;
+		if ( input->LIST() ) _input = input->LIST();
+		else {
+			_input = mk_olist();
+			_input->push_back ( input );
+		}
+		for ( auto e : *_input )
+			if ( has ( e->MAP(), "@context" ) )
+				dataset->parseContext ( e->MAP()->at ( "@context" ) );
+	}
+	return dataset;
 }
 
 
@@ -1694,7 +1734,7 @@ std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
 	return a.toRDF();
 }
 
-rdf_db load_jsonld( string fname, bool print = true ) {
+rdf_db load_jsonld ( string fname, bool print = true ) {
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
@@ -1715,12 +1755,15 @@ rdf_db load_jsonld( string fname, bool print = true ) {
 	json_spirit::read_stream ( ifs, v );
 	auto c = convert ( v );
 	jsonld_api a ( c, o );
-	auto r = *a.toRDF ( );
-	if (print) {
-		cout<<"Loaded graphs:"<<endl;
-		for (auto x : r) cout<<x.first<<endl;
+	auto r = *a.toRDF(jsonld::expand(c, o), o);
+	if ( print ) {
+		cout << "Loaded graphs:" << endl;
+		for ( auto x : r ) cout << x.first << endl;
 	}
-//	cout << r.tostring() << endl;
+	//	cout << r.tostring() << endl;
 	return r;
 }
+
+size_t jsonld_api::blankNodeCounter = 0;
+map<string, string> jsonld_api::bnode_id_map;
 }
