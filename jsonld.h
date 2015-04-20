@@ -1046,7 +1046,7 @@ public:
 	jsonld_api ( jsonld_options opts_ = jsonld_options ( "" ) ) : opts ( opts_ ) {}
 private:
 	void initialize ( pobj input, pobj context_ ) {
-		if ( input->LIST() || input->MAP() ) value = input->clone();
+		if ( input && (input->LIST() || input->MAP() )) value = input->clone();
 		context = make_shared<context_t>();
 		if ( context ) context = context->parse ( context_ );
 	}
@@ -1417,6 +1417,7 @@ public:
 	map<string, string> bnode_id_map;
 
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring activeProperty, psomap list ) {
+		if (!element) return;
 		if ( element->LIST() ) {
 			for ( pobj item : *element->LIST() ) gen_node_map ( item, nodeMap, activeGraph, activeSubject, activeProperty, list );
 			return;
