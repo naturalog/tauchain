@@ -313,7 +313,7 @@ int main ( int argc, char** argv ) {
 	for ( const auto& quad : *it->second ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		if (p != "http://www.w3.org/2000/10/swap/log#implies") 
-			cases[p].push_back ({ { p, { mk_res(s), mk_res(o) }}}, {} }); 
+			cases[p].push_back ({ { p, { mk_res(s), mk_res(o) }}, {}} ); 
 		else {
 			rule_t rule;
 			for (const auto& y : *it->second)
