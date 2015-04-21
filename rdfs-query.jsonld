@@ -17,15 +17,15 @@
     {
       "@id": "rdf:XMLLiteral",
       "@type": [
-        "rdfs:Class",
-        "rdfs:Resource"
+        "rdfs:Resource",
+        "rdfs:Class"
       ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
       }
     },
     {
-      "@id": "rdf:rest",
+      "@id": "rdf:predicate",
       "@type": "rdf:Property"
     },
     {
@@ -37,14 +37,20 @@
       "@type": "rdf:Property"
     },
     {
-      "@id": "rdf:object",
-      "@type": "rdf:Property"
+      "@id": "rdf:Bag",
+      "@type": [
+        "rdfs:Resource",
+        "rdfs:Class"
+      ],
+      "rdfs:subClassOf": {
+        "@id": "rdfs:Resource"
+      }
     },
     {
       "@id": "rdf:Statement",
       "@type": [
-        "rdfs:Class",
-        "rdfs:Resource"
+        "rdfs:Resource",
+        "rdfs:Class"
       ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
@@ -63,8 +69,8 @@
     {
       "@id": "rdfs:ContainerMembershipProperty",
       "@type": [
-        "rdfs:Resource",
-        "rdfs:Class"
+        "rdfs:Class",
+        "rdfs:Resource"
       ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
@@ -77,16 +83,6 @@
     {
       "@id": "rdfs:Class",
       "@type": [
-        "rdfs:Class",
-        "rdfs:Resource"
-      ],
-      "rdfs:subClassOf": {
-        "@id": "rdfs:Resource"
-      }
-    },
-    {
-      "@id": "rdf:Bag",
-      "@type": [
         "rdfs:Resource",
         "rdfs:Class"
       ],
@@ -95,14 +91,18 @@
       }
     },
     {
-      "@id": "rdf:subject",
+      "@id": "rdf:object",
+      "@type": "rdf:Property"
+    },
+    {
+      "@id": "rdfs:isDefinedBy",
       "@type": "rdf:Property"
     },
     {
       "@id": "rdf:Alt",
       "@type": [
-        "rdfs:Resource",
-        "rdfs:Class"
+        "rdfs:Class",
+        "rdfs:Resource"
       ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
@@ -137,8 +137,8 @@
     {
       "@id": "rdf:List",
       "@type": [
-        "rdfs:Resource",
-        "rdfs:Class"
+        "rdfs:Class",
+        "rdfs:Resource"
       ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
@@ -151,26 +151,26 @@
     {
       "@id": "rdf:Property",
       "@type": [
-        "rdfs:Class",
-        "rdfs:Resource"
+        "rdfs:Resource",
+        "rdfs:Class"
       ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
       }
     },
     {
-      "@id": "rdf:predicate",
+      "@id": "rdf:rest",
       "@type": "rdf:Property"
     },
     {
-      "@id": "rdfs:isDefinedBy",
+      "@id": "rdf:subject",
       "@type": "rdf:Property"
     },
     {
       "@id": "rdfs:Literal",
       "@type": [
-        "rdfs:Class",
-        "rdfs:Resource"
+        "rdfs:Resource",
+        "rdfs:Class"
       ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
@@ -192,4 +192,3 @@
     }
   ]
 }
-
