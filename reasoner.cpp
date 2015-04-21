@@ -1,7 +1,6 @@
 // c++ port of euler (EYE) js reasoner
 #include <deque>
-#include "jsonld.h"
-using namespace std;
+#include "parsers.h"
 
 bool DEBUG = true;
 #define trace(x) if(DEBUG) { x }

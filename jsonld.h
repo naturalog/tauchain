@@ -15,11 +15,32 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 
 using namespace std;
 using namespace std::string_literals;
-using namespace boost;
+//using namespace boost;
 
+typedef shared_ptr<string> pstring;
+
+inline pstring pstr ( const string& s ) {
+	return make_shared<string> ( s );
+}
+
+inline pstring pstr ( const char* s ) {
+	if (s) return make_shared<string> ( s );
+	else return 0;
+}
+
+inline pstring pstr ( const unsigned char* s ) {
+	if (s) return make_shared<string> ( (const char*)s );
+	else return 0;
+}
+
+inline pstring pstr ( unsigned char* s ) {
+	if (s) return make_shared<string> ( (const char*)s );
+	else return 0;
+}
 
 inline bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
@@ -221,7 +242,6 @@ OBJ_IMPL ( null, Null );
 typedef obj::pobj pobj;
 typedef obj::somap somap;
 typedef obj::olist olist;
-typedef std::shared_ptr<string> pstring;
 typedef std::shared_ptr<somap> psomap;
 typedef std::shared_ptr<olist> polist;
 typedef std::shared_ptr<bool> pbool;
@@ -257,10 +277,6 @@ polist mk_olist() {
 string resolve ( const string&, const string& ) {
 	cout<<"ERROR: resolve() not implemented"<<endl;
 	return "";
-}
-
-inline pstring pstr ( const string& s ) {
-	return make_shared<string> ( s );
 }
 
 pstring removeBase ( pobj o, string iri ) {
@@ -1020,6 +1036,7 @@ pnode mkiri ( string iri ) {
 	//	cout<<"mkiri value: "<<iri<<endl;
 	return r;
 }
+
 pnode mkbnode ( string attribute ) {
 	pnode r = make_shared<node> ( node::BNODE );
 	r->type = "blank node" ;
@@ -1028,7 +1045,7 @@ pnode mkbnode ( string attribute ) {
 	return r;
 }
 
-typedef std::tuple<pnode, pnode, pnode, pnode>  quad_base;
+typedef std::tuple<pnode, pnode, pnode, pnode> quad_base;
 
 class quad : public quad_base { //map<string, pnode> {
 	quad ( string subj, string pred, pnode object, pstring graph ) :
@@ -1042,6 +1059,8 @@ public:
 		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
 	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
 		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
+
+	using quad_base::quad_base;
 
 	string tostring ( string ctx ) {
 		string s = "< "s + ctx + " > : < "s;
@@ -1811,3 +1830,8 @@ rdf_db load_jsonld ( string fname, bool print = true ) {
 size_t jsonld_api::blankNodeCounter = 0;
 map<string, string> jsonld_api::bnode_id_map;
 }
+typedef jsonld::rdf_db rdf_db;
+typedef jsonld::quad quad;
+typedef jsonld::pquad pquad;
+typedef jsonld::node node;
+typedef jsonld::pnode pnode;
