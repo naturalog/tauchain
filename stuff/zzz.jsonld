@@ -1,0 +1,9 @@
+{
+  "@context": "http://schema.org/",
+  "@graph": [
+    {
+      "@id": "socrates",
+      "@type": "http://json-ld.org/playground/man"
+    }
+  ]
+}

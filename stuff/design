@@ -1,0 +1,11 @@
+the nodes talk, as long as it is some valid encoding of quads?
+<HMC_A_> json-ld is just an "easy" one
+<HMC_A_> the nodes could talk n3logic at eachother, I guess, but it much harder to work with?
+<HMC_A_> the nodes could even talk raw quads at eachother, but that would carry a ton of redundancy?
+<HMC_A_> binary encoded jsonld seems like the right compromise, but what is your concern(s)?
+
+
+
+
+intro:
+http://sourceforge.net/p/eulersharp/code/HEAD/tree/trunk/2006/02swap/classes/Euler4.js
