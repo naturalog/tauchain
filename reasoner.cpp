@@ -264,9 +264,7 @@ pred_t evaluate ( pred_t t, penv_t env ) {
 	return {t.pred, n};
 }
 
-inline pred_t mk_res ( string r ) {
-	return {r, {}};
-}
+inline pred_t mk_res ( string r ) { return {r, {}}; }
 
 void funtest() {
 	evidence_t evidence, cases;
@@ -289,6 +287,9 @@ void funtest() {
 	cout << "QED!" << endl;
 }
 
+pred_t triple(const string& s, const string& p, const string& o) { return pred_t{ p, { { s, {}}, { o, {}}}}; };
+pred_t triple(const jsonld::quad& q){ return triple(q.subj->value, q.pred->value, q.object->value); };
+
 int main ( int argc, char** argv ) {
 	if ( argc == 1 ) funtest();
 	if ( argc != 2 && argc != 3 && argc != 6 ) {
@@ -309,13 +310,21 @@ int main ( int argc, char** argv ) {
 	}
 
 	evidence_t evidence, cases;
-	for ( auto quad : *it->second ) {
+	for ( const auto& quad : *it->second ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		rule_t rule;
-		if (p == "a" || p == "log:implies" || jsonld::endsWith(p, "log#implies")) rule = { pred_t{ p, { pred_t{s, {}}, pred_t{o, {}}}}};
-		rule = { pred_t{ p, {}}, { pred_t{s, {}}, pred_t{o, {}}}};
-		cases[p].push_back ( rule );
-		cout << ( string ) rule << endl;
+		if (p != "http://www.w3.org/2000/10/swap/log#implies") 
+			cases[p].push_back ({ { p, { mk_res(s), mk_res(o) }}}, {} }); 
+		else {
+			rule_t rule;
+			for (const auto& y : *it->second)
+				if (y->graph->value == o) {
+					rule.head = triple(*y);
+					for (const auto& x : *it->second) 
+						if (x->graph->value == s) 
+							rule.body.push_back( triple(*x) );
+					cases[p].push_back ( rule );
+				}
+		}
 	}
 
 	if ( argc == 3 ) return 0;

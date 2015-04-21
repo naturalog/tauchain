@@ -21,6 +21,12 @@ using namespace std::string_literals;
 using namespace boost;
 
 
+inline bool endsWith ( const string& x, const string& y ) {
+	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
+}
+inline bool startsWith ( const string& x, const string& y ) {
+	return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
+}
 
 namespace jsonld {
 
@@ -93,12 +99,6 @@ inline string lower ( const string& s_ ) {
 	return s;
 }
 
-inline bool endsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
-}
-inline bool startsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
-}
 
 template<typename charT>
 inline vector<string> split ( const string& s, charT c ) {
