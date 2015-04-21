@@ -82,7 +82,7 @@ ostream& operator<< ( ostream& o, ground_t const& g ) {
 
 struct proof_trace_item {
 	rule_t rule;
-	int src, ind;
+	int src, ind; // source of what, index of what?
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
@@ -97,6 +97,12 @@ struct proof_trace_item {
 typedef std::shared_ptr<proof_trace_item> ppti;
 
 int builtin ( pred_t, proof_trace_item ) {
+	/*
+	 * 1:it unified
+	 * -1:no such builtin
+	 * 0:it didnt unify
+	 */
+	trace ( cout << "NO BEES yet PLZ!" << endl; )
 	return -1;
 }
 typedef map<string, vector<rule_t>> evidence_t;
@@ -107,9 +113,12 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f );
 pground_t gnd = make_shared<ground_t>();
 
 bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
+	/*
+    * please write an outline of this thing:)
+    */
 	int step = 0;
 	deque<ppti> queue;
-	ppti s = make_shared<proof_trace_item> ( proof_trace_item { {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)
+	ppti s = make_shared<proof_trace_item> ( proof_trace_item { {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
 	queue.emplace_back ( s );
 	//queue.push_back(s);
 	trace ( cout << "Goal: " << ( string ) goal << endl; )
@@ -126,8 +135,9 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		}
 		trace (
 		    cout << "c.ind: " << c->ind << endl;
-		    cout << "c.rule.body.size(): " << c->rule.body.size() << endl;
+		    cout << "c.rule.body.size(): " << c->rule.body.size() << endl; //in step 1, rule body is goal
 		)
+		// all parts of rule body succeeded...(?)
 		if ( (size_t)c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
 				trace ( cout << "no parent!" << endl; )
@@ -157,22 +167,24 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			r->ind++;
 			queue.push_back ( r );
 			continue;
-		} else if ( !b ) {
-			trace ( cout << "NO BEES PLZ!" << endl; )
+		} else if ( b == 0 ) { // builtin didnt unify
 			continue;
-		}
+		} // else there is no such builtin, continue...
+
 		trace ( cout << "Checking cases..." << endl; )
 		if ( cases.find ( t.pred ) == cases.end() ) {
-			trace ( cout << "No Cases!" << endl; )
+			trace ( cout << "No Cases(no such predicate)!" << endl; )
 			continue;
 		}
 		size_t src = 0;
+		//for each rule with the predicate we are trying to prove...
 		for ( rule_t rl : cases[t.pred] ) {
 			src++;
 			pground_t g = aCopy ( c->ground );
 			trace ( cout << "Check rule: " << ( string ) rl << endl; )
-			if ( rl.body.size() == 0 ) g->push_back ( { rl, make_shared<env_t>() } );
-			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );
+			if ( rl.body.size() == 0 ) g->push_back ( { rl, make_shared<env_t>() } ); //its a conditionless fact
+			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
+			//rl could imply our rule...
 			if ( unify ( t, c->env, rl.head, r->env, true ) ) {
 				ppti ep = c;
 				while ( ( ep = ep->parent ) ) {
@@ -283,7 +295,7 @@ void funtest() {
 		for ( auto ee : e.second ) cout << "    " << ( string ) ee << endl;
 		cout << endl << "---" << endl;
 	}
-	cout << "QED!" << endl;
+	cout << "QED! <- this means the proof is done, in leet mathspeak" << endl;
 }
 
 pred_t triple(const string& s, const string& p, const string& o) { return pred_t{ p, { { s, {}}, { o, {}}}}; };
@@ -309,21 +321,25 @@ int main ( int argc, char** argv ) {
 	}
 
 	evidence_t evidence, cases;
+	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	for ( const auto& quad : *it->second ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		if (p != "http://www.w3.org/2000/10/swap/log#implies") 
-			cases[p].push_back ({ { p, { mk_res(s), mk_res(o) }}, {}} ); 
-		else {
+		if (p == "http://www.w3.org/2000/10/swap/log#implies") 
+		{
 			rule_t rule;
+			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
 			for (const auto& y : *it->second)
 				if (y->graph->value == o) {
 					rule.head = triple(*y);
+					//now look for the subject graph
 					for (const auto& x : *it->second) 
 						if (x->graph->value == s) 
 							rule.body.push_back( triple(*x) );
 					cases[p].push_back ( rule );
 				}
 		}
+		else
+			cases[p].push_back ({ { p, { mk_res(s), mk_res(o) }}, {}} ); 
 	}
 
 	if ( argc == 3 ) return 0;

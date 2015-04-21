@@ -1,0 +1,7 @@
+<HMC_A_> _:x a :Mortal _:g1
+<HMC_A_> _:x a :Man _:g2
+<HMC_A_> _:g2 log:implies _:g1 <>
+<HMC_A_> _:x a :Male _:g3
+<HMC_A_> _:g3 log:implies _:g2 <>
+#<HMC_A_> for one example of how it could look
+#<HMC_A_> another example might duplicate _:g2 as 2 graphs, either conversion would be valid (I just manually "deduped" the redundant graph)
