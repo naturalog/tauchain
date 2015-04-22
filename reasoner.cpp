@@ -2,8 +2,6 @@
 #include <deque>
 #include "parsers.h"
 
-bool DEBUG = true;
-#define trace(x) if(DEBUG) { x }
 
 struct pred_t {
 	string pred;

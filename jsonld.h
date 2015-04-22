@@ -17,8 +17,15 @@
 #include <fstream>
 #include <stdexcept>
 
+//bool DEBUG = true;
+#define DEBUG
+#ifdef DEBUG
+#define trace(x) x
+#else
+#define trace(x)
+#endif
+
 using namespace std;
-//using namespace boost;
 
 typedef shared_ptr<string> pstring;
 
@@ -1319,14 +1326,19 @@ public:
 	// http://json-ld.org/spec/latest/json-ld-api/#expansion-algorithm
 	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 		pobj result;
-		if ( !element )  result = 0;
+		if ( !element ) result = 0;
 		else if ( ! ( element->LIST() || element->MAP() ) ) {
+			trace ( cout << "expanding noncompound element: " << element->toString() << " active property: " << ( act_prop ? *act_prop : string ( "" ) ) << endl << "active context:" << endl << act_ctx->toString() << endl;);
 			if ( !act_prop || *act_prop == str_graph ) result = 0;
 			else result = act_ctx->expandValue ( act_prop, element );
+			trace ( cout << "result: " << element->toString() << endl;);
 		} else if ( element->LIST() ) {
 			result = mk_olist_obj();
+			trace ( cout << "expanding each list item:" << endl;);
 			for ( pobj item : *element->LIST() ) {
+				trace ( cout << "expanding item:" << endl << item->toString() << endl;);
 				pobj v = expand ( act_ctx, act_prop, item );
+				trace ( cout << "expanded item:" << endl << item->toString() << endl;);
 				if ( act_prop && ( ( *act_prop == str_list || ( act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == str_list ) ) )
 				        && ( v->LIST() || ( v->MAP() && has ( v->MAP(), str_list ) ) ) )
 					throw LIST_OF_LISTS + string ( "\t" ) + "lists of lists are not permitted.";
@@ -1338,13 +1350,16 @@ public:
 			if ( elem->find ( str_context ) != elem->end() ) {
 				cout << "CONTEXT FOUND: " << endl << elem->at ( str_context )->toString() << endl;
 				act_ctx = act_ctx->parse ( elem->at ( str_context ) );
+				trace ( cout << "parsed context:" << endl << act_ctx->toString() << endl;);
 			}
 			result = mk_somap_obj();
+			trace ( cout << "expanding each map item:" << endl;);
 			for ( auto x : *elem ) {
 				string key = x.first;
 				pobj value = x.second;
 				if ( key == str_context ) continue;
 				pstring exp_prop = act_ctx->expandIri ( key, false, true, 0, 0 );
+				trace ( cout << "expanded property:" << *exp_prop << endl;);
 				pobj exp_val = 0;
 				if ( !exp_prop || ( exp_prop->find ( ":" ) == string::npos && !keyword ( *exp_prop ) ) ) continue;
 				if ( keyword ( *exp_prop ) ) {
@@ -1463,6 +1478,7 @@ public:
 						add_all ( result->MAP()->at ( *exp_prop )->LIST(), exp_val );
 					}
 				}
+				trace ( cout << "expanded value:" << exp_val->toString() << endl;);
 			}
 			if ( hasvalue ( result ) ) {
 				somap& ks = *result->MAP();
@@ -1797,10 +1813,10 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
 	gen_node_map ( value, nodeMap );
-	cout << "---------" << endl;
-	cout << "Node map:" << endl;
-	cout << "---------" << endl;
-	cout << nodeMap->toString() << endl;
+	trace ( cout << "---------" << endl;
+	    cout << "Node map:" << endl;
+	    cout << "---------" << endl;
+	    cout << mk_somap_obj ( nodeMap )->toString() << endl;);
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;
@@ -1830,11 +1846,9 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 
 std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 	pobj expandedInput = jsonld::expand ( input, options );
-
-	cout << "Expanded:" << endl;
-	cout << "---------" << endl;
-	cout << expandedInput->toString() << endl;
-
+	trace ( cout << "Expanded:" << endl;
+	    cout << "---------" << endl;
+	    cout << expandedInput->toString() << endl;);
 	jsonld_api api ( expandedInput, options );
 	std::shared_ptr<rdf_db> dataset = api.toRDF();
 
@@ -1877,15 +1891,17 @@ rdf_db load_jsonld ( string fname, bool print = false ) {
 
 	json_spirit::mValue v;
 	ifstream ifs ( fname );
-	cout << "reading json:" << endl;
-	cout << "-------------" << endl;
+	trace ( cout << "reading json:" << endl;
+	    cout << "-------------" << endl;);
 	json_spirit::read_stream ( ifs, v );
 	pobj c = convert ( v );
-	cout << c->toString() << endl;
+	trace (
+	    cout << c->toString() << endl;
+	);
 	jsonld_api a ( c, o );
-	cout << "--------------------" << endl;
-	cout << "converting to quads:" << endl;
-	cout << "--------------------" << endl;
+	trace ( cout << "--------------------" << endl;
+	    cout << "converting to quads:" << endl;
+	    cout << "--------------------" << endl;);
 	auto r = *a.toRDF ( c, o );
 	if ( print ) {
 		cout << "Loaded graphs:" << endl;
