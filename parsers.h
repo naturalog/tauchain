@@ -11,6 +11,7 @@
 #include "jsonld.h"
 using namespace std;
 
+#ifdef USE_RAPTOR
 #include <raptor2/raptor2.h>
 
 void list_parser_options ( raptor_world *world = raptor_new_world() ) {
@@ -77,6 +78,9 @@ string jsonld::resolve ( pstring base_, const string& ref ) {
 	raptor_uri_resolve_uri_reference ( ( pcuchar ) base.c_str(), ( pcuchar ) ref.c_str(), r, sz );
 	return string ( ( pcchar ) r );
 }
-
+#else
+string jsonld::resolve ( pstring base_, const string& ref ) { return base_ ? *base_+ref:ref; }
+rdf_db load_nq ( string fname ) { throw 0; }
+#endif
 
 #endif /* PARSERS_H_ */

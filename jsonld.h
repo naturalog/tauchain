@@ -1810,6 +1810,8 @@ public:
 		}
 		if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared<qlist> ( triples );
 		else for ( auto t : triples ) at ( graph_name )->push_back ( t );
+		trace(cout<<"graphToRDF: "<<endl<<mk_somap_obj(graph)->toString()<<endl);
+		trace(cout<<"triples: "<<endl; for (auto q : triples) cout<<q->tostring(graph_name)<<endl);
 		//		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
 	}
 
