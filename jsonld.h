@@ -39,9 +39,9 @@ const string str_id = "@id";
 const string str_list = "@list";
 const string str_index = "@index";
 const string str_lang = "@language";
-const string str_reverse = "@str_reverse";
-const string str_type = "@str_type";
-const string str_value = "@str_value";
+const string str_reverse = "@reverse";
+const string str_type = "@type";
+const string str_value = "@value";
 const string str_preserve = "@preserve";
 const string str_omitDefault = "@omitDefault";
 const string str_vocab = "@vocab";
@@ -1373,7 +1373,6 @@ public:
 				        && ( v->LIST() || ( v->MAP() && has ( v->MAP(), str_list ) ) ) )
 					throw LIST_OF_LISTS + string ( "\t" ) + "lists of lists are not permitted.";
 				if ( v ) add_all ( result->LIST(), v );
-
 			}
 		} else if ( element->MAP() ) {
 			psomap elem = element->MAP();
