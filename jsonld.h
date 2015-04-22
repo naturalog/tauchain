@@ -28,17 +28,17 @@ inline pstring pstr ( const string& s ) {
 }
 
 inline pstring pstr ( const char* s ) {
-	if (s) return make_shared<string> ( s );
+	if ( s ) return make_shared<string> ( s );
 	else return 0;
 }
 
 inline pstring pstr ( const unsigned char* s ) {
-	if (s) return make_shared<string> ( (const char*)s );
+	if ( s ) return make_shared<string> ( ( const char* ) s );
 	else return 0;
 }
 
 inline pstring pstr ( unsigned char* s ) {
-	if (s) return make_shared<string> ( (const char*)s );
+	if ( s ) return make_shared<string> ( ( const char* ) s );
 	else return 0;
 }
 
@@ -329,7 +329,9 @@ bool keyword ( const string& key ) {
 	       || "@reverse"s == key || "@preserve"s == key || "@set"s == key
 	       || "@type"s == key || "@value"s == key || "@vocab"s == key;
 }
-bool keyword ( pstring key ) { return key ? keyword(*key) : false; }
+bool keyword ( pstring key ) {
+	return key ? keyword ( *key ) : false;
+}
 
 #define KW_SHORTCUTS(x) \
 const string kw##x = "@"s + #x;\
@@ -422,12 +424,12 @@ struct remote_doc_t {
 void* curl = curl_easy_init();
 pobj convert ( const json_spirit::mValue& v ) {
 	pobj r;
-	if ( v.is_uint64() ) r= make_shared<uint64_t_obj> ( v.get_uint64() );
-	else if ( v.isInt() ) r= make_shared<int64_t_obj> ( v.get_int64() );
-	else if ( v.isString() ) r= make_shared<string_obj> ( v.get_str() );
-	else if ( v.isDouble() ) r= make_shared<double_obj> ( v.get_real() );
-	else if ( v.isBoolean() ) r= make_shared<bool_obj> ( v.get_bool() );
-	else if ( v.is_null() ) r= 0; //make_shared<null_obj>();
+	if ( v.is_uint64() ) r = make_shared<uint64_t_obj> ( v.get_uint64() );
+	else if ( v.isInt() ) r = make_shared<int64_t_obj> ( v.get_int64() );
+	else if ( v.isString() ) r = make_shared<string_obj> ( v.get_str() );
+	else if ( v.isDouble() ) r = make_shared<double_obj> ( v.get_real() );
+	else if ( v.isBoolean() ) r = make_shared<bool_obj> ( v.get_bool() );
+	else if ( v.is_null() ) r = 0; //make_shared<null_obj>();
 	else if ( v.isList() ) {
 		r = make_shared<olist_obj>();
 		auto a = v.get_array();
@@ -438,7 +440,7 @@ pobj convert ( const json_spirit::mValue& v ) {
 		auto a = v.get_obj();
 		for ( auto x : a ) ( *r->MAP() ) [x.first] = convert ( x.second );
 	}
-//	cout<<"converted: "<<endl<<r->toString()<<endl;
+	//	cout<<"converted: "<<endl<<r->toString()<<endl;
 	return r;
 }
 
@@ -514,7 +516,7 @@ public:
 			if ( context->STR() ) {
 				pstring s = context->STR();
 				somap& t1 = *result.MAP();
-				pobj p1 = sgetbase(t1);
+				pobj p1 = sgetbase ( t1 );
 				pstring s1 = p1 ? p1->STR() : 0;
 				string uri = resolve ( s1, *s );
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
@@ -536,7 +538,7 @@ public:
 					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@base"] = value;
 					else {
 						pstring baseUri = ( *result.MAP() ) ["@base"]->STR();
-						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + (baseUri ? *baseUri : ""s);
+						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + ( baseUri ? *baseUri : ""s );
 						( *result.MAP() ) ["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 					}
 				} else throw INVALID_BASE_IRI + "\t" + "@base must be a string";
@@ -643,29 +645,29 @@ public:
 
 
 	pstring expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
-//		return value ? expandIri ( value, relative, vocab, context, pdefined ) : 0;
-		if (!value || keyword(*value)) return value;
-		if (context && has(context, *value) && defined->find(*value) == defined->end()) createTermDefinition(context, *value, defined);
-		if (vocab && has(term_defs, *value)) {
-			auto td = term_defs->at(*value)->MAP();
-			if (td && has(td, "@id")) return td->at("@id")->STR();
+		//		return value ? expandIri ( value, relative, vocab, context, pdefined ) : 0;
+		if ( !value || keyword ( *value ) ) return value;
+		if ( context && has ( context, *value ) && defined->find ( *value ) == defined->end() ) createTermDefinition ( context, *value, defined );
+		if ( vocab && has ( term_defs, *value ) ) {
+			auto td = term_defs->at ( *value )->MAP();
+			if ( td && has ( td, "@id" ) ) return td->at ( "@id" )->STR();
 			else return 0;
 		}
-		size_t colIndex = value->find(":");
-		if (colIndex != string::npos) {
-			string prefix = value->substr(0, colIndex), suffix = value->substr(colIndex + 1);
-			if (prefix == "_" || startsWith(suffix, "//")) return value;
-			if (context && has(context, prefix) && (defined->find(prefix) == defined->end() || !defined->at(prefix)))
-				createTermDefinition(context, prefix, defined);
-			if (has(term_defs, prefix)) return pstr(*term_defs->at(prefix)->MAP()->at("@id")->STR() + suffix);
+		size_t colIndex = value->find ( ":" );
+		if ( colIndex != string::npos ) {
+			string prefix = value->substr ( 0, colIndex ), suffix = value->substr ( colIndex + 1 );
+			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return value;
+			if ( context && has ( context, prefix ) && ( defined->find ( prefix ) == defined->end() || !defined->at ( prefix ) ) )
+				createTermDefinition ( context, prefix, defined );
+			if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( "@id" )->STR() + suffix );
 			return value;
 		}
-		if (vocab && has(MAP(), "@vocab")) return pstr(*MAP()->at("@vocab")->STR() + *value);
-		if (relative) {
-			auto base = sgetbase(MAP());
-			pstr(resolve(base ? base->STR() : 0, *value));
+		if ( vocab && has ( MAP(), "@vocab" ) ) return pstr ( *MAP()->at ( "@vocab" )->STR() + *value );
+		if ( relative ) {
+			auto base = sgetbase ( MAP() );
+			pstr ( resolve ( base ? base->STR() : 0, *value ) );
 		}
-		if (context && is_rel_iri(*value)) throw INVALID_IRI_MAPPING + "not an absolute IRI: "s + *value;
+		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: "s + *value;
 		return value;
 	}
 	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
@@ -688,7 +690,7 @@ public:
 		}
 		if ( vocab && MAP()->find ( "@vocab" ) != MAP()->end() ) return pstr ( *MAP()->at ( "@vocab" )->STR() + value );
 		if ( relative ) {
-			auto t = sgetbase(*this);
+			auto t = sgetbase ( *this );
 			return pstr ( resolve ( t ? t->STR() : 0, value ) );
 		}
 		if ( context && is_rel_iri ( value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + value;
@@ -897,7 +899,7 @@ public:
 			string candidate = term + ":" + iri.substr ( getid ( term_def )->STR()->length() );
 			// TODO: verify && and ||
 			if ( ( !compactIRI || compareShortestLeast ( candidate, compactIRI ) < 0 )
-			        && ( !has ( term_defs, candidate ) || (( iri == *getid ( term_defs->at ( candidate ) )->STR() ) && !value) ) )
+			        && ( !has ( term_defs, candidate ) || ( ( iri == *getid ( term_defs->at ( candidate ) )->STR() ) && !value ) ) )
 				compactIRI = pstr ( candidate );
 		}
 		if ( !compactIRI  ) return compactIRI;
@@ -945,7 +947,7 @@ public:
 public:
 	pobj expandValue ( string act_prop, pobj value )  {
 		somap rval;
-		psomap td = has(term_defs, act_prop) ? term_defs->at ( act_prop )->MAP() : 0;
+		psomap td = has ( term_defs, act_prop ) ? term_defs->at ( act_prop )->MAP() : 0;
 		if ( td && *gettype ( td )->STR() == "@id" ) {
 			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
 			return mk_somap_obj ( rval );
@@ -1074,11 +1076,14 @@ public:
 
 	string tostring ( string ctx ) {
 		string s = "< "s + ctx + " > : < "s;
-		if ( subj ) s += subj->value; else s += "<null>"s;
+		if ( subj ) s += subj->value;
+		else s += "<null>"s;
 		s += " > <";
-		if ( pred ) s += pred->value; else s += "<null>"s;
+		if ( pred ) s += pred->value;
+		else s += "<null>"s;
 		s += " > < ";
-		if ( object ) s += object->value; else s += "<null>"s;
+		if ( object ) s += object->value;
+		else s += "<null>"s;
 		return s += " > .";
 	}
 };
@@ -1161,7 +1166,7 @@ public:
 					string property = y.first;
 					pobj value = y.second;
 					if ( act_ctx->isReverseProperty ( property ) ) {
-						if ( (( act_ctx->getContainer ( property )  &&  *act_ctx->getContainer ( property ) == "@set") || !compactArrays ) && !value->LIST() )
+						if ( ( ( act_ctx->getContainer ( property )  &&  *act_ctx->getContainer ( property ) == "@set" ) || !compactArrays ) && !value->LIST() )
 							value = mk_olist_obj ( olist ( 1, value ) );
 						if ( !has ( result, property ) ) ( *result ) [ property ] = value;
 						else {
@@ -1244,7 +1249,7 @@ public:
 			polist_obj result = mk_olist_obj();
 			for ( pobj item : *element->LIST() ) {
 				pobj v = expand ( act_ctx, act_prop, item );
-				if ( act_prop && ((*act_prop == "@list" || (act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == "@list" )))
+				if ( act_prop && ( ( *act_prop == "@list" || ( act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == "@list" ) ) )
 				        && ( v->LIST() || ( v->MAP() && has ( v->MAP(), "@list" ) ) ) )
 					throw LIST_OF_LISTS + "\t"s + "lists of lists are not permitted.";
 				if ( v ) add_all ( result->LIST(), v );
@@ -1253,8 +1258,8 @@ public:
 			return result;
 		} else if ( element->MAP() ) {
 			psomap elem = element->MAP();
-			if (elem->find("@context") != elem->end()) {
-				cout<<"CONTEXT FOUND: "<<endl<<elem->at("@context")->toString()<<endl;
+			if ( elem->find ( "@context" ) != elem->end() ) {
+				cout << "CONTEXT FOUND: " << endl << elem->at ( "@context" )->toString() << endl;
 				act_ctx = act_ctx->parse ( elem->at ( "@context" ) );
 			}
 			psomap result = make_shared<somap>();
@@ -1284,11 +1289,11 @@ public:
 							exp_val = value;
 						} else
 							throw INVALID_TYPE_VALUE + "\t" + "@type value must be a string or array of strings";
-					} else if ( *exp_prop == "@graph" ) exp_val = expand ( act_ctx, pstr("@graph"), value );
+					} else if ( *exp_prop == "@graph" ) exp_val = expand ( act_ctx, pstr ( "@graph" ), value );
 					else if ( *exp_prop == "@value" ) {
 						if ( value && ( value->MAP() || value->LIST() ) ) throw INVALID_VALUE_OBJECT_VALUE + "\t"s + "value of " + *exp_prop + " must be a scalar or null";
 						if ( ! ( exp_val = value ) ) {
-							(*result)[ "@value" ] = 0;
+							( *result ) [ "@value" ] = 0;
 							continue;
 						}
 					} else if ( *exp_prop == "@language" ) {
@@ -1305,7 +1310,7 @@ public:
 					} else if ( *exp_prop == "@set" ) exp_val = expand ( act_ctx, act_prop, value );
 					else if ( *exp_prop == "@reverse" ) {
 						if ( !value->MAP() ) throw INVALID_REVERSE_VALUE + "\t" + "@reverse value must be an object";
-						exp_val = expand ( act_ctx, pstr("@reverse"), value );
+						exp_val = expand ( act_ctx, pstr ( "@reverse" ), value );
 						if ( has ( exp_val->MAP(), "@reverse" ) ) {
 							psomap reverse = exp_val->MAP()->at ( "@reverse" )->MAP();
 							for ( auto z : *reverse ) {
@@ -1332,7 +1337,7 @@ public:
 						continue;
 					} else if ( is ( exp_prop, {"@explicit"s, "@default"s, "@embed"s, "@embedChildren"s, "@omitDefault"s} ) )
 						exp_val = expand ( act_ctx, exp_prop, value );
-					if ( exp_val ) (*result)[*exp_prop] = exp_val;
+					if ( exp_val ) ( *result ) [*exp_prop] = exp_val;
 					continue;
 				} else if ( act_ctx->getContainer ( key ) &&  *act_ctx->getContainer ( key ) == "@language" && value->MAP() ) {
 					exp_val = mk_olist_obj();
@@ -1353,13 +1358,13 @@ public:
 					for ( auto xx : *value->MAP() ) {
 						pobj indexValue = xx.second;
 						make_list_if_not ( indexValue );
-						indexValue = expand ( act_ctx, pstr(key), indexValue );
+						indexValue = expand ( act_ctx, pstr ( key ), indexValue );
 						for ( pobj item : *indexValue->LIST() ) {
 							if ( !has ( item->MAP(), "@index" ) ) ( *item->MAP() ) [ "@index" ] = make_shared<string_obj> ( xx.first );
 							exp_val->LIST()->push_back ( item );
 						}
 					}
-				} else exp_val = expand ( act_ctx, pstr(key), value );
+				} else exp_val = expand ( act_ctx, pstr ( key ), value );
 				if ( !exp_val ) continue;
 				if ( act_ctx->getContainer ( key ) && *act_ctx->getContainer ( key ) == "@list" && !has ( exp_val->MAP(), "@list" ) ) {
 					auto tmp = exp_val;
@@ -1406,9 +1411,9 @@ public:
 				if ( hasset ( result ) ) return getset ( result );
 			}
 			if ( haslang ( result ) && result->size() == 1 ) result = 0;
-			if ( !act_prop || *act_prop == "@graph" ){
-				if (result && ( ( !result->size() || hasvalue ( result ) || haslist ( result ) ) )) result = 0;
-				if (result && hasid ( result ) && result->size() == 1 ) result = 0;
+			if ( !act_prop || *act_prop == "@graph" ) {
+				if ( result && ( ( !result->size() || hasvalue ( result ) || haslist ( result ) ) ) ) result = 0;
+				if ( result && hasid ( result ) && result->size() == 1 ) result = 0;
 			}
 			return mk_somap_obj ( result );
 		}
@@ -1724,7 +1729,7 @@ private:
 				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
 			else {
 				string s = value->type_str();
-//				cout<<s<<endl;
+				//				cout<<s<<endl;
 				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
 			}
 		}
@@ -1765,7 +1770,7 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 			opts.expandContext = opts.expandContext->MAP()->at ( "@context" );
 		act_ctx = act_ctx->parse ( opts.expandContext );
 	}
-	auto expanded = jsonld_api ( opts ).expand ( act_ctx, 0, input);
+	auto expanded = jsonld_api ( opts ).expand ( act_ctx, 0, input );
 	if ( expanded->MAP() && has ( expanded->MAP(), "@graph" ) ) expanded = expanded->MAP()->at ( "@graph" );
 	else if ( !expanded ) expanded = mk_olist_obj();
 	if ( !expanded->LIST() ) expanded = mk_olist_obj ( olist ( 1, expanded ) );
@@ -1773,9 +1778,9 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 }
 
 std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
-//	cout<<"before expand: "<<endl<<input->toString()<<endl;
+	//	cout<<"before expand: "<<endl<<input->toString()<<endl;
 	pobj expandedInput = ( jsonld::expand ( input, options ) );
-//	cout<<"after expand: "<<endl<<expandedInput->toString()<<endl;
+	//	cout<<"after expand: "<<endl<<expandedInput->toString()<<endl;
 
 	jsonld_api api ( expandedInput, options );
 	std::shared_ptr<rdf_db> dataset = api.toRDF();
@@ -1789,10 +1794,10 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options )
 			_input->push_back ( expandedInput );
 		}
 		for ( auto e : *_input )
-			if (e->MAP()) {
-//				for (auto x : *e->MAP()) cout<<"$$ "<<x.first<<'\t'<<x.second->type_str()<<endl;
-				if ( e->MAP()->find("@context") != e->MAP()->end() ) {
-					cout<<"parsing context..."<<endl;
+			if ( e->MAP() ) {
+				//				for (auto x : *e->MAP()) cout<<"$$ "<<x.first<<'\t'<<x.second->type_str()<<endl;
+				if ( e->MAP()->find ( "@context" ) != e->MAP()->end() ) {
+					cout << "parsing context..." << endl;
 					dataset->parseContext ( e->MAP()->at ( "@context" ) );
 				}
 			}
@@ -1828,7 +1833,7 @@ rdf_db load_jsonld ( string fname, bool print = true ) {
 	json_spirit::read_stream ( ifs, v );
 	auto c = convert ( v );
 	jsonld_api a ( c, o );
-	auto r = *a.toRDF(jsonld::expand(c, o), o);
+	auto r = *a.toRDF ( jsonld::expand ( c, o ), o );
 	if ( print ) {
 		cout << "Loaded graphs:" << endl;
 		for ( auto x : r ) cout << x.first << endl;

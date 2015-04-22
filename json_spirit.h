@@ -82,8 +82,8 @@ public:
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
 
-	template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant ); // constructor for compatible variant types
+	template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant ); // constructor for compatible variant types
 
 	Value_impl ( const Value_impl& other );
 
@@ -346,8 +346,8 @@ Value_impl<Config>::Value_impl ( Iter first, Iter last )
 }
 
 template<class Config>
-template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant )
+template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant )
 	:   v_ ( boost::apply_visitor ( Variant_converter_visitor(), variant ) ) {
 }
 
@@ -560,13 +560,20 @@ T Value_impl<Config>::get_value() const {
 
 static std::string value_type_to_string ( const Value_type vtype ) {
 	switch ( vtype ) {
-		case obj_type: return "Object";
-		case array_type: return "Array";
-		case str_type: return "string";
-		case bool_type: return "boolean";
-		case int_type: return "integer";
-		case real_type: return "real";
-		case null_type: return "null";
+		case obj_type:
+			return "Object";
+		case array_type:
+			return "Array";
+		case str_type:
+			return "string";
+		case bool_type:
+			return "boolean";
+		case int_type:
+			return "integer";
+		case real_type:
+			return "real";
+		case null_type:
+			return "null";
 	}
 
 	assert ( false );
@@ -693,14 +700,30 @@ void append_esc_char_and_incr_iter ( String_type& s,
 	const Char_type c2 ( *begin );
 
 	switch ( c2 ) {
-		case 't':  s += '\t'; break;
-		case 'b':  s += '\b'; break;
-		case 'f':  s += '\f'; break;
-		case 'n':  s += '\n'; break;
-		case 'r':  s += '\r'; break;
-		case '\\': s += '\\'; break;
-		case '/':  s += '/';  break;
-		case '"':  s += '"';  break;
+		case 't':
+			s += '\t';
+			break;
+		case 'b':
+			s += '\b';
+			break;
+		case 'f':
+			s += '\f';
+			break;
+		case 'n':
+			s += '\n';
+			break;
+		case 'r':
+			s += '\r';
+			break;
+		case '\\':
+			s += '\\';
+			break;
+		case '/':
+			s += '/';
+			break;
+		case '"':
+			s += '"';
+			break;
 		case 'x': {
 				if ( end - begin >= 3 ) //  expecting "xHH..."
 					s += hex_str_to_char<Char_type> ( begin );
@@ -973,11 +996,11 @@ public:
 			// first we convert the semantic action class methods to functors with the
 			// parameter signature expected by spirit
 
-			typedef boost::function<void ( Char_type ) > Char_action;
-			typedef boost::function<void ( Iter_type, Iter_type ) > Str_action;
-			typedef boost::function<void ( double ) > Real_action;
-			typedef boost::function<void ( boost::int64_t ) > Int_action;
-			typedef boost::function<void ( boost::uint64_t ) > Uint64_action;
+			typedef boost::function<void ( Char_type )> Char_action;
+			typedef boost::function<void ( Iter_type, Iter_type )> Str_action;
+			typedef boost::function<void ( double )> Real_action;
+			typedef boost::function<void ( boost::int64_t )> Int_action;
+			typedef boost::function<void ( boost::uint64_t )> Uint64_action;
 
 			Char_action   begin_obj  ( boost::bind ( &Semantic_actions_t::begin_obj,   &self.actions_, _1 ) );
 			Char_action   end_obj    ( boost::bind ( &Semantic_actions_t::end_obj,     &self.actions_, _1 ) );
@@ -1216,9 +1239,12 @@ String_type non_printable_to_string ( unsigned int c ) {
 
 	result[1] = 'u';
 
-	result[ 5 ] = to_hex_char ( c & 0x000F ); c >>= 4;
-	result[ 4 ] = to_hex_char ( c & 0x000F ); c >>= 4;
-	result[ 3 ] = to_hex_char ( c & 0x000F ); c >>= 4;
+	result[ 5 ] = to_hex_char ( c & 0x000F );
+	c >>= 4;
+	result[ 4 ] = to_hex_char ( c & 0x000F );
+	c >>= 4;
+	result[ 3 ] = to_hex_char ( c & 0x000F );
+	c >>= 4;
 	result[ 2 ] = to_hex_char ( c & 0x000F );
 
 	return result;
@@ -1227,13 +1253,27 @@ String_type non_printable_to_string ( unsigned int c ) {
 template<typename Char_type, class String_type>
 bool add_esc_char ( Char_type c, String_type& s ) {
 	switch ( c ) {
-		case '"':  s += to_str<String_type> ( "\\\"" ); return true;
-		case '\\': s += to_str<String_type> ( "\\\\" ); return true;
-		case '\b': s += to_str<String_type> ( "\\b"  ); return true;
-		case '\f': s += to_str<String_type> ( "\\f"  ); return true;
-		case '\n': s += to_str<String_type> ( "\\n"  ); return true;
-		case '\r': s += to_str<String_type> ( "\\r"  ); return true;
-		case '\t': s += to_str<String_type> ( "\\t"  ); return true;
+		case '"':
+			s += to_str<String_type> ( "\\\"" );
+			return true;
+		case '\\':
+			s += to_str<String_type> ( "\\\\" );
+			return true;
+		case '\b':
+			s += to_str<String_type> ( "\\b"  );
+			return true;
+		case '\f':
+			s += to_str<String_type> ( "\\f"  );
+			return true;
+		case '\n':
+			s += to_str<String_type> ( "\\n"  );
+			return true;
+		case '\r':
+			s += to_str<String_type> ( "\\r"  );
+			return true;
+		case '\t':
+			s += to_str<String_type> ( "\\t"  );
+			return true;
 	}
 
 	return false;
@@ -1302,14 +1342,29 @@ private:
 
 	void output ( const Value_type& value ) {
 		switch ( value.type() ) {
-			case obj_type:   output ( value.get_obj() );   break;
-			case array_type: output ( value.get_array() ); break;
-			case str_type:   output ( value.get_str() );   break;
-			case bool_type:  output ( value.get_bool() );  break;
-			case real_type:  output ( value.get_real() );  break;
-			case int_type:   output_int ( value );         break;
-			case null_type:  os_ << "null";               break;
-			default: assert ( false );
+			case obj_type:
+				output ( value.get_obj() );
+				break;
+			case array_type:
+				output ( value.get_array() );
+				break;
+			case str_type:
+				output ( value.get_str() );
+				break;
+			case bool_type:
+				output ( value.get_bool() );
+				break;
+			case real_type:
+				output ( value.get_real() );
+				break;
+			case int_type:
+				output_int ( value );
+				break;
+			case null_type:
+				os_ << "null";
+				break;
+			default:
+				assert ( false );
 		}
 	}
 
@@ -1318,8 +1373,10 @@ private:
 	}
 
 	void output ( const Obj_member_type& member ) {
-		output ( Config_type::get_name ( member ) ); space();
-		os_ << ':'; space();
+		output ( Config_type::get_name ( member ) );
+		space();
+		os_ << ':';
+		space();
 		output ( Config_type::get_value ( member ) );
 	}
 
@@ -1364,7 +1421,8 @@ private:
 
 	void output ( const Array_type& arr ) {
 		if ( single_line_arrays_ && !contains_composite_elements ( arr )  ) {
-			os_ << '['; space();
+			os_ << '[';
+			space();
 
 			for ( typename Array_type::const_iterator i = arr.begin(); i != arr.end(); ++i ) {
 				output_composite_item ( i, arr.end() );
@@ -1379,7 +1437,8 @@ private:
 
 	template<class T>
 	void output_array_or_obj ( const T& t, Char_type start_char, Char_type end_char ) {
-		os_ << start_char; new_line();
+		os_ << start_char;
+		new_line();
 
 		++indentation_level_;
 
@@ -1393,7 +1452,8 @@ private:
 
 		--indentation_level_;
 
-		indent(); os_ << end_char;
+		indent();
+		os_ << end_char;
 	}
 
 	void indent() {

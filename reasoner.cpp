@@ -98,10 +98,10 @@ typedef std::shared_ptr<proof_trace_item> ppti;
 
 int builtin ( pred_t, proof_trace_item ) {
 	/*
-	 * 1:it unified
-	 * -1:no such builtin
-	 * 0:it didnt unify
-	 */
+	    1:it unified
+	    -1:no such builtin
+	    0:it didnt unify
+	*/
 	trace ( cout << "NO BEES yet PLZ!" << endl; )
 	return -1;
 }
@@ -114,8 +114,8 @@ pground_t gnd = make_shared<ground_t>();
 
 bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	/*
-    * please write an outline of this thing:)
-    */
+	    please write an outline of this thing:)
+	*/
 	int step = 0;
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
@@ -138,7 +138,7 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		    cout << "c.rule.body.size(): " << c->rule.body.size() << endl; //in step 1, rule body is goal
 		)
 		// all parts of rule body succeeded...(?)
-		if ( (size_t)c->ind >= c->rule.body.size() ) {
+		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
 				trace ( cout << "no parent!" << endl; )
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
@@ -167,9 +167,8 @@ bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			r->ind++;
 			queue.push_back ( r );
 			continue;
-		} else if ( b == 0 ) { // builtin didnt unify
-			continue;
-		} // else there is no such builtin, continue...
+		} else if ( b == 0 )   // builtin didnt unify
+			continue; // else there is no such builtin, continue...
 
 		trace ( cout << "Checking cases..." << endl; )
 		if ( cases.find ( t.pred ) == cases.end() ) {
@@ -275,7 +274,9 @@ pred_t evaluate ( pred_t t, penv_t env ) {
 	return {t.pred, n};
 }
 
-inline pred_t mk_res ( string r ) { return {r, {}}; }
+inline pred_t mk_res ( string r ) {
+	return {r, {}};
+}
 
 void funtest() {
 	evidence_t evidence, cases;
@@ -298,18 +299,22 @@ void funtest() {
 	cout << "QED! <- this means the proof is done, in leet mathspeak" << endl;
 }
 
-pred_t triple(const string& s, const string& p, const string& o) { return pred_t{ p, { { s, {}}, { o, {}}}}; };
-pred_t triple(const jsonld::quad& q){ return triple(q.subj->value, q.pred->value, q.object->value); };
+pred_t triple ( const string& s, const string& p, const string& o ) {
+	return pred_t { p, { { s, {}}, { o, {}}}};
+};
+pred_t triple ( const jsonld::quad& q ) {
+	return triple ( q.subj->value, q.pred->value, q.object->value );
+};
 
 int main ( int argc, char** argv ) {
-#ifdef TEST
+	#ifdef TEST
 	{
-		cout<<"test nq"<<endl;
-		auto kb = load_nq(argv[1]);
-		cout<<kb.tostring()<<endl;
+		cout << "test nq" << endl;
+		auto kb = load_nq ( argv[1] );
+		cout << kb.tostring() << endl;
 		return 0;
 	}
-#endif
+	#endif
 	if ( argc == 1 ) funtest();
 	if ( argc != 2 && argc != 3 && argc != 6 ) {
 		cout << "Usage:" << endl << "\t" << argv[0] << " [<JSON-LD kb file> [<Graph Name> [<Goal's subject> <Goal's predicate> <Goal's object>]]]" << endl;
@@ -319,7 +324,7 @@ int main ( int argc, char** argv ) {
 
 	cout << "input:" << argv[1] << endl;
 	auto kb = jsonld::load_jsonld ( argv[1], true );
-	cout<<kb.tostring()<<endl;
+	cout << kb.tostring() << endl;
 
 	if ( argc == 2 ) return 0;
 	auto it = kb.find ( argv[2] ) ;
@@ -332,22 +337,20 @@ int main ( int argc, char** argv ) {
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	for ( const auto& quad : *it->second ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		if (p == "http://www.w3.org/2000/10/swap/log#implies") 
-		{
+		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			rule_t rule;
 			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for (const auto& y : *it->second)
-				if (y->graph->value == o) {
-					rule.head = triple(*y);
+			for ( const auto& y : *it->second )
+				if ( y->graph->value == o ) {
+					rule.head = triple ( *y );
 					//now look for the subject graph
-					for (const auto& x : *it->second) 
-						if (x->graph->value == s) 
-							rule.body.push_back( triple(*x) );
+					for ( const auto& x : *it->second )
+						if ( x->graph->value == s )
+							rule.body.push_back ( triple ( *x ) );
 					cases[p].push_back ( rule );
 				}
-		}
-		else
-			cases[p].push_back ({ { p, { mk_res(s), mk_res(o) }}, {}} ); 
+		} else
+			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
 	}
 
 	if ( argc == 3 ) return 0;
