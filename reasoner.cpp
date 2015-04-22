@@ -112,13 +112,13 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f );
 
 pground_t gnd = make_shared<ground_t>();
 
-bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
+bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	/*
 	    please write an outline of this thing:)
 	*/
 	int step = 0;
 	deque<ppti> queue;
-	ppti s = make_shared<proof_trace_item> ( proof_trace_item { {goal, {goal}}, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
+	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
 	queue.emplace_back ( s );
 	//queue.push_back(s);
 	trace ( cout << "Goal: " << ( string ) goal << endl; )
@@ -302,9 +302,38 @@ void funtest() {
 pred_t triple ( const string& s, const string& p, const string& o ) {
 	return pred_t { p, { { s, {}}, { o, {}}}};
 };
+
 pred_t triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
+
+evidence_t prove(const qlist& kb, const qlist& query) {
+	evidence_t evidence, cases;
+	/*the way we store rules in jsonld is: graph1 implies graph2*/
+	for ( const auto& quad : kb ) {
+		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
+			rule_t rule;
+			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
+			for ( const auto& y : kb )
+				if ( y->graph->value == o ) {
+					rule.head = triple ( *y );
+					//now look for the subject graph
+					for ( const auto& x : kb )
+						if ( x->graph->value == s )
+							rule.body.push_back ( triple ( *x ) );
+					cases[p].push_back ( rule );
+				}
+		} else
+			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
+	}
+	rule_t goal;
+	for (auto q : query) goal.body.push_back(triple(*q));
+	prove ( goal, -1, cases, evidence );
+	return evidence;
+}
+
+const bool use_nquads = false;
 
 int main ( int argc, char** argv ) {
 	#ifdef TEST
@@ -316,48 +345,17 @@ int main ( int argc, char** argv ) {
 	}
 	#endif
 	if ( argc == 1 ) funtest();
-	if ( argc != 2 && argc != 3 && argc != 6 ) {
-		cout << "Usage:" << endl << "\t" << argv[0] << " [<JSON-LD kb file> [<Graph Name> [<Goal's subject> <Goal's predicate> <Goal's object>]]]" << endl;
-		cout << "think about socrates, or load a file, or also print a graph from it, or try to prove a triple." << endl;
+	if ( argc != 2 && argc != 3) {
+		cout << "Usage:" << endl << "\t" << argv[0] << " [<JSON-LD kb file> [JSON-LD query file]]" << endl;
 		return 1;
 	}
 
 	cout << "input:" << argv[1] << endl;
-	auto kb = jsonld::load_jsonld ( argv[1], true );
+	auto kb = use_nquads ? load_nq(argv[1]) : jsonld::load_jsonld ( argv[1], true );
 	cout << kb.tostring() << endl;
 
-	if ( argc == 2 ) return 0;
-	auto it = kb.find ( argv[2] ) ;
-	if ( it == kb.end() ) {
-		cerr << "No such graph." << endl;
-		return 1;
-	}
-
-	evidence_t evidence, cases;
-	/*the way we store rules in jsonld is: graph1 implies graph2*/
-	for ( const auto& quad : *it->second ) {
-		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			rule_t rule;
-			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for ( const auto& y : *it->second )
-				if ( y->graph->value == o ) {
-					rule.head = triple ( *y );
-					//now look for the subject graph
-					for ( const auto& x : *it->second )
-						if ( x->graph->value == s )
-							rule.body.push_back ( triple ( *x ) );
-					cases[p].push_back ( rule );
-				}
-		} else
-			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
-	}
-
-	if ( argc == 3 ) return 0;
-	const string s = argv[3], p = argv[4], o = argv[5];
-	pred_t goal = {p, {{s, {}}, {o, {}}}};
-	bool b = prove ( goal, -1, cases, evidence );
-	cout << "Prove returned " << b << endl;
+	auto query = use_nquads ? load_nq(argv[2]) : jsonld::load_jsonld ( argv[2], true );
+	auto evidence = prove(*kb["@default"], *query["@default"]);
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		cout << "  " << e.first << ":" << endl;

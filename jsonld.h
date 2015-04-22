@@ -1788,7 +1788,7 @@ std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
 	return a.toRDF();
 }
 
-rdf_db load_jsonld ( string fname, bool print = true ) {
+rdf_db load_jsonld ( string fname, bool print = false ) {
 	jsonld_options o;
 	/*pstring*/ o.base = 0;
 	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
@@ -1826,3 +1826,4 @@ typedef jsonld::quad quad;
 typedef jsonld::pquad pquad;
 typedef jsonld::node node;
 typedef jsonld::pnode pnode;
+typedef jsonld::qlist qlist;
