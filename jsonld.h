@@ -949,13 +949,15 @@ public:
 	pobj expandValue ( string act_prop, pobj value )  {
 		somap rval;
 		psomap td = has ( term_defs, act_prop ) ? term_defs->at ( act_prop )->MAP() : 0;
-		if ( td && *gettype ( td )->STR() == "@id" ) {
-			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
-			return mk_somap_obj ( rval );
-		}
-		if ( td && *gettype ( td )->STR() == "@vocab" ) {
-			rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, true, 0, 0 ) );
-			return mk_somap_obj ( rval );
+		if (hastype(td)) {
+			if ( *gettype ( td )->STR() == "@id" ) {
+				rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
+				return mk_somap_obj ( rval );
+			}
+			if ( *gettype ( td )->STR() == "@vocab" ) {
+				rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, true, 0, 0 ) );
+				return mk_somap_obj ( rval );
+			}
 		}
 		rval[ "@value" ] = value;
 		if ( td && hastype ( td ) ) rval[ "@type" ] = gettype ( td );
@@ -1750,13 +1752,11 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 	if ( expanded->MAP() && has ( expanded->MAP(), "@graph" ) ) expanded = expanded->MAP()->at ( "@graph" );
 	else if ( !expanded ) expanded = mk_olist_obj();
 	if ( !expanded->LIST() ) expanded = mk_olist_obj ( olist ( 1, expanded ) );
-	return expanded;//->LIST();
+	return expanded;
 }
 
 std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
-	//	cout<<"before expand: "<<endl<<input->toString()<<endl;
-	pobj expandedInput = ( jsonld::expand ( input, options ) );
-	//	cout<<"after expand: "<<endl<<expandedInput->toString()<<endl;
+	pobj expandedInput = jsonld::expand ( input, options );
 
 	jsonld_api api ( expandedInput, options );
 	std::shared_ptr<rdf_db> dataset = api.toRDF();

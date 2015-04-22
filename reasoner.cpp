@@ -336,14 +336,6 @@ evidence_t prove(const qlist& kb, const qlist& query) {
 const bool use_nquads = false;
 
 int main ( int argc, char** argv ) {
-	#ifdef TEST
-	{
-		cout << "test nq" << endl;
-		auto kb = load_nq ( argv[1] );
-		cout << kb.tostring() << endl;
-		return 0;
-	}
-	#endif
 	if ( argc == 1 ) funtest();
 	if ( argc != 2 && argc != 3) {
 		cout << "Usage:" << endl << "\t" << argv[0] << " [<JSON-LD kb file> [JSON-LD query file]]" << endl;
