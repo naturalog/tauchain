@@ -131,16 +131,6 @@ inline vector<string> split ( const string& s, charT c ) {
 	return v;
 }
 
-template<typename C, typename K> bool has ( const C& c, const K& k ) {
-	return /*std::find(c.begin(), c.end(), k)*/c.find ( k ) != c.end();
-}
-template<typename C, typename K> bool has ( std::shared_ptr<C> c, const K& k ) {
-	return c && has<C, K> ( *c, k );
-}
-template<typename C, typename K> bool has ( std::shared_ptr<C> c, std::shared_ptr<K> k ) {
-	return k && has<C, K> ( c, *k );
-}
-
 template<typename T> string tostr ( T t ) {
 	stringstream s;
 	s << t;
@@ -273,6 +263,28 @@ polist mk_olist() {
 	return make_shared<olist>();
 }
 
+bool has ( const defined_t& c, const string& k ) {
+	return c.find ( k ) != c.end();
+}
+bool has ( pdefined_t c, const string& k ) {
+	return c && has ( *c, k );
+}
+bool has ( const somap& c, const string& k ) {
+	return c.find ( k ) != c.end();
+}
+bool has ( psomap c, const string& k ) {
+	return c && has ( *c, k );
+}
+bool has ( psomap c, pstring k ) {
+	return k && has ( c, *k );
+}
+bool has ( pobj o, string s ) {
+	return o && o->MAP() && has ( o->MAP(), s );
+}
+bool has ( pobj o, pstring s ) {
+	return s && has ( o, *s );
+}
+
 string resolve ( pstring, const string& );
 
 pstring removeBase ( pobj o, string iri ) {
@@ -352,6 +364,7 @@ KW_SHORTCUTS ( type );
 KW_SHORTCUTS ( reverse );
 KW_SHORTCUTS ( value );
 KW_SHORTCUTS ( vocab );
+KW_SHORTCUTS ( graph );
 KW_SHORTCUTS ( none );
 template<typename T> bool haslang ( T t ) {
 	return has ( t, "@language" );
@@ -402,12 +415,6 @@ vector<string> vec2vec ( polist x ) {
 	vector<string> res;
 	for ( auto t : *x ) res.push_back ( *t->STR() );
 	return res;
-}
-
-void make_list_if_not ( pobj& o ) {
-	if ( o->LIST() ) return;
-	pobj t = o->clone();
-	o = mk_olist_obj ( olist ( 1, t ) );
 }
 
 void add_all ( polist l, pobj v ) {
@@ -539,7 +546,7 @@ public:
 					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@base"] = value;
 					else {
 						pstring baseUri = ( *result.MAP() ) ["@base"]->STR();
-						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + ( baseUri ? *baseUri : string("") );
+						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + ( baseUri ? *baseUri : string ( "" ) );
 						( *result.MAP() ) ["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 					}
 				} else throw INVALID_BASE_IRI + "\t" + "@base must be a string";
@@ -946,10 +953,10 @@ public:
 		return r && r->BOOL() && *r->BOOL();
 	}
 public:
-	pobj expandValue ( string act_prop, pobj value )  {
+	pobj expandValue ( pstring act_prop, pobj value )  {
 		somap rval;
-		psomap td = has ( term_defs, act_prop ) ? term_defs->at ( act_prop )->MAP() : 0;
-		if (hastype(td)) {
+		psomap td = has ( term_defs, act_prop ) ? term_defs->at ( *act_prop )->MAP() : 0;
+		if ( hastype ( td ) ) {
 			if ( *gettype ( td )->STR() == "@id" ) {
 				rval[ "@id" ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
 				return mk_somap_obj ( rval );
@@ -1173,7 +1180,7 @@ public:
 							value = mk_olist_obj ( olist ( 1, value ) );
 						if ( !has ( result, property ) ) ( *result ) [ property ] = value;
 						else {
-							make_list_if_not ( result->at ( property ) );
+							if ( !result->at ( property )->LIST() ) ( *result ) [ property ] = mk_olist_obj ( olist ( 1, result->at ( property ) ) );
 							add_all ( result->at ( property )->LIST(), value );
 						}
 						compacted_val->erase ( property );
@@ -1191,7 +1198,7 @@ public:
 				string itemActiveProperty = *act_ctx->compactIri ( exp_prop, exp_val, true, insideReverse );
 				auto it = result->find ( itemActiveProperty );
 				if ( it == result->end() ) result->at ( itemActiveProperty ) = mk_olist_obj();
-				else make_list_if_not ( it->second );
+				else if ( !it->second->LIST() ) it->second = mk_olist_obj ( olist ( 1, it->second ) );
 
 			}
 			for ( pobj exp_item : *exp_val->LIST() ) {
@@ -1201,7 +1208,7 @@ public:
 				pobj list = isList ? exp_item->MAP()->at ( "@list" ) : 0;
 				pobj compactedItem = compact ( act_ctx, itemActiveProperty, isList ? list : exp_item, compactArrays );
 				if ( isList ) {
-					make_list_if_not ( compactedItem );
+					if ( !compactedItem  ->LIST() ) compactedItem = mk_olist_obj ( olist ( 1, compactedItem ) );
 					if ( !container || *container != "@list" ) {
 						psomap wrapper = make_shared<somap>();
 						wrapper->at ( *act_ctx->compactIri ( "@list", true ) ) = compactedItem;
@@ -1223,8 +1230,9 @@ public:
 					string mapKey = *exp_item->MAP() ->at ( *container )->STR();
 					if ( !has ( mapObject->MAP(), mapKey ) ) ( *mapObject->MAP() ) [ mapKey ] = compactedItem;
 					else {
-						make_list_if_not ( mapObject->MAP()->at ( mapKey ) );
-						mapObject->MAP()->at ( mapKey )->LIST()->push_back ( compactedItem );
+						pobj& p = ( *mapObject->MAP() ) [ mapKey ];
+						if ( !p->LIST() ) p = mk_olist_obj ( olist ( 1, p ) );
+						p->LIST()->push_back ( compactedItem );
 					}
 				}
 				else {
@@ -1232,7 +1240,8 @@ public:
 					if ( check ) compactedItem = mk_olist_obj ( olist ( 1, compactedItem ) );
 					if ( !has ( result, itemActiveProperty ) )  ( *result ) [ itemActiveProperty ] = compactedItem;
 					else {
-						make_list_if_not ( result->at ( itemActiveProperty ) );
+						pobj& p = ( *result ) [itemActiveProperty];
+						if ( !p->LIST() ) p = mk_olist_obj ( olist ( 1, p ) );
 						add_all ( result->at ( itemActiveProperty )->LIST(), compactedItem );
 					}
 				}
@@ -1247,9 +1256,13 @@ public:
 
 	// http://json-ld.org/spec/latest/json-ld-api/#expansion-algorithm
 	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
-		if ( !element )  return 0;
-		if ( element->LIST() ) {
-			polist_obj result = mk_olist_obj();
+		pobj result;
+		if ( !element )  result = 0;
+		else if ( ! ( element->LIST() || element->MAP() ) ) {
+			if ( !act_prop || *act_prop == "@graph" ) result = 0;
+			else result = act_ctx->expandValue ( act_prop, element );
+		} else if ( element->LIST() ) {
+			result = mk_olist_obj();
 			for ( pobj item : *element->LIST() ) {
 				pobj v = expand ( act_ctx, act_prop, item );
 				if ( act_prop && ( ( *act_prop == "@list" || ( act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == "@list" ) ) )
@@ -1258,14 +1271,13 @@ public:
 				if ( v ) add_all ( result->LIST(), v );
 
 			}
-			return result;
 		} else if ( element->MAP() ) {
 			psomap elem = element->MAP();
 			if ( elem->find ( "@context" ) != elem->end() ) {
 				cout << "CONTEXT FOUND: " << endl << elem->at ( "@context" )->toString() << endl;
 				act_ctx = act_ctx->parse ( elem->at ( "@context" ) );
 			}
-			psomap result = make_shared<somap>();
+			result = mk_somap_obj();
 			for ( auto x : *elem ) {
 				string key = x.first;
 				pobj value = x.second;
@@ -1296,7 +1308,7 @@ public:
 					else if ( *exp_prop == "@value" ) {
 						if ( value && ( value->MAP() || value->LIST() ) ) throw INVALID_VALUE_OBJECT_VALUE + string ( "\t" ) + "value of " + *exp_prop + " must be a scalar or null";
 						if ( ! ( exp_val = value ) ) {
-							( *result ) [ "@value" ] = 0;
+							( *result->MAP() ) [ "@value" ] = 0;
 							continue;
 						}
 					} else if ( *exp_prop == "@language" ) {
@@ -1319,13 +1331,13 @@ public:
 							for ( auto z : *reverse ) {
 								string property = z.first;
 								pobj item = z.second;
-								if ( !has ( result, property ) ) ( *result ) [ property ] = mk_olist_obj();
-								add_all ( result->at ( property )->LIST(), item );
+								if ( !has ( result, property ) ) ( *result->MAP() ) [ property ] = mk_olist_obj();
+								add_all ( result->MAP()->at ( property )->LIST(), item );
 							}
 						}
 						if ( exp_val->MAP()->size() > ( has ( exp_val->MAP(), "@reverse" ) ? 1 : 0 ) ) {
-							if ( !has ( result, "@reverse" ) )  ( *result ) [ "@reverse" ] = mk_somap_obj();
-							psomap reverseMap = result->at ( "@reverse" )->MAP();
+							if ( !has ( result->MAP(), "@reverse" ) )  ( *result->MAP() ) [ "@reverse" ] = mk_somap_obj();
+							psomap reverseMap = result->MAP()->at ( "@reverse" )->MAP();
 							for ( auto t : *exp_val->MAP() ) {
 								string property = t.first;
 								if ( property == "@reverse" ) continue;
@@ -1340,14 +1352,14 @@ public:
 						continue;
 					} else if ( is ( exp_prop, {string ( "@explicit" ), string ( "@default" ), string ( "@embed" ), string ( "@embedChildren" ), string ( "@omitDefault" ) } ) )
 						exp_val = expand ( act_ctx, exp_prop, value );
-					if ( exp_val ) ( *result ) [*exp_prop] = exp_val;
+					if ( exp_val ) ( *result->MAP() ) [*exp_prop] = exp_val;
 					continue;
 				} else if ( act_ctx->getContainer ( key ) &&  *act_ctx->getContainer ( key ) == "@language" && value->MAP() ) {
 					exp_val = mk_olist_obj();
 					for ( auto yy : *value->MAP() ) {
 						string language = yy.first;
 						pobj languageValue = yy.second;
-						make_list_if_not ( languageValue );
+						if ( ! languageValue->LIST() ) languageValue = mk_olist_obj ( olist ( 1, languageValue ) );
 						for ( pobj item : *languageValue->LIST() ) {
 							if ( ! item->STR() ) throw INVALID_LANGUAGE_MAP_VALUE; // + "\t" + "Expected " + item.toString() + " to be a string");
 							somap tmp;
@@ -1360,7 +1372,7 @@ public:
 					exp_val = mk_olist_obj();
 					for ( auto xx : *value->MAP() ) {
 						pobj indexValue = xx.second;
-						make_list_if_not ( indexValue );
+						if ( ! indexValue->LIST() ) indexValue = mk_olist_obj ( olist ( 1, indexValue ) );
 						indexValue = expand ( act_ctx, pstr ( key ), indexValue );
 						for ( pobj item : *indexValue->LIST() ) {
 							if ( !has ( item->MAP(), "@index" ) ) ( *item->MAP() ) [ "@index" ] = make_shared<string_obj> ( xx.first );
@@ -1371,57 +1383,57 @@ public:
 				if ( !exp_val ) continue;
 				if ( act_ctx->getContainer ( key ) && *act_ctx->getContainer ( key ) == "@list" && !has ( exp_val->MAP(), "@list" ) ) {
 					auto tmp = exp_val;
-					make_list_if_not ( tmp );
+					if ( !tmp->LIST() ) tmp = mk_olist_obj ( olist ( 1, tmp ) );
 					exp_val = mk_somap_obj();
 					( *exp_val->MAP( ) ) [ "@list" ] = tmp;
-				}
-				if ( act_ctx->isReverseProperty ( key ) ) {
-					if ( !has ( result, "@reverse" ) ) ( *result ) [ "@reverse" ] = mk_somap_obj();
-					psomap reverseMap =  result->at ( "@reverse" )->MAP();
-					make_list_if_not ( exp_val );
-					for ( pobj item : *exp_val->LIST() ) {
-						if ( has ( item->MAP(), "@value" ) && has ( item->MAP(), "@list" ) ) throw INVALID_REVERSE_PROPERTY_VALUE;
-						if ( !has ( reverseMap, exp_prop ) ) ( *reverseMap ) [ *exp_prop ] = mk_olist_obj();
-						add_all ( reverseMap->at ( *exp_prop )->LIST(), item );
-					}
 				} else {
-					if ( !has ( result, exp_prop ) ) ( *result ) [ *exp_prop ] = mk_olist_obj();
-					add_all ( result->at ( *exp_prop )->LIST(), exp_val );
+					if ( act_ctx->isReverseProperty ( key ) ) {
+						if ( !hasreverse ( result ) ) ( *result->MAP() ) [ "@reverse" ] = mk_somap_obj();
+						psomap reverseMap = getreverse ( result )->MAP();
+						if ( !exp_val->LIST() ) exp_val = mk_olist_obj ( olist ( 1, exp_val ) );
+						for ( pobj item : *exp_val->LIST() ) {
+							if ( hasvalue ( item->MAP() ) && haslist ( item->MAP() ) ) throw INVALID_REVERSE_PROPERTY_VALUE;
+							if ( !has ( reverseMap, exp_prop ) ) ( *reverseMap ) [ *exp_prop ] = mk_olist_obj();
+							add_all ( reverseMap->at ( *exp_prop )->LIST(), item );
+						}
+					} else {
+						if ( !has ( result, exp_prop ) ) ( *result->MAP() ) [ *exp_prop ] = mk_olist_obj();
+						add_all ( result->MAP()->at ( *exp_prop )->LIST(), exp_val );
+					}
 				}
 			}
 			if ( hasvalue ( result ) ) {
-				//				 Set<String> keySet = new HashSet ( result.keySet() );
-				somap ks ( *result );
+				somap& ks = *result->MAP();
 				if ( hasvalue ( ks ) ) ks.erase ( "@value" );
 				if ( hasindex ( ks ) ) ks.erase ( "@index" );
-				bool langremoved = haslang ( ks );
-				bool typeremoved = hastype ( ks );
+				bool langremoved = haslang ( ks ), typeremoved = hastype ( ks );
 				if ( langremoved ) ks.erase ( "@language" );
 				if ( typeremoved ) ks.erase ( "@type" );
 				if ( ( langremoved && typeremoved ) || ks.size() ) throw INVALID_VALUE_OBJECT + "\t" + "value object has unknown keys";
 				pobj rval = getvalue ( result );
-				if ( !rval ) return 0;
-				if ( ! rval->STR() && haslang ( result ) ) throw INVALID_LANGUAGE_TAGGED_VALUE + "\t" + "when @language is used, @value must be a string";
+				if ( !rval ) result = 0;
+				else if ( ! rval->STR() && haslang ( result ) ) throw INVALID_LANGUAGE_TAGGED_VALUE + "\t" + "when @language is used, @value must be a string";
 				else if ( hastype ( result ) )
 					if ( ! ( gettype ( result )->STR() ) || startsWith ( *gettype ( result )->STR(), "_:" ) || gettype ( result )->STR()->find ( ":" ) == string::npos )
 						throw INVALID_TYPED_VALUE + "\t" + "value of @type must be an IRI";
 			} else if ( hastype ( result ) ) {
 				pobj rtype = gettype ( result );
-				if ( !rtype->LIST() ) ( *result ) ["@type"] = mk_olist_obj ( olist ( 1, rtype ) ) ;
+				if ( !rtype->LIST() ) ( *result->MAP() ) ["@type"] = mk_olist_obj ( olist ( 1, rtype ) ) ;
 			} else if ( hasset ( result ) || haslist ( result ) ) {
-				if ( result->size() > ( hasindex ( result ) ? 2 : 1 ) )
+				if ( result->MAP()->size() > ( hasindex ( result ) ? 2 : 1 ) )
 					throw INVALID_SET_OR_LIST_OBJECT + "\t" + "@set or @list may only contain @index";
-				if ( hasset ( result ) ) return getset ( result );
+				if ( hasset ( result ) ) result = getset ( result );
 			}
-			if ( haslang ( result ) && result->size() == 1 ) result = 0;
+			if ( haslang ( result ) && result->MAP()->size() == 1 ) result = 0;
 			if ( !act_prop || *act_prop == "@graph" ) {
-				if ( result && ( ( !result->size() || hasvalue ( result ) || haslist ( result ) ) ) ) result = 0;
-				if ( result && hasid ( result ) && result->size() == 1 ) result = 0;
+				if ( result && ( ( !result->MAP()->size() || hasvalue ( result ) || haslist ( result ) ) ) ) result = 0;
+				else if ( result && hasid ( result ) && result->MAP()->size() == 1 ) result = 0;
 			}
-			return mk_somap_obj ( result );
 		}
-		if ( !act_prop || *act_prop == "@graph" ) return 0;
-		return act_ctx->expandValue ( *act_prop, element );
+		if ( result && result->MAP() && result->MAP()->size() == 1 && hasgraph ( result ) ) result = getgraph ( result );
+		if ( !result ) result = mk_olist_obj();
+		if ( !result->LIST() ) result = mk_olist_obj ( olist ( 1, result ) );
+		return result;
 	}
 
 	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false ) {
@@ -1481,7 +1493,7 @@ public:
 	static size_t blankNodeCounter;
 	static map<string, string> bnode_id_map;
 	string gen_bnode_id ( string id = "" ) {
-		if ( has ( bnode_id_map, id ) ) return bnode_id_map[id];
+		if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) return bnode_id_map[id];
 		stringstream ss;
 		ss << "_:b" << ( blankNodeCounter++ );
 		return bnode_id_map[id] = ss.str();
@@ -1530,7 +1542,7 @@ public:
 		} else {
 			string id;
 			if ( hasid ( elem ) &&  elem->at ( "@id" ) && elem->at ( "@id" )->STR() ) {
-				/*string*/ id = *elem->at ( "@id" )->STR();
+				id = *elem->at ( "@id" )->STR();
 				elem->erase ( "@id" );
 				if ( startsWith ( id, "_:" ) ) id = gen_bnode_id ( id );
 			} else id = gen_bnode_id ( );
@@ -1749,7 +1761,7 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 		act_ctx = act_ctx->parse ( opts.expandContext );
 	}
 	auto expanded = jsonld_api ( opts ).expand ( act_ctx, 0, input );
-	if ( expanded->MAP() && has ( expanded->MAP(), "@graph" ) ) expanded = expanded->MAP()->at ( "@graph" );
+	if ( has ( expanded, "@graph" ) ) expanded = expanded->MAP()->at ( "@graph" );
 	else if ( !expanded ) expanded = mk_olist_obj();
 	if ( !expanded->LIST() ) expanded = mk_olist_obj ( olist ( 1, expanded ) );
 	return expanded;

@@ -1,5 +1,5 @@
 // c++ port of euler (EYE) js reasoner
-#include <deque> 
+#include <deque>
 #include "parsers.h"
 
 bool DEBUG = true;
@@ -307,7 +307,7 @@ pred_t triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
-evidence_t prove(const qlist& kb, const qlist& query) {
+evidence_t prove ( const qlist& kb, const qlist& query ) {
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	for ( const auto& quad : kb ) {
@@ -328,7 +328,7 @@ evidence_t prove(const qlist& kb, const qlist& query) {
 			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
 	}
 	rule_t goal;
-	for (auto q : query) goal.body.push_back(triple(*q));
+	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 	prove ( goal, -1, cases, evidence );
 	return evidence;
 }
@@ -337,19 +337,19 @@ const bool use_nquads = false;
 
 int main ( int argc, char** argv ) {
 	if ( argc == 1 ) funtest();
-	if ( argc != 2 && argc != 3) {
+	if ( argc != 2 && argc != 3 ) {
 		cout << "Usage:" << endl << "\t" << argv[0] << " [<JSON-LD kb file> [JSON-LD query file]]" << endl;
 		return 1;
 	}
 
 	cout << "input:" << argv[1] << endl;
-	auto kb = use_nquads ? load_nq(argv[1]) : jsonld::load_jsonld ( argv[1], true );
+	auto kb = use_nquads ? load_nq ( argv[1] ) : jsonld::load_jsonld ( argv[1], true );
 	cout << kb.tostring() << endl;
 
-	if (argc == 2) return 0;
+	if ( argc == 2 ) return 0;
 
-	auto query = use_nquads ? load_nq(argv[2]) : jsonld::load_jsonld ( argv[2], true );
-	auto evidence = prove(*kb["@default"], *query["@default"]);
+	auto query = use_nquads ? load_nq ( argv[2] ) : jsonld::load_jsonld ( argv[2], true );
+	auto evidence = prove ( *kb["@default"], *query["@default"] );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		cout << "  " << e.first << ":" << endl;
