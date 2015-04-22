@@ -460,6 +460,10 @@ size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
 }
 
 string download ( const string& url ) {
+	static const string ACCEPT_HEADER = "application/ld+json, application/json;q=0.9, application/javascript;q=0.5, text/javascript;q=0.5, text/plain;q=0.2, */*;q=0.1";
+ struct curl_slist *headers=0;
+ headers = curl_slist_append(headers, "Content-Type: text/xml");
+     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 	curl_easy_setopt ( curl, CURLOPT_URL, url.c_str() );
 	curl_easy_setopt ( curl, CURLOPT_FOLLOWLOCATION, 1L );
 	curl_easy_setopt ( curl, CURLOPT_NOSIGNAL, 1 );
@@ -469,7 +473,9 @@ string download ( const string& url ) {
 	curl_easy_setopt ( curl, CURLOPT_WRITEDATA, &out );
 	CURLcode res = curl_easy_perform ( curl );
 	if ( res != CURLE_OK ) throw std::runtime_error ( string ( "curl_easy_perform() failed: " ) + curl_easy_strerror ( res ) );
-	return out.str();
+	string r = out.str();
+	cout<<"downloaded file: "<<r<<endl;
+	return r;
 }
 
 pobj fromURL ( const string& url ) {
