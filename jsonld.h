@@ -1833,7 +1833,7 @@ rdf_db load_jsonld ( string fname, bool print = true ) {
 	json_spirit::read_stream ( ifs, v );
 	auto c = convert ( v );
 	jsonld_api a ( c, o );
-	auto r = *a.toRDF ( jsonld::expand ( c, o ), o );
+	auto r = *a.toRDF ( c, o );
 	if ( print ) {
 		cout << "Loaded graphs:" << endl;
 		for ( auto x : r ) cout << x.first << endl;
