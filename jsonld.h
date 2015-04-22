@@ -211,7 +211,8 @@ public:
 	virtual string type_str() const = 0;
 	virtual bool equals ( const obj& o ) const = 0;
 	virtual pobj clone() const = 0;
-	string toString ( int indent = 0, bool initial_endl = true ) {
+	string toString ( );
+/*	string toString ( int indent = 0, bool initial_endl = true ) {
 		stringstream ss;
 		auto ind = [indent]() {
 			string s = "";
@@ -245,7 +246,7 @@ public:
 		else if ( INT() ) ss << *INT();
 		else if ( UINT() ) ss << *UINT();
 		return ss.str();
-	}
+	}*/
 };
 
 #define OBJ_IMPL(type, getter) \
@@ -493,6 +494,27 @@ struct remote_doc_t {
 };
 
 void* curl = curl_easy_init();
+
+json_spirit::mValue convert ( obj& v ) {
+	typedef json_spirit::mValue val;
+	val r;
+	if ( v.UINT() ) return val(*v.UINT());
+	if ( v.INT() )  return val(*v.INT());
+	if ( v.STR() )  return val(*v.STR());
+	if ( v.DOUBLE() )  return val(*v.DOUBLE());
+	if ( v.BOOL() )  return val(*v.BOOL());
+	else if ( v.LIST() ) {
+		val::Array a;
+		for ( auto x : *v.LIST()) a.push_back ( convert ( *x ) );
+		return val(a);
+	} else {
+		if ( !v.MAP() ) throw "logic error";
+		val::Object a;
+		for ( auto x : *v.MAP() ) a[x.first] = convert ( *x.second );
+		return val(a);
+	}
+}
+
 pobj convert ( const json_spirit::mValue& v ) {
 	pobj r;
 	if ( v.is_uint64() ) r = make_shared<uint64_t_obj> ( v.get_uint64() );
@@ -512,6 +534,10 @@ pobj convert ( const json_spirit::mValue& v ) {
 		for ( auto x : a ) ( *r->MAP() ) [x.first] = convert ( x.second );
 	}
 	return r;
+}
+
+string obj::toString ( ) {
+	return json_spirit::write_string(convert(*this), json_spirit::pretty_print);
 }
 
 size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
