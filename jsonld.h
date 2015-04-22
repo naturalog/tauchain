@@ -22,22 +22,22 @@ using namespace std;
 
 typedef shared_ptr<string> pstring;
 
-const string str_base= "@base" ;
-const string str_context= "@context" ;
-const string str_embed= "@embed" ;
-const string str_default= "@default" ;
-const string str_container= "@container" ;
-const string str_graph= "@graph" ;
-const string str_id= "@id" ;
-const string str_list= "@list" ;
-const string str_index= "@index" ;
-const string str_language= "@language" ;
-const string str_reverse= "@reverse" ;
-const string str_type= "@type" ;
-const string str_value= "@value" ;
-const string str_preserve= "@preserve" ;
-const string str_omitDefault= "@omitDefault" ;
-const string str_vocab= "@vocab" ;
+const string str_base = "@base" ;
+const string str_context = "@context" ;
+const string str_embed = "@embed" ;
+const string str_default = "@default" ;
+const string str_container = "@container" ;
+const string str_graph = "@graph" ;
+const string str_id = "@id" ;
+const string str_list = "@list" ;
+const string str_index = "@index" ;
+const string str_language = "@language" ;
+const string str_reverse = "@reverse" ;
+const string str_type = "@type" ;
+const string str_value = "@value" ;
+const string str_preserve = "@preserve" ;
+const string str_omitDefault = "@omitDefault" ;
+const string str_vocab = "@vocab" ;
 
 inline pstring pstr ( const string& s ) {
 	return make_shared<string> ( s );
@@ -478,9 +478,9 @@ size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
 
 string download ( const string& url ) {
 	static const string ACCEPT_HEADER = "application/ld+json, application/json;q=0.9, application/javascript;q=0.5, text/javascript;q=0.5, text/plain;q=0.2, */*;q=0.1";
- struct curl_slist *headers=0;
- headers = curl_slist_append(headers, "Content-Type: text/xml");
-     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+	struct curl_slist *headers = 0;
+	headers = curl_slist_append ( headers, "Content-Type: text/xml" );
+	curl_easy_setopt ( curl, CURLOPT_HTTPHEADER, headers );
 	curl_easy_setopt ( curl, CURLOPT_URL, url.c_str() );
 	curl_easy_setopt ( curl, CURLOPT_FOLLOWLOCATION, 1L );
 	curl_easy_setopt ( curl, CURLOPT_NOSIGNAL, 1 );
@@ -491,7 +491,7 @@ string download ( const string& url ) {
 	CURLcode res = curl_easy_perform ( curl );
 	if ( res != CURLE_OK ) throw std::runtime_error ( string ( "curl_easy_perform() failed: " ) + curl_easy_strerror ( res ) );
 	string r = out.str();
-	cout<<"downloaded file: "<<r<<endl;
+	cout << "downloaded file: " << r << endl;
 	return r;
 }
 
@@ -1105,7 +1105,7 @@ public:
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, pstring graph ) :
 		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
 	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
-		quad_base ( subj, pred, object, (graph && *graph == "@default") ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
+		quad_base ( subj, pred, object, ( graph && *graph == "@default" ) ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
 
 	using quad_base::quad_base;
 
@@ -1686,7 +1686,7 @@ public:
 			string id = y.first;
 			if ( is_rel_iri ( id ) ) continue;
 			psomap node = y.second->MAP();
-			for ( auto x : *node ) { 
+			for ( auto x : *node ) {
 				string property = x.first;
 				polist values;// = x.second;
 				if ( property == "@type" ) { // 4.3.2.1
@@ -1701,7 +1701,7 @@ public:
 				for ( auto item : *values ) {
 					// convert @list to triples
 					if ( item->MAP() && haslist ( item->MAP() ) ) {
-						polist list = getlist(item)->LIST();
+						polist list = getlist ( item )->LIST();
 						pnode last = 0;
 						pnode firstBnode = nil;
 						if ( list && list->size() ) {
@@ -1724,21 +1724,21 @@ public:
 				}
 			}
 		}
-		if (find(graph_name) == end()) (*this)[graph_name] = make_shared<qlist>(triples);
-		else for (auto t : triples) at(graph_name)->push_back(t);
-//		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
+		if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared<qlist> ( triples );
+		else for ( auto t : triples ) at ( graph_name )->push_back ( t );
+		//		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
 	}
 
 private:
 	pnode obj_to_rdf ( pobj item ) {
 		if ( isvalue ( item ) ) {
-			pobj value = getvalue(item ), datatype = sgettype ( item );
+			pobj value = getvalue ( item ), datatype = sgettype ( item );
 			if ( !value ) return 0;
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 				if ( value->BOOL() ) return mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
-				else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() ) ) 
+				else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() ) )
 					return mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
-				 else 
+				else
 					return mkliteral ( value->INT() ? tostr ( *value->INT() ) : tostr ( *value->UINT() ), pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
 			} else if ( haslang ( item->MAP() ) )
 				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
@@ -1801,8 +1801,8 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options )
 			_input = mk_olist();
 			_input->push_back ( expandedInput );
 		}
-		for ( auto e : *_input ) if (hascontext(e) ) dataset->parse_ctx ( getcontext(e) );
-			
+		for ( auto e : *_input ) if ( hascontext ( e ) ) dataset->parse_ctx ( getcontext ( e ) );
+
 	}
 	return dataset;
 }
