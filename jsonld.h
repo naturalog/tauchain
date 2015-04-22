@@ -322,19 +322,19 @@ struct jsonld_options {
 };
 
 bool keyword ( const string& key ) {
-	return "@base"s == key || "@context"s == key || "@container"s == key
-	       || "@default"s == key || "@embed"s == key || "@explicit"s == key
-	       || "@graph"s == key || "@id"s == key || "@index"s == key
-	       || "@language"s == key || "@list"s == key || "@omitDefault"s == key
-	       || "@reverse"s == key || "@preserve"s == key || "@set"s == key
-	       || "@type"s == key || "@value"s == key || "@vocab"s == key;
+	return string ( "@base" ) == key || string ( "@context" ) == key || string ( "@container" ) == key
+	       || string ( "@default" ) == key || string ( "@embed" ) == key || string ( "@explicit" ) == key
+	       || string ( "@graph" ) == key || string ( "@id" ) == key || string ( "@index" ) == key
+	       || string ( "@language" ) == key || string ( "@list" ) == key || string ( "@omitDefault" ) == key
+	       || string ( "@reverse" ) == key || string ( "@preserve" ) == key || string ( "@set" ) == key
+	       || string ( "@type" ) == key || string ( "@value" ) == key || string ( "@vocab" ) == key;
 }
 bool keyword ( pstring key ) {
 	return key ? keyword ( *key ) : false;
 }
 
 #define KW_SHORTCUTS(x) \
-const string kw##x = "@"s + #x;\
+const string kw##x = string("@") + #x;\
 template<typename T> bool has##x(T t) { return has(t,kw##x); } \
 const pobj& get##x(pobj p) { return p->MAP()->at(kw##x); } \
 const pobj& get##x(obj& p) { return p.MAP()->at(kw##x); } \
@@ -459,7 +459,7 @@ string download ( const string& url ) {
 	curl_easy_setopt ( curl, CURLOPT_WRITEFUNCTION, write_data );
 	curl_easy_setopt ( curl, CURLOPT_WRITEDATA, &out );
 	CURLcode res = curl_easy_perform ( curl );
-	if ( res != CURLE_OK ) throw std::runtime_error ( "curl_easy_perform() failed: "s + curl_easy_strerror ( res ) );
+	if ( res != CURLE_OK ) throw std::runtime_error ( string ( "curl_easy_perform() failed: " ) + curl_easy_strerror ( res ) );
 	return out.str();
 }
 
@@ -559,7 +559,7 @@ public:
 				else throw INVALID_DEFAULT_LANGUAGE + "\t";// + value;
 			}
 			for ( auto it : cm ) {
-				if ( is ( it.first, { "@base"s, "@vocab"s, "@language"s } ) ) continue;
+				if ( is ( it.first, { string ( "@base" ), string ( "@vocab" ), string ( "@language" ) } ) ) continue;
 				result.createTermDefinition ( context->MAP(), it.first, defined ); // REVISE
 			}
 		}
@@ -592,7 +592,7 @@ public:
 			pstring type = it->second->STR();
 			if ( !type ) throw INVALID_TYPE_MAPPING;
 			type = expandIri ( type, false, true, context, pdefined );
-			if ( is ( *type, {"@id"s, "@vocab"s} ) || ( !startsWith ( *type, "_:" ) && is_abs_iri ( *type ) ) ) defn["@type"] = make_shared<string_obj> ( *type );
+			if ( is ( *type, {string ( "@id" ), string ( "@vocab" ) } ) || ( !startsWith ( *type, "_:" ) && is_abs_iri ( *type ) ) ) defn["@type"] = make_shared<string_obj> ( *type );
 			else throw INVALID_TYPE_MAPPING + "\t" + *type;
 		}
 		// 11
@@ -602,7 +602,7 @@ public:
 			string reverse = *expandIri ( val.at ( "@reverse" )->STR(), false, true, context, pdefined );
 			if ( !is_abs_iri ( reverse ) ) throw INVALID_IRI_MAPPING + "Non-absolute @reverse IRI: " + reverse;
 			defn ["@id"] = make_shared<string_obj> ( reverse );
-			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { "@set"s, "@index"s }, INVALID_REVERSE_PROPERTY + "reverse properties only support set- and index-containers" ) )
+			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { string ( "@set" ), string ( "@index" ) }, INVALID_REVERSE_PROPERTY + "reverse properties only support set- and index-containers" ) )
 				defn ["@container"] = it->second;
 			defn["@reverse"] = make_shared<bool_obj> ( ( *pdefined ) [term] = true );
 			( *term_defs ) [term] = mk_somap_obj ( defn );
@@ -630,7 +630,7 @@ public:
 
 		// 16
 		( ( it = val.find ( "@container" ) ) != val.end() ) && it->second->STR() &&
-		is ( *it->second->STR(), { "@list"s, "@set"s, "@index"s, "@language"s }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
+		is ( *it->second->STR(), { string ( "@list" ), string ( "@set" ), string ( "@index" ), string ( "@language" ) }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
 
 		auto i1 = val.find ( "@language" ), i2 = val.find ( "type" );
 		pstring lang;
@@ -667,7 +667,7 @@ public:
 			auto base = sgetbase ( MAP() );
 			pstr ( resolve ( base ? base->STR() : 0, *value ) );
 		}
-		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: "s + *value;
+		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + string ( "not an absolute IRI: " ) + *value;
 		return value;
 	}
 	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
@@ -832,11 +832,11 @@ public:
 					else if ( common_lang != itemLanguage && isvalue ( item ) ) common_lang = pstr ( "@none" );
 					if ( !common_type ) common_type = itemType;
 					else if ( common_type != itemType  ) common_type = pstr ( "@none" );
-					if ( "@none"s == *common_lang  && "@none"s == * common_type  ) break;
+					if ( string ( "@none" ) == *common_lang  && string ( "@none" ) == * common_type  ) break;
 				}
 				common_lang =  common_lang  ? common_lang : pstr ( "@none" );
 				common_type =  common_type  ? common_type : pstr ( "@none" );
-				if ( "@none"s != *common_type )  {
+				if ( string ( "@none" ) != *common_type )  {
 					type_lang = pstr ( "@type" );
 					type_lang_val = common_type;
 				} else type_lang_val = common_lang;
@@ -860,8 +860,8 @@ public:
 			containers.push_back ( "@none" );
 			if ( !type_lang_val ) type_lang_val = pstr ( "@null" );
 			vector<string> preferredValues;
-			if ( "@reverse"s ==  *type_lang_val  ) preferredValues.push_back ( "@reverse" );
-			if ( ( "@reverse"s ==  *type_lang_val  || "@id"s ==  *type_lang_val  )
+			if ( string ( "@reverse" ) ==  *type_lang_val  ) preferredValues.push_back ( "@reverse" );
+			if ( ( string ( "@reverse" ) ==  *type_lang_val  || string ( "@id" ) ==  *type_lang_val  )
 			        && ( value->MAP() ) && has ( value->MAP(),  "@id" ) ) {
 				pstring result = compactIri (  value->MAP( )->at ( "@id" )->STR(), 0, true, true );
 				auto it = term_defs->find ( *result );
@@ -991,7 +991,7 @@ typedef std::shared_ptr<node> pnode;
 typedef map<string, pnode> snmap;
 typedef std::shared_ptr<snmap> psnmap;
 
-const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURI", XSD_STRING = XSD_NS + "string", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
+const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#" , XSD_NS = "http://www.w3.org/2001/XMLSchema#" , XSD_ANYTYPE = XSD_NS + "anyType" , XSD_BOOLEAN = XSD_NS + "boolean" , XSD_DOUBLE = XSD_NS + "double" , XSD_INTEGER = XSD_NS + "integer", XSD_FLOAT = XSD_NS + "float", XSD_DECIMAL = XSD_NS + "decimal", XSD_ANYURI = XSD_NS + "anyURIstring(", XSD_STRING = XSD_NS + ")tring", RDF_TYPE = RDF_SYNTAX_NS + "type", RDF_FIRST = RDF_SYNTAX_NS + "first", RDF_REST = RDF_SYNTAX_NS + "rest", RDF_NIL = RDF_SYNTAX_NS + "nil", RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral", RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral", RDF_OBJECT = RDF_SYNTAX_NS + "object", RDF_LANGSTRING = RDF_SYNTAX_NS + "langString", RDF_LIST = RDF_SYNTAX_NS + "List";
 
 class node {
 public:
@@ -1075,15 +1075,15 @@ public:
 	using quad_base::quad_base;
 
 	string tostring ( string ctx ) {
-		string s = "< "s + ctx + " > : < "s;
+		string s = string ( "< " ) + ctx + string ( " > : < " );
 		if ( subj ) s += subj->value;
-		else s += "<null>"s;
+		else s += string ( "<null>" );
 		s += " > <";
 		if ( pred ) s += pred->value;
-		else s += "<null>"s;
+		else s += string ( "<null>" );
 		s += " > < ";
 		if ( object ) s += object->value;
-		else s += "<null>"s;
+		else s += string ( "<null>" );
 		return s += " > .";
 	}
 };
@@ -1145,7 +1145,7 @@ public:
 		for ( auto x : *elem ) { // 7
 			string exp_prop = x.first;
 			pobj exp_val = x.second;
-			if ( is ( exp_prop, { "@id"s, "@type"s} ) ) {
+			if ( is ( exp_prop, { string ( "@id" ), string ( "@type" ) } ) ) {
 				pobj compacted_val;
 				// TODO: spec tells to pass also inverse to compactIri
 				if ( exp_val->STR() ) compacted_val = make_shared<string_obj> ( act_ctx->compactIri ( exp_val->STR(), exp_prop == "@type" ) );
@@ -1180,7 +1180,7 @@ public:
 				continue;
 			}
 			if ( exp_prop == "@index" && act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == "@index" ) continue;
-			if ( is ( exp_prop, {"@index"s, "@value"s, "@language"s} ) ) {
+			if ( is ( exp_prop, {string ( "@index" ), string ( "@value" ), string ( "@language" ) } ) ) {
 				result->at ( *act_ctx->compactIri ( exp_prop, true ) ) = exp_val;
 				continue;
 			}
@@ -1211,7 +1211,7 @@ public:
 						}
 					} else if ( has ( result, itemActiveProperty ) ) throw COMPACTION_TO_LIST_OF_LISTS + "\t" + "There cannot be two list objects associated with an active property that has a container mapping";
 				}
-				if ( is ( container, {"@language"s, "@index"s} ) ) {
+				if ( is ( container, {string ( "@language" ), string ( "@index" ) } ) ) {
 					psomap_obj mapObject;
 					if ( has ( result, itemActiveProperty ) ) mapObject = mk_somap_obj ( result->at ( itemActiveProperty )->MAP() );
 					else result->at ( itemActiveProperty ) = mapObject = mk_somap_obj();
@@ -1225,7 +1225,7 @@ public:
 					}
 				}
 				else {
-					bool check = ( !compactArrays || is ( container, {"@set"s, "@list"} ) || is ( exp_prop, {"@list"s, "@graph"s} ) ) && ( !compactedItem->LIST() );
+					bool check = ( !compactArrays || is ( container, {string ( "@set" ), "@list"} ) || is ( exp_prop, {string ( "@list" ), string ( "@graph" ) } ) ) && ( !compactedItem->LIST() );
 					if ( check ) compactedItem = mk_olist_obj ( olist ( 1, compactedItem ) );
 					if ( !has ( result, itemActiveProperty ) )  ( *result ) [ itemActiveProperty ] = compactedItem;
 					else {
@@ -1251,7 +1251,7 @@ public:
 				pobj v = expand ( act_ctx, act_prop, item );
 				if ( act_prop && ( ( *act_prop == "@list" || ( act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == "@list" ) ) )
 				        && ( v->LIST() || ( v->MAP() && has ( v->MAP(), "@list" ) ) ) )
-					throw LIST_OF_LISTS + "\t"s + "lists of lists are not permitted.";
+					throw LIST_OF_LISTS + string ( "\t" ) + "lists of lists are not permitted.";
 				if ( v ) add_all ( result->LIST(), v );
 
 			}
@@ -1271,7 +1271,7 @@ public:
 				pobj exp_val = 0;
 				if ( !exp_prop || ( exp_prop->find ( ":" ) == string::npos && !keyword ( *exp_prop ) ) ) continue;
 				if ( keyword ( *exp_prop ) ) {
-					if ( act_prop && *act_prop == "@reverse" ) throw INVALID_REVERSE_PROPERTY_MAP + "\t"s + "a keyword cannot be used as a @reverse propery";
+					if ( act_prop && *act_prop == "@reverse" ) throw INVALID_REVERSE_PROPERTY_MAP + string ( "\t" ) + "a keyword cannot be used as a @reverse propery";
 					if ( has ( result, exp_prop ) ) throw COLLIDING_KEYWORDS + "\t" + *exp_prop + " already exists in result";
 					if ( *exp_prop == "@id" ) {
 						if ( !value->STR() ) throw INVALID_ID_VALUE + "\t" + "value of @id must be a string";
@@ -1291,16 +1291,16 @@ public:
 							throw INVALID_TYPE_VALUE + "\t" + "@type value must be a string or array of strings";
 					} else if ( *exp_prop == "@graph" ) exp_val = expand ( act_ctx, pstr ( "@graph" ), value );
 					else if ( *exp_prop == "@value" ) {
-						if ( value && ( value->MAP() || value->LIST() ) ) throw INVALID_VALUE_OBJECT_VALUE + "\t"s + "value of " + *exp_prop + " must be a scalar or null";
+						if ( value && ( value->MAP() || value->LIST() ) ) throw INVALID_VALUE_OBJECT_VALUE + string ( "\t" ) + "value of " + *exp_prop + " must be a scalar or null";
 						if ( ! ( exp_val = value ) ) {
 							( *result ) [ "@value" ] = 0;
 							continue;
 						}
 					} else if ( *exp_prop == "@language" ) {
-						if ( !value->STR() ) throw INVALID_LANGUAGE_TAGGED_STRING + "\t" + "Value of "s + *exp_prop + " must be a string";
+						if ( !value->STR() ) throw INVALID_LANGUAGE_TAGGED_STRING + "\t" + string ( "Value of " ) + *exp_prop + " must be a string";
 						exp_val = make_shared<string_obj> ( lower ( *value->STR() ) );
 					} else if ( *exp_prop == "@index" ) {
-						if ( !value->STR() ) throw INVALID_INDEX_VALUE + "\t" + "Value of "s + *exp_prop + " must be a string";
+						if ( !value->STR() ) throw INVALID_INDEX_VALUE + "\t" + string ( "Value of " ) + *exp_prop + " must be a string";
 						exp_val = value;
 					} else if ( *exp_prop == "@list" ) {
 						if ( act_prop && *act_prop == "@graph" ) continue;
@@ -1335,7 +1335,7 @@ public:
 							}
 						}
 						continue;
-					} else if ( is ( exp_prop, {"@explicit"s, "@default"s, "@embed"s, "@embedChildren"s, "@omitDefault"s} ) )
+					} else if ( is ( exp_prop, {string ( "@explicit" ), string ( "@default" ), string ( "@embed" ), string ( "@embedChildren" ), string ( "@omitDefault" ) } ) )
 						exp_val = expand ( act_ctx, exp_prop, value );
 					if ( exp_val ) ( *result ) [*exp_prop] = exp_val;
 					continue;
