@@ -206,8 +206,8 @@ public:
 	virtual pobj clone() const = 0;
 	string toString() {
 		stringstream ss;
-		if ( MAP() ) for ( auto x : *MAP() ) ss << x.first << ',' << x.second->toString() << endl;
-		else if ( LIST() ) for ( auto x : *LIST() ) ss << x->toString() << endl;
+		if ( MAP() ) for ( auto x : *MAP() ) ss << x.first << ':' << x.second->toString() << ',';
+		else if ( LIST() ) for ( auto x : *LIST() ) ss << x->toString() << ',';
 		else if ( BOOL() ) ss << *BOOL();
 		else if ( DOUBLE() ) ss << *DOUBLE();
 		else if ( Null() ) ss << "(null)";
@@ -481,7 +481,6 @@ pobj convert ( const json_spirit::mValue& v ) {
 		auto a = v.get_obj();
 		for ( auto x : a ) ( *r->MAP() ) [x.first] = convert ( x.second );
 	}
-	//	cout<<"converted: "<<endl<<r->toString()<<endl;
 	return r;
 }
 
@@ -1847,9 +1846,15 @@ rdf_db load_jsonld ( string fname, bool print = false ) {
 
 	json_spirit::mValue v;
 	ifstream ifs ( fname );
+	cout << "reading json:" << endl;
+	cout << "-------------" << endl;
 	json_spirit::read_stream ( ifs, v );
-	auto c = convert ( v );
+	pobj c = convert ( v );
+	cout << c->toString() << endl;
 	jsonld_api a ( c, o );
+	cout << "-------------" << endl;
+	cout << "converting to quads:" << endl;
+	cout << "--------------------" << endl;
 	auto r = *a.toRDF ( c, o );
 	if ( print ) {
 		cout << "Loaded graphs:" << endl;
