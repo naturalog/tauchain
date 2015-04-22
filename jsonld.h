@@ -523,8 +523,8 @@ public:
 				remoteContexts.push_back ( uri );
 
 				pobj remoteContext = fromURL ( uri );
-				if ( !remoteContext->map_and_has ( "@context" ) ) throw INVALID_REMOTE_CONTEXT + "\t"; // + context;
-				context = ( *remoteContext->MAP() ) ["@context"];
+				if ( remoteContext && !remoteContext->map_and_has ( "@context" ) ) throw INVALID_REMOTE_CONTEXT + "\t"; // + context;
+				context = remoteContext ? ( *remoteContext->MAP() ) ["@context"] : 0;
 				result = *result.parse ( context, remoteContexts );
 				continue;
 			}
