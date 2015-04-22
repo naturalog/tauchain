@@ -82,8 +82,8 @@ public:
 	template<class Iter>
 	Value_impl ( Iter first, Iter last );   // constructor from containers, e.g. std::vector or std::list
 
-	template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant ); // constructor for compatible variant types
+	template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+	Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant ); // constructor for compatible variant types
 
 	Value_impl ( const Value_impl& other );
 
@@ -346,8 +346,8 @@ Value_impl<Config>::Value_impl ( Iter first, Iter last )
 }
 
 template<class Config>
-template<BOOST_VARIANT_ENUM_PARAMS ( typename T ) >
-Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T ) >& variant )
+template<BOOST_VARIANT_ENUM_PARAMS ( typename T )>
+Value_impl<Config>::Value_impl ( const boost::variant<BOOST_VARIANT_ENUM_PARAMS ( T )>& variant )
 	:   v_ ( boost::apply_visitor ( Variant_converter_visitor(), variant ) ) {
 }
 
@@ -996,11 +996,11 @@ public:
 			// first we convert the semantic action class methods to functors with the
 			// parameter signature expected by spirit
 
-			typedef boost::function<void ( Char_type ) > Char_action;
-			typedef boost::function<void ( Iter_type, Iter_type ) > Str_action;
-			typedef boost::function<void ( double ) > Real_action;
-			typedef boost::function<void ( boost::int64_t ) > Int_action;
-			typedef boost::function<void ( boost::uint64_t ) > Uint64_action;
+			typedef boost::function<void ( Char_type )> Char_action;
+			typedef boost::function<void ( Iter_type, Iter_type )> Str_action;
+			typedef boost::function<void ( double )> Real_action;
+			typedef boost::function<void ( boost::int64_t )> Int_action;
+			typedef boost::function<void ( boost::uint64_t )> Uint64_action;
 
 			Char_action   begin_obj  ( boost::bind ( &Semantic_actions_t::begin_obj,   &self.actions_, _1 ) );
 			Char_action   end_obj    ( boost::bind ( &Semantic_actions_t::end_obj,     &self.actions_, _1 ) );

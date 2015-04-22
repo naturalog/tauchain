@@ -204,11 +204,34 @@ public:
 	virtual string type_str() const = 0;
 	virtual bool equals ( const obj& o ) const = 0;
 	virtual pobj clone() const = 0;
-	string toString() {
+	string toString ( int indent = 0, bool initial_endl = true ) {
 		stringstream ss;
-		if ( MAP() ) for ( auto x : *MAP() ) ss << x.first << ':' << x.second->toString() << ',';
-		else if ( LIST() ) for ( auto x : *LIST() ) ss << x->toString() << ',';
-		else if ( BOOL() ) ss << *BOOL();
+		auto ind = [indent]() {
+			string s = "";
+			if ( !indent ) return s;
+			size_t i = indent;
+			while ( --i ) s += "\t";
+			return s;
+		};
+		if ( MAP() ) {
+			if ( initial_endl ) ss << endl;
+			for ( auto x : *MAP() ) {
+				ss << ind() << x.first << ":\t" << x.second->toString ( indent + 1, false );
+				if ( !x.second->MAP() && !x.second->LIST() ) ss << endl;
+			}
+			return ss.str();
+		}
+
+		if ( LIST() ) {
+			if ( initial_endl ) ss << endl;
+			for ( auto x : *LIST() ) {
+				ss << ind() << x->toString ( indent + 1 );
+				if ( !x->MAP() && !x->LIST() ) ss << endl;
+			}
+			return ss.str();
+		}
+		ss << ind();
+		if ( BOOL() ) ss << *BOOL();
 		else if ( DOUBLE() ) ss << *DOUBLE();
 		else if ( Null() ) ss << "(null)";
 		else if ( STR() ) ss << *STR();
@@ -1774,6 +1797,10 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
 	gen_node_map ( value, nodeMap );
+	cout << "---------" << endl;
+	cout << "Node map:" << endl;
+	cout << "---------" << endl;
+	cout << nodeMap->toString() << endl;
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;
@@ -1803,6 +1830,10 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 
 std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 	pobj expandedInput = jsonld::expand ( input, options );
+
+	cout << "Expanded:" << endl;
+	cout << "---------" << endl;
+	cout << expandedInput->toString() << endl;
 
 	jsonld_api api ( expandedInput, options );
 	std::shared_ptr<rdf_db> dataset = api.toRDF();
@@ -1852,7 +1883,7 @@ rdf_db load_jsonld ( string fname, bool print = false ) {
 	pobj c = convert ( v );
 	cout << c->toString() << endl;
 	jsonld_api a ( c, o );
-	cout << "-------------" << endl;
+	cout << "--------------------" << endl;
 	cout << "converting to quads:" << endl;
 	cout << "--------------------" << endl;
 	auto r = *a.toRDF ( c, o );
