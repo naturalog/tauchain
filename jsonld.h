@@ -22,6 +22,23 @@ using namespace std;
 
 typedef shared_ptr<string> pstring;
 
+const string str_base= "@base" ;
+const string str_context= "@context" ;
+const string str_embed= "@embed" ;
+const string str_default= "@default" ;
+const string str_container= "@container" ;
+const string str_graph= "@graph" ;
+const string str_id= "@id" ;
+const string str_list= "@list" ;
+const string str_index= "@index" ;
+const string str_language= "@language" ;
+const string str_reverse= "@reverse" ;
+const string str_type= "@type" ;
+const string str_value= "@value" ;
+const string str_preserve= "@preserve" ;
+const string str_omitDefault= "@omitDefault" ;
+const string str_vocab= "@vocab" ;
+
 inline pstring pstr ( const string& s ) {
 	return make_shared<string> ( s );
 }
@@ -333,12 +350,12 @@ struct jsonld_options {
 };
 
 bool keyword ( const string& key ) {
-	return string ( "@base" ) == key || string ( "@context" ) == key || string ( "@container" ) == key
-	       || string ( "@default" ) == key || string ( "@embed" ) == key || string ( "@explicit" ) == key
-	       || string ( "@graph" ) == key || string ( "@id" ) == key || string ( "@index" ) == key
-	       || string ( "@language" ) == key || string ( "@list" ) == key || string ( "@omitDefault" ) == key
-	       || string ( "@reverse" ) == key || string ( "@preserve" ) == key || string ( "@set" ) == key
-	       || string ( "@type" ) == key || string ( "@value" ) == key || string ( "@vocab" ) == key;
+	return str_base == key || str_context == key || str_container == key
+	       || str_default == key || str_embed == key || string ( "@explicit" ) == key
+	       || str_graph == key || str_id == key || str_index == key
+	       || str_language == key || str_list == key || str_omitDefault == key
+	       || str_reverse == key || str_preserve == key || string ( "@set" ) == key
+	       || str_type == key || str_value == key || str_vocab == key;
 }
 bool keyword ( pstring key ) {
 	return key ? keyword ( *key ) : false;
@@ -575,7 +592,7 @@ public:
 				else throw INVALID_DEFAULT_LANGUAGE + "\t";// + value;
 			}
 			for ( auto it : cm ) {
-				if ( is ( it.first, { string ( "@base" ), string ( "@vocab" ), string ( "@language" ) } ) ) continue;
+				if ( is ( it.first, { str_base, str_vocab, str_language } ) ) continue;
 				result.create_term_def ( context->MAP(), it.first, defined ); // REVISE
 			}
 		}
@@ -608,7 +625,7 @@ public:
 			pstring type = it->second->STR();
 			if ( !type ) throw INVALID_TYPE_MAPPING;
 			type = expandIri ( type, false, true, context, pdefined );
-			if ( is ( *type, {string ( "@id" ), string ( "@vocab" ) } ) || ( !startsWith ( *type, "_:" ) && is_abs_iri ( *type ) ) ) defn["@type"] = make_shared<string_obj> ( *type );
+			if ( is ( *type, {str_id, str_vocab } ) || ( !startsWith ( *type, "_:" ) && is_abs_iri ( *type ) ) ) defn["@type"] = make_shared<string_obj> ( *type );
 			else throw INVALID_TYPE_MAPPING + "\t" + *type;
 		}
 		// 11
@@ -618,7 +635,7 @@ public:
 			string reverse = *expandIri ( val.at ( "@reverse" )->STR(), false, true, context, pdefined );
 			if ( !is_abs_iri ( reverse ) ) throw INVALID_IRI_MAPPING + "Non-absolute @reverse IRI: " + reverse;
 			defn ["@id"] = make_shared<string_obj> ( reverse );
-			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { string ( "@set" ), string ( "@index" ) }, INVALID_REVERSE_PROPERTY + "reverse properties only support set- and index-containers" ) )
+			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { string ( "@set" ), str_index }, INVALID_REVERSE_PROPERTY + "reverse properties only support set- and index-containers" ) )
 				defn ["@container"] = it->second;
 			defn["@reverse"] = make_shared<bool_obj> ( ( *pdefined ) [term] = true );
 			( *term_defs ) [term] = mk_somap_obj ( defn );
@@ -646,7 +663,7 @@ public:
 
 		// 16
 		( ( it = val.find ( "@container" ) ) != val.end() ) && it->second->STR() &&
-		is ( *it->second->STR(), { string ( "@list" ), string ( "@set" ), string ( "@index" ), string ( "@language" ) }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
+		is ( *it->second->STR(), { str_list, string ( "@set" ), str_index, str_language }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
 
 		auto i1 = val.find ( "@language" ), i2 = val.find ( "type" );
 		pstring lang;
@@ -876,8 +893,8 @@ public:
 			containers.push_back ( "@none" );
 			if ( !type_lang_val ) type_lang_val = pstr ( "@null" );
 			vector<string> preferredValues;
-			if ( string ( "@reverse" ) ==  *type_lang_val  ) preferredValues.push_back ( "@reverse" );
-			if ( ( string ( "@reverse" ) ==  *type_lang_val  || string ( "@id" ) ==  *type_lang_val  )
+			if ( str_reverse ==  *type_lang_val  ) preferredValues.push_back ( "@reverse" );
+			if ( ( str_reverse ==  *type_lang_val  || str_id ==  *type_lang_val  )
 			        && ( value->MAP() ) && has ( value->MAP(),  "@id" ) ) {
 				pstring result = compactIri (  value->MAP( )->at ( "@id" )->STR(), 0, true, true );
 				auto it = term_defs->find ( *result );
@@ -1088,7 +1105,7 @@ public:
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, pstring graph ) :
 		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
 	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
-		quad_base ( subj, pred, object, graph && *graph == "@default" ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
+		quad_base ( subj, pred, object, (graph && *graph == "@default") ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
 
 	using quad_base::quad_base;
 
@@ -1163,7 +1180,7 @@ public:
 		for ( auto x : *elem ) { // 7
 			string exp_prop = x.first;
 			pobj exp_val = x.second;
-			if ( is ( exp_prop, { string ( "@id" ), string ( "@type" ) } ) ) {
+			if ( is ( exp_prop, { str_id, str_type } ) ) {
 				pobj compacted_val;
 				// TODO: spec tells to pass also inverse to compactIri
 				if ( exp_val->STR() ) compacted_val = make_shared<string_obj> ( act_ctx->compactIri ( exp_val->STR(), exp_prop == "@type" ) );
@@ -1198,7 +1215,7 @@ public:
 				continue;
 			}
 			if ( exp_prop == "@index" && act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == "@index" ) continue;
-			if ( is ( exp_prop, {string ( "@index" ), string ( "@value" ), string ( "@language" ) } ) ) {
+			if ( is ( exp_prop, {str_index, str_value, str_language } ) ) {
 				result->at ( *act_ctx->compactIri ( exp_prop, true ) ) = exp_val;
 				continue;
 			}
@@ -1229,7 +1246,7 @@ public:
 						}
 					} else if ( has ( result, itemActiveProperty ) ) throw COMPACTION_TO_LIST_OF_LISTS + "\t" + "There cannot be two list objects associated with an active property that has a container mapping";
 				}
-				if ( is ( container, {string ( "@language" ), string ( "@index" ) } ) ) {
+				if ( is ( container, {str_language, str_index } ) ) {
 					psomap_obj mapObject;
 					if ( has ( result, itemActiveProperty ) ) mapObject = mk_somap_obj ( result->at ( itemActiveProperty )->MAP() );
 					else result->at ( itemActiveProperty ) = mapObject = mk_somap_obj();
@@ -1244,7 +1261,7 @@ public:
 					}
 				}
 				else {
-					bool check = ( !compactArrays || is ( container, {string ( "@set" ), "@list"} ) || is ( exp_prop, {string ( "@list" ), string ( "@graph" ) } ) ) && ( !compactedItem->LIST() );
+					bool check = ( !compactArrays || is ( container, {string ( "@set" ), "@list"} ) || is ( exp_prop, {str_list, str_graph } ) ) && ( !compactedItem->LIST() );
 					if ( check ) compactedItem = mk_olist_obj ( olist ( 1, compactedItem ) );
 					if ( !has ( result, itemActiveProperty ) )  ( *result ) [ itemActiveProperty ] = compactedItem;
 					else {
@@ -1358,7 +1375,7 @@ public:
 							}
 						}
 						continue;
-					} else if ( is ( exp_prop, {string ( "@explicit" ), string ( "@default" ), string ( "@embed" ), string ( "@embedChildren" ), string ( "@omitDefault" ) } ) )
+					} else if ( is ( exp_prop, {string ( "@explicit" ), str_default, str_embed, string ( "@embedChildren" ), str_omitDefault } ) )
 						exp_val = expand ( act_ctx, exp_prop, value );
 					if ( exp_val ) ( *result->MAP() ) [*exp_prop] = exp_val;
 					continue;
