@@ -64,4 +64,19 @@ rdf_db load_nq(string fname) {
 	return r;
 }
 
+typedef const char* pcchar;
+typedef const unsigned char* pcuchar;
+
+string jsonld::resolve ( pstring base_, const string& ref) {
+	if (!base_) return ref;
+	const string& base = *base_;
+	//size_t raptor_uri_resolve_uri_reference(const unsigned char *base_uri, const unsigned char *reference_uri,
+	//unsigned char* buffer, size_t length);
+	size_t sz = base.size()+ref.size();
+	unsigned char r[sz];
+	raptor_uri_resolve_uri_reference((pcuchar)base.c_str(), (pcuchar)ref.c_str(), r, sz);
+	return string((pcchar)r);
+}
+
+
 #endif /* PARSERS_H_ */

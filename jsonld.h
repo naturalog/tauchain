@@ -274,10 +274,7 @@ polist mk_olist() {
 	return make_shared<olist>();
 }
 
-string resolve ( const string&, const string& ) {
-	cout<<"ERROR: resolve() not implemented"<<endl;
-	return "";
-}
+string resolve ( pstring, const string& );
 
 pstring removeBase ( pobj o, string iri ) {
 	return pstr ( "" );
@@ -340,7 +337,11 @@ template<typename T> bool has##x(T t) { return has(t,kw##x); } \
 const pobj& get##x(pobj p) { return p->MAP()->at(kw##x); } \
 const pobj& get##x(obj& p) { return p.MAP()->at(kw##x); } \
 const pobj& get##x(psomap p) { return p->at(kw##x); } \
-const pobj& get##x(somap p) { return p.at(kw##x); }
+const pobj& get##x(somap p) { return p.at(kw##x); } \
+const pobj sget##x(pobj p) { return has##x(p->MAP()) ? p->MAP()->at(kw##x) : 0; } \
+const pobj sget##x(obj& p) { return has##x(p.MAP()) ? p.MAP()->at(kw##x) : 0; } \
+const pobj sget##x(psomap p) { return has##x(p) ? p->at(kw##x) : 0; } \
+const pobj sget##x(somap p) { return has##x(p) ? p.at(kw##x) : 0; }
 KW_SHORTCUTS ( base );
 KW_SHORTCUTS ( id );
 KW_SHORTCUTS ( index );
@@ -512,7 +513,10 @@ public:
 			}
 			if ( context->STR() ) {
 				pstring s = context->STR();
-				string uri = resolve ( * ( *result.MAP() ) ["@base"]->STR(), *s ); // REVISE
+				somap& t1 = *result.MAP();
+				pobj p1 = sgetbase(t1);
+				pstring s1 = p1 ? p1->STR() : 0;
+				string uri = resolve ( s1, *s );
 				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
 				remoteContexts.push_back ( uri );
 
@@ -531,8 +535,8 @@ public:
 				else if ( pstring s = value->STR() ) {
 					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@base"] = value;
 					else {
-						string baseUri = * ( *result.MAP() ) ["@base"]->STR();
-						if ( !is_abs_iri ( baseUri ) ) throw INVALID_BASE_IRI + "\t" + baseUri;
+						pstring baseUri = ( *result.MAP() ) ["@base"]->STR();
+						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + (baseUri ? *baseUri : ""s);
 						( *result.MAP() ) ["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 					}
 				} else throw INVALID_BASE_IRI + "\t" + "@base must be a string";
@@ -657,7 +661,10 @@ public:
 			return value;
 		}
 		if (vocab && has(MAP(), "@vocab")) return pstr(*MAP()->at("@vocab")->STR() + *value);
-		if (relative) return pstr(resolve(*MAP()->at("@base")->STR(), *value));
+		if (relative) {
+			auto base = sgetbase(MAP());
+			pstr(resolve(base ? base->STR() : 0, *value));
+		}
 		if (context && is_rel_iri(*value)) throw INVALID_IRI_MAPPING + "not an absolute IRI: "s + *value;
 		return value;
 	}
@@ -680,7 +687,10 @@ public:
 			return make_shared<string> ( value );
 		}
 		if ( vocab && MAP()->find ( "@vocab" ) != MAP()->end() ) return pstr ( *MAP()->at ( "@vocab" )->STR() + value );
-		if ( relative ) return pstr ( resolve ( *MAP()->at ( "@base" )->STR(), value ) );
+		if ( relative ) {
+			auto t = sgetbase(*this);
+			return pstr ( resolve ( t ? t->STR() : 0, value ) );
+		}
 		if ( context && is_rel_iri ( value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + value;
 		return make_shared<string> ( value );
 	}
@@ -905,7 +915,7 @@ public:
 		pstring type_map = get_type_map ( act_prop ), lang_map = get_lang_map ( act_prop );
 		auto it = value->find ( "@id" );
 		if ( it != value->end() ) {
-			if ( type_map && *type_map == "@id" && nvals == 1 ) 
+			if ( type_map && *type_map == "@id" && nvals == 1 )
 				return make_shared<string_obj> ( compactIri ( value->at ( "@id" )->STR(), 0, false, false ) );
 			else {
 				if ( type_map && *type_map == "@vocab" && nvals == 1 )
@@ -1778,7 +1788,7 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options )
 			_input = mk_olist();
 			_input->push_back ( expandedInput );
 		}
-		for ( auto e : *_input ) 
+		for ( auto e : *_input )
 			if (e->MAP()) {
 //				for (auto x : *e->MAP()) cout<<"$$ "<<x.first<<'\t'<<x.second->type_str()<<endl;
 				if ( e->MAP()->find("@context") != e->MAP()->end() ) {
