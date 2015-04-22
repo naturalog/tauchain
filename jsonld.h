@@ -365,6 +365,7 @@ KW_SHORTCUTS ( reverse );
 KW_SHORTCUTS ( value );
 KW_SHORTCUTS ( vocab );
 KW_SHORTCUTS ( graph );
+KW_SHORTCUTS ( context );
 KW_SHORTCUTS ( none );
 template<typename T> bool haslang ( T t ) {
 	return has ( t, "@language" );
@@ -506,6 +507,7 @@ public:
 		auto it = term_defs->find ( prop );
 		return it == term_defs->end() ? 0 : it->second->STR();
 	}
+
 	pstring getContainer ( pstring prop ) {
 		return getContainer ( *prop );
 	}
@@ -568,13 +570,13 @@ public:
 			}
 			for ( auto it : cm ) {
 				if ( is ( it.first, { string ( "@base" ), string ( "@vocab" ), string ( "@language" ) } ) ) continue;
-				result.createTermDefinition ( context->MAP(), it.first, defined ); // REVISE
+				result.create_term_def ( context->MAP(), it.first, defined ); // REVISE
 			}
 		}
 		return make_shared<context_t> ( result );
 	}
-	// Create Term Definition Algorithm
-	void createTermDefinition ( const psomap context, const string term, pdefined_t pdefined ) {
+
+	void create_term_def ( const psomap context, const string term, pdefined_t pdefined ) {
 		defined_t& defined = *pdefined;
 		if ( defined.find ( term ) != defined.end() ) {
 			if ( defined[term] ) return;
@@ -628,7 +630,7 @@ public:
 		} else if ( ( colIndex = term.find ( ":" ) ) != string::npos ) {
 			string prefix = term.substr ( 0, colIndex );
 			string suffix = term.substr ( colIndex + 1 );
-			if ( context->find ( prefix ) != context->end() ) createTermDefinition ( context, prefix, pdefined );
+			if ( context->find ( prefix ) != context->end() ) create_term_def ( context, prefix, pdefined );
 			if ( ( it = term_defs->find ( prefix ) ) != term_defs->end() )
 				defn ["@id"] = make_shared<string_obj> ( *it->second->MAP()->at ( "@id" )->STR() + suffix );
 			else defn["@id"] = make_shared<string_obj> ( term );
@@ -655,7 +657,7 @@ public:
 	pstring expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
 		//		return value ? expandIri ( value, relative, vocab, context, pdefined ) : 0;
 		if ( !value || keyword ( *value ) ) return value;
-		if ( context && has ( context, *value ) && defined->find ( *value ) == defined->end() ) createTermDefinition ( context, *value, defined );
+		if ( context && has ( context, *value ) && defined->find ( *value ) == defined->end() ) create_term_def ( context, *value, defined );
 		if ( vocab && has ( term_defs, *value ) ) {
 			auto td = term_defs->at ( *value )->MAP();
 			if ( td && has ( td, "@id" ) ) return td->at ( "@id" )->STR();
@@ -666,7 +668,7 @@ public:
 			string prefix = value->substr ( 0, colIndex ), suffix = value->substr ( colIndex + 1 );
 			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return value;
 			if ( context && has ( context, prefix ) && ( defined->find ( prefix ) == defined->end() || !defined->at ( prefix ) ) )
-				createTermDefinition ( context, prefix, defined );
+				create_term_def ( context, prefix, defined );
 			if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( "@id" )->STR() + suffix );
 			return value;
 		}
@@ -682,7 +684,7 @@ public:
 	pstring expandIri ( string value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
 		if ( keyword ( value ) ) return make_shared<string> ( value );
 		const defined_t& defined = *pdefined;
-		if ( context && has ( context, value ) && !defined.at ( value ) ) createTermDefinition ( context, value, pdefined );
+		if ( context && has ( context, value ) && !defined.at ( value ) ) create_term_def ( context, value, pdefined );
 		if ( vocab && has ( term_defs, value ) ) {
 			psomap td;
 			return ( td = term_defs->at ( value )->MAP() ) ? td->at ( "@id" )->STR() : 0;
@@ -692,7 +694,7 @@ public:
 			string prefix = value.substr ( 0, colIndex ), suffix = value.substr ( colIndex + 1 );
 			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return make_shared<string> ( value );
 			if ( context && has ( context, prefix ) && ( !has ( pdefined, prefix ) || !defined.at ( prefix ) ) )
-				createTermDefinition ( context, prefix, pdefined );
+				create_term_def ( context, prefix, pdefined );
 			if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( "@id" )->STR() + suffix );
 			return make_shared<string> ( value );
 		}
@@ -1085,16 +1087,16 @@ public:
 	using quad_base::quad_base;
 
 	string tostring ( string ctx ) {
-		string s = string ( "< " ) + ctx + string ( " > : < " );
+		string s = string ( "<" ) + ctx + string ( "> <" );
 		if ( subj ) s += subj->value;
 		else s += string ( "<null>" );
-		s += " > <";
+		s += "> <";
 		if ( pred ) s += pred->value;
 		else s += string ( "<null>" );
-		s += " > < ";
+		s += "> <";
 		if ( object ) s += object->value;
 		else s += string ( "<null>" );
-		return s += " > .";
+		return s += "> .";
 	}
 };
 
@@ -1580,8 +1582,8 @@ public:
 						if ( values ) for ( pobj value : *values ) gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared<string> ( prop ), 0 );
 					}
 			}
-			if ( has ( elem, "@graph" ) ) {
-				gen_node_map ( elem->at ( "@graph" ), nodeMap, id, 0, 0, 0 );
+			if ( hasgraph ( elem ) ) {
+				gen_node_map ( getgraph ( elem ), nodeMap, id, 0, 0, 0 );
 				elem->erase ( "@graph" );
 			}
 			//			final List<String> keys = new ArrayList<String> ( elem.keySet() );
@@ -1643,7 +1645,7 @@ public:
 		return rval;
 	}
 
-	void parseContext ( pobj contextLike ) {
+	void parse_ctx ( pobj contextLike ) {
 		pcontext context;
 		context = context->parse ( contextLike );
 		ssmap prefixes = context->getPrefixes ( true );
@@ -1655,21 +1657,19 @@ public:
 		}
 	}
 
-	void graphToRDF ( string graph_name, somap& graph ) {
+	void graph_to_rdf ( string graph_name, somap& graph ) {
 		qlist triples;
-		for ( auto y : graph ) {
+		for ( auto y : graph ) { // 4.3
 			string id = y.first;
 			if ( is_rel_iri ( id ) ) continue;
 			psomap node = y.second->MAP();
-			for ( auto x : *node ) {
+			for ( auto x : *node ) { 
 				string property = x.first;
-				polist values;
-				if ( property == "@type" ) {
-					values =  gettype ( node )->LIST();
-					property = RDF_TYPE;
-				} else if ( keyword ( property ) ) continue;
-				else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
-				else if ( is_rel_iri ( property ) ) continue;
+				polist values;// = x.second;
+				if ( property == "@type" ) { // 4.3.2.1
+					values = gettype ( node )->LIST(); // ??
+					property = RDF_TYPE; // ??
+				} else if ( keyword ( property ) || ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) || is_rel_iri ( property ) ) continue;
 				else values = node->at ( property )->LIST();
 
 				pnode subj = id.find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
@@ -1678,16 +1678,16 @@ public:
 				for ( auto item : *values ) {
 					// convert @list to triples
 					if ( item->MAP() && haslist ( item->MAP() ) ) {
-						polist list =  item->MAP( )->at ( "@list" )->LIST();
+						polist list = getlist(item)->LIST();
 						pnode last = 0;
 						pnode firstBnode = nil;
 						if ( list && list->size() ) {
-							last = objectToRDF ( *list->rbegin() );
+							last = obj_to_rdf ( *list->rbegin() );
 							firstBnode = mkbnode ( api.gen_bnode_id () );
 						}
 						triples.push_back ( make_shared<quad> ( subj, pred, firstBnode, pstr ( graph_name ) ) );
 						for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
-							pnode object = objectToRDF ( list->at ( i ) );
+							pnode object = obj_to_rdf ( list->at ( i ) );
 							triples.push_back ( make_shared<quad> ( firstBnode, first, object, pstr ( graph_name ) ) );
 							pnode restBnode = mkbnode ( api.gen_bnode_id() );
 							triples.push_back ( make_shared<quad> ( firstBnode, rest, restBnode, pstr ( graph_name ) ) );
@@ -1697,28 +1697,26 @@ public:
 							triples.push_back ( make_shared<quad> ( firstBnode, first, last, pstr ( graph_name ) ) );
 							triples.push_back ( make_shared<quad> ( firstBnode, rest, nil, pstr ( graph_name ) ) );
 						}
-					} else if ( pnode object = objectToRDF ( item ) ) triples.push_back ( make_shared<quad> ( subj, pred, object, pstr ( graph_name ) ) );
+					} else if ( pnode object = obj_to_rdf ( item ) ) triples.push_back ( make_shared<quad> ( subj, pred, object, pstr ( graph_name ) ) );
 				}
 			}
 		}
-		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
+		if (find(graph_name) == end()) (*this)[graph_name] = make_shared<qlist>(triples);
+		else for (auto t : triples) at(graph_name)->push_back(t);
+//		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
 	}
 
 private:
-	pnode objectToRDF ( pobj item ) {
+	pnode obj_to_rdf ( pobj item ) {
 		if ( isvalue ( item ) ) {
-			pobj value = item->MAP( )->at ( "@value" ), datatype = hastype ( item->MAP() ) ? item->MAP( )->at ( "@type" ) : pobj ( 0 );
+			pobj value = getvalue(item ), datatype = sgettype ( item );
 			if ( !value ) return 0;
 			if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 				if ( value->BOOL() ) return mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ),  0 );
-				else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() ) ) {
-					///					DecimalFormat df = new DecimalFormat ( "0.0###############E0" );
-					//					df.setDecimalFormatSymbols ( DecimalFormatSymbols.getInstance ( Locale.US ) );
+				else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() ) ) 
 					return mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
-				} else {
-					//DecimalFormat df = new DecimalFormat ( "0" );
+				 else 
 					return mkliteral ( value->INT() ? tostr ( *value->INT() ) : tostr ( *value->UINT() ), pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
-				}
 			} else if ( haslang ( item->MAP() ) )
 				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
 			else return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
@@ -1730,8 +1728,7 @@ private:
 				id = * getid ( item )->STR();
 				if ( is_rel_iri ( id ) ) return 0;
 			} else id = * item->STR();
-			if ( id.find ( "_:" ) == 0 ) return mkbnode ( id );
-			else return mkiri ( id );
+			return id.find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
 		}
 	}
 };
@@ -1744,7 +1741,7 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;
 		if ( !g.second || !g.second->MAP() ) throw 0;
-		r.graphToRDF ( g.first, *g.second->MAP() );
+		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
 	return make_shared<rdf_db> ( r );
 }
@@ -1761,7 +1758,7 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 		act_ctx = act_ctx->parse ( opts.expandContext );
 	}
 	auto expanded = jsonld_api ( opts ).expand ( act_ctx, 0, input );
-	if ( has ( expanded, "@graph" ) ) expanded = expanded->MAP()->at ( "@graph" );
+	if ( hasgraph ( expanded ) ) expanded = getgraph ( expanded );
 	else if ( !expanded ) expanded = mk_olist_obj();
 	if ( !expanded->LIST() ) expanded = mk_olist_obj ( olist ( 1, expanded ) );
 	return expanded;
@@ -1781,14 +1778,8 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options )
 			_input = mk_olist();
 			_input->push_back ( expandedInput );
 		}
-		for ( auto e : *_input )
-			if ( e->MAP() ) {
-				//				for (auto x : *e->MAP()) cout<<"$$ "<<x.first<<'\t'<<x.second->type_str()<<endl;
-				if ( e->MAP()->find ( "@context" ) != e->MAP()->end() ) {
-					cout << "parsing context..." << endl;
-					dataset->parseContext ( e->MAP()->at ( "@context" ) );
-				}
-			}
+		for ( auto e : *_input ) if (hascontext(e) ) dataset->parse_ctx ( getcontext(e) );
+			
 	}
 	return dataset;
 }
