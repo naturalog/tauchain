@@ -18,7 +18,6 @@
 #include <stdexcept>
 
 using namespace std;
-using namespace std::string_literals;
 //using namespace boost;
 
 typedef shared_ptr<string> pstring;
@@ -538,7 +537,7 @@ public:
 					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@base"] = value;
 					else {
 						pstring baseUri = ( *result.MAP() ) ["@base"]->STR();
-						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + ( baseUri ? *baseUri : ""s );
+						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + ( baseUri ? *baseUri : string("") );
 						( *result.MAP() ) ["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 					}
 				} else throw INVALID_BASE_IRI + "\t" + "@base must be a string";
