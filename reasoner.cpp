@@ -354,6 +354,8 @@ int main ( int argc, char** argv ) {
 	auto kb = use_nquads ? load_nq(argv[1]) : jsonld::load_jsonld ( argv[1], true );
 	cout << kb.tostring() << endl;
 
+	if (argc == 2) return 0;
+
 	auto query = use_nquads ? load_nq(argv[2]) : jsonld::load_jsonld ( argv[2], true );
 	auto evidence = prove(*kb["@default"], *query["@default"]);
 	cout << "evidence: " << evidence.size() << " items..." << endl;
