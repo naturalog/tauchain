@@ -212,41 +212,41 @@ public:
 	virtual bool equals ( const obj& o ) const = 0;
 	virtual pobj clone() const = 0;
 	string toString ( );
-/*	string toString ( int indent = 0, bool initial_endl = true ) {
-		stringstream ss;
-		auto ind = [indent]() {
-			string s = "";
-			if ( !indent ) return s;
-			size_t i = indent;
-			while ( --i ) s += "\t";
-			return s;
-		};
-		if ( MAP() ) {
-			if ( initial_endl ) ss << endl;
-			for ( auto x : *MAP() ) {
-				ss << ind() << x.first << ":\t" << x.second->toString ( indent + 1, false );
-				if ( !x.second->MAP() && !x.second->LIST() ) ss << endl;
+	/*	 string toString ( int indent = 0, bool initial_endl = true ) {
+			stringstream ss;
+			auto ind = [indent]() {
+				string s = "";
+				if ( !indent ) return s;
+				size_t i = indent;
+				while ( --i ) s += "\t";
+				return s;
+			};
+			if ( MAP() ) {
+				if ( initial_endl ) ss << endl;
+				for ( auto x : *MAP() ) {
+					ss << ind() << x.first << ":\t" << x.second->toString ( indent + 1, false );
+					if ( !x.second->MAP() && !x.second->LIST() ) ss << endl;
+				}
+				return ss.str();
 			}
-			return ss.str();
-		}
 
-		if ( LIST() ) {
-			if ( initial_endl ) ss << endl;
-			for ( auto x : *LIST() ) {
-				ss << ind() << x->toString ( indent + 1 );
-				if ( !x->MAP() && !x->LIST() ) ss << endl;
+			if ( LIST() ) {
+				if ( initial_endl ) ss << endl;
+				for ( auto x : *LIST() ) {
+					ss << ind() << x->toString ( indent + 1 );
+					if ( !x->MAP() && !x->LIST() ) ss << endl;
+				}
+				return ss.str();
 			}
+			ss << ind();
+			if ( BOOL() ) ss << *BOOL();
+			else if ( DOUBLE() ) ss << *DOUBLE();
+			else if ( Null() ) ss << "(null)";
+			else if ( STR() ) ss << *STR();
+			else if ( INT() ) ss << *INT();
+			else if ( UINT() ) ss << *UINT();
 			return ss.str();
-		}
-		ss << ind();
-		if ( BOOL() ) ss << *BOOL();
-		else if ( DOUBLE() ) ss << *DOUBLE();
-		else if ( Null() ) ss << "(null)";
-		else if ( STR() ) ss << *STR();
-		else if ( INT() ) ss << *INT();
-		else if ( UINT() ) ss << *UINT();
-		return ss.str();
-	}*/
+		}*/
 };
 
 #define OBJ_IMPL(type, getter) \
@@ -498,20 +498,20 @@ void* curl = curl_easy_init();
 json_spirit::mValue convert ( obj& v ) {
 	typedef json_spirit::mValue val;
 	val r;
-	if ( v.UINT() ) return val(*v.UINT());
-	if ( v.INT() )  return val(*v.INT());
-	if ( v.STR() )  return val(*v.STR());
-	if ( v.DOUBLE() )  return val(*v.DOUBLE());
-	if ( v.BOOL() )  return val(*v.BOOL());
+	if ( v.UINT() ) return val ( *v.UINT() );
+	if ( v.INT() )  return val ( *v.INT() );
+	if ( v.STR() )  return val ( *v.STR() );
+	if ( v.DOUBLE() )  return val ( *v.DOUBLE() );
+	if ( v.BOOL() )  return val ( *v.BOOL() );
 	else if ( v.LIST() ) {
 		val::Array a;
-		for ( auto x : *v.LIST()) a.push_back ( convert ( *x ) );
-		return val(a);
+		for ( auto x : *v.LIST() ) a.push_back ( convert ( *x ) );
+		return val ( a );
 	} else {
 		if ( !v.MAP() ) throw "logic error";
 		val::Object a;
 		for ( auto x : *v.MAP() ) a[x.first] = convert ( *x.second );
-		return val(a);
+		return val ( a );
 	}
 }
 
@@ -537,7 +537,7 @@ pobj convert ( const json_spirit::mValue& v ) {
 }
 
 string obj::toString ( ) {
-	return json_spirit::write_string(convert(*this), json_spirit::pretty_print);
+	return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print );
 }
 
 size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
@@ -748,58 +748,62 @@ public:
 
 
 	pstring expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
-		//		return value ? expandIri ( value, relative, vocab, context, pdefined ) : 0;
 		if ( !value || keyword ( *value ) ) return value;
+		pstring rval;
+		trace ( cout << "expandIri(" << *value << ") returned " );
 		if ( context && has ( context, *value ) && defined->find ( *value ) == defined->end() ) create_term_def ( context, *value, defined );
 		if ( vocab && has ( term_defs, *value ) ) {
 			auto td = term_defs->at ( *value )->MAP();
-			if ( td && has ( td, str_id ) ) return td->at ( str_id )->STR();
-			else return 0;
+			if ( td && has ( td, str_id ) ) rval = td->at ( str_id )->STR();
+			else rval = 0;
+		} else {
+			size_t colIndex = value->find ( ":" );
+			if ( colIndex != string::npos ) {
+				string prefix = value->substr ( 0, colIndex ), suffix = value->substr ( colIndex + 1 );
+				if ( prefix == "_" || startsWith ( suffix, "//" ) ) rval = value;
+				else {
+					if ( context && has ( context, prefix ) && ( defined->find ( prefix ) == defined->end() || !defined->at ( prefix ) ) )
+						create_term_def ( context, prefix, defined );
+					if ( has ( term_defs, prefix ) ) rval = pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
+				}
+				rval = value;
+			} else if ( vocab && has ( MAP(), str_vocab ) ) rval = pstr ( *MAP()->at ( str_vocab )->STR() + *value );
+			else if ( relative ) {
+				auto base = sgetbase ( MAP() );
+				rval = pstr ( resolve ( base ? base->STR() : 0, *value ) );
+			} else if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + string ( "not an absolute IRI: " ) + *value;
+			else rval = value;
 		}
-		size_t colIndex = value->find ( ":" );
-		if ( colIndex != string::npos ) {
-			string prefix = value->substr ( 0, colIndex ), suffix = value->substr ( colIndex + 1 );
-			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return value;
-			if ( context && has ( context, prefix ) && ( defined->find ( prefix ) == defined->end() || !defined->at ( prefix ) ) )
-				create_term_def ( context, prefix, defined );
-			if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
-			return value;
-		}
-		if ( vocab && has ( MAP(), str_vocab ) ) return pstr ( *MAP()->at ( str_vocab )->STR() + *value );
-		if ( relative ) {
-			auto base = sgetbase ( MAP() );
-			pstr ( resolve ( base ? base->STR() : 0, *value ) );
-		}
-		if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + string ( "not an absolute IRI: " ) + *value;
-		return value;
+		trace ( cout << ( *rval ) << endl );
+		return rval;
 	}
 	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
-	pstring expandIri ( string value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
-		if ( keyword ( value ) ) return make_shared<string> ( value );
-		const defined_t& defined = *pdefined;
-		if ( context && has ( context, value ) && !defined.at ( value ) ) create_term_def ( context, value, pdefined );
-		if ( vocab && has ( term_defs, value ) ) {
-			psomap td;
-			return ( td = term_defs->at ( value )->MAP() ) ? td->at ( str_id )->STR() : 0;
-		}
-		size_t colIndex = value.find ( ":" );
-		if ( colIndex != string::npos ) {
-			string prefix = value.substr ( 0, colIndex ), suffix = value.substr ( colIndex + 1 );
-			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return make_shared<string> ( value );
-			if ( context && has ( context, prefix ) && ( !has ( pdefined, prefix ) || !defined.at ( prefix ) ) )
-				create_term_def ( context, prefix, pdefined );
-			if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
+	/*	 pstring expandIri ( string value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
+			if ( keyword ( value ) ) return make_shared<string> ( value );
+			const defined_t& defined = *pdefined;
+			if ( context && has ( context, value ) && !defined.at ( value ) ) create_term_def ( context, value, pdefined );
+			if ( vocab && has ( term_defs, value ) ) {
+				psomap td;
+				return ( td = term_defs->at ( value )->MAP() ) ? td->at ( str_id )->STR() : 0;
+			}
+			size_t colIndex = value.find ( ":" );
+			if ( colIndex != string::npos ) {
+				string prefix = value.substr ( 0, colIndex ), suffix = value.substr ( colIndex + 1 );
+				if ( prefix == "_" || startsWith ( suffix, "//" ) ) return make_shared<string> ( value );
+				if ( context && has ( context, prefix ) && ( !has ( pdefined, prefix ) || !defined.at ( prefix ) ) )
+					create_term_def ( context, prefix, pdefined );
+				if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
+				return make_shared<string> ( value );
+			}
+			if ( vocab && MAP()->find ( str_vocab ) != MAP()->end() ) return pstr ( *MAP()->at ( str_vocab )->STR() + value );
+			if ( relative ) {
+				auto t = sgetbase ( *this );
+				return pstr ( resolve ( t ? t->STR() : 0, value ) );
+			}
+			if ( context && is_rel_iri ( value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + value;
 			return make_shared<string> ( value );
 		}
-		if ( vocab && MAP()->find ( str_vocab ) != MAP()->end() ) return pstr ( *MAP()->at ( str_vocab )->STR() + value );
-		if ( relative ) {
-			auto t = sgetbase ( *this );
-			return pstr ( resolve ( t ? t->STR() : 0, value ) );
-		}
-		if ( context && is_rel_iri ( value ) ) throw INVALID_IRI_MAPPING + "not an absolute IRI: " + value;
-		return make_shared<string> ( value );
-	}
-
+	*/
 	pstring get_type_map ( const string& prop ) {
 		auto td = term_defs->find ( prop );
 		return td == term_defs->end() || !td->second->MAP() ? 0 : gettype ( td->second )->STR();
@@ -1053,11 +1057,11 @@ public:
 		psomap td = has ( term_defs, act_prop ) ? term_defs->at ( *act_prop )->MAP() : 0;
 		if ( hastype ( td ) ) {
 			if ( *gettype ( td )->STR() == str_id ) {
-				rval[ str_id ] = make_shared<string_obj> ( expandIri ( value->toString(), true, false, 0, 0 ) );
+				rval[ str_id ] = make_shared<string_obj> ( expandIri ( pstr ( value->toString() ), true, false, 0, 0 ) );
 				return mk_somap_obj ( rval );
 			}
 			if ( *gettype ( td )->STR() == str_vocab ) {
-				rval[ str_id ] = make_shared<string_obj> ( expandIri ( value->toString(), true, true, 0, 0 ) );
+				rval[ str_id ] = make_shared<string_obj> ( expandIri ( pstr ( value->toString() ), true, true, 0, 0 ) );
 				return mk_somap_obj ( rval );
 			}
 		}
@@ -1354,17 +1358,17 @@ public:
 		pobj result;
 		if ( !element ) result = 0;
 		else if ( ! ( element->LIST() || element->MAP() ) ) {
-			trace ( cout << "expanding noncompound element: " << element->toString() << " active property: " << ( act_prop ? *act_prop : string ( "" ) ) << endl << "active context:" << endl << act_ctx->toString() << endl;);
+			trace ( cout << "expanding noncompound element: " << element->toString() << " active property: " << ( act_prop ? *act_prop : string ( "" ) ) << endl << "active context:" << endl << act_ctx->toString() << endl; );
 			if ( !act_prop || *act_prop == str_graph ) result = 0;
 			else result = act_ctx->expandValue ( act_prop, element );
-			trace ( cout << "result: " << element->toString() << endl;);
+			trace ( cout << "result: " << element->toString() << endl; );
 		} else if ( element->LIST() ) {
 			result = mk_olist_obj();
-			trace ( cout << "expanding each list item:" << endl;);
+			trace ( cout << "expanding each list item:" << endl; );
 			for ( pobj item : *element->LIST() ) {
-				trace ( cout << "expanding item:" << endl << item->toString() << endl;);
+				trace ( cout << "expanding item:" << endl << item->toString() << endl; );
 				pobj v = expand ( act_ctx, act_prop, item );
-				trace ( cout << "expanded item:" << endl << item->toString() << endl;);
+				trace ( cout << "expanded item:" << endl << v->toString() << endl; );
 				if ( act_prop && ( ( *act_prop == str_list || ( act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == str_list ) ) )
 				        && ( v->LIST() || ( v->MAP() && has ( v->MAP(), str_list ) ) ) )
 					throw LIST_OF_LISTS + string ( "\t" ) + "lists of lists are not permitted.";
@@ -1376,16 +1380,16 @@ public:
 			if ( elem->find ( str_context ) != elem->end() ) {
 				cout << "CONTEXT FOUND: " << endl << elem->at ( str_context )->toString() << endl;
 				act_ctx = act_ctx->parse ( elem->at ( str_context ) );
-				trace ( cout << "parsed context:" << endl << act_ctx->toString() << endl;);
+				trace ( cout << "parsed context:" << endl << act_ctx->toString() << endl; );
 			}
 			result = mk_somap_obj();
-			trace ( cout << "expanding each map item:" << endl;);
+			trace ( cout << "expanding each map item:" << endl; );
 			for ( auto x : *elem ) {
 				string key = x.first;
 				pobj value = x.second;
 				if ( key == str_context ) continue;
-				pstring exp_prop = act_ctx->expandIri ( key, false, true, 0, 0 );
-				trace ( cout << "expanded property:" << *exp_prop << endl;);
+				pstring exp_prop = act_ctx->expandIri ( pstr ( key ), false, true, 0, 0 );
+				trace ( cout << "expanded property:" << *exp_prop << endl; );
 				pobj exp_val = 0;
 				if ( !exp_prop || ( exp_prop->find ( ":" ) == string::npos && !keyword ( *exp_prop ) ) ) continue;
 				if ( keyword ( *exp_prop ) ) {
@@ -1407,8 +1411,10 @@ public:
 							exp_val = value;
 						} else
 							throw INVALID_TYPE_VALUE + "\t" + "@type value must be a string or array of strings";
-					} else if ( *exp_prop == str_graph ) exp_val = expand ( act_ctx, pstr ( str_graph ), value );
-					else if ( *exp_prop == str_value ) {
+					} else if ( *exp_prop == str_graph ) {
+						exp_val = expand ( act_ctx, pstr ( str_graph ), value );
+						trace ( cout << "expandedValue has key @graph" << endl; );
+					} else if ( *exp_prop == str_value ) {
 						if ( value && ( value->MAP() || value->LIST() ) ) throw INVALID_VALUE_OBJECT_VALUE + string ( "\t" ) + "value of " + *exp_prop + " must be a scalar or null";
 						if ( ! ( exp_val = value ) ) {
 							( *result->MAP() ) [ str_value ] = 0;
@@ -1504,7 +1510,6 @@ public:
 						add_all ( result->MAP()->at ( *exp_prop )->LIST(), exp_val );
 					}
 				}
-				trace ( cout << "expanded value:" << exp_val->toString() << endl;);
 			}
 			if ( hasvalue ( result ) ) {
 				somap& ks = *result->MAP();
@@ -1537,6 +1542,7 @@ public:
 		if ( result && result->MAP() && result->MAP()->size() == 1 && hasgraph ( result ) ) result = getgraph ( result );
 		if ( !result ) result = mk_olist_obj();
 		if ( !result->LIST() ) result = mk_olist_obj ( olist ( 1, result ) );
+		trace ( cout << "expanded value:" << result->toString() << endl; );
 		return result;
 	}
 
@@ -1840,9 +1846,9 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF() {
 	( *nodeMap ) [str_default] = mk_somap_obj();
 	gen_node_map ( value, nodeMap );
 	trace ( cout << "---------" << endl;
-	    cout << "Node map:" << endl;
-	    cout << "---------" << endl;
-	    cout << mk_somap_obj ( nodeMap )->toString() << endl;);
+	        cout << "Node map:" << endl;
+	        cout << "---------" << endl;
+	        cout << mk_somap_obj ( nodeMap )->toString() << endl; );
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;
@@ -1872,9 +1878,6 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 
 std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 	pobj expandedInput = jsonld::expand ( input, options );
-	trace ( cout << "Expanded:" << endl;
-	    cout << "---------" << endl;
-	    cout << expandedInput->toString() << endl;);
 	jsonld_api api ( expandedInput, options );
 	std::shared_ptr<rdf_db> dataset = api.toRDF();
 
@@ -1918,7 +1921,7 @@ rdf_db load_jsonld ( string fname, bool print = false ) {
 	json_spirit::mValue v;
 	ifstream ifs ( fname );
 	trace ( cout << "reading json:" << endl;
-	    cout << "-------------" << endl;);
+	        cout << "-------------" << endl; );
 	json_spirit::read_stream ( ifs, v );
 	pobj c = convert ( v );
 	trace (
@@ -1926,8 +1929,8 @@ rdf_db load_jsonld ( string fname, bool print = false ) {
 	);
 	jsonld_api a ( c, o );
 	trace ( cout << "--------------------" << endl;
-	    cout << "converting to quads:" << endl;
-	    cout << "--------------------" << endl;);
+	        cout << "converting to quads:" << endl;
+	        cout << "--------------------" << endl; );
 	auto r = *a.toRDF ( c, o );
 	if ( print ) {
 		cout << "Loaded graphs:" << endl;
