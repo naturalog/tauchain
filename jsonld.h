@@ -375,11 +375,13 @@ bool keyword ( pobj p ) {
 }
 
 bool is_abs_iri ( const string& s ) {
-	return s.find ( ':' ) != string::npos;
+	return s.find ( "://" ) != string::npos;
 }
+
 bool is_rel_iri ( const string& s ) {
 	return ! ( keyword ( s ) || is_abs_iri ( s ) );
 }
+
 pobj newMap ( const string& k, pobj v ) {
 	pobj r = mk_somap_obj();
 	( *r->MAP() ) [k] = v;
@@ -995,10 +997,34 @@ const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#", RDF_
 class node {
 public:
 	string type, value, datatype, lang;
-	enum node_type { LITERAL, IRI, BNODE };
-	const node_type _type;
+	enum node_type { LITERAL, IRI, BNODE } _type;
 	node ( const node_type& t ) : _type ( t ) {}
 };
+
+pnode mkliteral ( string value, pstring datatype, pstring language ) {
+	pnode r = make_shared<node> ( node::LITERAL );
+	r->type = "literal" ;
+	r->value = value ;
+	//	cout<<"mkliteral value: "<<value<<endl;
+	r-> datatype = datatype ? *datatype : XSD_STRING;
+	if ( language ) r->lang = *language;
+	return r;
+}
+pnode mkiri ( string iri ) {
+	pnode r = make_shared<node> ( node::IRI );
+	r->type = "IRI";
+	r->value = iri;
+	//	cout<<"mkiri value: "<<iri<<endl;
+	return r;
+}
+
+pnode mkbnode ( string attribute ) {
+	pnode r = make_shared<node> ( node::BNODE );
+	r->type = "blank node" ;
+	//	cout<<"mkbnode value: "<<attribute<<endl;
+	r->value = attribute ;
+	return r;
+}
 /*
 	somap node::toObject ( bool useNativeTypes ) {
 		if ( type==IRI || type==BNODE ) { somap r; r["@id"]=mk_str_obj(at("value"));return r; }
@@ -1031,30 +1057,6 @@ public:
 	}
 */
 
-pnode mkliteral ( string value, pstring datatype, pstring language ) {
-	pnode r = make_shared<node> ( node::LITERAL );
-	r->type = "literal" ;
-	r->value = value ;
-	//	cout<<"mkliteral value: "<<value<<endl;
-	r-> datatype = datatype ? *datatype : XSD_STRING;
-	if ( language ) r->lang = *language;
-	return r;
-}
-pnode mkiri ( string iri ) {
-	pnode r = make_shared<node> ( node::IRI );
-	r->type = "IRI";
-	r->value = iri;
-	//	cout<<"mkiri value: "<<iri<<endl;
-	return r;
-}
-
-pnode mkbnode ( string attribute ) {
-	pnode r = make_shared<node> ( node::BNODE );
-	r->type = "blank node" ;
-	//	cout<<"mkbnode value: "<<attribute<<endl;
-	r->value = attribute ;
-	return r;
-}
 
 typedef std::tuple<pnode, pnode, pnode, pnode> quad_base;
 
@@ -1474,14 +1476,8 @@ public:
 			values->push_back ( value );
 	}
 
-	void gen_node_map ( pobj element, psomap nodeMap )  {
-		gen_node_map ( element, nodeMap, "@default", pobj(), pstring(), psomap() );
-	}
-
-	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph ) {
-		gen_node_map ( element, nodeMap, activeGraph, pobj(), pstring(), psomap() );
-	}
-
+	static size_t blankNodeCounter;
+	static map<string, string> bnode_id_map;
 	string gen_bnode_id ( string id = "" ) {
 		if ( has ( bnode_id_map, id ) ) return bnode_id_map[id];
 		stringstream ss;
@@ -1489,8 +1485,13 @@ public:
 		return bnode_id_map[id] = ss.str();
 	}
 
-	static size_t blankNodeCounter;
-	static map<string, string> bnode_id_map;
+	void gen_node_map ( pobj element, psomap nodeMap )  {
+		gen_node_map ( element, nodeMap, "@default", pobj(), pstring(), psomap() );
+	}
+
+	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph ) {
+		gen_node_map ( element, nodeMap, activeGraph, pobj(), pstring(), psomap() );
+	}
 
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring act_prop, psomap list ) {
 		if ( !element ) return;
@@ -1640,26 +1641,6 @@ public:
 		}
 	}
 
-	void addTriple ( string subj, string pred, string value, pstring datatype, pstring language ) {
-		addquad ( subj, pred, value, datatype, language, pstr ( "@default" ) );
-	}
-
-	void addquad ( string s, string p, string value, pstring datatype, pstring language, pstring graph ) {
-		if ( !graph ) graph = pstr ( "@default" );
-		if ( find ( *graph ) == end() ) ( *this ) [ *graph ] = mk_qlist();
-		at ( *graph )->push_back ( make_shared<quad> ( s, p, value, datatype, language, graph ) );
-	}
-
-	void addTriple ( string subj, string pred, string object ) {
-		addquad ( subj, pred, object, pstr ( "@default" ) );
-	}
-
-	void addquad ( string subj, string pred, string object, pstring graph ) {
-		if ( !graph ) graph = pstr ( "@default" );
-		if ( !has ( *this, *graph ) ) ( *this ) [ *graph ] = mk_qlist();
-		at ( *graph )->push_back ( make_shared<quad> ( subj, pred, object, graph ) );
-	}
-
 	void graphToRDF ( string graph_name, somap& graph ) {
 		qlist triples;
 		for ( auto y : graph ) {
@@ -1726,11 +1707,7 @@ private:
 				}
 			} else if ( haslang ( item->MAP() ) )
 				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
-			else {
-				string s = value->type_str();
-				//				cout<<s<<endl;
-				return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
-			}
+			else return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
 		}
 		// convert string/node object to RDF
 		else {
