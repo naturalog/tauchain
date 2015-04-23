@@ -246,9 +246,9 @@ bool is_abs_iri ( const string& s ) {
 }
 
 bool is_rel_iri ( const string& s ) {
-	return (! ( keyword ( s ) || is_abs_iri ( s ))) // from jsonld-java code
-	&& (s[0] == '/') // ?
-	;
+	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) ) // from jsonld-java code
+	       && ( s[0] == '/' ) // ?
+	       ;
 }
 
 pobj newMap ( const string& k, pobj v ) {
@@ -1511,7 +1511,7 @@ public:
 				if ( property == str_type ) { // 4.3.2.1
 					values = gettype ( node )->LIST(); // ??
 					property = RDF_TYPE; // ??
-				} else if ( keyword ( property )) continue;
+				} else if ( keyword ( property ) ) continue;
 				else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
 				else if ( is_rel_iri ( property ) ) continue;
 				else values = node->at ( property )->LIST();
