@@ -246,7 +246,9 @@ bool is_abs_iri ( const string& s ) {
 }
 
 bool is_rel_iri ( const string& s ) {
-	return ! ( keyword ( s ) || is_abs_iri ( s ) );
+	return (! ( keyword ( s ) || is_abs_iri ( s ))) // from jsonld-java code
+	&& (s[0] != '_') // ???
+	;
 }
 
 pobj newMap ( const string& k, pobj v ) {
