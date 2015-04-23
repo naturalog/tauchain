@@ -234,6 +234,8 @@ json_spirit::mValue convert ( obj& v ) {
 	}
 }
 
+json_spirit::mValue convert ( pobj v ) { return convert(*v); }
+
 pobj convert ( const json_spirit::mValue& v ) {
 	using namespace std;
 	pobj r;
