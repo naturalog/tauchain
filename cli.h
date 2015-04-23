@@ -103,7 +103,7 @@ public:
 			return 1;
 		}
 		cout << convert ( load_json ( args ) ).tostring() << endl;
-		return 1;
+		return 0;
 	}
 };
 
@@ -182,8 +182,8 @@ public:
 		}
 		try {
 			if ( args.size() == 4 ) {
-				pobj kb = nodemap(jsonld::expand(load_json ( args[2] )));
-				pobj q = nodemap(jsonld::expand(load_json ( args[args.size() == 4 ? 3 : 4] )));
+				pobj kb = nodemap ( jsonld::expand ( load_json ( args[2] ) ) );
+				pobj q = nodemap ( jsonld::expand ( load_json ( args[args.size() == 4 ? 3 : 4] ) ) );
 				if ( kb && kb->MAP() ) {
 					cout << "Contexts in kb:" << endl;
 					for ( auto x : *kb->MAP() ) cout << x.first << endl;

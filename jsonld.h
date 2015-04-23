@@ -175,13 +175,13 @@ struct jsonld_options {
 	pobj expandContext = 0;
 	pstring processingMode = pstr ( "json-ld-1.0" );
 	pbool embed = 0;
-	pbool isexplicit = 0;
+	pbool isexplicit = make_shared<bool> ( true );
 	pbool omitDefault = 0;
-	pbool useRdfType = make_shared<bool> ( false );
-	pbool useNativeTypes = make_shared<bool> ( false );
+	pbool useRdfType = make_shared<bool> ( true );
+	pbool useNativeTypes = make_shared<bool> ( true );
 	pbool produceGeneralizedRdf = make_shared<bool> ( true );
 	pstring format = 0;
-	pbool useNamespaces = make_shared<bool> ( false );
+	pbool useNamespaces = make_shared<bool> ( true );
 	pstring outputForm = 0;
 };
 
@@ -854,6 +854,16 @@ public:
 	string type, value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE } _type;
 	node ( const node_type& t ) : _type ( t ) {}
+	string tostring() { 
+		stringstream ss;
+		if (_type == IRI) ss << '<';
+		if (_type == LITERAL) ss << '\"';
+		ss << value;
+		if (_type == LITERAL) ss << '\"';
+		if (_type == LITERAL && lang.size()) ss << '@' << lang;
+		if (_type == IRI) ss << '>';
+		return ss.str();
+	}
 };
 
 pnode mkliteral ( string value, pstring datatype, pstring language ) {
@@ -931,16 +941,12 @@ public:
 	using quad_base::quad_base;
 
 	string tostring ( string ctx ) {
-		string s = string ( "<" ) + ctx + string ( "> <" );
-		if ( subj ) s += subj->value;
-		else s += string ( "<null>" );
-		s += "> <";
-		if ( pred ) s += pred->value;
-		else s += string ( "<null>" );
-		s += "> <";
-		if ( object ) s += object->value;
-		else s += string ( "<null>" );
-		return s += "> .";
+		stringstream ss;
+		auto f = [] ( pnode n ) {
+			return n ? n->tostring() : string ( "<null>" );
+		};
+		ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ' << f ( graph ) << " .";
+		return ss.str();
 	}
 };
 
