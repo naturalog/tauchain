@@ -16,7 +16,10 @@ public:
 			json_spirit::read_stream ( is, v );
 		}
 		pobj r =  convert ( v );
+		cout << "Input:" << endl;
+		cout << "------" << endl;
 		cout << r->toString() << endl;
+		cout << "------ end Input" << endl;
 		return r;
 	}
 
@@ -33,6 +36,8 @@ public:
 		return r;
 	}
 
+	prdf_db to_quads( const strings& args, bool print = false ) { return to_quads(load_json(args), print); }
+	pobj load_json ( const strings& args ) { return load_json ( args.size() > 2 ? args[2] : "" ); }
 };
 
 class expand_cmd : public cmd_t {
@@ -46,6 +51,7 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
+		cout << jsonld::expand ( load_json ( args ) )->toString()<<endl;
 		return 1;
 	}
 };
@@ -62,7 +68,7 @@ public:
 	}
 	virtual int operator() ( const strings& args ) {
 		try {
-			to_quads ( load_json ( args.size() > 2 ? args[2] : "" ) , true );
+			to_quads ( args , true );
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;

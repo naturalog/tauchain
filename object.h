@@ -10,7 +10,8 @@
 
 //#include "logger.h"
 
-#define DEBUG
+//#define DEBUG
+//#define VERBOSE
 #ifdef DEBUG
 //logger _logger;
 auto dummy = []() {
@@ -191,7 +192,9 @@ bool has ( pdefined_t c, const string& k ) {
 }
 
 bool has ( const somap& c, const string& k ) {
+#ifdef VERBOSE
 	trace ( "query for key " << k << "form object: " << std::endl << mk_somap_obj ( c )->toString() << std::endl);
+#endif
 	return c.find ( k ) != c.end();
 }
 

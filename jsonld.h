@@ -1608,7 +1608,7 @@ prdf_db jsonld_api::toRDF() {
 	return make_shared<rdf_db> ( r );
 }
 
-pobj expand ( pobj& input, jsonld_options opts ) {
+pobj expand ( pobj input, jsonld_options opts = jsonld_options() ) {
 	if ( input->STR() && input->STR()->find ( ":" ) != string::npos ) {
 		input = load ( *input->STR() ).document;
 		if ( !opts.base ) opts.base = pstr ( *input->STR() );
