@@ -331,7 +331,7 @@ evidence_t prove ( const qlist& kb, const qlist& query ) {
 	return evidence;
 }
 
-void print_evidence(evidence_t evidence) {
+void print_evidence ( evidence_t evidence ) {
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		cout << "  " << e.first << ":" << endl;

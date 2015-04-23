@@ -79,8 +79,12 @@ string jsonld::resolve ( pstring base_, const string& ref ) {
 	return string ( ( pcchar ) r );
 }
 #else
-string jsonld::resolve ( pstring base_, const string& ref ) { return base_ ? *base_+ref:ref; }
-rdf_db load_nq ( string fname ) { throw 0; }
+string jsonld::resolve ( pstring base_, const string& ref ) {
+	return base_ ? *base_ + ref : ref;
+}
+rdf_db load_nq ( string fname ) {
+	throw 0;
+}
 #endif
 
 #endif /* PARSERS_H_ */

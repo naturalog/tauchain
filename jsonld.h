@@ -1564,8 +1564,8 @@ public:
 		}
 		if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared<qlist> ( triples );
 		else for ( auto t : triples ) at ( graph_name )->push_back ( t );
-		trace(cout<<"graphToRDF: "<<endl<<mk_somap_obj(graph)->toString()<<endl);
-		trace(cout<<"triples: "<<endl; for (auto q : triples) cout<<q->tostring(graph_name)<<endl);
+		trace ( cout << "graphToRDF: " << endl << mk_somap_obj ( graph )->toString() << endl );
+		trace ( cout << "triples: " << endl; for ( auto q : triples ) cout << q->tostring ( graph_name ) << endl );
 		//		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
 	}
 
@@ -1667,5 +1667,7 @@ typedef jsonld::pquad pquad;
 typedef jsonld::node node;
 typedef jsonld::pnode pnode;
 typedef jsonld::qlist qlist;
-string obj::toString ( ) { return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print ); }
+string obj::toString ( ) {
+	return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print );
+}
 

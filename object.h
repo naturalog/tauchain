@@ -7,10 +7,21 @@ typedef nullptr_t null;
 typedef std::string string;
 typedef std::shared_ptr<string> pstring;
 
-inline pstring pstr ( const string& s ) { return std::make_shared<string> ( s ); } 
-inline pstring pstr ( const char* s ) { if ( s ) return std::make_shared<string> ( s ); else return 0; } 
-inline pstring pstr ( const unsigned char* s ) { if ( s ) return std::make_shared<string> ( ( const char* ) s ); else return 0; } 
-inline pstring pstr ( unsigned char* s ) { if ( s ) return std::make_shared<string> ( ( const char* ) s ); else return 0; }
+inline pstring pstr ( const string& s ) {
+	return std::make_shared<string> ( s );
+}
+inline pstring pstr ( const char* s ) {
+	if ( s ) return std::make_shared<string> ( s );
+	else return 0;
+}
+inline pstring pstr ( const unsigned char* s ) {
+	if ( s ) return std::make_shared<string> ( ( const char* ) s );
+	else return 0;
+}
+inline pstring pstr ( unsigned char* s ) {
+	if ( s ) return std::make_shared<string> ( ( const char* ) s );
+	else return 0;
+}
 
 class obj {
 protected:
@@ -21,14 +32,30 @@ public:
 	typedef std::vector<pobj> olist;
 	typedef std::shared_ptr<somap> psomap;
 
-	virtual std::shared_ptr<uint64_t> UINT() { return 0; }
-	virtual std::shared_ptr<int64_t> INT() { return 0; }
-	virtual std::shared_ptr<bool> BOOL() { return 0; }
-	virtual std::shared_ptr<string> STR() { return 0; }
-	virtual std::shared_ptr<somap> MAP() { return 0; }
-	virtual std::shared_ptr<olist> LIST() { return 0; }
-	virtual std::shared_ptr<double> DOUBLE() { return 0; }
-	virtual std::shared_ptr<null> Null() { return 0; }
+	virtual std::shared_ptr<uint64_t> UINT() {
+		return 0;
+	}
+	virtual std::shared_ptr<int64_t> INT() {
+		return 0;
+	}
+	virtual std::shared_ptr<bool> BOOL() {
+		return 0;
+	}
+	virtual std::shared_ptr<string> STR() {
+		return 0;
+	}
+	virtual std::shared_ptr<somap> MAP() {
+		return 0;
+	}
+	virtual std::shared_ptr<olist> LIST() {
+		return 0;
+	}
+	virtual std::shared_ptr<double> DOUBLE() {
+		return 0;
+	}
+	virtual std::shared_ptr<null> Null() {
+		return 0;
+	}
 
 	bool map_and_has ( const string& k ) {
 		psomap m = MAP();
