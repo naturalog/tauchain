@@ -50,7 +50,7 @@ void dopause() {
 #define trace(x)
 #endif
 
-typedef nullptr_t null;
+typedef std::nullptr_t null;
 typedef std::string string;
 typedef std::shared_ptr<string> pstring;
 
