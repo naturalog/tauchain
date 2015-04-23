@@ -179,7 +179,7 @@ struct jsonld_options {
 	pbool omitDefault = 0;
 	pbool useRdfType = make_shared<bool> ( false );
 	pbool useNativeTypes = make_shared<bool> ( false );
-	pbool produceGeneralizedRdf = make_shared<bool> ( false );
+	pbool produceGeneralizedRdf = make_shared<bool> ( true );
 	pstring format = 0;
 	pbool useNamespaces = make_shared<bool> ( false );
 	pstring outputForm = 0;
@@ -1509,7 +1509,9 @@ public:
 				if ( property == str_type ) { // 4.3.2.1
 					values = gettype ( node )->LIST(); // ??
 					property = RDF_TYPE; // ??
-				} else if ( keyword ( property ) || ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) || is_rel_iri ( property ) ) continue;
+				} else if ( keyword ( property )) continue;
+				else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
+				else if ( is_rel_iri ( property ) ) continue;
 				else values = node->at ( property )->LIST();
 
 				pnode subj = id.find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
@@ -1543,9 +1545,6 @@ public:
 		}
 		if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared<qlist> ( triples );
 		else for ( auto t : triples ) at ( graph_name )->push_back ( t );
-		trace ( "graphToRDF: " << endl << mk_somap_obj ( graph )->toString() << endl );
-		trace ( "triples: " << endl; for ( auto q : triples ) cout << q->tostring ( graph_name ) << endl );
-		//		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
 	}
 
 private:
@@ -1581,11 +1580,9 @@ prdf_db jsonld_api::toRDF() {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
 	gen_node_map ( value, nodeMap );
-	trace ( "---------" << endl << "Node map:" << endl << "---------" << endl << mk_somap_obj ( nodeMap )->toString() << endl; );
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;
-		if ( !g.second || !g.second->MAP() ) throw 0;
 		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
 	return make_shared<rdf_db> ( r );

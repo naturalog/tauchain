@@ -70,7 +70,14 @@ public:
 	}
 	virtual int operator() ( const strings& args ) {
 		try {
-			to_quads ( args , true );
+			rdf_db r;
+			auto nodeMap = load_json ( args );
+			for ( auto g : *nodeMap->MAP() ) {
+				if ( jsonld::is_rel_iri ( g.first ) ) continue;
+				if ( !g.second || !g.second->MAP() ) throw 0;
+				r.graph_to_rdf ( g.first, *g.second->MAP() );
+			}
+			cout<<r.tostring()<<endl;
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;
