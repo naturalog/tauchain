@@ -115,8 +115,13 @@ public:
 			cout << help();
 			return 1;
 		}
-		cout << convert ( load_json ( args ) ).tostring() << endl;
-		return 1;
+		try {
+			cout << convert ( load_json ( args ) ).tostring() << endl;
+			return 0;
+		} catch (exception& ex) { 
+			std::cerr<<ex.what()<<endl;
+			return 1;
+		}
 	}
 };
 
