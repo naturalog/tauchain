@@ -8,11 +8,16 @@ public:
 	virtual string help() const = 0;
 	virtual int operator() ( const strings& args ) = 0;
 
-	template<typename Stream>
-	pobj load_json ( Stream& is ) {
+	pobj load_json ( string fname = "", bool print = true ) {
 		json_spirit::mValue v;
-		json_spirit::read_stream ( is, v );
-		return convert ( v );
+		if ( fname == "" ) json_spirit::read_stream ( cin, v );
+		else {
+			ifstream is ( fname );
+			json_spirit::read_stream ( is, v );
+		}
+		pobj r =  convert ( v );
+		cout << r->toString() << endl;
+		return r;
 	}
 
 	prdf_db to_quads ( pobj c, bool print = false ) {
@@ -57,11 +62,7 @@ public:
 	}
 	virtual int operator() ( const strings& args ) {
 		try {
-			if ( args.size() == 1 ) to_quads ( load_json ( cin ), true );
-			else {
-				ifstream is ( args[1] );
-				to_quads ( load_json ( is ) , true );
-			}
+			to_quads ( load_json ( args.size() > 2 ? args[2] : "" ) , true );
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;
@@ -81,21 +82,21 @@ map<string, cmd_t*> cmds = []() {
 }();
 
 int main ( int argc, char** argv ) {
-	if ( argc == 1 || ( cmds.find ( argv[2] ) == cmds.end() ) ) {
+	strings args;
+	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
+	if ( argc == 1 || ( cmds.find ( argv[1] ) == cmds.end() && args[1] != "help" ) ) {
 		cout << endl << "Tau-Chain by http://idni.org" << endl;
 		cout << endl << "Usage:" << endl;
-		cout << "\ttau <command>\t\tPrints usage of <command>." << endl;
-		cout << "\ttau <command> <args>\t\tRun <command> with <args>." << endl;
+		cout << "\ttau help <command>\t\tPrints usage of <command>." << endl;
+		cout << "\ttau <command> [<args>]\t\tRun <command> with <args>." << endl;
 		cout << endl << "Availiable commands:" << endl << endl;
 		for ( auto c : cmds ) cout << '\t' << c.first << '\t' << c.second->desc() << endl;
 		return 1;
 	}
-	if ( argc == 2 ) {
-		cout << cmds[string ( argv[1] )]->help();
-		return 1;
+	if ( args[1] == "help" && argc == 3 ) {
+		cout << cmds[string ( argv[2] )]->help();
+		return 0;
 	}
-	strings args;
-	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
 	return ( *cmds[argv[1]] ) ( args );
 
 	//	print_evidence(prove ( *kb["@default"], *query["@default"] ));

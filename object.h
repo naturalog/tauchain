@@ -2,6 +2,12 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <stdio.h>
+#include <signal.h>
+#include <stdio.h>
+#include <signal.h>
+#include <execinfo.h>
+
 //#include "logger.h"
 
 #define DEBUG
@@ -10,11 +16,34 @@
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
-void dopause() {
-	std::clog << "press any key to continue...";
-	getchar();
+bool autobt = false, _pause=true;
+void bt() {
+	void *trace[16];
+	char **messages = 0;
+	int i, trace_size = 0;
+	trace_size = backtrace ( trace, 16 );
+	trace[1] = ( void * ) __builtin_return_address(0);
+	messages = backtrace_symbols ( trace, trace_size );
+	printf ( "[bt] Execution path:\n" );
+	for ( i = 1; i < trace_size; ++i ) {
+		printf ( "[bt] #%d %s\n", i, messages[i] );
+		size_t p = 0;
+		while ( messages[i][p] != '(' && messages[i][p] != ' '
+		        && messages[i][p] != 0 )
+			++p;
+		char syscom[256];
+		sprintf ( syscom, "addr2line %p -e %.*s", trace[i], p, messages[i] );
+		system ( syscom );
+	}
 }
-bool _pause = false;
+void dopause() {
+	std::clog << "press any key to continue, b for backtrace, or a to always show backtrace, or c to stop pausing...";
+	char ch = getchar();
+	if ( ch == 'b' || (autobt = (ch == 'a')) ) bt();
+	else if (ch == 'c') autobt = _pause=false;
+}
+
+
 #define trace(x) std::clog<<x; if (_pause) dopause()
 #else
 #define trace(x)
@@ -88,11 +117,11 @@ public:
 class type##_obj : public obj { \
 	std::shared_ptr<type> data; \
 public: \
-	type##_obj(const type& o = type()) { data = std::make_shared<type>(); *data = o; \
-	trace( "created object of type "<<type_str()<<" and value "<<toString());} \
-	type##_obj(const std::shared_ptr<type> o) : data(o) {  \
-	trace( "created object of type "<<type_str()<<" and value "<<toString());} \
-	virtual std::shared_ptr<type> getter() { return data; } \
+	type##_obj(const type& o = type()) { data = std::make_shared<type>(); *data = o; } \
+	type##_obj(const std::shared_ptr<type> o) : data(o) { }  \
+	virtual std::shared_ptr<type> getter() { \
+	/*trace( "queried object of type "<<type_str()<<" and value "<<toString());*/ \
+	return data; } \
 	virtual string type_str() const { return #type; } \
 	virtual bool equals(const obj& o) const { \
 		if ( type_str() != o.type_str() ) return false; \
@@ -162,7 +191,7 @@ bool has ( pdefined_t c, const string& k ) {
 }
 
 bool has ( const somap& c, const string& k ) {
-	trace ( "query for key " << k << "form object: " << std::endl << mk_somap_obj ( c )->toString() );
+	trace ( "query for key " << k << "form object: " << std::endl << mk_somap_obj ( c )->toString() << std::endl);
 	return c.find ( k ) != c.end();
 }
 
