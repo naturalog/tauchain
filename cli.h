@@ -73,16 +73,29 @@ public:
 		return "Run expansion algorithm http://www.w3.org/TR/json-ld-api/#expansion-algorithms including all dependant algorithms.";
 	}
 	virtual string help() const {
-		stringstream ss ( "Usage: tau expand [JSON-LD input filename]" );
+		stringstream ss ( "Usage:");
+		ss << endl << "\ttau expand [JSON-LD input filename]";
+		ss << endl << "\ttau expand [JSON-LD input filename] [JSON-LD output to compare to]";
 		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( args.size() > 3 ) {
+		if ( args.size() > 4 ) {
 			cout << help();
 			return 1;
 		}
-		cout << jsonld::expand ( load_json ( args ) )->toString() << endl;
+		pobj e;
+		cout << (e=jsonld::expand ( load_json ( args ) ))->toString() << endl;
+		if (args.size() == 3) return 0;
+		string f1 = tmpnam(0), f2 = tmpnam(0);
+		ofstream os1(f1), os2(f2);
+		os1 << json_spirit::write_string ( ::convert(e), json_spirit::pretty_print | json_spirit::single_line_arrays )<<std::endl;
+		os2 << json_spirit::write_string ( ::convert(load_json(args[3])), json_spirit::pretty_print | json_spirit::single_line_arrays )<<std::endl;
+		os1.close();
+		os2.close();
+		string c = string("diff ") + f1 + string(" ") + f2;
+		system(c.c_str());
+		
 		return 0;
 	}
 };
@@ -102,8 +115,13 @@ public:
 			cout << help();
 			return 1;
 		}
-		cout << convert ( load_json ( args ) ).tostring() << endl;
-		return 0;
+		try {
+			cout << convert ( load_json ( args ) ).tostring() << endl;
+			return 0;
+		} catch (exception& ex) { 
+			std::cerr<<ex.what()<<endl;
+			return 1;
+		}
 	}
 };
 
@@ -215,3 +233,13 @@ map<string, cmd_t*> cmds = []() {
 	r["prove"] = new prove_cmd;
 	return r;
 }();
+
+void print_usage() {
+	cout << endl << "Tau-Chain by http://idni.org" << endl;
+	cout << endl << "Usage:" << endl;
+	cout << "\ttau help <command>\t\tPrints usage of <command>." << endl;
+	cout << "\ttau <command> [<args>]\t\tRun <command> with <args>." << endl;
+	cout << endl << "Availiable commands:" << endl << endl;
+	for ( auto c : cmds ) cout << '\t' << c.first << '\t' << c.second->desc() << endl;
+	cout << endl;
+}
