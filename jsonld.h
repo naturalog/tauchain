@@ -15,7 +15,6 @@
 #include <stdexcept>
 #include "object.h"
 
-
 using namespace std;
 
 const string str_base = "@base";
@@ -37,7 +36,7 @@ const string str_vocab = "@vocab";
 const string str_explicit = "@explicit";
 const string str_set = "@set";
 const string str_embedChildren = "@embedChildren";
-
+const string tab = "\t";
 
 inline bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
@@ -102,7 +101,7 @@ template<typename M, typename K, typename E> inline bool throw_if_not_contains (
 template<typename T>
 inline bool is ( const T& s, const std::vector<T>& v, std::string exception = std::string() ) {
 	bool rc = std::find ( v.begin(), v.end(), s ) != v.end();
-	if ( exception.size() && !rc ) throw exception;
+	if ( exception.size() && !rc ) throw std::runtime_error ( exception );
 	return rc;
 }
 
@@ -324,7 +323,7 @@ remote_doc_t load ( const string& url )  {
 	try {
 		doc.document = fromURL ( url );
 	} catch ( ... ) {
-		throw LOADING_REMOTE_CONTEXT_FAILED + "\t" + url;
+		throw std::runtime_error ( LOADING_REMOTE_CONTEXT_FAILED + tab + url );
 	}
 	return doc;
 }
@@ -369,16 +368,17 @@ public:
 				pobj p1 = sgetbase ( t1 );
 				pstring s1 = p1 ? p1->STR() : 0;
 				string uri = resolve ( s1, *s );
-				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() ) throw RECURSIVE_CONTEXT_INCLUSION + "\t" + uri;
+				if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() )
+					throw std::runtime_error ( RECURSIVE_CONTEXT_INCLUSION + tab + uri );
 				remoteContexts.push_back ( uri );
-
 				pobj remoteContext = fromURL ( uri );
-				if ( remoteContext && !remoteContext->map_and_has ( str_context ) ) throw INVALID_REMOTE_CONTEXT + "\t"; // + context;
+				if ( remoteContext && !remoteContext->map_and_has ( str_context ) )
+					throw std::runtime_error ( INVALID_REMOTE_CONTEXT + tab + context->toString() );
 				context = remoteContext ? ( *remoteContext->MAP() ) [str_context] : 0;
 				result = *result.parse ( context, remoteContexts );
 				continue;
 			}
-			if ( !context->MAP() ) throw INVALID_LOCAL_CONTEXT + "\t"; // + context;
+			if ( !context->MAP() ) throw std::runtime_error ( INVALID_LOCAL_CONTEXT + string ( "\r\n" ) + context->toString() );
 			somap& cm = *context->MAP();
 			auto it = cm.find ( "@base" );
 			if ( !remoteContexts.size() && it != cm.end() ) {
@@ -388,10 +388,10 @@ public:
 					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@base"] = value;
 					else {
 						pstring baseUri = ( *result.MAP() ) ["@base"]->STR();
-						if ( !is_abs_iri ( *baseUri ) ) throw INVALID_BASE_IRI + "\t" + ( baseUri ? *baseUri : string ( "" ) );
+						if ( !is_abs_iri ( *baseUri ) ) throw std::runtime_error ( INVALID_BASE_IRI + tab + ( baseUri ? *baseUri : string ( "" ) ) );
 						( *result.MAP() ) ["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 					}
-				} else throw INVALID_BASE_IRI + "\t" + "@base must be a string";
+				} else throw std::runtime_error ( INVALID_BASE_IRI + tab + string ( "@base must be a string" ) );
 			}
 			// 3.5
 			if ( ( it = cm.find ( str_vocab ) ) != cm.end() ) {
@@ -399,14 +399,14 @@ public:
 				if ( value->Null() ) result.MAP()->erase ( it );
 				else if ( pstring s = value->STR() ) {
 					if ( is_abs_iri ( *s ) ) ( *result.MAP() ) [str_vocab] = value;
-					else throw INVALID_VOCAB_MAPPING + "\t" + "@value must be an absolute IRI";
-				} else throw INVALID_VOCAB_MAPPING + "\t" + "@vocab must be a string or null";
+					else throw std::runtime_error ( INVALID_VOCAB_MAPPING + tab + string ( "@value must be an absolute IRI" ) );
+				} else throw std::runtime_error ( INVALID_VOCAB_MAPPING + tab + string ( "@vocab must be a string or null" ) );
 			}
 			if ( ( it = cm.find ( str_lang ) ) != cm.end() ) {
 				pobj value = it->second;
 				if ( value->Null() ) result.MAP()->erase ( it );
 				else if ( pstring s = value->STR() ) getlang ( result ) = make_shared<string_obj> ( lower ( *s ) );
-				else throw INVALID_DEFAULT_LANGUAGE + "\t";// + value;
+				else throw std::runtime_error ( INVALID_DEFAULT_LANGUAGE + tab + value->toString() );
 			}
 			for ( auto it : cm ) {
 				if ( is ( it.first, { str_base, str_vocab, str_lang } ) ) continue;
@@ -420,10 +420,10 @@ public:
 		defined_t& defined = *pdefined;
 		if ( defined.find ( term ) != defined.end() ) {
 			if ( defined[term] ) return;
-			throw CYCLIC_IRI_MAPPING + "\t" + term;
+			throw std::runtime_error ( CYCLIC_IRI_MAPPING + tab + term );
 		}
 		defined[term] = false;
-		if ( keyword ( term ) ) throw KEYWORD_REDEFINITION + "\t" + term;
+		if ( keyword ( term ) ) throw std::runtime_error ( KEYWORD_REDEFINITION + tab + term );
 		term_defs->erase ( term );
 		auto it = context->find ( term );
 		psomap m;
@@ -435,24 +435,24 @@ public:
 		}
 		pobj& value = it->second;
 		if ( value->STR() ) value = newMap ( str_id, value );
-		if ( !value->MAP() ) throw INVALID_TERM_DEFINITION;
+		if ( !value->MAP() ) throw std::runtime_error ( INVALID_TERM_DEFINITION );
 		somap defn, &val = *value->MAP();
 		//10
 		if ( ( it = val.find ( str_type ) ) != val.end() ) {
 			pstring type = it->second->STR();
-			if ( !type ) throw INVALID_TYPE_MAPPING;
+			if ( !type ) throw std::runtime_error ( INVALID_TYPE_MAPPING );
 			type = expandIri ( type, false, true, context, pdefined );
 			if ( is ( *type, {str_id, str_vocab } ) || ( !startsWith ( *type, "_:" ) && is_abs_iri ( *type ) ) ) defn[str_type] = make_shared<string_obj> ( *type );
-			else throw INVALID_TYPE_MAPPING + "\t" + *type;
+			else throw std::runtime_error ( INVALID_TYPE_MAPPING + tab + *type );
 		}
 		// 11
 		if ( ( it = val.find ( str_reverse ) ) != val.end() ) {
 			if ( throw_if_not_contains ( val, str_id, INVALID_REVERSE_PROPERTY ) && !it->second->STR() )
-				throw INVALID_IRI_MAPPING + "\t" + "Expected String for @reverse value.";
+				throw std::runtime_error ( INVALID_IRI_MAPPING + tab + string ( "Expected String for @reverse value." ) );
 			string reverse = *expandIri ( val.at ( str_reverse )->STR(), false, true, context, pdefined );
-			if ( !is_abs_iri ( reverse ) ) throw INVALID_IRI_MAPPING + "Non-absolute @reverse IRI: " + reverse;
+			if ( !is_abs_iri ( reverse ) ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "Non-absolute @reverse IRI: " ) + reverse );
 			defn [str_id] = make_shared<string_obj> ( reverse );
-			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { string ( str_set ), str_index }, INVALID_REVERSE_PROPERTY + "reverse properties only support set- and index-containers" ) )
+			if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { string ( str_set ), str_index }, ( INVALID_REVERSE_PROPERTY + string ( "reverse properties only support set- and index-containers" ) ) ) )
 				defn ["@container"] = it->second;
 			defn[str_reverse] = make_shared<bool_obj> ( ( *pdefined ) [term] = true );
 			( *term_defs ) [term] = mk_somap_obj ( defn );
@@ -461,12 +461,12 @@ public:
 		defn[str_reverse] = make_shared<bool_obj> ( false );
 		size_t colIndex;
 		if ( ( it = val.find ( str_id ) ) != val.end() && it->second->STR() && *it->second->STR() != term ) {
-			if ( ! it->second->STR() ) throw INVALID_IRI_MAPPING + "expected value of @id to be a string";
+			if ( ! it->second->STR() ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "expected value of @id to be a string" ) );
 			pstring res = expandIri ( it->second->STR(), false, true, context, pdefined );
 			if ( res && ( keyword ( *res ) || is_abs_iri ( *res ) ) ) {
-				if ( *res == str_context ) throw INVALID_KEYWORD_ALIAS + "cannot alias @context";
+				if ( *res == str_context ) throw std::runtime_error ( INVALID_KEYWORD_ALIAS + string ( "cannot alias @context" ) );
 				defn [str_id] = make_shared<string_obj> ( res );
-			} else throw INVALID_IRI_MAPPING + "resulting IRI mapping should be a keyword, absolute IRI or blank node";
+			} else throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "resulting IRI mapping should be a keyword, absolute IRI or blank node" ) );
 		} else if ( ( colIndex = term.find ( ":" ) ) != string::npos ) {
 			string prefix = term.substr ( 0, colIndex );
 			string suffix = term.substr ( colIndex + 1 );
@@ -476,17 +476,17 @@ public:
 			else defn[str_id] = make_shared<string_obj> ( term );
 		} else if ( ( it = MAP()->find ( str_vocab ) ) != MAP()->end() )
 			defn [str_id] = make_shared<string_obj> ( *MAP()->at ( str_vocab )->STR() + term );
-		else throw INVALID_IRI_MAPPING + "relative term defn without vocab mapping";
+		else throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "relative term defn without vocab mapping" ) );
 
 		// 16
 		( ( it = val.find ( "@container" ) ) != val.end() ) && it->second->STR() &&
-		is ( *it->second->STR(), { str_list, string ( str_set ), str_index, str_lang }, INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) && ( defn["@container"] = it->second );
+		is ( *it->second->STR(), { str_list, string ( str_set ), str_index, str_lang }, ( INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) ) && ( defn["@container"] = it->second );
 
 		auto i1 = val.find ( str_lang ), i2 = val.find ( "type" );
 		pstring lang;
 		if ( i1 != val.end() && i2 == val.end() ) {
 			if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) getlang ( defn ) = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
-			else throw INVALID_LANGUAGE_MAPPING + "@language must be a string or null";
+			else throw std::runtime_error ( INVALID_LANGUAGE_MAPPING + string ( "@language must be a string or null" ) );
 		}
 
 		( *term_defs ) [term] = mk_somap_obj ( defn );
@@ -497,7 +497,6 @@ public:
 	pstring expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
 		if ( !value || keyword ( *value ) ) return value;
 		pstring rval;
-		trace ( cout << "expandIri(" << *value << ") returned " );
 		if ( context && has ( context, *value ) && defined->find ( *value ) == defined->end() ) create_term_def ( context, *value, defined );
 		if ( vocab && has ( term_defs, *value ) ) {
 			auto td = term_defs->at ( *value )->MAP();
@@ -518,10 +517,9 @@ public:
 			else if ( relative ) {
 				auto base = sgetbase ( MAP() );
 				rval = pstr ( resolve ( base ? base->STR() : 0, *value ) );
-			} else if ( context && is_rel_iri ( *value ) ) throw INVALID_IRI_MAPPING + string ( "not an absolute IRI: " ) + *value;
+			} else if ( context && is_rel_iri ( *value ) ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "not an absolute IRI: " ) + *value );
 			else rval = value;
 		}
-		trace ( cout << ( *rval ) << endl );
 		return rval;
 	}
 	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
@@ -1065,7 +1063,7 @@ public:
 							    // true
 							    *act_ctx->compactIri ( str_index, true ) ) = exp_item->MAP()->at ( str_index ) ;
 						}
-					} else if ( has ( result, itemActiveProperty ) ) throw COMPACTION_TO_LIST_OF_LISTS + "\t" + "There cannot be two list objects associated with an active property that has a container mapping";
+					} else if ( has ( result, itemActiveProperty ) ) throw std::runtime_error ( COMPACTION_TO_LIST_OF_LISTS + tab + string ( "There cannot be two list objects associated with an active property that has a container mapping" ) );
 				}
 				if ( is ( container, {str_lang, str_index } ) ) {
 					psomap_obj mapObject;
@@ -1105,81 +1103,70 @@ public:
 		pobj result;
 		if ( !element ) result = 0;
 		else if ( ! ( element->LIST() || element->MAP() ) ) {
-			trace ( cout << "expanding noncompound element: " << element->toString() << " active property: " << ( act_prop ? *act_prop : string ( "" ) ) << endl << "active context:" << endl << act_ctx->toString() << endl; );
 			if ( !act_prop || *act_prop == str_graph ) result = 0;
 			else result = act_ctx->expandValue ( act_prop, element );
-			trace ( cout << "result: " << element->toString() << endl; );
 		} else if ( element->LIST() ) {
 			result = mk_olist_obj();
-			trace ( cout << "expanding each list item:" << endl; );
 			for ( pobj item : *element->LIST() ) {
-				trace ( cout << "expanding item:" << endl << item->toString() << endl; );
 				pobj v = expand ( act_ctx, act_prop, item );
-				trace ( cout << "expanded item:" << endl << v->toString() << endl; );
 				if ( act_prop && ( ( *act_prop == str_list || ( act_ctx->getContainer ( act_prop ) && *act_ctx->getContainer ( act_prop ) == str_list ) ) )
 				        && ( v->LIST() || ( v->MAP() && has ( v->MAP(), str_list ) ) ) )
-					throw LIST_OF_LISTS + string ( "\t" ) + "lists of lists are not permitted.";
+					throw std::runtime_error ( LIST_OF_LISTS + tab + string ( "lists of lists are not permitted." ) );
 				if ( v ) add_all ( result->LIST(), v );
 			}
 		} else if ( element->MAP() ) {
 			psomap elem = element->MAP();
-			if ( elem->find ( str_context ) != elem->end() ) {
-//				cout << "CONTEXT FOUND: " << endl << elem->at ( str_context )->toString() << endl;
-				act_ctx = act_ctx->parse ( elem->at ( str_context ) );
-//				trace ( cout << "parsed context:" << endl << act_ctx->toString() << endl; );
-			}
+			if ( elem->find ( str_context ) != elem->end() ) act_ctx = act_ctx->parse ( elem->at ( str_context ) );
+
 			result = mk_somap_obj();
-			trace ( cout << "expanding each map item:" << endl; );
 			for ( auto x : *elem ) {
 				string key = x.first;
 				pobj value = x.second;
 				if ( key == str_context ) continue;
 				pstring exp_prop = act_ctx->expandIri ( pstr ( key ), false, true, 0, 0 );
-				trace ( cout << "expanded property:" << *exp_prop << endl; );
 				pobj exp_val = 0;
 				if ( !exp_prop || ( exp_prop->find ( ":" ) == string::npos && !keyword ( *exp_prop ) ) ) continue;
 				if ( keyword ( *exp_prop ) ) {
-					if ( act_prop && *act_prop == str_reverse ) throw INVALID_REVERSE_PROPERTY_MAP + string ( "\t" ) + "a keyword cannot be used as a @reverse propery";
-					if ( has ( result, exp_prop ) ) throw COLLIDING_KEYWORDS + "\t" + *exp_prop + " already exists in result";
+					if ( act_prop && *act_prop == str_reverse ) throw std::runtime_error ( INVALID_REVERSE_PROPERTY_MAP + string ( tab ) + string ( "a keyword cannot be used as a @reverse propery" ) );
+					if ( has ( result, exp_prop ) ) throw std::runtime_error ( COLLIDING_KEYWORDS + tab + *exp_prop + string ( " already exists in result" ) );
 					if ( *exp_prop == str_id ) {
-						if ( !value->STR() ) throw INVALID_ID_VALUE + "\t" + "value of @id must be a string";
+						if ( !value->STR() ) throw std::runtime_error ( INVALID_ID_VALUE + tab + string ( "value of @id must be a string" ) );
 						exp_val = make_shared<string_obj> ( act_ctx->expandIri ( value->STR(), true, false, 0, 0 ) );
 					} else if ( *exp_prop == str_type ) {
 						if ( value->LIST() ) {
 							exp_val = mk_olist_obj();
 							for ( pobj v :  *value->LIST() ) {
-								if ( !v->STR() ) throw INVALID_TYPE_VALUE + "\t" + "@type value must be a string or array of strings" ;
+								if ( !v->STR() ) throw std::runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a string or array of strings" ) );
 								exp_val->LIST()->push_back ( make_shared<string_obj> ( act_ctx->expandIri ( v->STR(), true, true, 0, 0 ) ) );
 							}
 						} else if ( value->STR() ) exp_val = make_shared<string_obj> ( act_ctx->expandIri ( value->STR(), true, true, 0, 0 ) );
 						else if ( value->MAP() ) {
-							if ( value->MAP()->size() ) throw INVALID_TYPE_VALUE + "\t" + "@type value must be a an empty object for framing";
+							if ( value->MAP()->size() ) throw std::runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a an empty object for framing" ) );
 							exp_val = value;
 						} else
-							throw INVALID_TYPE_VALUE + "\t" + "@type value must be a string or array of strings";
-					} else if ( *exp_prop == str_graph ) {
+							throw std::runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a string or array of strings" ) );
+					} else if ( *exp_prop == str_graph )
 						exp_val = expand ( act_ctx, pstr ( str_graph ), value );
-						trace ( cout << "expandedValue has key @graph" << endl; );
-					} else if ( *exp_prop == str_value ) {
-						if ( value && ( value->MAP() || value->LIST() ) ) throw INVALID_VALUE_OBJECT_VALUE + string ( "\t" ) + "value of " + *exp_prop + " must be a scalar or null";
+					else if ( *exp_prop == str_value ) {
+						if ( value && ( value->MAP() || value->LIST() ) ) throw std::runtime_error ( INVALID_VALUE_OBJECT_VALUE + tab + string ( "value of " ) + *exp_prop + string ( " must be a scalar or null" ) );
 						if ( ! ( exp_val = value ) ) {
 							( *result->MAP() ) [ str_value ] = 0;
 							continue;
 						}
 					} else if ( *exp_prop == str_lang ) {
-						if ( !value->STR() ) throw INVALID_LANGUAGE_TAGGED_STRING + "\t" + string ( "Value of " ) + *exp_prop + " must be a string";
+						if ( !value->STR() ) throw std::runtime_error ( INVALID_LANGUAGE_TAGGED_STRING + tab + string ( "Value of " ) + *exp_prop + string ( " must be a string" ) );
 						exp_val = make_shared<string_obj> ( lower ( *value->STR() ) );
 					} else if ( *exp_prop == str_index ) {
-						if ( !value->STR() ) throw INVALID_INDEX_VALUE + "\t" + string ( "Value of " ) + *exp_prop + " must be a string";
+						if ( !value->STR() ) throw std::runtime_error ( INVALID_INDEX_VALUE + tab + string ( "Value of " ) + *exp_prop + string ( " must be a string" ) );
 						exp_val = value;
 					} else if ( *exp_prop == str_list ) {
 						if ( act_prop && *act_prop == str_graph ) continue;
 						exp_val = expand ( act_ctx, act_prop, value );
 						if ( !exp_val->LIST() ) exp_val = mk_olist_obj ( olist ( 1, exp_val ) );
-						for ( auto o : *exp_val->LIST() ) if ( o->MAP() && has ( o->MAP(), str_list ) ) throw LIST_OF_LISTS + "\t" + "A list may not contain another list";
+						for ( auto o : *exp_val->LIST() ) if ( o->MAP() && has ( o->MAP(), str_list ) ) throw std::runtime_error ( LIST_OF_LISTS + tab + string ( "A list may not contain another list" ) );
 					} else if ( *exp_prop == str_set ) exp_val = expand ( act_ctx, act_prop, value );
 					else if ( *exp_prop == str_reverse ) {
-						if ( !value->MAP() ) throw INVALID_REVERSE_VALUE + "\t" + "@reverse value must be an object";
+						if ( !value->MAP() ) throw std::runtime_error ( INVALID_REVERSE_VALUE + tab + string ( "@reverse value must be an object" ) );
 						exp_val = expand ( act_ctx, pstr ( str_reverse ), value );
 						if ( has ( exp_val->MAP(), str_reverse ) ) {
 							psomap reverse = exp_val->MAP()->at ( str_reverse )->MAP();
@@ -1198,7 +1185,7 @@ public:
 								if ( property == str_reverse ) continue;
 								polist items = exp_val->MAP()->at ( property )->LIST();
 								for ( pobj item : *items ) {
-									if ( has ( item->MAP(), str_value ) || has ( item->MAP(), str_list ) ) throw INVALID_REVERSE_PROPERTY_VALUE;
+									if ( has ( item->MAP(), str_value ) || has ( item->MAP(), str_list ) ) throw std::runtime_error ( INVALID_REVERSE_PROPERTY_VALUE );
 									if ( !has ( reverseMap, property ) ) ( *reverseMap ) [ property ] = mk_olist_obj();
 									reverseMap->at ( property )->LIST()->push_back ( item );
 								}
@@ -1216,7 +1203,7 @@ public:
 						pobj languageValue = yy.second;
 						if ( ! languageValue->LIST() ) languageValue = mk_olist_obj ( olist ( 1, languageValue ) );
 						for ( pobj item : *languageValue->LIST() ) {
-							if ( ! item->STR() ) throw INVALID_LANGUAGE_MAP_VALUE; // + "\t" + "Expected " + item.toString() + " to be a string");
+							if ( ! item->STR() ) throw std::runtime_error ( INVALID_LANGUAGE_MAP_VALUE + tab + string ( "Expected " ) + item->toString() + string ( " to be a string" ) );
 							somap tmp;
 							tmp[str_value] = item;
 							tmp[str_lang] = make_shared<string_obj> ( lower ( language ) );
@@ -1258,25 +1245,25 @@ public:
 				}
 			}
 			if ( hasvalue ( result ) ) {
-				somap& ks = *result->MAP();
+				somap ks = *result->MAP();
 				if ( hasvalue ( ks ) ) ks.erase ( str_value );
 				if ( hasindex ( ks ) ) ks.erase ( str_index );
 				bool langremoved = haslang ( ks ), typeremoved = hastype ( ks );
 				if ( langremoved ) ks.erase ( str_lang );
 				if ( typeremoved ) ks.erase ( str_type );
-				if ( ( langremoved && typeremoved ) || ks.size() ) throw INVALID_VALUE_OBJECT + "\t" + "value object has unknown keys";
+				if ( ( langremoved && typeremoved ) || ks.size() ) throw std::runtime_error ( INVALID_VALUE_OBJECT + tab + string ( "value object has unknown keys" ) );
 				pobj rval = getvalue ( result );
 				if ( !rval ) result = 0;
-				else if ( ! rval->STR() && haslang ( result ) ) throw INVALID_LANGUAGE_TAGGED_VALUE + "\t" + "when @language is used, @value must be a string";
+				else if ( ! rval->STR() && haslang ( result ) ) throw std::runtime_error ( INVALID_LANGUAGE_TAGGED_VALUE + tab + string ( "when @language is used, @value must be a string" ) );
 				else if ( hastype ( result ) )
 					if ( ! ( gettype ( result )->STR() ) || startsWith ( *gettype ( result )->STR(), "_:" ) || gettype ( result )->STR()->find ( ":" ) == string::npos )
-						throw INVALID_TYPED_VALUE + "\t" + "value of @type must be an IRI";
+						throw std::runtime_error ( INVALID_TYPED_VALUE + tab + string ( "value of @type must be an IRI" ) );
 			} else if ( hastype ( result ) ) {
 				pobj rtype = gettype ( result );
 				if ( !rtype->LIST() ) ( *result->MAP() ) [str_type] = mk_olist_obj ( olist ( 1, rtype ) ) ;
 			} else if ( hasset ( result ) || haslist ( result ) ) {
 				if ( result->MAP()->size() > ( hasindex ( result ) ? 2 : 1 ) )
-					throw INVALID_SET_OR_LIST_OBJECT + "\t" + "@set or @list may only contain @index";
+					throw std::runtime_error ( INVALID_SET_OR_LIST_OBJECT + tab + string ( "@set or @list may only contain @index" ) );
 				if ( hasset ( result ) ) result = getset ( result );
 			}
 			if ( haslang ( result ) && result->MAP()->size() == 1 ) result = 0;
@@ -1288,7 +1275,6 @@ public:
 		if ( result && result->MAP() && result->MAP()->size() == 1 && hasgraph ( result ) ) result = getgraph ( result );
 		if ( !result ) result = mk_olist_obj();
 		if ( !result->LIST() ) result = mk_olist_obj ( olist ( 1, result ) );
-		trace ( cout << "expanded value:" << result->toString() << endl; );
 		return result;
 	}
 
@@ -1557,8 +1543,8 @@ public:
 		}
 		if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared<qlist> ( triples );
 		else for ( auto t : triples ) at ( graph_name )->push_back ( t );
-		trace ( cout << "graphToRDF: " << endl << mk_somap_obj ( graph )->toString() << endl );
-		trace ( cout << "triples: " << endl; for ( auto q : triples ) cout << q->tostring ( graph_name ) << endl );
+		trace ( "graphToRDF: " << endl << mk_somap_obj ( graph )->toString() << endl );
+		trace ( "triples: " << endl; for ( auto q : triples ) cout << q->tostring ( graph_name ) << endl );
 		//		( *this ) [ graph_name ] = make_shared<qlist> ( triples );
 	}
 
@@ -1595,10 +1581,7 @@ prdf_db jsonld_api::toRDF() {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
 	gen_node_map ( value, nodeMap );
-	trace ( cout << "---------" << endl;
-	        cout << "Node map:" << endl;
-	        cout << "---------" << endl;
-	        cout << mk_somap_obj ( nodeMap )->toString() << endl; );
+	trace ( "---------" << endl << "Node map:" << endl << "---------" << endl << mk_somap_obj ( nodeMap )->toString() << endl; );
 	rdf_db r;
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) ) continue;

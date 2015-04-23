@@ -8,7 +8,7 @@ public:
 	virtual string help() const = 0;
 	virtual int operator() ( const strings& args ) = 0;
 
-	pobj load_json ( string fname = "", bool print = true ) {
+	pobj load_json ( string fname = "", bool print = false ) {
 		json_spirit::mValue v;
 		if ( fname == "" ) json_spirit::read_stream ( cin, v );
 		else {
@@ -16,10 +16,7 @@ public:
 			json_spirit::read_stream ( is, v );
 		}
 		pobj r =  convert ( v );
-		cout << "Input:" << endl;
-		cout << "------" << endl;
-		cout << r->toString() << endl;
-		cout << "------ end Input" << endl;
+		if ( print ) cout << r->toString() << endl;
 		return r;
 	}
 
@@ -36,8 +33,12 @@ public:
 		return r;
 	}
 
-	prdf_db to_quads( const strings& args, bool print = false ) { return to_quads(load_json(args), print); }
-	pobj load_json ( const strings& args ) { return load_json ( args.size() > 2 ? args[2] : "" ); }
+	prdf_db to_quads ( const strings& args, bool print = false ) {
+		return to_quads ( load_json ( args ), print );
+	}
+	pobj load_json ( const strings& args ) {
+		return load_json ( args.size() > 2 ? args[2] : "" );
+	}
 };
 
 class expand_cmd : public cmd_t {
@@ -51,7 +52,7 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		cout << jsonld::expand ( load_json ( args ) )->toString()<<endl;
+		cout << jsonld::expand ( load_json ( args ) )->toString() << endl;
 		return 1;
 	}
 };
@@ -59,11 +60,12 @@ public:
 class toquads_cmd : public cmd_t {
 public:
 	virtual string desc() const {
-		return "Run JSON-LD->RDF algorithm http://www.w3.org/TR/json-ld-api/#deserialize-json-ld-to-rdf-algorithm including all dependant algorithms.";
+		return "Run JSON-LD->RDF algorithm http://www.w3.org/TR/json-ld-api/#deserialize-json-ld-to-rdf-algorithm of already-expanded input.";
 	}
 	virtual string help() const {
 		stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
 		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+		ss << "Note that input has to be expanded first, so you might want to pipe it with 'tau expand' command." << endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
@@ -80,10 +82,39 @@ public:
 	}
 };
 
+class nodemap_cmd : public cmd_t {
+public:
+	virtual string desc() const {
+		return "Run JSON-LD node map generation algorithm.";
+	}
+	virtual string help() const {
+		stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
+		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+		return ss.str();
+	}
+	virtual int operator() ( const strings& args ) {
+		try {
+			psomap nodeMap = make_shared<somap>();
+			( *nodeMap ) [str_default] = mk_somap_obj();
+			jsonld::jsonld_api a;
+			a.gen_node_map ( load_json ( args ), nodeMap );
+			cout << mk_somap_obj ( nodeMap )->toString() << endl;
+		} catch ( string& ex ) {
+			cerr << ex << endl;
+			return 1;
+		} catch ( exception& ex ) {
+			cerr << ex.what() << endl;
+			return 1;
+		}
+		return 0;
+	}
+};
+
 map<string, cmd_t*> cmds = []() {
 	map<string, cmd_t*> r;
 	r["expand"] = new expand_cmd;
 	r["toquads"] = new toquads_cmd;
+	r["nodemap"] = new nodemap_cmd;
 	return r;
 }();
 

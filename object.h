@@ -17,13 +17,13 @@
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
-bool autobt = false, _pause=true;
+bool autobt = false, _pause = true;
 void bt() {
 	void *trace[16];
 	char **messages = 0;
 	int i, trace_size = 0;
 	trace_size = backtrace ( trace, 16 );
-	trace[1] = ( void * ) __builtin_return_address(0);
+	trace[1] = ( void * ) __builtin_return_address ( 0 );
 	messages = backtrace_symbols ( trace, trace_size );
 	printf ( "[bt] Execution path:\n" );
 	for ( i = 1; i < trace_size; ++i ) {
@@ -40,8 +40,8 @@ void bt() {
 void dopause() {
 	std::clog << "press any key to continue, b for backtrace, or a to always show backtrace, or c to stop pausing...";
 	char ch = getchar();
-	if ( ch == 'b' || (autobt = (ch == 'a')) ) bt();
-	else if (ch == 'c') autobt = _pause=false;
+	if ( ch == 'b' || ( autobt = ( ch == 'a' ) ) ) bt();
+	else if ( ch == 'c' ) autobt = _pause = false;
 }
 
 
@@ -192,9 +192,9 @@ bool has ( pdefined_t c, const string& k ) {
 }
 
 bool has ( const somap& c, const string& k ) {
-#ifdef VERBOSE
-	trace ( "query for key " << k << "form object: " << std::endl << mk_somap_obj ( c )->toString() << std::endl);
-#endif
+	#ifdef VERBOSE
+	trace ( "query for key " << k << "form object: " << std::endl << mk_somap_obj ( c )->toString() << std::endl );
+	#endif
 	return c.find ( k ) != c.end();
 }
 
