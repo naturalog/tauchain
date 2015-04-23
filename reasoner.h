@@ -100,7 +100,7 @@ int builtin ( pred_t, proof_trace_item ) {
 	    -1:no such builtin
 	    0:it didnt unify
 	*/
-	trace ( cout << "NO BEES yet PLZ!" << endl; )
+	trace ( "NO BEES yet PLZ!" << endl );
 	return -1;
 }
 typedef map<string, vector<rule_t>> evidence_t;
@@ -119,44 +119,41 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
 	queue.emplace_back ( s );
 	//queue.push_back(s);
-	trace ( cout << "Goal: " << ( string ) goal << endl; )
+	trace (  "Goal: " << ( string ) goal << endl );
 	while ( queue.size() > 0 ) {
-		trace ( cout << "=======" << endl; )
+		trace (  "=======" << endl );
 		ppti c = queue.front();
-		trace ( cout << "  c: " << ( string ) ( *c ) << endl; )
+		trace (  "  c: " << ( string ) ( *c ) << endl );
 		queue.pop_front();
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
-			trace ( cout << "TIMEOUT!" << endl; )
+			trace (  "TIMEOUT!" << endl );
 			return true;
 		}
-		trace (
-		    cout << "c.ind: " << c->ind << endl;
-		    cout << "c.rule.body.size(): " << c->rule.body.size() << endl; //in step 1, rule body is goal
-		)
+		trace ( "c.ind: " << c->ind << endl << "c.rule.body.size(): " << c->rule.body.size() << endl); //in step 1, rule body is goal
 		// all parts of rule body succeeded...(?)
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
-				trace ( cout << "no parent!" << endl; )
+				trace ( "no parent!" << endl );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };
-					trace ( cout << "Adding evidence for " << ( string ) t.pred << ": " << ( string ) tmp << endl; )
+					trace (  "Adding evidence for " << ( string ) t.pred << ": " << ( string ) tmp << endl );
 					evidence[t.pred].push_back ( tmp );
 				}
 				continue;
 			}
-			trace ( cout << "Q parent: "; )
+			trace ( "Q parent: " );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, c->parent->env, g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env, true );
 			r->ind++;
-			trace ( cout << ( string ) ( *r ) << endl; )
+			trace (  ( string ) ( *r ) << endl );
 			queue.push_back ( r );
 			continue;
 		}
-		trace ( cout << "Done q" << endl; )
+		trace ( "Done q" << endl );
 		pred_t t = c->rule.body[c->ind];
 		size_t b = builtin ( t, *c );
 		if ( b == 1 ) {
@@ -168,9 +165,9 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		} else if ( b == 0 )   // builtin didnt unify
 			continue; // else there is no such builtin, continue...
 
-		trace ( cout << "Checking cases..." << endl; )
+		trace ( "Checking cases..." << endl );
 		if ( cases.find ( t.pred ) == cases.end() ) {
-			trace ( cout << "No Cases(no such predicate)!" << endl; )
+			trace ( "No Cases(no such predicate)!" << endl );
 			continue;
 		}
 		size_t src = 0;
@@ -178,37 +175,37 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		for ( rule_t rl : cases[t.pred] ) {
 			src++;
 			pground_t g = aCopy ( c->ground );
-			trace ( cout << "Check rule: " << ( string ) rl << endl; )
+			trace (  "Check rule: " << ( string ) rl << endl );
 			if ( rl.body.size() == 0 ) g->push_back ( { rl, make_shared<env_t>() } ); //its a conditionless fact
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
 			//rl could imply our rule...
 			if ( unify ( t, c->env, rl.head, r->env, true ) ) {
 				ppti ep = c;
 				while ( ( ep = ep->parent ) ) {
-					trace ( cout << "  ep.src: " << ep->src << endl << "  c.src: " << c->src << endl; )
+					trace ( "  ep.src: " << ep->src << endl << "  c.src: " << c->src << endl );
 					if ( ep->src == c->src && unify ( ep->rule.head, ep->env, c->rule.head, c->env, false ) ) {
-						trace ( cout << "  ~~ match ~~ " << endl; )
+						trace ( "  ~~ match ~~ " << endl );
 						break;
 					}
-					trace ( cout << "  ~~  ~~  ~~" << endl; )
+					trace ( "  ~~  ~~  ~~" << endl );
 				}
 				if ( !ep ) {
-					trace ( cout << "Adding to queue: " << ( string ) ( *r ) << endl << flush; )
+					trace ( "Adding to queue: " << ( string ) ( *r ) << endl << flush );
 					queue.push_front ( r );
-				} else trace ( cout << "didn't reach top" << endl; )
-					trace ( cout << "Done euler loop" << endl; )
-				} else trace ( cout << "No loop here" << endl; )
+				} else trace ( "didn't reach top" << endl );
+					trace ( "Done euler loop" << endl );
+				} else trace ( "No loop here" << endl );
 			}
-		trace ( cout << "done rule checks, looping" << endl; )
+		trace ( "done rule checks, looping" << endl );
 	}
 	return false;
 }
 
 bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
-	trace ( cout << indent() << "Unify:" << endl << flush << indent() << "  s: " << ( string ) s << " in " << ( *senv ) << endl << flush;
-	        cout << indent() << "  d: " << ( string ) d << " in " << ( *denv ) << endl << flush; )
+	trace ( indent() << "Unify:" << endl << flush << indent() << "  s: " << ( string ) s << " in " << ( *senv ) << endl << flush;
+	        cout << indent() << "  d: " << ( string ) d << " in " << ( *denv ) << endl << flush );
 	if ( s.pred[0] == '?' ) {
-		trace ( cout << indent() << "  source is var" << endl << flush; )
+		trace ( indent() << "  source is var" << endl << flush );
 		try {
 			pred_t sval = evaluate ( s, senv );
 			_indent++;
@@ -217,46 +214,48 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 			return r;
 		} catch ( ... ) {
 			if ( _indent ) _indent--;
-			trace ( cout << indent() << " Match(free var)!" << endl; )
+			trace ( indent() << " Match(free var)!" << endl );
 			return true;
 		}
 	}
 	if ( d.pred[0] == '?' ) {
-		trace ( cout << indent() << "  dest is var" << endl << flush; )
+		trace ( indent() << "  dest is var" << endl << flush );
 		try {
 			pred_t dval = evaluate ( d, denv );
-			trace ( _indent++; )
+			trace ( _indent++ );
 			bool b = unify ( s, senv, dval, denv, f );
-			trace ( _indent--; )
+			trace ( _indent-- );
 			return b;
 		} catch ( ... ) {
 			( *denv ) [d.pred] = evaluate ( s, senv );
-			trace ( _indent--; )
-			trace ( cout << indent() << " Match!(free var)" << endl; )
+			trace ( _indent-- );
+			trace (  indent() << " Match!(free var)" << endl );
 			return true;
 		}
 	}
 	if ( s.pred == d.pred && s.args.size() == d.args.size() ) {
-		trace ( cout << indent() << "  Comparison:" << endl << flush; )
+		trace ( indent() << "  Comparison:" << endl << flush );
 		for ( size_t i = 0; i < s.args.size(); i++ ) {
-			trace ( _indent++; )
+			_indent++;
 			if ( !unify ( s.args[i], senv, d.args[i], denv, f ) ) {
-				trace ( _indent--; cout << indent() << "    " << ( string ) s.args[i] << " != " << ( string ) d.args[i] << endl << flush; )
+				_indent--;
+				trace ( indent() << "    " << ( string ) s.args[i] << " != " << ( string ) d.args[i] << endl << flush );
 				return false;
 			}
-			trace ( _indent--; cout << indent() << "    " << ( string ) s.args[i] << " == " << ( string ) d.args[i] << endl << flush; )
+			_indent--;
+			trace ( indent() << "    " << ( string ) s.args[i] << " == " << ( string ) d.args[i] << endl << flush );
 		}
-		trace ( cout << indent() << "  Equal!" << endl << flush; )
+		trace ( indent() << "  Equal!" << endl << flush );
 		return true;
 	}
-	trace ( cout << indent() << " No match" << endl << flush; )
+	trace ( indent() << " No match" << endl << flush );
 	return false;
 }
 
 pred_t evaluate ( pred_t t, penv_t env ) {
-	trace ( cout << indent() << "Eval " << ( string ) t << " in " << ( *env ) << endl; )
+	trace ( indent() << "Eval " << ( string ) t << " in " << ( *env ) << endl );
 	if ( t.pred[0] == '?' ) {
-		trace ( cout << "(" << ( string ) t << " is a var..)" << endl; );
+		trace (  "(" << ( string ) t << " is a var..)" << endl );
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) return evaluate ( it->second, env );
 		else throw 0;

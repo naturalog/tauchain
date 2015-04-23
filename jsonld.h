@@ -15,13 +15,6 @@
 #include <stdexcept>
 #include "object.h"
 
-//bool DEBUG = true;
-#define DEBUG
-#ifdef DEBUG
-#define trace(x) x
-#else
-#define trace(x)
-#endif
 
 using namespace std;
 
@@ -1596,7 +1589,9 @@ private:
 	}
 };
 
-std::shared_ptr<rdf_db> jsonld_api::toRDF() {
+typedef std::shared_ptr<rdf_db> prdf_db;
+
+prdf_db jsonld_api::toRDF() {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
 	gen_node_map ( value, nodeMap );
@@ -1631,10 +1626,10 @@ pobj expand ( pobj& input, jsonld_options opts ) {
 	return expanded;
 }
 
-std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options ) {
+prdf_db jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 	pobj expandedInput = jsonld::expand ( input, options );
 	jsonld_api api ( expandedInput, options );
-	std::shared_ptr<rdf_db> dataset = api.toRDF();
+	prdf_db dataset = api.toRDF();
 
 	// generate namespaces from context
 	if ( options.useNamespaces ) {
@@ -1651,7 +1646,7 @@ std::shared_ptr<rdf_db> jsonld_api::toRDF ( pobj input, jsonld_options options )
 }
 
 
-std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
+prdf_db to_rdf ( jsonld_api& a, pobj o ) {
 	//	psomap node_map = make_shared<somap>();
 	//	a.gen_node_map ( o, node_map );
 	return a.toRDF();
@@ -1667,6 +1662,7 @@ typedef jsonld::pquad pquad;
 typedef jsonld::node node;
 typedef jsonld::pnode pnode;
 typedef jsonld::qlist qlist;
+typedef jsonld::prdf_db prdf_db;
 string obj::toString ( ) {
 	return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print );
 }

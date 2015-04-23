@@ -2,6 +2,18 @@
 #include <vector>
 #include <memory>
 #include <string>
+//#include "logger.h"
+
+#define DEBUG
+#ifdef DEBUG
+//logger _logger;
+auto dummy = [](){return (bool)std::cin.tie(&std::clog);}();
+void dopause() { std::clog << "press any key to continue..."; getchar(); }
+bool _pause = false;
+#define trace(x) std::clog<<x; if (_pause) dopause()
+#else
+#define trace(x)
+#endif
 
 typedef nullptr_t null;
 typedef std::string string;
@@ -11,16 +23,10 @@ inline pstring pstr ( const string& s ) {
 	return std::make_shared<string> ( s );
 }
 inline pstring pstr ( const char* s ) {
-	if ( s ) return std::make_shared<string> ( s );
-	else return 0;
+	return s ? pstr ( string ( s ) ) : 0;
 }
 inline pstring pstr ( const unsigned char* s ) {
-	if ( s ) return std::make_shared<string> ( ( const char* ) s );
-	else return 0;
-}
-inline pstring pstr ( unsigned char* s ) {
-	if ( s ) return std::make_shared<string> ( ( const char* ) s );
-	else return 0;
+	return pstr ( ( const char* ) s );
 }
 
 class obj {
@@ -77,8 +83,10 @@ public:
 class type##_obj : public obj { \
 	std::shared_ptr<type> data; \
 public: \
-	type##_obj(const type& o = type()) { data = std::make_shared<type>(); *data = o; } \
-	type##_obj(const std::shared_ptr<type> o) : data(o) { } \
+	type##_obj(const type& o = type()) { data = std::make_shared<type>(); *data = o; \
+	trace( "created object of type "<<type_str()<<" and value "<<toString());} \
+	type##_obj(const std::shared_ptr<type> o) : data(o) {  \
+	trace( "created object of type "<<type_str()<<" and value "<<toString());} \
 	virtual std::shared_ptr<type> getter() { return data; } \
 	virtual string type_str() const { return #type; } \
 	virtual bool equals(const obj& o) const { \
@@ -149,6 +157,7 @@ bool has ( pdefined_t c, const string& k ) {
 }
 
 bool has ( const somap& c, const string& k ) {
+	trace ( "query for key " << k << "form object: " << std::endl << mk_somap_obj ( c )->toString() );
 	return c.find ( k ) != c.end();
 }
 

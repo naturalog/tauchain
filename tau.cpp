@@ -1,6 +1,6 @@
 #include "reasoner.h"
 
-typedef list<string> strings;
+typedef vector<string> strings;
 
 class cmd_t {
 public:
@@ -8,31 +8,23 @@ public:
 	virtual string help() const = 0;
 	virtual int operator() ( const strings& args ) = 0;
 
-	pobj load_json ( istream& is ) {
+	template<typename Stream>
+	pobj load_json ( Stream& is ) {
 		json_spirit::mValue v;
 		json_spirit::read_stream ( is, v );
-		pobj o = convert ( v );
-		//		clog << "
+		return convert ( v );
 	}
 
-	rdf_db load_jsonld ( istream is, bool print = false ) {
+	prdf_db to_quads ( pobj c, bool print = false ) {
 		using namespace jsonld;
 		jsonld_options o;
-
-		trace ( cout << "reading json:" << endl;
-		        cout << "-------------" << endl; );
-		pobj c = load_json ( is );
-		trace ( cout << c->toString() << endl; );
 		jsonld_api a ( c, o );
-		trace ( cout << "--------------------" << endl;
-		        cout << "converting to quads:" << endl;
-		        cout << "--------------------" << endl; );
-		auto r = *a.toRDF ( c, o );
+		auto r = a.toRDF ( c, o );
 		if ( print ) {
 			cout << "Loaded graphs:" << endl;
-			for ( auto x : r ) cout << x.first << endl;
+			for ( auto x : *r ) cout << x.first << endl;
 		}
-		//	cout << r.tostring() << endl;
+		cout << r->tostring() << endl;
 		return r;
 	}
 
@@ -48,8 +40,7 @@ public:
 		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
 		return ss.str();
 	}
-	virtual int operator() ( const strings& args ) {
-	}
+	virtual int operator() ( const strings& args ) { return 1; }
 };
 
 class toquads_cmd : public cmd_t {
@@ -63,6 +54,22 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
+		try {
+			if (args.size() == 1) to_quads(load_json(cin),true);
+			else {
+				ifstream is(args[1]);
+				to_quads(load_json(is) ,true);
+			}
+		}
+		catch (string& ex) {
+			cerr<<ex<<endl;
+			return 1;
+		}
+		catch (exception& ex) {
+			cerr<<ex.what()<<endl;
+			return 1;
+		}
+		return 0;
 	}
 };
 
