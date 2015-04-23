@@ -1,6 +1,3 @@
-#include <vector>
-#include <string>
-#include <map>
 #include <algorithm>
 #include <utility>
 #include <memory>
@@ -16,6 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
+#include "object.h"
 
 //bool DEBUG = true;
 #define DEBUG
@@ -26,8 +24,6 @@
 #endif
 
 using namespace std;
-
-typedef shared_ptr<string> pstring;
 
 const string str_base = "@base";
 const string str_context = "@context";
@@ -49,24 +45,6 @@ const string str_explicit = "@explicit";
 const string str_set = "@set";
 const string str_embedChildren = "@embedChildren";
 
-inline pstring pstr ( const string& s ) {
-	return make_shared<string> ( s );
-}
-
-inline pstring pstr ( const char* s ) {
-	if ( s ) return make_shared<string> ( s );
-	else return 0;
-}
-
-inline pstring pstr ( const unsigned char* s ) {
-	if ( s ) return make_shared<string> ( ( const char* ) s );
-	else return 0;
-}
-
-inline pstring pstr ( unsigned char* s ) {
-	if ( s ) return make_shared<string> ( ( const char* ) s );
-	else return 0;
-}
 
 inline bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
@@ -162,186 +140,6 @@ template<typename T> string tostr ( T t ) {
 }
 
 
-typedef nullptr_t null;
-
-class obj {
-protected:
-	obj() {}
-public:
-	typedef std::shared_ptr<obj> pobj;
-	typedef map<string, pobj> somap;
-	typedef vector<pobj> olist;
-	typedef std::shared_ptr<somap> psomap;
-
-	virtual std::shared_ptr<uint64_t> UINT() {
-		return 0;
-	}
-	virtual std::shared_ptr<int64_t> INT() {
-		return 0;
-	}
-	virtual std::shared_ptr<bool> BOOL() {
-		return 0;
-	}
-	virtual std::shared_ptr<string> STR() {
-		return 0;
-	}
-	virtual std::shared_ptr<somap> MAP() {
-		return 0;
-	}
-	virtual std::shared_ptr<olist> LIST() {
-		return 0;
-	}
-	virtual std::shared_ptr<double> DOUBLE() {
-		return 0;
-	}
-	virtual std::shared_ptr<null> Null() {
-		return 0;
-	}
-
-	bool map_and_has ( const string& k ) {
-		psomap m = MAP();
-		return m && m->find ( k ) != m->end();
-	}
-	bool map_and_has_null ( const string& k ) {
-		psomap m = MAP();
-		if ( !m ) return false;
-		auto it = m->find ( k );
-		return it != m->end() && it->second->Null();
-	}
-	virtual string type_str() const = 0;
-	virtual bool equals ( const obj& o ) const = 0;
-	virtual pobj clone() const = 0;
-	string toString ( );
-	/*	 string toString ( int indent = 0, bool initial_endl = true ) {
-			stringstream ss;
-			auto ind = [indent]() {
-				string s = "";
-				if ( !indent ) return s;
-				size_t i = indent;
-				while ( --i ) s += "\t";
-				return s;
-			};
-			if ( MAP() ) {
-				if ( initial_endl ) ss << endl;
-				for ( auto x : *MAP() ) {
-					ss << ind() << x.first << ":\t" << x.second->toString ( indent + 1, false );
-					if ( !x.second->MAP() && !x.second->LIST() ) ss << endl;
-				}
-				return ss.str();
-			}
-
-			if ( LIST() ) {
-				if ( initial_endl ) ss << endl;
-				for ( auto x : *LIST() ) {
-					ss << ind() << x->toString ( indent + 1 );
-					if ( !x->MAP() && !x->LIST() ) ss << endl;
-				}
-				return ss.str();
-			}
-			ss << ind();
-			if ( BOOL() ) ss << *BOOL();
-			else if ( DOUBLE() ) ss << *DOUBLE();
-			else if ( Null() ) ss << "(null)";
-			else if ( STR() ) ss << *STR();
-			else if ( INT() ) ss << *INT();
-			else if ( UINT() ) ss << *UINT();
-			return ss.str();
-		}*/
-};
-
-#define OBJ_IMPL(type, getter) \
-class type##_obj : public obj { \
-	std::shared_ptr<type> data; \
-public: \
-	type##_obj(const type& o = type()) { data = make_shared<type>(); *data = o; } \
-	type##_obj(const std::shared_ptr<type> o) : data(o) { } \
-	virtual std::shared_ptr<type> getter() { return data; } \
-	virtual string type_str() const { return #type; } \
-	virtual bool equals(const obj& o) const { \
-		if ( type_str() != o.type_str() ) return false; \
-		auto od = ((const type##_obj&)o).data; \
-		if ( !data || !od) return data == od; \
-		return *data == *od; \
-	}\
-	virtual pobj clone() const { return make_shared<type##_obj>(*data);  }\
-};typedef std::shared_ptr<type##_obj> p##type##_obj
-
-OBJ_IMPL ( int64_t, INT );
-OBJ_IMPL ( uint64_t, UINT );
-OBJ_IMPL ( bool, BOOL );
-OBJ_IMPL ( double, DOUBLE );
-OBJ_IMPL ( string, STR );
-OBJ_IMPL ( somap, MAP );
-OBJ_IMPL ( olist, LIST );
-OBJ_IMPL ( null, Null );
-
-typedef obj::pobj pobj;
-typedef obj::somap somap;
-typedef obj::olist olist;
-typedef std::shared_ptr<somap> psomap;
-typedef std::shared_ptr<olist> polist;
-typedef std::shared_ptr<bool> pbool;
-typedef map<string, bool> defined_t;
-typedef std::shared_ptr<defined_t> pdefined_t;
-
-template<typename T> pstring_obj mk_str_obj ( T t ) {
-	return make_shared<string_obj> ( t );
-}
-
-pstring_obj mk_str_obj() {
-	return make_shared<string_obj>();
-}
-
-template<typename T> psomap_obj mk_somap_obj ( T t ) {
-	return make_shared<somap_obj> ( t );
-}
-psomap_obj mk_somap_obj() {
-	return make_shared<somap_obj>();
-}
-
-template<typename T> polist_obj mk_olist_obj ( T t ) {
-	return make_shared<olist_obj> ( t );
-}
-
-polist_obj mk_olist_obj() {
-	return make_shared<olist_obj>();
-}
-
-template<typename T> polist mk_olist ( T t ) {
-	return make_shared<olist> ( t );
-}
-
-polist mk_olist() {
-	return make_shared<olist>();
-}
-
-bool has ( const defined_t& c, const string& k ) {
-	return c.find ( k ) != c.end();
-}
-
-bool has ( pdefined_t c, const string& k ) {
-	return c && has ( *c, k );
-}
-
-bool has ( const somap& c, const string& k ) {
-	return c.find ( k ) != c.end();
-}
-
-bool has ( psomap c, const string& k ) {
-	return c && has ( *c, k );
-}
-
-bool has ( psomap c, pstring k ) {
-	return k && has ( c, *k );
-}
-
-bool has ( pobj o, string s ) {
-	return o && o->MAP() && has ( o->MAP(), s );
-}
-
-bool has ( pobj o, pstring s ) {
-	return s && has ( o, *s );
-}
 
 string resolve ( pstring, const string& );
 
@@ -495,50 +293,6 @@ struct remote_doc_t {
 
 void* curl = curl_easy_init();
 
-json_spirit::mValue convert ( obj& v ) {
-	typedef json_spirit::mValue val;
-	val r;
-	if ( v.UINT() ) return val ( *v.UINT() );
-	if ( v.INT() )  return val ( *v.INT() );
-	if ( v.STR() )  return val ( *v.STR() );
-	if ( v.DOUBLE() )  return val ( *v.DOUBLE() );
-	if ( v.BOOL() )  return val ( *v.BOOL() );
-	else if ( v.LIST() ) {
-		val::Array a;
-		for ( auto x : *v.LIST() ) a.push_back ( convert ( *x ) );
-		return val ( a );
-	} else {
-		if ( !v.MAP() ) throw "logic error";
-		val::Object a;
-		for ( auto x : *v.MAP() ) a[x.first] = convert ( *x.second );
-		return val ( a );
-	}
-}
-
-pobj convert ( const json_spirit::mValue& v ) {
-	pobj r;
-	if ( v.is_uint64() ) r = make_shared<uint64_t_obj> ( v.get_uint64() );
-	else if ( v.isInt() ) r = make_shared<int64_t_obj> ( v.get_int64() );
-	else if ( v.isString() ) r = make_shared<string_obj> ( v.get_str() );
-	else if ( v.isDouble() ) r = make_shared<double_obj> ( v.get_real() );
-	else if ( v.isBoolean() ) r = make_shared<bool_obj> ( v.get_bool() );
-	else if ( v.is_null() ) r = 0; //make_shared<null_obj>();
-	else if ( v.isList() ) {
-		r = make_shared<olist_obj>();
-		auto a = v.get_array();
-		for ( auto x : a ) r->LIST()->push_back ( convert ( x ) );
-	} else {
-		if ( !v.isMap() ) throw "logic error";
-		r = make_shared<somap_obj>();
-		auto a = v.get_obj();
-		for ( auto x : a ) ( *r->MAP() ) [x.first] = convert ( x.second );
-	}
-	return r;
-}
-
-string obj::toString ( ) {
-	return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print );
-}
 
 size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
 	string data ( ( const char* ) ptr, ( size_t ) size * n );
@@ -1903,43 +1657,6 @@ std::shared_ptr<rdf_db> to_rdf ( jsonld_api& a, pobj o ) {
 	return a.toRDF();
 }
 
-rdf_db load_jsonld ( string fname, bool print = false ) {
-	jsonld_options o;
-	/*pstring*/ o.base = 0;
-	/*pbool*/ o.compactArrays = make_shared<bool> ( true );
-	//	/*pobj*/ o.expandContext = 0;
-	/*pstring*/ o.processingMode = pstr ( "json-ld-1.0" );
-	/*pbool*/ o.embed = 0;
-	/*pbool*/ o.isexplicit = 0;
-	/*pbool*/ o.omitDefault = 0;
-	/*pbool*/ o.useRdfType = make_shared<bool> ( true );
-	/*pbool*/ o.useNativeTypes = make_shared<bool> ( true );
-	/*pbool*/ o.produceGeneralizedRdf = make_shared<bool> ( true );
-	/*pstring*/ o.format = 0;
-	/*pbool*/ o.useNamespaces = make_shared<bool> ( true );
-	/*pstring*/ o.outputForm = 0;
-
-	json_spirit::mValue v;
-	ifstream ifs ( fname );
-	trace ( cout << "reading json:" << endl;
-	        cout << "-------------" << endl; );
-	json_spirit::read_stream ( ifs, v );
-	pobj c = convert ( v );
-	trace (
-	    cout << c->toString() << endl;
-	);
-	jsonld_api a ( c, o );
-	trace ( cout << "--------------------" << endl;
-	        cout << "converting to quads:" << endl;
-	        cout << "--------------------" << endl; );
-	auto r = *a.toRDF ( c, o );
-	if ( print ) {
-		cout << "Loaded graphs:" << endl;
-		for ( auto x : r ) cout << x.first << endl;
-	}
-	//	cout << r.tostring() << endl;
-	return r;
-}
 
 size_t jsonld_api::blankNodeCounter = 0;
 map<string, string> jsonld_api::bnode_id_map;
@@ -1950,3 +1667,5 @@ typedef jsonld::pquad pquad;
 typedef jsonld::node node;
 typedef jsonld::pnode pnode;
 typedef jsonld::qlist qlist;
+string obj::toString ( ) { return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print ); }
+
