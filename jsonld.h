@@ -1124,9 +1124,9 @@ public:
 		} else if ( element->MAP() ) {
 			psomap elem = element->MAP();
 			if ( elem->find ( str_context ) != elem->end() ) {
-				cout << "CONTEXT FOUND: " << endl << elem->at ( str_context )->toString() << endl;
+//				cout << "CONTEXT FOUND: " << endl << elem->at ( str_context )->toString() << endl;
 				act_ctx = act_ctx->parse ( elem->at ( str_context ) );
-				trace ( cout << "parsed context:" << endl << act_ctx->toString() << endl; );
+//				trace ( cout << "parsed context:" << endl << act_ctx->toString() << endl; );
 			}
 			result = mk_somap_obj();
 			trace ( cout << "expanding each map item:" << endl; );
