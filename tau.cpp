@@ -15,7 +15,7 @@ public:
 			ifstream is ( fname );
 			json_spirit::read_stream ( is, v );
 		}
-		pobj r =  convert ( v );
+		pobj r =  ::convert ( v );
 		if ( print ) cout << r->toString() << endl;
 		return r;
 	}
@@ -39,6 +39,28 @@ public:
 	pobj load_json ( const strings& args ) {
 		return load_json ( args.size() > 2 ? args[2] : "" );
 	}
+	pobj nodemap(const strings& args) { return nodemap(load_json(args)); }
+	pobj nodemap(pobj o) {
+		psomap nodeMap = make_shared<somap>();
+		( *nodeMap ) [str_default] = mk_somap_obj();
+		jsonld::jsonld_api a;
+		a.gen_node_map ( o, nodeMap );
+		return mk_somap_obj ( nodeMap );
+	}
+	rdf_db toquads(const strings& args) { return toquads(load_json(args)); }
+	rdf_db toquads(pobj o) {
+		rdf_db r;
+		auto nodeMap = o;
+		for ( auto g : *nodeMap->MAP() ) {
+			if ( jsonld::is_rel_iri ( g.first ) ) continue;
+			if ( !g.second || !g.second->MAP() ) throw 0;
+			r.graph_to_rdf ( g.first, *g.second->MAP() );
+		}
+		return r;
+	}
+	rdf_db convert(pobj o) {
+		 return toquads(nodemap(jsonld::expand ( o )));
+	}
 };
 
 class expand_cmd : public cmd_t {
@@ -57,6 +79,22 @@ public:
 	}
 };
 
+class convert_cmd : public cmd_t {
+public:
+	virtual string desc() const {
+		return "Convert JSON-LD to quads including all dependent algorithms.";
+	}
+	virtual string help() const {
+		stringstream ss ( "Usage: tau expand [JSON-LD input filename]" );
+		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+		return ss.str();
+	}
+	virtual int operator() ( const strings& args ) {
+		cout << convert ( load_json(args) ).tostring() << endl;
+		return 1;
+	}
+};
+
 class toquads_cmd : public cmd_t {
 public:
 	virtual string desc() const {
@@ -70,14 +108,7 @@ public:
 	}
 	virtual int operator() ( const strings& args ) {
 		try {
-			rdf_db r;
-			auto nodeMap = load_json ( args );
-			for ( auto g : *nodeMap->MAP() ) {
-				if ( jsonld::is_rel_iri ( g.first ) ) continue;
-				if ( !g.second || !g.second->MAP() ) throw 0;
-				r.graph_to_rdf ( g.first, *g.second->MAP() );
-			}
-			cout<<r.tostring()<<endl;
+			cout<<toquads(args).tostring()<<endl;
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;
@@ -101,11 +132,29 @@ public:
 	}
 	virtual int operator() ( const strings& args ) {
 		try {
-			psomap nodeMap = make_shared<somap>();
-			( *nodeMap ) [str_default] = mk_somap_obj();
-			jsonld::jsonld_api a;
-			a.gen_node_map ( load_json ( args ), nodeMap );
-			cout << mk_somap_obj ( nodeMap )->toString() << endl;
+			cout << nodemap(args)->toString() << endl;
+		} catch ( string& ex ) {
+			cerr << ex << endl;
+			return 1;
+		} catch ( exception& ex ) {
+			cerr << ex.what() << endl;
+			return 1;
+		}
+		return 0;
+	}
+};
+
+class prove_cmd : public cmd_t {
+public:
+	virtual string desc() const {
+		return "Run a query against a knowledgebase.";
+	}
+	virtual string help() const {
+		return "Usage: tau prove [JSON-LD kb filename] [JSON-LD query filename]";
+	}
+	virtual int operator() ( const strings& args ) {
+		try {
+			nodemap(args);
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;
@@ -122,6 +171,8 @@ map<string, cmd_t*> cmds = []() {
 	r["expand"] = new expand_cmd;
 	r["toquads"] = new toquads_cmd;
 	r["nodemap"] = new nodemap_cmd;
+	r["convert"] = new convert_cmd;
+	r["prove"] = new prove_cmd;
 	return r;
 }();
 
