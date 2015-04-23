@@ -131,7 +131,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			trace (  "TIMEOUT!" << endl );
 			return true;
 		}
-		trace ( "c.ind: " << c->ind << endl << "c.rule.body.size(): " << c->rule.body.size() << endl); //in step 1, rule body is goal
+		trace ( "c.ind: " << c->ind << endl << "c.rule.body.size(): " << c->rule.body.size() << endl ); //in step 1, rule body is goal
 		// all parts of rule body succeeded...(?)
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
@@ -193,9 +193,9 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 					trace ( "Adding to queue: " << ( string ) ( *r ) << endl << flush );
 					queue.push_front ( r );
 				} else trace ( "didn't reach top" << endl );
-					trace ( "Done euler loop" << endl );
-				} else trace ( "No loop here" << endl );
-			}
+				trace ( "Done euler loop" << endl );
+			} else trace ( "No loop here" << endl );
+		}
 		trace ( "done rule checks, looping" << endl );
 	}
 	return false;

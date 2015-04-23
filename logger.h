@@ -2,10 +2,17 @@ class logger {
 public:
 	#ifdef DEBUG
 	bool pause;
-	logger(bool _pause) : pause(_pause) {  cin.tie(&clog); }
-	void dopause() { if clog << "press any key to continue..."; getchar(); }
+	logger ( bool _pause ) : pause ( _pause ) {
+		cin.tie ( &clog );
+	}
+	void dopause() {
+		if clog << "press any key to continue...";
+	getchar();
+	}
 	void before_log() {}
-	void after_log() {if (pause) dopause(); }
+	void after_log() {
+		if ( pause ) dopause();
+	}
 	template<typename T> inline logger& operator<< ( const T& t ) {
 		before_log();
 		std::clog << t;

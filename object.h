@@ -7,8 +7,13 @@
 #define DEBUG
 #ifdef DEBUG
 //logger _logger;
-auto dummy = [](){return (bool)std::cin.tie(&std::clog);}();
-void dopause() { std::clog << "press any key to continue..."; getchar(); }
+auto dummy = []() {
+	return ( bool ) std::cin.tie ( &std::clog );
+}();
+void dopause() {
+	std::clog << "press any key to continue...";
+	getchar();
+}
 bool _pause = false;
 #define trace(x) std::clog<<x; if (_pause) dopause()
 #else

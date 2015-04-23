@@ -40,7 +40,9 @@ public:
 		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
 		return ss.str();
 	}
-	virtual int operator() ( const strings& args ) { return 1; }
+	virtual int operator() ( const strings& args ) {
+		return 1;
+	}
 };
 
 class toquads_cmd : public cmd_t {
@@ -55,18 +57,16 @@ public:
 	}
 	virtual int operator() ( const strings& args ) {
 		try {
-			if (args.size() == 1) to_quads(load_json(cin),true);
+			if ( args.size() == 1 ) to_quads ( load_json ( cin ), true );
 			else {
-				ifstream is(args[1]);
-				to_quads(load_json(is) ,true);
+				ifstream is ( args[1] );
+				to_quads ( load_json ( is ) , true );
 			}
-		}
-		catch (string& ex) {
-			cerr<<ex<<endl;
+		} catch ( string& ex ) {
+			cerr << ex << endl;
 			return 1;
-		}
-		catch (exception& ex) {
-			cerr<<ex.what()<<endl;
+		} catch ( exception& ex ) {
+			cerr << ex.what() << endl;
 			return 1;
 		}
 		return 0;
