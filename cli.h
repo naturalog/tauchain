@@ -73,7 +73,7 @@ public:
 		return "Run expansion algorithm http://www.w3.org/TR/json-ld-api/#expansion-algorithms including all dependant algorithms.";
 	}
 	virtual string help() const {
-		stringstream ss ( "Usage:");
+		stringstream ss ( "Usage:" );
 		ss << endl << "\ttau expand [JSON-LD input filename]";
 		ss << endl << "\ttau expand [JSON-LD input filename] [JSON-LD output to compare to]";
 		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
@@ -85,17 +85,17 @@ public:
 			return 1;
 		}
 		pobj e;
-		cout << (e=jsonld::expand ( load_json ( args ) ))->toString() << endl;
-		if (args.size() == 3) return 0;
-		string f1 = tmpnam(0), f2 = tmpnam(0);
-		ofstream os1(f1), os2(f2);
-		os1 << json_spirit::write_string ( ::convert(e), json_spirit::pretty_print | json_spirit::single_line_arrays )<<std::endl;
-		os2 << json_spirit::write_string ( ::convert(load_json(args[3])), json_spirit::pretty_print | json_spirit::single_line_arrays )<<std::endl;
+		cout << ( e = jsonld::expand ( load_json ( args ) ) )->toString() << endl;
+		if ( args.size() == 3 ) return 0;
+		string f1 = tmpnam ( 0 ), f2 = tmpnam ( 0 );
+		ofstream os1 ( f1 ), os2 ( f2 );
+		os1 << json_spirit::write_string ( ::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
+		os2 << json_spirit::write_string ( ::convert ( load_json ( args[3] ) ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
 		os1.close();
 		os2.close();
-		string c = string("diff ") + f1 + string(" ") + f2;
-		system(c.c_str());
-		
+		string c = string ( "diff " ) + f1 + string ( " " ) + f2;
+		system ( c.c_str() );
+
 		return 0;
 	}
 };
@@ -118,8 +118,8 @@ public:
 		try {
 			cout << convert ( load_json ( args ) ).tostring() << endl;
 			return 0;
-		} catch (exception& ex) { 
-			std::cerr<<ex.what()<<endl;
+		} catch ( exception& ex ) {
+			std::cerr << ex.what() << endl;
 			return 1;
 		}
 	}
@@ -212,7 +212,22 @@ public:
 				} else cout << "Cannot parse query or empty query." << endl;
 				return 0;
 			}
-			print_evidence ( prove ( *convert ( load_json ( args[2] ) ) [args[3]], *convert ( load_json ( args[args.size() == 4 ? 3 : 4] ) ) [args[5]] ) );
+			cout << "args: ";
+			for ( auto x : args ) cout << x << ' ';
+			cout << endl;
+			auto _kb = convert ( load_json ( args[2] ) );
+			auto _q = convert ( load_json ( args[4] ) );
+			cout << "contexts in kb: ";
+			for ( auto x : _kb ) cout << x.first << ' ';
+			cout << endl;
+			cout << "contexts in query: ";
+			for ( auto x : _q ) cout << x.first << ' ';
+			cout << endl;
+			cout << "kb ctx " << args[3] << " contains " << _kb[args[3]]->size() << " quads" << endl;
+			cout << "query ctx " << args[5] << " contains " << _q[args[5]]->size() << " quads" << endl;
+			auto kb = _kb [args[3]];
+			auto q = _q [args[5]];
+			print_evidence ( prove ( *kb, *q ) );
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;

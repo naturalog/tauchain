@@ -242,13 +242,12 @@ bool keyword ( pobj p ) {
 }
 
 bool is_abs_iri ( const string& s ) {
-	return s.find ( "://" ) != string::npos || s[0] == '?';
+	return ( s.find ( "://" ) != string::npos ) || ( s.size() && ( s[0] == '?' ) );
 }
 
 bool is_rel_iri ( const string& s ) {
 	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) ) // from jsonld-java code
-	       && ( s[0] == '/' ) // ?
-	       ;
+	       && ( s[0] == '/' );
 }
 
 pobj newMap ( const string& k, pobj v ) {
@@ -854,14 +853,14 @@ public:
 	string type, value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE } _type;
 	node ( const node_type& t ) : _type ( t ) {}
-	string tostring() { 
+	string tostring() {
 		stringstream ss;
-		if (_type == IRI) ss << '<';
-		if (_type == LITERAL) ss << '\"';
+		if ( _type == IRI ) ss << '<';
+		if ( _type == LITERAL ) ss << '\"';
 		ss << value;
-		if (_type == LITERAL) ss << '\"';
-		if (_type == LITERAL && lang.size()) ss << '@' << lang;
-		if (_type == IRI) ss << '>';
+		if ( _type == LITERAL ) ss << '\"';
+		if ( _type == LITERAL && lang.size() ) ss << '@' << lang;
+		if ( _type == IRI ) ss << '>';
 		return ss.str();
 	}
 };
@@ -926,17 +925,17 @@ pnode mkbnode ( string attribute ) {
 typedef std::tuple<pnode, pnode, pnode, pnode> quad_base;
 
 class quad : public quad_base { //map<string, pnode> {
-	quad ( string subj, string pred, pnode object, pstring graph ) :
+	quad ( string subj, string pred, pnode object, string graph ) :
 		quad ( startsWith ( subj, "_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {}
 public:
 	pnode &subj = std::get<0> ( *this ), &pred = std::get<1> ( *this ), &object = std::get<2> ( *this ), &graph = std::get<3> ( *this );
 
-	quad ( string subj, string pred, string object, pstring graph ) :
+	quad ( string subj, string pred, string object, string graph ) :
 		quad ( subj, pred, startsWith ( object, "_:" ) ?  mkbnode ( object ) : mkiri ( object ), graph ) {}
-	quad ( string subj, string pred, string value, pstring datatype, pstring language, pstring graph ) :
+	quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph ) :
 		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) {}
-	quad ( pnode subj, pnode pred, pnode object, pstring graph ) :
-		quad_base ( subj, pred, object, ( graph && *graph == str_default ) ? startsWith ( *graph, "_:" ) ? mkbnode ( *graph ) : mkiri ( *graph ) : 0 ) { }
+	quad ( pnode subj, pnode pred, pnode object, string graph ) :
+		quad_base ( subj, pred, object,/* ( graph != str_default ) ?*/ startsWith ( graph, "_:" ) ? mkbnode ( graph ) : mkiri ( graph ) ) { }
 
 	using quad_base::quad_base;
 
@@ -1535,19 +1534,19 @@ public:
 							last = obj_to_rdf ( *list->rbegin() );
 							firstBnode = mkbnode ( api.gen_bnode_id () );
 						}
-						triples.push_back ( make_shared<quad> ( subj, pred, firstBnode, pstr ( graph_name ) ) );
+						triples.push_back ( make_shared<quad> ( subj, pred, firstBnode, graph_name ) );
 						for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
 							pnode object = obj_to_rdf ( list->at ( i ) );
-							triples.push_back ( make_shared<quad> ( firstBnode, first, object, pstr ( graph_name ) ) );
+							triples.push_back ( make_shared<quad> ( firstBnode, first, object, graph_name ) );
 							pnode restBnode = mkbnode ( api.gen_bnode_id() );
-							triples.push_back ( make_shared<quad> ( firstBnode, rest, restBnode, pstr ( graph_name ) ) );
+							triples.push_back ( make_shared<quad> ( firstBnode, rest, restBnode, graph_name ) );
 							firstBnode = restBnode;
 						}
 						if ( last ) {
-							triples.push_back ( make_shared<quad> ( firstBnode, first, last, pstr ( graph_name ) ) );
-							triples.push_back ( make_shared<quad> ( firstBnode, rest, nil, pstr ( graph_name ) ) );
+							triples.push_back ( make_shared<quad> ( firstBnode, first, last, graph_name ) );
+							triples.push_back ( make_shared<quad> ( firstBnode, rest, nil, graph_name ) );
 						}
-					} else if ( pnode object = obj_to_rdf ( item ) ) triples.push_back ( make_shared<quad> ( subj, pred, object, pstr ( graph_name ) ) );
+					} else if ( pnode object = obj_to_rdf ( item ) ) triples.push_back ( make_shared<quad> ( subj, pred, object, graph_name ) );
 				}
 			}
 		}
