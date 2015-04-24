@@ -242,7 +242,7 @@ bool keyword ( pobj p ) {
 }
 
 bool is_abs_iri ( const string& s ) {
-	return s.find ( "://" ) != string::npos;
+	return s.find ( "://" ) != string::npos || s[0] == '?';
 }
 
 bool is_rel_iri ( const string& s ) {
