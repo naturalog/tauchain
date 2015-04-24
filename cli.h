@@ -189,17 +189,19 @@ public:
 	}
 	virtual string help() const {
 		stringstream ss ( "Usage:" );
-		ss << endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << tab << "Does nothing but list all availiable graphs." << endl;
+		ss << endl << "\ttau prove\tRun socrates unit test";
+		ss << endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << tab << "Does nothing but list all availiable graphs.";
 		ss << endl << "\ttau prove [JSON-LD kb filename] [Graph name in kb] [JSON-LD query filename] [Graph name in query]" << tab << "(Hopefully) Answers the query." << endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( args.size() != 4 && args.size() != 6 ) {
+		if ( args.size() != 2 && args.size() != 4 && args.size() != 6 ) {
 			cout << help();
 			return 1;
 		}
 		try {
-			if ( args.size() == 4 ) {
+			if ( args.size() == 2 ) cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
+			else if ( args.size() == 4 ) {
 				pobj kb = nodemap ( jsonld::expand ( load_json ( args[2] ) ) );
 				pobj q = nodemap ( jsonld::expand ( load_json ( args[args.size() == 4 ? 3 : 4] ) ) );
 				if ( kb && kb->MAP() ) {
@@ -211,12 +213,13 @@ public:
 					for ( auto x : *q->MAP() ) cout << x.first << endl;
 				} else cout << "Cannot parse query or empty query." << endl;
 				return 0;
+			} else {
+				auto _kb = convert ( load_json ( args[2] ) );
+				auto _q = convert ( load_json ( args[4] ) );
+				auto kb = _kb [args[3]];
+				auto q = _q [args[5]];
+				print_evidence ( prove ( *kb, *q ) );
 			}
-			auto _kb = convert ( load_json ( args[2] ) );
-			auto _q = convert ( load_json ( args[4] ) );
-			auto kb = _kb [args[3]];
-			auto q = _q [args[5]];
-			print_evidence ( prove ( *kb, *q ) );
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;

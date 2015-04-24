@@ -129,7 +129,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
 			trace (  "TIMEOUT!" << endl );
-			return true;
+			return false;
 		}
 		trace ( "c.ind: " << c->ind << endl << "c.rule.body.size(): " << c->rule.body.size() << endl ); //in step 1, rule body is goal
 		// all parts of rule body succeeded...(?)
@@ -169,8 +169,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		trace ( "looking for case " << t.pred << endl );
 		if ( cases.find ( t.pred ) == cases.end() ) {
 			trace ( "No Cases(no such predicate)!" << endl );
-			trace ( "availiable cases' keys: " << endl);
-			for (auto x : cases) trace(x.first<<endl);
+			trace ( "availiable cases' keys: " << endl );
+			for ( auto x : cases ) trace ( x.first << endl );
 			continue;
 		}
 		size_t src = 0;
@@ -204,6 +204,9 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	return false;
 }
 
+bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
+	return prove ( rule_t {goal, { goal } }, maxNumberOfSteps, cases, evidence );
+}
 bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 	trace ( indent() << "Unify:" << endl << flush << indent() << "  s: " << ( string ) s << " in " << ( *senv ) << endl << flush;
 	        cout << indent() << "  d: " << ( string ) d << " in " << ( *denv ) << endl << flush );
@@ -278,7 +281,7 @@ inline pred_t mk_res ( string r ) {
 	return {r, {}};
 }
 
-void funtest() {
+bool test_reasoner() {
 	evidence_t evidence, cases;
 	pred_t Socrates = mk_res ( "Socrates" ), Man = mk_res ( "Man" ), Mortal = mk_res ( "Mortal" ), Morrtal = mk_res ( "Morrtal" ), Male = mk_res ( "Male" ), _x = mk_res ( "?x" ), _y = mk_res ( "?y" );
 	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
@@ -288,7 +291,7 @@ void funtest() {
 		{ {"a", {_x, Male}}, }
 	} );
 
-	bool p = prove ( {"a", {_y, Mortal}}, -1, cases, evidence );
+	bool p = prove ( pred_t{"a", {_y, Mortal}}, -1, cases, evidence );
 	cout << "Prove returned " << p << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
@@ -296,7 +299,8 @@ void funtest() {
 		for ( auto ee : e.second ) cout << "    " << ( string ) ee << endl;
 		cout << endl << "---" << endl;
 	}
-	cout << "QED! <- this means the proof is done, in leet mathspeak" << endl;
+	cout << "QED!" << endl;
+	return p;
 }
 
 pred_t triple ( const string& s, const string& p, const string& o ) {
