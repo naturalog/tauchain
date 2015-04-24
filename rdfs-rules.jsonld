@@ -8,7 +8,7 @@
   }, {
     "@id": "?P",
     "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
-      "@id": "R?"
+      "@id": "?R"
     }]
   }]
 }, {
@@ -37,18 +37,18 @@
   "@id": "g117",
   "@graph": [{
     "@id": "?S",
-    "@type": ["A?"]
+    "@type": ["?A"]
   }, {
     "@id": "?A",
     "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
-      "@id": "B?"
+      "@id": "?B"
     }]
   }]
 }, {
   "@id": "g123",
   "@graph": [{
     "@id": "?S",
-    "@type": ["B?"]
+    "@type": ["?B"]
   }]
 }, {
   "@id": "g127",
@@ -151,14 +151,14 @@
   }, {
     "@id": "?P",
     "http://www.w3.org/2000/01/rdf-schema#range": [{
-      "@id": "C?"
+      "@id": "?C"
     }]
   }]
 }, {
   "@id": "g74",
   "@graph": [{
     "@id": "?O",
-    "@type": ["C?"]
+    "@type": ["?C"]
   }]
 }, {
   "@id": "g78",
@@ -193,12 +193,12 @@
   "@graph": [{
     "@id": "?P",
     "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
-      "@id": "Q?"
+      "@id": "?Q"
     }]
   }, {
     "@id": "?Q",
     "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
-      "@id": "R?"
+      "@id": "?R"
     }]
   }]
 }, {
@@ -206,7 +206,7 @@
   "@graph": [{
     "@id": "?P",
     "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
-      "@id": "R?"
+      "@id": "?R"
     }]
   }]
 }, {
