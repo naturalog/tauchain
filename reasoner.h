@@ -300,7 +300,7 @@ bool test_reasoner() {
 		cout << endl << "---" << endl;
 	}
 	cout << "QED!" << endl;
-	return p;
+	return evidence.size();
 }
 
 pred_t triple ( const string& s, const string& p, const string& o ) {
