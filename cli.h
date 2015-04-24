@@ -212,19 +212,8 @@ public:
 				} else cout << "Cannot parse query or empty query." << endl;
 				return 0;
 			}
-			cout << "args: ";
-			for ( auto x : args ) cout << x << ' ';
-			cout << endl;
 			auto _kb = convert ( load_json ( args[2] ) );
 			auto _q = convert ( load_json ( args[4] ) );
-			cout << "contexts in kb: ";
-			for ( auto x : _kb ) cout << x.first << ' ';
-			cout << endl;
-			cout << "contexts in query: ";
-			for ( auto x : _q ) cout << x.first << ' ';
-			cout << endl;
-			cout << "kb ctx " << args[3] << " contains " << _kb[args[3]]->size() << " quads" << endl;
-			cout << "query ctx " << args[5] << " contains " << _q[args[5]]->size() << " quads" << endl;
 			auto kb = _kb [args[3]];
 			auto q = _q [args[5]];
 			print_evidence ( prove ( *kb, *q ) );

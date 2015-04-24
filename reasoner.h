@@ -166,8 +166,11 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue; // else there is no such builtin, continue...
 
 		trace ( "Checking cases..." << endl );
+		trace ( "looking for case " << t.pred << endl );
 		if ( cases.find ( t.pred ) == cases.end() ) {
 			trace ( "No Cases(no such predicate)!" << endl );
+			trace ( "availiable cases' keys: " << endl);
+			for (auto x : cases) trace(x.first<<endl);
 			continue;
 		}
 		size_t src = 0;
