@@ -11,8 +11,8 @@
 #include "jsonld.h"
 using namespace std;
 
-#include <raptor2/raptor2.h>
 #ifdef USE_RAPTOR
+#include <raptor2/raptor2.h>
 
 void list_parser_options ( raptor_world *world = raptor_new_world() ) {
 	for ( size_t i = 0; i < raptor_option_get_count(); i++ )
