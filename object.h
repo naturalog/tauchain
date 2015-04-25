@@ -13,15 +13,12 @@
 
 //#include "logger.h"
 
-//#define DEBUG
+#define DEBUG
 //#define VERBOSE
 #ifdef DEBUG
 //logger _logger;
-auto dummy = []() {
-	return ( bool ) std::cin.tie ( &std::clog );
-}();
-bool autobt = false, _pause = true;
-void bt() {
+extern bool autobt, _pause;
+inline void bt() {
 	void *trace[16];
 	char **messages = 0;
 	int i, trace_size = 0;
@@ -40,7 +37,7 @@ void bt() {
 		system ( syscom );
 	}
 }
-void dopause() {
+inline void dopause() {
 	std::clog << "press any key to continue, b for backtrace, or a to always show backtrace, or c to stop pausing...";
 	char ch = getchar();
 	if ( ch == 'b' || ( autobt = ( ch == 'a' ) ) ) bt();

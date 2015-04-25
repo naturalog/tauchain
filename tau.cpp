@@ -1,5 +1,10 @@
 #include "cli.h"
 
+#ifdef DEBUG
+auto dummy = []() { return ( bool ) std::cin.tie ( &std::clog ); }();
+bool autobt = false, _pause = true;
+#endif
+
 class expand_cmd : public cmd_t {
 public:
 	virtual string desc() const {
