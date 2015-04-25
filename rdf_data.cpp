@@ -100,15 +100,19 @@ string rdf_db::tostring() {
 void rdf_db::setNamespace ( string ns, string prefix ) {
 	context[ns] = prefix;
 }
+
 string rdf_db::getNamespace ( string ns ) {
 	return context[ns];
 }
+
 void rdf_db::clearNamespaces() {
 	context.clear();
 }
+
 ssmap& rdf_db::getNamespaces() {
 	return context;
 }
+
 somap rdf_db::getContext() {
 	somap rval;
 	for ( auto x : context )
@@ -128,8 +132,7 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 	for ( auto x : prefixes ) {
 		const string &key = x.first, &val = x.second;
 		if ( key == str_vocab ) setNamespace ( "", val );
-		else if ( !keyword ( key ) )
-			setNamespace ( key, val );
+		else if ( !keyword ( key ) ) setNamespace ( key, val );
 	}
 }
 
@@ -163,40 +166,25 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 						last = obj_to_rdf ( *list->rbegin() );
 						firstBnode = mkbnode ( api.gen_bnode_id() );
 					}
-					triples.push_back (
-					    make_shared <quad
-					    > ( subj, pred, firstBnode, graph_name ) );
+					triples.push_back ( make_shared <quad > ( subj, pred, firstBnode, graph_name ) );
 					for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
 						pnode object = obj_to_rdf ( list->at ( i ) );
-						triples.push_back (
-						    make_shared <quad
-						    > ( firstBnode, first, object, graph_name ) );
+						triples.push_back ( make_shared <quad > ( firstBnode, first, object, graph_name ) );
 						pnode restBnode = mkbnode ( api.gen_bnode_id() );
-						triples.push_back (
-						    make_shared <quad
-						    > ( firstBnode, rest, restBnode, graph_name ) );
+						triples.push_back ( make_shared <quad > ( firstBnode, rest, restBnode, graph_name ) );
 						firstBnode = restBnode;
 					}
 					if ( last ) {
-						triples.push_back (
-						    make_shared <quad
-						    > ( firstBnode, first, last, graph_name ) );
-						triples.push_back (
-						    make_shared <quad
-						    > ( firstBnode, rest, nil, graph_name ) );
+						triples.push_back ( make_shared <quad > ( firstBnode, first, last, graph_name ) );
+						triples.push_back ( make_shared <quad > ( firstBnode, rest, nil, graph_name ) );
 					}
 				} else if ( pnode object = obj_to_rdf ( item ) )
-					triples.push_back (
-					    make_shared <quad
-					    > ( subj, pred, object, graph_name ) );
+					triples.push_back ( make_shared <quad > ( subj, pred, object, graph_name ) );
 			}
 		}
 	}
-	if ( find ( graph_name ) == end() )
-		( *this ) [graph_name] = make_shared <qlist> ( triples );
-	else
-		for ( auto t : triples )
-			at ( graph_name )->push_back ( t );
+	if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared <qlist> ( triples );
+	else for ( auto t : triples ) at ( graph_name )->push_back ( t );
 }
 
 pnode rdf_db::obj_to_rdf ( pobj item ) {
@@ -204,38 +192,22 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 		pobj value = getvalue ( item ), datatype = sgettype ( item );
 		if ( !value )
 			return 0;
-		if ( value->BOOL() || value->INT() || value->UINT()
-		        || value->DOUBLE() ) {
-			if ( value->BOOL() )
-				return mkliteral ( *value->BOOL() ? "(true)" : "(false)",
-				                   pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ), 0 );
-			else if ( value->DOUBLE()
-			          || ( datatype && XSD_DOUBLE == *datatype->STR() ) )
-				return mkliteral ( tostr ( *value->DOUBLE() ),
-				                   pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
-			else
-				return mkliteral (
-				           value->INT() ?
-				           tostr ( *value->INT() ) :
-				           tostr ( *value->UINT() ),
-				           pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
+		if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
+			if ( value->BOOL() ) return mkliteral ( *value->BOOL() ? "(true)" : "(false)", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ), 0 );
+			else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() ) )
+				return mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
+			else return mkliteral ( value->INT() ?  tostr ( *value->INT() ) : tostr ( *value->UINT() ), pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
 		} else if ( haslang ( item->MAP() ) )
-			return mkliteral ( *value->STR(),
-			                   pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ),
-			                   getlang ( item )->STR() );
-		else
-			return mkliteral ( *value->STR(),
-			                   pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
+			return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
+		else return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
 	}
 	// convert string/node object to RDF
 	else {
 		string id;
 		if ( item->MAP() ) {
 			id = *getid ( item )->STR();
-			if ( is_rel_iri ( id ) )
-				return 0;
-		} else
-			id = *item->STR();
+			if ( is_rel_iri ( id ) ) return 0;
+		} else id = *item->STR();
 		return id.find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
 	}
 }

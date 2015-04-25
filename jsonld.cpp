@@ -884,108 +884,79 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 	return result;
 }
 
-void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph,
-                                pobj activeSubject, pstring act_prop, psomap list ) {
-	if ( !element )
-		return;
+void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring act_prop, psomap list ) {
+	if ( !element ) return;
 	if ( element->LIST() ) {
-		for ( pobj item : *element->LIST() )
-			gen_node_map ( item, nodeMap, activeGraph, activeSubject,
-			               act_prop, list );
+		for ( pobj item : *element->LIST() ) gen_node_map ( item, nodeMap, activeGraph, activeSubject, act_prop, list );
 		return;
 	}
 	psomap elem = element->MAP();
-	if ( !has ( nodeMap, activeGraph ) )
-		( *nodeMap ) [activeGraph] = mk_somap_obj();
-	psomap graph = nodeMap->at ( activeGraph )->MAP(), node =
-	                   ( activeSubject && activeSubject->STR() ) ?
-	                   graph->at ( *activeSubject->STR() )->MAP() : 0;
+	if ( !has ( nodeMap, activeGraph ) ) ( *nodeMap ) [activeGraph] = mk_somap_obj();
+	psomap graph = nodeMap->at ( activeGraph )->MAP(), node = ( activeSubject && activeSubject->STR() ) ?  graph->at ( *activeSubject->STR() )->MAP() : 0;
 	if ( hastype ( elem ) ) {
 		vector<string> oldTypes, newTypes;
-		if ( gettype ( elem )->LIST() )
-			oldTypes = vec2vec ( gettype ( elem )->LIST() );
+		if ( gettype ( elem )->LIST() ) oldTypes = vec2vec ( gettype ( elem )->LIST() );
 		else {
-			oldTypes = vector<string>();			//mk_olist_obj();
+			oldTypes = vector<string>();	//mk_olist_obj();
 			oldTypes.push_back ( *elem->at ( str_type )->STR() );
 		}
 		for ( string item : oldTypes ) {
-			if ( startsWith ( item, "_:" ) )
-				newTypes.push_back ( gen_bnode_id ( item ) );
-			else
-				newTypes.push_back ( item );
+			if ( startsWith ( item, "_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
+			else newTypes.push_back ( item );
 		}
-		polist el = gettype ( elem )->LIST();
-		if ( el )
-			( *elem ) [str_type] = mk_olist_obj ( vec2vec ( newTypes ) );
-		else
-			( *elem ) [str_type] = make_shared <string_obj> ( newTypes[0] );
+		( *elem ) [str_type] = gettype ( elem )->LIST() ? (pobj)mk_olist_obj ( vec2vec ( newTypes ) ) : make_shared <string_obj> ( newTypes[0] );
 	}
 	if ( hasvalue ( elem ) ) {
-		if ( !list )
-			mergeValue ( node, act_prop, element );
-		else
-			mergeValue ( list, str_list, element );
+		if ( !list ) mergeValue ( node, act_prop, element );
+		else mergeValue ( list, str_list, element );
 	} else if ( haslist ( elem ) ) {
 		psomap result = make_shared<somap>();
 		( *result ) [str_list] = mk_olist_obj();
-		gen_node_map ( getlist ( elem ), nodeMap, activeGraph, activeSubject,
-		               act_prop, result );
+		gen_node_map ( getlist ( elem ), nodeMap, activeGraph, activeSubject, act_prop, result );
 		mergeValue ( node, act_prop, mk_somap_obj ( result ) );
 	} else {
 		string id;
 		if ( hasid ( elem ) && elem->at ( str_id ) && elem->at ( str_id )->STR() ) {
 			id = *elem->at ( str_id )->STR();
 			elem->erase ( str_id );
-			if ( startsWith ( id, "_:" ) )
-				id = gen_bnode_id ( id );
-		} else
-			id = gen_bnode_id();
+			if ( startsWith ( id, "_:" ) ) id = gen_bnode_id ( id );
+		} else id = gen_bnode_id();
 		if ( !has ( graph, id ) ) {
 			somap tmp;
 			tmp[str_id] = make_shared <string_obj> ( id );
 			( *graph ) [id] = mk_somap_obj ( tmp );
 		}
-		if ( activeSubject && activeSubject->MAP() )
-			mergeValue ( get ( graph, id )->MAP(), act_prop, activeSubject );
+		if ( activeSubject && activeSubject->MAP() ) mergeValue ( get ( graph, id )->MAP(), act_prop, activeSubject );
 		else if ( act_prop ) {
 			somap ref;
 			ref[str_id] = make_shared <string_obj> ( id );
-			if ( !list )
-				mergeValue ( node, act_prop, mk_somap_obj ( ref ) );
-			else
-				mergeValue ( list, str_list, mk_somap_obj ( ref ) );
+			if ( !list ) mergeValue ( node, act_prop, mk_somap_obj ( ref ) );
+			else mergeValue ( list, str_list, mk_somap_obj ( ref ) );
 		}
 		node = graph->at ( id )->MAP();
 		if ( hastype ( elem ) ) {
 			if ( gettype ( elem )->LIST() )
 				for ( pobj type : *gettype ( elem )->LIST() )
-					if ( type )
-						mergeValue ( node, str_type, type );
+					if ( type ) mergeValue ( node, str_type, type );
 			elem->erase ( str_type );
 		}
 		if ( hasindex ( elem ) ) {
 			pobj elemIndex = getindex ( elem );
 			elem->erase ( str_index );
 			if ( hasindex ( node ) ) {
-				if ( !deepCompare ( getindex ( node ), elemIndex ) )
-					throw CONFLICTING_INDEXES;
-			} else
-				( *node ) [str_index] = elemIndex;
+				if ( !deepCompare ( getindex ( node ), elemIndex ) ) throw CONFLICTING_INDEXES;
+			} else ( *node ) [str_index] = elemIndex;
 		}
 		if ( hasreverse ( elem ) ) {
-			psomap refnode = make_shared<somap>(), revmap = elem->at (
-			                     str_reverse )->MAP();
+			psomap refnode = make_shared<somap>(), revmap = elem->at ( str_reverse )->MAP();
 			( *refnode ) [str_id] = make_shared <string_obj> ( id );
 			elem->erase ( str_reverse );
 			if ( revmap )
 				for ( auto x : *revmap ) {
 					string prop = x.first;
 					polist values = revmap->at ( prop )->LIST();
-					if ( values )
-						for ( pobj value : *values )
-							gen_node_map ( value, nodeMap, activeGraph,
-							               mk_somap_obj ( refnode ),
-							               make_shared <string> ( prop ), 0 );
+					if ( values ) for ( pobj value : *values )
+						gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared <string> ( prop ), 0 );
 				}
 		}
 		if ( hasgraph ( elem ) ) {
@@ -998,13 +969,9 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 			for ( auto z : *elem ) {
 				string property = z.first;
 				pobj value = z.second;
-				if ( startsWith ( property, "_:" ) )
-					property = gen_bnode_id ( property );
-				if ( !has ( node, property ) )
-					( *node ) [property] = mk_olist_obj();
-				gen_node_map ( value, nodeMap, activeGraph,
-				               make_shared <string_obj> ( id ),
-				               make_shared <string> ( property ), 0 );
+				if ( startsWith ( property, "_:" ) ) property = gen_bnode_id ( property );
+				if ( !has ( node, property ) ) ( *node ) [property] = mk_olist_obj();
+				gen_node_map ( value, nodeMap, activeGraph, make_shared <string_obj> ( id ), make_shared <string> ( property ), 0 );
 			}
 	}
 }
