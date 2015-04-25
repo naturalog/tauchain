@@ -577,18 +577,13 @@ pobj jsonld_api::compact ( pcontext act_ctx, string act_prop, pobj element,
 }
 
 bool jsonld_api::deepCompare ( pobj v1, pobj v2, bool listOrderMatters ) {
-	if ( !v1 )
-		return !v2;
-	if ( !v2 )
-		return !v1;
+	if ( !v1 ) return !v2;
+	if ( !v2 ) return !v1;
 	if ( v1->MAP() && v2->MAP() ) {
 		psomap m1 = v1->MAP(), m2 = v2->MAP();
-		if ( m1->size() != m2->size() )
-			return false;
+		if ( m1->size() != m2->size() ) return false;
 		for ( auto x : *m1 )
-			if ( !has ( m2, x.first )
-			        || !deepCompare ( x.second, m2->at ( x.first ),
-			                          listOrderMatters ) )
+			if ( !has ( m2, x.first ) || !deepCompare ( x.second, m2->at ( x.first ), listOrderMatters ) )
 				return false;
 		return true;
 	} else if ( v1->LIST() && v2->LIST() ) {
@@ -601,24 +596,18 @@ bool jsonld_api::deepCompare ( pobj v1, pobj v2, bool listOrderMatters ) {
 		for ( size_t i = 0; i < l1->size(); ++i ) {
 			pobj o1 = l1->at ( i );
 			bool gotmatch = false;
-			if ( listOrderMatters )
-				gotmatch = deepCompare ( o1, l2->at ( i ), listOrderMatters );
-			else
-				for ( size_t j = 0; j < l2->size(); j++ )
-					if ( !alreadyMatched[j]
-					        && deepCompare ( o1, l2->at ( j ),
-					                         listOrderMatters ) ) {
+			if ( listOrderMatters ) gotmatch = deepCompare ( o1, l2->at ( i ), listOrderMatters );
+			else for ( size_t j = 0; j < l2->size(); j++ )
+					if ( !alreadyMatched[j] && deepCompare ( o1, l2->at ( j ), listOrderMatters ) ) {
 						alreadyMatched[j] = true;
 						gotmatch = true;
 						break;
 					}
 			delete[] alreadyMatched;
-			if ( !gotmatch )
-				return false;
+			if ( !gotmatch ) return false;
 		}
 		return true;
-	} else
-		return equals ( v1, v2 );
+	} else return equals ( v1, v2 );
 }
 
 pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {

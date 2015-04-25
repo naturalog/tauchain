@@ -393,7 +393,7 @@ public:
 	static void mergeValue ( psomap obj, string key, pobj value ) {
 		if ( obj ) mergeValue ( *obj, key, value );
 	}
-	static void mergeValue ( somap obj, pstring key, pobj value ) {
+	static void mergeValue ( somap& obj, pstring key, pobj value ) {
 		if ( key ) mergeValue ( obj, *key, value );
 	}
 
@@ -401,7 +401,7 @@ public:
 		auto x = obj[key];
 		polist values = x ? obj[key]->LIST() : 0;
 		if ( !values ) obj[key] = mk_olist_obj ( values = mk_olist() );
-		if ( key == str_list || ( value->MAP() && has ( value->MAP(), str_list ) ) || !deepContains ( values, value ) )
+		if ( key == str_list || ( has ( value->MAP(), str_list ) ) || !deepContains ( values, value ) )
 			values->push_back ( value );
 	}
 
