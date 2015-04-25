@@ -127,8 +127,7 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 
 	for ( auto x : prefixes ) {
 		const string &key = x.first, &val = x.second;
-		if ( key == str_vocab )
-			setNamespace ( "", val );
+		if ( key == str_vocab ) setNamespace ( "", val );
 		else if ( !keyword ( key ) )
 			setNamespace ( key, val );
 	}
@@ -138,8 +137,7 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	qlist triples;
 	for ( auto y : graph ) { // 4.3
 		string id = y.first;
-		if ( is_rel_iri ( id ) )
-			continue;
+		if ( is_rel_iri ( id ) ) continue;
 		psomap node = y.second->MAP();
 		for ( auto x : *node ) {
 			string property = x.first;
@@ -147,20 +145,13 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 			if ( property == str_type ) { // 4.3.2.1
 				values = gettype ( node )->LIST(); // ??
 				property = RDF_TYPE; // ??
-			} else if ( keyword ( property ) )
-				continue;
-			else if ( startsWith ( property, "_:" )
-			          && !api.opts.produceGeneralizedRdf )
-				continue;
-			else if ( is_rel_iri ( property ) )
-				continue;
-			else
-				values = node->at ( property )->LIST();
+			} else if ( keyword ( property ) ) continue;
+			else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
+			else if ( is_rel_iri ( property ) ) continue;
+			else values = node->at ( property )->LIST();
 
 			pnode subj = id.find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
-			pnode pred =
-			    startsWith ( property, "_:" ) ?
-			    mkbnode ( property ) : mkiri ( property );
+			pnode pred = startsWith ( property, "_:" ) ?  mkbnode ( property ) : mkiri ( property );
 
 			for ( auto item : *values ) {
 				// convert @list to triples

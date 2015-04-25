@@ -143,32 +143,31 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 }
 
 pstring context_t::expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
-	if ( !value || keyword ( *value ) || ( value->size() || ( *value ) [0] == '?' ) ) return value;
+	if ( !value || keyword ( *value ) || ( value->size() && ( *value ) [0] == '?' ) ) return value;
 	pstring rval;
 	if ( has ( context, *value ) && defined->find ( *value ) == defined->end() ) create_term_def ( context, *value, defined );
 	somap::iterator it = term_defs->find ( *value );
 	if ( vocab && it != term_defs->end() ) {
-		if ( auto td = it->second->MAP() ) rval = ( it = td->find ( str_id ) ) != td->end() ? it->second->STR() : 0;
-		else rval = 0;
+		if ( auto td = it->second->MAP() ) return ( it = td->find ( str_id ) ) != td->end() ? it->second->STR() : 0;
+		return 0;
 	} else {
 		size_t colIndex = value->find ( ":" );
 		if ( colIndex != string::npos ) {
 			string prefix = value->substr ( 0, colIndex ), suffix = value->substr ( colIndex + 1 );
-			if ( prefix == "_" || startsWith ( suffix, "//" ) ) rval = value;
+			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return value;
 			else {
 				if ( has ( context, prefix ) && ( defined->find ( prefix ) == defined->end() || !defined->at ( prefix ) ) )
 					create_term_def ( context, prefix, defined );
-				if ( has ( term_defs, prefix ) ) rval = pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
+				if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
 			}
-			rval = value;
-		} else if ( vocab && has ( MAP(), str_vocab ) ) rval = pstr ( *MAP()->at ( str_vocab )->STR() + *value );
+			return value;
+		} else if ( vocab && has ( MAP(), str_vocab ) ) return pstr ( *MAP()->at ( str_vocab )->STR() + *value );
 		else if ( relative ) {
 			auto base = get ( MAP(), str_base );
-			rval = pstr ( resolve ( base ? base->STR() : 0, *value ) );
+			return pstr ( resolve ( base ? base->STR() : 0, *value ) );
 		} else if ( context && is_rel_iri ( *value ) ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "not an absolute IRI: " ) + *value );
-		else rval = value;
 	}
-	return rval;
+	return value;
 }
 
 psomap_obj context_t::getInverse() {

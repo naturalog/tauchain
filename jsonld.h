@@ -152,11 +152,12 @@ inline bool keyword ( pobj p ) {
 }
 
 inline bool is_abs_iri ( const string& s ) {
-	return !s.size() ? false : ( ( s.find ( "://" ) != string::npos ) || s[0] == '?' || s[0] == '_' /* '_' taken from expandiri algo step 4.2 */ );
+	return (s.find(":") != string::npos) || (s.size() && s[0] == '?');
+//	return (!s.size()) ? false : ( ( s.find ( "://" ) != string::npos ) || s[0] == '?' || s[0] == '_' /* '_' taken from expandiri algo step 4.2 */ );
 }
 
 inline bool is_rel_iri ( const string& s ) {
-	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) ) && ( s[0] != '_' );
+	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) );
 }
 
 inline pobj newMap ( const string& k, pobj v ) {
