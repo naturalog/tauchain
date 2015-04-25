@@ -11,8 +11,8 @@
 #include "jsonld.h"
 using namespace std;
 
-#ifdef USE_RAPTOR
 #include <raptor2/raptor2.h>
+#ifdef USE_RAPTOR
 
 void list_parser_options ( raptor_world *world = raptor_new_world() ) {
 	for ( size_t i = 0; i < raptor_option_get_count(); i++ )
@@ -75,8 +75,8 @@ string jsonld::resolve ( pstring base_, const string& ref ) {
 	//unsigned char* buffer, size_t length);
 	size_t sz = base.size() + ref.size();
 	unsigned char r[sz];
-	raptor_uri_resolve_uri_reference ( ( pcuchar ) base.c_str(), ( pcuchar ) ref.c_str(), r, sz );
-	return string ( ( pcchar ) r );
+	raptor_uri_resolve_uri_reference ( ( const unsigned char* ) base.c_str(), ( const unsigned char* ) ref.c_str(), r, sz );
+	return string ( ( const char* ) r );
 }
 #else
 string jsonld::resolve ( pstring base_, const string& ref ) {

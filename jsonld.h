@@ -75,7 +75,7 @@ struct jsonld_options {
 	jsonld_options ( string base_ ) :
 		base ( pstr ( base_ ) ) {
 	}
-	pstring base = 0;
+	pstring base = pstr("http://tauchain.org/");
 	pbool compactArrays = make_shared<bool> ( true );
 	pobj expandContext = 0;
 	pstring processingMode = pstr ( "json-ld-1.0" );
@@ -146,8 +146,7 @@ inline pobj& getlang ( somap p ) {
 }
 
 inline bool keyword ( pobj p ) {
-	if ( !p || !p->STR() )
-		return false;
+	if ( !p || !p->STR() ) return false;
 	return keyword ( *p->STR() );
 }
 
@@ -157,7 +156,7 @@ inline bool is_abs_iri ( const string& s ) {
 }
 
 inline bool is_rel_iri ( const string& s ) {
-	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) );
+	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) );// || (s.size() && s[0] == '?');
 }
 
 inline pobj newMap ( const string& k, pobj v ) {

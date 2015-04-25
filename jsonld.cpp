@@ -161,7 +161,8 @@ pstring context_t::expandIri ( const pstring value, bool relative, bool vocab, c
 				if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
 			}
 			return value;
-		} else if ( vocab && has ( MAP(), str_vocab ) ) return pstr ( *MAP()->at ( str_vocab )->STR() + *value );
+		} 
+		if ( vocab && has ( MAP(), str_vocab ) ) return pstr ( *MAP()->at ( str_vocab )->STR() + *value );
 		else if ( relative ) {
 			auto base = get ( MAP(), str_base );
 			return pstr ( resolve ( base ? base->STR() : 0, *value ) );
