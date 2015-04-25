@@ -383,55 +383,44 @@ public:
 	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false );
 
 	static bool deepContains ( polist values, pobj value ) {
-		for ( pobj item : *values )
-			if ( deepCompare ( item, value, false ) )
-				return true;
+		for ( pobj item : *values ) if ( deepCompare ( item, value, false ) ) return true;
 		return false;
 	}
 
 	static void mergeValue ( psomap obj, pstring key, pobj value ) {
-		if ( obj && key )
-			mergeValue ( *obj, *key, value );
+		if ( obj && key ) mergeValue ( *obj, *key, value );
 	}
 	static void mergeValue ( psomap obj, string key, pobj value ) {
-		if ( obj )
-			mergeValue ( *obj, key, value );
+		if ( obj ) mergeValue ( *obj, key, value );
 	}
 	static void mergeValue ( somap obj, pstring key, pobj value ) {
-		if ( key )
-			mergeValue ( obj, *key, value );
+		if ( key ) mergeValue ( obj, *key, value );
 	}
 
-	static void mergeValue ( somap obj, string key, pobj value ) {
+	static void mergeValue ( somap& obj, string key, pobj value ) {
 		auto x = obj[key];
 		polist values = x ? obj[key]->LIST() : 0;
-		if ( !values )
-			obj[key] = mk_olist_obj ( values = mk_olist() );
-		if ( key == str_list || ( value->MAP() && has ( value->MAP(), str_list ) )
-		        || !deepContains ( values, value ) )
+		if ( !values ) obj[key] = mk_olist_obj ( values = mk_olist() );
+		if ( key == str_list || ( value->MAP() && has ( value->MAP(), str_list ) ) || !deepContains ( values, value ) )
 			values->push_back ( value );
 	}
 
 	string gen_bnode_id ( string id = "" ) {
-		if ( bnode_id_map.find ( id ) != bnode_id_map.end() )
-			return bnode_id_map[id];
+		if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) return bnode_id_map[id];
 		stringstream ss;
 		ss << "_:b" << ( blankNodeCounter++ );
 		return bnode_id_map[id] = ss.str();
 	}
 
 	void gen_node_map ( pobj element, psomap nodeMap ) {
-		gen_node_map ( element, nodeMap, str_default, pobj(), pstring(),
-		               psomap() );
+		gen_node_map ( element, nodeMap, str_default, pobj(), pstring(), psomap() );
 	}
 
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph ) {
-		gen_node_map ( element, nodeMap, activeGraph, pobj(), pstring(),
-		               psomap() );
+		gen_node_map ( element, nodeMap, activeGraph, pobj(), pstring(), psomap() );
 	}
 
-	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph,
-	                    pobj activeSubject, pstring act_prop, psomap list );
+	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring act_prop, psomap list );
 
 	std::shared_ptr<rdf_db> toRDF();
 	std::shared_ptr<rdf_db> toRDF ( pobj input, jsonld_options options );
