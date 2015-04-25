@@ -1,3 +1,6 @@
+#ifndef __OBJ_H__
+#define __OBJ_H__
+
 #include <map>
 #include <vector>
 #include <memory>
@@ -151,111 +154,67 @@ typedef std::shared_ptr<bool> pbool;
 typedef std::map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
 
-template<typename T> pstring_obj mk_str_obj ( T t ) {
+template<typename T> inline pstring_obj mk_str_obj ( T t ) {
 	return std::make_shared<string_obj> ( t );
 }
 
-pstring_obj mk_str_obj() {
+inline pstring_obj mk_str_obj() {
 	return std::make_shared<string_obj>();
 }
 
-template<typename T> psomap_obj mk_somap_obj ( T t ) {
+template<typename T> inline psomap_obj mk_somap_obj ( T t ) {
 	return std::make_shared<somap_obj> ( t );
 }
 
-psomap_obj mk_somap_obj() {
+inline psomap_obj mk_somap_obj() {
 	return std::make_shared<somap_obj>();
 }
 
-template<typename T> polist_obj mk_olist_obj ( T t ) {
+template<typename T> inline polist_obj mk_olist_obj ( T t ) {
 	return std::make_shared<olist_obj> ( t );
 }
 
-polist_obj mk_olist_obj() {
+inline polist_obj mk_olist_obj() {
 	return std::make_shared<olist_obj>();
 }
 
-template<typename T> polist mk_olist ( T t ) {
+template<typename T> inline polist mk_olist ( T t ) {
 	return std::make_shared<olist> ( t );
 }
 
-polist mk_olist() {
+inline polist mk_olist() {
 	return std::make_shared<olist>();
 }
 
-bool has ( const defined_t& c, const string& k ) {
+inline bool has ( const defined_t& c, const string& k ) {
 	return c.find ( k ) != c.end();
 }
 
-bool has ( pdefined_t c, const string& k ) {
+inline bool has ( pdefined_t c, const string& k ) {
 	return c && has ( *c, k );
 }
 
-bool has ( const somap& c, const string& k ) {
+inline bool has ( const somap& c, const string& k ) {
 	#ifdef VERBOSE
 	trace ( "query for key " << k << "form object: " << std::endl << mk_somap_obj ( c )->toString() << std::endl );
 	#endif
 	return c.find ( k ) != c.end();
 }
 
-bool has ( psomap c, const string& k ) {
+inline bool has ( psomap c, const string& k ) {
 	return c && has ( *c, k );
 }
 
-bool has ( psomap c, pstring k ) {
+inline bool has ( psomap c, pstring k ) {
 	return k && has ( c, *k );
 }
 
-bool has ( pobj o, string s ) {
+inline bool has ( pobj o, string s ) {
 	return o && o->MAP() && has ( o->MAP(), s );
 }
 
-bool has ( pobj o, pstring s ) {
+inline bool has ( pobj o, pstring s ) {
 	return s && has ( o, *s );
 }
 
-json_spirit::mValue convert ( obj& v ) {
-	typedef json_spirit::mValue val;
-	val r;
-	if ( v.UINT() ) return val ( *v.UINT() );
-	if ( v.INT() )  return val ( *v.INT() );
-	if ( v.STR() )  return val ( *v.STR() );
-	if ( v.DOUBLE() )  return val ( *v.DOUBLE() );
-	if ( v.BOOL() )  return val ( *v.BOOL() );
-	else if ( v.LIST() ) {
-		val::Array a;
-		for ( auto x : *v.LIST() ) a.push_back ( convert ( *x ) );
-		return val ( a );
-	} else {
-		if ( !v.MAP() ) throw "logic error";
-		val::Object a;
-		for ( auto x : *v.MAP() ) a[x.first] = convert ( *x.second );
-		return val ( a );
-	}
-}
-
-json_spirit::mValue convert ( pobj v ) {
-	return convert ( *v );
-}
-
-pobj convert ( const json_spirit::mValue& v ) {
-	using namespace std;
-	pobj r;
-	if ( v.is_uint64() ) r = make_shared<uint64_t_obj> ( v.get_uint64() );
-	else if ( v.isInt() ) r = make_shared<int64_t_obj> ( v.get_int64() );
-	else if ( v.isString() ) r = make_shared<string_obj> ( v.get_str() );
-	else if ( v.isDouble() ) r = make_shared<double_obj> ( v.get_real() );
-	else if ( v.isBoolean() ) r = make_shared<bool_obj> ( v.get_bool() );
-	else if ( v.is_null() ) r = 0;
-	else if ( v.isList() ) {
-		r = make_shared<olist_obj>();
-		auto a = v.get_array();
-		for ( auto x : a ) r->LIST()->push_back ( convert ( x ) );
-	} else {
-		if ( !v.isMap() ) throw "logic error";
-		r = make_shared<somap_obj>();
-		auto a = v.get_obj();
-		for ( auto x : a ) ( *r->MAP() ) [x.first] = convert ( x.second );
-	}
-	return r;
-}
+#endif

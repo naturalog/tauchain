@@ -169,7 +169,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		trace ( "looking for case " << t.pred << endl );
 		if ( cases.find ( t.pred ) == cases.end() ) {
 			trace ( "No Cases(no such predicate)!" << endl );
-			trace ( "availiable cases' keys: " << endl );
+			trace ( "available cases' keys: " << endl );
 			for ( auto x : cases ) trace ( x.first << endl );
 			continue;
 		}
@@ -291,7 +291,7 @@ bool test_reasoner() {
 		{ {"a", {_x, Male}}, }
 	} );
 
-	bool p = prove ( pred_t{"a", {_y, Mortal}}, -1, cases, evidence );
+	bool p = prove ( pred_t {"a", {_y, Mortal}}, -1, cases, evidence );
 	cout << "Prove returned " << p << endl;
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
