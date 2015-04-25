@@ -89,6 +89,26 @@ const string INVALID_INPUT = "invalid input";
 const string PARSE_ERROR = "parse error";
 const string UNKNOWN_ERROR = "unknown error";
 
+const auto Ex1 = std::runtime_error ( INVALID_IRI_MAPPING + string ( "expected value of @id to be a string" ) );
+const auto Ex2 = std::runtime_error ( INVALID_KEYWORD_ALIAS + string ( "cannot alias @context" ) );
+const auto Ex3 = std::runtime_error ( INVALID_IRI_MAPPING + string ( "resulting IRI mapping should be a keyword, absolute IRI or blank node" ) );
+const auto Ex4 = std::runtime_error ( INVALID_IRI_MAPPING + string ( "relative term defn without vocab mapping" ) );
+const auto Ex5 = std::runtime_error ( INVALID_IRI_MAPPING + tab + string ( "Expected String for @reverse value." ) );
+const auto Ex6 = INVALID_REVERSE_PROPERTY + string ( "reverse properties only support set- and index-containers" );
+const auto Ex7 = std::runtime_error ( INVALID_VOCAB_MAPPING + tab + string ( "@value must be an absolute IRI" ) );
+const auto Ex8 = std::runtime_error ( INVALID_VOCAB_MAPPING + tab + string ( "@vocab must be a string or null" ) );
+const auto Ex9 = std::runtime_error ( INVALID_BASE_IRI + tab + string ( "@base must be a string" ) );
+const auto Ex10 = INVALID_CONTAINER_MAPPING + string ( "@container must be either @list, @set, @index, or @language" );
+const auto Ex11 = std::runtime_error ( INVALID_LANGUAGE_MAPPING + string ( "@language must be a string or null" ) );
+const auto Ex12 = std::runtime_error ( INVALID_REVERSE_PROPERTY_MAP + string ( tab ) + string ( "a keyword cannot be used as a @reverse propery" ) );
+const auto Ex13 = std::runtime_error ( INVALID_ID_VALUE + tab + string ( "value of @id must be a string" ) );
+const auto Ex14 = std::runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a string or array of strings" ) );
+const auto Ex15 = std::runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a an empty object for framing" ) );
+const auto Ex16 = std::runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a string or array of strings" ) );
+const auto Ex17 = std::runtime_error ( LIST_OF_LISTS + tab + string ( "A list may not contain another list" ) );
+const auto Ex18 = std::runtime_error ( INVALID_REVERSE_VALUE + tab + string ( "@reverse value must be an object" ) );
+const auto Ex19 = std::runtime_error ( LIST_OF_LISTS + tab + string ( "lists of lists are not permitted." ) );
+
 inline bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
 }

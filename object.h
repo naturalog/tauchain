@@ -76,25 +76,39 @@ public:
 	typedef std::vector<pobj> olist;
 	typedef std::shared_ptr<somap> psomap;
 
-	virtual std::shared_ptr<uint64_t> UINT() { return 0; }
-	virtual std::shared_ptr<int64_t> INT() { return 0; }
-	virtual std::shared_ptr<bool> BOOL() { return 0; }
-	virtual std::shared_ptr<string> STR() { return 0; }
-	virtual std::shared_ptr<somap> MAP() { return 0; }
-	virtual std::shared_ptr<olist> LIST() { return 0; }
-	virtual std::shared_ptr<double> DOUBLE() { return 0; }
+	virtual std::shared_ptr<uint64_t> UINT() {
+		return 0;
+	}
+	virtual std::shared_ptr<int64_t> INT() {
+		return 0;
+	}
+	virtual std::shared_ptr<bool> BOOL() {
+		return 0;
+	}
+	virtual std::shared_ptr<string> STR() {
+		return 0;
+	}
+	virtual std::shared_ptr<somap> MAP() {
+		return 0;
+	}
+	virtual std::shared_ptr<olist> LIST() {
+		return 0;
+	}
+	virtual std::shared_ptr<double> DOUBLE() {
+		return 0;
+	}
 	virtual std::shared_ptr<null> Null() {
 		return 0;
 	}
-	virtual bool STR(const string& x) { 
-		auto y = STR(); 
-		return y && (*y == x);
+	bool STR ( const string& x ) {
+		auto y = STR();
+		return y && ( *y == x );
 	}
-	virtual std::shared_ptr<obj> MAP(const string& k) { 
+	std::shared_ptr<obj> MAP ( const string& k ) {
 		auto y = MAP();
-		if (!y) return 0;
-		somap::iterator it = y->find(k);
-		return it == y->end() ? 0 : it->second; 
+		if ( !y ) return 0;
+		somap::iterator it = y->find ( k );
+		return it == y->end() ? 0 : it->second;
 	}
 
 	bool map_and_has ( const string& k ) {

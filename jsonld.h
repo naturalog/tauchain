@@ -63,12 +63,9 @@ inline bool equals ( const obj& a, const pobj& b ) {
 }
 
 inline pobj get ( psomap p, string k ) {
-	if ( !p )
-		return 0;
+	if ( !p ) return 0;
 	auto it = p->find ( k );
-	if ( it == p->end() )
-		return 0;
-	return it->second;
+	return it == p->end() ? 0 : it->second;
 }
 
 // http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
@@ -155,12 +152,11 @@ inline bool keyword ( pobj p ) {
 }
 
 inline bool is_abs_iri ( const string& s ) {
-	return ( s.find ( "://" ) != string::npos ) || ( s.size() && ( s[0] == '?' ) );
+	return !s.size() ? false : ( ( s.find ( "://" ) != string::npos ) || s[0] == '?' || s[0] == '_' /* '_' taken from expandiri algo step 4.2 */ );
 }
 
 inline bool is_rel_iri ( const string& s ) {
-	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) ) // from jsonld-java code
-	       && ( s[0] == '/' );
+	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) ) && ( s[0] != '_' );
 }
 
 inline pobj newMap ( const string& k, pobj v ) {
@@ -223,7 +219,7 @@ public:
 	context_t ( const jsonld_options& o = jsonld_options() ) :
 		somap_obj(), options ( o ) {
 		if ( options.base )
-			MAP()->at ( "@base" ) = make_shared <string_obj> ( *options.base );
+			( *MAP() ) [ "@base" ] = make_shared <string_obj> ( *options.base );
 	}
 
 	pstring getContainer ( string prop ) {

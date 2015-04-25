@@ -57,10 +57,9 @@ public:
 	string tostring ( string ctx ) {
 		stringstream ss;
 		auto f = [] ( pnode n ) {
-			return n ? n->tostring() : string ( "<null>" );
+			return n ? n->tostring() : string ( "<>" );
 		};
-		ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ' << f ( graph )
-		   << " .";
+		ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ' << ctx << " .";
 		return ss.str();
 	}
 };
