@@ -68,7 +68,7 @@ public:
 	}
 };
 
-void print_usage(const map<string, cmd_t*>& cmds) {
+void print_usage ( const map<string, cmd_t*>& cmds ) {
 	cout << endl << "Tau-Chain by http://idni.org" << endl;
 	cout << endl << "Usage:" << endl;
 	cout << "\ttau help <command>\t\tPrints usage of <command>." << endl;

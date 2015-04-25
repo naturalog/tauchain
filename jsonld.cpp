@@ -68,41 +68,41 @@ pcontext context_t::parse ( pobj localContext, vector<string> remoteContexts ) {
 
 void context_t::create_term_def ( const psomap context, const string term, pdefined_t pdefined ) {
 	defined_t& defined = *pdefined;
-	if ( defined.find ( term ) != defined.end() ) {
-		if ( defined[term] ) return;
+	auto dit = defined.find ( term );
+	if ( dit != defined.end() ) {
+		if ( dit->second ) return;
 		throw std::runtime_error ( CYCLIC_IRI_MAPPING + tab + term );
 	}
-	defined[term] = false;
+	bool& dterm = dit->second = false;
 	if ( keyword ( term ) ) throw std::runtime_error ( KEYWORD_REDEFINITION + tab + term );
-	term_defs->erase ( term );
+	term_defs->erase ( term ); // 4
 	auto it = context->find ( term );
 	psomap m;
 	decltype ( m->end() ) _it;
 	if ( it == context->end() || it->second->map_and_has_null ( str_id ) ) {
-		( *term_defs ) [term] = make_shared<null_obj>();
-		defined[term] = true;
+		( *term_defs ) [term] = 0;//make_shared<null_obj>();
+		dterm = true;
 		return;
 	}
-	pobj& value = it->second;
-	if ( value->STR() ) value = newMap ( str_id, value );
-	if ( !value->MAP() ) throw std::runtime_error ( INVALID_TERM_DEFINITION );
-	somap defn, &val = *value->MAP();
-	//10
-	if ( ( it = val.find ( str_type ) ) != val.end() ) {
-		pstring type = it->second->STR();
-		if ( !type ) throw std::runtime_error ( INVALID_TYPE_MAPPING );
-		type = expandIri ( type, false, true, context, pdefined );
-		if ( is ( *type, {str_id, str_vocab } ) || ( !startsWith ( *type, "_:" ) && is_abs_iri ( *type ) ) ) defn[str_type] = make_shared<string_obj> ( *type );
-		else throw std::runtime_error ( INVALID_TYPE_MAPPING + tab + *type );
+	somap value;
+	if( it->second->STR())value= *newMap ( str_id, it->second )->MAP();
+	else if (auto x = it->second->MAP()) value = *x;
+	else throw std::runtime_error ( INVALID_TERM_DEFINITION );
+	somap defn;//, &val = *value->MAP();
+	if ( ( it = value.find ( str_type ) ) != value.end() ) { // 10
+		if ( !it->second->STR() ) throw std::runtime_error ( INVALID_TYPE_MAPPING );
+		string type(*expandIri ( it->second->STR(), false, true, context, pdefined ));
+		if (type != str_id && type != str_vocab && !is_abs_iri(type)) throw std::runtime_error ( INVALID_TYPE_MAPPING + tab + type );
+		defn[str_type] = make_shared<string_obj> ( type );
 	}
 	// 11
-	if ( ( it = val.find ( str_reverse ) ) != val.end() ) {
-		if ( throw_if_not_contains ( val, str_id, INVALID_REVERSE_PROPERTY ) && !it->second->STR() )
+	if ( ( it = value.find ( str_reverse ) ) != value.end() ) {
+		if ( throw_if_not_contains ( value, str_id, INVALID_REVERSE_PROPERTY ) && !it->second->STR() )
 			throw std::runtime_error ( INVALID_IRI_MAPPING + tab + string ( "Expected String for @reverse value." ) );
-		string reverse = *expandIri ( val.at ( str_reverse )->STR(), false, true, context, pdefined );
+		string reverse = *expandIri ( value.at ( str_reverse )->STR(), false, true, context, pdefined );
 		if ( !is_abs_iri ( reverse ) ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "Non-absolute @reverse IRI: " ) + reverse );
 		defn [str_id] = make_shared<string_obj> ( reverse );
-		if ( ( it = val.find ( "@container" ) ) != val.end() && is ( *it->second->STR(), { string ( str_set ), str_index }, ( INVALID_REVERSE_PROPERTY + string ( "reverse properties only support set- and index-containers" ) ) ) )
+		if ( ( it = value.find ( "@container" ) ) != value.end() && is ( *it->second->STR(), { string ( str_set ), str_index }, ( INVALID_REVERSE_PROPERTY + string ( "reverse properties only support set- and index-containers" ) ) ) )
 			defn ["@container"] = it->second;
 		defn[str_reverse] = make_shared<bool_obj> ( ( *pdefined ) [term] = true );
 		( *term_defs ) [term] = mk_somap_obj ( defn );
@@ -110,7 +110,7 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 	}
 	defn[str_reverse] = make_shared<bool_obj> ( false );
 	size_t colIndex;
-	if ( ( it = val.find ( str_id ) ) != val.end() && it->second->STR() && *it->second->STR() != term ) {
+	if ( ( it = value.find ( str_id ) ) != value.end() && !it->second->STR(term) ) {
 		if ( ! it->second->STR() ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "expected value of @id to be a string" ) );
 		pstring res = expandIri ( it->second->STR(), false, true, context, pdefined );
 		if ( res && ( keyword ( *res ) || is_abs_iri ( *res ) ) ) {
@@ -118,23 +118,22 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 			defn [str_id] = make_shared<string_obj> ( res );
 		} else throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "resulting IRI mapping should be a keyword, absolute IRI or blank node" ) );
 	} else if ( ( colIndex = term.find ( ":" ) ) != string::npos ) {
-		string prefix = term.substr ( 0, colIndex );
-		string suffix = term.substr ( colIndex + 1 );
-		if ( context->find ( prefix ) != context->end() ) create_term_def ( context, prefix, pdefined );
+		string prefix = term.substr ( 0, colIndex ), suffix = term.substr ( colIndex + 1 );
+		if ( has(context, prefix ) ) create_term_def ( context, prefix, pdefined );
 		if ( ( it = term_defs->find ( prefix ) ) != term_defs->end() )
-			defn [str_id] = make_shared<string_obj> ( *it->second->MAP()->at ( str_id )->STR() + suffix );
+			defn [str_id] = make_shared<string_obj> ( *getid(it->second)->STR() + suffix );
 		else defn[str_id] = make_shared<string_obj> ( term );
 	} else if ( ( it = MAP()->find ( str_vocab ) ) != MAP()->end() )
 		defn [str_id] = make_shared<string_obj> ( *MAP()->at ( str_vocab )->STR() + term );
 	else throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "relative term defn without vocab mapping" ) );
 
 	// 16
-	( ( it = val.find ( "@container" ) ) != val.end() ) && it->second->STR() &&
+	( ( it = value.find ( "@container" ) ) != value.end() ) && it->second->STR() &&
 	is ( *it->second->STR(), { str_list, string ( str_set ), str_index, str_lang }, ( INVALID_CONTAINER_MAPPING + "@container must be either @list, @set, @index, or @language" ) ) && ( defn["@container"] = it->second );
 
-	auto i1 = val.find ( str_lang ), i2 = val.find ( "type" );
+	auto i1 = value.find ( str_lang ), i2 = value.find ( "type" );
 	pstring lang;
-	if ( i1 != val.end() && i2 == val.end() ) {
+	if ( i1 != value.end() && i2 == value.end() ) {
 		if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) getlang ( defn ) = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
 		else throw std::runtime_error ( INVALID_LANGUAGE_MAPPING + string ( "@language must be a string or null" ) );
 	}
@@ -1077,7 +1076,7 @@ prdf_db jsonld_api::toRDF() {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
 	gen_node_map ( value, nodeMap );
-	rdf_db r(*this);
+	rdf_db r ( *this );
 	for ( auto g : *nodeMap ) {
 		if ( is_rel_iri ( g.first ) )
 			continue;
