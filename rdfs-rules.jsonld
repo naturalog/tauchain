@@ -55,12 +55,12 @@
   "@graph": [{
     "@id": "?A",
     "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
-      "@id": "B"
+      "@id": "?B"
     }]
   }, {
     "@id": "?B",
     "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
-      "@id": "C"
+      "@id": "?C"
     }]
   }]
 }, {
@@ -68,7 +68,7 @@
   "@graph": [{
     "@id": "?A",
     "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
-      "@id": "C"
+      "@id": "?C"
     }]
   }]
 }, {
