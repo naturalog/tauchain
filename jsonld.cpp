@@ -73,14 +73,14 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 		if ( dit->second ) return;
 		throw std::runtime_error ( CYCLIC_IRI_MAPPING + tab + term );
 	}
-	bool& dterm = dit->second = false;
+	defined[term] = false;
 	if ( keyword ( term ) ) throw std::runtime_error ( KEYWORD_REDEFINITION + tab + term );
 	term_defs->erase ( term ); // 4
 	auto it = context->find ( term );
 	psomap m;
 	if ( it == context->end() || it->second->map_and_has_null ( str_id ) ) {
 		( *term_defs ) [term] = 0;//make_shared<null_obj>();
-		dterm = true;
+		defined[term] = true;
 		return;
 	}
 	somap value;

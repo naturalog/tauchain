@@ -13,7 +13,7 @@
 
 //#include "logger.h"
 
-#define DEBUG
+//#define DEBUG
 //#define VERBOSE
 #ifdef DEBUG
 //logger _logger;
