@@ -1001,6 +1001,7 @@ prdf_db jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 }
 
 pobj expand ( pobj input, jsonld_options opts ) {
+	if (!input) return 0;
 	if ( input->STR() && input->STR()->find ( ":" ) != string::npos ) {
 		input = load ( *input->STR() ).document;
 		if ( !opts.base )

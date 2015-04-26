@@ -156,6 +156,8 @@ public:
 				auto _q = convert ( load_json ( args[4] ) );
 				auto kb = _kb [args[3]];
 				auto q = _q [args[5]];
+				if (!kb) { cout<<"Fatal: kb converted to null."<<endl; return 1; }
+				if (!q) { cout<<"Fatal: query converted to null."<<endl; return 1; }
 				print_evidence ( prove ( *kb, *q ) );
 			}
 		} catch ( string& ex ) {
