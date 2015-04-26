@@ -87,6 +87,24 @@ struct proof_trace_item {
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
+	
+
+	proof_trace_item(
+		rule_t rule,
+		int src, 
+		int ind,
+		std::shared_ptr<proof_trace_item> parent,
+		std::shared_ptr<env_t> env,
+		std::shared_ptr<ground_t> ground):
+		rule(rule),
+		src(src), 
+		ind(ind),
+		parent(parent),
+		env(env),
+		ground(ground)
+	{}
+	
+
 	operator string() const {
 		stringstream o;
 		o << "<<" << ( string ) rule << src << "," << ind << "(";

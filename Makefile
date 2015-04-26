@@ -6,6 +6,7 @@ OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=tau
 
 debug: CXXFLAGS += -DDEBUG
+ubi-tau: CXXFLAGS += -DDEBUG
 
 all: $(SOURCES) $(EXECUTABLE)
 debug: $(SOURCES) $(EXECUTABLE)
