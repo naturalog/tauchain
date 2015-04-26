@@ -4,7 +4,7 @@
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
-bool autobt = false, _pause = true;
+bool autobt = false, _pause = false;
 #endif
 
 class expand_cmd : public cmd_t {
@@ -131,7 +131,7 @@ public:
 		stringstream ss ( "Usage:" );
 		ss << endl << "\ttau prove\tRun socrates unit test";
 		ss << endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << tab << "Does nothing but list all available graphs.";
-		ss << endl << "\ttau prove [JSON-LD kb filename] [Graph name in kb] [JSON-LD query filename] [Graph name in query]" << tab << "(Hopefully) Answers the query." << endl;
+		ss << endl << "\ttau prove [JSON-LD kb filename] [Graph name in kb] [JSON-LD query filename] [Graph name in query]" << tab << "Resolves the query." << endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
@@ -148,12 +148,12 @@ public:
 					cout << "Contexts in kb:" << endl;
 					rdf_db rkb = toquads(kb);
 					for ( auto x : rkb ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
-				} else cout << "Cannot parse kb or empty kb." << endl;
+				} else cerr << "Cannot parse kb or empty kb." << endl;
 				if ( q && q->MAP() ) {
 					cout << "Contexts in query:" << endl;
 					rdf_db rq = toquads(q);
 					for ( auto x : rq) cout << x.first << '\t' << x.second->size() << " quads." << endl;
-				} else cout << "Cannot parse query or empty query." << endl;
+				} else cerr << "Cannot parse query or empty query." << endl;
 				return 0;
 			} else {
 				auto _kb = convert ( load_json ( args[2] ) );
@@ -161,11 +161,11 @@ public:
 				auto kb = _kb [args[3]];
 				auto q = _q [args[5]];
 				if ( !kb ) {
-					cerr << "Fatal: kb converted to null." << endl;
+					cerr << "Fatal: kb selected graph is null." << endl;
 					return 1;
 				}
 				if ( !q ) {
-					cerr << "Fatal: query converted to null." << endl;
+					cerr << "Fatal: query selected graph is null." << endl;
 					return 1;
 				}
 				print_evidence ( prove ( *kb, *q ) );

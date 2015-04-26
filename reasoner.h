@@ -47,12 +47,13 @@ ostream& operator<< ( ostream& o, env_t const& r ) {
 struct rule_t {
 	pred_t head;
 	vector<pred_t> body;
-	operator string() const {
+	string tostring() const {
 		stringstream o;
 		o << ( string ) head << " :- ";
-		for ( auto b : body ) o << ( string ) b << "; ";
+		for (auto x : body) x.write(o);
 		return o.str();
 	}
+	operator string() const { return tostring(); }
 };
 
 struct rule_env {
