@@ -50,10 +50,12 @@ struct rule_t {
 	string tostring() const {
 		stringstream o;
 		o << ( string ) head << " :- ";
-		for (auto x : body) x.write(o);
+		for ( auto x : body ) x.write ( o );
 		return o.str();
 	}
-	operator string() const { return tostring(); }
+	operator string() const {
+		return tostring();
+	}
 };
 
 struct rule_env {

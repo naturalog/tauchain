@@ -634,7 +634,7 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 			if ( key == str_context ) continue;
 			pstring exp_prop = act_ctx->expand_iri ( pstr ( key ), true/*? false*/, true, 0, 0 );
 			pobj exp_val = 0;
-			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?'/*  vars support - out of spec */&& exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
+			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?'/*  vars support - out of spec */ && exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
 			if ( keyword ( *exp_prop ) ) {
 				if ( act_prop && *act_prop == str_reverse ) throw Ex12;
 				if ( has ( result, exp_prop ) ) throw std::runtime_error ( COLLIDING_KEYWORDS + tab + *exp_prop + string ( " already exists in result" ) );
