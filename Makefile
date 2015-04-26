@@ -2,12 +2,17 @@ CC=g++
 CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb
 LDFLAGS=-lcurl
 SOURCES=tau.cpp jsonld.cpp rdf.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=tau
 
 debug: CXXFLAGS += -DDEBUG
-ubi-tau: CXXFLAGS += -DDEBUG -DUBI  -Iubi `xmlrpc-c-config  c++2 client  --libs --cflags`
-ubi-tau: SOURCES += ubi/client.c
+
+ubi-tau: CXXFLAGS += -DDEBUG -DUBI  -I./ubi/
+ubi-tau: LDFLAGS += `xmlrpc-c-config  c++2 client --libs --cflags` 
+
+#ubi/client.o: ubi/client.cpp
+#	$(CC) `xmlrpc-c-config  c++2 client --libs --cflags` ubi/client.cpp -o ubi/client.o
+
+OBJECTS=$(SOURCES:.cpp=.o)
+EXECUTABLE=tau
 
 
 all: $(SOURCES) $(EXECUTABLE)
@@ -15,8 +20,8 @@ debug: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
-ubi-tau: $(OBJECTS) 
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+ubi-tau: $(OBJECTS) ubi/client.o
+	$(CC) $(OBJECTS) ubi/client.o -o $@ $(LDFLAGS)
 .cpp.o:
 	$(CC) $(CXXFLAGS) $< -o $@
 

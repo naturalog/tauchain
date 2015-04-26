@@ -108,9 +108,15 @@ struct proof_trace_item {
 		ground(ground)
 	{
 		ubi_node_id = ubigraph_new_vertex();
+
+		ubigraph_set_vertex_attribute(ubi_node_id, "fontsize", "18");
+		ubigraph_set_vertex_attribute(ubi_node_id, "label", ((string)rule).c_str());
+		ubigraph_set_vertex_attribute(ubi_node_id, "fontcolor", "#ffffff");
+
 		if (parent != 0)
 		{
-			ubigraph_new_edge(ubi_node_id, parent->ubi_node_id);
+			int e = ubigraph_new_edge(ubi_node_id, parent->ubi_node_id);
+			ubigraph_set_edge_attribute(e, "color", "#ffffff");
 		}
 	}
 #endif
@@ -351,7 +357,7 @@ pred_t triple ( const jsonld::quad& q ) {
 evidence_t prove ( const qlist& kb, const qlist& query ) {
 #ifdef UBI
 	ubigraph_clear();
-	trace(cout<<"ubi.");
+	cout<<"ubi." << endl;
 #endif
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/

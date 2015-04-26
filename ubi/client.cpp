@@ -6,7 +6,7 @@
 
 //#include "config.h"  /* information about this build environment */
 
-#include <UbigraphAPI.h>
+#include "UbigraphAPI.h"
 
 #define NAME "XML-RPC C Test Client"
 #define VERSION "1.0"
