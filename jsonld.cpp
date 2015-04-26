@@ -115,7 +115,7 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 			if ( *res == str_context ) throw Ex2;
 			defn [str_id] = make_shared<string_obj> ( res );
 		} else throw Ex3;
-	} else if ( ( ( colIndex = term.find ( ":" ) ) != string::npos )/* || ( term.size() && term[0] == '?' ) */) {
+	} else if ( ( ( colIndex = term.find ( ":" ) ) != string::npos ) /*|| ( term.size() && term[0] == '?' )*/ ) {
 		if ( colIndex != string::npos ) {
 			string prefix = term.substr ( 0, colIndex ), suffix = term.substr ( colIndex + 1 );
 			if ( has ( context, prefix ) ) create_term_def ( context, prefix, pdefined );
@@ -634,7 +634,7 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 			if ( key == str_context ) continue;
 			pstring exp_prop = act_ctx->expand_iri ( pstr ( key ), true/*? false*/, true, 0, 0 );
 			pobj exp_val = 0;
-			if ( !exp_prop || ( (/* ( *exp_prop ) [0] != '?'  vars support - out of spec && */ exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
+			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?'/*  vars support - out of spec */&& exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
 			if ( keyword ( *exp_prop ) ) {
 				if ( act_prop && *act_prop == str_reverse ) throw Ex12;
 				if ( has ( result, exp_prop ) ) throw std::runtime_error ( COLLIDING_KEYWORDS + tab + *exp_prop + string ( " already exists in result" ) );
