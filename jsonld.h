@@ -237,10 +237,10 @@ public:
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
 	pcontext parse ( pobj localContext, vector<string> remoteContexts = vector<string>() );
 	void create_term_def ( const psomap context, const string term, pdefined_t pdefined );
-	pstring expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined );
+	pstring expand_iri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined );
 
 	//http://json-ld.org/spec/latest/json-ld-api/#iri-expansion
-	/*	 pstring expandIri ( string value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
+	/*	 pstring expand_iri ( string value, bool relative, bool vocab, const psomap context, pdefined_t pdefined ) {
 	    if ( keyword ( value ) ) return make_shared<string> ( value );
 	    const defined_t& defined = *pdefined;
 	    if ( context && has ( context, value ) && !defined.at ( value ) ) create_term_def ( context, value, pdefined );

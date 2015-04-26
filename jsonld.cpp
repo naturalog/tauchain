@@ -90,14 +90,14 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 	somap defn;//, &val = *value->MAP();
 	if ( ( it = value.find ( str_type ) ) != value.end() ) { // 10
 		if ( !it->second->STR() ) throw std::runtime_error ( INVALID_TYPE_MAPPING );
-		string type ( *expandIri ( it->second->STR(), false, true, context, pdefined ) );
+		string type ( *expand_iri ( it->second->STR(), false, true, context, pdefined ) );
 		if ( type != str_id && type != str_vocab && !is_abs_iri ( type ) ) throw std::runtime_error ( INVALID_TYPE_MAPPING + tab + type );
 		defn[str_type] = make_shared<string_obj> ( type );
 	}
 	// 11
 	if ( ( it = value.find ( str_reverse ) ) != value.end() ) {
 		if ( throw_if_not_contains ( value, str_id, INVALID_REVERSE_PROPERTY ) && !it->second->STR() ) throw Ex5;
-		string reverse = *expandIri ( value.at ( str_reverse )->STR(), false, true, context, pdefined );
+		string reverse = *expand_iri ( value.at ( str_reverse )->STR(), false, true, context, pdefined );
 		if ( !is_abs_iri ( reverse ) ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "Non-absolute @reverse IRI: " ) + reverse );
 		defn [str_id] = make_shared<string_obj> ( reverse );
 		if ( ( it = value.find ( "@container" ) ) != value.end() && is ( *it->second->STR(), { string ( str_set ), str_index }, Ex6 ) )
@@ -110,7 +110,7 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 	size_t colIndex;
 	if ( ( it = value.find ( str_id ) ) != value.end() && !it->second->STR ( term ) ) { // 13
 		if ( ! it->second->STR() ) throw Ex1;
-		pstring res = expandIri ( it->second->STR(), false, true, context, pdefined );
+		pstring res = expand_iri ( it->second->STR(), false, true, context, pdefined );
 		if ( res && ( keyword ( *res ) || is_abs_iri ( *res ) ) ) {
 			if ( *res == str_context ) throw Ex2;
 			defn [str_id] = make_shared<string_obj> ( res );
@@ -142,8 +142,8 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 	( *pdefined ) [term] = true;
 }
 
-pstring context_t::expandIri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
-	if ( !value || keyword ( *value ) || ( value->size() && ( *value ) [0] == '?' ) ) return value;
+pstring context_t::expand_iri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
+	if ( !value || keyword ( *value )/* || ( value->size() && ( *value ) [0] == '?' )*/ ) return value;
 	pstring rval;
 	if ( has ( context, *value ) && defined->find ( *value ) == defined->end() ) create_term_def ( context, *value, defined );
 	somap::iterator it = term_defs->find ( *value );
@@ -374,11 +374,11 @@ pobj context_t::expandValue ( pstring act_prop, pobj value )  {
 	psomap td = has ( term_defs, act_prop ) ? term_defs->at ( *act_prop )->MAP() : 0;
 	if ( hastype ( td ) ) {
 		if ( *gettype ( td )->STR() == str_id ) {
-			rval[ str_id ] = make_shared<string_obj> ( expandIri ( pstr ( value->toString() ), true, false, 0, 0 ) );
+			rval[ str_id ] = make_shared<string_obj> ( expand_iri ( pstr ( value->toString() ), true, false, 0, 0 ) );
 			return mk_somap_obj ( rval );
 		}
 		if ( *gettype ( td )->STR() == str_vocab ) {
-			rval[ str_id ] = make_shared<string_obj> ( expandIri ( pstr ( value->toString() ), true, true, 0, 0 ) );
+			rval[ str_id ] = make_shared<string_obj> ( expand_iri ( pstr ( value->toString() ), true, true, 0, 0 ) );
 			return mk_somap_obj ( rval );
 		}
 	}
@@ -632,7 +632,7 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 			string key = x.first;
 			pobj value = x.second;
 			if ( key == str_context ) continue;
-			pstring exp_prop = act_ctx->expandIri ( pstr ( key ), false, true, 0, 0 );
+			pstring exp_prop = act_ctx->expand_iri ( pstr ( key ), false, true, 0, 0 );
 			pobj exp_val = 0;
 			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?' /* vars support - out of spec */ &&  exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
 			if ( keyword ( *exp_prop ) ) {
@@ -640,16 +640,16 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 				if ( has ( result, exp_prop ) ) throw std::runtime_error ( COLLIDING_KEYWORDS + tab + *exp_prop + string ( " already exists in result" ) );
 				if ( *exp_prop == str_id ) {
 					if ( !value->STR() ) throw Ex13;
-					exp_val = make_shared <string_obj> ( act_ctx->expandIri ( value->STR(), true, false, 0, 0 ) );
+					exp_val = make_shared <string_obj> ( act_ctx->expand_iri ( value->STR(), true, false, 0, 0 ) );
 				} else if ( *exp_prop == str_type ) {
 					if ( value->LIST() ) {
 						exp_val = mk_olist_obj();
 						for ( pobj v : *value->LIST() ) {
 							if ( !v->STR() ) throw Ex14;
-							exp_val->LIST()->push_back ( make_shared <string_obj> ( act_ctx->expandIri ( v->STR(), true, true, 0, 0 ) ) );
+							exp_val->LIST()->push_back ( make_shared <string_obj> ( act_ctx->expand_iri ( v->STR(), true, true, 0, 0 ) ) );
 						}
 					} else if ( value->STR() )
-						exp_val = make_shared <string_obj> ( act_ctx->expandIri ( value->STR(), true, true, 0, 0 ) );
+						exp_val = make_shared <string_obj> ( act_ctx->expand_iri ( value->STR(), true, true, 0, 0 ) );
 					else if ( value->MAP() ) {
 						if ( value->MAP()->size() ) throw Ex15;
 						exp_val = value;
