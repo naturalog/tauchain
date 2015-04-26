@@ -2,14 +2,24 @@
 
 For more information about tauchain see http://idni.org
 
+To build, run 'make' or 'make debug' for verbose debug prints.
+Command line usage:
 
-Current status:
-===
+tau help <command>Prints usage of <command>.
 
-* json_spirit library is used to parse JSON.
+tau <command> [<args>]Run <command> with <args>.
 
-* JSON-LD (http://www.w3.org/TR/json-ld-api) api was implemented to translate JSON-LD into quads.
+Available commands:
 
-* Euler's (EYE) reasoner was ported to C++.
+convertConvert JSON-LD to quads including all dependent algorithms.
 
-* Ongoing work on improving and stabilizing the code.
+expandRun expansion algorithm http://www.w3.org/TR/json-ld-api/#expansion-algorithms including all dependant algorithms.
+
+nodemapRun JSON-LD node map generation algorithm.
+
+proveRun a query against a knowledgebase.
+
+toquadsRun JSON-LD->RDF algorithm http://www.w3.org/TR/json-ld-api/#deserialize-json-ld-to-rdf-algorithm of already-expanded input.
+
+
+

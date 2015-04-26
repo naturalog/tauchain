@@ -20,7 +20,7 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( args.size() > 4 ) {
+		if ( (args.size() == 3 && args[1] == "help") || args.size() > 4 ) {
 			cout << help();
 			return 1;
 		}
@@ -51,7 +51,7 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( args.size() > 3 ) {
+		if ( (args.size() == 3 && args[1] == "help") || args.size() > 3 ) {
 			cout << help();
 			return 1;
 		}
@@ -77,7 +77,7 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( args.size() > 3 ) {
+		if ( (args.size() == 3 && args[1] == "help") || args.size() > 3 ) {
 			cout << help();
 			return 1;
 		}
@@ -105,7 +105,7 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( args.size() > 3 ) {
+		if ( (args.size() == 3 && args[1] == "help") || args.size() > 3 ) {
 			cout << help();
 			return 1;
 		}
@@ -135,7 +135,7 @@ public:
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( args.size() != 2 && args.size() != 4 && args.size() != 6 ) {
+		if ((args.size() == 3 && args[1] == "help") || ( args.size() != 2 && args.size() != 4 && args.size() != 6 )) {
 			cout << help();
 			return 1;
 		}
@@ -200,6 +200,10 @@ int main ( int argc, char** argv ) {
 	}
 	if ( args[1] == "help" && argc == 3 ) {
 		cout << cmds[string ( argv[2] )]->help();
+		return 0;
+	}
+	if ( args[1] == "help" && argc == 2 ) {
+		print_usage(cmds);
 		return 0;
 	}
 	return ( *cmds[argv[1]] ) ( args );
