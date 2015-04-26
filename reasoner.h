@@ -2,6 +2,9 @@
 #include <deque>
 #include "parsers.h"
 
+#ifdef UBI
+#include <UbigraphAPI.h>
+#endif
 
 struct pred_t {
 	string pred;
@@ -87,7 +90,8 @@ struct proof_trace_item {
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
-	
+#ifdef UBI
+	int ubi_node_id;
 
 	proof_trace_item(
 		rule_t rule,
@@ -102,8 +106,14 @@ struct proof_trace_item {
 		parent(parent),
 		env(env),
 		ground(ground)
-	{}
-	
+	{
+		ubi_node_id = ubigraph_new_vertex();
+		if (parent != 0)
+		{
+			ubigraph_new_edge(ubi_node_id, parent->ubi_node_id);
+		}
+	}
+#endif
 
 	operator string() const {
 		stringstream o;
@@ -339,6 +349,10 @@ pred_t triple ( const jsonld::quad& q ) {
 };
 
 evidence_t prove ( const qlist& kb, const qlist& query ) {
+#ifdef UBI
+	ubigraph_clear();
+	trace(cout<<"ubi.");
+#endif
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	for ( const auto& quad : kb ) {

@@ -6,21 +6,19 @@ OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=tau
 
 debug: CXXFLAGS += -DDEBUG
-ubi-tau: CXXFLAGS += -DDEBUG
+ubi-tau: CXXFLAGS += -DDEBUG -DUBI  -Iubi `xmlrpc-c-config  c++2 client  --libs --cflags`
+ubi-tau: SOURCES += ubi/client.c
+
 
 all: $(SOURCES) $(EXECUTABLE)
 debug: $(SOURCES) $(EXECUTABLE)
+
 $(EXECUTABLE): $(OBJECTS) 
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+ubi-tau: $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 .cpp.o:
 	$(CC) $(CXXFLAGS) $< -o $@
-
-ubi-tau: $(OBJECTS) ubi/client.c
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) -Iubi ubi/client.c `xmlrpc-c-config  c++2 client  --libs --cflags`
-
-	
-
-
 
 clean:
 	rm -rf tau $(OBJECTS)
