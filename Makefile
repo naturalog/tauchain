@@ -26,7 +26,7 @@ ubi-tau: $(OBJECTS) ubi/client.o
 	$(CC) $(CXXFLAGS) $< -o $@
 
 clean:
-	rm -rf tau $(OBJECTS)
+	rm -rf tau $(OBJECTS) ubi/client.o
 
 
 #all: jsonld.h  json_spirit.h parsers.h reasoner.h strings.h rdf.h logger.h object.h tau.o jsonld.o rdf.o

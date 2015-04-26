@@ -92,35 +92,7 @@ struct proof_trace_item {
 	std::shared_ptr<ground_t> ground;
 #ifdef UBI
 	int ubi_node_id;
-
-	proof_trace_item(
-		rule_t rule,
-		int src, 
-		int ind,
-		std::shared_ptr<proof_trace_item> parent,
-		std::shared_ptr<env_t> env,
-		std::shared_ptr<ground_t> ground):
-		rule(rule),
-		src(src), 
-		ind(ind),
-		parent(parent),
-		env(env),
-		ground(ground)
-	{
-		ubi_node_id = ubigraph_new_vertex();
-
-		ubigraph_set_vertex_attribute(ubi_node_id, "fontsize", "18");
-		ubigraph_set_vertex_attribute(ubi_node_id, "label", ((string)rule).c_str());
-		ubigraph_set_vertex_attribute(ubi_node_id, "fontcolor", "#ffffff");
-
-		if (parent != 0)
-		{
-			int e = ubigraph_new_edge(ubi_node_id, parent->ubi_node_id);
-			ubigraph_set_edge_attribute(e, "color", "#ffffff");
-		}
-	}
 #endif
-
 	operator string() const {
 		stringstream o;
 		o << "<<" << ( string ) rule << src << "," << ind << "(";
@@ -130,6 +102,30 @@ struct proof_trace_item {
 	}
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
+
+void ubi(const ppti i)
+{
+#ifdef UBI
+	i->ubi_node_id = ubigraph_new_vertex();
+
+	ubigraph_set_vertex_attribute(i->ubi_node_id, "fontsize", "16");
+	ubigraph_set_vertex_attribute(i->ubi_node_id, "label", ((string)i->rule).c_str());
+	ubigraph_set_vertex_attribute(i->ubi_node_id, "color", "#ffffff");
+	ubigraph_set_vertex_attribute(i->ubi_node_id, "fontcolor", "#ffffff");
+	ubigraph_set_vertex_attribute(i->ubi_node_id, "shape", "octahedron");
+
+	if (i->parent != 0)
+	{
+		int e = ubigraph_new_edge(i->parent->ubi_node_id, i->ubi_node_id);
+		ubigraph_set_edge_attribute(e, "color", "#ffffff");
+		ubigraph_set_edge_attribute(e, "width", "5.0");
+		ubigraph_set_edge_attribute(e, "oriented", "true");
+	}
+	else
+		ubigraph_set_vertex_attribute(i->ubi_node_id, "color", "#ff0000");
+
+#endif
+}
 
 int builtin ( pred_t, proof_trace_item ) {
 	/*
@@ -154,7 +150,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	int step = 0;
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
-	queue.emplace_back ( s );
+	queue.emplace_back ( s ); ubi(s);
 	//queue.push_back(s);
 	trace (  "Goal: " << ( string ) goal << endl );
 	while ( queue.size() > 0 ) {
@@ -183,11 +179,11 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			}
 			trace ( "Q parent: " );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
-			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, c->parent->env, g} );
+			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent,  make_shared<env_t>(), g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env, true );
 			r->ind++;
 			trace (  ( string ) ( *r ) << endl );
-			queue.push_back ( r );
+			queue.push_back ( r ); //ubi(r);
 			continue;
 		}
 		trace ( "Done q" << endl );
@@ -197,7 +193,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			g->emplace_back ( rule_env { { evaluate ( t, c->env ), vector<pred_t>() }, make_shared<env_t>() } );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->rule, c->src, c->ind, c->parent, c->env, g} );
 			r->ind++;
-			queue.push_back ( r );
+			queue.push_back ( r ); ubi(r);
 			continue;
 		} else if ( b == 0 )   // builtin didnt unify
 			continue; // else there is no such builtin, continue...
@@ -231,7 +227,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				}
 				if ( !ep ) {
 					trace ( "Adding to queue: " << ( string ) ( *r ) << endl << flush );
-					queue.push_front ( r );
+					queue.push_front ( r ); ubi(r);
 				} else trace ( "didn't reach top" << endl );
 				trace ( "Done euler loop" << endl );
 			} else trace ( "No loop here" << endl );
@@ -357,7 +353,6 @@ pred_t triple ( const jsonld::quad& q ) {
 evidence_t prove ( const qlist& kb, const qlist& query ) {
 #ifdef UBI
 	ubigraph_clear();
-	cout<<"ubi." << endl;
 #endif
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
