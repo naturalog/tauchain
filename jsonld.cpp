@@ -143,7 +143,7 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 }
 
 pstring context_t::expand_iri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined ) {
-	if ( !value || keyword ( *value )/* || ( value->size() && ( *value ) [0] == '?' )*/ ) return value;
+	if ( !value || keyword ( *value ) || ( value->size() && ( *value ) [0] == '?' ) ) return value;
 	pstring rval;
 	if ( has ( context, *value ) && defined->find ( *value ) == defined->end() ) create_term_def ( context, *value, defined );
 	somap::iterator it = term_defs->find ( *value );
