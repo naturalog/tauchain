@@ -14,6 +14,13 @@ $(EXECUTABLE): $(OBJECTS)
 .cpp.o:
 	$(CC) $(CXXFLAGS) $< -o $@
 
+ubi-tau: $(OBJECTS) ubi/client.c
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) -Iubi ubi/client.c `xmlrpc-c-config  c++2 client  --libs --cflags`
+
+	
+
+
+
 clean:
 	rm -rf tau $(OBJECTS)
 

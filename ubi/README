@@ -1,0 +1,14 @@
+This client requires XML-RPC for C/C++ (Xmlrpc-c), which can be obtained
+from:
+
+  http://xmlrpc-c.sourceforge.net/
+
+or with
+
+apt-get install libxmlrpc-c++8-dev
+
+
+grab the server here:
+
+http://ubietylab.net/ubigraph/content/Downloads/index.php
+
