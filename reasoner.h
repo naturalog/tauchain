@@ -221,11 +221,13 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 			bool r = unify ( sval, senv, d, denv, f );
 			_indent--;
 			return r;
-		} catch ( ... ) {
+		} catch (int n) {
+			if (n) { bt(); throw std::runtime_error("Error during unify"); }
 			if ( _indent ) _indent--;
 			trace ( indent() << " Match(free var)!" << endl );
 			return true;
-		}
+		} catch (exception ex) { bt(); throw ex; }
+		catch (...) { bt(); throw std::runtime_error("Error during unify"); }
 	}
 	if ( d.pred[0] == '?' ) {
 		trace ( indent() << "  dest is var" << endl << flush );
@@ -235,12 +237,14 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 			bool b = unify ( s, senv, dval, denv, f );
 			trace ( _indent-- );
 			return b;
-		} catch ( ... ) {
+		} catch ( int n) {
+			if (n) { bt(); throw std::runtime_error("Error during unify"); }
 			( *denv ) [d.pred] = evaluate ( s, senv );
 			trace ( _indent-- );
 			trace (  indent() << " Match!(free var)" << endl );
 			return true;
-		}
+		} catch (exception ex) { throw ex; }
+		catch (...) { bt(); throw std::runtime_error("Error during unify"); }
 	}
 	if ( s.pred == d.pred && s.args.size() == d.args.size() ) {
 		trace ( indent() << "  Comparison:" << endl << flush );
@@ -267,15 +271,17 @@ pred_t evaluate ( pred_t t, penv_t env ) {
 		trace (  "(" << ( string ) t << " is a var..)" << endl );
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) return evaluate ( it->second, env );
-		else throw 0;
+		else throw int(0);
 	} else if ( t.args.size() == 0 ) return t;
 	vector<pred_t> n;
 	for ( size_t i = 0; i < t.args.size(); ++i ) {
 		try {
 			n.push_back ( evaluate ( t.args[i], env ) );
-		} catch ( ... ) {
+		} catch (int k) {
+			if (k) { bt(); throw std::runtime_error("Uncaught exception during evaluate()."); }
 			n.push_back ( { t.args[i].pred, vector<pred_t>() } );
-		}
+		} catch (exception ex) { bt(); throw ex; }
+		catch (...) { bt(); throw std::runtime_error("Uncaught exception during evaluate()."); }
 	}
 	return {t.pred, n};
 }

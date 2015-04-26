@@ -163,25 +163,25 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 						firstBnode = mkbnode ( api.gen_bnode_id() );
 					}
 					triples.push_back ( make_shared <quad> ( subj, pred, firstBnode, graph_name ) );
-					trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+//					trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 					for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
 						pnode object = obj_to_rdf ( list->at ( i ) );
 						triples.push_back ( make_shared <quad> ( firstBnode, first, object, graph_name ) );
-						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+//						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 						pnode restBnode = mkbnode ( api.gen_bnode_id() );
 						triples.push_back ( make_shared <quad> ( firstBnode, rest, restBnode, graph_name ) );
-						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+//						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 						firstBnode = restBnode;
 					}
 					if ( last ) {
 						triples.push_back ( make_shared <quad> ( firstBnode, first, last, graph_name ) );
-						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+//						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 						triples.push_back ( make_shared <quad> ( firstBnode, rest, nil, graph_name ) );
-						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+//						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 					}
 				} else if ( pnode object = obj_to_rdf ( item ) ) {
 					triples.push_back ( make_shared <quad> ( subj, pred, object, graph_name ) );
-					trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+//					trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 				}
 			}
 		}
