@@ -1,15 +1,18 @@
 CC=g++
-CFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb
+CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb
 LDFLAGS=-lcurl
 SOURCES=tau.cpp jsonld.cpp rdf.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=tau
 
+debug: CXXFLAGS += -DDEBUG
+
 all: $(SOURCES) $(EXECUTABLE)
+debug: $(SOURCES) $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 .cpp.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CXXFLAGS) $< -o $@
 
 clean:
 	rm -rf tau $(OBJECTS)

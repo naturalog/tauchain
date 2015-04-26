@@ -49,7 +49,7 @@ public:
 
 	using quad_base::quad_base;
 
-	string tostring ( string ) {
+	string tostring ( string __ = "") {
 		//		if (ctx == "") ctx = graph->tostring();
 		stringstream ss;
 		auto f = [] ( pnode n ) {
