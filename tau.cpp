@@ -1,7 +1,9 @@
 #include "cli.h"
 
 #ifdef DEBUG
-auto dummy = []() { return ( bool ) std::cin.tie ( &std::clog ); }();
+auto dummy = []() {
+	return ( bool ) std::cin.tie ( &std::clog );
+}();
 bool autobt = false, _pause = true;
 #endif
 
@@ -141,14 +143,14 @@ public:
 			if ( args.size() == 2 ) cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
 			else if ( args.size() == 4 ) {
 				pobj kb = nodemap ( jsonld::expand ( load_json ( args[2] ) ) );
-				pobj q = nodemap ( jsonld::expand ( load_json ( args[args.size() == 4 ? 3 : 4] ) ) );
+				pobj q = nodemap ( jsonld::expand ( load_json ( args[3] ) ) );
 				if ( kb && kb->MAP() ) {
 					cout << "Contexts in kb:" << endl;
-					for ( auto x : *kb->MAP() ) cout << x.first << endl;
-				} else cout << "Cannot parse query or empty query." << endl;
+					for ( auto x : *kb->MAP() ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
+				} else cout << "Cannot parse kb or empty kb." << endl;
 				if ( q && q->MAP() ) {
 					cout << "Contexts in query:" << endl;
-					for ( auto x : *q->MAP() ) cout << x.first << endl;
+					for ( auto x : *q->MAP() ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
 				} else cout << "Cannot parse query or empty query." << endl;
 				return 0;
 			} else {
@@ -156,8 +158,14 @@ public:
 				auto _q = convert ( load_json ( args[4] ) );
 				auto kb = _kb [args[3]];
 				auto q = _q [args[5]];
-				if (!kb) { cout<<"Fatal: kb converted to null."<<endl; return 1; }
-				if (!q) { cout<<"Fatal: query converted to null."<<endl; return 1; }
+				if ( !kb ) {
+					cerr << "Fatal: kb converted to null." << endl;
+					return 1;
+				}
+				if ( !q ) {
+					cerr << "Fatal: query converted to null." << endl;
+					return 1;
+				}
 				print_evidence ( prove ( *kb, *q ) );
 			}
 		} catch ( string& ex ) {

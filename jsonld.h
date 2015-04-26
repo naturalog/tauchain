@@ -18,7 +18,7 @@
 #include <stdexcept>
 #include "object.h"
 #include "strings.h"
-#include "rdf_data.h"
+#include "rdf.h"
 using namespace std;
 
 namespace jsonld {
@@ -75,7 +75,7 @@ struct jsonld_options {
 	jsonld_options ( string base_ ) :
 		base ( pstr ( base_ ) ) {
 	}
-	pstring base = pstr("http://tauchain.org/");
+	pstring base = pstr ( "http://tauchain.org/" );
 	pbool compactArrays = make_shared<bool> ( true );
 	pobj expandContext = 0;
 	pstring processingMode = pstr ( "json-ld-1.0" );
@@ -151,8 +151,8 @@ inline bool keyword ( pobj p ) {
 }
 
 inline bool is_abs_iri ( const string& s ) {
-	return (s.find(":") != string::npos) || (s.size() && s[0] == '?');
-//	return (!s.size()) ? false : ( ( s.find ( "://" ) != string::npos ) || s[0] == '?' || s[0] == '_' /* '_' taken from expandiri algo step 4.2 */ );
+	return ( s.find ( ":" ) != string::npos ) || ( s.size() && s[0] == '?' );
+	//	return (!s.size()) ? false : ( ( s.find ( "://" ) != string::npos ) || s[0] == '?' || s[0] == '_' /* '_' taken from expandiri algo step 4.2 */ );
 }
 
 inline bool is_rel_iri ( const string& s ) {
@@ -184,10 +184,8 @@ inline vector<string> vec2vec ( polist x ) {
 }
 
 inline void add_all ( polist l, pobj v ) {
-	if ( v->LIST() )
-		l->insert ( l->end(), v->LIST()->begin(), v->LIST()->end() );
-	else
-		l->push_back ( v );
+	if ( v->LIST() ) l->insert ( l->end(), v->LIST()->begin(), v->LIST()->end() );
+	else l->push_back ( v );
 }
 
 struct remote_doc_t {

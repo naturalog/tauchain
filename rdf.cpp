@@ -4,17 +4,12 @@ namespace jsonld {
 
 string node::tostring() {
 	stringstream ss;
-	if ( _type == IRI )
-		ss << '<';
-	if ( _type == LITERAL )
-		ss << '\"';
+	if ( _type == IRI || _type == BNODE ) ss << '<';
+	if ( _type == LITERAL ) ss << '\"';
 	ss << value;
-	if ( _type == LITERAL )
-		ss << '\"';
-	if ( _type == LITERAL && lang.size() )
-		ss << '@' << lang;
-	if ( _type == IRI )
-		ss << '>';
+	if ( _type == LITERAL ) ss << '\"';
+	if ( _type == LITERAL && lang.size() ) ss << '@' << lang;
+	if ( _type == IRI || _type == BNODE ) ss << '>';
 	return ss.str();
 }
 
@@ -24,8 +19,7 @@ pnode mkliteral ( string value, pstring datatype, pstring language ) {
 	r->value = value;
 	//	cout<<"mkliteral value: "<<value<<endl;
 	r->datatype = datatype ? *datatype : XSD_STRING;
-	if ( language )
-		r->lang = *language;
+	if ( language ) r->lang = *language;
 	return r;
 }
 
@@ -152,6 +146,8 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 			else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
 			else if ( is_rel_iri ( property ) ) continue;
 			else values = node->at ( property )->LIST();
+			// hack
+			//if (!values) values = ((*node)[property] = mk_olist_obj(olist(1, node->at ( property )->clone())))->LIST();
 
 			pnode subj = id.find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
 			pnode pred = startsWith ( property, "_:" ) ?  mkbnode ( property ) : mkiri ( property );
@@ -166,25 +162,37 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 						last = obj_to_rdf ( *list->rbegin() );
 						firstBnode = mkbnode ( api.gen_bnode_id() );
 					}
-					triples.push_back ( make_shared <quad > ( subj, pred, firstBnode, graph_name ) );
+					triples.push_back ( make_shared <quad> ( subj, pred, firstBnode, graph_name ) );
+					trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 					for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
 						pnode object = obj_to_rdf ( list->at ( i ) );
-						triples.push_back ( make_shared <quad > ( firstBnode, first, object, graph_name ) );
+						triples.push_back ( make_shared <quad> ( firstBnode, first, object, graph_name ) );
+						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 						pnode restBnode = mkbnode ( api.gen_bnode_id() );
-						triples.push_back ( make_shared <quad > ( firstBnode, rest, restBnode, graph_name ) );
+						triples.push_back ( make_shared <quad> ( firstBnode, rest, restBnode, graph_name ) );
+						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 						firstBnode = restBnode;
 					}
 					if ( last ) {
-						triples.push_back ( make_shared <quad > ( firstBnode, first, last, graph_name ) );
-						triples.push_back ( make_shared <quad > ( firstBnode, rest, nil, graph_name ) );
+						triples.push_back ( make_shared <quad> ( firstBnode, first, last, graph_name ) );
+						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+						triples.push_back ( make_shared <quad> ( firstBnode, rest, nil, graph_name ) );
+						trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
 					}
-				} else if ( pnode object = obj_to_rdf ( item ) )
-					triples.push_back ( make_shared <quad > ( subj, pred, object, graph_name ) );
+				} else if ( pnode object = obj_to_rdf ( item ) ) {
+					triples.push_back ( make_shared <quad> ( subj, pred, object, graph_name ) );
+					trace ( "triple added: " << ( *triples.rbegin() )->tostring() << endl );
+				}
 			}
 		}
 	}
+	//	orig insertion:
 	if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared <qlist> ( triples );
-	else for ( auto t : triples ) at ( graph_name )->push_back ( t );
+	else at ( graph_name )->insert ( at ( graph_name )->end() , triples.begin(), triples.end() );
+	//	alternative insertion:
+	//	for (auto t : triples) {
+	//		if (find(t.graph->value) == end())
+	//	}
 }
 
 pnode rdf_db::obj_to_rdf ( pobj item ) {

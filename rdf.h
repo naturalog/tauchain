@@ -14,12 +14,8 @@ typedef std::shared_ptr<snmap> psnmap;
 class node {
 public:
 	string type, value, datatype, lang;
-	enum node_type {
-		LITERAL, IRI, BNODE
-	} _type;
-	node ( const node_type& t ) :
-		_type ( t ) {
-	}
+	enum node_type { LITERAL, IRI, BNODE } _type;
+	node ( const node_type& t ) : _type ( t ) { }
 	string tostring();
 };
 
@@ -31,8 +27,7 @@ typedef std::tuple<pnode, pnode, pnode, pnode> quad_base;
 
 class quad: public quad_base {
 	quad ( string subj, string pred, pnode object, string graph ) :
-		quad ( startsWith ( subj, "_:" ) ? mkbnode ( subj ) : mkiri ( subj ),
-		       mkiri ( pred ), object, graph ) {
+		quad ( startsWith ( subj, "_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {
 	}
 public:
 	pnode &subj = std::get <0> ( *this ), &pred = std::get <1> ( *this ),
@@ -54,12 +49,16 @@ public:
 
 	using quad_base::quad_base;
 
-	string tostring ( string ctx ) {
+	string tostring ( string ) {
+		//		if (ctx == "") ctx = graph->tostring();
 		stringstream ss;
 		auto f = [] ( pnode n ) {
 			return n ? n->tostring() : string ( "<>" );
 		};
-		ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ' << ctx << " .";
+		ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ' << f ( graph ) << " .";
+		#ifdef DEBUG
+		ss << " stored graph name: " << f ( graph );
+		#endif
 		return ss.str();
 	}
 };

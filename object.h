@@ -97,6 +97,11 @@ public:
 	virtual std::shared_ptr<null> Null() {
 		return 0;
 	}
+	size_t size() {
+		if ( LIST() ) return LIST()->size();
+		if ( MAP() ) return MAP()->size();
+		return 1;
+	}
 	bool STR ( const string& x ) {
 		auto y = STR();
 		return y && ( *y == x );

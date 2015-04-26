@@ -1,5 +1,5 @@
 #include "jsonld.h"
-#include "rdf_data.h"
+#include "rdf.h"
 
 namespace jsonld {
 
@@ -161,7 +161,7 @@ pstring context_t::expandIri ( const pstring value, bool relative, bool vocab, c
 				if ( has ( term_defs, prefix ) ) return pstr ( *term_defs->at ( prefix )->MAP()->at ( str_id )->STR() + suffix );
 			}
 			return value;
-		} 
+		}
 		if ( vocab && has ( MAP(), str_vocab ) ) return pstr ( *MAP()->at ( str_vocab )->STR() + *value );
 		else if ( relative ) {
 			auto base = get ( MAP(), str_base );
@@ -615,7 +615,7 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 	pobj result;
 	if ( !element ) result = 0;
 	else if ( ! ( element->LIST() || element->MAP() ) )
-		result = ( !act_prop || *act_prop == str_graph ) ? 0 :act_ctx->expandValue ( act_prop, element );
+		result = ( !act_prop || *act_prop == str_graph ) ? 0 : act_ctx->expandValue ( act_prop, element );
 	else if ( element->LIST() ) {
 		result = mk_olist_obj();
 		for ( pobj item : *element->LIST() ) {
@@ -626,7 +626,7 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 		}
 	} else if ( element->MAP() ) {
 		psomap elem = element->MAP();
-		if ( elem->find ( str_context ) != elem->end() ) act_ctx = act_ctx->parse ( elem->at ( str_context ) ); 
+		if ( elem->find ( str_context ) != elem->end() ) act_ctx = act_ctx->parse ( elem->at ( str_context ) );
 		result = mk_somap_obj();
 		for ( auto x : *elem ) {
 			string key = x.first;
@@ -634,22 +634,22 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 			if ( key == str_context ) continue;
 			pstring exp_prop = act_ctx->expandIri ( pstr ( key ), false, true, 0, 0 );
 			pobj exp_val = 0;
-			if ( !exp_prop || ( ((*exp_prop)[0] != '?' /* vars support - out of spec */ &&  exp_prop->find ( ":" ) == string::npos) && !keyword ( *exp_prop ) ) ) continue;
+			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?' /* vars support - out of spec */ &&  exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
 			if ( keyword ( *exp_prop ) ) {
-				if ( act_prop && *act_prop == str_reverse ) throw Ex12; 
+				if ( act_prop && *act_prop == str_reverse ) throw Ex12;
 				if ( has ( result, exp_prop ) ) throw std::runtime_error ( COLLIDING_KEYWORDS + tab + *exp_prop + string ( " already exists in result" ) );
 				if ( *exp_prop == str_id ) {
 					if ( !value->STR() ) throw Ex13;
-					exp_val = make_shared <string_obj > ( act_ctx->expandIri ( value->STR(), true, false, 0, 0 ) );
+					exp_val = make_shared <string_obj> ( act_ctx->expandIri ( value->STR(), true, false, 0, 0 ) );
 				} else if ( *exp_prop == str_type ) {
 					if ( value->LIST() ) {
 						exp_val = mk_olist_obj();
 						for ( pobj v : *value->LIST() ) {
 							if ( !v->STR() ) throw Ex14;
-							exp_val->LIST()->push_back ( make_shared <string_obj > ( act_ctx->expandIri ( v->STR(), true, true, 0, 0 ) ) );
+							exp_val->LIST()->push_back ( make_shared <string_obj> ( act_ctx->expandIri ( v->STR(), true, true, 0, 0 ) ) );
 						}
 					} else if ( value->STR() )
-						exp_val = make_shared <string_obj > ( act_ctx->expandIri ( value->STR(), true, true, 0, 0 ) );
+						exp_val = make_shared <string_obj> ( act_ctx->expandIri ( value->STR(), true, true, 0, 0 ) );
 					else if ( value->MAP() ) {
 						if ( value->MAP()->size() ) throw Ex15;
 						exp_val = value;
@@ -894,7 +894,7 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 			if ( startsWith ( item, "_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
 			else newTypes.push_back ( item );
 		}
-		( *elem ) [str_type] = gettype ( elem )->LIST() ? (pobj)mk_olist_obj ( vec2vec ( newTypes ) ) : make_shared <string_obj> ( newTypes[0] );
+		( *elem ) [str_type] = gettype ( elem )->LIST() ? ( pobj ) mk_olist_obj ( vec2vec ( newTypes ) ) : make_shared <string_obj> ( newTypes[0] );
 	}
 	if ( hasvalue ( elem ) ) {
 		if ( !list ) mergeValue ( node, act_prop, element );
@@ -946,7 +946,7 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 					string prop = x.first;
 					polist values = revmap->at ( prop )->LIST();
 					if ( values ) for ( pobj value : *values )
-						gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared <string> ( prop ), 0 );
+							gen_node_map ( value, nodeMap, activeGraph, mk_somap_obj ( refnode ), make_shared <string> ( prop ), 0 );
 				}
 		}
 		if ( hasgraph ( elem ) ) {
@@ -1001,7 +1001,7 @@ prdf_db jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 }
 
 pobj expand ( pobj input, jsonld_options opts ) {
-	if (!input) return 0;
+	if ( !input ) return 0;
 	if ( input->STR() && input->STR()->find ( ":" ) != string::npos ) {
 		input = load ( *input->STR() ).document;
 		if ( !opts.base )
