@@ -146,11 +146,13 @@ public:
 				pobj q = nodemap ( jsonld::expand ( load_json ( args[3] ) ) );
 				if ( kb && kb->MAP() ) {
 					cout << "Contexts in kb:" << endl;
-					for ( auto x : *kb->MAP() ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
+					rdf_db rkb = toquads(kb);
+					for ( auto x : rkb ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
 				} else cout << "Cannot parse kb or empty kb." << endl;
 				if ( q && q->MAP() ) {
 					cout << "Contexts in query:" << endl;
-					for ( auto x : *q->MAP() ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
+					rdf_db rq = toquads(q);
+					for ( auto x : rq) cout << x.first << '\t' << x.second->size() << " quads." << endl;
 				} else cout << "Cannot parse query or empty query." << endl;
 				return 0;
 			} else {

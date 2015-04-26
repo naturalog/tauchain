@@ -632,7 +632,7 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 			string key = x.first;
 			pobj value = x.second;
 			if ( key == str_context ) continue;
-			pstring exp_prop = act_ctx->expand_iri ( pstr ( key ), false, true, 0, 0 );
+			pstring exp_prop = act_ctx->expand_iri ( pstr ( key ), true/*? false*/, true, 0, 0 );
 			pobj exp_val = 0;
 			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?' /* vars support - out of spec */ &&  exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
 			if ( keyword ( *exp_prop ) ) {
