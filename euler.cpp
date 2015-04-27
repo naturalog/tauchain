@@ -201,7 +201,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 	};
 	deque<proof_element> proof_trace;
 
-	proof_trace.emplace_back ( goal );
+	proof_trace.emplace_back ( mkpred(0, {goal}) );
 	evidence_t evidence;
 	size_t step = 0;
 	while ( proof_trace.size() ) {
@@ -235,6 +235,8 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 				proof_trace.push_back ( r );
 				continue;
 			} else if ( b == 0 ) continue;
+			cout << "now looking in cases for " << t << endl;
+			cout << "cases:" << endl << predicate::str() << endl;
 			if ( cases.find ( P[t].pred ) != cases.end() ) {
 				size_t src = 0;
 				for ( size_t k = 0; k < cases.at ( P[t].pred ).size(); k++ ) {
