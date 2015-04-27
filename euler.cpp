@@ -70,9 +70,18 @@ public:
 	}
 	string tostr() const {
 		stringstream o;
-		o << dict[pred] << '(' << pred << ')' << " implied by either ";
-		for ( auto x : args ) o << dict[preds[x].pred] << '(' << preds[x].pred << ')' << " or ";
-		o << '.';
+		o << loc << '\t';
+		if ( args.size() ) {
+			auto it = args.begin();
+			for ( ;; ) {
+				const predicate& p = preds[*it];
+				o << dict[p.pred] << '(' << p.pred << ')';
+				++it;
+				if ( it != args.end() ) o << " | ";
+				else break;
+			}
+		} else o << "Ground";
+		o << " => " << dict[pred] << '(' << pred << ')';
 		return o.str();
 	}
 	static string str() {
@@ -95,7 +104,6 @@ predicate *predicate::preds = []() {
 }();
 size_t predicate::npreds = 1;
 #define P predicate::_ps()
-#define PID /*(uint)predicate*/mkpred
 typedef predicate rule_t;
 
 uint mkpred ( int p = 0, vector<uint> a = vector<uint>() ) {
@@ -114,7 +122,7 @@ uint mkpred ( int p, gnd_t g ) {
 }
 
 uint mkpred ( string s )  {
-	return mkpred(dict.has ( s )  ? dict[s] : dict.set ( s ));
+	return mkpred ( dict.has ( s )  ? dict[s] : dict.set ( s ) );
 }
 
 //uint mkpred(uint p, vector<uint> a) { return mkpred(preds[p].pred, a); }
@@ -125,10 +133,10 @@ uint eval ( const uint _t, const subst s ) {
 		auto it = s.find ( t.pred );
 		return it == s.end() ? ( uint ) predicate ( ) : eval ( it->second, s );
 	} else if ( !t.args.size() == 0 ) return _t;
-	uint _r = PID ( t.pred );
+	uint _r = mkpred ( t.pred );
 	predicate& r = P[_r];
 	uint a;
-	for ( uint x : t.args ) r.args.emplace_back ( ( a = eval ( x, s ) ) ? PID ( P[x].pred ) : a );
+	for ( uint x : t.args ) r.args.emplace_back ( ( a = eval ( x, s ) ) ? mkpred ( P[x].pred ) : a );
 	return _r;
 }
 
@@ -183,7 +191,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 		proof_element ( uint r = 0, uint s = 0, uint i = 0, proof_element* p = 0, subst e = subst(), gnd_t g = gnd_t() ) :
 			rule ( r ), src ( s ), ind ( i ), parent ( p ), env ( e ), ground ( g ) {
 			cout << "new proof_element with: ";
-			cout << "rule: " << rule << ", ";
+			cout << "rule" << '(' << rule << "): " << P[rule].tostr() << ", ";
 			cout << "src: " << src << ", ";
 			cout << "ind: " << ind << ", ";
 			cout << "parent: " << parent << ", ";
@@ -207,7 +215,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 				for ( size_t i = 0; i < P[pe.rule].body.size(); ++i ) {
 					uint t = eval ( P[pe.rule].body[i], pe.env );
 					if ( evidence.find ( P[t].pred ) == evidence.end() ) evidence[P[t].pred] = {};
-					evidence[P[t].pred].emplace_back ( PID ( t, vector<uint> {PID ( GND, pe.ground ) } ) );
+					evidence[P[t].pred].emplace_back ( mkpred ( t, vector<uint> {mkpred ( GND, pe.ground ) } ) );
 				}
 			} else {
 				if ( P[pe.rule].body.size() ) gnd.emplace_back ( P[pe.rule], pe.env );
@@ -222,7 +230,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 			int b = builtin ();// t, pe );
 			if ( b == 1 ) {
 				gnd.emplace_back ( eval ( t, pe.env ), subst() );
-				proof_element r ( PID ( P[pe.rule].head, P[pe.rule].body ), pe.src, pe.ind, pe.parent, pe.env, gnd );
+				proof_element r ( mkpred ( P[pe.rule].head, P[pe.rule].body ), pe.src, pe.ind, pe.parent, pe.env, gnd );
 				r.ind++;
 				proof_trace.push_back ( r );
 				continue;
@@ -233,7 +241,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 					uint rl = cases.at ( P[t].pred ) [k];
 					src++;
 					gnd_t gnd = pe.ground;
-					if ( !P[rl].body.size() ) gnd.emplace_back ( PID ( rl ), subst() );
+					if ( !P[rl].body.size() ) gnd.emplace_back ( mkpred ( rl ), subst() );
 					proof_element r ( rl, src, 0, &pe, subst(), gnd );
 					if ( unify ( t, pe.env, P[rl].head, r.env, true ) ) {
 						auto ep = pe;  // euler path
@@ -254,19 +262,14 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 
 int main() {
 	evidence_t evidence, cases;
-	uint Socrates = PID ( "Socrates" ), Man = PID ( "Man" ), Mortal = PID ( "Mortal" ), Morrtal = PID ( "Morrtal" ), Male = PID ( "Male" ), _x = PID ( "?x" ), _y = PID ( "?y" );
-	rule_t r;
-	r.head = PID ( dict["a"], {Socrates, Male} );
-	cases[dict["a"]].push_back ( r );
-	r.head = PID ( dict["a"], {_x, Mortal} );
-	r.body = { PID ( dict["a"], {_x, Man} )  };
-	cases[dict["a"]].push_back ( r );
-	r.head = PID ( dict["a"], {_x, Man} );
-	r.body = { PID ( dict["a"], {_x, Male} )  };
+	uint Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+	cases[dict["a"]].push_back ( mkpred(mkpred ( dict["a"], vector<uint>{Socrates, Male} )) );
+	cases[dict["a"]].push_back ( mkpred(mkpred ( dict["a"], vector<uint>{_x, Mortal} ),vector<uint>{ mkpred ( dict["a"], vector<uint>{_x, Man} )  }) );
+	cases[dict["a"]].push_back ( mkpred(mkpred ( dict["a"], vector<uint>{_x, Man} ),vector<uint>{ mkpred ( dict["a"], vector<uint>{_x, Male} )  }) );
 
 	cout << "cases:" << endl << predicate::str() << endl;
 
-	evidence = prove ( PID ( dict["a"], PID ( _y, Mortal ) ), -1, cases );
+	evidence = prove ( mkpred ( dict["a"], mkpred ( _y, Mortal ) ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		//		cout << "  " << e.first << ":" << endl;
