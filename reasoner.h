@@ -138,8 +138,8 @@ int builtin ( pred_t, proof_trace_item ) {
 }
 typedef map<string, vector<rule_t>> evidence_t;
 
-pred_t evaluate ( pred_t t, penv_t env );
-bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f );
+pred_t evaluate ( const pred_t t, const penv_t env );
+bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv );
 
 pground_t gnd = make_shared<ground_t>();
 
@@ -180,7 +180,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			trace ( "Q parent: " );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent,  make_shared<env_t>(), g} );
-			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env, true );
+			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
 			trace (  ( string ) ( *r ) << endl );
 			queue.push_back ( r ); //ubi(r);
@@ -215,11 +215,11 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			if ( rl.body.size() == 0 ) g->push_back ( { rl, make_shared<env_t>() } ); //its a conditionless fact
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
 			//rl could imply our rule...
-			if ( unify ( t, c->env, rl.head, r->env, true ) ) {
+			if ( unify ( t, c->env, rl.head, r->env ) ) {
 				ppti ep = c;
 				while ( ( ep = ep->parent ) ) {
 					trace ( "  ep.src: " << ep->src << endl << "  c.src: " << c->src << endl );
-					if ( ep->src == c->src && unify ( ep->rule.head, ep->env, c->rule.head, c->env, false ) ) {
+					if ( ep->src == c->src && unify ( ep->rule.head, ep->env, c->rule.head, c->env ) ) {
 						trace ( "  ~~ match ~~ " << endl );
 						break;
 					}
@@ -240,7 +240,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	return prove ( rule_t {goal, { goal } }, maxNumberOfSteps, cases, evidence );
 }
-bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
+bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv ) {
 	trace ( indent() << "Unify:" << endl << flush << indent() << "  s: " << ( string ) s << " in " << ( *senv ) << endl << flush;
 	        cout << indent() << "  d: " << ( string ) d << " in " << ( *denv ) << endl << flush );
 	if ( s.pred[0] == '?' ) {
@@ -248,7 +248,7 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 		try {
 			pred_t sval = evaluate ( s, senv );
 			_indent++;
-			bool r = unify ( sval, senv, d, denv, f );
+			bool r = unify ( sval, senv, d, denv );
 			_indent--;
 			return r;
 		} catch (int n) {
@@ -264,7 +264,7 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 		try {
 			pred_t dval = evaluate ( d, denv );
 			trace ( _indent++ );
-			bool b = unify ( s, senv, dval, denv, f );
+			bool b = unify ( s, senv, dval, denv );
 			trace ( _indent-- );
 			return b;
 		} catch ( int n) {
@@ -280,7 +280,7 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 		trace ( indent() << "  Comparison:" << endl << flush );
 		for ( size_t i = 0; i < s.args.size(); i++ ) {
 			_indent++;
-			if ( !unify ( s.args[i], senv, d.args[i], denv, f ) ) {
+			if ( !unify ( s.args[i], senv, d.args[i], denv ) ) {
 				_indent--;
 				trace ( indent() << "    " << ( string ) s.args[i] << " != " << ( string ) d.args[i] << endl << flush );
 				return false;
@@ -295,7 +295,7 @@ bool unify ( pred_t s, penv_t senv, pred_t d, penv_t denv, bool f ) {
 	return false;
 }
 
-pred_t evaluate ( pred_t t, penv_t env ) {
+pred_t evaluate ( const pred_t t, const penv_t env ) {
 	trace ( indent() << "Eval " << ( string ) t << " in " << ( *env ) << endl );
 	if ( t.pred[0] == '?' ) {
 		trace (  "(" << ( string ) t << " is a var..)" << endl );
