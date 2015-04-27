@@ -37,11 +37,13 @@ public:
 	}
 	const string operator[] ( const int& k ) {
 		auto v = m1[k];
+		m2[m1[k]];
 		if (!v.size() && k) throw 0;
 		return v;
 	}
 	const int operator[] ( const string& v ) {
 		if (!v.size() ) throw 0;
+		m1[m2[v]];
 		return m2[v];
 	}
 	bool has ( const int& k ) const {
