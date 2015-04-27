@@ -6,10 +6,14 @@
 #include <map>
 #include <stdexcept>
 #include <climits>
+#include <deque>
 using namespace std;
 
 const size_t max_preds = 1024 * 1024;
 const size_t GND = INT_MAX;
+
+typedef map<int, uint> subst;
+typedef vector<pair<uint, subst>> gnd_t;
 
 class predicate {
 	static predicate *preds;
@@ -20,9 +24,9 @@ public:
 	vector<uint> args;
 	uint& head = * ( unsigned int* )&pred;
 	vector<uint>& body = args;
-	predicate ( int p = 0, vector<uint> a = vector<uint>() ) {
-		preds[loc = npreds].pred = p;
-		preds[npreds++].args = a;
+	predicate ( int p = 0, vector<uint> a = vector<uint>() ) : loc(npreds++), pred(p), args(a) { }
+	predicate ( int p, gnd_t g ) : predicate(p) {
+		for (auto x : g) args.push_back(x.first);
 	}
 //	predicate ( uint p, vector<uint> a = vector<uint>() ) : predicate ( ( int ) p, a ) {}
 	static predicate* _ps() { return preds; }
@@ -34,7 +38,6 @@ size_t predicate::npreds = 0;
 #define PID (uint)predicate
 typedef predicate rule_t;
 
-typedef map<int, uint> subst;
 //uint mkpred(uint p, vector<uint> a) { return mkpred(preds[p].pred, a); }
 
 uint eval ( const uint _t, const subst s ) {
@@ -46,7 +49,7 @@ uint eval ( const uint _t, const subst s ) {
 	uint _r = PID ( t.pred );
 	predicate& r = P[_r];
 	uint a;
-	for ( uint x : t.args ) r.args.push_back ( ( a = eval ( x, s ) ) ? PID ( P[x].pred, {} ) : a );
+	for ( uint x : t.args ) r.args.emplace_back ( ( a = eval ( x, s ) ) ? PID ( P[x].pred ) : a );
 	return _r;
 }
 
@@ -74,25 +77,25 @@ bool unify ( const uint _s, const subst senv, const uint _d, subst& denv, const 
 typedef map<int, vector<uint>> evidence_t;
 evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 	typedef uint uint;
-	typedef vector<uint> gnd_t;
 
-	const size_t max_proof_trace = max_preds;
 	struct proof_element {
-		uint rule;
-		uint src = 0, ind = 0;
-		uint parent = 0;
+		uint rule, src, ind;
+		proof_element* parent;
 		subst env;
 		gnd_t ground;
-		proof_element() : rule ( 0 ) {}
-		proof_element ( uint r ) : rule ( r ) {}
-	} *proof_trace = new proof_element[max_proof_trace];
-	size_t firstproof = 0, lastproof = 0;
+		proof_element ( uint r = 0, uint s = 0, uint i = 0, proof_element* p = 0, subst e = subst(), gnd_t g = gnd_t()) :
+			rule(r),src(s),ind(i),parent(p),env(e),ground(g){}
+	};
+	deque<proof_element> proof_trace;
+	// *proof_trace = new proof_element[max_proof_trace];
+//	size_t firstproof = 0, lastproof = 0;
 
-	proof_trace[lastproof++] = proof_element ( goal );
+	proof_trace.emplace_back ( goal );
 	evidence_t evidence;
 	size_t step = 0;
-	while ( lastproof - firstproof ) {
-		proof_element& pe = proof_trace[firstproof++];
+	while ( proof_trace.size() ) {
+		proof_element& pe = proof_trace.front();//proof_trace[firstproof++];
+		proof_trace.pop_front();
 		gnd_t gnd = pe.ground;
 		step++;
 		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
@@ -101,21 +104,21 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 				for ( size_t i = 0; i < P[pe.rule].body.size(); ++i ) {
 					uint t = eval ( P[pe.rule].body[i], pe.env );
 					if ( evidence.find ( P[t].pred ) == evidence.end() ) evidence[P[t].pred] = {};
-					evidence[P[t].pred].push_back ( PID ( t, {PID ( GND, pe.ground ) } ) );
+					evidence[P[t].pred].emplace_back ( PID ( t, vector<uint>{PID ( GND, pe.ground ) } ) );
 				}
 			} else {
-				if ( P[pe.rule].body.size() ) gnd.push_back (PID( P[pe.rule], pe.env) );
-				proof_element r = pe.parent;
+				if ( P[pe.rule].body.size() ) gnd.emplace_back ( P[pe.rule], pe.env);
+				proof_element r = *pe.parent;
 				r.ground = gnd;
 				unify ( P[pe.rule].head, pe.env, P[r.rule].body[r.ind], r.env, true );
 				r.ind++;
-				proof_trace[lastproof++] = r;
+				proof_trace.emplace_back(r);
 			}
 		} else {
 			auto t = P[pe.rule].body[pe.ind];
 //			auto b = builtin ( t, pe );
 			//		if ( b == 1 ) {
-			//			g.push_back ( { { eval ( t, c.env ), {}}, {}} );
+			//			g.emplace_back ( { { eval ( t, c.env ), {}}, {}} );
 			//			auto r = {rule: {head: c.rule.head, body: c.rule.body}, src: c.src, ind: c.ind, parent: c.parent, env: c.env, ground: g};
 			//			r.ind++;
 			//			queue.push ( r );
@@ -126,18 +129,16 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 				for ( size_t k = 0; k < cases.at(P[t].pred).size(); k++ ) {
 					uint rl = cases.at(P[t].pred)[k];
 					src++;
-					gnd_t g = pe.ground;
-					if ( P[rl].body.size() == 0 ) g.push_back ( PID( rl) );
-					proof_element r = {rl, src, 0, firstproof-1, subst(), g};
+					gnd_t gnd = pe.ground;
+					if ( P[rl].body.size() == 0 ) gnd.emplace_back ( PID( rl), subst() );
+					proof_element r(rl, src, 0, &pe, subst(), gnd);
 					if ( unify ( t, pe.env, P[rl].head, r.env, true ) ) {
 						auto ep = pe;  // euler path
 						while ( ep.parent ) {
-							ep = proof_trace[ep.parent];
-							if ( ep.src == pe.src && unify ( rules[ep.rule].head, ep.env, rules[pe.rule].head, pe.env, false ) ) break;
+							ep = *ep.parent;
+							if ( ep.src == pe.src && unify ( P[ep.rule].head, ep.env, P[pe.rule].head, pe.env, false ) ) break;
 						}
-						if ( ep == null ) proof_trace[--firstproof] = r;
-						if ( firstproof < 0 || firstproof > max_proof_trace ) throw logic_error ( "negative array index" );
-						//					queue.unshift ( r );
+						if ( !ep.parent ) proof_trace.emplace_front(r);
 
 					}
 				}
