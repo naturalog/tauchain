@@ -108,22 +108,25 @@ void ubi(const ppti i)
 #ifdef UBI
 	i->ubi_node_id = ubigraph_new_vertex();
 
-	ubigraph_set_vertex_attribute(i->ubi_node_id, "fontsize", "16");
+	ubigraph_set_vertex_attribute(i->ubi_node_id, "fontsize", "20");
 	ubigraph_set_vertex_attribute(i->ubi_node_id, "label", ((string)i->rule).c_str());
-	ubigraph_set_vertex_attribute(i->ubi_node_id, "color", "#ffffff");
 	ubigraph_set_vertex_attribute(i->ubi_node_id, "fontcolor", "#ffffff");
-	ubigraph_set_vertex_attribute(i->ubi_node_id, "shape", "octahedron");
 
-	if (i->parent != 0)
+	if (i->parent)
 	{
+		ubigraph_set_vertex_attribute(i->ubi_node_id, "color", "#ffffff");
+		ubigraph_set_vertex_attribute(i->ubi_node_id, "shape", "icosahedron");
+
 		int e = ubigraph_new_edge(i->parent->ubi_node_id, i->ubi_node_id);
 		ubigraph_set_edge_attribute(e, "color", "#ffffff");
 		ubigraph_set_edge_attribute(e, "width", "5.0");
 		ubigraph_set_edge_attribute(e, "oriented", "true");
 	}
 	else
+	{
 		ubigraph_set_vertex_attribute(i->ubi_node_id, "color", "#ff0000");
-
+		ubigraph_set_vertex_attribute(i->ubi_node_id, "shape", "octahedron");
+	}
 #endif
 }
 
