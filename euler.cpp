@@ -18,41 +18,50 @@ const size_t GND = INT_MAX;
 typedef map<int, uint> subst;
 typedef vector<pair<uint, subst>> gnd_t;
 
+template<typename T> void print(T t) { cout << t << endl; }
+
 class bidict {
 	map<int, string> m1;
 	map<string, int> m2;
-	size_t lastk = 0;
+//	size_t lastk = 0;
 public:
-	const int set ( const string& v ) {
-		if (v.size() <= 1) throw 0;
-		int k = ( int ) lastk++;
+	int set ( const string& v ) {
+//		if (m1.size() != m2.size()) throw "dict size mismatch";
+		if (v.size() < 1) throw 0;
+		int k = m1.size() + 1 ;//( int ) lastk++;
 		if ( v[0] == '?' ) k = -k;
 		m1[k] = v;
 		m2[v] = k;
 		return k;
 	}
-	void set ( const int& k, const string& v ) {
+/*	void set ( const int& k, const string& v ) {
+//		if (m1.size() != m2.size()) throw "dict size mismatch";
 		m1[k] = v;
 		m2[v] = k;
-	}
+	}*/
 	const string operator[] ( const int& k ) {
+//		if (m1.size() != m2.size()) throw "dict size mismatch";
 		auto v = m1[k];
 		m2[m1[k]];
-		if (!v.size() && k) throw 0;
+//		if (!v.size() && k) throw 0;
 		return v;
 	}
 	const int operator[] ( const string& v ) {
+//		if (m1.size() != m2.size()) throw "dict size mismatch";
 		if (!v.size() ) throw 0;
 		m1[m2[v]];
 		return m2[v];
 	}
-	bool has ( const int& k ) const {
+	bool has ( int k ) const {
+//		if (m1.size() != m2.size()) throw "dict size mismatch";
 		return m1.find ( k ) != m1.end();
 	}
 	bool has ( const string& v ) const {
+//		if (m1.size() != m2.size()) throw "dict size mismatch";
 		return m2.find ( v ) != m2.end();
 	}
 	string tostr() {
+//		if (m1.size() != m2.size()) throw "dict size mismatch";
 		stringstream s;
 		for ( auto x : m1 ) cout << x.first << " := " << x.second << endl;
 		return s.str();
@@ -74,14 +83,15 @@ public:
 	operator uint() {
 		return loc;
 	}
-	string tostr() const {
+	string tostr(bool print_loc = false) const {
 		stringstream o;
-		o << loc << '\t';
+		if (print_loc) o << loc << '\t';
 		if ( args.size() ) {
 			auto it = args.begin();
 			for ( ;; ) {
 				const predicate& p = preds[*it];
-				o << dict[p.pred] << '(' << p.pred << ')';
+				o << " { " << p.tostr(false) << " } ";
+//				o << dict[p.pred].tostr() << '(' << p.pred << ')';
 				++it;
 				if ( it != args.end() ) o << " | ";
 				else break;
@@ -100,7 +110,7 @@ public:
 		r.loc = npreds++;
 		r.pred = p;
 		r.args = a;
-		if (!dict.has(r.loc)) dict.set(r.loc, string("Ground => ") + dict[p]);
+		dict.set(r.tostr());
 		cout<<"mkpred: "<<r.tostr()<<endl;
 		return r;
 	}
@@ -174,11 +184,19 @@ int builtin() {
 typedef map<int, vector<uint>> evidence_t;
 
 ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( auto x : s ) o << x.first << " := " << x.second << endl;
+	for ( auto x : s ) o << x.first << " := " << dict[x.second] << '(' << x.second << ')' << endl;
 	return o;
 }
 ostream& operator<< ( ostream& o, const gnd_t& s ) {
 	for ( auto x : s ) o << x.first << " := " << x.second << endl;
+	return o;
+}
+ostream& operator<< ( ostream& o, const evidence_t& s ) {
+	for ( auto x : s ) {
+		for (auto y : x.second) o << P[y].tostr(false)/*dict[y] << '(' << y << ')' */<< " | ";
+		o << " => " << P[x.first].tostr(false)/* << '(' << x.first << ')'*/;
+		o << endl;
+	}
 	return o;
 }
 
@@ -210,7 +228,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 	};
 	deque<proof_element> proof_trace;
 
-	proof_trace.emplace_back ( mkpred(0, {goal}) );
+	proof_trace.emplace_back ( goal );
 	evidence_t evidence;
 	size_t step = 0;
 	while ( proof_trace.size() ) {
@@ -245,7 +263,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 				continue;
 			} else if ( b == 0 ) continue;
 			cout << "now looking in cases for " << t << endl;
-			cout << "cases:" << endl << predicate::str() << endl;
+			cout << "cases:" << endl << /*predicate::str()*/cases << endl;
 			if ( cases.find ( P[t].pred ) != cases.end() ) {
 				size_t src = 0;
 				for ( size_t k = 0; k < cases.at ( P[t].pred ).size(); k++ ) {
@@ -272,14 +290,14 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 
 
 int main() {
-	dict.set(0, "Ground");
+	dict.set("a");
 	evidence_t evidence, cases;
 	uint Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_back ( mkpred(mkpred ( dict["a"], vector<uint>{Socrates, Male} )) );
 	cases[dict["a"]].push_back ( mkpred(mkpred ( dict["a"], vector<uint>{_x, Mortal} ),vector<uint>{ mkpred ( dict["a"], vector<uint>{_x, Man} )  }) );
 	cases[dict["a"]].push_back ( mkpred(mkpred ( dict["a"], vector<uint>{_x, Man} ),vector<uint>{ mkpred ( dict["a"], vector<uint>{_x, Male} )  }) );
 
-	cout << "cases:" << endl << predicate::str() << endl;
+	cout << "cases:" << endl << cases << endl;
 
 	evidence = prove ( mkpred ( dict["a"], mkpred ( _y, Mortal ) ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
