@@ -21,9 +21,10 @@ typedef vector<pair<uint, subst>> gnd_t;
 class bidict {
 	map<int, string> m1;
 	map<string, int> m2;
-	size_t lastk = 1;
+	size_t lastk = 0;
 public:
 	const int set ( const string& v ) {
+		if (v.size() <= 1) throw 0;
 		int k = ( int ) lastk++;
 		if ( v[0] == '?' ) k = -k;
 		m1[k] = v;
@@ -35,9 +36,12 @@ public:
 		m2[v] = k;
 	}
 	const string operator[] ( const int& k ) {
-		return m1[k];
+		auto v = m1[k];
+		if (!v.size() && k) throw 0;
+		return v;
 	}
 	const int operator[] ( const string& v ) {
+		if (!v.size() ) throw 0;
 		return m2[v];
 	}
 	bool has ( const int& k ) const {
@@ -94,6 +98,8 @@ public:
 		r.loc = npreds++;
 		r.pred = p;
 		r.args = a;
+		if (!dict.has(r.loc)) dict.set(r.loc, string("Ground => ") + dict[p]);
+		cout<<"mkpred: "<<r.tostr()<<endl;
 		return r;
 	}
 };
@@ -182,6 +188,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 	}
 	typedef uint uint;
 	cout << "kb:" << endl << predicate::str() << endl;
+	cout << "goal: " << P[goal].tostr() << endl;
 
 	struct proof_element {
 		uint rule, src, ind;
@@ -263,6 +270,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 
 
 int main() {
+	dict.set(0, "Ground");
 	evidence_t evidence, cases;
 	uint Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_back ( mkpred(mkpred ( dict["a"], vector<uint>{Socrates, Male} )) );
