@@ -9,6 +9,7 @@
 #include <deque>
 #include <iostream>
 #include <sstream>
+#include "strings.h"
 using namespace std;
 
 const size_t max_preds = 1024 * 1024;
@@ -22,15 +23,32 @@ class bidict {
 	map<string, int> m2;
 	size_t lastk = 1;
 public:
-	const int set(const string& v) { int k = (int)lastk++; if (v[0] == '?') k = -k;  m1[k] = v; m2[v] = k; return k; }
-	void set(const int& k, const string& v) { m1[k] = v; m2[v] = k; }
-	const string operator[](const int& k) { return m1[k]; }
-	const int operator[](const string& v) { return m2[v]; }
-	bool has(const int& k) const { return m1.find(k) != m1.end(); }
-	bool has(const string& v) const { return m2.find(v) != m2.end(); }
+	const int set ( const string& v ) {
+		int k = ( int ) lastk++;
+		if ( v[0] == '?' ) k = -k;
+		m1[k] = v;
+		m2[v] = k;
+		return k;
+	}
+	void set ( const int& k, const string& v ) {
+		m1[k] = v;
+		m2[v] = k;
+	}
+	const string operator[] ( const int& k ) {
+		return m1[k];
+	}
+	const int operator[] ( const string& v ) {
+		return m2[v];
+	}
+	bool has ( const int& k ) const {
+		return m1.find ( k ) != m1.end();
+	}
+	bool has ( const string& v ) const {
+		return m2.find ( v ) != m2.end();
+	}
 	string tostr() {
 		stringstream s;
-		for (auto x : m1) cout << x.first << " := " << x.second << endl;
+		for ( auto x : m1 ) cout << x.first << " := " << x.second << endl;
 		return s.str();
 	}
 } dict;
@@ -38,44 +56,66 @@ public:
 class predicate {
 	static predicate *preds;
 	static size_t npreds;
-	uint loc;
 public:
+	uint loc;
 	int pred = 0;
 	vector<uint> args;
 	uint& head = * ( unsigned int* )&pred;
 	vector<uint>& body = args;
-	predicate ( string s) : predicate() {
-		if (dict.has(s)) pred = dict[s];
-		else pred = dict.set(s);
-	}
-	predicate ( int p, int q) : predicate(p, vector<uint>(1, q)){}
-	predicate ( int p = 0, vector<uint> a = vector<uint>() ) : loc ( npreds++ ), pred ( p ), args ( a ) { }
-	predicate ( int p, gnd_t g ) : predicate ( p ) {
-		for ( auto x : g ) args.push_back ( x.first );
-	}
-	//	predicate ( uint p, vector<uint> a = vector<uint>() ) : predicate ( ( int ) p, a ) {}
 	static predicate* _ps() {
 		return preds;
 	}
 	operator uint() {
 		return loc;
 	}
-	ostream& operator<<(ostream& o) { 
-		o <<  dict[pred] << '(' << pred << ')' << " implied by either "; 
-		for (auto x : args) o << dict[preds[x]] << '(' << preds[x] << ')' << " or ";
-		return o << '.' << endl;
+	string tostr() const {
+		stringstream o;
+		o << dict[pred] << '(' << pred << ')' << " implied by either ";
+		for ( auto x : args ) o << dict[preds[x].pred] << '(' << preds[x].pred << ')' << " or ";
+		o << '.';
+		return o.str();
 	}
-	static string tostr() {
+	static string str() {
 		stringstream ss;
-		for (size_t n = 0; n < npreds; ++n) ss << preds[n] << endl;
+		for ( size_t n = 1; n < npreds; ++n ) ss << preds[n].tostr() << endl;
 		return ss.str();
 	}
+	static predicate& mkpred ( int p = 0, vector<uint> a = vector<uint>() ) {
+		predicate& r = preds[npreds];
+		r.loc = npreds++;
+		r.pred = p;
+		r.args = a;
+		return r;
+	}
 };
-predicate *predicate::preds = new predicate[max_preds];
+predicate *predicate::preds = []() {
+	auto r = new predicate[max_preds];
+	predicate::npreds = 1;
+	return r;
+}();
 size_t predicate::npreds = 1;
 #define P predicate::_ps()
-#define PID (uint)predicate
+#define PID /*(uint)predicate*/mkpred
 typedef predicate rule_t;
+
+uint mkpred ( int p = 0, vector<uint> a = vector<uint>() ) {
+	predicate& r = predicate::mkpred ( p, a );
+	return r.loc;
+}
+
+uint mkpred ( int p, int q ) {
+	return mkpred ( p, vector<uint> ( 1, q ) );
+}
+
+uint mkpred ( int p, gnd_t g ) {
+	uint r = mkpred ( p );
+	for ( auto x : g ) P[p].args.push_back ( x.first );
+	return r;
+}
+
+uint mkpred ( string s )  {
+	return mkpred(dict.has ( s )  ? dict[s] : dict.set ( s ));
+}
 
 //uint mkpred(uint p, vector<uint> a) { return mkpred(preds[p].pred, a); }
 
@@ -117,14 +157,23 @@ int builtin() {
 }
 typedef map<int, vector<uint>> evidence_t;
 
-ostream& operator<<(ostream& o, const subst& s) { for (auto x : s) o << x.first << " := " << x.second << endl; return o; }
-ostream& operator<<(ostream& o, const gnd_t& s) { for (auto x : s) o << x.first << " := " << x.second << endl; return o; }
+ostream& operator<< ( ostream& o, const subst& s ) {
+	for ( auto x : s ) o << x.first << " := " << x.second << endl;
+	return o;
+}
+ostream& operator<< ( ostream& o, const gnd_t& s ) {
+	for ( auto x : s ) o << x.first << " := " << x.second << endl;
+	return o;
+}
 
 evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 	static bool first = true;
-	if (first) { cout<<"prove called, dictionary: "<<endl<<dict.tostr()<<endl; first = false; }
+	if ( first ) {
+		cout << "prove called, dictionary: " << endl << dict.tostr() << endl;
+		first = false;
+	}
 	typedef uint uint;
-	cout<<"kb:"<<endl<<predicate::tostr()<<endl;
+	cout << "kb:" << endl << predicate::str() << endl;
 
 	struct proof_element {
 		uint rule, src, ind;
@@ -133,14 +182,14 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 		gnd_t ground;
 		proof_element ( uint r = 0, uint s = 0, uint i = 0, proof_element* p = 0, subst e = subst(), gnd_t g = gnd_t() ) :
 			rule ( r ), src ( s ), ind ( i ), parent ( p ), env ( e ), ground ( g ) {
-				cout<<"new proof_element with: ";
-				cout<<"rule: "<<rule<<", ";
-				cout<<"src: "<<src<<", ";
-				cout<<"ind: "<<ind<<", ";
-				cout<<"parent: "<<parent<<", ";
-				cout<<"env: "<<env<<", ";
-				cout<<"gnd: "<<ground<<endl;
-				}
+			cout << "new proof_element with: ";
+			cout << "rule: " << rule << ", ";
+			cout << "src: " << src << ", ";
+			cout << "ind: " << ind << ", ";
+			cout << "parent: " << parent << ", ";
+			cout << "env: " << env << ", ";
+			cout << "gnd: " << ground << endl;
+		}
 	};
 	deque<proof_element> proof_trace;
 
@@ -173,7 +222,7 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 			int b = builtin ();// t, pe );
 			if ( b == 1 ) {
 				gnd.emplace_back ( eval ( t, pe.env ), subst() );
-				proof_element r(PID( P[pe.rule].head, P[pe.rule].body ), pe.src, pe.ind, pe.parent, pe.env, gnd);
+				proof_element r ( PID ( P[pe.rule].head, P[pe.rule].body ), pe.src, pe.ind, pe.parent, pe.env, gnd );
 				r.ind++;
 				proof_trace.push_back ( r );
 				continue;
@@ -205,24 +254,26 @@ evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
 
 int main() {
 	evidence_t evidence, cases;
-	uint Socrates =PID( "Socrates" ), Man=PID ( "Man" ), Mortal=PID ( "Mortal" ), Morrtal=PID ( "Morrtal" ), Male=PID ( "Male" ), _x=PID ( "?x" ), _y=PID ( "?y" );
+	uint Socrates = PID ( "Socrates" ), Man = PID ( "Man" ), Mortal = PID ( "Mortal" ), Morrtal = PID ( "Morrtal" ), Male = PID ( "Male" ), _x = PID ( "?x" ), _y = PID ( "?y" );
 	rule_t r;
-	r.head = PID(dict["a"], {Socrates, Male});
-	cases[dict["a"]].push_back (r);
-	r.head = PID(dict["a"], {_x, Mortal});
-	r.body = { PID(dict["a"], {_x, Man})  };
-	cases[dict["a"]].push_back (r);
-	r.head = PID(dict["a"], {_x, Man});
-	r.body = { PID(dict["a"], {_x, Male})  };
+	r.head = PID ( dict["a"], {Socrates, Male} );
+	cases[dict["a"]].push_back ( r );
+	r.head = PID ( dict["a"], {_x, Mortal} );
+	r.body = { PID ( dict["a"], {_x, Man} )  };
+	cases[dict["a"]].push_back ( r );
+	r.head = PID ( dict["a"], {_x, Man} );
+	r.body = { PID ( dict["a"], {_x, Male} )  };
 
-	evidence = prove ( PID (dict["a"], PID(_y, Mortal)), -1, cases );
+	cout << "cases:" << endl << predicate::str() << endl;
+
+	evidence = prove ( PID ( dict["a"], PID ( _y, Mortal ) ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
-//		cout << "  " << e.first << ":" << endl;
-//		for ( auto ee : e.second ) cout << "    " << ( string ) ee << endl;
-//		cout << endl << "---" << endl;
+		//		cout << "  " << e.first << ":" << endl;
+		//		for ( auto ee : e.second ) cout << "    " << ( string ) ee << endl;
+		//		cout << endl << "---" << endl;
 	}
 	cout << "QED!" << endl;
-	cout<< evidence.size()<<endl;
+	cout << evidence.size() << endl;
 	return 0;
 }
