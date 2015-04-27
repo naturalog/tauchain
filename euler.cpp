@@ -9,7 +9,7 @@
 #include <deque>
 #include <iostream>
 #include <sstream>
-#include "strings.h"
+#include <strings.h>
 using namespace std;
 
 const size_t max_preds = 1024 * 1024;

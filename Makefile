@@ -28,6 +28,8 @@ ubi-tau: $(OBJECTS) ubi/client.o
 clean:
 	rm -rf tau $(OBJECTS) ubi/client.o
 
+euler: euler.cpp
+	g++ -std=c++1y euler.cpp -oeuler -Wall -ggdb
 
 #all: jsonld.h  json_spirit.h parsers.h reasoner.h strings.h rdf.h logger.h object.h tau.o jsonld.o rdf.o
 #	$(CC) tau.o jsonld.o rdf.o -lcurl -otau
