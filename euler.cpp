@@ -1,125 +1,149 @@
 // Euler proof mechanism -- Jos De Roo
 //version = '$Id: Euler4.js 1398 2007-07-20 16:41:33Z josd $'
-#include<vector>
-#include<cstdlib>
-#include<cmath>
-#include<map>
-#include<stdexcept>
+#include <vector>
+#include <cstdlib>
+#include <cmath>
+#include <map>
+#include <stdexcept>
+#include <climits>
 using namespace std;
-typedef size_t pid;
-
-struct predicate {
-	int pred = 0;
-	vector<pid> args;
-};
 
 const size_t max_preds = 1024 * 1024;
-predicate preds[max_preds];
-size_t npreds = 0;
+const size_t GND = INT_MAX;
 
-pid mkpred ( int p, vector<pid> a ) {
-	preds[npreds].pred = p;
-	preds[npreds++].args = a;
-	return npreds - 1;
-}
-typedef map<int, pid> subst;
-//pid mkpred(pid p, vector<pid> a) { return mkpred(preds[p].pred, a); }
+class predicate {
+	static predicate *preds;
+	static size_t npreds;
+	uint loc;
+public:
+	int pred = 0;
+	vector<uint> args;
+	uint& head = * ( unsigned int* )&pred;
+	vector<uint>& body = args;
+	predicate ( int p = 0, vector<uint> a = vector<uint>() ) {
+		preds[loc = npreds].pred = p;
+		preds[npreds++].args = a;
+	}
+//	predicate ( uint p, vector<uint> a = vector<uint>() ) : predicate ( ( int ) p, a ) {}
+	static predicate* _ps() { return preds; }
+	operator uint() { return loc; }
+}; 
+predicate *predicate::preds = new predicate[max_preds];
+size_t predicate::npreds = 0;
+#define P predicate::_ps()
+#define PID (uint)predicate
+typedef predicate rule_t;
 
-pid eval ( const pid _t, const subst s ) {
-	const predicate& t = preds[_t];
+typedef map<int, uint> subst;
+//uint mkpred(uint p, vector<uint> a) { return mkpred(preds[p].pred, a); }
+
+uint eval ( const uint _t, const subst s ) {
+	const predicate& t = P[_t];
 	if ( t.pred < 0 ) {
 		auto it = s.find ( t.pred );
-		return it == s.end() ? mkpred ( 0, {} ) : eval ( it->second, s );
+		return it == s.end() ? (uint)predicate ( ) : eval ( it->second, s );
 	} else if ( !t.args.size() == 0 ) return _t;
-	pid _r = mkpred ( t.pred, {} );
-	predicate& r = preds[_r];
-	pid a;
-	for ( pid x : t.args ) r.args.push_back ( ( a = eval ( x, s ) ) ? mkpred ( preds[x].pred, {} ) : a );
+	uint _r = PID ( t.pred );
+	predicate& r = P[_r];
+	uint a;
+	for ( uint x : t.args ) r.args.push_back ( ( a = eval ( x, s ) ) ? PID ( P[x].pred, {} ) : a );
 	return _r;
 }
 
-bool unify ( const pid _s, const subst senv, const pid _d, subst& denv, const void* f, const pid __d = 0 ) {
-	if (!_s) return true;
-	if (!_d) {
-		if ( f ) { 
-			if (!__d) throw logic_error("wrt unify's __d");
-			denv[preds[__d].pred] = eval ( _s, senv );
+bool unify ( const uint _s, const subst senv, const uint _d, subst& denv, const bool f, const uint __d = 0 ) {
+	if ( !_s ) return true;
+	if ( !_d ) {
+		if ( f ) {
+			if ( !__d ) throw logic_error ( "wrt unify's __d" );
+			denv[P[__d].pred] = eval ( _s, senv );
 		}
 		return true;
 	}
-	const predicate &s = preds[_s], &d = preds[_d];
+	const predicate &s = P[_s], &d = P[_d];
 	if ( s.pred < 0 ) return unify ( eval ( _s, senv ), senv, _d, denv, f );
 	if ( d.pred < 0 ) return unify ( _s, senv, eval ( _d, denv ), denv, f, _d );
 
 	if ( s.pred != d.pred || s.args.size() != d.args.size() ) return false;
 
-	for ( size_t i = 0; i < s.args.size(); ++i ) 
-		if ( !unify ( s.args[i], senv, d.args[i], denv, f ) ) 
+	for ( size_t i = 0; i < s.args.size(); ++i )
+		if ( !unify ( s.args[i], senv, d.args[i], denv, f ) )
 			return false;
 	return true;
 }
-/*
-    function prove ( goal, maxNumberOfSteps ) {
-	var queue = [ {rule:goal, src:0, ind:0, parent:null, env:{}, ground: []}]
-	            if ( typeof ( evidence ) == 'undefined' ) evidence = {}
-		                    if ( typeof ( step ) == 'undefined' ) step = 0
-			while ( queue.length > 0 ) {
-				var c = queue.pop()
-				        if ( typeof ( trace ) != 'undefined' ) document.writeln ( 'POP QUEUE\n' + JSON.stringify ( c.rule ) + '\n' )
-					        var g = aCopy ( c.ground )
-					                step++
-					                if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) return ''
-						if ( c.ind >= c.rule.body.length ) {
-							if ( c.parent == null ) {
-								for ( var i = 0; i < c.rule.body.length; i++ ) {
-									var t = evaluate ( c.rule.body[i], c.env )
-									        if ( typeof ( evidence[t.pred] ) == 'undefined' ) evidence[t.pred] = []
-										                evidence[t.pred].push ( {head: t, body: [{pred:'GND', args:c.ground}]} )
-									}
-								continue
-							}
-							if ( c.rule.body.length != 0 ) g.push ( {src: c.rule, env: c.env} )
-    var r = {rule:
-								{head: c.parent.rule.head, body: c.parent.rule.body}, src:
-    c.parent.src, ind:
-								c.parent.ind,
-    parent:
-								c.parent.parent != null ? new copy ( c.parent.parent ) : null, env : new copy ( c.parent.env ), ground : g
-							}
-							unify ( c.rule.head, c.env, r.rule.body[r.ind], r.env, true )
-							r.ind++
-							queue.push ( r )
-							if ( typeof ( trace ) != 'undefined' ) document.writeln ( 'PUSH QUEUE\n' + JSON.stringify ( r.rule ) + '\n' )
-								continue
-							}
-				var t = c.rule.body[c.ind]
-				        var b = builtin ( t, c )
-				if ( b == 1 ) {
-					g.push ( {src: {head: evaluate ( t, c.env ), body: []}, env: {}} )
-					var r = {rule: {head: c.rule.head, body: c.rule.body}, src: c.src, ind: c.ind, parent: c.parent, env: c.env, ground: g}
-					        r.ind++
-					        queue.push ( r )
-					        if ( typeof ( trace ) != 'undefined' ) document.writeln ( 'PUSH QUEUE\n' + JSON.stringify ( r.rule ) + '\n' )
-						        continue
-					} else if ( b == 0 ) continue
-					if ( cases[t.pred] == null ) continue
-						var src = 0
-						for ( var k = 0; k < cases[t.pred].length; k++ ) {
-							var rl = cases[t.pred][k]
-							         src++
-							         var g = aCopy ( c.ground )
-							                 if ( rl.body.length == 0 ) g.push ( {src: rl, env: {}} )
-								                 var r = {rule: rl, src: src, ind: 0, parent: c, env: {}, ground: g}
-								if ( unify ( t, c.env, rl.head, r.env, true ) ) {
-									var ep = c  // euler path
-									         while ( ep = ep.parent ) if ( ep.src == c.src && unify ( ep.rule.head, ep.env, c.rule.head, c.env, false ) ) break
-											if ( ep == null ) {
-												queue.unshift ( r )
-												if ( typeof ( trace ) != 'undefined' ) document.writeln ( 'EULER PATH UNSHIFT QUEUE\n' + JSON.stringify ( r.rule ) + '\n' )
-												}
-								}
-						}
-			}
-    }
 
-*/
+typedef map<int, vector<uint>> evidence_t;
+evidence_t prove ( uint goal, int max_steps, const evidence_t& cases ) {
+	typedef uint uint;
+	typedef vector<uint> gnd_t;
+
+	const size_t max_proof_trace = max_preds;
+	struct proof_element {
+		uint rule;
+		uint src = 0, ind = 0;
+		uint parent = 0;
+		subst env;
+		gnd_t ground;
+		proof_element() : rule ( 0 ) {}
+		proof_element ( uint r ) : rule ( r ) {}
+	} *proof_trace = new proof_element[max_proof_trace];
+	size_t firstproof = 0, lastproof = 0;
+
+	proof_trace[lastproof++] = proof_element ( goal );
+	evidence_t evidence;
+	size_t step = 0;
+	while ( lastproof - firstproof ) {
+		proof_element& pe = proof_trace[firstproof++];
+		gnd_t gnd = pe.ground;
+		step++;
+		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
+		if ( pe.ind >= P[pe.rule].body.size() ) {
+			if ( !pe.parent ) {
+				for ( size_t i = 0; i < P[pe.rule].body.size(); ++i ) {
+					uint t = eval ( P[pe.rule].body[i], pe.env );
+					if ( evidence.find ( P[t].pred ) == evidence.end() ) evidence[P[t].pred] = {};
+					evidence[P[t].pred].push_back ( PID ( t, {PID ( GND, pe.ground ) } ) );
+				}
+			} else {
+				if ( P[pe.rule].body.size() ) gnd.push_back (PID( P[pe.rule], pe.env) );
+				proof_element r = pe.parent;
+				r.ground = gnd;
+				unify ( P[pe.rule].head, pe.env, P[r.rule].body[r.ind], r.env, true );
+				r.ind++;
+				proof_trace[lastproof++] = r;
+			}
+		} else {
+			auto t = P[pe.rule].body[pe.ind];
+//			auto b = builtin ( t, pe );
+			//		if ( b == 1 ) {
+			//			g.push_back ( { { eval ( t, c.env ), {}}, {}} );
+			//			auto r = {rule: {head: c.rule.head, body: c.rule.body}, src: c.src, ind: c.ind, parent: c.parent, env: c.env, ground: g};
+			//			r.ind++;
+			//			queue.push ( r );
+			//			continue;
+			//		} else if ( b == 0 ) continue;
+			if ( cases.find ( P[t].pred ) != cases.end() ) {
+				size_t src = 0;
+				for ( size_t k = 0; k < cases.at(P[t].pred).size(); k++ ) {
+					uint rl = cases.at(P[t].pred)[k];
+					src++;
+					gnd_t g = pe.ground;
+					if ( P[rl].body.size() == 0 ) g.push_back ( PID( rl) );
+					proof_element r = {rl, src, 0, firstproof-1, subst(), g};
+					if ( unify ( t, pe.env, P[rl].head, r.env, true ) ) {
+						auto ep = pe;  // euler path
+						while ( ep.parent ) {
+							ep = proof_trace[ep.parent];
+							if ( ep.src == pe.src && unify ( rules[ep.rule].head, ep.env, rules[pe.rule].head, pe.env, false ) ) break;
+						}
+						if ( ep == null ) proof_trace[--firstproof] = r;
+						if ( firstproof < 0 || firstproof > max_proof_trace ) throw logic_error ( "negative array index" );
+						//					queue.unshift ( r );
+
+					}
+				}
+			}
+		}
+	}
+	return evidence;
+}
+
