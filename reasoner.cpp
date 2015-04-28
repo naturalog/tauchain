@@ -289,7 +289,7 @@ predicate* triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
-evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
+evidence_t prove ( const qlist& kb, const qlist& query ) {
 	#ifdef UBI
 	ubigraph_clear();
 	#endif
@@ -297,21 +297,22 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 	evidence_t evidence;
 	cases_t cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
-	for ( const auto& quad : graph ) {
+	for ( const auto& quad : kb ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
+			rule& rul = *mkrule();
 			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for ( const auto &y : *kb[o] ) {
-				rule& rul = *mkrule ( triple ( *y ) );
-				//now look for the subject graph
-				for ( const auto& x : *kb[s] ) rul.body.push_back ( triple ( *x ) );
-				cases[rul.head->pred].push_back ( &rul );
-			}
-		} else {
-			rule& r = *mkrule ( 0, {triple ( p, s, o ) } ); // { { p, { mk_res ( s ), mk_res ( o ) }}, {}};
-			cout << r << endl;
-			cases[dict[p]].push_back ( &r );
-		}
+			for ( const auto& y : kb )
+				if ( y->graph->value == o ) {
+					rul.head = triple ( *y );
+					//now look for the subject graph
+					for ( const auto& x : kb )
+						if ( x->graph->value == s )
+							rul.body.push_back ( triple ( *x ) );
+					cases[dict[p]].push_back ( &rul );
+				}
+		} else
+			cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
 	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
@@ -327,7 +328,7 @@ bool test_reasoner() {
 	evidence_t evidence;
 	cases_t cases;
 	typedef predicate* ppredicate;
-	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" ), _z = mkpred ( "?z" );
+	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );

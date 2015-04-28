@@ -89,7 +89,7 @@ predicate* evaluate ( predicate& t, const subst& sub );
 bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f );
 predlist to_predlist ( const ground_t& g );
 evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases );
-evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb );
+evidence_t prove ( const qlist& graph, const qlist& query );
 bool test_reasoner();
 
 #endif

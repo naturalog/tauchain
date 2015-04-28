@@ -86,7 +86,7 @@ string rdf_db::tostring() {
 	for ( auto x : *this ) {
 		o << "#Triples: " << x.second->size() << endl;
 		for ( pquad q : *x.second )
-			o << q->tostring ( x.first == str_default ? "<>" : x.first ) << endl;
+			o << q->tostring (/* x.first == str_default ? "<>" : x.first*/ ) << endl;
 	}
 	return o.str();
 }

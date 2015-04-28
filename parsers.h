@@ -13,7 +13,6 @@ using namespace std;
 
 #ifdef USE_RAPTOR
 #include <raptor2/raptor2.h>
-
 void list_parser_options ( raptor_world *world = raptor_new_world() ) {
 	for ( size_t i = 0; i < raptor_option_get_count(); i++ )
 		if ( raptor_option_description* od = raptor_world_get_option_description (
@@ -68,7 +67,7 @@ rdf_db load_nq ( string fname ) {
 typedef const char* pcchar;
 typedef const unsigned char* pcuchar;
 
-string jsonld::resolve ( pstring base_, const string& ref ) {
+inline string resolve ( pstring base_, const string& ref ) {
 	if ( !base_ ) return ref;
 	const string& base = *base_;
 	//size_t raptor_uri_resolve_uri_reference(const unsigned char *base_uri, const unsigned char *reference_uri,
@@ -77,14 +76,9 @@ string jsonld::resolve ( pstring base_, const string& ref ) {
 	unsigned char r[sz];
 	raptor_uri_resolve_uri_reference ( ( const unsigned char* ) base.c_str(), ( const unsigned char* ) ref.c_str(), r, sz );
 	return string ( ( const char* ) r );
-}
 #else
-inline string jsonld::resolve ( pstring base_, const string& ref ) {
-	return base_ ? *base_ + ref : ref;
-}
 inline rdf_db load_nq ( string ) {
 	throw 0;
 }
 #endif
-
 #endif /* PARSERS_H_ */

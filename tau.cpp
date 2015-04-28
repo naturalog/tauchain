@@ -168,7 +168,7 @@ public:
 					cerr << "Fatal: query selected graph is null." << endl;
 					return 1;
 				}
-				cout << prove ( *kb, *q, _kb );
+				cout << prove ( *kb, *q );
 			}
 		} catch ( string& ex ) {
 			cerr << ex << endl;

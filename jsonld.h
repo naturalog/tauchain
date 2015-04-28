@@ -21,6 +21,8 @@
 #include "rdf.h"
 using namespace std;
 
+inline string resolve ( pstring base_, const string& ref ) { return base_ ? *base_ + ref : ref; }
+
 namespace jsonld {
 
 template<typename M, typename K, typename E> inline bool throw_if_contains (
@@ -35,8 +37,6 @@ template<typename M, typename K, typename E> inline bool throw_if_not_contains (
 		throw err;
 	return true;
 }
-
-string resolve ( pstring, const string& );
 
 inline pstring removeBase ( pobj, string ) {
 	return pstr ( "" );
@@ -350,10 +350,10 @@ public:
 		jsonld_api ( opts ) {
 		initialize ( input, 0 );
 	}
-/*	jsonld_api ( pobj input, pobj context, jsonld_options opts ) :
-		jsonld_api ( opts ) {
-		initialize ( input, 0 );
-	}*/
+	/*	 jsonld_api ( pobj input, pobj context, jsonld_options opts ) :
+			jsonld_api ( opts ) {
+			initialize ( input, 0 );
+		}*/
 	jsonld_api ( jsonld_options opts_ = jsonld_options ( "" ) ) :
 		opts ( opts_ ) {
 	}
