@@ -124,7 +124,7 @@ void ubi ( const ppti i ) {
 
 	if ( i->parent ) {
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
 
 		int e = ubigraph_new_edge ( i->parent->ubi_node_id, i->ubi_node_id );
 		ubigraph_set_edge_attribute ( e, "color", "#ffffff" );
@@ -132,7 +132,8 @@ void ubi ( const ppti i ) {
 		ubigraph_set_edge_attribute ( e, "oriented", "true" );
 	} else {
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
+
 	}
 	if ( i->rule.ubi_node_id )
 		int e = ubigraph_new_edge ( i->ubi_node_id, i->rule.ubi_node_id );
@@ -149,7 +150,10 @@ void ubi_add_facts ( evidence_t &cases ) {
 				                    r.ubi_node_id = ubigraph_new_vertex() ) );
 				ubigraph_set_vertex_attribute ( r.ubi_node_id, "fontsize", "18" );
 				ubigraph_set_vertex_attribute ( r.ubi_node_id, "label", ( ( string ) r ).c_str() );
-				ubigraph_set_vertex_attribute ( r.ubi_node_id, "fontcolor", "#ffffff" );
+				ubigraph_set_vertex_attribute ( r.ubi_node_id, "fontcolor", "#ccffcc" );
+				ubigraph_set_vertex_attribute ( r.ubi_node_id, "color", "#55ff55" );
+				ubigraph_set_vertex_attribute ( r.ubi_node_id, "shape", "cube" );
+
 			}
 
 	int w = sqrt ( ids.size() ) + 1;
@@ -190,15 +194,11 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 pground_t gnd = make_shared<ground_t>();
 
 bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
-	/*
-	    please write an outline of this thing:)
-	*/
 	int step = 0;
 	deque<ppti> queue;
-	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
+	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
-	ubi ( s );
-	//queue.push_back(s);
+	//ubi ( s );
 	trace (  "Goal: " << ( string ) goal << endl );
 	while ( queue.size() > 0 ) {
 		trace (  "=======" << endl );
@@ -218,7 +218,9 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				trace ( "no parent!" << endl );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
-					rule_t tmp = {t, {{ "GND", {}}} };
+					rule_t tmp = {t, {{ "GND", {}}} };//well...
+					for (auto gnd_item : *c->ground)
+						tmp.body[0].args.push_back(gnd_item.src.head);
 					trace (  "Adding evidence for " << ( string ) t.pred << ": " << ( string ) tmp << endl );
 					evidence[t.pred].push_back ( tmp );
 				}
@@ -230,7 +232,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
 			trace (  ( string ) ( *r ) << endl );
-			queue.push_back ( r ); //ubi(r);
+			queue.push_back ( r ); ubi(r);
 			continue;
 		}
 		trace ( "Done q" << endl );
@@ -434,16 +436,16 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 	for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			rule_t rule;
 			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
 			for ( const auto &y : *kb[o] )
-				{
-					rule.head = triple ( *y );
-					//now look for the subject graph
-					for ( const auto& x : *kb[s] )
-						rule.body.push_back ( triple ( *x ) );
-					cases[rule.head.pred].push_back ( rule );
-				}
+			{
+				rule_t rule;
+				rule.head = triple ( *y );
+				//now look for the subject graph
+				for ( const auto& x : *kb[s] )
+					rule.body.push_back ( triple ( *x ) );
+				cases[rule.head.pred].push_back ( rule );
+			}
 		} 
 		else
 		{
