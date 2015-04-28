@@ -8,6 +8,7 @@
 #include <map>
 #include <list>
 #include <vector>
+#include <cstdio>
 using namespace std;
 
 const uint K1 = 1024, M1 = K1 * K1;
@@ -30,7 +31,6 @@ class bidict {
 	//	size_t lastk = 0;
 public:
 	int set ( const string& v ) {
-		if ( v.size() < 1 ) throw 0;
 		int k = m1.size() + 1 ;//( int ) lastk++;
 		if ( v[0] == '?' ) k = -k;
 		m1[k] = v;
@@ -43,7 +43,6 @@ public:
 		return v;
 	}
 	const int operator[] ( const string& v ) {
-		if ( !v.size() ) throw 0;
 		m1[m2[v]];
 		return m2[v];
 	}
@@ -69,7 +68,7 @@ struct predicate {
 		return *this;
 	}
 	bool& null = ( bool& ) p;
-	friend ostream& operator<< ( ostream& o, const predicate& p) {
+	friend ostream& operator<< ( ostream& o, const predicate& p ) {
 		o << dict[p.p];
 		return p.args.empty() ? o : o << p.args;
 	}
@@ -79,14 +78,16 @@ struct rule {
 	predicate* head = 0;
 	predlist body;
 	rule& init ( predicate* h, predlist b = predlist() ) {
-		if (!h) throw 0;
 		head = h;
 		body = b;
 		return *this;
 	}
 	friend ostream& operator<< ( ostream& o, const rule& r ) {
-		if ( r.head ) o << ( *r.head );
-		return r.body.empty() ? o : o << r.body;
+		if ( r.body.empty() ) o << "{}";
+		else o << r.body;
+		o << " => ";
+		if ( r.head ) return o << ( *r.head );
+		else return o << "{}";
 	}
 } *rules = new rule[max_rules];
 
@@ -97,11 +98,14 @@ typedef list<pair<rule*, subst>> gnd;
 typedef map<int, forward_list<pair<rule*, subst>>> evd;
 typedef map<int, vector<rule*>> cases_t;
 
-int builtin(predicate* p) { if (p && p->p == dict["GND"]) return 1; return -1; }
+int builtin ( predicate* p ) {
+	if ( p && p->p == dict["GND"] ) return 1;
+	return -1;
+}
 
-rulelist to_rulelist(const gnd& g) {
+rulelist to_rulelist ( const gnd& g ) {
 	rulelist r;
-	for (auto x = g.cbegin(); x != g.cend(); ++x) r.push_back(x->first);
+	for ( auto x = g.cbegin(); x != g.cend(); ++x ) r.push_back ( x->first );
 	return r;
 }
 
@@ -118,48 +122,69 @@ ostream& operator<< ( ostream& o, const gnd& s ) {
 ostream& operator<< ( ostream& o, const evd& e ) {
 	for ( auto x : e ) {
 		o << dict[x.first] << " <= ";
-		for (auto y : x.second) o << *y.first << y.second << " | ";
+		for ( auto y : x.second ) o << *y.first << y.second << " | ";
 		o << endl;
 	}
 	return o;
 }
 
-class frame {
-	frame() {}
-public:
-	static frame* frames;
+ostream& operator<< ( ostream& o, const cases_t& e ) {
+	for ( auto x : e ) {
+		o << dict[x.first] << " <= ";
+		for ( auto y : x.second ) o << *y << " | ";
+		o << endl;
+	}
+	return o;
+}
+
+struct frame {
 	rule* r = 0;
 	uint src = 0, ind = 0;
 	frame* parent = 0;
 	subst s;
 	gnd g;
-	frame& init( const frame& f) {
-		if (nframes >= max_frames) throw 0;
-		if (!f.parent) return init(f.r,f.src,f.ind,0,f.s,f.g);
-		return init(f.r,f.src,f.ind,&frame::frames[nframes++].init(*f.parent),f.s,f.g);
-	}
-	frame& init ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), gnd _g = gnd() ) {
-		if (!_r) throw 0;
-		if (nframes >= max_frames) throw 0;
-		r = _r;  
-		src = _src; 
-		ind = _ind;
-		parent = p; 
-		s = _s;
-		g = _g;
-		return *this;
-	}
+	frame& init ( const frame& f );
+	frame& init ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), gnd _g = gnd() );
 	friend ostream& operator<< ( ostream& o, const frame& f ) {
 		return o << "rule: " << *f.r << " src: " << f.src << " ind: " << f.ind << " parent: ";
-		if (f.parent) o << *f.parent;
+		if ( f.parent ) o << *f.parent;
 		else o << "(null)";
 		return o << " subst: " << f.s << " gnd: " << f.g;
 	}
-};
-frame *frame::frames = new frame[max_frames];
+} *frames = new frame[max_frames];
+
+frame& frame::init ( const frame& f ) {
+	if ( nframes >= max_frames ) throw "Buffer overflow";
+	if ( !f.parent ) return init ( f.r, f.src, f.ind, 0, f.s, f.g );
+	return init ( f.r, f.src, f.ind, &frames[nframes++].init ( *f.parent ), f.s, f.g );
+}
+frame& frame::init ( rule* _r, uint _src, uint _ind, frame* p, subst _s, gnd _g ) {
+	if ( nframes >= max_frames ) throw "Buffer overflow";
+	r = _r;
+	src = _src;
+	ind = _ind;
+	parent = p;
+	s = _s;
+	g = _g;
+	return *this;
+}
+
+void printkb() {
+	static bool pause = true;
+	cout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nframes << " frames. " << endl;
+	cout << "predicates: " <<  endl;
+	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
+	cout << "rules: " << endl;
+	for ( uint n = 0; n < nrules; ++n ) cout << rules[n] << endl;
+	cout << "frames: " << endl;
+	for ( uint n = 0; n < nframes; ++n ) cout << frames[n] << endl;
+	if (pause) cout << "type <enter> to continue or <c><enter> to stop pausing...";
+	cout << endl;
+	if (getchar() == 'c') pause = false;
+}
 
 ostream& operator<< ( ostream& o, const rulelist& l ) {
-	if (l.empty()) return o << "[]";
+	if ( l.empty() ) return o << "[]";
 	o << '[';
 	for ( auto it = l.cbegin();; ) {
 		o << *it;
@@ -170,7 +195,7 @@ ostream& operator<< ( ostream& o, const rulelist& l ) {
 }
 
 ostream& operator<< ( ostream& o, const predlist& l ) {
-	if (l.empty()) return o << "[]";
+	if ( l.empty() ) return o << "[]";
 	o << '[';
 	for ( predlist::const_iterator it = l.cbegin();; ) {
 		o << **it;
@@ -180,27 +205,25 @@ ostream& operator<< ( ostream& o, const predlist& l ) {
 	return o << ']';
 }
 /*
-ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
+    ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
 	for ( auto it = l.cbegin();; ) {
 		o << *it;
 		if ( ++it == l.end() ) break;
 		else o << ',';
 	}
 	return o;
-}
+    }
 */
 predicate* evaluate ( predicate& t, const subst& sub ) {
 	if ( t.p < 0 ) {
-		auto it = sub.find(t.p);
+		auto it = sub.find ( t.p );
 		return it == sub.end() ? 0 : evaluate ( *it->second, sub );
 	}
-	else if ( t.args.empty() ) return &t;
-	else {
-		predicate* p;
-		predicate& r = predicates[npredicates++].init ( t.p );
-		for ( auto x : t.args ) r.args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->p ) );
-		return &r;
-	}
+	if ( t.args.empty() ) return &t;
+	predicate* p;
+	predicate& r = predicates[npredicates++].init ( t.p );
+	for ( auto x : t.args ) r.args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->p ) );
+	return &r;
 }
 
 bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f ) {
@@ -209,48 +232,47 @@ bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f 
 	if ( d.p < 0 ) {
 		p = evaluate ( d, dsub );
 		if ( ( p = evaluate ( d, dsub ) ) ) return unify ( s, ssub, *p, dsub, f );
-		else {
-			if ( f ) dsub[d.p] = evaluate ( s, ssub );
-			return true;
-		}
+		if ( f ) dsub[d.p] = evaluate ( s, ssub );
+		return true;
 	}
 	return equal ( s.args.begin(), s.args.end(), d.args.begin(), d.args.end(), [&ssub, &dsub, &f] ( predicate * p1, predicate * p2 ) {
 		return unify ( *p1, ssub, *p2, dsub, f );
 	} );
 }
 
-predlist to_predlist(const gnd& g) {
-//typedef list<pair<rule*, subst>> gnd;
+predlist to_predlist ( const gnd& g ) {
+	//typedef list<pair<rule*, subst>> gnd;
 	predlist r;
-	for (auto x : g) r.push_back(x.first->head);
+	for ( auto x : g ) r.push_back ( x.first->head );
 	return r;
 }
 
 evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t& cases ) {
 	deque<frame*> queue;
-	queue.emplace_back ( &frame::frames[nframes++].init( &rules[nrules++].init(goal, {goal}) ));
+	queue.emplace_back ( &frames[nframes++].init ( &rules[nrules++].init ( goal, {goal} ) ) );
 	evd e;
 	uint step = 0;
 
-	cout<<"goal: "<<*goal<<endl;
+	cout << "goal: " << *goal << endl;
 	while ( !queue.empty() ) {
 		frame& c = *queue.front();
-//		cout << c << endl;
+		cout  << "current frame: " << c << endl;
+		printkb();
 		queue.pop_front();
 		gnd g = c.g ;
 		step++;
-		if ( maxNumberOfSteps != -1 && (int)step >= maxNumberOfSteps ) return evd();
-		if ( c.ind == c.r->body.size() ) {
+		if ( maxNumberOfSteps != -1 && ( int ) step >= maxNumberOfSteps ) return evd();
+		if ( c.ind >= c.r->body.size() ) {
 			if ( !c.parent ) {
-				for (auto x : c.r->body) {
-					auto t = evaluate ( *x, c.s ); 
+				for ( auto x : c.r->body ) {
+					auto t = evaluate ( *x, c.s );
 					if ( e.find ( t->p ) == e.end() ) e[t->p] = {};
-					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( c.g ) ) } ) , subst()); 
+					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( c.g ) ) } ) , subst() );
 				}
 				continue;
 			}
 			if ( !c.r->body.empty() ) g.emplace_front ( c.r, c.s );
-			frame& r = frame::frames[nframes++].init(*c.parent);
+			frame& r = frames[nframes++].init ( *c.parent );
 			r.g = gnd();
 			unify ( *c.r->head, c.s, *r.r->body[r.ind], r.s, true );
 			r.ind++;
@@ -258,11 +280,11 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t& cases 
 			continue;
 		}
 		predicate* t = c.r->body[c.ind];
-		cout << *t << endl;
-		int b = builtin(t);// ( t, c );
+		//cout << *t << endl;
+		int b = builtin ( t ); // ( t, c );
 		if ( b == 1 ) {
 			g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
-			frame& r = frame::frames[nframes++].init(c);
+			frame& r = frames[nframes++].init ( c );
 			r.g = gnd();
 			r.ind++;
 			queue.push_back ( &r );
@@ -272,35 +294,40 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t& cases 
 		if ( cases.find ( t->p ) == cases.end() ) continue;
 
 		uint src = 0;
-//		for ( size_t k = 0; k < cases[t->p].size(); k++ ) {
-		for (rule* _rl : cases[t->p]) {
+		//		for ( size_t k = 0; k < cases[t->p].size(); k++ ) {
+		for ( rule* _rl : cases[t->p] ) {
 			rule& rl = *_rl;//*cases[t->p][k];
 			cout << rl << endl;
 			src++;
 			gnd g = c.g;
 			if ( rl.body.empty() ) g.emplace_back ( &rl, subst() );
-			frame& r = frame::frames[nframes++].init ( &rl, src, 0, &c, subst(), g );
+			frame& r = frames[nframes++].init ( &rl, src, 0, &c, subst(), g );
 			if ( unify ( *t, c.s, *rl.head, r.s, true ) ) {
 				frame& ep = c;
 				while ( ep.parent ) {
 					ep = *ep.parent;
 					if ( ep.src == c.src && unify ( *ep.r->head, ep.s, *c.r->head, c.s, false ) ) break;
 				}
-				if ( !ep.parent ) queue.push_front ( &r );
+				if ( !ep.parent ) {
+					cout << "pushing frame: " << r << endl;
+					queue.push_front ( &r );
+				}
 			}
 		}
 	}
 	return e;
 }
 
-predicate* mkpred(string s, const vector<predicate*>& v = vector<predicate*>()) { 
-	uint p; 
-	p = dict.has(s) ? dict[s] : dict.set(s); 
-	return &predicates[npredicates++].init(p, v); 
+predicate* mkpred ( string s, const vector<predicate*>& v = vector<predicate*>() ) {
+	uint p;
+	p = dict.has ( s ) ? dict[s] : dict.set ( s );
+	return &predicates[npredicates++].init ( p, v );
 }
 
 //rule* mkrule(string s) { return &rules[nrules++].init(dict.set(s)); }
-rule* mkrule(predicate* p, const vector<predicate*>& v = vector<predicate*>()) { return &rules[nrules++].init(p, v); }
+rule* mkrule ( predicate* p, const vector<predicate*>& v = vector<predicate*>() ) {
+	return &rules[nrules++].init ( p, v );
+}
 
 typedef predicate* ppredicate;
 
@@ -309,22 +336,22 @@ int main() {
 	dict.set ( "GND" );
 	evd evidence;
 	cases_t cases;
-	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" ), _z = mkpred("?z");
+	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" ), _z = mkpred ( "?z" );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
-//	cout << "cases:" << endl << cases << endl;
-/*
-	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
-	cases["a"].push_back ( {{"a", {_x, Mortal}}    , { {"a", {_x, Man}}, } } );
-	cases["a"].push_back ( {
-		{"a", {_x, Man}},
-		{ {"a", {_x, Male}}, }
-	} );
-	bool p = prove ( pred_t {"a", {_y, Mortal}}, -1, cases, evidence );
-*/	
-	evidence = prove ( /*mkrule ( 0, {*/mkpred( "a", { _y, /*Mortal*/_z } )/*} )*/, -1, cases );
+	cout << "cases:" << endl << cases << endl;
+	/*
+		cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
+		cases["a"].push_back ( {{"a", {_x, Mortal}}    , { {"a", {_x, Man}}, } } );
+		cases["a"].push_back ( {
+			{"a", {_x, Man}},
+			{ {"a", {_x, Male}}, }
+		} );
+		bool p = prove ( pred_t {"a", {_y, Mortal}}, -1, cases, evidence );
+	*/
+	evidence = prove ( /*mkrule ( 0, {*/mkpred ( "a", { _y, Mortal } ) /*} )*/, -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		//		cout << "  " << e.first << ":" << endl;

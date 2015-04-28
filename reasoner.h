@@ -219,8 +219,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
-					for (auto gnd_item : *c->ground)
-						tmp.body[0].args.push_back(gnd_item.src.head);
+					for ( auto gnd_item : *c->ground )
+						tmp.body[0].args.push_back ( gnd_item.src.head );
 					trace (  "Adding evidence for " << ( string ) t.pred << ": " << ( string ) tmp << endl );
 					evidence[t.pred].push_back ( tmp );
 				}
@@ -232,7 +232,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
 			trace (  ( string ) ( *r ) << endl );
-			queue.push_back ( r ); ubi(r);
+			queue.push_back ( r );
+			ubi ( r );
 			continue;
 		}
 		trace ( "Done q" << endl );
@@ -437,8 +438,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for ( const auto &y : *kb[o] )
-			{
+			for ( const auto &y : *kb[o] ) {
 				rule_t rule;
 				rule.head = triple ( *y );
 				//now look for the subject graph
@@ -446,9 +446,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 					rule.body.push_back ( triple ( *x ) );
 				cases[rule.head.pred].push_back ( rule );
 			}
-		} 
-		else
-		{
+		} else {
 			rule_t r = { { p, { mk_res ( s ), mk_res ( o ) }}, {}};
 			cout << ( string ) r << endl;
 			cases[p].push_back ( r );
