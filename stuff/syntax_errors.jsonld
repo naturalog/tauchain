@@ -1,0 +1,152 @@
+ [{
+   "@context": {
+    "log": "http://www.w3.org/2000/10/swap/log#",
+  },
+   "@id": "@default",
+   "@graph": 
+   [
+   	{
+	     "@id": ":bananas",
+	     ":a": {"@id": ":fruit"}
+   	},
+   	{
+	     "@id": ":fruit",
+	     ":a": {"@id": ":healthy food"}
+   	},
+   	{
+	     "@id": ":healthy food",
+	     ":is": {"@id": ":good for you"}
+   	},
+   	{
+	     "@id": ":lemons",
+	     ":a": {"@id": ":fruit"}
+   	},
+   	{
+	     "@id": ":nuts",
+	     ":are": {"@id": ":expensive"}
+   	},
+   	{
+	     "@id": ":lemons",
+	     ":tastes": {"@id": ":sour"}
+   	},
+   	{
+	     "@id": ":bananas",
+	     ":tastes": {"@id": ":sweet"}
+   	},
+   	{
+	     "@id": ":papaya",
+	     ":a": {"@id": ":fruit"}
+   	},
+   	{
+	     "@id": ":kiwi",
+	     ":a": {"@id": ":fruit"}
+   	},
+   	{
+	     "@id": ":mango",
+	     ":a": {"@id": ":fruit"}
+   	},
+   	{
+	     "@id": ":limete",
+	     ":a": {"@id": ":fruit"}
+   	},
+   	{
+	     "@id": ":clementine",
+	     ":a": {"@id": ":fruit"}
+   	},
+   	{
+	     "@id": ":broccoli",
+	     ":a": {"@id": ":vegetable"}
+   	},
+   	{
+	     "@id": ":celery",
+	     ":a": {"@id": ":vegetable"}
+   	},
+   	{
+	     "@id": ":broccoli",
+	     ":color": {"@id": ":green"}
+   	},
+   	{
+	     "@id": ":lemons",
+	     ":color": {"@id": ":yellow"}
+   	},
+   	{
+	     "@id": "?A",
+	     ":color": {"@id": ":green"},
+	     "log:implies": [{
+		"@id": "?A",
+		":is": {"@id": ":good for you"}
+	    }]
+   	},
+  {
+    "@id": ":socrates",
+    "a": [{
+      "@id": ":Male"
+    }]
+  }, {
+    "@id": "_:g2",
+    "log:implies": [{
+      "@id": "_:g1"
+    }]
+  }, {
+    "@id": "_:g3",
+    "log:implies": [{
+      "@id": "_:g2"
+    }]
+  }]
+}, {
+  "@id": "_:g1",
+  "@graph": [{
+    "@id": "_:x",
+    "a": [{
+      "@id": ":Mortal"
+    }]
+  }]
+}, {
+  "@id": "_:g2",
+  "@graph": [{
+    "@id": "_:x",
+    "a": [{
+      "@id": ":Man"
+    }]
+  }]
+}, {
+  "@id": "_:g3",
+  "@graph": [{
+    "@id": "_:x",
+    "a": [{
+      "@id": ":Male"
+    }]
+  }]
+}
+
+
+, {
+    "@id": "_:g4",
+    "log:implies": [{
+      "@id": "_:g5"
+    }]
+  }]
+}, {
+  "@id": "_:g4",
+  "@graph": [{
+    "@id": "_:x",
+    "a": [{
+      "@id": ":Mortal"
+    }]
+  }]
+}, {
+  "@id": "_:g2",
+  "@graph": [{
+    "@id": "_:x",
+    ":likes": [{
+      "@id": ":healthy food"
+    }]
+  }]
+}
+
+
+]
+
+   ]
+ }]
+

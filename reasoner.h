@@ -4,6 +4,7 @@
 
 #ifdef UBI
 #include <UbigraphAPI.h>
+#include <cmath>
 #endif
 
 struct pred_t {
@@ -50,16 +51,27 @@ ostream& operator<< ( ostream& o, env_t const& r ) {
 struct rule_t {
 	pred_t head;
 	vector<pred_t> body;
+#ifdef UBI
+	int ubi_node_id;
+#endif
 	string tostring() const {
 		stringstream o;
-		o << ( string ) head << " :- ";
-		for ( auto x : body ) x.write ( o );
+		o << ( string ) head;
+		if (body.size()) 
+		{
+			o << " :- ";
+			for ( auto x : body ) x.write ( o );
+		}
+		else
+			o << ".";
 		return o.str();
 	}
 	operator string() const {
 		return tostring();
 	}
 };
+
+typedef map<string, vector<rule_t>> evidence_t;
 
 struct rule_env {
 	rule_t src;
@@ -103,8 +115,10 @@ struct proof_trace_item {
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
 
-void ubi ( const ppti i ) {
-	#ifdef UBI
+
+void ubi(const ppti i)
+{
+#ifdef UBI
 	i->ubi_node_id = ubigraph_new_vertex();
 
 	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "20" );
@@ -123,8 +137,53 @@ void ubi ( const ppti i ) {
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
 	}
-	#endif
+	if (i->rule.ubi_node_id)
+		int e = ubigraph_new_edge(i->ubi_node_id, i->rule.ubi_node_id);
+#endif
 }
+
+void ubi_add_facts(evidence_t &cases)
+{
+#ifdef UBI
+	vector<int> ids;
+	for ( auto c : cases ) 
+		for ( auto r : c.second ) 
+			if ( !r.body.size() )
+			{
+				ids.push_back((
+					r.ubi_node_id = ubigraph_new_vertex()));
+				ubigraph_set_vertex_attribute(r.ubi_node_id, "fontsize", "18");
+				ubigraph_set_vertex_attribute(r.ubi_node_id, "label", ((string)r).c_str());
+				ubigraph_set_vertex_attribute(r.ubi_node_id, "fontcolor", "#ffffff");
+			}
+
+	int w = sqrt(ids.size()) + 1;
+	for (int x = 0; x < w; x++)
+	{
+		int h = ids.size()/w+1;
+		
+		for (int y = 0; y < h; y++)
+		{
+			if ((x*h+y) == ids.size())
+				return;
+
+			cout << ids.size() << " facts, w:" << w << 
+				", h:" << h << ", x:"<<x << ", y:"<<y <<endl;
+
+			int id = ids[x*h+y];
+			if (x>0)
+			{
+				int e = ubigraph_new_edge(id, ids[(x-1)*h+y]);
+			}
+			if(y>0)
+			{
+				int e = ubigraph_new_edge(id, ids[x*h+y-1]);
+			}
+		}
+	}
+#endif
+}
+
 
 int builtin ( pred_t, proof_trace_item ) {
 	/*
@@ -135,7 +194,6 @@ int builtin ( pred_t, proof_trace_item ) {
 	trace ( "NO BEES yet PLZ!" << endl );
 	return -1;
 }
-typedef map<string, vector<rule_t>> evidence_t;
 
 pred_t evaluate ( const pred_t t, const penv_t env );
 bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv );
@@ -179,7 +237,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			}
 			trace ( "Q parent: " );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
-			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent,  make_shared<env_t>(), g} );
+			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, make_shared<env_t>(*c->parent->env) , g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
 			trace (  ( string ) ( *r ) << endl );
@@ -375,34 +433,42 @@ pred_t triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
-evidence_t prove ( const qlist& kb, const qlist& query ) {
+evidence_t prove ( const qlist& graph, const qlist& query, const jsonld::rdf_db &kb ) {
+
 	#ifdef UBI
 	ubigraph_clear();
 	#endif
+
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
-	for ( const auto& quad : kb ) {
+	for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			rule_t rule;
 			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for ( const auto& y : kb )
-				if ( y->graph->value == o ) {
+			for ( const auto &y : kb[o] )
+				{
 					rule.head = triple ( *y );
 					//now look for the subject graph
-					for ( const auto& x : kb )
-						if ( x->graph->value == s )
-							rule.body.push_back ( triple ( *x ) );
-					cases[p].push_back ( rule );
+					for ( const auto& x : kb[s] )
+						rule.body.push_back ( triple ( *x ) );
+					cases[rule.head.pred].push_back ( rule );
 				}
-		} else
-			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
+		} 
+		else
+		{
+			rule_t r = { { p, { mk_res ( s ), mk_res ( o ) }}, {}};
+			cout << (string)r << endl;
+			cases[p].push_back (r);
+		}
 	}
 	rule_t goal;
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
+	ubi_add_facts(cases);
 	prove ( goal, -1, cases, evidence );
 	return evidence;
 }
+
 
 void print_evidence ( evidence_t evidence ) {
 	cout << "evidence: " << evidence.size() << " items..." << endl;
@@ -414,4 +480,3 @@ void print_evidence ( evidence_t evidence ) {
 }
 
 const bool use_nquads = false;
-

@@ -1,0 +1,11 @@
+ [{
+   "@id": "@default",
+   "@graph": 
+   [
+  {
+    "@id": ":socrates",
+    ":likes": ":lemons"
+  }
+   ]
+}]
+
