@@ -96,7 +96,8 @@ uint npredicates = 0, nrules = 0, nframes = 0;
 
 typedef map<int, predicate*> subst;
 typedef list<pair<rule*, subst>> gnd;
-typedef map<int, forward_list<rule*>> evd;
+typedef map<int, forward_list<pair<rule*, subst>>> evd;
+typedef map<int, vector<rule*>> cases_t;
 
 rulelist to_rulelist(const gnd& g) {
 	rulelist r;
@@ -117,7 +118,7 @@ ostream& operator<< ( ostream& o, const gnd& s ) {
 ostream& operator<< ( ostream& o, const evd& e ) {
 	for ( auto x : e ) {
 		o << dict[x.first] << " <= ";
-		for (auto y : x.second) o << *y << " | ";
+		for (auto y : x.second) o << *y.first << y.second << " | ";
 		o << endl;
 	}
 	return o;
@@ -225,7 +226,7 @@ predlist to_predlist(const gnd& g) {
 	return r;
 }
 
-evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
+evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t& cases ) {
 	deque<frame*> queue;
 	queue.emplace_back ( &frame::frames[nframes++].init( &rules[nrules++].init(goal, {goal}) ));
 	evd e;
@@ -244,7 +245,7 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 				for (auto x : c.r->body) {
 					auto t = evaluate ( *x, c.s ); 
 					if ( e.find ( t->p ) == e.end() ) e[t->p] = {};
-					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); 
+					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) , subst()); 
 				}
 				continue;
 			}
@@ -305,13 +306,14 @@ typedef predicate* ppredicate;
 
 int main() {
 	dict.set ( "a" );
-	evd evidence, cases;
+	evd evidence;
+	cases_t cases;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" ), _z = mkpred("?z");
-	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
-	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
-	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
-	cout << "cases:" << endl << cases << endl;
+//	cout << "cases:" << endl << cases << endl;
 /*
 	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
 	cases["a"].push_back ( {{"a", {_x, Mortal}}    , { {"a", {_x, Man}}, } } );
