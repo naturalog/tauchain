@@ -1,7 +1,7 @@
 CC=g++
-CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb
+CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb -Wextra
 LDFLAGS=-lcurl
-SOURCES=tau.cpp jsonld.cpp rdf.cpp
+SOURCES=tau.cpp jsonld.cpp rdf.cpp reasoner.cpp
 
 debug: CXXFLAGS += -DDEBUG
 
@@ -27,9 +27,6 @@ ubi-tau: $(OBJECTS) ubi/client.o
 
 clean:
 	rm -rf tau $(OBJECTS) ubi/client.o
-
-euler: euler.hmc.cpp
-	g++ -std=c++1y euler.hmc.cpp -oeuler -Wall -ggdb
 
 #all: jsonld.h  json_spirit.h parsers.h reasoner.h strings.h rdf.h logger.h object.h tau.o jsonld.o rdf.o
 #	$(CC) tau.o jsonld.o rdf.o -lcurl -otau

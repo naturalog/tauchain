@@ -38,7 +38,7 @@ template<typename M, typename K, typename E> inline bool throw_if_not_contains (
 
 string resolve ( pstring, const string& );
 
-inline pstring removeBase ( pobj o, string iri ) {
+inline pstring removeBase ( pobj, string ) {
 	return pstr ( "" );
 }
 
@@ -350,10 +350,10 @@ public:
 		jsonld_api ( opts ) {
 		initialize ( input, 0 );
 	}
-	jsonld_api ( pobj input, pobj context, jsonld_options opts ) :
+/*	jsonld_api ( pobj input, pobj context, jsonld_options opts ) :
 		jsonld_api ( opts ) {
 		initialize ( input, 0 );
-	}
+	}*/
 	jsonld_api ( jsonld_options opts_ = jsonld_options ( "" ) ) :
 		opts ( opts_ ) {
 	}

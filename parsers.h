@@ -79,10 +79,10 @@ string jsonld::resolve ( pstring base_, const string& ref ) {
 	return string ( ( const char* ) r );
 }
 #else
-string jsonld::resolve ( pstring base_, const string& ref ) {
+inline string jsonld::resolve ( pstring base_, const string& ref ) {
 	return base_ ? *base_ + ref : ref;
 }
-rdf_db load_nq ( string fname ) {
+inline rdf_db load_nq ( string ) {
 	throw 0;
 }
 #endif
