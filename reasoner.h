@@ -50,26 +50,17 @@ struct predicate {
 	predlist args;
 	predicate& init ( int _p = 0, predlist _args = predlist() );
 };
-ostream& operator<< ( ostream& o, const predicate& p );
 
 struct rule {
 	predicate* head = 0;
 	predlist body;
 	rule& init ( predicate* h, predlist b = predlist() );
 };
-ostream& operator<< ( ostream& o, const rule& r );
 
 typedef map<int, predicate*> subst;
 typedef list<pair<rule*, subst>> ground_t;
 typedef map<int, forward_list<pair<rule*, subst>>> evidence_t;
 typedef map<int, vector<rule*>> cases_t;
-
-int builtin ( predicate* p );
-rulelist to_rulelist ( const ground_t& g );
-ostream& operator<< ( ostream& o, const subst& s );
-ostream& operator<< ( ostream& o, const ground_t& s );
-ostream& operator<< ( ostream& o, const evidence_t& e );
-ostream& operator<< ( ostream& o, const cases_t& e );
 
 struct frame {
 	rule* rul = 0;
@@ -80,11 +71,20 @@ struct frame {
 	frame& init ( const frame& f );
 	frame& init ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 };
-ostream& operator<< ( ostream& o, const frame& f );
 
-void printkb();
+ostream& operator<< ( ostream& o, const subst& s );
+ostream& operator<< ( ostream& o, const ground_t& s );
+ostream& operator<< ( ostream& o, const evidence_t& e );
+ostream& operator<< ( ostream& o, const cases_t& e );
+ostream& operator<< ( ostream& o, const rule& r );
+ostream& operator<< ( ostream& o, const predicate& p );
+ostream& operator<< ( ostream& o, const frame& f );
 ostream& operator<< ( ostream& o, const rulelist& l );
 ostream& operator<< ( ostream& o, const predlist& l );
+
+void printkb();
+int builtin ( predicate* p );
+rulelist to_rulelist ( const ground_t& g );
 predicate* evaluate ( predicate& t, const subst& sub );
 bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f );
 predlist to_predlist ( const ground_t& g );
