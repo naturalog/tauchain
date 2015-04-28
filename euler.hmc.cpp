@@ -57,7 +57,7 @@ public:
 	}
 	string tostr() {
 		stringstream s;
-		for ( auto x : m1 ) cout << x.first << " := " << x.second << endl;
+		for ( auto x : m1 ) s << x.first << " := " << x.second << endl;
 		return s.str();
 	}
 } dict;
@@ -103,11 +103,20 @@ rulelist to_rulelist(const gnd& g) {
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( auto x : s ) cout << x.first << ':' << x.second << endl;
+	for ( auto x : s ) o << dict[x.first] << ':' << *x.second << endl;
 	return o;
 }
+
 ostream& operator<< ( ostream& o, const gnd& s ) {
-	for ( auto x : s ) cout << x.first << ':' << x.second << endl;
+	for ( auto x : s ) o << *x.first << ':' << x.second << endl;
+	return o;
+}
+
+ostream& operator<< ( ostream& o, const evd& e ) {
+	for ( auto x : e ) {
+		o << dict[x.first] << ':';
+		for (auto y : x.second) o << *y << endl;
+	}
 	return o;
 }
 
@@ -125,21 +134,25 @@ struct frame {
 };
 
 ostream& operator<< ( ostream& o, const rulelist& l ) {
+	if (l.empty()) return o << "[]";
+	o << '[';
 	for ( auto it = l.cbegin();; ) {
 		o << *it;
 		if ( ++it == l.end() ) break;
 		else o << ',';
 	}
-	return o;
+	return o << ']';
 }
 
 ostream& operator<< ( ostream& o, const predlist& l ) {
+	if (l.empty()) return o << "[]";
+	o << '[';
 	for ( predlist::const_iterator it = l.cbegin();; ) {
-		o << *it;
+		o << **it;
 		if ( ++it == l.end() ) break;
 		else o << ',';
 	}
-	return o;
+	return o << ']';
 }
 /*
 ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
@@ -195,7 +208,7 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 				for ( size_t i = 0; i < c.r->body.size(); ++i ) {
 					auto t = evaluate ( *c.r->body[i], c.s ); //evaluate the statement in the enviornment
 					if ( e.find ( t->p ) == e.end() ) e[t->p] = {}; //initialize this predicate's evidence list, if necessary
-					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); //add the evidence for this statement
+//					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); //add the evidence for this statement
 				}
 				continue;
 			}
@@ -247,3 +260,35 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 	return e;
 }
 
+predicate* mkpred(string s, const vector<predicate*>& v = vector<predicate*>()) { 
+	uint p; 
+	p = dict.has(s) ? dict[s] : dict.set(s); 
+	return &predicates[npredicates++].init(p, v); 
+}
+
+//rule* mkrule(string s) { return &rules[nrules++].init(dict.set(s)); }
+rule* mkrule(predicate* p, const vector<predicate*>& v = vector<predicate*>()) { return &rules[nrules++].init(p, v); }
+
+typedef predicate* ppredicate;
+
+int main() {
+	dict.set ( "a" );
+	evd evidence, cases;
+	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
+	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man} )  } ) );
+	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Man} ), { mkpred ( "a", {_x, Male} )  } ) );
+
+	cout << "cases:" << endl << cases << endl;
+
+	evidence = prove ( mkrule ( 0, { _y, Mortal } ), -1, cases );
+	cout << "evidence: " << evidence.size() << " items..." << endl;
+	for ( auto e : evidence ) {
+		//		cout << "  " << e.first << ":" << endl;
+		//		for ( auto ee : e.second ) cout << "    " << ( string ) ee << endl;
+		//		cout << endl << "---" << endl;
+	}
+	cout << "QED!" << endl;
+	cout << evidence.size() << endl;
+	return 0;
+}
