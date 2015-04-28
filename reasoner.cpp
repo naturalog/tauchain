@@ -14,6 +14,7 @@ frame *frames = new frame[max_frames];
 uint npredicates = 0, nrules = 0, nframes = 0;
 
 int bidict::set ( const string& v ) {
+	if (m2.find(v) != m2.end()) return m2[v];
 	int k = m1.size();
 	if ( v[0] == '?' ) k = -k;
 	m1[k] = v;
@@ -53,7 +54,8 @@ predicate& predicate::init ( int _p, predlist _args ) {
 }
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
-	o << dict[p.pred];
+	if (deref) o << dict[p.pred];
+	else o << p.pred;
 	return p.args.empty() ? o : o << p.args;
 }
 
@@ -76,7 +78,11 @@ int builtin ( predicate* p ) {
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( auto x : s ) o << dict[x.first] << " := " << *x.second << endl;
+	for ( auto x : s ) {
+		if (deref) o << dict[x.first];
+		else o << x.first;
+		o << " := " << *x.second << endl;
+	}
 	return o;
 }
 
@@ -89,7 +95,9 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( auto x : e ) {
 		o << '{';
 		for ( auto y : x.second ) o << *y.first << y.second << " | ";
-		o << "} => " << dict[x.first];
+		o << "} => ";
+		if (deref) o << dict[x.first];
+		else o << x.first;
 		o << endl;
 	}
 	return o;
@@ -97,7 +105,9 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
 	for ( auto x : e ) {
-		o << dict[x.first] << " <= ";
+		if (deref) o << dict[x.first];
+		else o << x.first;
+		o << " <= ";
 		for ( auto y : x.second ) o << *y << " | ";
 		o << endl;
 	}
@@ -202,7 +212,7 @@ predlist to_predlist ( const ground_t& g ) {
 	return r;
 }
 
-evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases ) {
+evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 	deque<frame*> queue;
 	queue.emplace_back ( &frames[nframes++].init ( goal ) );
 	evidence_t evidence;
@@ -215,7 +225,7 @@ evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases ) {
 		queue.pop_front();
 		ground_t g = current_frame.ground;
 		step++;
-		if ( maxNumberOfSteps != -1 && ( int ) step >= maxNumberOfSteps ) return evidence_t();
+		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		if ( current_frame.ind >= current_frame.rul->body.size() ) {
 			if ( !current_frame.parent ) {
 				for ( auto x : current_frame.rul->body ) {
@@ -254,7 +264,7 @@ evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases ) {
 			ground_t ground = current_frame.ground;
 			if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
 			frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
-			if ( unify ( *t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
+			if ( rl.head && unify ( *t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
 				frame& ep = current_frame;
 				while ( ep.parent ) {
 					ep = *ep.parent;
@@ -290,55 +300,83 @@ predicate* triple ( const jsonld::quad& q ) {
 };
 
 evidence_t prove ( const qlist& kb, const qlist& query ) {
+	evidence_t evidence;
+	cases_t cases;
+	for ( const auto& quad : kb ) {
+		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+		dict.set(s);
+		dict.set(o);
+		dict.set(p);
+		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
+			rule& rul = *mkrule();
+			for ( const auto& y : kb )
+				if ( y->graph->value == o ) {
+					rul.head = triple ( *y );
+					for ( const auto& x : kb )
+						if ( x->graph->value == s )
+							rul.body.push_back ( triple ( *x ) );
+					cases[dict[p]].push_back ( &rul );
+				}
+		} else cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
+//			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
+	}
+	rule& goal = *mkrule();
+	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
+	return prove ( &goal, -1, cases );
+}
+/*
+evidence_t prove ( const qlist& kb, const qlist& query ) {
 	#ifdef UBI
 	ubigraph_clear();
 	#endif
 
 	evidence_t evidence;
 	cases_t cases;
-	/*the way we store rules in jsonld is: graph1 implies graph2*/
+	//the way we store rules in jsonld is: graph1 implies graph2
+
 	for ( const auto& quad : kb ) {
-		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
+		  if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			rule& rul = *mkrule();
-			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for ( const auto& y : kb )
-				if ( y->graph->value == o ) {
-					rul.head = triple ( *y );
-					//now look for the subject graph
-					for ( const auto& x : kb )
-						if ( x->graph->value == s )
-							rul.body.push_back ( triple ( *x ) );
-					cases[dict[p]].push_back ( &rul );
+				//go thru all quads again, look for the implicated graph (rule head in prolog terms)
+				for ( const auto& z : query ) {
+					if ( z.first == o ) {
+						auto y = z.second;
+						rul.head = triple ( *y );
+						//now look for the subject graph
+						for ( const auto& x : kb )
+							if ( x->graph->value == s )
+								rul.body.push_back ( triple ( *x ) );
+						cases[dict[p]].push_back ( &rul );
+					}
 				}
-		} else
-			cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
+			} else
+				cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
+			}
+		rule& goal = *mkrule();
+		for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
+		#ifdef UBI
+		ubi_add_facts ( cases );
+		#endif
+		return prove ( &goal, -1, cases );
 	}
-	rule& goal = *mkrule();
-	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-	#ifdef UBI
-	ubi_add_facts ( cases );
-	#endif
-	return prove ( &goal, -1, cases );
-}
+*/
+	bool test_reasoner() {
+		dict.set ( "a" );
+		dict.set ( "GND" );
+		evidence_t evidence;
+		cases_t cases;
+		typedef predicate* ppredicate;
+		ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+		cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
+		cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
+		cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
-bool test_reasoner() {
-	dict.set ( "a" );
-	dict.set ( "GND" );
-	evidence_t evidence;
-	cases_t cases;
-	typedef predicate* ppredicate;
-	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
-
-	cout << "cases:" << endl << cases << endl;
-	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	evidence = prove ( mkrule ( goal, { goal } ), -1, cases );
-	cout << "evidence: " << evidence.size() << " items..." << endl;
-	cout << evidence << endl;
-	cout << "QED!" << endl;
-	cout << evidence.size() << endl;
-	return evidence.size();
-}
+		cout << "cases:" << endl << cases << endl;
+		predicate* goal = mkpred ( "a", { _y, Mortal } );
+		evidence = prove ( mkrule ( goal, { goal } ), -1, cases );
+		cout << "evidence: " << evidence.size() << " items..." << endl;
+		cout << evidence << endl;
+		cout << "QED!" << endl;
+		cout << evidence.size() << endl;
+		return evidence.size();
+	}

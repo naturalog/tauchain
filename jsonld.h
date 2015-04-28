@@ -21,7 +21,9 @@
 #include "rdf.h"
 using namespace std;
 
-inline string resolve ( pstring base_, const string& ref ) { return base_ ? *base_ + ref : ref; }
+inline string resolve ( pstring base_, const string& ref ) {
+	return base_ ? *base_ + ref : ref;
+}
 
 namespace jsonld {
 
