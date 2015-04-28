@@ -49,7 +49,7 @@ void close_xmlrpc() {
 }
 
 result_t ubigraph_new_vertex_w_id ( vertex_id_t x ) {
-	char* const methodName = "ubigraph.new_vertex_w_id";
+	const char* const methodName = "ubigraph.new_vertex_w_id";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -71,7 +71,7 @@ result_t ubigraph_new_vertex_w_id ( vertex_id_t x ) {
 }
 
 vertex_id_t ubigraph_new_vertex() {
-	char* const methodName = "ubigraph.new_vertex";
+	const char* const methodName = "ubigraph.new_vertex";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -93,7 +93,7 @@ vertex_id_t ubigraph_new_vertex() {
 }
 
 result_t ubigraph_new_edge_w_id ( edge_id_t e, vertex_id_t x, vertex_id_t y ) {
-	char* const methodName = "ubigraph.new_edge_w_id";
+	const char* const methodName = "ubigraph.new_edge_w_id";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -115,7 +115,7 @@ result_t ubigraph_new_edge_w_id ( edge_id_t e, vertex_id_t x, vertex_id_t y ) {
 }
 
 edge_id_t ubigraph_new_edge ( vertex_id_t x, vertex_id_t y ) {
-	char* const methodName = "ubigraph.new_edge";
+	const char* const methodName = "ubigraph.new_edge";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -137,7 +137,7 @@ edge_id_t ubigraph_new_edge ( vertex_id_t x, vertex_id_t y ) {
 }
 
 result_t ubigraph_remove_vertex ( vertex_id_t x ) {
-	char* const methodName = "ubigraph.remove_vertex";
+	const char* const methodName = "ubigraph.remove_vertex";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -159,7 +159,7 @@ result_t ubigraph_remove_vertex ( vertex_id_t x ) {
 }
 
 result_t ubigraph_remove_edge ( edge_id_t e ) {
-	char* const methodName = "ubigraph.remove_edge";
+	const char* const methodName = "ubigraph.remove_edge";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -181,7 +181,7 @@ result_t ubigraph_remove_edge ( edge_id_t e ) {
 }
 
 void ubigraph_clear() {
-	char* const methodName = "ubigraph.clear";
+	const char* const methodName = "ubigraph.clear";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -202,7 +202,7 @@ void ubigraph_clear() {
 
 result_t ubigraph_set_vertex_attribute ( vertex_id_t x, const char* attribute,
         const char* value ) {
-	char* const methodName = "ubigraph.set_vertex_attribute";
+	const char* const methodName = "ubigraph.set_vertex_attribute";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -224,7 +224,7 @@ result_t ubigraph_set_vertex_attribute ( vertex_id_t x, const char* attribute,
 }
 
 style_id_t ubigraph_new_vertex_style ( style_id_t parent_style ) {
-	char* const methodName = "ubigraph.new_vertex_style";
+	const char* const methodName = "ubigraph.new_vertex_style";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -246,7 +246,7 @@ style_id_t ubigraph_new_vertex_style ( style_id_t parent_style ) {
 }
 
 result_t ubigraph_new_vertex_style_w_id ( style_id_t s, style_id_t parent_style ) {
-	char* const methodName = "ubigraph.new_vertex_style_w_id";
+	const char* const methodName = "ubigraph.new_vertex_style_w_id";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -268,7 +268,7 @@ result_t ubigraph_new_vertex_style_w_id ( style_id_t s, style_id_t parent_style 
 }
 
 result_t ubigraph_change_vertex_style ( vertex_id_t x, style_id_t s ) {
-	char* const methodName = "ubigraph.change_vertex_style";
+	const char* const methodName = "ubigraph.change_vertex_style";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -291,7 +291,7 @@ result_t ubigraph_change_vertex_style ( vertex_id_t x, style_id_t s ) {
 
 result_t ubigraph_set_vertex_style_attribute ( style_id_t s,
         const char* attribute, const char* value ) {
-	char* const methodName = "ubigraph.set_vertex_style_attribute";
+	const char* const methodName = "ubigraph.set_vertex_style_attribute";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -313,7 +313,7 @@ result_t ubigraph_set_vertex_style_attribute ( style_id_t s,
 }
 
 style_id_t ubigraph_new_edge_style ( style_id_t parent_style ) {
-	char* const methodName = "ubigraph.new_edge_style";
+	const char* const methodName = "ubigraph.new_edge_style";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -335,7 +335,7 @@ style_id_t ubigraph_new_edge_style ( style_id_t parent_style ) {
 }
 
 result_t ubigraph_new_edge_style_w_id ( style_id_t s, style_id_t parent_style ) {
-	char* const methodName = "ubigraph.new_edge_style_w_id";
+	const char* const methodName = "ubigraph.new_edge_style_w_id";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -357,7 +357,7 @@ result_t ubigraph_new_edge_style_w_id ( style_id_t s, style_id_t parent_style ) 
 }
 
 result_t ubigraph_change_edge_style ( edge_id_t x, style_id_t s ) {
-	char* const methodName = "ubigraph.change_edge_style";
+	const char* const methodName = "ubigraph.change_edge_style";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -380,7 +380,7 @@ result_t ubigraph_change_edge_style ( edge_id_t x, style_id_t s ) {
 
 result_t ubigraph_set_edge_style_attribute ( style_id_t s, const char* attribute,
         const char* value ) {
-	char* const methodName = "ubigraph.set_edge_style_attribute";
+	const char* const methodName = "ubigraph.set_edge_style_attribute";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
@@ -403,7 +403,7 @@ result_t ubigraph_set_edge_style_attribute ( style_id_t s, const char* attribute
 
 result_t ubigraph_set_edge_attribute ( edge_id_t s, const char* attribute,
                                        const char* value ) {
-	char* const methodName = "ubigraph.set_edge_attribute";
+	const char* const methodName = "ubigraph.set_edge_attribute";
 	xmlrpc_value * resultP;
 
 	if ( !xmlrpc_initialized )
