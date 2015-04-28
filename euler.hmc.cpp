@@ -79,7 +79,7 @@ evd prove(rule* goal, int maxNumberOfSteps) {
         if (c.ind == c.rule.body.size()) {
             if (!c.parent) {
                 for (size_t i = 0; i < c.rule.body.size(); ++i) {
-                    var t = evaluate(c.rule.body[i], c.env); //evaluate the statement in the enviornment
+                    var t = evaluate(c.rule.body[i], c.sub); //evaluate the statement in the enviornment
 		    if (e.find(t.p) == e.end()) e[t.p] = {};//initialize this predicate's evidence list, if necessary
                     e[t.p].emplace_front(rules[nrules++].init(t, {predicates[npredicates++].init(GND, to_predlist(c.ground))}));//add the evidence for this statement
                 }
@@ -87,18 +87,18 @@ evd prove(rule* goal, int maxNumberOfSteps) {
                 continue;
             }
             //parent is not null, so we continue at this depth, adding this matched rule to ground state
-            if (!c.rule.body.empty()) g.emplace_front(c.rule, c.env);
+            if (!c.rule.body.empty()) g.emplace_front(c.rule, c.sub);
             //construct a new frame at the next index of the parent rule, with a copy of the evidence state
             frame r(
 	      	     rules[nrules++].init(c.parent->rule.head, c.parent->rule.body),
                      c.parent.src, 
                      c.parent.ind,
                      c.parent.parent, 
-		     subst(c.parent.env), 
+		     subst(c.parent.sub), 
 		     g
                     );
             //unify this new frame with our current environment
-            unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true);
+            unify(c.rule.head, c.sub, r.rule.body[r.ind], r.sub, true);
             //advance to the next statement in the parent frame
             r.ind++;
             //add this new "next statement of parent" frame back into queue
@@ -114,7 +114,7 @@ evd prove(rule* goal, int maxNumberOfSteps) {
         if (b == 1) {
             //it can and did!
             //Add it as a matched statement to our ground state
-            g.emplace_front(rules[nrules++].init(evaluate(t, c.env)), subst());
+            g.emplace_front(rules[nrules++].init(evaluate(t, c.sub)), subst());
             //push a new evidenc frame for the parent rule
             frame r = c;
 	    r.g = gnd();
@@ -146,19 +146,19 @@ evd prove(rule* goal, int maxNumberOfSteps) {
             //Set up this rule as a potential new frame
             var r = {rule:rl, src:src, ind:0, parent:c, env:{}, ground:g};
             //check if this rule matches the current subgoal
-            if (unify(t, c.env, rl.head, r.env, true)) {
+            if (unify(t, c.sub, rl.head, r.sub, true)) {
                 //it does!  Check it for a euler path...
                 var ep = c;  // euler path
                 //Walk up the evidence tree and see if we find a frame already in the tree that is the same as this "potential next frame"
                 //If we do find that this "next" frame was already seen this indicates that we are about to enter a proof state that we have already been in
                 //This would create a non-productive loop, so if we do encounter such a case we simply fail out of the match and continue on
-                while (ep = ep.parent) if (ep.src == c.src && unify(ep.rule.head, ep.env, c.rule.head, c.env, false)) break;
+                while (ep = ep.parent) if (ep.src == c.src && unify(ep.rule.head, ep.sub, c.rule.head, c.sub, false)) break;
                 //Check if we iterated up to the root goal.  If so, then we know this next frame is a *new* proof state that we have not encountered before
                 //and that we should continue resolution trying to match this frame as a new subgoal!
                 if (ep == null) {
                     //Add our new frame to queue
                     queue.unshift(r);
-                    if (typeof(trace) != 'undefined') document.writeln('EULER PATH UNSHIFT QUEUE\n' + JSON.stringify(r.rule) + '\n');
+//                    if (typeof(trace) != 'undefined') document.writeln('EULER PATH UNSHIFT QUEUE\n' + JSON.stringify(r.rule) + '\n');
                 }
             } //end specific subgoal
         } //end iteration of subgoals
@@ -170,42 +170,42 @@ evd prove(rule* goal, int maxNumberOfSteps) {
 /* The unifier.  Attempts to match two statements in corresponding environments.  Updates one environment with information from the other if they do match.
    Inputs:
     s - source statement
-    senv - source environment
+    ssub - source environment
     d - destination statement
-    denv - destination environment.  Updated with variable bindings if s does unify with d.
+    dsub - destination environment.  Updated with variable bindings if s does unify with d.
    Returns: true if unification happened, false otherwise
-   Outputs: updates denv
+   Outputs: updates dsub
 */
-function unify(s, senv, d, denv, f) {
-    if (typeof(trace) != 'undefined') document.writeln('UNIFY\n' + JSON.stringify(s) + '\nWITH\n' + JSON.stringify(d) + '\n');
+bool unify(const predicate& s, const subst& ssub, const predicate& d, subst& dsub, bool f) {
+//    if (typeof(trace) != 'undefined') document.writeln('UNIFY\n' + JSON.stringify(s) + '\nWITH\n' + JSON.stringify(d) + '\n');
     //If source predicate is a variable
     if (isVar(s.pred)) {
         //evaluate it in the environment
-        var sval = evaluate(s, senv);
+        var sval = evaluate(s, ssub);
         //if it did evaluate, unify with the value
-        if (sval != null) return unify(sval, senv, d, denv, f);
+        if (sval != null) return unify(sval, ssub, d, dsub, f);
         //otherwise assume match
         else return true;
     }
     //If the desination predicate is a variable
     else if (isVar(d.pred)) {
         //evalaute it in the environment
-        var dval = evaluate(d, denv);
+        var dval = evaluate(d, dsub);
         //if it did evaluate, unify with the value
-        if (dval != null) return unify(s, senv, dval, denv, f);
+        if (dval != null) return unify(s, ssub, dval, dsub, f);
         //otherwise
         else {
             //if we have the override flag, update the destination predicate with its value from source
             //note: currently unused
-            if (f != null) denv[d.pred] = evaluate(s, senv);
+            if (f != null) dsub[d.pred] = evaluate(s, ssub);
             return true;
         }
     }
     //otherwise, check for matching predicates
     else if (s.pred == d.pred && s.args.size() == d.args.size()) {
         //they match, check each argument and make sure they also unify, fail out if not
-        for (var i = 0; i < s.args.size(); i++) if (!unify(s.args[i], senv, d.args[i], denv, f)) return false;
-        //everything matched!  These statements unify and denv is updated.
+        for (var i = 0; i < s.args.size(); i++) if (!unify(s.args[i], ssub, d.args[i], dsub, f)) return false;
+        //everything matched!  These statements unify and dsub is updated.
         return true;
     }
     //otherwise we fail unification
@@ -218,17 +218,17 @@ function unify(s, senv, d, denv, f) {
 /* Environment evaluator.  Determines the value of an expression within an environment.  If the expression is a term we just return the term.
    Inputs:
      t - term to evaluate
-     env - environment of variable bindings
+     sub - environment of variable bindings
    Returns: The term with variables replaced, if they were found in the environment.  Null otherwise.
    Outputs: none
 */
-function evaluate(t, env) {
+predicate* evaluate(const predicate& t, const subst& sub) {
     //If the predicate is a variable
     if (isVar(t.pred)) {
         //look up the variable in environment
-        var a = env[t.pred];
+        var a = sub[t.pred];
         //if the variable has a value, re-evaluate with the predicate variable replaced
-        if (a != null) return evaluate(a, env);
+        if (a != null) return evaluate(a, sub);
         //otherwise fail
         else return null;
     }
@@ -241,7 +241,7 @@ function evaluate(t, env) {
         //loop over arguments
         for (var i = 0; i < t.args.size(); i++) {
             //evaluate this argument
-            var a = evaluate(t.args[i], env);
+            var a = evaluate(t.args[i], sub);
             if (a != null) n.push(a); //we were able to evaluate, so include the value of the argument
             else n.push({pred:t.args[i].pred, args:[]}); //we were not able to evaluate, so leave it as a variable predicate
         }
