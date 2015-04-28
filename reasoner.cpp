@@ -91,35 +91,70 @@ predlist to_predlist ( const ground_t& g ) {
 	return r;
 }
 
+evidence_t proof_done ( const frame& current_frame ) {
+	evidence_t evidence;
+	for ( auto x : current_frame.rul->body ) {
+		auto t = evaluate ( *x, current_frame.substitution );
+		if ( evidence.find ( t->pred ) == evidence.end() ) evidence[t->pred] = {};
+		evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( current_frame.ground ) ) } ) , subst() );
+	}
+	return evidence;
+}
+
+frame* next_frame ( const frame& current_frame, ground_t& g ) {
+	if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
+	frame& new_frame = frames[nframes++].init ( *current_frame.parent );
+	new_frame.ground = ground_t();
+	unify ( *current_frame.rul->head, current_frame.substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
+	new_frame.ind++;
+	return &new_frame;
+}
+
+frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
+	trace ( "looking for " << t << " in cases: " << endl << cases << endl << "end cases" << endl );
+	if ( cases.find ( t.pred ) == cases.end() /* || cases[t->pred].empty()*/ ) return 0;
+
+	uint src = 0;
+	for ( rule* _rl : cases[t.pred] ) {
+		rule& rl = *_rl;
+		trace ( "trying to unify rule " << rl << " from cases against " << t << "... " );
+		src++;
+		ground_t ground = current_frame.ground;
+		if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
+		frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
+		if ( rl.head && unify ( t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
+			trace ( "unified!" << endl );
+			frame& ep = current_frame;
+			while ( ep.parent ) {
+				ep = *ep.parent;
+				if ( ( ep.src == current_frame.src ) &&
+				        unify ( *ep.rul->head, ep.substitution, *current_frame.rul->head, current_frame.substitution, false ) )
+					break;
+			}
+			if ( !ep.parent ) {
+				//	cout << "pushing frame: " << candidate_frame << endl;
+				return &candidate_frame;
+			}
+		} else
+			trace ( "unification failed" << endl );
+	}
+	return 0;
+}
+
 evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 	deque<frame*> queue;
 	queue.emplace_back ( &frames[nframes++].init ( goal ) );
-	evidence_t evidence;
 	uint step = 0;
 
 	cout << "goal: " << *goal << endl;
-	while ( !queue.empty() ) {
+	while ( !queue.empty() && ++step ) {
 		frame& current_frame = *queue.front();
-		//		printkb();
 		queue.pop_front();
 		ground_t g = current_frame.ground;
-		step++;
 		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		if ( current_frame.ind >= current_frame.rul->body.size() ) {
-			if ( !current_frame.parent ) {
-				for ( auto x : current_frame.rul->body ) {
-					auto t = evaluate ( *x, current_frame.substitution );
-					if ( evidence.find ( t->pred ) == evidence.end() ) evidence[t->pred] = {};
-					evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( current_frame.ground ) ) } ) , subst() );
-				}
-			} else {
-				if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
-				frame& new_frame = frames[nframes++].init ( *current_frame.parent );
-				new_frame.ground = ground_t();
-				unify ( *current_frame.rul->head, current_frame.substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
-				new_frame.ind++;
-				queue.push_back ( &new_frame );
-			}
+			if ( !current_frame.parent ) return proof_done ( current_frame );
+			else queue.push_back ( next_frame ( current_frame, g ) );
 		} else {
 			predicate* t = current_frame.rul->body[current_frame.ind];
 			int b = builtin ( t ); // ( t, c );
@@ -129,38 +164,10 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 				r.ground = ground_t();
 				r.ind++;
 				queue.push_back ( &r );
-			} else if ( b ) {
-				trace ( "looking for " << *t << " in cases: " << endl << cases << endl << "end cases" << endl );
-				if ( cases.find ( t->pred ) == cases.end() /* || cases[t->pred].empty()*/ ) continue;
-
-				uint src = 0;
-				for ( rule* _rl : cases[t->pred] ) {
-					rule& rl = *_rl;
-					trace ( "trying to unify rule " << rl << " from cases against " << *t << "... " );
-					src++;
-					ground_t ground = current_frame.ground;
-					if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
-					frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
-					if ( rl.head && unify ( *t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
-						trace ( "unified!" << endl );
-						frame& ep = current_frame;
-						while ( ep.parent ) {
-							ep = *ep.parent;
-							if ( ( ep.src == current_frame.src ) &&
-							        unify ( *ep.rul->head, ep.substitution, *current_frame.rul->head, current_frame.substitution, false ) )
-								break;
-						}
-						if ( !ep.parent ) {
-							//	cout << "pushing frame: " << candidate_frame << endl;
-							queue.push_front ( &candidate_frame );
-						}
-					} else
-						trace ( "unification failed" << endl );
-				}
-			}
+			} else if ( b ) if ( frame* f = match_cases ( current_frame, *t, cases ) ) queue.push_front ( f );
 		}
 	}
-	return evidence;
+	return evidence_t();
 }
 
 predicate* mkpred ( string s, const vector<predicate*>& v = vector<predicate*>() ) {

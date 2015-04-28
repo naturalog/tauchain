@@ -33,7 +33,7 @@ inline void bt() {
 		        && messages[i][p] != 0 )
 			++p;
 		char syscom[256];
-		sprintf ( syscom, "addr2line %p -e %.*s", trace[i], p, messages[i] );
+		sprintf ( syscom, "addr2line %p -e %.*s", trace[i], ( int ) p, messages[i] );
 		system ( syscom );
 	}
 }
