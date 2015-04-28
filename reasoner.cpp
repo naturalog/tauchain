@@ -308,7 +308,7 @@ predicate* triple ( const jsonld::quad& q ) {
 
 qlist merge ( const qdb& q ) {
 	qlist r;
-	for ( auto x : q ) copy ( x.second->begin(), x.second->end(), r.end() );
+	for ( auto x : q ) for (auto y : *x.second) r.push_back(y);
 	return r;
 }
 
