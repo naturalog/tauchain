@@ -214,29 +214,16 @@ ostream& operator<< ( ostream& o, const predlist& l ) {
 	}
 	return o << ']';
 }
-/*
-    ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
-	for ( auto it = l.cbegin();; ) {
-		o << *it;
-		if ( ++it == l.end() ) break;
-		else o << ',';
-	}
-	return o;
-    }
-*/
 
 predicate* evaluate ( predicate& t, const subst& sub ) {
-	predicate* r;
 	if ( t.pred < 0 ) {
 		auto it = sub.find ( t.pred );
-		r = it == sub.end() ? 0 : evaluate ( *it->second, sub );
+		return it == sub.end() ? 0 : evaluate ( *it->second, sub );
 	}
-	else if ( t.args.empty() ) r = &t;
-	else {
-		predicate* p;
-		r = &predicates[npredicates++].init ( t.pred );
-		for ( auto x : t.args ) r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
-	}
+	if ( t.args.empty() ) return &t;
+	predicate *p, *r;
+	r = &predicates[npredicates++].init ( t.pred );
+	for ( auto x : t.args ) r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
 //	cout << "eval ( " << t << '/' << sub << " ) returned ";
 //	if (!r) cout << "(null)" << endl;
 //	else cout << *r << endl;
@@ -245,22 +232,15 @@ predicate* evaluate ( predicate& t, const subst& sub ) {
 
 bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f ) {
 	predicate* p;
-	bool rval;
-	if ( s.pred < 0 ) rval = ( p = evaluate ( s, ssub ) ) ? unify ( *p, ssub, d, dsub, f ) : true;
-	else if ( d.pred < 0 ) {
-		p = evaluate ( d, dsub );
-		if ( ( p = evaluate ( d, dsub ) ) ) rval = unify ( s, ssub, *p, dsub, f );
-		else {
-			/*if ( f )*/ dsub[d.pred] = evaluate ( s, ssub );
-			rval = true;
-		}
-	}
-	else 
-		rval = (s.pred == d.pred) &&  equal ( s.args.begin(), s.args.end(), d.args.begin(), d.args.end(), [&ssub, &dsub, &f] ( predicate * p1, predicate * p2 ) {
-		return unify ( *p1, ssub, *p2, dsub, f );
-		});
+	if ( s.pred < 0 ) return ( p = evaluate ( s, ssub ) ) ? unify ( *p, ssub, d, dsub, f ) : true;
+	if ( d.pred >= 0 )
+	return (s.pred == d.pred) && equal ( s.args.begin(), s.args.end(), d.args.begin(), d.args.end(), [&ssub, &dsub, &f] ( predicate * p1, predicate * p2 ) {
+		return unify ( *p1, ssub, *p2, dsub, f ); });
+	p = evaluate ( d, dsub );
+	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( s, ssub, *p, dsub, f );
+	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
+	return true;
 //	cout << "unification of "<<s<<'/'<<ssub<<" with " << d << '/' << dsub << " returned " << (rval ? "true" : "false" ) << endl;
-	return rval;
 }
 
 predlist to_predlist ( const ground_t& g ) {
@@ -270,9 +250,9 @@ predlist to_predlist ( const ground_t& g ) {
 	return r;
 }
 
-evidence_t prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t& cases ) {
+evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases ) {
 	deque<frame*> queue;
-	queue.emplace_back ( &frames[nframes++].init ( &rules[nrules++].init ( goal, {goal} ) ) );
+	queue.emplace_back ( &frames[nframes++].init ( goal ) );
 	evidence_t evidence;
 	uint step = 0;
 
@@ -316,7 +296,6 @@ evidence_t prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t&
 		if ( cases.find ( t->pred ) == cases.end() || cases[t->pred].empty() ) continue;
 
 		uint src = 0;
-		//		for ( size_t k = 0; k < cases[t->p].size(); k++ ) {
 		for ( rule* _rl : cases[t->pred] ) {
 			rule& rl = *_rl;
 			src++;
@@ -363,16 +342,8 @@ int main() {
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
 	cout << "cases:" << endl << cases << endl;
-	/*
-		cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
-		cases["a"].push_back ( {{"a", {_x, Mortal}}    , { {"a", {_x, Man}}, } } );
-		cases["a"].push_back ( {
-			{"a", {_x, Man}},
-			{ {"a", {_x, Male}}, }
-		} );
-		bool p = prove ( pred_t {"a", {_y, Mortal}}, -1, cases, evidence );
-	*/
-	evidence = prove ( /*mkrule ( 0, {*/mkpred ( "a", { _y, Mortal } ) /*} )*/, -1, cases );
+	predicate* goal = mkpred ( "a", { _y, Mortal } );
+	evidence = prove ( mkrule ( goal, { goal } ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	cout << evidence << endl;
 	cout << "QED!" << endl;
