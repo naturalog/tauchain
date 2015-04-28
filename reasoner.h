@@ -90,9 +90,9 @@ struct proof_trace_item {
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
-#ifdef UBI
+	#ifdef UBI
 	int ubi_node_id;
-#endif
+	#endif
 	operator string() const {
 		stringstream o;
 		o << "<<" << ( string ) rule << src << "," << ind << "(";
@@ -103,31 +103,27 @@ struct proof_trace_item {
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
 
-void ubi(const ppti i)
-{
-#ifdef UBI
+void ubi ( const ppti i ) {
+	#ifdef UBI
 	i->ubi_node_id = ubigraph_new_vertex();
 
-	ubigraph_set_vertex_attribute(i->ubi_node_id, "fontsize", "20");
-	ubigraph_set_vertex_attribute(i->ubi_node_id, "label", ((string)i->rule).c_str());
-	ubigraph_set_vertex_attribute(i->ubi_node_id, "fontcolor", "#ffffff");
+	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "20" );
+	ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
+	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontcolor", "#ffffff" );
 
-	if (i->parent)
-	{
-		ubigraph_set_vertex_attribute(i->ubi_node_id, "color", "#ffffff");
-		ubigraph_set_vertex_attribute(i->ubi_node_id, "shape", "icosahedron");
+	if ( i->parent ) {
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
 
-		int e = ubigraph_new_edge(i->parent->ubi_node_id, i->ubi_node_id);
-		ubigraph_set_edge_attribute(e, "color", "#ffffff");
-		ubigraph_set_edge_attribute(e, "width", "5.0");
-		ubigraph_set_edge_attribute(e, "oriented", "true");
+		int e = ubigraph_new_edge ( i->parent->ubi_node_id, i->ubi_node_id );
+		ubigraph_set_edge_attribute ( e, "color", "#ffffff" );
+		ubigraph_set_edge_attribute ( e, "width", "5.0" );
+		ubigraph_set_edge_attribute ( e, "oriented", "true" );
+	} else {
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
 	}
-	else
-	{
-		ubigraph_set_vertex_attribute(i->ubi_node_id, "color", "#ff0000");
-		ubigraph_set_vertex_attribute(i->ubi_node_id, "shape", "octahedron");
-	}
-#endif
+	#endif
 }
 
 int builtin ( pred_t, proof_trace_item ) {
@@ -153,7 +149,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	int step = 0;
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } ); //TODO: don't deref null parent ;-)//done?
-	queue.emplace_back ( s ); ubi(s);
+	queue.emplace_back ( s );
+	ubi ( s );
 	//queue.push_back(s);
 	trace (  "Goal: " << ( string ) goal << endl );
 	while ( queue.size() > 0 ) {
@@ -196,7 +193,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			g->emplace_back ( rule_env { { evaluate ( t, c->env ), vector<pred_t>() }, make_shared<env_t>() } );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->rule, c->src, c->ind, c->parent, c->env, g} );
 			r->ind++;
-			queue.push_back ( r ); ubi(r);
+			queue.push_back ( r );
+			ubi ( r );
 			continue;
 		} else if ( b == 0 )   // builtin didnt unify
 			continue; // else there is no such builtin, continue...
@@ -230,7 +228,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				}
 				if ( !ep ) {
 					trace ( "Adding to queue: " << ( string ) ( *r ) << endl << flush );
-					queue.push_front ( r ); ubi(r);
+					queue.push_front ( r );
+					ubi ( r );
 				} else trace ( "didn't reach top" << endl );
 				trace ( "Done euler loop" << endl );
 			} else trace ( "No loop here" << endl );
@@ -254,13 +253,21 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 			bool r = unify ( sval, senv, d, denv );
 			_indent--;
 			return r;
-		} catch (int n) {
-			if (n) { bt(); throw std::runtime_error("Error during unify"); }
+		} catch ( int n ) {
+			if ( n ) {
+				bt();
+				throw std::runtime_error ( "Error during unify" );
+			}
 			if ( _indent ) _indent--;
 			trace ( indent() << " Match(free var)!" << endl );
 			return true;
-		} catch (exception ex) { bt(); throw ex; }
-		catch (...) { bt(); throw std::runtime_error("Error during unify"); }
+		} catch ( exception ex ) {
+			bt();
+			throw ex;
+		} catch ( ... ) {
+			bt();
+			throw std::runtime_error ( "Error during unify" );
+		}
 	}
 	if ( d.pred[0] == '?' ) {
 		trace ( indent() << "  dest is var" << endl << flush );
@@ -270,14 +277,21 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 			bool b = unify ( s, senv, dval, denv );
 			trace ( _indent-- );
 			return b;
-		} catch ( int n) {
-			if (n) { bt(); throw std::runtime_error("Error during unify"); }
+		} catch ( int n ) {
+			if ( n ) {
+				bt();
+				throw std::runtime_error ( "Error during unify" );
+			}
 			( *denv ) [d.pred] = evaluate ( s, senv );
 			trace ( _indent-- );
 			trace (  indent() << " Match!(free var)" << endl );
 			return true;
-		} catch (exception ex) { throw ex; }
-		catch (...) { bt(); throw std::runtime_error("Error during unify"); }
+		} catch ( exception ex ) {
+			throw ex;
+		} catch ( ... ) {
+			bt();
+			throw std::runtime_error ( "Error during unify" );
+		}
 	}
 	if ( s.pred == d.pred && s.args.size() == d.args.size() ) {
 		trace ( indent() << "  Comparison:" << endl << flush );
@@ -304,17 +318,25 @@ pred_t evaluate ( const pred_t t, const penv_t env ) {
 		trace (  "(" << ( string ) t << " is a var..)" << endl );
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) return evaluate ( it->second, env );
-		else throw int(0);
+		else throw int ( 0 );
 	} else if ( t.args.size() == 0 ) return t;
 	vector<pred_t> n;
 	for ( size_t i = 0; i < t.args.size(); ++i ) {
 		try {
 			n.push_back ( evaluate ( t.args[i], env ) );
-		} catch (int k) {
-			if (k) { bt(); throw std::runtime_error("Uncaught exception during evaluate()."); }
+		} catch ( int k ) {
+			if ( k ) {
+				bt();
+				throw std::runtime_error ( "Uncaught exception during evaluate()." );
+			}
 			n.push_back ( { t.args[i].pred, vector<pred_t>() } );
-		} catch (exception ex) { bt(); throw ex; }
-		catch (...) { bt(); throw std::runtime_error("Uncaught exception during evaluate()."); }
+		} catch ( exception ex ) {
+			bt();
+			throw ex;
+		} catch ( ... ) {
+			bt();
+			throw std::runtime_error ( "Uncaught exception during evaluate()." );
+		}
 	}
 	return {t.pred, n};
 }
@@ -354,9 +376,9 @@ pred_t triple ( const jsonld::quad& q ) {
 };
 
 evidence_t prove ( const qlist& kb, const qlist& query ) {
-#ifdef UBI
+	#ifdef UBI
 	ubigraph_clear();
-#endif
+	#endif
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	for ( const auto& quad : kb ) {
