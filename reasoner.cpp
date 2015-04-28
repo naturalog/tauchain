@@ -8,6 +8,10 @@
 #include "reasoner.h"
 
 bidict dict;
+predicate *predicates = new predicate[max_predicates];
+rule *rules = new rule[max_rules];
+frame *frames = new frame[max_frames];
+uint npredicates = 0, nrules = 0, nframes = 0;
 
 int bidict::set ( const string& v ) {
 	int k = m1.size();
@@ -53,8 +57,6 @@ ostream& operator<< ( ostream& o, const predicate& p ) {
 	return p.args.empty() ? o : o << p.args;
 }
 
-predicate *predicates = new predicate[max_predicates];
-
 rule& rule::init ( predicate* h, predlist b ) {
 	head = h;
 	body = b;
@@ -67,9 +69,6 @@ ostream& operator<< ( ostream& o, const rule& r ) {
 	if ( r.head ) return o << ( *r.head );
 	else return o << "{}";
 }
-rule *rules = new rule[max_rules];
-
-uint npredicates = 0, nrules = 0, nframes = 0;
 
 int builtin ( predicate* p ) {
 	if ( p && p->pred == dict["GND"] ) return 1;
@@ -113,7 +112,6 @@ ostream& operator<< ( ostream& o, const frame& f ) {
 	return o << "\trule: " << *f.rul;
 }
 
-frame *frames = new frame[max_frames];
 
 frame& frame::init ( const frame& f ) {
 	if ( nframes >= max_frames ) throw "Buffer overflow";
