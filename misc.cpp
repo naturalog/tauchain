@@ -2,6 +2,10 @@
 
 extern bidict dict;
 
+void bidict::set ( const vector<string>& v ) {
+	for ( auto x : v ) set ( x );
+}
+
 int bidict::set ( const string& v ) {
 	if ( m2.find ( v ) != m2.end() ) return m2[v];
 	int k = m1.size();

@@ -18,14 +18,15 @@
 #include <vector>
 #include <cstdio>
 #include "parsers.h"
+#include "misc.h"
 
 using namespace std;
 
 const uint K1 = 1024, M1 = K1 * K1;
-const uint max_predicates = K1, max_rules = K1, max_frames = K1;
+const uint max_predicates = M1, max_rules = M1, max_frames = M1;
 
-typedef vector<class predicate*> predlist;
-typedef vector<class rule*> rulelist;
+typedef vector<struct predicate*> predlist;
+typedef vector<struct rule*> rulelist;
 ostream& operator<< ( ostream&, const predlist& );
 ostream& operator<< ( ostream&, const rulelist& );
 
@@ -35,17 +36,6 @@ template<typename T> string print ( T t ) {
 	return ss.str();
 }
 
-class bidict {
-	map<int, string> m1;
-	map<string, int> m2;
-public:
-	int set ( const string& v );
-	const string operator[] ( const int& k );
-	int operator[] ( const string& v );
-	bool has ( int k ) const;
-	bool has ( const string& v ) const;
-	string tostr();
-};
 
 struct predicate {
 	int pred = 0;
@@ -88,10 +78,10 @@ void printkb();
 int builtin ( predicate* p );
 rulelist to_rulelist ( const ground_t& g );
 predicate* evaluate ( predicate& t, const subst& sub );
-bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f );
+bool unify ( predicate* s, const subst& ssub, predicate* d, subst& dsub, bool f );
 predlist to_predlist ( const ground_t& g );
 evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases );
-evidence_t prove ( const qlist& graph, const qlist& query );
+evidence_t prove ( const qdb& kb, const qlist& query );
 bool test_reasoner();
 
 #endif

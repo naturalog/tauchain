@@ -83,9 +83,6 @@ public:
 		}
 		try {
 			cout << toquads ( args ) << endl;
-		} catch ( string& ex ) {
-			cerr << ex << endl;
-			return 1;
 		} catch ( exception& ex ) {
 			cerr << ex.what() << endl;
 			return 1;
@@ -111,9 +108,6 @@ public:
 		}
 		try {
 			cout << nodemap ( args )->toString() << endl;
-		} catch ( string& ex ) {
-			cerr << ex << endl;
-			return 1;
 		} catch ( exception& ex ) {
 			cerr << ex.what() << endl;
 			return 1;
@@ -130,54 +124,18 @@ public:
 	virtual string help() const {
 		stringstream ss ( "Usage:" );
 		ss << endl << "\ttau prove\tRun socrates unit test";
-		ss << endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << tab << "Does nothing but list all available graphs.";
-		ss << endl << "\ttau prove [JSON-LD kb filename] [Graph name in kb] [JSON-LD query filename] [Graph name in query]" << tab << "Resolves the query." << endl;
+		ss << endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << tab << "Resolves the query." << endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( ( args.size() == 3 && args[1] == "help" ) || ( args.size() != 2 && args.size() != 4 && args.size() != 6 ) ) {
+		if ( ( args.size() == 3 && args[1] == "help" ) || ( args.size() != 2 && args.size() != 4 ) ) {
 			cout << help();
 			return 1;
 		}
+		if ( args.size() == 2 ) cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
 		try {
-			if ( args.size() == 2 ) cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
-			else if ( args.size() == 4 ) {
-				qdb rkb, rq;
-				pobj kb = nodemap ( jsonld::expand ( load_json ( args[2] ) ) );
-				pobj q = nodemap ( jsonld::expand ( load_json ( args[3] ) ) );
-				if ( kb && kb->MAP() ) {
-					cout << "Contexts in kb:" << endl;
-					rkb = toquads ( kb );
-					//for ( auto x : rkb ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
-				} else cerr << "Cannot parse kb or empty kb." << endl;
-				if ( q && q->MAP() ) {
-					cout << "Contexts in query:" << endl;
-					rq = toquads ( q );
-					//for ( auto x : rq ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
-				} else {
-					cerr << "Cannot parse query or empty query." << endl;
-					return 1;
-				}
-				prove ( merge ( rkb ), merge ( rq ) );
-				return 0;
-			} else {
-				auto _kb = convert ( load_json ( args[2] ) );
-				auto _q = convert ( load_json ( args[4] ) );
-				auto kb = _kb [args[3]];
-				auto q = _q [args[5]];
-				if ( !kb ) {
-					cerr << "Fatal: kb selected graph is null." << endl;
-					return 1;
-				}
-				if ( !q ) {
-					cerr << "Fatal: query selected graph is null." << endl;
-					return 1;
-				}
-				cout << prove ( *kb, *q );
-			}
-		} catch ( string& ex ) {
-			cerr << ex << endl;
-			return 1;
+			cout << "evidence: " << endl << prove ( convert ( args[2] ), merge ( convert ( args[3] ) ) );
+			return 0;
 		} catch ( exception& ex ) {
 			cerr << ex.what() << endl;
 			return 1;

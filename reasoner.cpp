@@ -65,21 +65,28 @@ predicate* evaluate ( predicate& t, const subst& sub ) {
 	predicate *p, *r;
 	r = &predicates[npredicates++].init ( t.pred );
 	for ( auto x : t.args ) r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
-	//	cout << "eval ( " << t << '/' << sub << " ) returned ";
-	//	if (!r) cout << "(null)" << endl;
-	//	else cout << *r << endl;
 	return r;
 }
 
-bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f ) {
+bool unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool f ) {
+	if (!_s && !_d) return true;
+	if (!_s || !_d) return false;
+	predicate& s = *_s;
+	predicate& d = *_d;
+	if (s.pred == d.pred)
+		trace("we have local pred match"<<endl);
 	predicate* p;
-	if ( s.pred < 0 ) return ( p = evaluate ( s, ssub ) ) ? unify ( *p, ssub, d, dsub, f ) : true;
-	if ( d.pred >= 0 )
-		return ( s.pred == d.pred ) && equal ( s.args.begin(), s.args.end(), d.args.begin(), d.args.end(), [&ssub, &dsub, &f] ( predicate * p1, predicate * p2 ) {
-		return unify ( *p1, ssub, *p2, dsub, f );
-	} );
+	if ( s.pred < 0 ) return ( p = evaluate ( s, ssub ) ) ? unify ( p, ssub, _d, dsub, f ) : true;
+	if ( d.pred >= 0 ) {
+		if ( s.pred != d.pred || s.args.size() != d.args.size()) return false;
+		const predlist& as = s.args, ad = d.args;
+		for (auto sit = as.begin(), dit = ad.begin(); sit != as.end(); ++sit, ++dit)
+			if (!unify(*sit, ssub, *dit, dsub, f))
+				return false;
+		return true;
+	}
 	p = evaluate ( d, dsub );
-	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( s, ssub, *p, dsub, f );
+	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
 	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
 	return true;
 }
@@ -105,7 +112,7 @@ frame* next_frame ( const frame& current_frame, ground_t& g ) {
 	if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
 	frame& new_frame = frames[nframes++].init ( *current_frame.parent );
 	new_frame.ground = ground_t();
-	unify ( *current_frame.rul->head, current_frame.substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
+	unify ( current_frame.rul->head, current_frame.substitution, new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
 	return &new_frame;
 }
@@ -122,13 +129,13 @@ frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
 		ground_t ground = current_frame.ground;
 		if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
 		frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
-		if ( rl.head && unify ( t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
+		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
 			trace ( "unified!" << endl );
 			frame& ep = current_frame;
 			while ( ep.parent ) {
 				ep = *ep.parent;
 				if ( ( ep.src == current_frame.src ) &&
-				        unify ( *ep.rul->head, ep.substitution, *current_frame.rul->head, current_frame.substitution, false ) )
+				        unify ( ep.rul->head, ep.substitution, current_frame.rul->head, current_frame.substitution, false ) )
 					break;
 			}
 			if ( !ep.parent ) {
@@ -204,27 +211,58 @@ qlist merge ( const qdb& q ) {
     10:06 < HMC_A_> conjunction, disjunction!
     10:06 < HMC_A_> body is conjuncted
     10:06 < HMC_A_> head is disjuncted
-*/
-evidence_t prove ( const qlist& kb, const qlist& query ) {
+
+evidence_t prove ( const qdb& kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
-	for ( auto quad : kb ) {
-		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		dict.set ( s );
-		dict.set ( o );
-		dict.set ( p );
-		if ( p != implication ) cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
-		else for ( const auto& y : kb )
+	qlist graph = merge ( kb );
+	for ( auto quad : qkb ) {
+		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, c = quad->graph->value;
+		dict.set ( { s, p, o, c } );
+		if ( p != implication ) cases[dict[p]].push_back ( mkrule ( mkpred(p), {mkpred( s),mkpred( o)  } ) );
+		else if ( kb.find ( o ) != kb.end() )
+			for ( auto y : *kb.at ( o ) )
 				if ( y->graph->value == o ) {
 					rule& rul = *mkrule();
 					rul.head = triple ( *y );
-					for ( const auto& z : kb )
-						if ( z->graph->value == s )
+					for ( auto z : qkb )
+						if ( z->subj->value == s )
 							rul.body.push_back ( triple ( *z ) );
 					cases[dict[p]].push_back ( &rul );
 				}
 	}
 
+	rule& goal = *mkrule();
+	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
+	return prove ( &goal, -1, cases );
+}
+*/
+evidence_t prove ( const qdb &kb, const qlist& query ) {
+	qlist graph = merge ( kb );
+	evidence_t evidence;
+	cases_t cases;
+	/*the way we store rules in jsonld is: graph1 implies graph2*/
+	for ( const auto& quad : graph ) {
+		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
+		dict.set({s,p,o,c});
+		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
+			if (kb.find(o) != kb.end())
+				for ( const auto &y : *kb.at(o) ) {
+					rule& rul = *mkrule();
+					rul.head = triple ( *y );
+					if (kb.find(s) != kb.end())
+						for ( const auto& x : *kb.at(s) )
+							rul.body.push_back ( triple ( *x ) );
+					cases[rul.head->pred].push_back ( &rul );
+					cout << rul << endl;
+			}
+		} 
+		else {
+			rule* r = mkrule(triple(s,p,o));
+			cout << *r << endl;
+			cases[dict[p]].push_back ( r );
+		}
+	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 	return prove ( &goal, -1, cases );

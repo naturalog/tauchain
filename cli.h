@@ -66,6 +66,9 @@ public:
 	qdb convert ( pobj o ) {
 		return toquads ( nodemap ( jsonld::expand ( o ) ) );
 	}
+	qdb convert ( const string& s ) {
+		return convert ( load_json ( s ) );
+	}
 };
 
 void print_usage ( const map<string, cmd_t*>& cmds ) {
