@@ -14,9 +14,11 @@ const uint M1 = 1024 * 1024;
 const uint max_predicates = M1, max_rules = M1;
 const uint GND = INT_MAX;
 
-typedef forward_list<class predicate*> predlist;
+typedef /*forward_*/vector<class predicate*> predlist;
+typedef /*forward_*/vector<class rule*> rulelist;
 ostream& operator<< ( ostream&, const predlist& );
-ostream& operator<< ( ostream&, const vector<predicate*>& );
+ostream& operator<< ( ostream&, const rulelist& );
+//ostream& operator<< ( ostream&, const vector<predicate*>& );
 
 template<typename T> void print ( T t ) {
 	cout << t << endl;
@@ -76,8 +78,8 @@ struct predicate {
 
 struct rule {
 	predicate* head = 0;
-	/*predlist*/vector<predicate*> body;
-	rule& init ( predicate* h, /*predlist b = predlist()*/ vector<predicate*> b = vector<predicate*>() ) {
+	predlist body;
+	rule& init ( predicate* h, predlist b = predlist() ) {
 		head = h;
 		body = b;
 		return *this;
@@ -91,12 +93,13 @@ struct rule {
 uint npredicates = 0, nrules = 0;
 
 typedef map<int, predicate*> subst;
-typedef forward_list<pair<rule*, subst>> gnd;
+typedef list<pair<rule*, subst>> gnd;
 typedef map<int, forward_list<rule*>> evd;
 
-predlist to_predlist(const gnd& g) {
-//	predlist r;
-//	for (auto x = gnd.rbegin(); x != gnd.rend(); ++x) r.push_front(x->first)
+rulelist to_rulelist(const gnd& g) {
+	rulelist r;
+	for (auto x = g.cbegin(); x != g.cend(); ++x) r.push_back(x->first);
+	return r;
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
@@ -121,16 +124,7 @@ struct frame {
 	}
 };
 
-ostream& operator<< ( ostream& o, const predlist& l ) {
-	for ( predlist::const_iterator it = l.cbegin();; ) {
-		o << *it;
-		if ( ++it == l.end() ) break;
-		else o << ',';
-	}
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
+ostream& operator<< ( ostream& o, const rulelist& l ) {
 	for ( auto it = l.cbegin();; ) {
 		o << *it;
 		if ( ++it == l.end() ) break;
@@ -139,13 +133,31 @@ ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
 	return o;
 }
 
+ostream& operator<< ( ostream& o, const predlist& l ) {
+	for ( predlist::const_iterator it = l.cbegin();; ) {
+		o << *it;
+		if ( ++it == l.end() ) break;
+		else o << ',';
+	}
+	return o;
+}
+/*
+ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
+	for ( auto it = l.cbegin();; ) {
+		o << *it;
+		if ( ++it == l.end() ) break;
+		else o << ',';
+	}
+	return o;
+}
+*/
 predicate* evaluate ( predicate& t, const subst& sub ) {
 	predicate* p;
 	if ( t.p < 0 ) return ( ( p = sub.at ( t.p ) ) ) ? evaluate ( *p, sub ) : 0;
 	else if ( t.args.empty() ) return &t;
 	else {
 		predicate& r = predicates[npredicates++].init ( t.p );
-		for ( auto x : t.args ) r.args.emplace_front ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->p ) );
+		for ( auto x : t.args ) r.args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->p ) );
 		return &r;
 	}
 }
@@ -183,7 +195,7 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 				for ( size_t i = 0; i < c.r->body.size(); ++i ) {
 					auto t = evaluate ( *c.r->body[i], c.s ); //evaluate the statement in the enviornment
 					if ( e.find ( t->p ) == e.end() ) e[t->p] = {}; //initialize this predicate's evidence list, if necessary
-					e[t->p].emplace_front ( rules[nrules++].init ( *t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); //add the evidence for this statement
+					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); //add the evidence for this statement
 				}
 				continue;
 			}
@@ -204,7 +216,7 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 		predicate* t = c.r->body[c.ind];
 		int b = builtin();// ( t, c );
 		if ( b == 1 ) {
-			g.emplace_front ( rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
+			g.emplace_front ( &rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
 			frame r = c;
 			r.g = gnd();
 			r.ind++;
@@ -220,7 +232,7 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 			rule& rl = *_rl;//*cases[t->p][k];
 			src++;
 			gnd g = c.g;
-			if ( rl.body.size() == 0 ) g.push_back ( &rules[nrules++].init ( &rl ) );
+			if ( rl.body.size() == 0 ) g.emplace_back ( &rl, subst() );
 			frame r ( &rl, src, 0, &c, subst(), g );
 			if ( unify ( *t, c.s, *rl.head, r.s, true ) ) {
 				frame& ep = c;
@@ -232,5 +244,6 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 			}
 		}
 	}
+	return e;
 }
 
