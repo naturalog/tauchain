@@ -1,7 +1,7 @@
 CC=g++
 CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb -Wextra
 LDFLAGS=-lcurl
-SOURCES=tau.cpp jsonld.cpp rdf.cpp reasoner.cpp
+SOURCES=tau.cpp jsonld.cpp rdf.cpp reasoner.cpp misc.cpp
 
 debug: CXXFLAGS += -DDEBUG
 

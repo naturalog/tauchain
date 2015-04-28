@@ -14,117 +14,16 @@ frame *frames = new frame[max_frames];
 uint npredicates = 0, nrules = 0, nframes = 0;
 const string implication = "http://www.w3.org/2000/10/swap/log#implies";
 
-int bidict::set ( const string& v ) {
-	if ( m2.find ( v ) != m2.end() ) return m2[v];
-	int k = m1.size();
-	if ( v[0] == '?' ) k = -k;
-	m1[k] = v;
-	m2[v] = k;
-	return k;
-}
-
-const string bidict::operator[] ( const int& k ) {
-	auto v = m1[k];
-	m2[m1[k]];
-	return v;
-}
-
-int bidict::operator[] ( const string& v ) {
-	m1[m2[v]];
-	return m2[v];
-}
-
-bool bidict::has ( int k ) const {
-	return m1.find ( k ) != m1.end();
-}
-
-bool bidict::has ( const string& v ) const {
-	return m2.find ( v ) != m2.end();
-}
-
-string bidict::tostr() {
-	stringstream s;
-	for ( auto x : m1 ) s << x.first << " := " << x.second << endl;
-	return s.str();
-}
-
-predicate& predicate::init ( int _p, predlist _args ) {
-	pred = _p;
-	args = _args;
-	return *this;
-}
-
-ostream& operator<< ( ostream& o, const predicate& p ) {
-	if ( deref ) o << dict[p.pred];
-	else o << p.pred;
-	return p.args.empty() ? o : o << p.args;
-}
-
 rule& rule::init ( predicate* h, predlist b ) {
 	head = h;
 	body = b;
 	return *this;
-}
-ostream& operator<< ( ostream& o, const rule& r ) {
-	if ( r.body.empty() ) o << "{}";
-	else o << r.body;
-	o << " => ";
-	if ( r.head ) return o << ( *r.head );
-	else return o << "{}";
 }
 
 int builtin ( predicate* p ) {
 	if ( p && p->pred == dict["GND"] ) return 1;
 	return -1;
 }
-
-ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( auto x : s ) {
-		if ( deref ) o << dict[x.first];
-		else o << x.first;
-		o << " := " << *x.second << endl;
-	}
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const ground_t& s ) {
-	for ( auto x : s ) o << *x.first << ": " << x.second << '|';
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const evidence_t& e ) {
-	for ( auto x : e ) {
-		o << '{';
-		for ( auto y : x.second ) o << *y.first << y.second << " | ";
-		o << "} => ";
-		if ( deref ) o << dict[x.first];
-		else o << x.first;
-		o << endl;
-	}
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const cases_t& e ) {
-	for ( auto x : e ) {
-		o << '[';
-		for ( auto y : x.second ) o << *y << " | ";
-		o << ']';
-		o << " => ";
-		if ( deref ) o << dict[x.first];
-		else o << x.first;
-		o << endl;
-	}
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const frame& f ) {
-	o << "src: " << f.src << "\tind: " << f.ind << "\tparent: ";
-	if ( f.parent ) o << *f.parent;
-	else o << "(null)";
-	o << "\tsubst: " << f.substitution << "\tgnd: " << f.ground;
-	return o << "\trule: " << *f.rul;
-}
-
 
 frame& frame::init ( const frame& f ) {
 	if ( nframes >= max_frames ) throw "Buffer overflow";
@@ -157,28 +56,6 @@ void printkb() {
 	if ( pause && getchar() == 'c' ) pause = false;
 }
 
-ostream& operator<< ( ostream& o, const rulelist& l ) {
-	if ( l.empty() ) return o << "[]";
-	o << '[';
-	for ( auto it = l.cbegin();; ) {
-		o << *it;
-		if ( ++it == l.end() ) break;
-		else o << ',';
-	}
-	return o << ']';
-}
-
-ostream& operator<< ( ostream& o, const predlist& l ) {
-	if ( l.empty() ) return o << "[]";
-	o << '[';
-	for ( predlist::const_iterator it = l.cbegin();; ) {
-		o << **it;
-		if ( ++it == l.end() ) break;
-		else o << ',';
-	}
-	return o << ']';
-}
-
 predicate* evaluate ( predicate& t, const subst& sub ) {
 	if ( t.pred < 0 ) {
 		auto it = sub.find ( t.pred );
@@ -205,7 +82,6 @@ bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f 
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( s, ssub, *p, dsub, f );
 	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
 	return true;
-	//	cout << "unification of "<<s<<'/'<<ssub<<" with " << d << '/' << dsub << " returned " << (rval ? "true" : "false" ) << endl;
 }
 
 predlist to_predlist ( const ground_t& g ) {
@@ -236,52 +112,52 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 					if ( evidence.find ( t->pred ) == evidence.end() ) evidence[t->pred] = {};
 					evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( current_frame.ground ) ) } ) , subst() );
 				}
-				continue;
+			} else {
+				if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
+				frame& new_frame = frames[nframes++].init ( *current_frame.parent );
+				new_frame.ground = ground_t();
+				unify ( *current_frame.rul->head, current_frame.substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
+				new_frame.ind++;
+				queue.push_back ( &new_frame );
 			}
-			if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
-			frame& new_frame = frames[nframes++].init ( *current_frame.parent );
-			new_frame.ground = ground_t();
-			unify ( *current_frame.rul->head, current_frame.substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
-			new_frame.ind++;
-			queue.push_back ( &new_frame );
-			continue;
-		}
-		predicate* t = current_frame.rul->body[current_frame.ind];
-		int b = builtin ( t ); // ( t, c );
-		if ( b == 1 ) {
-			g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
-			frame& r = frames[nframes++].init ( current_frame );
-			r.ground = ground_t();
-			r.ind++;
-			queue.push_back ( &r );
-			continue;
-		} else if ( b == 0 ) continue;
+		} else {
+			predicate* t = current_frame.rul->body[current_frame.ind];
+			int b = builtin ( t ); // ( t, c );
+			if ( b == 1 ) {
+				g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
+				frame& r = frames[nframes++].init ( current_frame );
+				r.ground = ground_t();
+				r.ind++;
+				queue.push_back ( &r );
+			} else if ( b ) {
+				trace ( "looking for " << *t << " in cases: " << endl << cases << endl << "end cases" << endl );
+				if ( cases.find ( t->pred ) == cases.end() /* || cases[t->pred].empty()*/ ) continue;
 
-		trace ( "looking for " << *t << " in cases: " << endl << cases << endl << "end cases" << endl );
-		if ( cases.find ( t->pred ) == cases.end() /* || cases[t->pred].empty()*/ ) continue;
-
-		uint src = 0;
-		for ( rule* _rl : cases[t->pred] ) {
-			rule& rl = *_rl;
-			trace ( "trying to unify rule " << rl << " from cases against " << *t << "... " );
-			src++;
-			ground_t ground = current_frame.ground;
-			if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
-			frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
-			if ( rl.head && unify ( *t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
-				trace ( "unified!" << endl );
-				frame& ep = current_frame;
-				while ( ep.parent ) {
-					ep = *ep.parent;
-					if ( ( ep.src == current_frame.src ) &&
-					        unify ( *ep.rul->head, ep.substitution, *current_frame.rul->head, current_frame.substitution, false ) )
-						break;
+				uint src = 0;
+				for ( rule* _rl : cases[t->pred] ) {
+					rule& rl = *_rl;
+					trace ( "trying to unify rule " << rl << " from cases against " << *t << "... " );
+					src++;
+					ground_t ground = current_frame.ground;
+					if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
+					frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
+					if ( rl.head && unify ( *t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
+						trace ( "unified!" << endl );
+						frame& ep = current_frame;
+						while ( ep.parent ) {
+							ep = *ep.parent;
+							if ( ( ep.src == current_frame.src ) &&
+							        unify ( *ep.rul->head, ep.substitution, *current_frame.rul->head, current_frame.substitution, false ) )
+								break;
+						}
+						if ( !ep.parent ) {
+							//	cout << "pushing frame: " << candidate_frame << endl;
+							queue.push_front ( &candidate_frame );
+						}
+					} else
+						trace ( "unification failed" << endl );
 				}
-				if ( !ep.parent ) {
-					//					cout << "pushing frame: " << candidate_frame << endl;
-					queue.push_front ( &candidate_frame );
-				}
-			} else trace ( "unification failed" << endl );
+			}
 		}
 	}
 	return evidence;
@@ -293,7 +169,6 @@ predicate* mkpred ( string s, const vector<predicate*>& v = vector<predicate*>()
 	return &predicates[npredicates++].init ( p, v );
 }
 
-//rule* mkrule(string s) { return &rules[nrules++].init(dict.set(s)); }
 rule* mkrule ( predicate* p = 0, const vector<predicate*>& v = vector<predicate*>() ) {
 	return &rules[nrules++].init ( p, v );
 }
@@ -308,7 +183,7 @@ predicate* triple ( const jsonld::quad& q ) {
 
 qlist merge ( const qdb& q ) {
 	qlist r;
-	for ( auto x : q ) for (auto y : *x.second) r.push_back(y);
+	for ( auto x : q ) for ( auto y : *x.second ) r.push_back ( y );
 	return r;
 }
 
