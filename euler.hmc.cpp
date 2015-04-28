@@ -12,7 +12,6 @@ using namespace std;
 
 const uint K1 = 1024, M1 = K1 * K1;
 const uint max_predicates = K1, max_rules = K1, max_frames = K1;
-const uint GND = INT_MAX;
 
 typedef /*forward_*/vector<class predicate*> predlist;
 typedef /*forward_*/vector<class rule*> rulelist;
@@ -24,7 +23,6 @@ template<typename T> void print ( T t ) {
 	cout << t << endl;
 }
 
-int builtin() { return -1; }
 
 class bidict {
 	map<int, string> m1;
@@ -98,6 +96,8 @@ typedef map<int, predicate*> subst;
 typedef list<pair<rule*, subst>> gnd;
 typedef map<int, forward_list<pair<rule*, subst>>> evd;
 typedef map<int, vector<rule*>> cases_t;
+
+int builtin(predicate* p) { if (p && p->p == dict["GND"]) return 1; return -1; }
 
 rulelist to_rulelist(const gnd& g) {
 	rulelist r;
@@ -245,7 +245,7 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t& cases 
 				for (auto x : c.r->body) {
 					auto t = evaluate ( *x, c.s ); 
 					if ( e.find ( t->p ) == e.end() ) e[t->p] = {};
-					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) , subst()); 
+					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( c.g ) ) } ) , subst()); 
 				}
 				continue;
 			}
@@ -259,7 +259,7 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, cases_t& cases 
 		}
 		predicate* t = c.r->body[c.ind];
 		cout << *t << endl;
-		int b = builtin();// ( t, c );
+		int b = builtin(t);// ( t, c );
 		if ( b == 1 ) {
 			g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
 			frame& r = frame::frames[nframes++].init(c);
@@ -306,6 +306,7 @@ typedef predicate* ppredicate;
 
 int main() {
 	dict.set ( "a" );
+	dict.set ( "GND" );
 	evd evidence;
 	cases_t cases;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" ), _z = mkpred("?z");
