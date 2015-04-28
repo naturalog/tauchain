@@ -311,59 +311,23 @@ evidence_t prove ( const qlist& kb, const qlist& query ) {
 		dict.set ( s );
 		dict.set ( o );
 		dict.set ( p );
-		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			for ( const auto& y : kb )
-				if ( y->graph->value == o ) {
-					rule& rul = *mkrule();
-					rul.head = triple ( *y );
-					for ( const auto& x : kb )
-						if ( x->graph->value == s )
-							rul.body.push_back ( triple ( *x ) );
-					cases[dict[p]].push_back ( &rul );
-				}
-		} else cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
-		//			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
+		if ( p != "http://www.w3.org/2000/10/swap/log#implies" )
+			cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
+		else for ( const auto& y : kb )
+			if ( y->graph->value == o ) {
+				rule& rul = *mkrule();
+				rul.head = triple ( *y );
+				for ( const auto& x : kb )
+					if ( x->graph->value == s )
+						rul.body.push_back ( triple ( *x ) );
+				cases[dict[p]].push_back ( &rul );
+			}
 	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 	return prove ( &goal, -1, cases );
 }
-/*
-    evidence_t prove ( const qlist& kb, const qlist& query ) {
-	#ifdef UBI
-	ubigraph_clear();
-	#endif
 
-	evidence_t evidence;
-	cases_t cases;
-	//the way we store rules in jsonld is: graph1 implies graph2
-
-	for ( const auto& quad : kb ) {
-		  if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			rule& rul = *mkrule();
-				//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-				for ( const auto& z : query ) {
-					if ( z.first == o ) {
-						auto y = z.second;
-						rul.head = triple ( *y );
-						//now look for the subject graph
-						for ( const auto& x : kb )
-							if ( x->graph->value == s )
-								rul.body.push_back ( triple ( *x ) );
-						cases[dict[p]].push_back ( &rul );
-					}
-				}
-			} else
-				cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
-			}
-		rule& goal = *mkrule();
-		for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-		#ifdef UBI
-		ubi_add_facts ( cases );
-		#endif
-		return prove ( &goal, -1, cases );
-	}
-*/
 bool test_reasoner() {
 	dict.set ( "a" );
 	dict.set ( "GND" );
