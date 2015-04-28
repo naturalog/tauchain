@@ -1,0 +1,70 @@
+[
+  {
+  "@graph": [
+      {
+        "@id": ":fruit", 
+        ":a": {
+          "@id": ":healthy food"
+        }
+      }, 
+      {
+        "@id": ":lemons", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        ":a": [
+          {
+            "@id": ":Mortal"
+          }
+        ], 
+        "@id": ":socrates"
+      }, 
+      {
+        "http://www.w3.org/2000/10/swap/log#implies": [
+          {
+            "@id": "_:g5"
+          }
+        ], 
+        "@id": "_:g4"
+      }, 
+      {
+        "@graph": [
+          {
+            ":a": [
+              {
+                "@id": ":Mortal"
+              }
+            ], 
+            "@id": "?X"
+          }
+        ], 
+        "@id": "_:g4"
+      }, 
+      {
+        "@graph": [
+          {
+            ":likes": [
+              {
+		"@id":"?B"
+              }
+            ], 
+            "@id": "?X"
+          },
+          {
+            ":a": [
+              {
+                "@id": ":healthy food"
+              }
+            ], 
+            "@id": "?B"
+          }
+
+        ], 
+        "@id": "_:g5"
+      }
+    ], 
+    "@id": "@default"
+  }
+]
