@@ -10,8 +10,8 @@
 #include <vector>
 using namespace std;
 
-const uint M1 = 1024 * 1024;
-const uint max_predicates = M1, max_rules = M1, max_frames = M1;
+const uint K1 = 1024, M1 = K1 * K1;
+const uint max_predicates = K1, max_rules = K1, max_frames = K1;
 const uint GND = INT_MAX;
 
 typedef /*forward_*/vector<class predicate*> predlist;
@@ -117,7 +117,8 @@ ostream& operator<< ( ostream& o, const gnd& s ) {
 ostream& operator<< ( ostream& o, const evd& e ) {
 	for ( auto x : e ) {
 		o << dict[x.first] << " <= ";
-		for (auto y : x.second) o << *y << endl;
+		for (auto y : x.second) o << *y << " | ";
+		o << endl;
 	}
 	return o;
 }
@@ -132,10 +133,13 @@ public:
 	subst s;
 	gnd g;
 	frame& init( const frame& f) {
-		return init(f.r,f.src,f.ind,f.parent,f.s,f.g);
+		if (nframes >= max_frames) throw 0;
+		if (!f.parent) return init(f.r,f.src,f.ind,0,f.s,f.g);
+		return init(f.r,f.src,f.ind,&frame::frames[nframes++].init(*f.parent),f.s,f.g);
 	}
 	frame& init ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), gnd _g = gnd() ) {
 		if (!_r) throw 0;
+		if (nframes >= max_frames) throw 0;
 		r = _r;  
 		src = _src; 
 		ind = _ind;
@@ -228,31 +232,25 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 	uint step = 0;
 
 	cout<<"goal: "<<*goal<<endl;
-	while ( queue.size() > 0 ) {
+	while ( !queue.empty() ) {
 		frame& c = *queue.front();
 //		cout << c << endl;
 		queue.pop_front();
-		gnd g ( c.g );
+		gnd g = c.g ;
 		step++;
 		if ( maxNumberOfSteps != -1 && (int)step >= maxNumberOfSteps ) return evd();
 		if ( c.ind == c.r->body.size() ) {
 			if ( !c.parent ) {
-				for ( size_t i = 0; i < c.r->body.size(); ++i ) {
-					auto t = evaluate ( *c.r->body[i], c.s ); //evaluate the statement in the enviornment
-					if ( e.find ( t->p ) == e.end() ) e[t->p] = {}; //initialize this predicate's evidence list, if necessary
-					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); //add the evidence for this statement
+				for (auto x : c.r->body) {
+					auto t = evaluate ( *x, c.s ); 
+					if ( e.find ( t->p ) == e.end() ) e[t->p] = {};
+					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); 
 				}
 				continue;
 			}
 			if ( !c.r->body.empty() ) g.emplace_front ( c.r, c.s );
-			frame& r = frame::frames[nframes++].init (
-			    &rules[nrules++].init ( c.parent->r->head, c.parent->r->body ),
-			    c.parent->src,
-			    c.parent->ind,
-			    c.parent->parent,
-			    subst ( c.parent->s ),
-			    g
-			);
+			frame& r = frame::frames[nframes++].init(*c.parent);
+			r.g = gnd();
 			unify ( *c.r->head, c.s, *r.r->body[r.ind], r.s, true );
 			r.ind++;
 			queue.push_back ( &r );
@@ -262,7 +260,7 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 		cout << *t << endl;
 		int b = builtin();// ( t, c );
 		if ( b == 1 ) {
-			g.emplace_front ( &rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
+			g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
 			frame& r = frame::frames[nframes++].init(c);
 			r.g = gnd();
 			r.ind++;
@@ -279,7 +277,7 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 			cout << rl << endl;
 			src++;
 			gnd g = c.g;
-			if ( rl.body.size() == 0 ) g.emplace_back ( &rl, subst() );
+			if ( rl.body.empty() ) g.emplace_back ( &rl, subst() );
 			frame& r = frame::frames[nframes++].init ( &rl, src, 0, &c, subst(), g );
 			if ( unify ( *t, c.s, *rl.head, r.s, true ) ) {
 				frame& ep = c;
@@ -308,7 +306,7 @@ typedef predicate* ppredicate;
 int main() {
 	dict.set ( "a" );
 	evd evidence, cases;
-	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" ), _z = mkpred("?z");
 	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
 	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
 	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
@@ -323,7 +321,7 @@ int main() {
 	} );
 	bool p = prove ( pred_t {"a", {_y, Mortal}}, -1, cases, evidence );
 */	
-	evidence = prove ( /*mkrule ( 0, {*/mkpred( "a", { _y, Mortal } )/*} )*/, -1, cases );
+	evidence = prove ( /*mkrule ( 0, {*/mkpred( "a", { _y, /*Mortal*/_z } )/*} )*/, -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		//		cout << "  " << e.first << ":" << endl;
