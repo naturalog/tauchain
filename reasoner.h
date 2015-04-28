@@ -411,8 +411,8 @@ pred_t triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
-//evidence_t prove ( const psomap& kb, const psomap& query ) {
-evidence_t prove ( const qlist& kb, const qlist& query ) {
+//evidence_t prove ( , const psomap& query ) {
+evidence_t prove ( const qlist& graph, const qlist& query, const jsonld::rdf_db &kb ) {
 
 	#ifdef UBI
 	ubigraph_clear();
@@ -420,19 +420,18 @@ evidence_t prove ( const qlist& kb, const qlist& query ) {
 
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
-	for ( const auto& quad : kb ) {
+	for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			rule_t rule;
 			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for ( const auto& y : kb )
-				if ( y->graph->value == o ) {
+			for ( const auto &y : kb[o] )
+				{
 					rule.head = triple ( *y );
 					//now look for the subject graph
-					for ( const auto& x : kb )
-						if ( x->graph->value == s )
-							rule.body.push_back ( triple ( *x ) );
-					cases[p].push_back ( rule );
+					for ( const auto& x : kb[s] )
+						rule.body.push_back ( triple ( *x ) );
+					cases[rule.head.pred].push_back ( rule );
 				}
 		} 
 		else
