@@ -460,12 +460,14 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 				for ( const auto& x : *kb[s] )
 					rule.body.push_back ( triple ( *x ) );
 				cases[rule.head.pred].push_back ( rule );
+				cout << ( string ) rule << endl;
+
 			}
 		} 
 		else
 		{
 			rule_t r = { { p, { mk_res ( s ), mk_res ( o ) }}, {}};
-			//cout << ( string ) r << endl;
+			cout << ( string ) r << endl;
 			cases[p].push_back ( r );
 		}
 	}
