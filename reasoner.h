@@ -412,7 +412,7 @@ pred_t triple ( const jsonld::quad& q ) {
 };
 
 //evidence_t prove ( , const psomap& query ) {
-evidence_t prove ( const qlist& graph, const qlist& query, const jsonld::rdf_db &kb ) {
+evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
 
 	#ifdef UBI
 	ubigraph_clear();
@@ -425,11 +425,11 @@ evidence_t prove ( const qlist& graph, const qlist& query, const jsonld::rdf_db 
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			rule_t rule;
 			//go thru all quads again, look for the implicated graph (rule head in prolog terms)
-			for ( const auto &y : kb[o] )
+			for ( const auto &y : *kb[o] )
 				{
 					rule.head = triple ( *y );
 					//now look for the subject graph
-					for ( const auto& x : kb[s] )
+					for ( const auto& x : *kb[s] )
 						rule.body.push_back ( triple ( *x ) );
 					cases[rule.head.pred].push_back ( rule );
 				}
