@@ -435,6 +435,7 @@ pobj expand ( pobj input, jsonld_options opts = jsonld_options() );
 
 typedef jsonld::rdf_db rdf_db;
 typedef jsonld::quad quad;
+typedef jsonld::qdb qdb;
 typedef jsonld::pquad pquad;
 typedef jsonld::node node;
 typedef jsonld::pnode pnode;

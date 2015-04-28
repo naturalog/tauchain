@@ -79,16 +79,20 @@ rdf_db::rdf_db ( jsonld_api& api_ ) :
 	( *this ) [str_default] = mk_qlist();
 }
 
-string rdf_db::tostring() {
-	string s;
-	stringstream o;
-	o << "#Graphs: " << size() << endl;
-	for ( auto x : *this ) {
+ostream& operator<< ( ostream& o, const qdb& q ) {
+	o << "#Graphs: " << q.size() << endl;
+	for ( auto x : q ) {
 		o << "#Triples: " << x.second->size() << endl;
 		for ( pquad q : *x.second )
 			o << q->tostring ( /* x.first == str_default ? "<>" : x.first*/ ) << endl;
 	}
-	return o.str();
+	return o;
+}
+
+string rdf_db::tostring() {
+	stringstream s;
+	s << *this;
+	return s.str();
 }
 
 void rdf_db::setNamespace ( string ns, string prefix ) {

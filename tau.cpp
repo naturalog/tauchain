@@ -56,7 +56,7 @@ public:
 			return 1;
 		}
 		try {
-			cout << convert ( load_json ( args ) ).tostring() << endl;
+			cout << convert ( load_json ( args ) ) << endl;
 			return 0;
 		} catch ( exception& ex ) {
 			std::cerr << ex.what() << endl;
@@ -82,7 +82,7 @@ public:
 			return 1;
 		}
 		try {
-			cout << toquads ( args ).tostring() << endl;
+			cout << toquads ( args ) << endl;
 		} catch ( string& ex ) {
 			cerr << ex << endl;
 			return 1;
@@ -142,18 +142,23 @@ public:
 		try {
 			if ( args.size() == 2 ) cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
 			else if ( args.size() == 4 ) {
+				qdb rkb, rq;
 				pobj kb = nodemap ( jsonld::expand ( load_json ( args[2] ) ) );
 				pobj q = nodemap ( jsonld::expand ( load_json ( args[3] ) ) );
 				if ( kb && kb->MAP() ) {
 					cout << "Contexts in kb:" << endl;
-					rdf_db rkb = toquads ( kb );
-					for ( auto x : rkb ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
+					rkb = toquads ( kb );
+					//for ( auto x : rkb ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
 				} else cerr << "Cannot parse kb or empty kb." << endl;
 				if ( q && q->MAP() ) {
 					cout << "Contexts in query:" << endl;
-					rdf_db rq = toquads ( q );
-					for ( auto x : rq ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
-				} else cerr << "Cannot parse query or empty query." << endl;
+					rq = toquads ( q );
+					//for ( auto x : rq ) cout << x.first << '\t' << x.second->size() << " quads." << endl;
+				} else {
+					cerr << "Cannot parse query or empty query." << endl;
+					return 1;
+				}
+				prove ( merge ( rkb ), merge ( rq ) );
 				return 0;
 			} else {
 				auto _kb = convert ( load_json ( args[2] ) );

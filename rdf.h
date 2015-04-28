@@ -76,6 +76,8 @@ inline pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
 
+ostream& operator<< ( ostream& o, const qdb& );
+
 class jsonld_api;
 class rdf_db: public qdb {
 	ssmap context;
@@ -101,5 +103,5 @@ private:
 
 typedef std::shared_ptr<rdf_db> prdf_db;
 }
-
+jsonld::qlist merge ( const jsonld::qdb& q );
 #endif

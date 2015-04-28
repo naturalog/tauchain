@@ -49,10 +49,10 @@ public:
 		a.gen_node_map ( o, nodeMap );
 		return mk_somap_obj ( nodeMap );
 	}
-	rdf_db toquads ( const strings& args ) {
+	qdb toquads ( const strings& args ) {
 		return toquads ( load_json ( args ) );
 	}
-	rdf_db toquads ( pobj o ) {
+	qdb toquads ( pobj o ) {
 		jsonld::jsonld_api a;
 		rdf_db r ( a );
 		auto nodeMap = o;
@@ -63,7 +63,7 @@ public:
 		}
 		return r;
 	}
-	rdf_db convert ( pobj o ) {
+	qdb convert ( pobj o ) {
 		return toquads ( nodemap ( jsonld::expand ( o ) ) );
 	}
 };

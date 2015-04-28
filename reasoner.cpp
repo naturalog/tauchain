@@ -12,6 +12,7 @@ predicate *predicates = new predicate[max_predicates];
 rule *rules = new rule[max_rules];
 frame *frames = new frame[max_frames];
 uint npredicates = 0, nrules = 0, nframes = 0;
+const string implication = "http://www.w3.org/2000/10/swap/log#implies";
 
 int bidict::set ( const string& v ) {
 	if ( m2.find ( v ) != m2.end() ) return m2[v];
@@ -223,7 +224,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 	cout << "goal: " << *goal << endl;
 	while ( !queue.empty() ) {
 		frame& current_frame = *queue.front();
-		printkb();
+		//		printkb();
 		queue.pop_front();
 		ground_t g = current_frame.ground;
 		step++;
@@ -256,17 +257,19 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 			continue;
 		} else if ( b == 0 ) continue;
 
-		trace ( "looking for " << *t << "in cases:" << endl << cases << endl << " end cases" << endl );
+		trace ( "looking for " << *t << " in cases: " << endl << cases << endl << "end cases" << endl );
 		if ( cases.find ( t->pred ) == cases.end() /* || cases[t->pred].empty()*/ ) continue;
 
 		uint src = 0;
 		for ( rule* _rl : cases[t->pred] ) {
 			rule& rl = *_rl;
+			trace ( "trying to unify rule " << rl << " from cases against " << *t << "... " );
 			src++;
 			ground_t ground = current_frame.ground;
 			if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
 			frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
 			if ( rl.head && unify ( *t, current_frame.substitution, *rl.head, candidate_frame.substitution, true ) ) {
+				trace ( "unified!" << endl );
 				frame& ep = current_frame;
 				while ( ep.parent ) {
 					ep = *ep.parent;
@@ -278,7 +281,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 					//					cout << "pushing frame: " << candidate_frame << endl;
 					queue.push_front ( &candidate_frame );
 				}
-			}
+			} else trace ( "unification failed" << endl );
 		}
 	}
 	return evidence;
@@ -303,26 +306,43 @@ predicate* triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
+qlist merge ( const qdb& q ) {
+	qlist r;
+	for ( auto x : q ) copy ( x.second->begin(), x.second->end(), r.end() );
+	return r;
+}
+
+/*
+    10:05 < HMC_A_> if X=>Y
+    10:05 < HMC_A_> then for each statement in Y make a rule
+    10:05 < HMC_A_> of X=>Yi for Yi in Y
+    10:05 < HMC_A_> where X is all the statements in X
+    10:06 < HMC_A_> the body (X) is a vector of statements (triples)
+    10:06 < HMC_A_> each head (Yi) is only one statement (triple)
+    10:06 < HMC_A_> conjunction, disjunction!
+    10:06 < HMC_A_> body is conjuncted
+    10:06 < HMC_A_> head is disjuncted
+*/
 evidence_t prove ( const qlist& kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
-	for ( const auto& quad : kb ) {
+	for ( auto quad : kb ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		dict.set ( s );
 		dict.set ( o );
 		dict.set ( p );
-		if ( p != "http://www.w3.org/2000/10/swap/log#implies" )
-			cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
+		if ( p != implication ) cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
 		else for ( const auto& y : kb )
-			if ( y->graph->value == o ) {
-				rule& rul = *mkrule();
-				rul.head = triple ( *y );
-				for ( const auto& x : kb )
-					if ( x->graph->value == s )
-						rul.body.push_back ( triple ( *x ) );
-				cases[dict[p]].push_back ( &rul );
-			}
+				if ( y->graph->value == o ) {
+					rule& rul = *mkrule();
+					rul.head = triple ( *y );
+					for ( const auto& z : kb )
+						if ( z->graph->value == s )
+							rul.body.push_back ( triple ( *z ) );
+					cases[dict[p]].push_back ( &rul );
+				}
 	}
+
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 	return prove ( &goal, -1, cases );
