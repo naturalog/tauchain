@@ -11,7 +11,7 @@
 using namespace std;
 
 const uint M1 = 1024 * 1024;
-const uint max_predicates = M1, max_rules = M1;
+const uint max_predicates = M1, max_rules = M1, max_frames = M1;
 const uint GND = INT_MAX;
 
 typedef /*forward_*/vector<class predicate*> predlist;
@@ -91,7 +91,7 @@ struct rule {
 	}
 } *rules = new rule[max_rules];
 
-uint npredicates = 0, nrules = 0;
+uint npredicates = 0, nrules = 0, nframes = 0;
 
 typedef map<int, predicate*> subst;
 typedef list<pair<rule*, subst>> gnd;
@@ -127,12 +127,25 @@ struct frame {
 	frame* parent = 0;
 	subst s;
 	gnd g;
-	frame ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), gnd _g = gnd() ) :
-		r ( _r ), src ( _src ), ind ( _ind ), parent ( p ), s ( _s ), g ( _g ) {}
-	friend ostream& operator<< ( ostream& o, const frame& f ) {
-		return o << "rule: " << *f.r << " src: " << f.src << " ind: " << f.ind << " parent: " << *f.parent << " subst: " << f.s << " gnd: " << f.g;
+	frame& init( const frame& f) {
+		return init(f.r,f.src,f.ind,f.parent,f.s,f.g);
 	}
-};
+	frame& init ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), gnd _g = gnd() ) {
+		r = _r;  
+		src = _src; 
+		ind = _ind;
+		parent = p; 
+		s = _s;
+		g = _g;
+		return *this;
+	}
+	friend ostream& operator<< ( ostream& o, const frame& f ) {
+		return o << "rule: " << *f.r << " src: " << f.src << " ind: " << f.ind << " parent: ";
+		if (f.parent) o << *f.parent;
+		else o << "(null)";
+		return o << " subst: " << f.s << " gnd: " << f.g;
+	}
+} *frames = new frame[max_frames];
 
 ostream& operator<< ( ostream& o, const rulelist& l ) {
 	if (l.empty()) return o << "[]";
@@ -203,14 +216,15 @@ predlist to_predlist(const gnd& g) {
 }
 
 evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
-	deque<frame> queue;
-	queue.emplace_back ( &rules[nrules++].init(0, {goal}) );
+	deque<frame*> queue;
+	queue.emplace_back ( &frames[nframes++].init( &rules[nrules++].init(0, {goal}) ));
 	evd e;
 	uint step = 0;
 
 	cout<<"goal: "<<*goal<<endl;
 	while ( queue.size() > 0 ) {
-		frame c = queue.front();
+		frame& c = *queue.front();
+		cout << c << endl;
 		queue.pop_front();
 		gnd g ( c.g );
 		step++;
@@ -225,7 +239,7 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 				continue;
 			}
 			if ( !c.r->body.empty() ) g.emplace_front ( c.r, c.s );
-			frame r (
+			frame& r = frames[nframes++].init (
 			    &rules[nrules++].init ( c.parent->r->head, c.parent->r->body ),
 			    c.parent->src,
 			    c.parent->ind,
@@ -235,7 +249,7 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 			);
 			unify ( *c.r->head, c.s, *r.r->body[r.ind], r.s, true );
 			r.ind++;
-			queue.push_back ( r );
+			queue.push_back ( &r );
 			continue;
 		}
 		predicate* t = c.r->body[c.ind];
@@ -243,10 +257,10 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 		int b = builtin();// ( t, c );
 		if ( b == 1 ) {
 			g.emplace_front ( &rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
-			frame r = c;
+			frame& r = frames[nframes++].init(c);
 			r.g = gnd();
 			r.ind++;
-			queue.push_back ( r );
+			queue.push_back ( &r );
 			continue;
 		} else if ( b == 0 ) continue;
 
@@ -260,14 +274,14 @@ evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 			src++;
 			gnd g = c.g;
 			if ( rl.body.size() == 0 ) g.emplace_back ( &rl, subst() );
-			frame r ( &rl, src, 0, &c, subst(), g );
+			frame& r = frames[nframes++].init ( &rl, src, 0, &c, subst(), g );
 			if ( unify ( *t, c.s, *rl.head, r.s, true ) ) {
 				frame& ep = c;
 				while ( ep.parent ) {
 					ep = *ep.parent;
 					if ( ep.src == c.src && unify ( *ep.r->head, ep.s, *c.r->head, c.s, false ) ) break;
 				}
-				if ( !ep.parent ) queue.push_front ( r );
+				if ( !ep.parent ) queue.push_front ( &r );
 			}
 		}
 	}
