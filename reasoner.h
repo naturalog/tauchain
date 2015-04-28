@@ -56,14 +56,22 @@ struct rule_t {
 #endif
 	string tostring() const {
 		stringstream o;
-		o << ( string ) head << " :- ";
-		for ( auto x : body ) x.write ( o );
+		o << ( string ) head;
+		if (body.size()) 
+		{
+			o << " :- ";
+			for ( auto x : body ) x.write ( o );
+		}
+		else
+			o << ".";
 		return o.str();
 	}
 	operator string() const {
 		return tostring();
 	}
 };
+
+typedef map<string, vector<rule_t>> evidence_t;
 
 struct rule_env {
 	rule_t src;
@@ -135,25 +143,36 @@ void ubi(const ppti i)
 	}
 	if (i->rule.ubi_node_id)
 		int e = ubigraph_new_edge(i->ubi_node_id, i->rule.ubi_node_id);
-
-	
 #endif
 }
 
-
-
-#ifdef UBI
-void ubi_facts_send(vector<int> ids)
+void ubi_add_facts(evidence_t &cases)
 {
+#ifdef UBI
+	vector<int> ids;
+	for ( auto c : cases ) 
+		for ( auto r : c.second ) 
+			if ( !r.body.size() )
+			{
+				ids.push_back((
+					r.ubi_node_id = ubigraph_new_vertex()));
+				ubigraph_set_vertex_attribute(r.ubi_node_id, "fontsize", "18");
+				ubigraph_set_vertex_attribute(r.ubi_node_id, "label", ((string)r).c_str());
+				ubigraph_set_vertex_attribute(r.ubi_node_id, "fontcolor", "#ffffff");
+			}
+
 	int w = sqrt(ids.size()) + 1;
 	for (int x = 0; x < w; x++)
 	{
-		int h = ids.size()/w;
+		int h = ids.size()/w+1;
 		
 		for (int y = 0; y < h; y++)
 		{
 			if ((x*h+y) == ids.size())
 				return;
+
+			cout << ids.size() << " facts, w:" << w << 
+				", h:" << h << ", x:"<<x << ", y:"<<y <<endl;
 
 			int id = ids[x*h+y];
 			if (x>0)
@@ -166,8 +185,8 @@ void ubi_facts_send(vector<int> ids)
 			}
 		}
 	}
-}
 #endif
+}
 
 
 int builtin ( pred_t, proof_trace_item ) {
@@ -179,7 +198,6 @@ int builtin ( pred_t, proof_trace_item ) {
 	trace ( "NO BEES yet PLZ!" << endl );
 	return -1;
 }
-typedef map<string, vector<rule_t>> evidence_t;
 
 pred_t evaluate ( const pred_t t, const penv_t env );
 bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv );
@@ -393,11 +411,11 @@ pred_t triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
+//evidence_t prove ( const psomap& kb, const psomap& query ) {
 evidence_t prove ( const qlist& kb, const qlist& query ) {
 
 	#ifdef UBI
 	ubigraph_clear();
-	vector<int> ubi_fact_nodes;
 	#endif
 
 	evidence_t evidence, cases;
@@ -420,25 +438,13 @@ evidence_t prove ( const qlist& kb, const qlist& query ) {
 		else
 		{
 			rule_t r = { { p, { mk_res ( s ), mk_res ( o ) }}, {}};
-			#ifdef UBI
-			if ( s[0] != '?' && o[0] != '?' && p[0] != '?' ) 
-			{
-				ubi_fact_nodes.push_back((r.ubi_node_id = ubigraph_new_vertex()));
-				ubigraph_set_vertex_attribute(r.ubi_node_id, "fontsize", "18");
-				ubigraph_set_vertex_attribute(r.ubi_node_id, "label", ((string)r).c_str());
-				ubigraph_set_vertex_attribute(r.ubi_node_id, "fontcolor", "#ffffff");
-			}
-			#endif
+			cout << (string)r << endl;
 			cases[p].push_back (r);
 		}
 	}
 	rule_t goal;
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-
-	#ifdef UBI
-	ubi_facts_send(ubi_fact_nodes);
-	#endif
-
+	ubi_add_facts(cases);
 	prove ( goal, -1, cases, evidence );
 	return evidence;
 }

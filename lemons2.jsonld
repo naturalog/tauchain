@@ -1,0 +1,233 @@
+[
+  {
+    "@context": {
+      "log": "http://www.w3.org/2000/10/swap/log#"
+    }, 
+    "@graph": [
+      {
+        "@id": ":bananas", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        "@id": ":fruit", 
+        ":a": {
+          "@id": ":healthy food"
+        }
+      }, 
+      {
+        "@id": ":healthy food", 
+        ":is": {
+          "@id": ":good for you"
+        }
+      }, 
+      {
+        "@id": ":lemons", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        ":are": {
+          "@id": ":expensive"
+        }, 
+        "@id": ":nuts"
+      }, 
+      {
+        ":tastes": {
+          "@id": ":sour"
+        }, 
+        "@id": ":lemons"
+      }, 
+      {
+        ":tastes": {
+          "@id": ":sweet"
+        }, 
+        "@id": ":bananas"
+      }, 
+      {
+        "@id": ":papaya", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        "@id": ":kiwi", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        "@id": ":mango", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        "@id": ":limete", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        "@id": ":clementine", 
+        ":a": {
+          "@id": ":fruit"
+        }
+      }, 
+      {
+        "@id": ":broccoli", 
+        ":a": {
+          "@id": ":vegetable"
+        }
+      }, 
+      {
+        "@id": ":celery", 
+        ":a": {
+          "@id": ":vegetable"
+        }
+      }, 
+      {
+        "@id": ":broccoli", 
+        ":color": {
+          "@id": ":green"
+        }
+      }, 
+      {
+        "@id": ":lemons", 
+        ":color": {
+          "@id": ":yellow"
+        }
+      }, 
+      {
+        ":a": [
+          {
+            "@id": ":Male"
+          }
+        ], 
+        "@id": ":socrates"
+      }, 
+
+      
+      {
+	"@id": "_:xxx", 
+        "http://www.w3.org/2000/10/swap/log#implies": [{"@id": "_:yyy"}]
+      },
+      {
+        "@graph": [{":color": {"@id": ":green"}}],
+        "@id": "_:xxx"
+      }, 
+      {
+        "@graph": [{":is": {"@id": ":good for you"}}],
+        "@id": "_:yyy"
+      }, 
+      {
+        "http://www.w3.org/2000/10/swap/log#implies": [
+          {
+            "@id": "_:g1"
+          }
+        ], 
+        "@id": "_:g2"
+      }, 
+      {
+        "http://www.w3.org/2000/10/swap/log#implies": [
+          {
+            "@id": "_:g2"
+          }
+        ], 
+        "@id": "_:g3"
+      }, 
+      {
+        "@graph": [
+          {
+            ":a": [
+              {
+                "@id": ":Mortal"
+              }
+            ], 
+            "@id": "_:x"
+          }
+        ], 
+        "@id": "_:g1"
+      }, 
+      {
+        "@graph": [
+          {
+            ":a": [
+              {
+                "@id": ":Man"
+              }
+            ], 
+            "@id": "_:x"
+          }
+        ], 
+        "@id": "_:g2"
+      }, 
+      {
+        "@graph": [
+          {
+            ":a": [
+              {
+                "@id": ":Male"
+              }
+            ], 
+            "@id": "_:x"
+          }
+        ], 
+        "@id": "_:g3"
+      }, 
+      {
+        "http://www.w3.org/2000/10/swap/log#implies": [
+          {
+            "@id": "_:g5"
+          }
+        ], 
+        "@id": "_:g4"
+      }, 
+      {
+        "@graph": [
+          {
+            ":a": [
+              {
+                "@id": ":Mortal"
+              }
+            ], 
+            "@id": "_:x"
+          }
+        ], 
+        "@id": "_:g4"
+      }, 
+      {
+        "@graph": [
+          {
+            ":likes": [
+              {
+		"@id":"_:yyyyyy"
+              }
+            ], 
+            "@id": "_:x"
+          }
+        ], 
+        "@id": "_:g5"
+      }, 
+      {
+        "@graph": [
+          {
+            ":a": [
+              {
+                "@id": ":healthy food"
+              }
+            ], 
+            "@id": "_:y"
+          }
+        ], 
+        "@id":"_:yyyyyy"
+      }
+      
+      
+      
+    ], 
+    "@id": "@default"
+  }
+]
