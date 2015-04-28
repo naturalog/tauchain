@@ -72,7 +72,8 @@ struct predicate {
 	}
 	bool& null = ( bool& ) p;
 	friend ostream& operator<< ( ostream& o, const predicate& p) {
-		return o << dict[p.p] << '(' << p.args << ')';
+		o << dict[p.p];
+		return p.args.empty() ? o : o << p.args;
 	}
 } *predicates = new predicate[max_predicates];
 
@@ -86,7 +87,7 @@ struct rule {
 	}
 	friend ostream& operator<< ( ostream& o, const rule& r ) {
 		if ( r.head ) o << ( *r.head );
-		return o << '(' << r.body << ')';
+		return r.body.empty() ? o : o << r.body;
 	}
 } *rules = new rule[max_rules];
 
@@ -103,18 +104,18 @@ rulelist to_rulelist(const gnd& g) {
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( auto x : s ) o << dict[x.first] << ':' << *x.second << endl;
+	for ( auto x : s ) o << dict[x.first] << " := " << *x.second << endl;
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const gnd& s ) {
-	for ( auto x : s ) o << *x.first << ':' << x.second << endl;
+	for ( auto x : s ) o << *x.first << ": " << x.second << endl;
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const evd& e ) {
 	for ( auto x : e ) {
-		o << dict[x.first] << ':';
+		o << dict[x.first] << " <= ";
 		for (auto y : x.second) o << *y << endl;
 	}
 	return o;
@@ -165,10 +166,13 @@ ostream& operator<< ( ostream& o, const vector<predicate*> l ) {
 }
 */
 predicate* evaluate ( predicate& t, const subst& sub ) {
-	predicate* p;
-	if ( t.p < 0 ) return ( ( p = sub.at ( t.p ) ) ) ? evaluate ( *p, sub ) : 0;
+	if ( t.p < 0 ) {
+		auto it = sub.find(t.p);
+		return it == sub.end() ? 0 : evaluate ( *it->second, sub );
+	}
 	else if ( t.args.empty() ) return &t;
 	else {
+		predicate* p;
 		predicate& r = predicates[npredicates++].init ( t.p );
 		for ( auto x : t.args ) r.args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->p ) );
 		return &r;
@@ -191,12 +195,20 @@ bool unify ( predicate& s, const subst& ssub, predicate& d, subst& dsub, bool f 
 	} );
 }
 
-evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
+predlist to_predlist(const gnd& g) {
+//typedef list<pair<rule*, subst>> gnd;
+	predlist r;
+	for (auto x : g) r.push_back(x.first->head);
+	return r;
+}
+
+evd prove ( /*rule* goal*/predicate* goal, int maxNumberOfSteps, evd& cases ) {
 	deque<frame> queue;
-	queue.emplace_back ( goal );
+	queue.emplace_back ( &rules[nrules++].init(0, {goal}) );
 	evd e;
 	uint step = 0;
 
+	cout<<"goal: "<<*goal<<endl;
 	while ( queue.size() > 0 ) {
 		frame c = queue.front();
 		queue.pop_front();
@@ -208,7 +220,7 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 				for ( size_t i = 0; i < c.r->body.size(); ++i ) {
 					auto t = evaluate ( *c.r->body[i], c.s ); //evaluate the statement in the enviornment
 					if ( e.find ( t->p ) == e.end() ) e[t->p] = {}; //initialize this predicate's evidence list, if necessary
-//					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); //add the evidence for this statement
+					e[t->p].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( GND, to_predlist ( c.g ) ) } ) ); //add the evidence for this statement
 				}
 				continue;
 			}
@@ -227,6 +239,7 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 			continue;
 		}
 		predicate* t = c.r->body[c.ind];
+		cout << *t << endl;
 		int b = builtin();// ( t, c );
 		if ( b == 1 ) {
 			g.emplace_front ( &rules[nrules++].init ( evaluate ( *t, c.s ) ), subst() );
@@ -243,6 +256,7 @@ evd prove ( rule* goal, int maxNumberOfSteps, evd& cases ) {
 //		for ( size_t k = 0; k < cases[t->p].size(); k++ ) {
 		for (rule* _rl : cases[t->p]) {
 			rule& rl = *_rl;//*cases[t->p][k];
+			cout << rl << endl;
 			src++;
 			gnd g = c.g;
 			if ( rl.body.size() == 0 ) g.emplace_back ( &rl, subst() );
@@ -276,12 +290,20 @@ int main() {
 	evd evidence, cases;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Morrtal = mkpred ( "Morrtal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
-	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man} )  } ) );
-	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Man} ), { mkpred ( "a", {_x, Male} )  } ) );
+	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
+	cases[dict["a"]].push_front ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
 	cout << "cases:" << endl << cases << endl;
-
-	evidence = prove ( mkrule ( 0, { _y, Mortal } ), -1, cases );
+/*
+	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
+	cases["a"].push_back ( {{"a", {_x, Mortal}}    , { {"a", {_x, Man}}, } } );
+	cases["a"].push_back ( {
+		{"a", {_x, Man}},
+		{ {"a", {_x, Male}}, }
+	} );
+	bool p = prove ( pred_t {"a", {_y, Mortal}}, -1, cases, evidence );
+*/	
+	evidence = prove ( /*mkrule ( 0, {*/mkpred( "a", { _y, Mortal } )/*} )*/, -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	for ( auto e : evidence ) {
 		//		cout << "  " << e.first << ":" << endl;
