@@ -29,8 +29,10 @@ typedef vector<class rule*> rulelist;
 ostream& operator<< ( ostream&, const predlist& );
 ostream& operator<< ( ostream&, const rulelist& );
 
-template<typename T> void print ( T t ) {
-	cout << t << endl;
+template<typename T> string print ( T t ) {
+	stringstream ss;
+	ss << t;
+	return ss.str();
 }
 
 class bidict {

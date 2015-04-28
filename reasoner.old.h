@@ -52,7 +52,7 @@ struct rule_t {
 	pred_t head;
 	vector<pred_t> body;
 	#ifdef UBI
-	int ubi_node_id=0;
+	int ubi_node_id = 0;
 	#endif
 	string tostring() const {
 		stringstream o;
@@ -134,24 +134,22 @@ void ubi ( const ppti i ) {
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
 
 	}
-	
-	for (auto g : *i->ground)
-		if ( g.src.ubi_node_id )
-		{
+
+	for ( auto g : *i->ground )
+		if ( g.src.ubi_node_id ) {
 			int e = ubigraph_new_edge ( i->ubi_node_id, g.src.ubi_node_id );
 			ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
 			ubigraph_set_edge_attribute ( e, "width", "5.0" );
 			ubigraph_set_edge_attribute ( e, "oriented", "true" );
 		}
-	
-	if ( i->rule.ubi_node_id )
-	{
+
+	if ( i->rule.ubi_node_id ) {
 		int e = ubigraph_new_edge ( i->ubi_node_id, i->rule.ubi_node_id );
 		ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
 		ubigraph_set_edge_attribute ( e, "width", "5.0" );
 		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		}
-	
+	}
+
 	#endif
 }
 
@@ -160,17 +158,17 @@ void ubi_add_facts ( evidence_t &cases ) {
 	vector<int> ids;
 	for ( auto c : cases )
 		for ( auto r : c.second )
-			//if ( !r.body.size() ) 
-			{
-				ids.push_back ( (
-				                    r.ubi_node_id = ubigraph_new_vertex() ) );
-				ubigraph_set_vertex_attribute ( r.ubi_node_id, "fontsize", "18" );
-				ubigraph_set_vertex_attribute ( r.ubi_node_id, "label", ( ( string ) r ).c_str() );
-				ubigraph_set_vertex_attribute ( r.ubi_node_id, "fontcolor", "#ccffcc" );
-				ubigraph_set_vertex_attribute ( r.ubi_node_id, "color", "#55ff55" );
-				ubigraph_set_vertex_attribute ( r.ubi_node_id, "shape", "cube" );
+			//if ( !r.body.size() )
+		{
+			ids.push_back ( (
+			                    r.ubi_node_id = ubigraph_new_vertex() ) );
+			ubigraph_set_vertex_attribute ( r.ubi_node_id, "fontsize", "18" );
+			ubigraph_set_vertex_attribute ( r.ubi_node_id, "label", ( ( string ) r ).c_str() );
+			ubigraph_set_vertex_attribute ( r.ubi_node_id, "fontcolor", "#ccffcc" );
+			ubigraph_set_vertex_attribute ( r.ubi_node_id, "color", "#55ff55" );
+			ubigraph_set_vertex_attribute ( r.ubi_node_id, "shape", "cube" );
 
-			}
+		}
 
 	unsigned int w = sqrt ( ids.size() ) + 1;
 	for ( unsigned int x = 0; x < w; x++ ) {
@@ -235,8 +233,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
-					for (auto gnd_item : *c->ground)
-						tmp.body[0].args.push_back(gnd_item.src.head);
+					for ( auto gnd_item : *c->ground )
+						tmp.body[0].args.push_back ( gnd_item.src.head );
 					trace (  "Adding evidence for " << ( string ) t.pred << ": " << ( string ) tmp << endl );
 					evidence[t.pred].push_back ( tmp );
 				}
@@ -248,7 +246,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
 			trace (  ( string ) ( *r ) << endl );
-			queue.push_back ( r ); ubi(r);
+			queue.push_back ( r );
+			ubi ( r );
 			continue;
 		}
 		trace ( "Done q" << endl );
@@ -278,7 +277,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			src++;
 			pground_t g = aCopy ( c->ground );
 			trace (  "Check rule: " << ( string ) rl << endl );
-			if ( rl.body.size() == 0 ) 
+			if ( rl.body.size() == 0 )
 				g->push_back ( { rl, make_shared<env_t>() } ); //its a fact
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
 			//rl could imply our rule...
@@ -453,17 +452,14 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 	for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			for ( const auto &y : *kb[o] )
-			{
+			for ( const auto &y : *kb[o] ) {
 				rule_t rule;
 				rule.head = triple ( *y );
 				for ( const auto& x : *kb[s] )
 					rule.body.push_back ( triple ( *x ) );
 				cases[rule.head.pred].push_back ( rule );
 			}
-		} 
-		else
-		{
+		} else {
 			rule_t r = { { p, { mk_res ( s ), mk_res ( o ) }}, {}};
 			//cout << ( string ) r << endl;
 			cases[p].push_back ( r );

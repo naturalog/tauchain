@@ -14,7 +14,7 @@ frame *frames = new frame[max_frames];
 uint npredicates = 0, nrules = 0, nframes = 0;
 
 int bidict::set ( const string& v ) {
-	if (m2.find(v) != m2.end()) return m2[v];
+	if ( m2.find ( v ) != m2.end() ) return m2[v];
 	int k = m1.size();
 	if ( v[0] == '?' ) k = -k;
 	m1[k] = v;
@@ -54,7 +54,7 @@ predicate& predicate::init ( int _p, predlist _args ) {
 }
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
-	if (deref) o << dict[p.pred];
+	if ( deref ) o << dict[p.pred];
 	else o << p.pred;
 	return p.args.empty() ? o : o << p.args;
 }
@@ -79,7 +79,7 @@ int builtin ( predicate* p ) {
 
 ostream& operator<< ( ostream& o, const subst& s ) {
 	for ( auto x : s ) {
-		if (deref) o << dict[x.first];
+		if ( deref ) o << dict[x.first];
 		else o << x.first;
 		o << " := " << *x.second << endl;
 	}
@@ -96,7 +96,7 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 		o << '{';
 		for ( auto y : x.second ) o << *y.first << y.second << " | ";
 		o << "} => ";
-		if (deref) o << dict[x.first];
+		if ( deref ) o << dict[x.first];
 		else o << x.first;
 		o << endl;
 	}
@@ -105,10 +105,12 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
 	for ( auto x : e ) {
-		if (deref) o << dict[x.first];
-		else o << x.first;
-		o << " <= ";
+		o << '[';
 		for ( auto y : x.second ) o << *y << " | ";
+		o << ']';
+		o << " => ";
+		if ( deref ) o << dict[x.first];
+		else o << x.first;
 		o << endl;
 	}
 	return o;
@@ -221,7 +223,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 	cout << "goal: " << *goal << endl;
 	while ( !queue.empty() ) {
 		frame& current_frame = *queue.front();
-		//		printkb();
+		printkb();
 		queue.pop_front();
 		ground_t g = current_frame.ground;
 		step++;
@@ -244,7 +246,6 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 			continue;
 		}
 		predicate* t = current_frame.rul->body[current_frame.ind];
-		//cout << *t << endl;
 		int b = builtin ( t ); // ( t, c );
 		if ( b == 1 ) {
 			g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
@@ -255,7 +256,8 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 			continue;
 		} else if ( b == 0 ) continue;
 
-		if ( cases.find ( t->pred ) == cases.end() || cases[t->pred].empty() ) continue;
+		trace ( "looking for " << *t << "in cases:" << endl << cases << endl << " end cases" << endl );
+		if ( cases.find ( t->pred ) == cases.end() /* || cases[t->pred].empty()*/ ) continue;
 
 		uint src = 0;
 		for ( rule* _rl : cases[t->pred] ) {
@@ -268,7 +270,9 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 				frame& ep = current_frame;
 				while ( ep.parent ) {
 					ep = *ep.parent;
-					if ( ( ep.src == current_frame.src ) && unify ( *ep.rul->head, ep.substitution, *current_frame.rul->head, current_frame.substitution, false ) ) break;
+					if ( ( ep.src == current_frame.src ) &&
+					        unify ( *ep.rul->head, ep.substitution, *current_frame.rul->head, current_frame.substitution, false ) )
+						break;
 				}
 				if ( !ep.parent ) {
 					//					cout << "pushing frame: " << candidate_frame << endl;
@@ -304,13 +308,13 @@ evidence_t prove ( const qlist& kb, const qlist& query ) {
 	cases_t cases;
 	for ( const auto& quad : kb ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		dict.set(s);
-		dict.set(o);
-		dict.set(p);
+		dict.set ( s );
+		dict.set ( o );
+		dict.set ( p );
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			rule& rul = *mkrule();
 			for ( const auto& y : kb )
 				if ( y->graph->value == o ) {
+					rule& rul = *mkrule();
 					rul.head = triple ( *y );
 					for ( const auto& x : kb )
 						if ( x->graph->value == s )
@@ -318,14 +322,14 @@ evidence_t prove ( const qlist& kb, const qlist& query ) {
 					cases[dict[p]].push_back ( &rul );
 				}
 		} else cases[dict[p]].push_back ( mkrule ( 0, {triple ( p, s, o ) } ) );
-//			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
+		//			cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
 	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 	return prove ( &goal, -1, cases );
 }
 /*
-evidence_t prove ( const qlist& kb, const qlist& query ) {
+    evidence_t prove ( const qlist& kb, const qlist& query ) {
 	#ifdef UBI
 	ubigraph_clear();
 	#endif
@@ -360,23 +364,24 @@ evidence_t prove ( const qlist& kb, const qlist& query ) {
 		return prove ( &goal, -1, cases );
 	}
 */
-	bool test_reasoner() {
-		dict.set ( "a" );
-		dict.set ( "GND" );
-		evidence_t evidence;
-		cases_t cases;
-		typedef predicate* ppredicate;
-		ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
-		cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
-		cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
-		cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
+bool test_reasoner() {
+	dict.set ( "a" );
+	dict.set ( "GND" );
+	evidence_t evidence;
+	cases_t cases;
+	typedef predicate* ppredicate;
+	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
-		cout << "cases:" << endl << cases << endl;
-		predicate* goal = mkpred ( "a", { _y, Mortal } );
-		evidence = prove ( mkrule ( goal, { goal } ), -1, cases );
-		cout << "evidence: " << evidence.size() << " items..." << endl;
-		cout << evidence << endl;
-		cout << "QED!" << endl;
-		cout << evidence.size() << endl;
-		return evidence.size();
-	}
+	cout << "cases:" << endl << cases << endl;
+	printkb();
+	predicate* goal = mkpred ( "a", { _y, Mortal } );
+	evidence = prove ( mkrule ( goal, { goal } ), -1, cases );
+	cout << "evidence: " << evidence.size() << " items..." << endl;
+	cout << evidence << endl;
+	cout << "QED!" << endl;
+	cout << evidence.size() << endl;
+	return evidence.size();
+}
