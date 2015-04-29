@@ -104,13 +104,14 @@ void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence
 		predicate* t = evaluate ( *x, current_frame.substitution );
 		evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {GND}), current_frame.ground );
 	}
-	trace("evidence so far: " << endl << evidence );
+	trace( "evidence so far: " << endl << evidence );
+	trace( "current frame:" << endl << current_frame );
 }
 
 frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 	if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
 	frame& new_frame = frames[nframes++].init ( this, *current_frame.parent );
-	new_frame.ground = ground_t();
+	new_frame.ground = g;//round_t();
 	unify ( current_frame.rul->head, current_frame.substitution, new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
 	return &new_frame;
@@ -125,7 +126,8 @@ frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& case
 //		trace ( "trying to unify rule " << rl << " from cases against " << t << "... " );
 		src++;
 		ground_t ground = current_frame.ground;
-		if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
+		if ( rl.body.empty() ) 
+			ground.emplace_back ( &rl, subst() );
 		frame& candidate_frame = frames[nframes++].init ( this, &rl, src, 0, &current_frame, subst(), ground );
 		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
 			frame& ep = current_frame;
