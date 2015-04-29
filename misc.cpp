@@ -1,42 +1,48 @@
 #include "reasoner.h"
 
-extern bidict dict;
+bidict& dict = *new bidict;
+
+bidict::bidict() {
+	set ( "GND" );
+}
 
 void bidict::set ( const vector<string>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
 int bidict::set ( const string& v ) {
-	if ( m2.find ( v ) != m2.end() ) return m2[v];
-	int k = m1.size();
+	auto it = m.right.find ( v );
+	if ( it != m.right.end() ) return it->second;
+	int k = m.size();
 	if ( v[0] == '?' ) k = -k;
-	m1[k] = v;
-	m2[v] = k;
+	m.insert(bm::value_type(k, v));
 	return k;
 }
 
 const string bidict::operator[] ( const int& k ) {
-	auto v = m1[k];
-	m2[m1[k]];
-	return v;
+	return m.left.find ( k )->second;
+//	auto v = m1[k];
+//	m2[m1[k]];
+//	return v;
 }
 
 int bidict::operator[] ( const string& v ) {
-	m1[m2[v]];
-	return m2[v];
+	return m.right.find ( v )->second;
+//	m1[m2[v]];
+//	return m2[v];
 }
 
 bool bidict::has ( int k ) const {
-	return m1.find ( k ) != m1.end();
+	return m.left.find ( k ) != m.left.end();
 }
 
 bool bidict::has ( const string& v ) const {
-	return m2.find ( v ) != m2.end();
+	return m.right.find ( v ) != m.right.end();
 }
 
 string bidict::tostr() {
 	stringstream s;
-	for ( auto x : m1 ) s << x.first << " := " << x.second << endl;
+	for ( auto x : m.right ) s << x.first << " := " << x.second << endl;
 	return s.str();
 }
 
@@ -70,14 +76,14 @@ ostream& operator<< ( ostream& o, const subst& s ) {
 }
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
-	for ( auto x : s ) o << *x.first << ": " << x.second << '|';
+	for ( auto x : s ) o << *x.first << "/" << x.second << '|';
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( auto x : e ) {
 		o << '{';
-		for ( auto y : x.second ) o << *y.first << y.second << " | ";
+		for ( auto y : x.second ) o << *y.first << y.second << " . ";
 		o << "} => ";
 		if ( deref ) o << dict[x.first];
 		else o << x.first;
@@ -129,3 +135,10 @@ ostream& operator<< ( ostream& o, const predlist& l ) {
 	return o << ']';
 }
 
+void menu() {
+/*	static map<char, string> menu1 = { 
+		{'d', "print dict"}
+		};
+	cout << "now what?" << endl;
+	for (auto x : menu1) cout << x.first << ":\t" << x.second << endl;
+*/}

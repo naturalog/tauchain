@@ -27,8 +27,8 @@ const uint max_predicates = M1, max_rules = M1, max_frames = M1;
 
 typedef vector<struct predicate*> predlist;
 typedef vector<struct rule*> rulelist;
-ostream& operator<< ( ostream&, const predlist& );
-ostream& operator<< ( ostream&, const rulelist& );
+ostream& operator<< ( ostream& o, const rulelist& l );
+ostream& operator<< ( ostream& o, const predlist& l );
 
 template<typename T> string print ( T t ) {
 	stringstream ss;
@@ -51,7 +51,7 @@ struct rule {
 
 typedef map<int, predicate*> subst;
 typedef list<pair<rule*, subst>> ground_t;
-typedef map<int, forward_list<pair<rule*, subst>>> evidence_t;
+typedef map<int, forward_list<pair<rule*, ground_t>>> evidence_t;
 typedef map<int, vector<rule*>> cases_t;
 
 struct frame {
@@ -64,15 +64,6 @@ struct frame {
 	frame& init ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 };
 
-ostream& operator<< ( ostream& o, const subst& s );
-ostream& operator<< ( ostream& o, const ground_t& s );
-ostream& operator<< ( ostream& o, const evidence_t& e );
-ostream& operator<< ( ostream& o, const cases_t& e );
-ostream& operator<< ( ostream& o, const rule& r );
-ostream& operator<< ( ostream& o, const predicate& p );
-ostream& operator<< ( ostream& o, const frame& f );
-ostream& operator<< ( ostream& o, const rulelist& l );
-ostream& operator<< ( ostream& o, const predlist& l );
 
 void printkb();
 int builtin ( predicate* p );
@@ -83,5 +74,12 @@ predlist to_predlist ( const ground_t& g );
 evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases );
 evidence_t prove ( const qdb& kb, const qlist& query );
 bool test_reasoner();
+ostream& operator<< ( ostream& o, const subst& s );
+ostream& operator<< ( ostream& o, const ground_t& s );
+ostream& operator<< ( ostream& o, const evidence_t& e );
+ostream& operator<< ( ostream& o, const cases_t& e );
+ostream& operator<< ( ostream& o, const rule& r );
+ostream& operator<< ( ostream& o, const predicate& p );
+ostream& operator<< ( ostream& o, const frame& f );
 
 #endif

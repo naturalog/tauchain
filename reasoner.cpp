@@ -7,7 +7,6 @@
 
 #include "reasoner.h"
 
-bidict dict;
 predicate *predicates = new predicate[max_predicates];
 rule *rules = new rule[max_rules];
 frame *frames = new frame[max_frames];
@@ -20,7 +19,7 @@ rule& rule::init ( predicate* h, predlist b ) {
 	return *this;
 }
 
-int builtin ( predicate* p ) {
+int builtin ( predicate*  ) {
 //	if ( p && p->pred == dict["GND"] ) return 1;
 	return -1;
 }
@@ -89,19 +88,24 @@ bool unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool 
 	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
 	return true;
 }
-
-predlist to_predlist ( const ground_t& g ) {
+/*
+vector<rule*> to_rulelist ( const ground_t& g ) {
 	//typedef list<pair<rule*, subst>> gnd;
-	predlist r;
-	for ( auto x : g ) r.push_back ( x.first->head );
+	rulelist r;
+	for ( auto x : g ) r.push_back ( x.first );
 	return r;
 }
+*/
 
 void evidence_found ( const frame& current_frame, evidence_t& evidence ) {
-	for ( auto x : current_frame.rul->body ) {
-		auto t = evaluate ( *x, current_frame.substitution );
-		if ( evidence.find ( t->pred ) == evidence.end() ) evidence[t->pred] = {};
-		evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( current_frame.ground ) ) } ) , subst() );
+//typedef map<int, forward_list<pair<rule*, subst>>> evidence_t;
+//typedef list<pair<rule*, subst>> ground_t;
+	for ( predicate* x : current_frame.rul->body ) {
+		predicate* t = evaluate ( *x, current_frame.substitution );
+		predicate* g = &predicates[npredicates++].init ( dict["GND"]);
+		rule* r = &rules[nrules++].init ( t, {g});
+		trace("pushing new evidence, t = " << *t << " g = " << *g << " r = " << *r << endl);
+		evidence[t->pred].emplace_front ( r, current_frame.ground );
 	}
 	trace("evidence so far: " << endl << evidence );
 }
@@ -269,7 +273,8 @@ evidence_t prove ( const qdb &kb, const qlist& query ) {
 
 bool test_reasoner() {
 	dict.set ( "a" );
-	dict.set ( "GND" );
+//	cout <<"dict:"<<endl<< dict.tostr() << endl;
+//	exit(0);
 	evidence_t evidence;
 	cases_t cases;
 	typedef predicate* ppredicate;

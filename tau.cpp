@@ -7,6 +7,8 @@ auto dummy = []() {
 bool autobt = false, _pause = false;
 #endif
 
+void menu();
+
 class expand_cmd : public cmd_t {
 public:
 	virtual string desc() const {
@@ -132,9 +134,12 @@ public:
 			cout << help();
 			return 1;
 		}
-		if ( args.size() == 2 ) cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
-		try {
+		if ( args.size() == 2 )
+			cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
+		else try {
 			cout << "evidence: " << endl << prove ( convert ( args[2] ), merge ( convert ( args[3] ) ) );
+		//	menu();
+	//		cout << "dict: " << endl << dict.tostr()<<endl;
 			return 0;
 		} catch ( exception& ex ) {
 			cerr << ex.what() << endl;
