@@ -21,7 +21,7 @@ rule& rule::init ( predicate* h, predlist b ) {
 }
 
 int builtin ( predicate* p ) {
-	if ( p && p->pred == dict["GND"] ) return 1;
+//	if ( p && p->pred == dict["GND"] ) return 1;
 	return -1;
 }
 
@@ -73,8 +73,7 @@ bool unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool 
 	if (!_s || !_d) return false;
 	predicate& s = *_s;
 	predicate& d = *_d;
-	if (s.pred == d.pred)
-		trace("we have local pred match"<<endl);
+//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	predicate* p;
 	if ( s.pred < 0 ) return ( p = evaluate ( s, ssub ) ) ? unify ( p, ssub, _d, dsub, f ) : true;
 	if ( d.pred >= 0 ) {
@@ -98,14 +97,13 @@ predlist to_predlist ( const ground_t& g ) {
 	return r;
 }
 
-evidence_t proof_done ( const frame& current_frame ) {
-	evidence_t evidence;
+void evidence_found ( const frame& current_frame, evidence_t& evidence ) {
 	for ( auto x : current_frame.rul->body ) {
 		auto t = evaluate ( *x, current_frame.substitution );
 		if ( evidence.find ( t->pred ) == evidence.end() ) evidence[t->pred] = {};
 		evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {&predicates[npredicates++].init ( dict["GND"], to_predlist ( current_frame.ground ) ) } ) , subst() );
 	}
-	return evidence;
+	trace("evidence so far: " << endl << evidence );
 }
 
 frame* next_frame ( const frame& current_frame, ground_t& g ) {
@@ -152,6 +150,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 	deque<frame*> queue;
 	queue.emplace_back ( &frames[nframes++].init ( goal ) );
 	uint step = 0;
+	evidence_t evidence;
 
 	cout << "goal: " << *goal << endl;
 	while ( !queue.empty() && ++step ) {
@@ -160,7 +159,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 		ground_t g = current_frame.ground;
 		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		if ( current_frame.ind >= current_frame.rul->body.size() ) {
-			if ( !current_frame.parent ) return proof_done ( current_frame );
+			if ( !current_frame.parent ) evidence_found ( current_frame, evidence );
 			else queue.push_back ( next_frame ( current_frame, g ) );
 		} else {
 			predicate* t = current_frame.rul->body[current_frame.ind];
@@ -174,7 +173,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 			} else if ( b ) if ( frame* f = match_cases ( current_frame, *t, cases ) ) queue.push_front ( f );
 		}
 	}
-	return evidence_t();
+	return evidence;
 }
 
 predicate* mkpred ( string s, const vector<predicate*>& v = vector<predicate*>() ) {
