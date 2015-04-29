@@ -21,3 +21,9 @@ public:
 };
 
 extern bidict& dict;
+
+template<typename T> string print ( T t ) {
+	stringstream ss;
+	ss << t;
+	return ss.str();
+}

@@ -30,13 +30,6 @@ typedef vector<struct rule*> rulelist;
 ostream& operator<< ( ostream& o, const rulelist& l );
 ostream& operator<< ( ostream& o, const predlist& l );
 
-template<typename T> string print ( T t ) {
-	stringstream ss;
-	ss << t;
-	return ss.str();
-}
-
-
 struct predicate {
 	int pred = 0;
 	predlist args;
@@ -60,20 +53,39 @@ struct frame {
 	frame* parent = 0;
 	subst substitution;
 	ground_t ground;
-	frame& init ( const frame& f );
-	frame& init ( rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
+	frame& init ( class reasoner* r, const frame& f );
+	frame& init ( class reasoner*, rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 };
 
+class reasoner {
+	friend struct frame;
+	predicate *predicates = new predicate[max_predicates];
+	rule *rules = new rule[max_rules];
+	frame *frames = new frame[max_frames];
+	uint npredicates = 0, nrules = 0, nframes = 0;
+	const string implication = "http://www.w3.org/2000/10/swap/log#implies";
+	predicate* GND;
+	int builtin ( predicate* p );
+//	rulelist to_rulelist ( const ground_t& g );
+	predicate* evaluate ( predicate& t, const subst& sub );
+	bool unify ( predicate* s, const subst& ssub, predicate* d, subst& dsub, bool f );
+	predlist to_predlist ( const ground_t& g );
+	void evidence_found ( const frame& current_frame, evidence_t& evidence );
+	frame* next_frame ( const frame& current_frame, ground_t& g );
+	frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases );
+public:
+	reasoner();
+	~reasoner();
+	evidence_t operator() ( rule* goal, int maxNumberOfSteps, cases_t& cases );
+	evidence_t operator() ( const qdb& kb, const qlist& query );
+	bool test_reasoner();
+	void printkb();
+	predicate* mkpred ( string s, const vector<predicate*>& v = vector<predicate*>() );
+	rule* mkrule ( predicate* p = 0, const vector<predicate*>& v = vector<predicate*>() );
+	predicate* triple ( const string& s, const string& p, const string& o );
+	predicate* triple ( const jsonld::quad& q );
+};
 
-void printkb();
-int builtin ( predicate* p );
-rulelist to_rulelist ( const ground_t& g );
-predicate* evaluate ( predicate& t, const subst& sub );
-bool unify ( predicate* s, const subst& ssub, predicate* d, subst& dsub, bool f );
-predlist to_predlist ( const ground_t& g );
-evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases );
-evidence_t prove ( const qdb& kb, const qlist& query );
-bool test_reasoner();
 ostream& operator<< ( ostream& o, const subst& s );
 ostream& operator<< ( ostream& o, const ground_t& s );
 ostream& operator<< ( ostream& o, const evidence_t& e );

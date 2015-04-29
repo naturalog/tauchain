@@ -7,11 +7,13 @@
 
 #include "reasoner.h"
 
-predicate *predicates = new predicate[max_predicates];
-rule *rules = new rule[max_rules];
-frame *frames = new frame[max_frames];
-uint npredicates = 0, nrules = 0, nframes = 0;
-const string implication = "http://www.w3.org/2000/10/swap/log#implies";
+reasoner::reasoner() : GND(&predicates[npredicates++].init ( dict.set("GND"))){}
+
+reasoner::~reasoner() {
+	delete[] predicates;
+	delete[] rules;
+	delete[] frames;
+}
 
 rule& rule::init ( predicate* h, predlist b ) {
 	head = h;
@@ -19,19 +21,19 @@ rule& rule::init ( predicate* h, predlist b ) {
 	return *this;
 }
 
-int builtin ( predicate*  ) {
+int reasoner::builtin ( predicate*  ) {
 //	if ( p && p->pred == dict["GND"] ) return 1;
 	return -1;
 }
 
-frame& frame::init ( const frame& f ) {
-	if ( nframes >= max_frames ) throw "Buffer overflow";
-	if ( !f.parent ) return init ( f.rul, f.src, f.ind, 0, f.substitution, f.ground );
-	return init ( f.rul, f.src, f.ind, &frames[nframes++].init ( *f.parent ), f.substitution, f.ground );
+frame& frame::init ( reasoner* r, const frame& f ) {
+	if ( r->nframes >= max_frames ) throw "Buffer overflow";
+	if ( !f.parent ) return init ( r, f.rul, f.src, f.ind, 0, f.substitution, f.ground );
+	return init ( r, f.rul, f.src, f.ind, &r->frames[r->nframes++].init ( r, *f.parent ), f.substitution, f.ground );
 }
 
-frame& frame::init ( rule* _r, uint _src, uint _ind, frame* p, subst _s, ground_t _g ) {
-	if ( nframes >= max_frames ) throw "Buffer overflow";
+frame& frame::init ( reasoner* rs, rule* _r, uint _src, uint _ind, frame* p, subst _s, ground_t _g ) {
+	if ( rs->nframes >= max_frames ) throw "Buffer overflow";
 	rul = _r;
 	src = _src;
 	ind = _ind;
@@ -41,7 +43,7 @@ frame& frame::init ( rule* _r, uint _src, uint _ind, frame* p, subst _s, ground_
 	return *this;
 }
 
-void printkb() {
+void reasoner::printkb() {
 	static bool pause = false;
 	cout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nframes << " frames. " << endl;
 	cout << "predicates: " <<  endl;
@@ -55,7 +57,7 @@ void printkb() {
 	if ( pause && getchar() == 'c' ) pause = false;
 }
 
-predicate* evaluate ( predicate& t, const subst& sub ) {
+predicate* reasoner::evaluate ( predicate& t, const subst& sub ) {
 	if ( t.pred < 0 ) {
 		auto it = sub.find ( t.pred );
 		return it == sub.end() ? 0 : evaluate ( *it->second, sub );
@@ -67,7 +69,7 @@ predicate* evaluate ( predicate& t, const subst& sub ) {
 	return r;
 }
 
-bool unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool f ) {
+bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool f ) {
 	if (!_s && !_d) return true;
 	if (!_s || !_d) return false;
 	predicate& s = *_s;
@@ -88,38 +90,25 @@ bool unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool 
 	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
 	return true;
 }
-/*
-vector<rule*> to_rulelist ( const ground_t& g ) {
-	//typedef list<pair<rule*, subst>> gnd;
-	rulelist r;
-	for ( auto x : g ) r.push_back ( x.first );
-	return r;
-}
-*/
 
-void evidence_found ( const frame& current_frame, evidence_t& evidence ) {
-//typedef map<int, forward_list<pair<rule*, subst>>> evidence_t;
-//typedef list<pair<rule*, subst>> ground_t;
+void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence ) {
 	for ( predicate* x : current_frame.rul->body ) {
 		predicate* t = evaluate ( *x, current_frame.substitution );
-		predicate* g = &predicates[npredicates++].init ( dict["GND"]);
-		rule* r = &rules[nrules++].init ( t, {g});
-		trace("pushing new evidence, t = " << *t << " g = " << *g << " r = " << *r << endl);
-		evidence[t->pred].emplace_front ( r, current_frame.ground );
+		evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {GND}), current_frame.ground );
 	}
 	trace("evidence so far: " << endl << evidence );
 }
 
-frame* next_frame ( const frame& current_frame, ground_t& g ) {
+frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 	if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
-	frame& new_frame = frames[nframes++].init ( *current_frame.parent );
+	frame& new_frame = frames[nframes++].init ( this, *current_frame.parent );
 	new_frame.ground = ground_t();
 	unify ( current_frame.rul->head, current_frame.substitution, new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
 	return &new_frame;
 }
 
-frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
+frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
 	trace ( "looking for " << t << " in cases" << endl );
 	if ( cases.find ( t.pred ) == cases.end() /* || cases[t->pred].empty()*/ ) return 0;
 
@@ -130,7 +119,7 @@ frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
 		src++;
 		ground_t ground = current_frame.ground;
 		if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
-		frame& candidate_frame = frames[nframes++].init ( &rl, src, 0, &current_frame, subst(), ground );
+		frame& candidate_frame = frames[nframes++].init ( this, &rl, src, 0, &current_frame, subst(), ground );
 		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
 			trace ( "unified!" << endl );
 			frame& ep = current_frame;
@@ -150,9 +139,9 @@ frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
 	return 0;
 }
 
-evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
+evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 	deque<frame*> queue;
-	queue.emplace_back ( &frames[nframes++].init ( goal ) );
+	queue.emplace_back ( &frames[nframes++].init ( this, goal ) );
 	uint step = 0;
 	evidence_t evidence;
 
@@ -170,7 +159,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 			int b = builtin ( t ); // ( t, c );
 			if ( b == 1 ) {
 				g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
-				frame& r = frames[nframes++].init ( current_frame );
+				frame& r = frames[nframes++].init ( this, current_frame );
 				r.ground = ground_t();
 				r.ind++;
 				queue.push_back ( &r );
@@ -180,21 +169,21 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 	return evidence;
 }
 
-predicate* mkpred ( string s, const vector<predicate*>& v = vector<predicate*>() ) {
+predicate* reasoner::mkpred ( string s, const vector<predicate*>& v ) {
 	uint p;
 	p = dict.has ( s ) ? dict[s] : dict.set ( s );
 	return &predicates[npredicates++].init ( p, v );
 }
 
-rule* mkrule ( predicate* p = 0, const vector<predicate*>& v = vector<predicate*>() ) {
+rule* reasoner::mkrule ( predicate* p, const vector<predicate*>& v ) {
 	return &rules[nrules++].init ( p, v );
 }
 
-predicate* triple ( const string& s, const string& p, const string& o ) {
+predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
 	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
 };
 
-predicate* triple ( const jsonld::quad& q ) {
+predicate* reasoner::triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
@@ -204,43 +193,7 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-/*
-    10:05 < HMC_A_> if X=>Y
-    10:05 < HMC_A_> then for each statement in Y make a rule
-    10:05 < HMC_A_> of X=>Yi for Yi in Y
-    10:05 < HMC_A_> where X is all the statements in X
-    10:06 < HMC_A_> the body (X) is a vector of statements (triples)
-    10:06 < HMC_A_> each head (Yi) is only one statement (triple)
-    10:06 < HMC_A_> conjunction, disjunction!
-    10:06 < HMC_A_> body is conjuncted
-    10:06 < HMC_A_> head is disjuncted
-
-evidence_t prove ( const qdb& kb, const qlist& query ) {
-	evidence_t evidence;
-	cases_t cases;
-	qlist graph = merge ( kb );
-	for ( auto quad : qkb ) {
-		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, c = quad->graph->value;
-		dict.set ( { s, p, o, c } );
-		if ( p != implication ) cases[dict[p]].push_back ( mkrule ( mkpred(p), {mkpred( s),mkpred( o)  } ) );
-		else if ( kb.find ( o ) != kb.end() )
-			for ( auto y : *kb.at ( o ) )
-				if ( y->graph->value == o ) {
-					rule& rul = *mkrule();
-					rul.head = triple ( *y );
-					for ( auto z : qkb )
-						if ( z->subj->value == s )
-							rul.body.push_back ( triple ( *z ) );
-					cases[dict[p]].push_back ( &rul );
-				}
-	}
-
-	rule& goal = *mkrule();
-	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-	return prove ( &goal, -1, cases );
-}
-*/
-evidence_t prove ( const qdb &kb, const qlist& query ) {
+evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	qlist graph = merge ( kb );
 	evidence_t evidence;
 	cases_t cases;
@@ -268,10 +221,10 @@ evidence_t prove ( const qdb &kb, const qlist& query ) {
 	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-	return prove ( &goal, -1, cases );
+	return (*this) ( &goal, -1, cases );
 }
 
-bool test_reasoner() {
+bool reasoner::test_reasoner() {
 	dict.set ( "a" );
 //	cout <<"dict:"<<endl<< dict.tostr() << endl;
 //	exit(0);
@@ -286,7 +239,7 @@ bool test_reasoner() {
 	cout << "cases:" << endl << cases << endl;
 	printkb();
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	evidence = prove ( mkrule ( goal, { goal } ), -1, cases );
+	evidence = (*this) ( mkrule ( goal, { goal } ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	cout << evidence << endl;
 	cout << "QED!" << endl;

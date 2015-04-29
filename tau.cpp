@@ -119,6 +119,7 @@ public:
 };
 
 class prove_cmd : public cmd_t {
+	reasoner r;
 public:
 	virtual string desc() const {
 		return "Run a query against a knowledgebase.";
@@ -135,9 +136,9 @@ public:
 			return 1;
 		}
 		if ( args.size() == 2 )
-			cout << ( test_reasoner() ? "pass" : "fail" ) << endl;
+			cout << ( r.test_reasoner() ? "pass" : "fail" ) << endl;
 		else try {
-			cout << "evidence: " << endl << prove ( convert ( args[2] ), merge ( convert ( args[3] ) ) );
+			cout << "evidence: " << endl << r ( convert ( args[2] ), merge ( convert ( args[3] ) ) );
 		//	menu();
 	//		cout << "dict: " << endl << dict.tostr()<<endl;
 			return 0;
@@ -149,17 +150,15 @@ public:
 	}
 };
 
-map<string, cmd_t*> cmds = []() {
-	map<string, cmd_t*> r;
-	r["expand"] = new expand_cmd;
-	r["toquads"] = new toquads_cmd;
-	r["nodemap"] = new nodemap_cmd;
-	r["convert"] = new convert_cmd;
-	r["prove"] = new prove_cmd;
-	return r;
-}();
+map<string, cmd_t*> cmds;
 
 int main ( int argc, char** argv ) {
+	cmds = {
+	{ string("expand") , new expand_cmd },
+	{ string("toquads") , new toquads_cmd },
+	{ string("nodemap") , new nodemap_cmd },
+	{ string("convert") , new convert_cmd },
+	{ string("prove") , new prove_cmd }};
 	strings args;
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
 	if ( argc == 1 || ( cmds.find ( argv[1] ) == cmds.end() && args[1] != "help" ) ) {

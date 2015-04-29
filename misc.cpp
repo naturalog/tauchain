@@ -3,7 +3,6 @@
 bidict& dict = *new bidict;
 
 bidict::bidict() {
-	set ( "GND" );
 }
 
 void bidict::set ( const vector<string>& v ) {
