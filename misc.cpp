@@ -90,7 +90,7 @@ ostream& operator<< ( ostream& o, const ground_t& s ) {
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
-	for ( pair<int, forward_list<pair<rule*, ground_t>>> x : e ) {
+	for ( pair<int, list<pair<rule*, ground_t>>> x : e ) {
 		( deref ? o << dict[x.first] : o << x.first ) << ':' << endl;
 		for ( pair<rule*, ground_t> y : x.second ) 
 			o << '\t' << *y.first << y.second << endl;
@@ -99,7 +99,7 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 }
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
-	for ( pair<int, vector<rule*>> x : e ) {
+	for ( pair<int, list<rule*>> x : e ) {
 		( deref ? o << dict[x.first] : o << x.first ) << "( " << endl;
 		for (rule* y : x.second) o << '\t' << *y << endl;
 		o << " ) " << endl;

@@ -44,8 +44,8 @@ struct rule {
 
 typedef map<int, predicate*> subst;
 typedef list<pair<rule*, subst>> ground_t;
-typedef map<int, forward_list<pair<rule*, ground_t>>> evidence_t;
-typedef map<int, vector<rule*>> cases_t;
+typedef map<int, list<pair<rule*, ground_t>>> evidence_t;
+typedef map<int, list<rule*>> cases_t;
 
 struct frame {
 	rule* rul = 0;

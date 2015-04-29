@@ -21,8 +21,8 @@ rule& rule::init ( predicate* h, predlist b ) {
 	return *this;
 }
 
-int reasoner::builtin ( predicate*  ) {
-//	if ( p && p->pred == dict["GND"] ) return 1;
+int reasoner::builtin ( predicate* p ) {
+	if ( p && dict[p->pred] == "GND" ) return 1;
 	return -1;
 }
 
@@ -95,17 +95,16 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 	}
 	p = evaluate ( d, dsub );
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
-	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
+//f ( f ) 
+		dsub[d.pred] = evaluate ( s, ssub );
 	return true;
 }
 
 void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence ) {
 	for ( predicate* x : current_frame.rul->body ) {
 		predicate* t = evaluate ( *x, current_frame.substitution );
-		evidence[t->pred].emplace_front ( &rules[nrules++].init ( t, {GND}), current_frame.ground );
+		evidence[t->pred].emplace_back ( &rules[nrules++].init ( t, { mkpred("GND") }), current_frame.ground );
 	}
-	trace( "evidence so far: " << endl << evidence );
-	trace( "current frame:" << endl << current_frame );
 }
 
 frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
@@ -167,7 +166,7 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 			if ( b == 1 ) {
 				g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
 				frame& r = frames[nframes++].init ( this, current_frame );
-				r.ground = ground_t();
+				r.ground = g;
 				r.ind++;
 				queue.push_back ( &r );
 			} else if ( b ) if ( frame* f = match_cases ( current_frame, *t, cases ) ) queue.push_front ( f );
@@ -177,9 +176,7 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 }
 
 predicate* reasoner::mkpred ( string s, const vector<predicate*>& v ) {
-	uint p;
-	p = dict.has ( s ) ? dict[s] : dict.set ( s );
-	return &predicates[npredicates++].init ( p, v );
+	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
 }
 
 rule* reasoner::mkrule ( predicate* p, const vector<predicate*>& v ) {
@@ -208,7 +205,7 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
 		dict.set({s,p,o,c});
-		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
+		if ( p == implication ) {
 			if (kb.find(o) != kb.end())
 				for ( const auto &y : *kb.at(o) ) {
 					rule& rul = *mkrule();
