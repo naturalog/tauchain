@@ -58,14 +58,21 @@ void reasoner::printkb() {
 }
 
 predicate* reasoner::evaluate ( predicate& t, const subst& sub ) {
+	predicate* r;
+	trace ( "\tEval " << t << " in " << sub << endl);
 	if ( t.pred < 0 ) {
 		auto it = sub.find ( t.pred );
-		return it == sub.end() ? 0 : evaluate ( *it->second, sub );
+		r = it == sub.end() ? 0 : evaluate ( *it->second, sub );
+	} else if ( t.args.empty() ) r = &t;
+	else {
+		predicate *p;
+		r = &predicates[npredicates++].init ( t.pred );
+		for ( auto x : t.args ) r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
 	}
-	if ( t.args.empty() ) return &t;
-	predicate *p, *r;
-	r = &predicates[npredicates++].init ( t.pred );
-	for ( auto x : t.args ) r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
+#ifdef DEBUF
+	if (r) { trace ( " returned " << *r << endl); }
+	else { trace ( " returned 0" << endl); }
+#endif
 	return r;
 }
 
@@ -74,6 +81,7 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 	if (!_s || !_d) return false;
 	predicate& s = *_s;
 	predicate& d = *_d;
+	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl);
 //	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	predicate* p;
 	if ( s.pred < 0 ) return ( p = evaluate ( s, ssub ) ) ? unify ( p, ssub, _d, dsub, f ) : true;
@@ -109,19 +117,17 @@ frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 }
 
 frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
-	trace ( "looking for " << t << " in cases" << endl );
-	if ( cases.find ( t.pred ) == cases.end() /* || cases[t->pred].empty()*/ ) return 0;
+	if ( cases.find ( t.pred ) == cases.end() ) return 0;
 
 	uint src = 0;
 	for ( rule* _rl : cases[t.pred] ) {
 		rule& rl = *_rl;
-		trace ( "trying to unify rule " << rl << " from cases against " << t << "... " );
+//		trace ( "trying to unify rule " << rl << " from cases against " << t << "... " );
 		src++;
 		ground_t ground = current_frame.ground;
 		if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
 		frame& candidate_frame = frames[nframes++].init ( this, &rl, src, 0, &current_frame, subst(), ground );
 		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
-			trace ( "unified!" << endl );
 			frame& ep = current_frame;
 			while ( ep.parent ) {
 				ep = *ep.parent;
@@ -133,8 +139,7 @@ frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& case
 				//	cout << "pushing frame: " << candidate_frame << endl;
 				return &candidate_frame;
 			}
-		} else
-			trace ( "unification failed" << endl );
+		}
 	}
 	return 0;
 }
@@ -237,12 +242,12 @@ bool reasoner::test_reasoner() {
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
 	cout << "cases:" << endl << cases << endl;
-	printkb();
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	evidence = (*this) ( mkrule ( goal, { goal } ), -1, cases );
+	evidence = (*this) ( mkrule ( 0, { goal } ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	cout << evidence << endl;
 	cout << "QED!" << endl;
 	cout << evidence.size() << endl;
+	printkb();
 	return evidence.size();
 }

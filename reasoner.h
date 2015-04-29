@@ -63,7 +63,6 @@ class reasoner {
 	rule *rules = new rule[max_rules];
 	frame *frames = new frame[max_frames];
 	uint npredicates = 0, nrules = 0, nframes = 0;
-	const string implication = "http://www.w3.org/2000/10/swap/log#implies";
 	predicate* GND;
 	int builtin ( predicate* p );
 //	rulelist to_rulelist ( const ground_t& g );

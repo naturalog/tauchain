@@ -109,6 +109,8 @@ const auto Ex17 = std::runtime_error ( LIST_OF_LISTS + tab + string ( "A list ma
 const auto Ex18 = std::runtime_error ( INVALID_REVERSE_VALUE + tab + string ( "@reverse value must be an object" ) );
 const auto Ex19 = std::runtime_error ( LIST_OF_LISTS + tab + string ( "lists of lists are not permitted." ) );
 
+const string implication = "http://www.w3.org/2000/10/swap/log#implies";
+
 inline bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
 }

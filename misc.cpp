@@ -20,15 +20,10 @@ int bidict::set ( const string& v ) {
 
 const string bidict::operator[] ( const int& k ) {
 	return m.left.find ( k )->second;
-//	auto v = m1[k];
-//	m2[m1[k]];
-//	return v;
 }
 
 int bidict::operator[] ( const string& v ) {
 	return m.right.find ( v )->second;
-//	m1[m2[v]];
-//	return m2[v];
 }
 
 bool bidict::has ( int k ) const {
@@ -52,58 +47,62 @@ predicate& predicate::init ( int _p, predlist _args ) {
 }
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
+	if (p.args.size() == 2) {
+		o << "{ ";
+		if (deref) o << dict[p.args[0]->pred];
+		else o << p.args[0]->pred;
+		if (dict[p.pred] == implication) o << " <= ";
+		else {
+			o << ' ';
+			if (deref) o << dict[p.pred];
+			else o << p.pred;
+			o << ' ';
+		}
+		return (deref ? o << dict[p.args[1]->pred] : o << p.args[1]->pred) << " . } ";
+	}
 	if ( deref ) o << dict[p.pred];
 	else o << p.pred;
 	return p.args.empty() ? o : o << p.args;
 }
 
 ostream& operator<< ( ostream& o, const rule& r ) {
-	if ( r.body.empty() ) o << "{}";
-	else o << r.body;
-	o << " => ";
-	if ( r.head ) return o << ( *r.head );
-	else return o << "{}";
+	o << "{ ";
+	for (auto x : r.body) o << *x << ' ';
+	o << "} => ";
+	if (r.head) return o << *r.head;
+	else return o << "{ }";
+//	if ( r.body.empty() ) o << "{}";
+//	else o << r.body;
+//	o << " => ";
+//	return r.head ? o << ( *r.head ) : o << "{}";
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( auto x : s ) {
-		if ( deref ) o << dict[x.first];
-		else o << x.first;
-		o << " := " << *x.second << endl;
-	}
+	for ( pair<int, predicate*> x : s )
+		( deref ? o << dict[x.first] : o << x.first ) << " / " << *x.second << "; ";
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
-	for ( auto x : s ) o << *x.first << "/" << x.second << '|';
+	for ( pair<rule*, subst> x : s ) 
+		o << *x.first << " ( " << x.second << " ) ";
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
-	for ( auto x : e ) {
-		o << '{';
-		for ( auto y : x.second ) o << *y.first << y.second << " . ";
-		o << "} => ";
-		if ( deref ) o << dict[x.first];
-		else o << x.first;
-		o << endl;
+	for ( pair<int, forward_list<pair<rule*, ground_t>>> x : e ) {
+		( deref ? o << dict[x.first] : o << x.first ) << ':' << endl;
+		for ( pair<rule*, ground_t> y : x.second ) 
+			o << '\t' << *y.first << y.second << endl;
 	}
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
-	for ( auto x : e ) {
-		o << '[';
-		for ( auto y = x.second.begin();; ) {
-			o << *y;
-			if (++y == x.second.end()) break;
-			else o << " | ";
-		}
-		o << ']';
-		o << " => ";
-		if ( deref ) o << dict[x.first];
-		else o << x.first;
-		o << endl;
+	for ( pair<int, vector<rule*>> x : e ) {
+		( deref ? o << dict[x.first] : o << x.first ) << "( " << endl;
+		for (rule* y : x.second) o << '\t' << *y << endl;
+		o << " ) " << endl;
 	}
 	return o;
 }
@@ -124,7 +123,7 @@ ostream& operator<< ( ostream& o, const rulelist& l ) {
 		if ( ++it == l.end() ) break;
 		else o << ',';
 	}
-	return o << ']';
+	return o << ']' << endl;
 }
 
 ostream& operator<< ( ostream& o, const predlist& l ) {
