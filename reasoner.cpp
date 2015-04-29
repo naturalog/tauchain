@@ -116,7 +116,7 @@ frame* next_frame ( const frame& current_frame, ground_t& g ) {
 }
 
 frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
-	trace ( "looking for " << t << " in cases: " << endl << cases << endl << "end cases" << endl );
+	trace ( "looking for " << t << " in cases" << endl );
 	if ( cases.find ( t.pred ) == cases.end() /* || cases[t->pred].empty()*/ ) return 0;
 
 	uint src = 0;
@@ -152,7 +152,7 @@ evidence_t prove ( rule* goal, int max_steps, cases_t& cases ) {
 	uint step = 0;
 	evidence_t evidence;
 
-	cout << "goal: " << *goal << endl;
+	cout << "goal: " << *goal << endl << "cases:"<<endl<<cases<<endl;
 	while ( !queue.empty() && ++step ) {
 		frame& current_frame = *queue.front();
 		queue.pop_front();
