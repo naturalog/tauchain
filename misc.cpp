@@ -94,7 +94,11 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 ostream& operator<< ( ostream& o, const cases_t& e ) {
 	for ( auto x : e ) {
 		o << '[';
-		for ( auto y : x.second ) o << *y << " | ";
+		for ( auto y = x.second.begin();; ) {
+			o << *y;
+			if (++y == x.second.end()) break;
+			else o << " | ";
+		}
 		o << ']';
 		o << " => ";
 		if ( deref ) o << dict[x.first];
