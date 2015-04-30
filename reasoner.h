@@ -105,7 +105,8 @@ struct proof_trace_item {
 	#endif
 	operator string() const {
 		stringstream o;
-		o << "<<" << ( string ) rule << src << "," << ind << "(";
+                o << "<<" << ( string ) rule << src << "," << ind << "(";
+//		o << "{\"rule\":" << ( string ) rule << " srcc: " << src << "," << "ind:"<<ind << ",parent:(";
 		if ( parent ) o << ( string ) ( *parent );
 		o << ") {env:" << ( *env ) << "}[[ground:" << ( *ground ) << "]]";
 		return o.str();
@@ -125,18 +126,24 @@ void ubi ( const ppti i ) {
 
 	if ( i->parent ) {
 		int e = ubigraph_new_edge ( i->parent->ubi_node_id, i->ubi_node_id );
-		ubigraph_set_edge_attribute ( e, "color", "#ffffff" );
-		ubigraph_set_edge_attribute ( e, "width", "5" );
+		if (i->parent->parent)
+			ubigraph_set_edge_attribute ( e, "color", "#ffffff" );
+		else	
+			ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
+		ubigraph_set_edge_attribute ( e, "width", "3" );
 		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		ubigraph_set_edge_attribute ( e, "strength", "1.2" );
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
+		ubigraph_set_edge_attribute ( e, "strength", "0.5" );
+		if (i->parent->parent)
+			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
+		else	
+			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#55ffff" );
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
 	} else {
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
 
 	}
-	
+	/*
 	for (auto g : *i->ground)
 		if ( g.src.ubi_node_id )
 		{
@@ -145,15 +152,15 @@ void ubi ( const ppti i ) {
 			ubigraph_set_edge_attribute ( e, "visible", "false" );
 			ubigraph_set_edge_attribute ( e, "oriented", "true" );
 		}
-	
+	*/
 	if ( i->rule.ubi_node_id && !i->rule.body.size())
 	{
 		int e = ubigraph_new_edge ( i->ubi_node_id, i->rule.ubi_node_id );
 		ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
 		ubigraph_set_edge_attribute ( e, "width", "5" );
 		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		ubigraph_set_edge_attribute ( e, "strength", "0.2" );
-		ubigraph_set_edge_attribute ( e, "visible", "true" );
+		ubigraph_set_edge_attribute ( e, "strength", "0.5" );
+		ubigraph_set_edge_attribute ( e, "visible", "false" );
 	
 	}
 	
@@ -163,6 +170,7 @@ void ubi ( const ppti i ) {
 void ubi_add_facts ( evidence_t &cases ) {
 	#ifdef UBI
 	vector<int> ids;
+	int first, prev = 0;
 	for ( auto &c : cases )
 		for(auto it = c.second.begin() ; it != c.second.end() ; ++it)
 			//if ( !r.body.size() ) 
@@ -173,9 +181,22 @@ void ubi_add_facts ( evidence_t &cases ) {
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "fontcolor", "#ccffcc" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "color", "#55ff55" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "shape", "cube" );
-
+				ubigraph_set_vertex_attribute ( it->ubi_node_id, "size", "5" );
+				/*
+				if (prev)
+					ubigraph_new_edge ( it->ubi_node_id,  prev);
+				else
+					first = it->ubi_node_id;
+				prev = it->ubi_node_id;
+				*/
 			}
+	/*
+	if (prev)
+		ubigraph_new_edge ( prev, first);
+	*/
 
+	/*
+	//a grid
 	unsigned int w = sqrt ( ids.size() ) + 1;
 	for ( unsigned int x = 0; x < w; x++ ) {
 		unsigned int h = ids.size() / w + 1;
@@ -194,6 +215,7 @@ void ubi_add_facts ( evidence_t &cases ) {
 				ubigraph_new_edge ( id, ids[x * h + y - 1] );
 		}
 	}
+	*/
 	#endif
 }
 
@@ -236,9 +258,6 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
 				trace ( "no parent!" << endl );
-				#ifdef UBI
-				ubigraph_set_vertex_attribute ( c->ubi_node_id, "color", "#ffff33" );
-				#endif
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
@@ -256,6 +275,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
 			trace (  ( string ) ( *r ) << endl );
+			if (r->parent && !r->parent->parent)
+				trace("subquery "<<  ( string ) ( *r )  << endl);
 			queue.push_back ( r ); ubi(r);
 			continue;
 		}
