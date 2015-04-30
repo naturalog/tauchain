@@ -50,7 +50,7 @@ predicate& predicate::init ( int _p, predlist _args ) {
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
 	if ( p.args.size() == 2 ) {
-		o << "{ ";
+//		o << "{ ";
 		if ( deref ) o << dict[p.args[0]->pred];
 		else o << p.args[0]->pred;
 		if ( dict[p.pred] == implication ) o << " <= ";
@@ -60,7 +60,7 @@ ostream& operator<< ( ostream& o, const predicate& p ) {
 			else o << p.pred;
 			o << ' ';
 		}
-		return ( deref ? o << dict[p.args[1]->pred] : o << p.args[1]->pred ) << " . } ";
+		return ( deref ? o << dict[p.args[1]->pred] : o << p.args[1]->pred ) << " .";// } ";
 	}
 	if ( deref ) o << dict[p.pred];
 	else o << p.pred;
@@ -73,10 +73,6 @@ ostream& operator<< ( ostream& o, const rule& r ) {
 	o << "} => ";
 	if ( r.head ) return o << *r.head;
 	else return o << "{ }";
-	//	if ( r.body.empty() ) o << "{}";
-	//	else o << r.body;
-	//	o << " => ";
-	//	return r.head ? o << ( *r.head ) : o << "{}";
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
