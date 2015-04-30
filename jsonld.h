@@ -75,7 +75,7 @@ struct jsonld_options {
 	jsonld_options() {
 	}
 
-	jsonld_options ( pstring base_ ) : base(base_) {}
+	jsonld_options ( pstring base_ ) : base ( base_ ) {}
 	jsonld_options ( string base_ ) :
 		base ( pstr ( base_ ) ) {
 	}

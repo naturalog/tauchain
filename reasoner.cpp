@@ -90,7 +90,12 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
 	//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	predicate* p;
-	if ( s.pred < 0 ) return ( p = evaluate ( s, ssub ) ) ? unify ( p, ssub, _d, dsub, f ) : true;
+	if ( s.pred < 0 )
+		if ( p = evaluate ( s, ssub ) ) unify ( p, ssub, _d, dsub, f );
+		else {
+			trace ( "Match." << endl );
+			return	true;
+		}
 	if ( d.pred >= 0 ) {
 		if ( s.pred != d.pred || s.args.size() != d.args.size() ) return false;
 		const predlist& as = s.args, ad = d.args;
@@ -210,7 +215,7 @@ qlist merge ( const qdb& q ) {
 evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
-	for (const pair<string, jsonld::pqlist>& x : kb) {
+	for ( const pair<string, jsonld::pqlist>& x : kb ) {
 		for ( jsonld::pquad quad : *x.second ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
 			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );

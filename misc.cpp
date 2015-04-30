@@ -94,9 +94,9 @@ ostream& operator<< ( ostream& o, const ground_t& s ) {
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( pair<int, list<pair<rule*, ground_t>>> x : e ) {
 		( deref ? o << dict[x.first] : o << x.first ) << ':';
-		if (x.second.empty()) o << " { }";
+		if ( x.second.empty() ) o << " { }";
 		else for ( pair<rule*, ground_t> y : x.second )
-			o << endl << '\t' << *y.first << y.second;
+				o << endl << '\t' << *y.first << y.second;
 		o << endl;
 	}
 	return o;
@@ -106,7 +106,7 @@ ostream& operator<< ( ostream& o, const cases_t& e ) {
 	for ( pair<int, list<rule*>> x : e ) {
 		( deref ? o << dict[x.first] : o << x.first ) << ": " << endl;
 		for ( rule* y : x.second ) o << '\t' << *y << endl;
-//o << " ) " << endl;
+		//o << " ) " << endl;
 	}
 	return o;
 }
@@ -116,7 +116,7 @@ ostream& operator<< ( ostream& o, const frame& f ) {
 	if ( f.parent ) o << f.parent;
 	else o << "null";
 	o << endl << "\tsubst: " << f.substitution << endl << "\tgnd: " << f.ground;
-	o << "\trule: " << (*f.rul) << endl << '}' << endl;
+	o << "\trule: " << ( *f.rul ) << endl << '}' << endl;
 	return o;
 }
 

@@ -26,24 +26,24 @@ public:
 	}
 
 	pobj nodemap ( const strings& args ) {
-		return nodemap ( load_json ( args[2] ), pstr(string("file://")+args[2] ));
+		return nodemap ( load_json ( args[2] ), pstr ( string ( "file://" ) + args[2] ) );
 	}
 
 	pobj nodemap ( pobj o, pstring base ) {
 		psomap nodeMap = make_shared<somap>();
 		( *nodeMap ) [str_default] = mk_somap_obj();
-		jsonld::jsonld_options opts(base);
-		jsonld::jsonld_api a(opts);
+		jsonld::jsonld_options opts ( base );
+		jsonld::jsonld_api a ( opts );
 		a.gen_node_map ( o, nodeMap );
 		return mk_somap_obj ( nodeMap );
 	}
 	qdb toquads ( const strings& args ) {
-		return toquads ( load_json ( args ), pstr(args[2]) );
+		return toquads ( load_json ( args ), pstr ( args[2] ) );
 	}
 
 	qdb toquads ( pobj o, pstring base ) {
-		jsonld::jsonld_options opts(base);
-		jsonld::jsonld_api a(opts);
+		jsonld::jsonld_options opts ( base );
+		jsonld::jsonld_api a ( opts );
 		rdf_db r ( a );
 		auto nodeMap = o;
 		for ( auto g : *nodeMap->MAP() ) {
@@ -55,11 +55,11 @@ public:
 	}
 
 	qdb convert ( pobj o, pstring base ) {
-		return toquads ( nodemap ( jsonld::expand ( o, jsonld::jsonld_options(base) ), base ), base );
+		return toquads ( nodemap ( jsonld::expand ( o, jsonld::jsonld_options ( base ) ), base ), base );
 	}
 
 	qdb convert ( const string& s ) {
-		return convert ( load_json ( s ), pstr(string("file://") + s + "#" ));
+		return convert ( load_json ( s ), pstr ( string ( "file://" ) + s + "#" ) );
 	}
 };
 

@@ -54,13 +54,13 @@ public:
 		stringstream ss;
 		bool _shorten = shorten;
 		auto f = [_shorten] ( pnode n ) {
-			if (n) {
+			if ( n ) {
 				string s = n->tostring();
-				if (!shorten) return s;
-				if (s.find("#") == string::npos) return s;
-				return s.substr(s.find("#"), s.size() - s.find("#"));
+				if ( !shorten ) return s;
+				if ( s.find ( "#" ) == string::npos ) return s;
+				return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
 			}
-			return string("<>");
+			return string ( "<>" );
 		};
 		ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ' << f ( graph ) << " .";
 		return ss.str();
