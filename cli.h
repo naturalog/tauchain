@@ -3,6 +3,7 @@
 typedef vector<string> strings;
 
 class cmd_t {
+	jsonld::jsonld_options opts;
 public:
 	virtual string desc() const = 0;
 	virtual string help() const = 0;
@@ -20,40 +21,29 @@ public:
 		return r;
 	}
 
-	prdf_db to_quads ( pobj c, bool print = false ) {
-		using namespace jsonld;
-		jsonld_options o;
-		jsonld_api a ( c, o );
-		auto r = a.toRDF ( c, o );
-		if ( print ) {
-			cout << "Loaded graphs:" << endl;
-			for ( auto x : *r ) cout << x.first << endl;
-		}
-		cout << r->tostring() << endl;
-		return r;
-	}
-
-	prdf_db to_quads ( const strings& args, bool print = false ) {
-		return to_quads ( load_json ( args ), print );
-	}
 	pobj load_json ( const strings& args ) {
 		return load_json ( args.size() > 2 ? args[2] : "" );
 	}
+
 	pobj nodemap ( const strings& args ) {
-		return nodemap ( load_json ( args ) );
+		return nodemap ( load_json ( args[2] ), pstr(string("file://")+args[2] ));
 	}
-	pobj nodemap ( pobj o ) {
+
+	pobj nodemap ( pobj o, pstring base ) {
 		psomap nodeMap = make_shared<somap>();
 		( *nodeMap ) [str_default] = mk_somap_obj();
-		jsonld::jsonld_api a;
+		jsonld::jsonld_options opts(base);
+		jsonld::jsonld_api a(opts);
 		a.gen_node_map ( o, nodeMap );
 		return mk_somap_obj ( nodeMap );
 	}
 	qdb toquads ( const strings& args ) {
-		return toquads ( load_json ( args ) );
+		return toquads ( load_json ( args ), pstr(args[2]) );
 	}
-	qdb toquads ( pobj o ) {
-		jsonld::jsonld_api a;
+
+	qdb toquads ( pobj o, pstring base ) {
+		jsonld::jsonld_options opts(base);
+		jsonld::jsonld_api a(opts);
 		rdf_db r ( a );
 		auto nodeMap = o;
 		for ( auto g : *nodeMap->MAP() ) {
@@ -63,11 +53,13 @@ public:
 		}
 		return r;
 	}
-	qdb convert ( pobj o ) {
-		return toquads ( nodemap ( jsonld::expand ( o ) ) );
+
+	qdb convert ( pobj o, pstring base ) {
+		return toquads ( nodemap ( jsonld::expand ( o, jsonld::jsonld_options(base) ), base ), base );
 	}
+
 	qdb convert ( const string& s ) {
-		return convert ( load_json ( s ) );
+		return convert ( load_json ( s ), pstr(string("file://") + s + "#" ));
 	}
 };
 

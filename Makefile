@@ -1,4 +1,4 @@
-CC=g++
+CC=clang++
 CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb -Wextra
 LDFLAGS=-lcurl
 SOURCES=tau.cpp jsonld.cpp rdf.cpp reasoner.cpp misc.cpp

@@ -1,0 +1,8 @@
+[{ "@id": "@default", "@graph": [{ 
+	"@id": "_:g3", "http://www.agfa.com/w3c/euler/ziv#cinema": {"@id": "Globus"},
+	"@id": "_:g3", "http://www.agfa.com/w3c/euler/ziv#city": {"@id": "_:g4"},
+	"@id": "_:g3", "http://www.agfa.com/w3c/euler/ziv#film": {"@id": "_:g5"},
+	"@id": "_:g3", "http://www.agfa.com/w3c/euler/ziv#month": {"@id": "May"},
+	"@id": "_:g3", "http://www.agfa.com/w3c/euler/ziv#year": {"@id": "2001"}
+}]}]
+

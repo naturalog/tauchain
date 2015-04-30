@@ -58,7 +58,7 @@ public:
 			return 1;
 		}
 		try {
-			cout << convert ( load_json ( args ) ) << endl;
+			cout << convert ( args[2] ) << endl;
 			return 0;
 		} catch ( exception& ex ) {
 			std::cerr << ex.what() << endl;
@@ -138,7 +138,8 @@ public:
 		if ( args.size() == 2 )
 			cout << ( r.test_reasoner() ? "pass" : "fail" ) << endl;
 		else try {
-				cout << "evidence: " << endl << r ( convert ( args[2] ), merge ( convert ( args[3] ) ) ) << endl;
+				auto e = r ( convert ( args[2] ), merge ( convert ( args[3] ) ) );
+				cout << "evidence: " << endl << e << endl;
 				//	menu();
 				//		cout << "dict: " << endl << dict.tostr()<<endl;
 				return 0;

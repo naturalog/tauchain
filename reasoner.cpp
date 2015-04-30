@@ -205,15 +205,12 @@ qlist merge ( const qdb& q ) {
 }
 
 evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
-	qlist graph = merge ( kb );
 	evidence_t evidence;
 	cases_t cases;
-	/*the way we store rules in jsonld is: graph1 implies graph2*/
-//	cout << kb;
 	for (auto x : kb) {
 		for ( const auto& quad : *x.second ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
-			dict.set ( {s, p, o, c} );
+			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
 			if ( p == implication ) {
 				if ( kb.find ( o ) != kb.end() )
 					for ( const auto &y : *kb.at ( o ) ) {
@@ -223,14 +220,8 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 							for ( const auto& z : *kb.at ( s ) )
 								rul.body.push_back ( triple ( *z ) );
 						cases[rul.head->pred].push_back ( &rul );
-//						cout << rul << endl;
 					}
 			}
-//			else {
-				rule* r = mkrule ( triple ( s, p, o ) );
-				cout << *r << endl;
-				cases[dict[p]].push_back ( r );
-//			}
 		}
 	}
 	rule& goal = *mkrule();

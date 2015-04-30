@@ -74,10 +74,13 @@ inline pobj get ( psomap p, string k ) {
 struct jsonld_options {
 	jsonld_options() {
 	}
+
+	jsonld_options ( pstring base_ ) : base(base_) {}
 	jsonld_options ( string base_ ) :
 		base ( pstr ( base_ ) ) {
 	}
-	pstring base = pstr ( "http://tauchain.org/" );
+
+	pstring base = 0;//pstr ( "http://tauchain.org/" );
 	pbool compactArrays = make_shared<bool> ( true );
 	pobj expandContext = 0;
 	pstring processingMode = pstr ( "json-ld-1.0" );
