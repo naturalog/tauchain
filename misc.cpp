@@ -13,7 +13,7 @@ void bidict::set ( const vector<string>& v ) {
 int bidict::set ( const string& v ) {
 	auto it = m.right.find ( v );
 	if ( it != m.right.end() ) return it->second;
-	int k = m.size();
+	int k = m.size() + 1;
 	if ( v[0] == '?' || v[0] == '_' ) k = -k;
 	m.insert ( bm::value_type ( k, v ) );
 	return k;

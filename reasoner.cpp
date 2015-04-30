@@ -80,7 +80,10 @@ predicate* reasoner::evaluate ( predicate& t, const subst& sub ) {
 }
 
 bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool f ) {
-	if ( !_s && !_d ) return true;
+	if ( !_s && !_d ) {
+		trace ( "Match two nulls." << endl );
+		return true;
+	}
 	if ( !_s || !_d ) return false;
 	predicate& s = *_s;
 	predicate& d = *_d;
