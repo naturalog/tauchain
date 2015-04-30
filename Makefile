@@ -1,25 +1,25 @@
-CC=clang++
-CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb -Wextra -W
+CC=g++
+CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb -Wextra -W 
 LDFLAGS=-lcurl
+OBJECTS=tau.o jsonld.o rdf.o reasoner.o misc.o
+
+all: tau
+tau: $(OBJECTS) $(EXECUTABLE)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 tau.o: tau.cpp cli.h reasoner.h parsers.h jsonld.h json_spirit.h object.h \
  strings.h rdf.h misc.h
-	$(CC) $(CXXFLAGS) $< -o $@
 jsonld.o: jsonld.cpp jsonld.h json_spirit.h object.h strings.h rdf.h
-	$(CC) $(CXXFLAGS) $< -o $@
 rdf.o: rdf.cpp jsonld.h json_spirit.h object.h strings.h rdf.h
-	$(CC) $(CXXFLAGS) $< -o $@
 reasoner.o: reasoner.cpp reasoner.h parsers.h jsonld.h json_spirit.h \
  object.h strings.h rdf.h misc.h
-	$(CC) $(CXXFLAGS) $< -o $@
 misc.o: misc.cpp reasoner.h parsers.h jsonld.h json_spirit.h object.h \
  strings.h rdf.h misc.h
-	$(CC) $(CXXFLAGS) $< -o $@
 
 debug: CXXFLAGS += -DDEBUG
 
-all: tau.o jsonld.o rdf.o reasoner.o misc.o
-debug: tau.o jsonld.o rdf.o reasoner.o misc.o
+debug: $(OBJECTS) $(EXECUTABLE)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)

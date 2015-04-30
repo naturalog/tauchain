@@ -93,10 +93,10 @@ ostream& operator<< ( ostream& o, const ground_t& s ) {
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
-	for ( pair<int, list<pair<rule*, ground_t>>> x : e ) {
+	for ( pair<int, list<pair<predicate*, ground_t>>> x : e ) {
 		( deref ? o << dict[x.first] : o << x.first ) << ':';
 		if ( x.second.empty() ) o << " { }";
-		else for ( pair<rule*, ground_t> y : x.second )
+		else for ( pair<predicate*, ground_t> y : x.second )
 				o << endl << '\t' << *y.first << y.second;
 		o << endl;
 	}

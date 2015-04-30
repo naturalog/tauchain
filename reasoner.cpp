@@ -117,7 +117,7 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence ) {
 	for ( predicate* x : current_frame.rul->body ) {
 		predicate* t = evaluate ( *x, current_frame.substitution );
-		evidence[t->pred].emplace_back ( &rules[nrules++].init ( t, { mkpred ( "GND" ) } ), current_frame.ground );
+		evidence[t->pred].emplace_back (/* &rules[nrules++].init (*/ t/*, { mkpred ( "GND" ) } )*/, current_frame.ground );
 	}
 }
 
