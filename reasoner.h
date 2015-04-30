@@ -90,7 +90,7 @@ pground_t aCopy ( pground_t f ) {
 }
 
 ostream& operator<< ( ostream& o, ground_t const& g ) {
-	for ( auto gg : g ) o << "_" << ( string ) gg << "_";
+	for ( auto gg : g ) o << "   _" << ( string ) gg << "_   ";
 	return o;
 }
 
@@ -244,9 +244,10 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
 					for (auto gnd_item : *c->ground)
 						tmp.body[0].args.push_back(gnd_item.src.head);
-					trace (  "Adding evidence for " << ( string ) t.pred << ": " << ( string ) tmp << endl );
+					trace (  "Adding evidence for " << ( string ) t.pred << ": " <<  *c->ground << endl );
 					evidence[t.pred].push_back ( tmp );
 				}
+
 				continue;
 			}
 			trace ( "Q parent: " );
@@ -448,7 +449,17 @@ pred_t triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
-//evidence_t prove ( , const psomap& query ) {
+void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t &cases)
+{
+	rule_t rule{head, {}};
+	if (kb.find(s) != kb.end())
+		for ( const auto& x : *kb[s] )
+			rule.body.push_back ( triple ( *x ) );
+	else
+		throw std::runtime_error (s + "is not a graph in our kb");
+	cases[rule.head.pred].push_back ( rule );
+}
+
 evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
 
 	#ifdef UBI
@@ -459,23 +470,18 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+		cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			for ( const auto &y : *kb[o] )
-			{
-				rule_t rule;
-				rule.head = triple ( *y );
-				for ( const auto& x : *kb[s] )
-					rule.body.push_back ( triple ( *x ) );
-				cases[rule.head.pred].push_back ( rule );
-				cout << ( string ) rule << endl;
-
-			}
-		} 
-		else
-		{
-			rule_t r = { { p, { mk_res ( s ), mk_res ( o ) }}, {}};
-			cout << ( string ) r << endl;
-			cases[p].push_back ( r );
+			/*if (o == "http://eulersharp.sourceforge.net/2003/03swap/rdfs-rules#true")
+				 ?
+			else if (o == "http://eulersharp.sourceforge.net/2003/03swap/rdfs-rules#false")
+				 ?
+			else*/
+			if (kb.find(o) != kb.end())
+				for ( const auto &y : *kb[o] )
+					add_rule(triple(*y), s, kb, cases);
+			else
+				throw std::runtime_error ("HMC_Alpha> bananas is not a formula...");
 		}
 	}
 	rule_t goal;
