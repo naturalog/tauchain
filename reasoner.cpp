@@ -29,7 +29,7 @@ int reasoner::builtin ( predicate* p ) {
 frame& frame::init ( reasoner* r, const frame& f ) {
 	if ( r->nframes >= max_frames ) throw "Buffer overflow";
 	if ( !f.parent ) return init ( r, f.rul, f.src, f.ind, 0, f.substitution, f.ground );
-	return init ( r, f.rul, f.src, f.ind, &r->frames[r->nframes++].init ( r, *f.parent ), substitution_t(f.substitution), f.ground );
+	return init ( r, f.rul, f.src, f.ind, &r->frames[r->nframes++].init ( r, *f.parent ), f.substitution, f.ground );
 }
 
 frame& frame::init ( reasoner* rs, rule* _r, uint _src, uint _ind, frame* p, subst _s, ground_t _g ) {
@@ -112,7 +112,7 @@ void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence
 frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 	if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
 	frame& new_frame = frames[nframes++].init ( this, *current_frame.parent );
-	new_frame.ground = ground_t(*g);
+	new_frame.ground = g;
 	unify ( current_frame.rul->head, current_frame.substitution, new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
 	return &new_frame;
