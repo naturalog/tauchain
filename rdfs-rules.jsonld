@@ -375,11 +375,8 @@
       "@id": "http://www.w3.org/2000/01/rdf-schema#Literal"
     }],
     "@type": ["http://www.w3.org/2000/01/rdf-schema#Datatype"]
-  }, {
-    "@id": "rdfs-rules.n3#",
-    "#rcsid": [{
-      "@value": "$Id: rdfs-rules.n3 2865 2009-05-21 18:28:02Z josd $"
-    }]
+  } 
+    ]
   }, {
     "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil",
     "@type": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#List"]
