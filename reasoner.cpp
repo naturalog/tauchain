@@ -68,7 +68,8 @@ predicate* reasoner::evaluate ( predicate& t, const subst& sub ) {
 	else {
 		predicate *p;
 		r = &predicates[npredicates++].init ( t.pred );
-		for ( auto x : t.args ) r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
+		for ( auto x : t.args ) 
+			r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
 	}
 	#ifdef DEBUF
 	if ( r )
@@ -84,17 +85,18 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 		trace ( "Match two nulls." << endl );
 		return true;
 	}
-	if ( !_s || !_d ) return false;
+//	if ( !_s ) return _d && _d->pred >= 0; // ??
+//	if ( !_d ) return _s && _s->pred >= 0; // ??
 	predicate& s = *_s;
 	predicate& d = *_d;
 	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
 	//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	predicate* p;
 	if ( s.pred < 0 ) {
-		if (( p = evaluate ( s, ssub ) )) unify ( p, ssub, _d, dsub, f );
+		if (( p = evaluate ( s, ssub ) )) return unify ( p, ssub, _d, dsub, f );
 		else {
 			trace ( "Match." << endl );
-			return	true;
+			return true;
 		}
 	}
 	if ( d.pred >= 0 ) {
