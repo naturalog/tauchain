@@ -5,8 +5,8 @@
 using namespace std;
 
 class bidict {
-//	map<int, string> m1;
-//	map<string, int> m2;
+	//	map<int, string> m1;
+	//	map<string, int> m2;
 	typedef boost::bimap<int, string> bm;
 	bm m;
 public:

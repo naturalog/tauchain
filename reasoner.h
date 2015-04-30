@@ -65,7 +65,7 @@ class reasoner {
 	uint npredicates = 0, nrules = 0, nframes = 0;
 	predicate* GND;
 	int builtin ( predicate* p );
-//	rulelist to_rulelist ( const ground_t& g );
+	//	rulelist to_rulelist ( const ground_t& g );
 	predicate* evaluate ( predicate& t, const subst& sub );
 	bool unify ( predicate* s, const subst& ssub, predicate* d, subst& dsub, bool f );
 	predlist to_predlist ( const ground_t& g );

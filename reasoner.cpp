@@ -7,7 +7,7 @@
 
 #include "reasoner.h"
 
-reasoner::reasoner() : GND(&predicates[npredicates++].init ( dict.set("GND"))){}
+reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
 
 reasoner::~reasoner() {
 	delete[] predicates;
@@ -28,7 +28,6 @@ int reasoner::builtin ( predicate* p ) {
 
 frame& frame::init ( reasoner* r, const frame& f ) {
 	if ( r->nframes >= max_frames ) throw "Buffer overflow";
-	if ( !f.parent ) return init ( r, f.rul, f.src, f.ind, 0, f.substitution, f.ground );
 	frame& res = init ( r, f.rul, f.src, f.ind, 0, f.substitution, f.ground );
 	res.parent = f.parent;
 	return res;
@@ -61,7 +60,7 @@ void reasoner::printkb() {
 
 predicate* reasoner::evaluate ( predicate& t, const subst& sub ) {
 	predicate* r;
-	trace ( "\tEval " << t << " in " << sub << endl);
+	trace ( "\tEval " << t << " in " << sub << endl );
 	if ( t.pred < 0 ) {
 		auto it = sub.find ( t.pred );
 		r = it == sub.end() ? 0 : evaluate ( *it->second, sub );
@@ -71,43 +70,45 @@ predicate* reasoner::evaluate ( predicate& t, const subst& sub ) {
 		r = &predicates[npredicates++].init ( t.pred );
 		for ( auto x : t.args ) r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
 	}
-#ifdef DEBUF
-	if (r) { trace ( " returned " << *r << endl); }
-	else { trace ( " returned 0" << endl); }
-#endif
+	#ifdef DEBUF
+	if ( r )
+		trace ( " returned " << *r << endl );
+	else
+		trace ( " returned 0" << endl );
+	#endif
 	return r;
 }
 
 bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& dsub, bool f ) {
-	if (!_s && !_d) return true;
-	if (!_s || !_d) return false;
+	if ( !_s && !_d ) return true;
+	if ( !_s || !_d ) return false;
 	predicate& s = *_s;
 	predicate& d = *_d;
-	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl);
-//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
+	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
+	//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	predicate* p;
 	if ( s.pred < 0 ) return ( p = evaluate ( s, ssub ) ) ? unify ( p, ssub, _d, dsub, f ) : true;
 	if ( d.pred >= 0 ) {
-		if ( s.pred != d.pred || s.args.size() != d.args.size()) return false;
+		if ( s.pred != d.pred || s.args.size() != d.args.size() ) return false;
 		const predlist& as = s.args, ad = d.args;
-		for (auto sit = as.begin(), dit = ad.begin(); sit != as.end(); ++sit, ++dit)
-			if (!unify(*sit, ssub, *dit, dsub, f))
+		for ( auto sit = as.begin(), dit = ad.begin(); sit != as.end(); ++sit, ++dit )
+			if ( !unify ( *sit, ssub, *dit, dsub, f ) )
 				return false;
-		trace("Match." << endl);
+		trace ( "Match." << endl );
 		return true;
 	}
 	p = evaluate ( d, dsub );
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
-//f ( f ) 
-		dsub[d.pred] = evaluate ( s, ssub );
-	trace("Match." << endl);
+	//f ( f )
+	dsub[d.pred] = evaluate ( s, ssub );
+	trace ( "Match." << endl );
 	return true;
 }
 
 void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence ) {
 	for ( predicate* x : current_frame.rul->body ) {
 		predicate* t = evaluate ( *x, current_frame.substitution );
-		evidence[t->pred].emplace_back ( &rules[nrules++].init ( t, { mkpred("GND") }), current_frame.ground );
+		evidence[t->pred].emplace_back ( &rules[nrules++].init ( t, { mkpred ( "GND" ) } ), current_frame.ground );
 	}
 }
 
@@ -126,10 +127,10 @@ frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& case
 	uint src = 0;
 	for ( rule* _rl : cases[t.pred] ) {
 		rule& rl = *_rl;
-//		trace ( "trying to unify rule " << rl << " from cases against " << t << "... " );
+		//		trace ( "trying to unify rule " << rl << " from cases against " << t << "... " );
 		src++;
 		ground_t ground = current_frame.ground;
-		if ( rl.body.empty() ) 
+		if ( rl.body.empty() )
 			ground.emplace_back ( &rl, subst() );
 		frame& candidate_frame = frames[nframes++].init ( this, &rl, src, 0, &current_frame, subst(), ground );
 		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
@@ -155,12 +156,12 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 	uint step = 0;
 	evidence_t evidence;
 
-	cout << "goal: " << *goal << endl << "cases:"<<endl<<cases<<endl;
+	cout << "goal: " << *goal << endl << "cases:" << endl << cases << endl;
 	while ( !queue.empty() && ++step ) {
 		frame& current_frame = *queue.front();
 		queue.pop_front();
 		ground_t g = current_frame.ground;
-		trace(current_frame << endl);
+		trace ( current_frame << endl );
 		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		if ( current_frame.ind >= current_frame.rul->body.size() ) {
 			if ( !current_frame.parent ) evidence_found ( current_frame, evidence );
@@ -209,37 +210,36 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	cases_t cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	cout << kb;
-	for ( const auto& quad : *kb.at("@default") ) {
-	//for ( const auto& quad : graph ) {
+	for ( const auto& quad : *kb.at ( "@default" ) ) {
+		//for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
-		dict.set({s,p,o,c});
+		dict.set ( {s, p, o, c} );
 		if ( p == implication ) {
-			if (kb.find(o) != kb.end())
-				for ( const auto &y : *kb.at(o) ) {
+			if ( kb.find ( o ) != kb.end() )
+				for ( const auto &y : *kb.at ( o ) ) {
 					rule& rul = *mkrule();
 					rul.head = triple ( *y );
-					if (kb.find(s) != kb.end())
-						for ( const auto& x : *kb.at(s) )
+					if ( kb.find ( s ) != kb.end() )
+						for ( const auto& x : *kb.at ( s ) )
 							rul.body.push_back ( triple ( *x ) );
 					cases[rul.head->pred].push_back ( &rul );
 					cout << rul << endl;
-			}
-		} 
-		else {
-			rule* r = mkrule(triple(s,p,o));
+				}
+		} else {
+			rule* r = mkrule ( triple ( s, p, o ) );
 			cout << *r << endl;
 			cases[dict[p]].push_back ( r );
 		}
 	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-	return (*this) ( &goal, -1, cases );
+	return ( *this ) ( &goal, -1, cases );
 }
 
 bool reasoner::test_reasoner() {
 	dict.set ( "a" );
-//	cout <<"dict:"<<endl<< dict.tostr() << endl;
-//	exit(0);
+	//	cout <<"dict:"<<endl<< dict.tostr() << endl;
+	//	exit(0);
 	evidence_t evidence;
 	cases_t cases;
 	typedef predicate* ppredicate;
@@ -250,7 +250,7 @@ bool reasoner::test_reasoner() {
 
 	cout << "cases:" << endl << cases << endl;
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	evidence = (*this) ( mkrule ( 0, { goal } ), -1, cases );
+	evidence = ( *this ) ( mkrule ( 0, { goal } ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	cout << evidence << endl;
 	cout << "QED!" << endl;
