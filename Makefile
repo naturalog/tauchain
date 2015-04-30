@@ -19,7 +19,7 @@ misc.o: misc.cpp reasoner.h parsers.h jsonld.h json_spirit.h object.h \
 debug: CXXFLAGS += -DDEBUG
 
 debug: $(OBJECTS) $(EXECUTABLE)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
 
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
