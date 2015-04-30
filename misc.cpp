@@ -1,6 +1,7 @@
 #include "reasoner.h"
 
 bidict& dict = *new bidict;
+bool deref = true;
 
 bidict::bidict() {
 }

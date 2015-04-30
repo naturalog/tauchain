@@ -175,6 +175,10 @@ int main ( int argc, char** argv ) {
 		print_usage ( cmds );
 		return 0;
 	}
+	strings::iterator it;
+	if ((it = find(args.begin(), args.end(), "--no-deref")) != args.end()) { deref = false; args.erase(it); }
+	if ((it = find(args.begin(), args.end(), "--pause")) != args.end()) { _pause = true; args.erase(it); }
+	
 	return ( *cmds[argv[1]] ) ( args );
 
 	return 0;
