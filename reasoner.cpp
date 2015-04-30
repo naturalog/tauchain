@@ -255,6 +255,5 @@ bool reasoner::test_reasoner() {
 	cout << evidence << endl;
 	cout << "QED!" << endl;
 	cout << evidence.size() << endl;
-	printkb();
 	return evidence.size();
 }

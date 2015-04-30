@@ -85,35 +85,39 @@ ostream& operator<< ( ostream& o, const subst& s ) {
 }
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
+	o << endl;
 	for ( pair<rule*, subst> x : s )
-		o << *x.first << " ( " << x.second << " ) ";
+		o << '\t' << *x.first << ": " << x.second << endl;
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( pair<int, list<pair<rule*, ground_t>>> x : e ) {
-		( deref ? o << dict[x.first] : o << x.first ) << ':' << endl;
-		for ( pair<rule*, ground_t> y : x.second )
-			o << '\t' << *y.first << y.second << endl;
+		( deref ? o << dict[x.first] : o << x.first ) << ':';
+		if (x.second.empty()) o << " { }";
+		else for ( pair<rule*, ground_t> y : x.second )
+			o << endl << '\t' << *y.first << y.second;
+		o << endl;
 	}
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
 	for ( pair<int, list<rule*>> x : e ) {
-		( deref ? o << dict[x.first] : o << x.first ) << "( " << endl;
+		( deref ? o << dict[x.first] : o << x.first ) << ": " << endl;
 		for ( rule* y : x.second ) o << '\t' << *y << endl;
-		o << " ) " << endl;
+//o << " ) " << endl;
 	}
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const frame& f ) {
-	o << "src: " << f.src << "\tind: " << f.ind << "\tparent: ";
-	if ( f.parent ) o << "(" << *f.parent << ")";
-	else o << "(null)";
-	o << "\tsubst:( " << f.substitution << ")\tgnd: (" << f.ground;
-	return o << ")\trule: " << *f.rul;
+	o << "Frame: " << &f << " {" << endl << "\tsrc: " << f.src << endl << "\tind: " << f.ind << endl << "\tparent pointer: ";
+	if ( f.parent ) o << f.parent;
+	else o << "null";
+	o << endl << "\tsubst: " << f.substitution << endl << "\tgnd: " << f.ground;
+	o << "\trule: " << (*f.rul) << endl << '}' << endl;
+	return o;
 }
 
 ostream& operator<< ( ostream& o, const rulelist& l ) {

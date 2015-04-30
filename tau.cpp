@@ -139,7 +139,6 @@ public:
 			cout << ( r.test_reasoner() ? "pass" : "fail" ) << endl;
 		else try {
 				cout << "evidence: " << endl << r ( convert ( args[2] ), merge ( convert ( args[3] ) ) ) << endl;
-				//			r.printkb();
 				//	menu();
 				//		cout << "dict: " << endl << dict.tostr()<<endl;
 				return 0;
@@ -147,6 +146,7 @@ public:
 				cerr << ex.what() << endl;
 				return 1;
 			}
+		r.printkb();
 		return 0;
 	}
 };
