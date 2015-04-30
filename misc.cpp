@@ -48,22 +48,23 @@ predicate& predicate::init ( int _p, predlist _args ) {
 	return *this;
 }
 
+string dstr(int p) {
+	if ( !deref ) return tostr(p);
+	string s = dict[p];
+	if ( !shorten ) return s;
+	if ( s.find ( "#" ) == string::npos ) return s;
+	return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
+}
+
 ostream& operator<< ( ostream& o, const predicate& p ) {
 	if ( p.args.size() == 2 ) {
 //		o << "{ ";
-		if ( deref ) o << dict[p.args[0]->pred];
-		else o << p.args[0]->pred;
+		o << dstr(p.args[0]->pred);
 		if ( dict[p.pred] == implication ) o << " <= ";
-		else {
-			o << ' ';
-			if ( deref ) o << dict[p.pred];
-			else o << p.pred;
-			o << ' ';
-		}
-		return ( deref ? o << dict[p.args[1]->pred] : o << p.args[1]->pred ) << " .";// } ";
+		else o << ' ' << dstr(p.pred) << ' ';
+		return o << dstr(p.args[1]->pred) << " .";
 	}
-	if ( deref ) o << dict[p.pred];
-	else o << p.pred;
+	o << dstr(p.pred);
 	return p.args.empty() ? o : o << p.args;
 }
 

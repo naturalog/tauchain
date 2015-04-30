@@ -161,6 +161,7 @@ frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& case
 }
 
 evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
+	trace("dict: "<<dict.tostr()<<endl);
 	deque<frame*> queue;
 	queue.emplace_back ( &frames[nframes++].init ( this, goal ) );
 	uint step = 0;
