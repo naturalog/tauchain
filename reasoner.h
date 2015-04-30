@@ -452,6 +452,12 @@ pred_t triple ( const jsonld::quad& q ) {
 void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t &cases)
 {
 	rule_t rule{head, {}};
+	//if (s == true)
+	//{}
+	//else
+	//if (s == false)
+	//throw ("absurdity")
+	//else
 	if (kb.find(s) != kb.end())
 		for ( const auto& x : *kb[s] )
 			rule.body.push_back ( triple ( *x ) );
@@ -472,12 +478,11 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 		cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
-			/*if (o == "http://eulersharp.sourceforge.net/2003/03swap/rdfs-rules#true")
-				 ?
-			else if (o == "http://eulersharp.sourceforge.net/2003/03swap/rdfs-rules#false")
-				 ?
-			else*/
-			if (kb.find(o) != kb.end())
+			/*if (o == true)
+				 ?//query? what do? add it as a triple or not?
+			else if (o == false)
+				{}//negation, ignored, added as triple
+			else*/ if (kb.find(o) != kb.end())
 				for ( const auto &y : *kb[o] )
 					add_rule(triple(*y), s, kb, cases);
 			else
