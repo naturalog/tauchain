@@ -110,7 +110,7 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
 	//f ( f )
 	dsub[d.pred] = evaluate ( s, ssub );
-	trace ( "Match." << endl );
+	trace ( "Match with subst: " << dsub << endl );
 	return true;
 }
 
@@ -220,16 +220,14 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 		for ( jsonld::pquad quad : *x.second ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
 			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
-			if ( p == implication ) {
-				if ( kb.find ( o ) != kb.end() )
-					for ( jsonld::pquad y : *kb.at ( o ) ) {
-						rule& rul = *mkrule();
-						rul.head = triple ( *y );
-						if ( kb.find ( s ) != kb.end() )
-							for ( jsonld::pquad z : *kb.at ( s ) )
-								rul.body.push_back ( triple ( *z ) );
-						cases[rul.head->pred].push_back ( &rul );
-					}
+			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
+			for ( jsonld::pquad y : *kb.at ( o ) ) {
+				rule& rul = *mkrule();
+				rul.head = triple ( *y );
+				if ( kb.find ( s ) != kb.end() )
+					for ( jsonld::pquad z : *kb.at ( s ) )
+						rul.body.push_back ( triple ( *z ) );
+				cases[rul.head->pred].push_back ( &rul );
 			}
 		}
 	}
