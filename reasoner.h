@@ -71,7 +71,7 @@ class reasoner {
 	predlist to_predlist ( const ground_t& g );
 	void evidence_found ( const frame& current_frame, evidence_t& evidence );
 	frame* next_frame ( const frame& current_frame, ground_t& g );
-	frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases );
+	frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases, deque<frame*>& queue );
 public:
 	reasoner();
 	~reasoner();

@@ -131,7 +131,7 @@ frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 	return &new_frame;
 }
 
-frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& cases ) {
+frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& cases, deque<frame*>& queue ) {
 	if ( cases.find ( t.pred ) == cases.end() ) return 0;
 
 	uint src = 0;
@@ -153,7 +153,8 @@ frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& case
 			}
 			if ( !ep.parent ) {
 				//	cout << "pushing frame: " << candidate_frame << endl;
-				return &candidate_frame;
+//				return 
+				queue.push_front(&candidate_frame);
 			}
 		} else {
 			trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
@@ -189,8 +190,11 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 				r.ind++;
 				queue.push_back ( &r );
 			} else if ( !b ) continue;
-			if ( frame* f = match_cases ( current_frame, *t, cases ) ) queue.push_front ( f );
+//	if ( frame* f = 
+				match_cases ( current_frame, *t, cases, queue );
+//		) ) queue.push_front ( f ); 
 		}
+		
 	}
 	return evidence;
 }

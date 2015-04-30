@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-c -std=c++1y -Wall -rdynamic -ggdb -Wextra -W 
+CXXFLAGS=-c -std=c++1y -Wall -rdynamic -Wextra -W -O2
 LDFLAGS=-lcurl
 OBJECTS=tau.o jsonld.o rdf.o reasoner.o misc.o
 
