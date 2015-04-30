@@ -120,23 +120,28 @@ void ubi ( const ppti i ) {
 	i->ubi_node_id = ubigraph_new_vertex();
 	if (!i->rule.body.size())
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "visible", "false" );
-	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "16" );
-	ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
+	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "12" );
 	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontcolor", "#ffffff" );
 
 	if ( i->parent ) {
 		int e = ubigraph_new_edge ( i->parent->ubi_node_id, i->ubi_node_id );
 		if (i->parent->parent)
-			ubigraph_set_edge_attribute ( e, "color", "#ffffff" );
+		{
+			ubigraph_set_edge_attribute ( e, "color", "#777777" );
+			ubigraph_set_edge_attribute ( e, "width", "1" );
+			ubigraph_set_edge_attribute ( e, "strength", "0.05" );
+			ubigraph_set_edge_attribute ( e, "visible", "true" );
+		}
 		else	
-			ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
-		ubigraph_set_edge_attribute ( e, "width", "1" );
-		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		ubigraph_set_edge_attribute ( e, "strength", "0.05" );
-		if (i->parent->parent)
+		{
 			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
-		else	
+			ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
+			ubigraph_set_edge_attribute ( e, "width", "3" );
+			ubigraph_set_edge_attribute ( e, "strength", "0.5" );
 			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#55ffff" );
+			ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
+		}
+		ubigraph_set_edge_attribute ( e, "oriented", "true" );
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
 	} else {
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
@@ -177,7 +182,7 @@ void ubi_add_facts ( evidence_t &cases ) {
 			{
 				ids.push_back ( (it->ubi_node_id = ubigraph_new_vertex() ) );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "fontsize", "16" );
-				ubigraph_set_vertex_attribute ( it->ubi_node_id, "label", ( ( string ) *it ).c_str() );
+				//ubigraph_set_vertex_attribute ( it->ubi_node_id, "label", ( ( string ) *it ).c_str() );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "fontcolor", "#ccffcc" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "color", "#55ff55" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "shape", "cube" );
@@ -269,6 +274,11 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 
 				continue;
 			}
+			else
+				#ifdef UBI
+				ubigraph_remove_vertex( c->ubi_node_id );
+				#endif
+
 			trace ( "Q parent: " );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, make_shared<env_t> ( *c->parent->env ) , g} );
