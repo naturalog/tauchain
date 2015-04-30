@@ -234,6 +234,7 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
+	printkb();
 	return ( *this ) ( &goal, -1, cases );
 }
 
