@@ -178,6 +178,7 @@ int main ( int argc, char** argv ) {
 	strings::iterator it;
 	if ((it = find(args.begin(), args.end(), "--no-deref")) != args.end()) { deref = false; args.erase(it); }
 	if ((it = find(args.begin(), args.end(), "--pause")) != args.end()) { _pause = true; args.erase(it); }
+	if ((it = find(args.begin(), args.end(), "--shorten")) != args.end()) { shorten = true; args.erase(it); }
 	
 	return ( *cmds[argv[1]] ) ( args );
 

@@ -52,13 +52,16 @@ public:
 	string tostring ( ) {
 		//		if (ctx == "") ctx = graph->tostring();
 		stringstream ss;
-		auto f = [] ( pnode n ) {
-			return n ? n->tostring() : string ( "<>" );
+		auto f = [shorten] ( pnode n ) {
+			if (n) {
+				string s = n->tostring();
+				if (!shorten) return s;
+				if (s.find("#") == string::npos) return s;
+				return s.substr(s.find("#"), s.size() - s.find("#"));
+			}
+			return string("<>");
 		};
 		ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ' << f ( graph ) << " .";
-		#ifdef DEBUG
-		ss << " stored graph name: " << f ( graph );
-		#endif
 		return ss.str();
 	}
 };
