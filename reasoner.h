@@ -130,9 +130,9 @@ void ubi ( const ppti i ) {
 			ubigraph_set_edge_attribute ( e, "color", "#ffffff" );
 		else	
 			ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
-		ubigraph_set_edge_attribute ( e, "width", "3" );
+		ubigraph_set_edge_attribute ( e, "width", "1" );
 		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		ubigraph_set_edge_attribute ( e, "strength", "0.5" );
+		ubigraph_set_edge_attribute ( e, "strength", "0.05" );
 		if (i->parent->parent)
 			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
 		else	
@@ -159,7 +159,7 @@ void ubi ( const ppti i ) {
 		ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
 		ubigraph_set_edge_attribute ( e, "width", "5" );
 		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		ubigraph_set_edge_attribute ( e, "strength", "0.5" );
+		ubigraph_set_edge_attribute ( e, "strength", "0.1" );
 		ubigraph_set_edge_attribute ( e, "visible", "false" );
 	
 	}
@@ -182,18 +182,18 @@ void ubi_add_facts ( evidence_t &cases ) {
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "color", "#55ff55" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "shape", "cube" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "size", "5" );
-				/*
+				
 				if (prev)
 					ubigraph_new_edge ( it->ubi_node_id,  prev);
 				else
 					first = it->ubi_node_id;
 				prev = it->ubi_node_id;
-				*/
+				
 			}
-	/*
+	
 	if (prev)
 		ubigraph_new_edge ( prev, first);
-	*/
+	
 
 	/*
 	//a grid
