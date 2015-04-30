@@ -108,8 +108,7 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 	}
 	p = evaluate ( d, dsub );
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
-	//f ( f )
-	dsub[d.pred] = evaluate ( s, ssub );
+	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
 	trace ( "Match with subst: " << dsub << endl );
 	return true;
 }
