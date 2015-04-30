@@ -58,8 +58,8 @@ public:
 		return toquads ( nodemap ( jsonld::expand ( o, jsonld::jsonld_options ( base ) ), base ), base );
 	}
 
-	qdb convert ( const string& s ) {
-		return convert ( load_json ( s ), pstr ( string ( "file://" ) + s + "#" ) );
+	qdb convert ( const string& s, pstring base = 0) {
+		return convert ( load_json ( s ), base ? base : pstr ( string ( "file://" ) + s + "#" ) );
 	}
 };
 

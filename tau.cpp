@@ -138,7 +138,7 @@ public:
 		if ( args.size() == 2 )
 			cout << ( r.test_reasoner() ? "pass" : "fail" ) << endl;
 		else try {
-				auto e = r ( convert ( args[2] ), merge ( convert ( args[3] ) ) );
+				auto e = r ( convert ( args[2] ), merge ( convert ( args[3], pstr(args[2]) ) ) );
 				cout << "evidence: " << endl << e << endl;
 				//	menu();
 				//		cout << "dict: " << endl << dict.tostr()<<endl;
