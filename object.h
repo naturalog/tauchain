@@ -12,7 +12,7 @@
 #include <execinfo.h>
 
 //#include "logger.h"
-const bool deref = false;
+const bool deref = true;
 //#define DEBUG
 //#define VERBOSE
 #ifdef DEBUG

@@ -29,7 +29,9 @@ int reasoner::builtin ( predicate* p ) {
 frame& frame::init ( reasoner* r, const frame& f ) {
 	if ( r->nframes >= max_frames ) throw "Buffer overflow";
 	if ( !f.parent ) return init ( r, f.rul, f.src, f.ind, 0, f.substitution, f.ground );
-	return init ( r, f.rul, f.src, f.ind, &r->frames[r->nframes++].init ( r, *f.parent ), f.substitution, f.ground );
+	frame& res = init ( r, f.rul, f.src, f.ind, 0, f.substitution, f.ground );
+	res.parent = f.parent;
+	return res;
 }
 
 frame& frame::init ( reasoner* rs, rule* _r, uint _src, uint _ind, frame* p, subst _s, ground_t _g ) {
