@@ -109,10 +109,10 @@ ostream& operator<< ( ostream& o, const cases_t& e ) {
 
 ostream& operator<< ( ostream& o, const frame& f ) {
 	o << "src: " << f.src << "\tind: " << f.ind << "\tparent: ";
-	if ( f.parent ) o << *f.parent;
+	if ( f.parent ) o << "("<<*f.parent<<")";
 	else o << "(null)";
-	o << "\tsubst: " << f.substitution << "\tgnd: " << f.ground;
-	return o << "\trule: " << *f.rul;
+	o << "\tsubst:( " << f.substitution << ")\tgnd: (" << f.ground;
+	return o << ")\trule: " << *f.rul;
 }
 
 ostream& operator<< ( ostream& o, const rulelist& l ) {

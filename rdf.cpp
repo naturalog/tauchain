@@ -82,7 +82,7 @@ rdf_db::rdf_db ( jsonld_api& api_ ) :
 ostream& operator<< ( ostream& o, const qdb& q ) {
 	o << "#Graphs: " << q.size() << endl;
 	for ( auto x : q ) {
-		o << "#Triples: " << x.second->size() << endl;
+		o << x.first << "(" << x.second->size() << "):" << endl;
 		for ( pquad q : *x.second )
 			o << q->tostring ( /* x.first == str_default ? "<>" : x.first*/ ) << endl;
 	}

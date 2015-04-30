@@ -29,7 +29,7 @@ int reasoner::builtin ( predicate* p ) {
 frame& frame::init ( reasoner* r, const frame& f ) {
 	if ( r->nframes >= max_frames ) throw "Buffer overflow";
 	if ( !f.parent ) return init ( r, f.rul, f.src, f.ind, 0, f.substitution, f.ground );
-	return init ( r, f.rul, f.src, f.ind, &r->frames[r->nframes++].init ( r, *f.parent ), f.substitution, f.ground );
+	return init ( r, f.rul, f.src, f.ind, &r->frames[r->nframes++].init ( r, *f.parent ), substitution_t(f.substitution), f.ground );
 }
 
 frame& frame::init ( reasoner* rs, rule* _r, uint _src, uint _ind, frame* p, subst _s, ground_t _g ) {
@@ -91,12 +91,14 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 		for (auto sit = as.begin(), dit = ad.begin(); sit != as.end(); ++sit, ++dit)
 			if (!unify(*sit, ssub, *dit, dsub, f))
 				return false;
+		trace("Match." << endl);
 		return true;
 	}
 	p = evaluate ( d, dsub );
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
 //f ( f ) 
 		dsub[d.pred] = evaluate ( s, ssub );
+	trace("Match." << endl);
 	return true;
 }
 
@@ -110,7 +112,7 @@ void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence
 frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 	if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
 	frame& new_frame = frames[nframes++].init ( this, *current_frame.parent );
-	new_frame.ground = g;//round_t();
+	new_frame.ground = ground_t(*g);
 	unify ( current_frame.rul->head, current_frame.substitution, new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
 	return &new_frame;
@@ -156,6 +158,7 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 		frame& current_frame = *queue.front();
 		queue.pop_front();
 		ground_t g = current_frame.ground;
+		trace(current_frame << endl);
 		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		if ( current_frame.ind >= current_frame.rul->body.size() ) {
 			if ( !current_frame.parent ) evidence_found ( current_frame, evidence );
@@ -169,7 +172,8 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 				r.ground = g;
 				r.ind++;
 				queue.push_back ( &r );
-			} else if ( b ) if ( frame* f = match_cases ( current_frame, *t, cases ) ) queue.push_front ( f );
+			} else if ( !b ) continue;
+			if ( frame* f = match_cases ( current_frame, *t, cases ) ) queue.push_front ( f );
 		}
 	}
 	return evidence;
@@ -202,7 +206,9 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
-	for ( const auto& quad : graph ) {
+	cout << kb;
+	for ( const auto& quad : *kb.at("@default") ) {
+	//for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
 		dict.set({s,p,o,c});
 		if ( p == implication ) {
