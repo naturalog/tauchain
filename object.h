@@ -45,7 +45,7 @@ inline void dopause() {
 }
 
 
-#define trace(x) std::clog<<x; if (_pause) dopause()
+#define trace(x) std::clog<<__FILE__<<':'<<__LINE__<<'\t'<<x; if (_pause) dopause()
 #else
 inline void bt() {}
 #define trace(x)
