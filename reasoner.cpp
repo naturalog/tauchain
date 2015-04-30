@@ -218,6 +218,7 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	for ( const pair<string, jsonld::pqlist>& x : kb ) {
 		for ( jsonld::pquad quad : *x.second ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
+			trace("processing quad " << quad->tostring() << endl);
 			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
 			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
 			for ( jsonld::pquad y : *kb.at ( o ) ) {
