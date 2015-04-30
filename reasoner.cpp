@@ -135,13 +135,13 @@ frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& case
 	uint src = 0;
 	for ( rule* _rl : cases[t.pred] ) {
 		rule& rl = *_rl;
-		//		trace ( "trying to unify rule " << rl << " from cases against " << t << "... " );
 		src++;
 		ground_t ground = current_frame.ground;
 		if ( rl.body.empty() )
 			ground.emplace_back ( &rl, subst() );
 		frame& candidate_frame = frames[nframes++].init ( this, &rl, src, 0, &current_frame, subst(), ground );
 		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
+			trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
 			frame& ep = current_frame;
 			while ( ep.parent ) {
 				ep = *ep.parent;
@@ -153,6 +153,8 @@ frame* reasoner::match_cases ( frame& current_frame, predicate& t, cases_t& case
 				//	cout << "pushing frame: " << candidate_frame << endl;
 				return &candidate_frame;
 			}
+		} else {
+			trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
 		}
 	}
 	return 0;
