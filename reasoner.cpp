@@ -207,17 +207,17 @@ qlist merge ( const qdb& q ) {
 evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
-	for (auto x : kb) {
-		for ( const auto& quad : *x.second ) {
+	for (const pair<string, jsonld::pqlist>& x : kb) {
+		for ( jsonld::pquad quad : *x.second ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
 			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
 			if ( p == implication ) {
 				if ( kb.find ( o ) != kb.end() )
-					for ( const auto &y : *kb.at ( o ) ) {
+					for ( jsonld::pquad y : *kb.at ( o ) ) {
 						rule& rul = *mkrule();
 						rul.head = triple ( *y );
 						if ( kb.find ( s ) != kb.end() )
-							for ( const auto& z : *kb.at ( s ) )
+							for ( jsonld::pquad z : *kb.at ( s ) )
 								rul.body.push_back ( triple ( *z ) );
 						cases[rul.head->pred].push_back ( &rul );
 					}
