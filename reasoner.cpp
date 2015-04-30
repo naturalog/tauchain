@@ -209,26 +209,28 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
-	cout << kb;
-	for ( const auto& quad : *kb.at ( "@default" ) ) {
-		//for ( const auto& quad : graph ) {
-		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
-		dict.set ( {s, p, o, c} );
-		if ( p == implication ) {
-			if ( kb.find ( o ) != kb.end() )
-				for ( const auto &y : *kb.at ( o ) ) {
-					rule& rul = *mkrule();
-					rul.head = triple ( *y );
-					if ( kb.find ( s ) != kb.end() )
-						for ( const auto& x : *kb.at ( s ) )
-							rul.body.push_back ( triple ( *x ) );
-					cases[rul.head->pred].push_back ( &rul );
-					cout << rul << endl;
-				}
-		} else {
-			rule* r = mkrule ( triple ( s, p, o ) );
-			cout << *r << endl;
-			cases[dict[p]].push_back ( r );
+//	cout << kb;
+	for (auto x : kb) {
+		for ( const auto& quad : *x.second ) {
+			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
+			dict.set ( {s, p, o, c} );
+			if ( p == implication ) {
+				if ( kb.find ( o ) != kb.end() )
+					for ( const auto &y : *kb.at ( o ) ) {
+						rule& rul = *mkrule();
+						rul.head = triple ( *y );
+						if ( kb.find ( s ) != kb.end() )
+							for ( const auto& z : *kb.at ( s ) )
+								rul.body.push_back ( triple ( *z ) );
+						cases[rul.head->pred].push_back ( &rul );
+//						cout << rul << endl;
+					}
+			}
+//			else {
+				rule* r = mkrule ( triple ( s, p, o ) );
+				cout << *r << endl;
+				cases[dict[p]].push_back ( r );
+//			}
 		}
 	}
 	rule& goal = *mkrule();

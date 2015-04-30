@@ -1,11 +1,7 @@
 [{
   "@id": "g102",
-  "@graph": [{
-    "@id": "?S",
-    "?P": [{
-      "@id": "?O"
-    }]
-  }, {
+  "@graph": [
+   {
     "@id": "?P",
     "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
       "@id": "?R"
@@ -210,7 +206,6 @@
     }]
   }]
 }, {
-  "@id": "rdfs-rules.n3",
   "@graph": [{
     "@id": "http://www.w3.org/2000/01/rdf-schema#label",
     "http://www.w3.org/2000/01/rdf-schema#domain": [{
@@ -410,12 +405,8 @@
     "http://www.w3.org/2000/10/swap/log#implies": [{
       "@id": "g74"
     }]
-  }, {
-    "@id": "g150",
-    "http://www.w3.org/2000/10/swap/log#implies": [{
-      "@id": "http://eulersharp.sourceforge.net/2003/03swap/rdfs-rules#false"
-    }]
-  }, {
+  },
+   {
     "@id": "g51",
     "http://www.w3.org/2000/10/swap/log#implies": [{
       "@id": "g57"

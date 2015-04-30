@@ -2,7 +2,7 @@
   "@id": "@default",
   "@graph": [{
     "@id": "?A",
-    "http://www.w3.org/2000/01/rdf-schema#range": {"@id": "?C"}
+    "http://www.w3.org/2000/10/swap/log#implies": {"@id": "?C"}
   }]
 }]
 
