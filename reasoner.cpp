@@ -72,9 +72,9 @@ predicate* reasoner::evaluate ( predicate& t, const subst& sub ) {
 	}
 	#ifdef DEBUF
 	if ( r )
-		trace ( " returned " << *r << endl );
+		{ trace ( " returned " << *r << endl ); }
 	else
-		trace ( " returned 0" << endl );
+		{ trace ( " returned 0" << endl ); }
 	#endif
 	return r;
 }
@@ -91,7 +91,7 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 	//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	predicate* p;
 	if ( s.pred < 0 )
-		if ( p = evaluate ( s, ssub ) ) unify ( p, ssub, _d, dsub, f );
+		if (( p = evaluate ( s, ssub ) )) unify ( p, ssub, _d, dsub, f );
 		else {
 			trace ( "Match." << endl );
 			return	true;
