@@ -90,12 +90,13 @@ bool reasoner::unify ( predicate* _s, const subst& ssub, predicate* _d, subst& d
 	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
 	//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	predicate* p;
-	if ( s.pred < 0 )
+	if ( s.pred < 0 ) {
 		if (( p = evaluate ( s, ssub ) )) unify ( p, ssub, _d, dsub, f );
 		else {
 			trace ( "Match." << endl );
 			return	true;
 		}
+	}
 	if ( d.pred >= 0 ) {
 		if ( s.pred != d.pred || s.args.size() != d.args.size() ) return false;
 		const predlist& as = s.args, ad = d.args;
