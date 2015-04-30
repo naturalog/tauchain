@@ -4,8 +4,8 @@
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
-bool autobt = false, _pause = false;
 #endif
+bool autobt = false, _pause = false;
 
 void menu();
 
