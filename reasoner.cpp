@@ -228,6 +228,7 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 					for ( jsonld::pquad z : *kb.at ( s ) )
 						rul.body.push_back ( triple ( *z ) );
 				cases[rul.head->pred].push_back ( &rul );
+				trace("added rule " << rul << endl);				
 			}
 		}
 	}
