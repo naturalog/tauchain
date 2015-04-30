@@ -52,7 +52,8 @@ public:
 	string tostring ( ) {
 		//		if (ctx == "") ctx = graph->tostring();
 		stringstream ss;
-		auto f = [shorten] ( pnode n ) {
+		bool _shorten = shorten;
+		auto f = [_shorten] ( pnode n ) {
 			if (n) {
 				string s = n->tostring();
 				if (!shorten) return s;
