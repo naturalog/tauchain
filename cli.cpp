@@ -58,12 +58,23 @@ qdb cmd_t::convert ( const string& s, pstring base) {
 	return convert ( load_json ( s ), base ? base : pstr ( string ( "file://" ) + s + "#" ) );
 }
 
-void print_usage ( const map<string, cmd_t*>& cmds ) {
+void process_flags ( const cmds_t& cmds, strings& args ) {
+	strings::iterator it;
+	for (auto x : cmds.second) 
+		if ( ( it = find ( args.begin(), args.end(), x.first.first ) ) != args.end() ) {
+			*x.second = true;
+			args.erase ( it );
+		}
+}
+
+void print_usage ( const cmds_t& cmds ) {
 	cout << endl << "Tau-Chain by http://idni.org" << endl;
 	cout << endl << "Usage:" << endl;
 	cout << "\ttau help <command>\t\tPrints usage of <command>." << endl;
 	cout << "\ttau <command> [<args>]\t\tRun <command> with <args>." << endl;
 	cout << endl << "Available commands:" << endl << endl;
-	for ( auto c : cmds ) cout << '\t' << c.first << '\t' << c.second->desc() << endl;
+	for ( auto c : cmds.first ) cout << '\t' << c.first << '\t' << c.second->desc() << endl;
+	cout << endl << "Available flags:" << endl << endl;
+	for ( auto c : cmds.second ) cout << '\t' << c.first.first << '\t' << c.first.second << endl;
 	cout << endl;
 }

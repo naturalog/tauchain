@@ -4,13 +4,14 @@
 #include <sstream>
 #include "parsers.h"
 #include "reasoner.h"
+using namespace std;
 
 #ifdef DEBUG
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
 #endif
-bool autobt = false, _pause = false;
+bool autobt = false, _pause = false, __printkb = false;
 
 void menu();
 
@@ -160,50 +161,41 @@ public:
 				cerr << ex.what() << endl;
 				return 1;
 			}
-		r.printkb();
+		if (__printkb) r.printkb();
 		return 0;
 	}
 };
 
-map<string, cmd_t*> cmds;
-
 int main ( int argc, char** argv ) {
-	cmds = {
+	cmds_t cmds = { {
 		{ string ( "expand" ) , new expand_cmd },
 		{ string ( "toquads" ) , new toquads_cmd },
 		{ string ( "nodemap" ) , new nodemap_cmd },
 		{ string ( "convert" ) , new convert_cmd },
-		{ string ( "prove" ) , new prove_cmd }
-	};
+		{ string ( "prove" ) , new prove_cmd },
+	}, {
+		{ { "--no-deref", "show integers only instead of strings" }, &deref },
+		{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
+		{ { "--shorten", "on IRIs containig # show only what after #" }, &shorten },
+		{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
+	}};
 	strings args;
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
-	if ( argc == 1 || ( cmds.find ( argv[1] ) == cmds.end() && args[1] != "help" ) ) {
+	process_flags(cmds, args);
+	if ( argc == 1 || ( cmds.first.find ( argv[1] ) == cmds.first.end() && args[1] != "help" ) ) {
 		print_usage ( cmds );
 		return 1;
 	}
 	if ( args[1] == "help" && argc == 3 ) {
-		cout << cmds[string ( argv[2] )]->help();
+		cout << cmds.first[string ( argv[2] )]->help();
 		return 0;
 	}
 	if ( args[1] == "help" && argc == 2 ) {
 		print_usage ( cmds );
 		return 0;
 	}
-	strings::iterator it;
-	if ( ( it = find ( args.begin(), args.end(), "--no-deref" ) ) != args.end() ) {
-		deref = false;
-		args.erase ( it );
-	}
-	if ( ( it = find ( args.begin(), args.end(), "--pause" ) ) != args.end() ) {
-		_pause = true;
-		args.erase ( it );
-	}
-	if ( ( it = find ( args.begin(), args.end(), "--shorten" ) ) != args.end() ) {
-		shorten = true;
-		args.erase ( it );
-	}
 
-	return ( *cmds[argv[1]] ) ( args );
+	return ( *cmds.first[argv[1]] ) ( args );
 
 	return 0;
 }

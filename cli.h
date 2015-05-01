@@ -26,6 +26,9 @@ public:
 	qdb convert ( const string& s, pstring base = 0);
 };
 
-void print_usage ( const map<string, cmd_t*>& cmds );
+typedef pair<map<string, cmd_t*>, map<pair<string, string>, bool*>>  cmds_t;
+
+void print_usage ( const cmds_t& cmds );
+void process_flags ( const cmds_t& cmds, strings& args );
 
 #endif
