@@ -255,7 +255,7 @@ string quad::tostring ( ) {
 		return string ( "<>" );
 	};
 	ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ';
-	if (graph->value == str_default) ss << f ( graph );  
+	if (graph->value != str_default) ss << f ( graph );
 	ss << " .";
 	return ss.str();
 }
