@@ -1,0 +1,481 @@
+[{
+  "@id": "_:_1",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/agent#hasAgent"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/computer#Software"
+  }]
+}, {
+  "@id": "_:_10",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasOutput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Result"
+  }]
+}, {
+  "@id": "_:_11",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasInput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Query"
+  }]
+}, {
+  "@id": "_:_12",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasOutput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Querying"
+  }]
+}, {
+  "@id": "_:_2",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#inputOf"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Procedure"
+  }]
+}, {
+  "@id": "_:_3",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#outputOf"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Procedure"
+  }]
+}, {
+  "@id": "_:_4",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasInput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/agent#UserCredential"
+  }]
+}, {
+  "@id": "_:_5",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasInput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Searching"
+  }]
+}, {
+  "@id": "_:_6",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasOutput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#SearchResult"
+  }]
+}, {
+  "@id": "_:_7",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/agent#hasAgent"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/computer#SearchEngine"
+  }]
+}, {
+  "@id": "_:_8",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasInput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#SearchRequest"
+  }]
+}, {
+  "@id": "_:_9",
+  "@type": ["http://www.w3.org/2002/07/owl#Restriction"],
+  "http://www.w3.org/2002/07/owl#onProperty": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#hasOutput"
+  }],
+  "http://www.w3.org/2002/07/owl#someValuesFrom": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Searching"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure",
+  "@type": ["http://www.w3.org/2002/07/owl#Ontology"],
+  "http://purl.org/dc/elements/1.1/title": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Digital%20Procedure%22%22%22@en"
+  }],
+  "http://purl.org/dc/elements/1.1/creator": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Hans%20Cools,%20MD;%20Agfa%20Healthcare,%20Belgium%22%22%22@nl"
+  }],
+  "http://purl.org/dc/elements/1.1/contributor": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Kristof%20Depraetere,%20Boris%20De%20Vloed,%20Giovanni%20Mels;%20Agfa%20Healthcare,%20Belgium%22%22%22@nl"
+  }],
+  "http://purl.org/dc/elements/1.1/publisher": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Agfa%20Healthcare,%20Belgium%22%22%22@en"
+  }],
+  "http://purl.org/dc/elements/1.1/description": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Formal%20description%20of%20digital%20procedure.%22%22%22@en"
+  }],
+  "http://purl.org/dc/elements/1.1/format": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22OWL%20Full%22%22%22@en"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Input",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20computer%20input%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Input%20of%20a%20digital%20computer%20procedure.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_2"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#Input"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#LoggingIn",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22logging%20in%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Accessing%20a%20multiuser%20computer%20system%20by%20controlled%20input%20of%20username%20and%20password.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_4"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Procedure"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Output",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20computer%20output%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Output%20of%20a%20digital%20computer%20procedure.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_3"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#Output"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Procedure",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20computer%20procedure%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Procedure%20performed%20on%20a%20digital%20computer.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_1"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#Procedure"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Query",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20query%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Input%20of%20digital%20querying.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Input"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#QueryLanguage",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20query%20language%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Language%20to%20formulate%20a%20digital%20computer%20query.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/foster#Language"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#QueryPlan",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22query%20plan%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Plan%20describing%20algorithms%20to%20be%20used%20for%20executing%20a%20query.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#Plan"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Querying",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20querying%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Executing%20a%20query%20on%20a%20digital%20computer.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_10"
+  }, {
+    "@id": "_:_11"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Procedure"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Request",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20computer%20request%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Request%20as%20digital%20computer%20input.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#Request"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Input"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Result",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20result%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Output%20of%20digital%20querying.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_12"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Output"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#SearchRequest",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20search%20request%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Request%20for%20digital%20searching.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_5"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Request"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#SearchResult",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20search%20result%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Output%20of%20digital%20searching.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_9"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Searching",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20searching%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Searching%20of%20digital%20data.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+    "@id": "_:_6"
+  }, {
+    "@id": "_:_7"
+  }, {
+    "@id": "_:_8"
+  }, {
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Procedure"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Template",
+  "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22digital%20template%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Standardized%20file%20used%20by%20computer%20software%20as%20a%20pre-formatted%20example%20on%20which%20to%20base%20other%20files.%22%22%22@en"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#hasResult",
+  "@type": ["http://www.w3.org/2002/07/owl#ObjectProperty"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Specifying%20a%20digital%20result%20for%20a%20digital%20query.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#domain": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Query"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#range": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Result"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#hasSearchingDateTime",
+  "@type": ["http://www.w3.org/2002/07/owl#DatatypeProperty", "http://www.w3.org/2002/07/owl#FunctionalProperty"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22has%20searching%20date%20time%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Specifying%20a%20date%20time%20on%20which%20is%20searched.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#domain": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Searching"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#range": [{
+    "@id": "http://www.w3.org/2001/XMLSchema#dateTime"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#hasSearchingPeriod",
+  "@type": ["http://www.w3.org/2002/07/owl#ObjectProperty"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22has%20searching%20period%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Specifying%20a%20list%20with%20beginning%20an%20end%20of%20a%20period%20wherein%20is%20searched%20digitally.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#domain": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Searching"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#range": [{
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#List"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#hasSelected",
+  "@type": ["http://www.w3.org/2002/07/owl#ObjectProperty"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Specifying%20a%20list%20of%20(universal%20and%20existential)%20bound%20variables%20in%20the%20conclusion%20of%20an%20N3%20rule%20or%20the%20answer%20of%20an%20N3%20query.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#domain": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Result"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#range": [{
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#List"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#matchesExpression",
+  "@type": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Specifying%20terms%20in%20an%20expression%20matched%20in%20a%20digital%20content.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#comment": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Used%20in%20builtin;%20expression%20syntax%20in%20the%20triple%20quoted%20literal:%0A%09%09*%20term1%20term2:%20phrase%20of%20terms%0A%09%09*%20term3%20term4%20:%20implicit%20AND%20of%20two%20terms%0A%09%09*%20term3%20OR%20term4%20:%20explicit%20OR%20of%20two%20terms%0A%09%09*%20-term5%20:%20excluding%20the%20term%0A%09%09*%20AND%20has%20higher%20precedence%20than%20OR.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#domain": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/document#DigitalContent"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#range": [{
+    "@id": "http://www.w3.org/2000/01/rdf-schema#Literal"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#resultOf",
+  "@type": ["http://www.w3.org/2002/07/owl#ObjectProperty"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Specifying%20a%20digital%20query%20of%20a%20digital%20result.%22%22%22@en"
+  }],
+  "http://www.w3.org/2002/07/owl#inverseOf": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#hasResult"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#domain": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Result"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#range": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Query"
+  }]
+}, {
+  "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#searchingDuring",
+  "@type": ["http://www.w3.org/2002/07/owl#ObjectProperty"],
+  "http://www.w3.org/2000/01/rdf-schema#isDefinedBy": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#label": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22searching%20during%22%22%22@en"
+  }],
+  "http://www.w3.org/2004/02/skos/core#definition": [{
+    "@id": "_:LITERAL:http://www.w3.org/2001/XMLSchema#string?%22%22%22Specifying%20a%20period%20wherein%20is%20searched%20digitally.%22%22%22@en"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#domain": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/digitalProcedure#Searching"
+  }],
+  "http://www.w3.org/2000/01/rdf-schema#range": [{
+    "@id": "http://eulersharp.sourceforge.net/2003/03swap/event#Event"
+  }]
+}]

@@ -1116,6 +1116,226 @@ pobj convert ( const json_spirit::mValue& v ) {
 	return r;
 }
 
+pstring removeBase ( pobj, string ) {
+	return pstr ( "" );
+}
+
+pstring removeBase ( pobj o, pstring iri ) {
+	return removeBase ( o, *iri );
+}
+
+bool equals ( const obj& a, const obj& b ) {
+	return a.equals ( b );
+}
+
+bool equals ( const pobj& a, const pobj& b ) {
+	return a->equals ( *b );
+}
+
+bool equals ( const pobj& a, const obj& b ) {
+	return a->equals ( b );
+}
+
+bool equals ( const obj& a, const pobj& b ) {
+	return a.equals ( *b );
+}
+
+pobj get ( psomap p, string k ) {
+	if ( !p ) return 0;
+	auto it = p->find ( k );
+	return it == p->end() ? 0 : it->second;
+}
+
+bool keyword ( const string& key ) {
+	return str_base == key || str_context == key || str_container == key
+	       || str_default == key || str_embed == key || str_explicit == key
+	       || str_graph == key || str_id == key || str_index == key
+	       || str_lang == key || str_list == key || str_omitDefault == key
+	       || str_reverse == key || str_preserve == key || str_set == key
+	       || str_type == key || str_value == key || str_vocab == key;
+}
+
+bool keyword ( pstring key ) {
+	return key ? keyword ( *key ) : false;
+}
+
+pobj& getlang ( pobj p ) {
+	return p->MAP()->at ( str_lang );
+}
+
+pobj& getlang ( obj& p ) {
+	return p.MAP()->at ( str_lang );
+}
+
+pobj& getlang ( psomap p ) {
+	return p->at ( str_lang );
+}
+
+pobj& getlang ( somap p ) {
+	return p.at ( str_lang );
+}
+
+bool keyword ( pobj p ) {
+	if ( !p || !p->STR() ) return false;
+	return keyword ( *p->STR() );
+}
+
+bool is_abs_iri ( const string& s ) {
+	return ( s.find ( ":" ) != string::npos ) || ( s.size() && s[0] == '?' );
+}
+
+bool is_rel_iri ( const string& s ) {
+	return ( ! ( keyword ( s ) || is_abs_iri ( s ) ) );// || (s.size() && s[0] == '?');
+}
+
+pobj newMap ( const string& k, pobj v ) {
+	pobj r = mk_somap_obj();
+	( *r->MAP() ) [k] = v;
+	return r;
+}
+
+bool isvalue ( pobj v ) {
+	return v && v->MAP() && hasvalue ( v->MAP() );
+}
+
+polist vec2vec ( const vector<string>& x ) {
+	polist res = mk_olist();
+	for ( auto t : x ) res->push_back ( make_shared <string_obj> ( t ) );
+	return res;
+}
+
+vector<string> vec2vec ( polist x ) {
+	vector<string> res;
+	for ( auto t : *x ) res.push_back ( *t->STR() );
+	return res;
+}
+
+void add_all ( polist l, pobj v ) {
+	if ( v->LIST() ) l->insert ( l->end(), v->LIST()->begin(), v->LIST()->end() );
+	else l->push_back ( v );
+}
+
+context_t::context_t ( const jsonld_options& o ) :
+	somap_obj(), options ( o ) {
+	if ( options.base ) ( *MAP() ) [ "@base" ] = make_shared <string_obj> ( *options.base );
+}
+
+pstring context_t::getContainer ( string prop ) {
+	if ( prop == str_graph ) return pstr ( str_set );
+	if ( keyword ( prop ) ) return pstr ( prop );
+	auto it = term_defs->find ( prop );
+	return it == term_defs->end() ? 0 : it->second->STR();
+}
+
+pstring context_t::getContainer ( pstring prop ) {
+	return getContainer ( *prop );
+}
+
+pstring context_t::get_type_map ( const string& prop ) {
+	auto td = term_defs->find ( prop );
+	return td == term_defs->end() || !td->second->MAP() ?  0 : gettype ( td->second )->STR();
+}
+
+pstring context_t::get_lang_map ( const string& prop ) {
+	auto td = term_defs->find ( prop );
+	return td == term_defs->end() || !td->second->MAP() ?  0 : getlang ( td->second )->STR();
+}
+
+psomap context_t::get_term_def ( const string& key ) {
+	return term_defs->at ( key )->MAP();
+}
+
+int context_t::compareShortestLeast ( const string& a, const string& b ) {
+	if ( a.length() < b.length() ) return -1;
+	else if ( b.length() < a.length() ) return 1;
+	return a == b ? 0 : a < b ? -1 : 1;
+}
+
+int context_t::compareShortestLeast ( pstring a, pstring b ) {
+	return !a && !b ? 0 : a && !b ? 1 : !a && b ? -1 : compareShortestLeast ( *a, *b );
+}
+
+int context_t::compareShortestLeast ( string a, pstring b ) {
+	return !b ? 1 : compareShortestLeast ( a, *b );
+}
+
+int context_t::compareShortestLeast ( pstring a, string b ) {
+	return !a ? -1 : compareShortestLeast ( *a, b );
+}
+
+pstring context_t::compactIri ( string iri, bool relativeToVocab ) {
+	return compactIri ( iri, 0, relativeToVocab, false );
+}
+
+pstring context_t::compactIri ( pstring iri, bool relativeToVocab ) {
+	return !iri ? 0 : compactIri ( *iri, 0, relativeToVocab, false );
+}
+
+pstring context_t::compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse ) {
+	return !iri ? 0 : compactIri ( *iri, value, relativeToVocab, reverse );
+}
+
+bool context_t::isReverseProperty ( string prop ) {
+	auto it = term_defs->find ( prop );
+	if ( it == term_defs->end() || !it->second->MAP() ) return false;
+	auto r = it->second->MAP()->at ( str_reverse );
+	return r && r->BOOL() && *r->BOOL();
+}
+
+jsonld_api::jsonld_api ( pobj input, jsonld_options opts ) : jsonld_api ( opts ) {
+	initialize ( input, 0 );
+}
+
+void jsonld_api::initialize ( pobj input, pobj context_ ) {
+	if ( input && ( input->LIST() || input->MAP() ) ) value = input->clone();
+	context = make_shared<context_t>();
+	if ( context ) context = context->parse ( context_ );
+}
+
+pobj jsonld_api::compact ( pcontext act_ctx, string act_prop, pobj element ) {
+	return compact ( act_ctx, act_prop, element, true );
+}
+
+bool jsonld_api::deepContains ( polist values, pobj value ) {
+	for ( pobj item : *values ) if ( deepCompare ( item, value, false ) ) return true;
+	return false;
+}
+
+void jsonld_api::mergeValue ( psomap obj, pstring key, pobj value ) {
+	if ( obj && key ) mergeValue ( *obj, *key, value );
+}
+
+void jsonld_api::mergeValue ( psomap obj, string key, pobj value ) {
+	if ( obj ) mergeValue ( *obj, key, value );
+}
+
+void jsonld_api::mergeValue ( somap& obj, pstring key, pobj value ) {
+	if ( key ) mergeValue ( obj, *key, value );
+}
+
+void jsonld_api::mergeValue ( somap& obj, string key, pobj value ) {
+	auto x = obj[key];
+	polist values = x ? obj[key]->LIST() : 0;
+	if ( !values ) obj[key] = mk_olist_obj ( values = mk_olist() );
+	if ( key == str_list || ( has ( value->MAP(), str_list ) ) || !deepContains ( values, value ) ) values->push_back ( value );
+}
+
+string jsonld_api::gen_bnode_id ( string id ) {
+	if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) return bnode_id_map[id];
+	stringstream ss;
+	ss << "_:b" << ( blankNodeCounter++ );
+	return bnode_id_map[id] = ss.str();
+}
+
+void jsonld_api::gen_node_map ( pobj element, psomap nodeMap ) {
+	gen_node_map ( element, nodeMap, str_default, pobj(), pstring(), psomap() );
+}
+
+void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph ) {
+	gen_node_map ( element, nodeMap, activeGraph, pobj(), pstring(), psomap() );
+}
+
+typedef std::shared_ptr<context_t> pcontext;
 size_t jsonld_api::blankNodeCounter = 0;
 map<string, string> jsonld_api::bnode_id_map;
 void* curl = curl_easy_init();

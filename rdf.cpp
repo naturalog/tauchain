@@ -2,14 +2,18 @@
 
 namespace jsonld {
 
+pqlist mk_qlist() {
+	return make_shared<qlist>();
+}
+
 string node::tostring() {
 	stringstream ss;
-	if ( _type == IRI || _type == BNODE ) ss << '<';
+	if ( _type == IRI ) ss << '<';
 	if ( _type == LITERAL ) ss << '\"';
 	ss << value;
 	if ( _type == LITERAL ) ss << '\"';
 	if ( _type == LITERAL && lang.size() ) ss << '@' << lang;
-	if ( _type == IRI || _type == BNODE ) ss << '>';
+	if ( _type == IRI ) ss << '>';
 	return ss.str();
 }
 
@@ -80,12 +84,9 @@ rdf_db::rdf_db ( jsonld_api& api_ ) :
 }
 
 ostream& operator<< ( ostream& o, const qdb& q ) {
-	o << "#Graphs: " << q.size() << endl;
-	for ( auto x : q ) {
-		o << x.first << "(" << x.second->size() << "):" << endl;
+	for ( auto x : q ) 
 		for ( pquad q : *x.second )
-			o << q->tostring ( /* x.first == str_default ? "<>" : x.first*/ ) << endl;
-	}
+			o << q->tostring ( ) << endl;
 	return o;
 }
 
@@ -224,4 +225,37 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 	}
 }
 
+}
+	
+quad::quad ( string subj, string pred, pnode object, string graph ) :
+	quad ( startsWith ( subj, "_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {
+}
+
+quad::quad ( string subj, string pred, string object, string graph ) :
+	quad ( subj, pred,
+	       startsWith ( object, "_:" ) ? mkbnode ( object ) : mkiri ( object ),
+	       graph ) {}
+
+quad::quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph ) :
+		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) { }
+
+quad::quad ( pnode subj, pnode pred, pnode object, string graph ) : 
+	quad_base ( subj, pred, object, startsWith ( graph, "_:" ) ? mkbnode ( graph ) : mkiri ( graph ) ) { }
+
+string quad::tostring ( ) {
+	stringstream ss;
+	bool _shorten = shorten;
+	auto f = [_shorten] ( pnode n ) {
+		if ( n ) {
+			string s = n->tostring();
+			if ( !shorten ) return s;
+			if ( s.find ( "#" ) == string::npos ) return s;
+			return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
+		}
+		return string ( "<>" );
+	};
+	ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ';
+	if (graph->value == str_default) ss << f ( graph );
+	ss << " .";
+	return ss.str();
 }
