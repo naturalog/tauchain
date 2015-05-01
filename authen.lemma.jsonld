@@ -1,0 +1,7 @@
+[{
+	  "@id": "?WHO",
+	    "http://www.agfa.com/w3c/euler/authen.axiom#authenticated": [{
+		        "@id": "mailto:w3c-ac-forum@w3.org/"
+			  }]
+}]
+

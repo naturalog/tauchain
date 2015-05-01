@@ -1,0 +1,41 @@
+[{
+	  "@id": "_:g1",
+	    "http://www.w3.org/2000/10/swap/log#implies": [{
+		        "@id": "_:g2"
+			  }],
+			    "@graph": [{
+				        "@id": "?PERSON",
+					    "http://www.agfa.com/w3c/euler/authen.axiom#member": [{
+						          "@id": "?INSTITUTION"
+							      }]
+							        }, {
+									    "@id": "?INSTITUTION",
+									        "http://www.agfa.com/w3c/euler/authen.axiom#w3cmember": [{
+											      "@id": "http://www.w3.org"
+											          }],
+												      "http://www.agfa.com/w3c/euler/authen.axiom#subscribed": [{
+													            "@id": "?MAILINGLIST"
+														        }]
+															  }]
+}, {
+	  "@id": "_:g2",
+	    "@graph": [{
+		        "@id": "?PERSON",
+			    "http://www.agfa.com/w3c/euler/authen.axiom#authenticated": [{
+				          "@id": "?MAILINGLIST"
+					      }]
+					        }]
+}, {
+	  "@id": "http://www.agfa.com",
+	    "http://www.agfa.com/w3c/euler/authen.axiom#w3cmember": [{
+		        "@id": "http://www.w3.org"
+			  }],
+			    "http://www.agfa.com/w3c/euler/authen.axiom#subscribed": [{
+				        "@id": "mailto:w3c-ac-forum@w3.org/"
+					  }]
+}, {
+	  "@id": "mailto:jos.deroo@agfa.com",
+	    "http://www.agfa.com/w3c/euler/authen.axiom#member": [{
+		        "@id": "http://www.agfa.com"
+			  }]
+}]
