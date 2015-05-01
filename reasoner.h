@@ -111,42 +111,64 @@ struct proof_trace_item {
 		o << ") {env:" << ( *env ) << "}[[ground:" << ( *ground ) << "]]";
 		return o.str();
 	}
+	#ifdef UBI
+	~proof_trace_item()
+	{
+//		if (!--ubi_node_refcount)
+			ubigraph_remove_vertex( ubi_node_id );
+	}
+	#endif
+
+	
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
 
 
 void ubi ( const ppti i ) {
 	#ifdef UBI
-	i->ubi_node_id = ubigraph_new_vertex();
-	if (!i->rule.body.size())
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "visible", "false" );
-	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "12" );
-	ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontcolor", "#ffffff" );
+	{
+		i->ubi_node_id = ubigraph_new_vertex();
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "12" );
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontcolor", "#ffffff" );
+		ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
 
-	if ( i->parent ) {
-		int e = ubigraph_new_edge ( i->parent->ubi_node_id, i->ubi_node_id );
-		if (i->parent->parent)
+		if ( !i->parent ) 
 		{
-			ubigraph_set_edge_attribute ( e, "color", "#777777" );
+			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
+			ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
+		}
+		else
+		{
+			ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
+			int e = ubigraph_new_edge ( i->parent->ubi_node_id, i->ubi_node_id );
+			ubigraph_set_edge_attribute ( e, "oriented", "true" );
+			if (i->parent->parent)
+			{
+				ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
+				ubigraph_set_edge_attribute ( e, "color", "#777777" );
+				ubigraph_set_edge_attribute ( e, "width", "2" );
+				ubigraph_set_edge_attribute ( e, "strength", "0.5" );
+			}
+			else
+			{
+				ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff9999" );
+				ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
+				ubigraph_set_edge_attribute ( e, "width", "5" );
+				ubigraph_set_edge_attribute ( e, "strength", "0.2" );
+			}
+		}
+	} 
+
+	{
+		if ( i->rule.ubi_node_id)
+		{
+			int e = ubigraph_new_edge ( i->ubi_node_id, i->rule.ubi_node_id );
+			ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
 			ubigraph_set_edge_attribute ( e, "width", "1" );
-			ubigraph_set_edge_attribute ( e, "strength", "0.05" );
-			ubigraph_set_edge_attribute ( e, "visible", "true" );
+			ubigraph_set_edge_attribute ( e, "oriented", "true" );
+			ubigraph_set_edge_attribute ( e, "strength", "0" );
+//			ubigraph_set_edge_attribute ( e, "visible", "false" );
 		}
-		else	
-		{
-			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
-			ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
-			ubigraph_set_edge_attribute ( e, "width", "3" );
-			ubigraph_set_edge_attribute ( e, "strength", "0.5" );
-			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#55ffff" );
-			ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
-		}
-		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
-	} else {
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
-
 	}
 	/*
 	for (auto g : *i->ground)
@@ -158,16 +180,6 @@ void ubi ( const ppti i ) {
 			ubigraph_set_edge_attribute ( e, "oriented", "true" );
 		}
 	*/
-	if ( i->rule.ubi_node_id && !i->rule.body.size())
-	{
-		int e = ubigraph_new_edge ( i->ubi_node_id, i->rule.ubi_node_id );
-		ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
-		ubigraph_set_edge_attribute ( e, "width", "5" );
-		ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		ubigraph_set_edge_attribute ( e, "strength", "0.1" );
-		ubigraph_set_edge_attribute ( e, "visible", "false" );
-	
-	}
 	
 	#endif
 }
@@ -225,7 +237,7 @@ void ubi_add_facts ( evidence_t &cases ) {
 }
 
 
-int builtin ( pred_t, proof_trace_item ) {
+int builtin ( pred_t, proof_trace_item& ) {
 	/*
 	    1:it unified
 	    -1:no such builtin
@@ -274,10 +286,6 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 
 				continue;
 			}
-			else
-				#ifdef UBI
-				ubigraph_remove_vertex( c->ubi_node_id );
-				#endif
 
 			trace ( "Q parent: " );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
@@ -291,7 +299,9 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue;
 		}
 		trace ( "Done q" << endl );
+
 		pred_t t = c->rule.body[c->ind];
+		
 		size_t b = builtin ( t, *c );
 		if ( b == 1 ) {
 			g->emplace_back ( rule_env { { evaluate ( t, c->env ), vector<pred_t>() }, make_shared<env_t>() } );
@@ -520,9 +530,9 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 				throw std::runtime_error ("HMC_Alpha> bananas is not a formula...");
 		}
 	}
+	ubi_add_facts ( cases );
 	rule_t goal;
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-	ubi_add_facts ( cases );
 	prove ( goal, -1, cases, evidence );
 	return evidence;
 }
