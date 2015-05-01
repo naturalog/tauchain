@@ -1,4 +1,5 @@
 #include "reasoner.h"
+#include "parsers.h"
 
 bidict& dict = *new bidict;
 bool deref = true, shorten = false;
@@ -143,4 +144,18 @@ void menu() {
 		cout << "now what?" << endl;
 		for (auto x : menu1) cout << x.first << ":\t" << x.second << endl;
 	*/
+}
+
+bool endsWith ( const string& x, const string& y ) {
+	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
+}
+
+bool startsWith ( const string& x, const string& y ) {
+	return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
+}
+
+string lower ( const string& s_ ) {
+	string s = s_;
+	std::transform ( s.begin(), s.end(), s.begin(), ::tolower );
+	return s;
 }

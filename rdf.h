@@ -1,6 +1,10 @@
 #ifndef __RDF_DATA__
 #define __RDF_DATA__
 
+#include "object.h"
+
+using namespace std;
+
 namespace jsonld {
 
 typedef map<string, string> ssmap;

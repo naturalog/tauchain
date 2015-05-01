@@ -132,8 +132,6 @@ size_t write_data ( void *ptr, size_t size, size_t n, void *stream );
 string download ( const string& url );
 pobj fromURL ( const string& url );
 remote_doc_t load ( const string& url );
-json_spirit::mValue convert ( obj& v );
-json_spirit::mValue convert ( pobj v );
 pobj convert ( const json_spirit::mValue& v );
 
 class context_t: public somap_obj {

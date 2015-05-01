@@ -9,7 +9,13 @@
 #define PARSERS_H_
 
 #include "jsonld.h"
+#include "json_spirit.h"
 using namespace std;
+
+namespace jsonld {
+json_spirit::mValue convert ( obj& v );
+json_spirit::mValue convert ( pobj v );
+}
 
 #ifdef USE_RAPTOR
 #include <raptor2/raptor2.h>

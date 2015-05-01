@@ -17,10 +17,12 @@
 #include <list>
 #include <vector>
 #include <cstdio>
-#include "parsers.h"
+//#include "parsers.h"
 #include "misc.h"
+#include "rdf.h"
 
 using namespace std;
+using namespace jsonld;
 
 const uint K1 = 1024, M1 = K1 * K1;
 const uint max_predicates = M1, max_rules = M1, max_frames = M1;
@@ -65,7 +67,6 @@ class reasoner {
 	uint npredicates = 0, nrules = 0, nframes = 0;
 	predicate* GND;
 	int builtin ( predicate* p );
-	//	rulelist to_rulelist ( const ground_t& g );
 	predicate* evaluate ( predicate& t, const subst& sub );
 	bool unify ( predicate* s, const subst& ssub, predicate* d, subst& dsub, bool f );
 	predlist to_predlist ( const ground_t& g );

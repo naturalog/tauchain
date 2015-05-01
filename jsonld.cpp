@@ -1,5 +1,6 @@
 #include "jsonld.h"
 #include "rdf.h"
+#include "json_spirit.h"
 
 namespace jsonld {
 

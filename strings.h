@@ -72,8 +72,7 @@ const string INVALID_CONTAINER_MAPPING = "invalid container mapping";
 const string INVALID_TYPE_VALUE = "invalid type value";
 const string INVALID_VALUE_OBJECT = "invalid value object";
 const string INVALID_VALUE_OBJECT_VALUE = "invalid value object value";
-const string INVALID_LANGUAGE_TAGGED_STRING =
-    "invalid language-tagged const String";
+const string INVALID_LANGUAGE_TAGGED_STRING = "invalid language-tagged const String";
 const string INVALID_LANGUAGE_TAGGED_VALUE = "invalid language-tagged value";
 const string INVALID_TYPED_VALUE = "invalid typed value";
 const string INVALID_SET_OR_LIST_OBJECT = "invalid set or list object";
@@ -111,40 +110,26 @@ const auto Ex19 = std::runtime_error ( LIST_OF_LISTS + tab + string ( "lists of 
 
 const string implication = "http://www.w3.org/2000/10/swap/log#implies";
 
-inline bool endsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
-}
-inline bool startsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
-}
-
-template<typename T>
-inline bool is ( const T& s, const std::vector<T>& v, std::string exception =
-                     std::string() ) {
+template<typename T> inline bool is ( const T& s, const std::vector<T>& v, std::string exception = std::string() ) {
 	bool rc = std::find ( v.begin(), v.end(), s ) != v.end();
-	if ( exception.size() && !rc )
-		throw std::runtime_error ( exception );
+	if ( exception.size() && !rc ) throw std::runtime_error ( exception );
 	return rc;
 }
 
-template<typename T> inline bool is ( const std::shared_ptr<T>& s,
-                                      const std::vector<T>& v, std::string exception = std::string() ) {
+template<typename T> inline bool is ( const std::shared_ptr<T>& s, const std::vector<T>& v, std::string exception = std::string() ) {
 	return is<T> ( *s, v, exception );
 }
 
-inline string lower ( const string& s_ ) {
-	string s = s_;
-	std::transform ( s.begin(), s.end(), s.begin(), ::tolower );
-	return s;
-}
+bool endsWith ( const string& x, const string& y );
+bool startsWith ( const string& x, const string& y );
+string lower ( const string& s_ );
 
 template<typename charT> inline vector<string> split ( const string& s, charT c ) {
 	vector<string> v;
 	for ( string::size_type i = 0, j = s.find ( c ); j != string::npos; ) {
 		v.push_back ( s.substr ( i, j - i ) );
 		j = s.find ( c, i = ++j );
-		if ( j == string::npos )
-			v.push_back ( s.substr ( i, s.length() ) );
+		if ( j == string::npos ) v.push_back ( s.substr ( i, s.length() ) );
 	}
 	return v;
 }

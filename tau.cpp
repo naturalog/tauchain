@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <boost/filesystem.hpp>
 #include "cli.h"
+#include <sstream>
+#include "parsers.h"
+#include "reasoner.h"
 
 #ifdef DEBUG
 auto dummy = []() {

@@ -1,13 +1,14 @@
 CC=g++
-CXXFLAGS=-c -std=c++1y -Wall -rdynamic -Wextra -W -ggdb
+CXXFLAGS=-c -std=c++1y -Wall -Wextra -W -ggdb
 LDFLAGS=-lcurl -lboost_system -lboost_filesystem
-OBJECTS=tau.o jsonld.o rdf.o reasoner.o misc.o object.o
+OBJECTS=tau.o jsonld.o rdf.o reasoner.o misc.o object.o cli.o
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 object.o: object.cpp object.h
+cli.o: cli.cpp cli.h reasoner.h jsonld.h parsers.h strings.h
 tau.o: tau.cpp cli.h reasoner.h parsers.h jsonld.h json_spirit.h object.h \
  strings.h rdf.h misc.h
 jsonld.o: jsonld.cpp jsonld.h json_spirit.h object.h strings.h rdf.h

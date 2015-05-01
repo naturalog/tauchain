@@ -6,6 +6,7 @@
 */
 
 #include "reasoner.h"
+#include "parsers.h"
 
 reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
 
