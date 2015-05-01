@@ -130,7 +130,7 @@ frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 void reasoner::match_rule ( frame& current_frame, const predicate& t, const rule& rl, deque<frame*>& queue ) {
 	ground_t ground = current_frame.ground;
 	if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
-	frame& candidate_frame = frame::init ( this, &rl, 0, &current_frame, subst(), ground );
+	frame candidate_frame = /*frame::init ( this,*/{ &rl, 0, &current_frame, subst(), ground };
 	if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
 		trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
 		const frame* ep = &current_frame;
@@ -140,7 +140,7 @@ void reasoner::match_rule ( frame& current_frame, const predicate& t, const rule
 			        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, current_frame.substitution, false ) )
 				break;
 		}
-		if ( !ep->parent ) queue.push_front(&candidate_frame);
+		if ( !ep->parent ) queue.push_front(&frame::init(this, candidate_frame));
 	} else {
 		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
 	}
