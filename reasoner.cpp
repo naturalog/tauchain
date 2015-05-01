@@ -7,6 +7,7 @@
 
 #include "reasoner.h"
 #include "parsers.h"
+#include "rdf.h"
 
 reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
 
@@ -196,11 +197,11 @@ rule* reasoner::mkrule ( const predicate* p, const vector<const predicate*>& v )
 	return &rules[nrules++].init ( p, v );
 }
 
-predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
+const predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
 	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
 };
 
-predicate* reasoner::triple ( const jsonld::quad& q ) {
+const predicate* reasoner::triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 };
 
@@ -213,9 +214,10 @@ qlist merge ( const qdb& q ) {
 evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
+	trace("Reasoner called with quads kb: " << endl << kb << endl << "And query: " << endl << query << endl);
 	for ( const pair<string, jsonld::pqlist>& x : kb ) {
 		for ( jsonld::pquad quad : *x.second ) {
-			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value, &c = quad->graph->value;
+			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 			trace("processing quad " << quad->tostring() << endl);
 			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
 			if ( p != implication || kb.find ( o ) == kb.end() ) continue;

@@ -55,6 +55,7 @@ extern const pnode nil;
 pqlist mk_qlist();
 
 ostream& operator<< ( ostream& o, const qdb& );
+ostream& operator<< ( ostream& o, const qlist& );
 
 class jsonld_api;
 class rdf_db: public qdb {

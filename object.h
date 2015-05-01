@@ -29,6 +29,7 @@ void bt();
 typedef std::nullptr_t null;
 typedef std::string string;
 typedef std::shared_ptr<string> pstring;
+typedef std::shared_ptr<bool> pbool;
 
 pstring pstr ( const string& s );
 pstring pstr ( const char* s );
@@ -111,7 +112,6 @@ typedef obj::somap somap;
 typedef obj::olist olist;
 typedef std::shared_ptr<somap> psomap;
 typedef std::shared_ptr<olist> polist;
-typedef std::shared_ptr<bool> pbool;
 typedef std::map<string, bool> defined_t;
 typedef std::shared_ptr<defined_t> pdefined_t;
 
@@ -143,4 +143,30 @@ bool has ( psomap c, pstring k );
 bool has ( pobj o, string s );
 bool has ( pobj o, pstring s );
 
+namespace jsonld {
+// http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
+struct jsonld_options {
+	jsonld_options() {
+	}
+
+	jsonld_options ( pstring base_ ) : base ( base_ ) {}
+	jsonld_options ( string base_ ) :
+		base ( pstr ( base_ ) ) {
+	}
+
+	pstring base = 0;//pstr ( "http://tauchain.org/" );
+	pbool compactArrays = std::make_shared<bool> ( true );
+	std::shared_ptr<class obj> expandContext = 0;
+	pstring processingMode = pstr ( "json-ld-1.0" );
+	pbool embed = 0;
+	pbool isexplicit = std::make_shared<bool> ( true );
+	pbool omitDefault = 0;
+	pbool useRdfType = std::make_shared<bool> ( true );
+	pbool useNativeTypes = std::make_shared<bool> ( true );
+	pbool produceGeneralizedRdf = std::make_shared<bool> ( true );
+	pstring format = 0;
+	pbool useNamespaces = std::make_shared<bool> ( true );
+	pstring outputForm = 0;
+};
+}
 #endif

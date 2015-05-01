@@ -152,7 +152,9 @@ public:
 		if ( args.size() == 2 )
 			cout << ( r.test_reasoner() ? "pass" : "fail" ) << endl;
 		else try {
-				auto e = r ( convert ( args[2] ), merge ( convert ( args[3], pstr(args[2]) ) ) );
+				qdb kb = convert ( args[2] );
+				qdb query = convert ( args[3], true );
+				auto e = r ( kb, merge ( query ) );
 				cout << "evidence: " << endl << e << endl;
 				//	menu();
 				//		cout << "dict: " << endl << dict.tostr()<<endl;

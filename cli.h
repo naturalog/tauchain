@@ -10,7 +10,7 @@ using namespace jsonld;
 typedef vector<string> strings;
 
 class cmd_t {
-//	jsonld::jsonld_options opts;
+	jsonld::jsonld_options opts;
 public:
 	virtual string desc() const = 0;
 	virtual string help() const = 0;
@@ -19,11 +19,11 @@ public:
 	pobj load_json ( string fname = "", bool print = false );
 	pobj load_json ( const strings& args );
 	pobj nodemap ( const strings& args );
-	pobj nodemap ( pobj o, pstring base );
+	pobj nodemap ( pobj o );
 	qdb toquads ( const strings& args );
-	qdb toquads ( pobj o, pstring base );
-	qdb convert ( pobj o, pstring base );
-	qdb convert ( const string& s, pstring base = 0);
+	qdb toquads ( pobj o );
+	qdb convert ( pobj o );
+	qdb convert ( const string& s, bool bdebugprint = false);
 };
 
 typedef pair<map<string, cmd_t*>, map<pair<string, string>, bool*>>  cmds_t;

@@ -48,30 +48,6 @@ bool equals ( const pobj& a, const obj& b );
 bool equals ( const obj& a, const pobj& b );
 pobj get ( psomap p, string k );
 
-// http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
-struct jsonld_options {
-	jsonld_options() {
-	}
-
-	jsonld_options ( pstring base_ ) : base ( base_ ) {}
-	jsonld_options ( string base_ ) :
-		base ( pstr ( base_ ) ) {
-	}
-
-	pstring base = 0;//pstr ( "http://tauchain.org/" );
-	pbool compactArrays = make_shared<bool> ( true );
-	pobj expandContext = 0;
-	pstring processingMode = pstr ( "json-ld-1.0" );
-	pbool embed = 0;
-	pbool isexplicit = make_shared<bool> ( true );
-	pbool omitDefault = 0;
-	pbool useRdfType = make_shared<bool> ( true );
-	pbool useNativeTypes = make_shared<bool> ( true );
-	pbool produceGeneralizedRdf = make_shared<bool> ( true );
-	pstring format = 0;
-	pbool useNamespaces = make_shared<bool> ( true );
-	pstring outputForm = 0;
-};
 
 bool keyword ( const string& key );
 bool keyword ( pstring key );

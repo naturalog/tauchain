@@ -21,24 +21,22 @@ pobj cmd_t::load_json ( const strings& args ) {
 }
 
 pobj cmd_t::nodemap ( const strings& args ) {
-	return nodemap ( load_json ( args[2] ), pstr ( string ( "file://" ) + args[2] ) );
+	return nodemap ( load_json ( args[2] ) );
 }
 
-pobj cmd_t::nodemap ( pobj o, pstring base ) {
+pobj cmd_t::nodemap ( pobj o ) {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
-	jsonld::jsonld_options opts ( base );
 	jsonld::jsonld_api a ( opts );
 	a.gen_node_map ( o, nodeMap );
 	return mk_somap_obj ( nodeMap );
 }
 
 qdb cmd_t::toquads ( const strings& args ) {
-	return toquads ( load_json ( args ), pstr ( args[2] ) );
+	return toquads ( load_json ( args ) );
 }
 
-qdb cmd_t::toquads ( pobj o, pstring base ) {
-	jsonld::jsonld_options opts ( base );
+qdb cmd_t::toquads ( pobj o ) {
 	jsonld::jsonld_api a ( opts );
 	rdf_db r ( a );
 	auto nodeMap = o;
@@ -47,22 +45,27 @@ qdb cmd_t::toquads ( pobj o, pstring base ) {
 		if ( !g.second || !g.second->MAP() ) throw logic_error("Expected map in nodemap.");
 		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
+//	cout << "Converting: " << endl << o->toString() << endl;
+//	cout << "Converted: " << endl << r << endl;
 	return r;
 }
 
-qdb cmd_t::convert ( pobj o, pstring base ) {
-	return toquads ( nodemap ( jsonld::expand ( o, jsonld::jsonld_options ( base ) ), base ), base );
+qdb cmd_t::convert ( pobj o ) {
+	return toquads ( nodemap ( jsonld::expand ( o, opts) ) );
 }
 
-qdb cmd_t::convert ( const string& s, pstring base) {
-	return convert ( load_json ( s ), base ? base : pstr ( string ( "file://" ) + s + "#" ) );
+qdb cmd_t::convert ( const string& s, bool debugprint) {
+	if (debugprint) cout << " Converting: " << s;
+	qdb r = convert ( load_json ( s ) );
+	if (debugprint) cout << " Converted: " << r << endl;
+	return r;
 }
 
 void process_flags ( const cmds_t& cmds, strings& args ) {
 	strings::iterator it;
 	for (auto x : cmds.second) 
 		if ( ( it = find ( args.begin(), args.end(), x.first.first ) ) != args.end() ) {
-			*x.second = true;
+			*x.second = !*x.second;
 			args.erase ( it );
 		}
 }

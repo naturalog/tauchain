@@ -82,8 +82,8 @@ public:
 	void printkb();
 	predicate* mkpred ( string s, const vector<const predicate*>& v = vector<const predicate*>() );
 	rule* mkrule ( const predicate* p = 0, const vector<const predicate*>& v = vector<const predicate*>() );
-	predicate* triple ( const string& s, const string& p, const string& o );
-	predicate* triple ( const jsonld::quad& q );
+	const predicate* triple ( const string& s, const string& p, const string& o );
+	const predicate* triple ( const jsonld::quad& q );
 };
 
 ostream& operator<< ( ostream& o, const subst& s );

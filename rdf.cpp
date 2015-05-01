@@ -83,10 +83,15 @@ rdf_db::rdf_db ( jsonld_api& api_ ) :
 	( *this ) [str_default] = mk_qlist();
 }
 
+ostream& operator<< ( ostream& o, const qlist& x ) {
+	for ( pquad q : x )
+		o << '\t' << q->tostring ( ) << endl;
+	return o;
+}
+
 ostream& operator<< ( ostream& o, const qdb& q ) {
 	for ( auto x : q ) 
-		for ( pquad q : *x.second )
-			o << q->tostring ( ) << endl;
+		o << x.first << *x.second << endl;
 	return o;
 }
 
