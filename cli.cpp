@@ -55,6 +55,7 @@ qdb cmd_t::convert ( pobj o ) {
 }
 
 qdb cmd_t::convert ( const string& s, bool debugprint) {
+	if (fnamebase) opts.base = pstr(string("file://") + s + "#");
 	if (debugprint) cout << " Converting: " << s;
 	qdb r = convert ( load_json ( s ) );
 	if (debugprint) cout << " Converted: " << r << endl;

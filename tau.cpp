@@ -11,7 +11,8 @@ auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
 #endif
-bool autobt = false, _pause = false, __printkb = false;
+bool autobt = false, _pause = false, __printkb = false, fnamebase = false;
+jsonld::jsonld_options opts;
 
 void menu();
 
@@ -180,6 +181,7 @@ int main ( int argc, char** argv ) {
 		{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
 		{ { "--shorten", "on IRIs containig # show only what after #" }, &shorten },
 		{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
+		{ { "--base", "set file://<filename> as base in JsonLDOptions" }, &fnamebase }
 	}};
 	strings args;
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );

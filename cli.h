@@ -9,8 +9,10 @@ using namespace jsonld;
 
 typedef vector<string> strings;
 
+extern bool fnamebase;
+extern jsonld::jsonld_options opts;
+
 class cmd_t {
-	jsonld::jsonld_options opts;
 public:
 	virtual string desc() const = 0;
 	virtual string help() const = 0;
