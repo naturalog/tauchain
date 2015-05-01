@@ -1,4 +1,8 @@
+#include <stdio.h>
+#include <boost/filesystem.hpp>
 #include "cli.h"
+
+using namespace boost::filesystem;
 
 #ifdef DEBUG
 auto dummy = []() {
@@ -29,14 +33,22 @@ public:
 		pobj e;
 		cout << ( e = jsonld::expand ( load_json ( args ) ) )->toString() << endl;
 		if ( args.size() == 3 ) return 0;
-		string f1 = tmpnam ( 0 ), f2 = tmpnam ( 0 );
-		ofstream os1 ( f1 ), os2 ( f2 );
+		boost::filesystem::path tmpdir = boost::filesystem::temp_directory_path();
+		const string tmpfile_template =  tmpdir.string() + "/XXXXXX";
+		std::unique_ptr<char> fn1(strdup(tmpfile_template.c_str()));
+		std::unique_ptr<char> fn2(strdup(tmpfile_template.c_str()));
+		int fd1 = mkstemp(fn1.get());
+		int fd2 = mkstemp(fn2.get());
+
+		ofstream os1 ( fn1.get() ), os2 ( fn2.get() );
 		os1 << json_spirit::write_string ( jsonld::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
 		os2 << json_spirit::write_string ( jsonld::convert ( load_json ( args[3] ) ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
 		os1.close();
 		os2.close();
-		string c = string ( "diff " ) + f1 + string ( " " ) + f2;
+		string c = string ( "diff " ) + fn1.get() + string ( " " ) + fn2.get();
 		system ( c.c_str() );
+		close(fd1);
+		close(fd2);
 
 		return 0;
 	}
