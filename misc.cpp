@@ -91,8 +91,8 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( pair<int, list<pair<const predicate*, ground_t>>> x : e ) {
 		o << dstr( x.first ) << ": ";
 		if ( x.second.empty() ) o << " { }";
-		else for ( pair<const predicate*, ground_t> y : x.second )
-				o << endl << '\t' << *y.first << y.second;
+		else //for ( pair<const predicate*, ground_t> y : x.second )
+				o << endl << '\t' << *x.second.rbegin()->first << x.second.rbegin()->second;
 		o << endl;
 	}
 	return o;
