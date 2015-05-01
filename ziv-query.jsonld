@@ -4,7 +4,7 @@
             {
                 "@id" : "_:g3",
                 "http://www.agfa.com/w3c/euler/ziv#cinema" : {
-                    "@value" : "Globus"
+                    "@id" : "Globus"
                 },
                 "http://www.agfa.com/w3c/euler/ziv#city" : {
                     "@id" : "_:g4"
@@ -13,10 +13,10 @@
                     "@id" : "_:g5"
                 },
                 "http://www.agfa.com/w3c/euler/ziv#month" : {
-                    "@value" : "May"
+                    "@id" : "May"
                 },
                 "http://www.agfa.com/w3c/euler/ziv#year" : {
-                    "@value" : 2001
+                    "@id" : 2001
                 }
             }
         ],
