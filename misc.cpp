@@ -107,7 +107,10 @@ ostream& operator<< ( ostream& o, const cases_t& e ) {
 }
 
 ostream& operator<< ( ostream& o, const frame& f ) {
-	o << "Frame: " << &f << " {" << endl << "\tsrc: " << f.src << endl << "\tind: " << f.ind << endl << "\tparent pointer: ";
+	o << "Frame: " << &f << " {" << endl << "\tsrc: " ;
+	if (f.src) o << *f.src;
+	else o << "null";
+	o << endl << "\tind: " << f.ind << endl << "\tparent pointer: ";
 	if ( f.parent ) o << f.parent;
 	else o << "null";
 	o << endl << "\tsubst: " << f.substitution << endl << "\tgnd: " << f.ground;

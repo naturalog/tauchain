@@ -51,12 +51,13 @@ typedef map<int, list<const rule*>> cases_t;
 
 struct frame {
 	const rule* rul = 0;
-	uint src = 0, ind = 0;
+	const rule* src = 0;
+	uint ind = 0;
 	const frame* parent = 0;
 	subst substitution;
 	ground_t ground;
 	static frame& init ( class reasoner* r, const frame& f );
-	static frame& init ( class reasoner*, const rule* _r = 0, uint _src = 0, uint _ind = 0, const frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
+	static frame& init ( class reasoner*, const rule* _r = 0, const rule* _src = 0, uint _ind = 0, const frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 };
 
 class reasoner {

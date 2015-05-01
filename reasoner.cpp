@@ -36,7 +36,7 @@ frame& frame::init ( reasoner* r, const frame& f ) {
 //	return res;
 }
 
-frame& frame::init ( reasoner* rs, const rule* _r, uint _src, uint _ind, const frame* p, subst _s, ground_t _g ) {
+frame& frame::init ( reasoner* rs, const rule* _r, const rule* _src, uint _ind, const frame* p, subst _s, ground_t _g ) {
 	if ( rs->nframes >= max_frames ) throw "Buffer overflow";
 	frame& f = rs->frames[rs->nframes++];
 	f.rul = _r;
@@ -130,13 +130,11 @@ frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 
 void reasoner::match_cases ( frame& current_frame, const predicate& t, const cases_t& cases, deque<frame*>& queue ) {
 	if ( cases.find ( t.pred ) == cases.end() ) return;
-	uint src = 0;
 	for ( const rule* _rl : cases.at(t.pred) ) {
 		const rule& rl = *_rl;
-		src++;
 		ground_t ground = current_frame.ground;
 		if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
-		frame& candidate_frame = frame::init ( this, &rl, src, 0, &current_frame, subst(), ground );
+		frame& candidate_frame = frame::init ( this, &rl, _rl, 0, &current_frame, subst(), ground );
 		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
 			trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
 			const frame* ep = &current_frame;
@@ -164,11 +162,11 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 
 	cout << "goal: " << *goal << endl << "cases:" << endl << cases << endl;
 	while ( !queue.empty() && ++step ) {
+		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		frame& current_frame = *queue.front();
 		queue.pop_front();
 		ground_t g = current_frame.ground;
 		trace ( current_frame << endl );
-		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		if ( current_frame.ind >= current_frame.rul->body.size() ) {
 			if ( !current_frame.parent ) evidence_found ( current_frame, evidence );
 			else queue.push_back ( next_frame ( current_frame, g ) );
