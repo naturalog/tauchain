@@ -27,8 +27,8 @@ using namespace jsonld;
 const uint K1 = 1024, M1 = K1 * K1;
 const uint max_predicates = M1, max_rules = M1, max_frames = M1;
 
-typedef vector<struct predicate*> predlist;
-typedef vector<struct rule*> rulelist;
+typedef vector<const struct predicate*> predlist;
+typedef vector<const struct rule*> rulelist;
 ostream& operator<< ( ostream& o, const rulelist& l );
 ostream& operator<< ( ostream& o, const predlist& l );
 
@@ -39,24 +39,24 @@ struct predicate {
 };
 
 struct rule {
-	predicate* head = 0;
+	const predicate* head = 0;
 	predlist body;
-	rule& init ( predicate* h, predlist b = predlist() );
+	rule& init ( const predicate* h, predlist b = predlist() );
 };
 
-typedef map<int, predicate*> subst;
-typedef list<pair<rule*, subst>> ground_t;
-typedef map<int, list<pair</*rule*/predicate*, ground_t>>> evidence_t;
-typedef map<int, list<rule*>> cases_t;
+typedef map<int, const predicate*> subst;
+typedef list<pair<const rule*, subst>> ground_t;
+typedef map<int, list<pair<const predicate*, ground_t>>> evidence_t;
+typedef map<int, list<const rule*>> cases_t;
 
 struct frame {
-	rule* rul = 0;
+	const rule* rul = 0;
 	uint src = 0, ind = 0;
-	frame* parent = 0;
+	const frame* parent = 0;
 	subst substitution;
 	ground_t ground;
-	frame& init ( class reasoner* r, const frame& f );
-	frame& init ( class reasoner*, rule* _r = 0, uint _src = 0, uint _ind = 0, frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
+	static frame& init ( class reasoner* r, const frame& f );
+	static frame& init ( class reasoner*, const rule* _r = 0, uint _src = 0, uint _ind = 0, const frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 };
 
 class reasoner {
@@ -66,13 +66,13 @@ class reasoner {
 	frame *frames = new frame[max_frames];
 	uint npredicates = 0, nrules = 0, nframes = 0;
 	predicate* GND;
-	int builtin ( predicate* p );
-	predicate* evaluate ( predicate& t, const subst& sub );
-	bool unify ( predicate* s, const subst& ssub, predicate* d, subst& dsub, bool f );
+	int builtin ( const predicate* p );
+	const predicate* evaluate ( const predicate& t, const subst& sub );
+	bool unify ( const predicate* s, const subst& ssub, const predicate* d, subst& dsub, bool f );
 	predlist to_predlist ( const ground_t& g );
 	void evidence_found ( const frame& current_frame, evidence_t& evidence );
 	frame* next_frame ( const frame& current_frame, ground_t& g );
-	frame* match_cases ( frame& current_frame, predicate& t, cases_t& cases, deque<frame*>& queue );
+	void match_cases ( frame& current_frame, const predicate& t, const cases_t& cases, deque<frame*>& queue );
 public:
 	reasoner();
 	~reasoner();
@@ -80,8 +80,8 @@ public:
 	evidence_t operator() ( const qdb& kb, const qlist& query );
 	bool test_reasoner();
 	void printkb();
-	predicate* mkpred ( string s, const vector<predicate*>& v = vector<predicate*>() );
-	rule* mkrule ( predicate* p = 0, const vector<predicate*>& v = vector<predicate*>() );
+	predicate* mkpred ( string s, const vector<const predicate*>& v = vector<const predicate*>() );
+	rule* mkrule ( const predicate* p = 0, const vector<const predicate*>& v = vector<const predicate*>() );
 	predicate* triple ( const string& s, const string& p, const string& o );
 	predicate* triple ( const jsonld::quad& q );
 };

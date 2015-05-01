@@ -77,21 +77,21 @@ ostream& operator<< ( ostream& o, const rule& r ) {
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( pair<int, predicate*> x : s ) o << dstr ( x.first ) << " / " << *x.second << "; ";
+	for ( pair<int, const predicate*> x : s ) o << dstr ( x.first ) << " / " << *x.second << "; ";
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
 	o << endl;
-	for ( pair<rule*, subst> x : s ) o << '\t' << *x.first << ": " << x.second << endl;
+	for ( pair<const rule*, subst> x : s ) o << '\t' << *x.first << ": " << x.second << endl;
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
-	for ( pair<int, list<pair<predicate*, ground_t>>> x : e ) {
+	for ( pair<int, list<pair<const predicate*, ground_t>>> x : e ) {
 		o << dstr( x.first ) << ": ";
 		if ( x.second.empty() ) o << " { }";
-		else for ( pair<predicate*, ground_t> y : x.second )
+		else for ( pair<const predicate*, ground_t> y : x.second )
 				o << endl << '\t' << *y.first << y.second;
 		o << endl;
 	}
@@ -99,9 +99,9 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 }
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
-	for ( pair<int, list<rule*>> x : e ) {
+	for ( pair<int, list<const rule*>> x : e ) {
 		o << dstr( x.first ) << ": " << endl;
-		for ( rule* y : x.second ) o << '\t' << *y << endl;
+		for ( const rule* y : x.second ) o << '\t' << *y << endl;
 	}
 	return o;
 }
