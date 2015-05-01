@@ -2,8 +2,6 @@
 #include <boost/filesystem.hpp>
 #include "cli.h"
 
-using namespace boost::filesystem;
-
 #ifdef DEBUG
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );

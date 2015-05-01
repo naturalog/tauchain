@@ -1,9 +1,56 @@
 [
   {
-    "@context": {
-      "log": "http://www.w3.org/2000/10/swap/log#"
-    }, 
     "@graph": [
+      {
+        "http://www.w3.org/2000/10/swap/log#implies": [
+          {
+            "@id": "_:t2"
+          }
+        ], 
+        "@id": "_:t1"
+      }, 
+      {
+        "@graph": [
+          {
+            ":a": [
+              {
+		"@id":"?T2"
+              }
+            ], 
+            "@id": "?T1"
+          },
+          {
+            ":a": [
+              {
+		"@id":"?T3"
+              }
+            ], 
+            "@id": "?T2"
+          }
+        ], 
+        "@id": "_:t1"
+      },
+
+       {
+        "@graph": [
+          {
+            ":a": [
+              {
+		"@id":"?T3"
+              }
+            ], 
+            "@id": "?T1"
+          }
+        ], 
+        "@id": "_:t2"
+      },
+
+    
+    
+    
+    
+    
+    
       {
         "@id": ":bananas", 
         ":a": {
@@ -109,19 +156,27 @@
         "@id": ":socrates"
       }, 
 
+
+      
+      
+      
       
       {
 	"@id": "_:xxx", 
         "http://www.w3.org/2000/10/swap/log#implies": [{"@id": "_:yyy"}]
       },
       {
-        "@graph": [{":color": {"@id": ":green"}}],
+        "@graph": [{"@id":"?G", ":color": {"@id": ":green"}}],
         "@id": "_:xxx"
       }, 
       {
-        "@graph": [{":is": {"@id": ":good for you"}}],
+        "@graph": [{"@id":"?G", ":is": {"@id": ":good for you"}}],
         "@id": "_:yyy"
       }, 
+      
+      
+      
+      
       {
         "http://www.w3.org/2000/10/swap/log#implies": [
           {
@@ -190,7 +245,12 @@
         ], 
         "@id": "_:g3"
       }, 
-      {
+      
+      
+      
+      
+
+       {
         "http://www.w3.org/2000/10/swap/log#implies": [
           {
             "@id": "_:g5"
@@ -207,6 +267,14 @@
               }
             ], 
             "@id": "?X"
+          },
+          {
+            ":a": [
+              {
+                "@id": ":healthy food"
+              }
+            ], 
+            "@id": "?B"
           }
         ], 
         "@id": "_:g4"
@@ -220,19 +288,14 @@
               }
             ], 
             "@id": "?X"
-          },
-          {
-            ":a": [
-              {
-                "@id": ":healthy food"
-              }
-            ], 
-            "@id": "?B"
           }
-
         ], 
         "@id": "_:g5"
       }
+
+     
+      
+      
       
       
       
