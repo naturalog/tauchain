@@ -17,6 +17,7 @@ public:
 			json_spirit::read_stream ( is, v );
 		}
 		pobj r =  jsonld::convert ( v );
+		if (!r) throw runtime_error("Couldn't read input.");
 		if ( print ) cout << r->toString() << endl;
 		return r;
 	}
@@ -48,7 +49,7 @@ public:
 		auto nodeMap = o;
 		for ( auto g : *nodeMap->MAP() ) {
 			if ( jsonld::is_rel_iri ( g.first ) ) continue;
-			if ( !g.second || !g.second->MAP() ) throw 0;
+			if ( !g.second || !g.second->MAP() ) throw logic_error("Expected map in nodemap.");
 			r.graph_to_rdf ( g.first, *g.second->MAP() );
 		}
 		return r;

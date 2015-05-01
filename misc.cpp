@@ -58,7 +58,6 @@ string dstr(int p) {
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
 	if ( p.args.size() == 2 ) {
-//		o << "{ ";
 		o << dstr(p.args[0]->pred);
 		if ( dict[p.pred] == implication ) o << " <= ";
 		else o << ' ' << dstr(p.pred) << ' ';
@@ -77,21 +76,19 @@ ostream& operator<< ( ostream& o, const rule& r ) {
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( pair<int, predicate*> x : s )
-		( deref ? o << dict[x.first] : o << x.first ) << " / " << *x.second << "; ";
+	for ( pair<int, predicate*> x : s ) o << dstr ( x.first ) << " / " << *x.second << "; ";
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
 	o << endl;
-	for ( pair<rule*, subst> x : s )
-		o << '\t' << *x.first << ": " << x.second << endl;
+	for ( pair<rule*, subst> x : s ) o << '\t' << *x.first << ": " << x.second << endl;
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( pair<int, list<pair<predicate*, ground_t>>> x : e ) {
-		( deref ? o << dict[x.first] : o << x.first ) << ':';
+		o << dstr( x.first ) << ": ";
 		if ( x.second.empty() ) o << " { }";
 		else for ( pair<predicate*, ground_t> y : x.second )
 				o << endl << '\t' << *y.first << y.second;
@@ -102,9 +99,8 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
 	for ( pair<int, list<rule*>> x : e ) {
-		( deref ? o << dict[x.first] : o << x.first ) << ": " << endl;
+		o << dstr( x.first ) << ": " << endl;
 		for ( rule* y : x.second ) o << '\t' << *y << endl;
-		//o << " ) " << endl;
 	}
 	return o;
 }
