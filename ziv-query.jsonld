@@ -16,7 +16,7 @@
                     "@id" : "May"
                 },
                 "http://www.agfa.com/w3c/euler/ziv#year" : {
-                    "@id" : 2001
+                    "@id" : "2001"
                 }
             }
         ],
