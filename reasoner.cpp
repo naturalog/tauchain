@@ -31,16 +31,15 @@ int reasoner::builtin ( const predicate* p ) {
 frame& frame::init ( reasoner* r, const frame& f ) {
 //	if ( r->nframes >= max_frames ) throw "Buffer overflow";
 //	const frame& res = 
-	return init ( r, f.rul, f.src, f.ind, f.parent, f.substitution, f.ground );
+	return init ( r, f.rul, f.ind, f.parent, f.substitution, f.ground );
 //	res.parent = f.parent;
 //	return res;
 }
 
-frame& frame::init ( reasoner* rs, const rule* _r, const rule* _src, uint _ind, const frame* p, subst _s, ground_t _g ) {
+frame& frame::init ( reasoner* rs, const rule* _r, uint _ind, const frame* p, subst _s, ground_t _g ) {
 	if ( rs->nframes >= max_frames ) throw "Buffer overflow";
 	frame& f = rs->frames[rs->nframes++];
 	f.rul = _r;
-	f.src = _src;
 	f.ind = _ind;
 	f.parent = p;
 	f.substitution = _s;
@@ -128,28 +127,22 @@ frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
 	return &new_frame;
 }
 
-void reasoner::match_cases ( frame& current_frame, const predicate& t, const cases_t& cases, deque<frame*>& queue ) {
-	if ( cases.find ( t.pred ) == cases.end() ) return;
-	for ( const rule* _rl : cases.at(t.pred) ) {
-		const rule& rl = *_rl;
-		ground_t ground = current_frame.ground;
-		if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
-		frame& candidate_frame = frame::init ( this, &rl, _rl, 0, &current_frame, subst(), ground );
-		if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
-			trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
-			const frame* ep = &current_frame;
-			while ( ep->parent ) {
-				ep = ep->parent;
-				if ( ( ep->src == current_frame.src ) &&
-				        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, current_frame.substitution, false ) )
-					break;
-			}
-			if ( !ep->parent ) {
-				queue.push_front(&candidate_frame);
-			}
-		} else {
-			trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
+void reasoner::match_rule ( frame& current_frame, const predicate& t, const rule& rl, deque<frame*>& queue ) {
+	ground_t ground = current_frame.ground;
+	if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
+	frame& candidate_frame = frame::init ( this, &rl, 0, &current_frame, subst(), ground );
+	if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
+		trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
+		const frame* ep = &current_frame;
+		while ( ep->parent ) {
+			ep = ep->parent;
+			if ( ( ep->rul == current_frame.rul ) &&
+			        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, current_frame.substitution, false ) )
+				break;
 		}
+		if ( !ep->parent ) queue.push_front(&candidate_frame);
+	} else {
+		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
 	}
 }
 
@@ -180,7 +173,10 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 				r.ind++;
 				queue.push_back ( &r );
 			} else if ( !b ) continue;
-			match_cases ( current_frame, *t, cases, queue );
+			auto it = cases.find(t->pred);
+			if (it != cases.end())
+				for ( const rule* rl : it->second )
+					match_rule ( current_frame, *t, *rl, queue );
 		}
 		
 	}

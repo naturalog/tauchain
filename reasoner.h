@@ -51,13 +51,12 @@ typedef map<int, list<const rule*>> cases_t;
 
 struct frame {
 	const rule* rul = 0;
-	const rule* src = 0;
 	uint ind = 0;
 	const frame* parent = 0;
 	subst substitution;
 	ground_t ground;
 	static frame& init ( class reasoner* r, const frame& f );
-	static frame& init ( class reasoner*, const rule* _r = 0, const rule* _src = 0, uint _ind = 0, const frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
+	static frame& init ( class reasoner*, const rule* _r = 0, uint _ind = 0, const frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 };
 
 class reasoner {
@@ -73,7 +72,7 @@ class reasoner {
 	predlist to_predlist ( const ground_t& g );
 	void evidence_found ( const frame& current_frame, evidence_t& evidence );
 	frame* next_frame ( const frame& current_frame, ground_t& g );
-	void match_cases ( frame& current_frame, const predicate& t, const cases_t& cases, deque<frame*>& queue );
+	void match_rule ( frame& current_frame, const predicate& t, const rule& rl, deque<frame*>& queue );
 public:
 	reasoner();
 	~reasoner();
