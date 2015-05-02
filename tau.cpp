@@ -49,7 +49,7 @@ public:
 		os1.close();
 		os2.close();
 		string c = string ( "diff " ) + fn1.get() + string ( " " ) + fn2.get();
-		system ( c.c_str() );
+		if ( system ( c.c_str() ) ) cerr << "command " << c << " failed." << endl;
 		close ( fd1 );
 		close ( fd2 );
 

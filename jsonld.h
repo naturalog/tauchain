@@ -63,18 +63,18 @@ inline const pobj sget##x(pobj p) { return has##x(p->MAP()) ? p->MAP()->at(kw##x
 inline const pobj sget##x(obj& p) { return has##x(p.MAP()) ? p.MAP()->at(kw##x) : 0; } \
 inline const pobj sget##x(psomap p) { return has##x(p) ? p->at(kw##x) : 0; } \
 inline const pobj sget##x(somap p) { return has##x(p) ? p.at(kw##x) : 0; }
-KW_SHORTCUTS ( base );
-KW_SHORTCUTS ( id );
-KW_SHORTCUTS ( index );
-KW_SHORTCUTS ( set );
-KW_SHORTCUTS ( list );
-KW_SHORTCUTS ( type );
-KW_SHORTCUTS ( reverse );
-KW_SHORTCUTS ( value );
-KW_SHORTCUTS ( vocab );
-KW_SHORTCUTS ( graph );
-KW_SHORTCUTS ( context );
-KW_SHORTCUTS ( none );
+KW_SHORTCUTS ( base )
+KW_SHORTCUTS ( id )
+KW_SHORTCUTS ( index )
+KW_SHORTCUTS ( set )
+KW_SHORTCUTS ( list )
+KW_SHORTCUTS ( type )
+KW_SHORTCUTS ( reverse )
+KW_SHORTCUTS ( value )
+KW_SHORTCUTS ( vocab )
+KW_SHORTCUTS ( graph )
+KW_SHORTCUTS ( context )
+KW_SHORTCUTS ( none )
 
 template<typename T> inline bool haslang ( T t ) {
 	return has ( t, str_lang );

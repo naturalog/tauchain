@@ -139,8 +139,9 @@ void reasoner::match_rule ( frame& current_frame, const predicate& t, const rule
 				break;
 		}
 		if ( !ep->parent ) queue.push_front ( &frame::init ( this, candidate_frame ) );
-	} else
+	} else {
 		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
+	}
 }
 
 evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
@@ -190,11 +191,11 @@ rule* reasoner::mkrule ( const predicate* p, const vector<const predicate*>& v )
 
 const predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
 	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
-};
+}
 
 const predicate* reasoner::triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
-};
+}
 
 qlist merge ( const qdb& q ) {
 	qlist r;
