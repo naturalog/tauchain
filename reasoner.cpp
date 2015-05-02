@@ -76,12 +76,9 @@ bool reasoner::unify ( const predicate* _s, const subst& ssub, const predicate* 
 		trace ( "Match two nulls." << endl );
 		return true;
 	}
-	//	if ( !_s ) return _d && _d->pred >= 0; // ??
-	//	if ( !_d ) return _s && _s->pred >= 0; // ??
 	const predicate& s = *_s;
 	const predicate& d = *_d;
 	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
-	//	if (s.pred == d.pred) trace("we have local pred match"<<endl);
 	const predicate* p;
 	if ( s.pred < 0 ) {
 		if ( ( p = evaluate ( s, ssub ) ) ) return unify ( p, ssub, _d, dsub, f );
@@ -99,7 +96,6 @@ bool reasoner::unify ( const predicate* _s, const subst& ssub, const predicate* 
 		trace ( "Match." << endl );
 		return true;
 	}
-	p = evaluate ( d, dsub );
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
 	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
 	trace ( "Match with subst: " << dsub << endl );
@@ -144,7 +140,7 @@ void reasoner::match_rule ( frame& current_frame, const predicate& t, const rule
 	}
 }
 
-evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
+evidence_t reasoner::prove ( rule* goal, int max_steps, cases_t& cases ) {
 	trace ( "dict: " << dict.tostr() << endl );
 	deque<frame*> queue;
 	queue.emplace_back ( &frame::init ( this, goal ) );
@@ -163,7 +159,7 @@ evidence_t reasoner::operator() ( rule* goal, int max_steps, cases_t& cases ) {
 			else queue.push_back ( next_frame ( current_frame, g ) );
 		} else {
 			const predicate* t = current_frame.rul->body[current_frame.ind];
-			int b = builtin ( t, current_frame ); // ( t, c );
+			int b = builtin ( t, current_frame );
 			if ( b == 1 ) {
 				g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
 				frame& r = frame::init ( this, current_frame );
@@ -203,7 +199,7 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
+evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
 	trace ( "Reasoner called with quads kb: " << endl << kb << endl << "And query: " << endl << query << endl );
@@ -227,7 +223,7 @@ evidence_t reasoner::operator() ( const qdb &kb, const qlist& query ) {
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 	printkb();
-	return ( *this ) ( &goal, -1, cases );
+	return prove ( &goal, -1, cases );
 }
 
 bool reasoner::test_reasoner() {
@@ -244,7 +240,7 @@ bool reasoner::test_reasoner() {
 
 	cout << "cases:" << endl << cases << endl;
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	evidence = ( *this ) ( mkrule ( 0, { goal } ), -1, cases );
+	evidence = prove ( mkrule ( 0, { goal } ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
 	cout << evidence << endl;
 	cout << "QED!" << endl;

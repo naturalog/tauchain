@@ -155,7 +155,7 @@ public:
 		else try {
 				qdb kb = convert ( args[2] );
 				qdb query = convert ( args[3], true );
-				auto e = r ( kb, merge ( query ) );
+				auto e = r.prove ( kb, merge ( query ) );
 				cout << "evidence: " << endl << e << endl;
 				//	menu();
 				//		cout << "dict: " << endl << dict.tostr()<<endl;

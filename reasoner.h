@@ -76,8 +76,8 @@ class reasoner {
 public:
 	reasoner();
 	~reasoner();
-	evidence_t operator() ( rule* goal, int maxNumberOfSteps, cases_t& cases );
-	evidence_t operator() ( const qdb& kb, const qlist& query );
+	evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases );
+	evidence_t prove ( const qdb& kb, const qlist& query );
 	bool test_reasoner();
 	void printkb();
 	predicate* mkpred ( string s, const vector<const predicate*>& v = vector<const predicate*>() );
