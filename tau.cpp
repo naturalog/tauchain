@@ -38,10 +38,10 @@ public:
 		if ( args.size() == 3 ) return 0;
 		boost::filesystem::path tmpdir = boost::filesystem::temp_directory_path();
 		const string tmpfile_template =  tmpdir.string() + "/XXXXXX";
-		std::unique_ptr<char> fn1(strdup(tmpfile_template.c_str()));
-		std::unique_ptr<char> fn2(strdup(tmpfile_template.c_str()));
-		int fd1 = mkstemp(fn1.get());
-		int fd2 = mkstemp(fn2.get());
+		std::unique_ptr<char> fn1 ( strdup ( tmpfile_template.c_str() ) );
+		std::unique_ptr<char> fn2 ( strdup ( tmpfile_template.c_str() ) );
+		int fd1 = mkstemp ( fn1.get() );
+		int fd2 = mkstemp ( fn2.get() );
 
 		ofstream os1 ( fn1.get() ), os2 ( fn2.get() );
 		os1 << json_spirit::write_string ( jsonld::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
@@ -50,8 +50,8 @@ public:
 		os2.close();
 		string c = string ( "diff " ) + fn1.get() + string ( " " ) + fn2.get();
 		system ( c.c_str() );
-		close(fd1);
-		close(fd2);
+		close ( fd1 );
+		close ( fd2 );
 
 		return 0;
 	}
@@ -164,28 +164,29 @@ public:
 				cerr << ex.what() << endl;
 				return 1;
 			}
-		if (__printkb) r.printkb();
+		if ( __printkb ) r.printkb();
 		return 0;
 	}
 };
 
 int main ( int argc, char** argv ) {
 	cmds_t cmds = { {
-		{ string ( "expand" ) , new expand_cmd },
-		{ string ( "toquads" ) , new toquads_cmd },
-		{ string ( "nodemap" ) , new nodemap_cmd },
-		{ string ( "convert" ) , new convert_cmd },
-		{ string ( "prove" ) , new prove_cmd },
-	}, {
-		{ { "--no-deref", "show integers only instead of strings" }, &deref },
-		{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
-		{ { "--shorten", "on IRIs containig # show only what after #" }, &shorten },
-		{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
-		{ { "--base", "set file://<filename> as base in JsonLDOptions" }, &fnamebase }
-	}};
+			{ string ( "expand" ) , new expand_cmd },
+			{ string ( "toquads" ) , new toquads_cmd },
+			{ string ( "nodemap" ) , new nodemap_cmd },
+			{ string ( "convert" ) , new convert_cmd },
+			{ string ( "prove" ) , new prove_cmd },
+		}, {
+			{ { "--no-deref", "show integers only instead of strings" }, &deref },
+			{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
+			{ { "--shorten", "on IRIs containig # show only what after #" }, &shorten },
+			{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
+			{ { "--base", "set file://<filename> as base in JsonLDOptions" }, &fnamebase }
+		}
+	};
 	strings args;
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
-	process_flags(cmds, args);
+	process_flags ( cmds, args );
 	if ( argc == 1 || ( cmds.first.find ( argv[1] ) == cmds.first.end() && args[1] != "help" ) ) {
 		print_usage ( cmds );
 		return 1;

@@ -66,7 +66,7 @@ class reasoner {
 	frame *frames = new frame[max_frames];
 	uint npredicates = 0, nrules = 0, nframes = 0;
 	predicate* GND;
-	int builtin ( const predicate* p );
+	int builtin ( const predicate* t, frame& f );
 	const predicate* evaluate ( const predicate& t, const subst& sub );
 	bool unify ( const predicate* s, const subst& ssub, const predicate* d, subst& dsub, bool f );
 	predlist to_predlist ( const ground_t& g );

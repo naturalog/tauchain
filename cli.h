@@ -25,7 +25,7 @@ public:
 	qdb toquads ( const strings& args );
 	qdb toquads ( pobj o );
 	qdb convert ( pobj o );
-	qdb convert ( const string& s, bool bdebugprint = false);
+	qdb convert ( const string& s, bool bdebugprint = false );
 };
 
 typedef pair<map<string, cmd_t*>, map<pair<string, string>, bool*>>  cmds_t;

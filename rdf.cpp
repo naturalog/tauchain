@@ -90,7 +90,7 @@ ostream& operator<< ( ostream& o, const qlist& x ) {
 }
 
 ostream& operator<< ( ostream& o, const qdb& q ) {
-	for ( auto x : q ) 
+	for ( auto x : q )
 		o << x.first << *x.second << endl;
 	return o;
 }
@@ -231,7 +231,7 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 }
 
 }
-	
+
 quad::quad ( string subj, string pred, pnode object, string graph ) :
 	quad ( startsWith ( subj, "_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {
 }
@@ -242,9 +242,9 @@ quad::quad ( string subj, string pred, string object, string graph ) :
 	       graph ) {}
 
 quad::quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph ) :
-		quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) { }
+	quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) { }
 
-quad::quad ( pnode subj, pnode pred, pnode object, string graph ) : 
+quad::quad ( pnode subj, pnode pred, pnode object, string graph ) :
 	quad_base ( subj, pred, object, startsWith ( graph, "_:" ) ? mkbnode ( graph ) : mkiri ( graph ) ) { }
 
 string quad::tostring ( ) {
@@ -260,7 +260,7 @@ string quad::tostring ( ) {
 		return string ( "<>" );
 	};
 	ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ';
-	if (graph->value != str_default) ss << f ( graph );
+	if ( graph->value != str_default ) ss << f ( graph );
 	ss << " .";
 	return ss.str();
 }

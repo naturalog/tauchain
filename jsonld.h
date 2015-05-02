@@ -138,7 +138,7 @@ public:
 	int compareShortestLeast ( string a, pstring b );
 	int compareShortestLeast ( pstring a, string b );
 	// http://json-ld.org/spec/latest/json-ld-api/#term-selection
-	pstring selectTerm ( string iri, vector<string>& containers, string typeLanguage, vector<string>& preferredValues ); 
+	pstring selectTerm ( string iri, vector<string>& containers, string typeLanguage, vector<string>& preferredValues );
 	pstring compactIri ( string iri, bool relativeToVocab );
 	pstring compactIri ( pstring iri, bool relativeToVocab );
 	pstring compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse );
@@ -170,7 +170,7 @@ private:
 	void initialize ( pobj input, pobj context_ );
 public:
 	// http://json-ld.org/spec/latest/json-ld-api/#compaction-algorithm
-	pobj compact ( pcontext act_ctx, string act_prop, pobj element, bool compactArrays ); 
+	pobj compact ( pcontext act_ctx, string act_prop, pobj element, bool compactArrays );
 	pobj compact ( pcontext act_ctx, string act_prop, pobj element );
 	// http://json-ld.org/spec/latest/json-ld-api/#expansion-algorithm
 	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element );

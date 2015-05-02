@@ -11,7 +11,7 @@ pobj cmd_t::load_json ( string fname, bool print ) {
 		json_spirit::read_stream ( is, v );
 	}
 	pobj r =  jsonld::convert ( v );
-	if (!r) throw runtime_error("Couldn't read input.");
+	if ( !r ) throw runtime_error ( "Couldn't read input." );
 	if ( print ) cout << r->toString() << endl;
 	return r;
 }
@@ -42,29 +42,29 @@ qdb cmd_t::toquads ( pobj o ) {
 	auto nodeMap = o;
 	for ( auto g : *nodeMap->MAP() ) {
 		if ( jsonld::is_rel_iri ( g.first ) ) continue;
-		if ( !g.second || !g.second->MAP() ) throw logic_error("Expected map in nodemap.");
+		if ( !g.second || !g.second->MAP() ) throw logic_error ( "Expected map in nodemap." );
 		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
-//	cout << "Converting: " << endl << o->toString() << endl;
-//	cout << "Converted: " << endl << r << endl;
+	//	cout << "Converting: " << endl << o->toString() << endl;
+	//	cout << "Converted: " << endl << r << endl;
 	return r;
 }
 
 qdb cmd_t::convert ( pobj o ) {
-	return toquads ( nodemap ( jsonld::expand ( o, opts) ) );
+	return toquads ( nodemap ( jsonld::expand ( o, opts ) ) );
 }
 
-qdb cmd_t::convert ( const string& s, bool debugprint) {
-	if (fnamebase) opts.base = pstr(string("file://") + s + "#");
-	if (debugprint) cout << " Converting: " << s;
+qdb cmd_t::convert ( const string& s, bool debugprint ) {
+	if ( fnamebase ) opts.base = pstr ( string ( "file://" ) + s + "#" );
+	if ( debugprint ) cout << " Converting: " << s;
 	qdb r = convert ( load_json ( s ) );
-	if (debugprint) cout << " Converted: " << r << endl;
+	if ( debugprint ) cout << " Converted: " << r << endl;
 	return r;
 }
 
 void process_flags ( const cmds_t& cmds, strings& args ) {
 	strings::iterator it;
-	for (auto x : cmds.second) 
+	for ( auto x : cmds.second )
 		if ( ( it = find ( args.begin(), args.end(), x.first.first ) ) != args.end() ) {
 			*x.second = !*x.second;
 			args.erase ( it );

@@ -5,7 +5,7 @@ bidict& dict = *new bidict;
 bool deref = true, shorten = false;
 
 bidict::bidict() {
-	set("GND");
+	set ( "GND" );
 }
 
 void bidict::set ( const vector<string>& v ) {
@@ -49,8 +49,8 @@ predicate& predicate::init ( int _p, predlist _args ) {
 	return *this;
 }
 
-string dstr(int p) {
-	if ( !deref ) return tostr(p);
+string dstr ( int p ) {
+	if ( !deref ) return tostr ( p );
 	string s = dict[p];
 	if ( !shorten ) return s;
 	if ( s.find ( "#" ) == string::npos ) return s;
@@ -59,12 +59,12 @@ string dstr(int p) {
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
 	if ( p.args.size() == 2 ) {
-		o << dstr(p.args[0]->pred);
+		o << dstr ( p.args[0]->pred );
 		if ( dict[p.pred] == implication ) o << " <= ";
-		else o << ' ' << dstr(p.pred) << ' ';
-		return o << dstr(p.args[1]->pred) << " .";
+		else o << ' ' << dstr ( p.pred ) << ' ';
+		return o << dstr ( p.args[1]->pred ) << " .";
 	}
-	o << dstr(p.pred);
+	o << dstr ( p.pred );
 	return p.args.empty() ? o : o << p.args;
 }
 
@@ -89,10 +89,10 @@ ostream& operator<< ( ostream& o, const ground_t& s ) {
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( pair<int, list<pair<const predicate*, ground_t>>> x : e ) {
-		o << dstr( x.first ) << ": ";
+		o << dstr ( x.first ) << ": ";
 		if ( x.second.empty() ) o << " { }";
 		else //for ( pair<const predicate*, ground_t> y : x.second )
-				o << endl << '\t' << *x.second.rbegin()->first << x.second.rbegin()->second;
+			o << endl << '\t' << *x.second.rbegin()->first << x.second.rbegin()->second;
 		o << endl;
 	}
 	return o;
@@ -100,7 +100,7 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
 	for ( pair<int, list<const rule*>> x : e ) {
-		o << dstr( x.first ) << ": " << endl;
+		o << dstr ( x.first ) << ": " << endl;
 		for ( const rule* y : x.second ) o << '\t' << *y << endl;
 	}
 	return o;
