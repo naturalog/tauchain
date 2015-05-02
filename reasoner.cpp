@@ -118,7 +118,7 @@ frame* reasoner::next_frame ( const frame& current_frame ) {
 	return &new_frame;
 }
 
-void reasoner::match_rule ( frame& current_frame, const predicate& t, const rule& rl, deque<frame*>& queue ) {
+const frame* reasoner::match_rule ( const frame& current_frame, const predicate& t, const rule& rl ) {
 	ground_t ground = current_frame.ground;
 	if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
 	frame candidate_frame;
@@ -130,50 +130,63 @@ void reasoner::match_rule ( frame& current_frame, const predicate& t, const rule
 		const frame* ep = &current_frame;
 		while ( ep->parent ) {
 			ep = ep->parent;
+			subst s = current_frame.substitution;
 			if ( ( ep->rul == current_frame.rul ) &&
-			        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, current_frame.substitution, false ) )
+			        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, s, false ) )
 				break;
 		}
-		if ( !ep->parent ) queue.push_front ( &frame::init ( this, candidate_frame ) );
+		if ( !ep->parent ) return &frame::init ( this, candidate_frame );
 	} else {
 		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
 	}
+	return 0;
 }
 
-evidence_t reasoner::prove ( rule* goal, int max_steps, cases_t& cases ) {
-	trace ( "dict: " << dict.tostr() << endl );
-	deque<frame*> queue;
+deque<const frame*> reasoner::init( const rule* goal ) {
+	deque<const frame*> queue;
 	queue.emplace_back ( &frame::init ( this, goal ) );
+	return queue;
+}
+
+evidence_t reasoner::prove ( const rule* goal, int max_steps, const cases_t& cases ) {
+	trace ( "dict: " << dict.tostr() << endl );
+	deque<const frame*> queue = init(goal);
 	uint step = 0;
 	evidence_t evidence;
 
 	cout << "goal: " << *goal << endl << "cases:" << endl << cases << endl;
 	while ( !queue.empty() && ++step ) {
-		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
-		frame& current_frame = *queue.front();
+		if ( max_steps != -1 && ( int ) step >= max_steps ) return {};
+		deque<const frame*> fs = process_frame(*queue.front(), cases, evidence);
 		queue.pop_front();
-		trace ( current_frame << endl );
-		if ( current_frame.ind >= current_frame.rul->body.size() ) {
-			if ( !current_frame.parent ) evidence_found ( current_frame, evidence );
-			else queue.push_back ( next_frame ( current_frame ) );
-		} else {
-			const predicate* t = current_frame.rul->body[current_frame.ind];
-			int b = builtin ( t, current_frame );
-			if ( b == 1 ) {
-				frame& r = frame::init ( this, current_frame );
-				r.ground = current_frame.ground;
-				r.ground.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
-				r.ind++;
-				queue.push_back ( &r );
-			} else if ( !b ) continue;
-			auto it = cases.find ( t->pred );
-			if ( it != cases.end() )
-				for ( const rule* rl : it->second )
-					match_rule ( current_frame, *t, *rl, queue );
-		}
-
+		for (auto x : fs) queue.push_back(x); 
 	}
 	return evidence;
+}
+
+deque<const frame*> reasoner::process_frame ( const frame& current_frame, const cases_t& cases, evidence_t& evidence ) {
+	trace ( current_frame << endl );
+	deque<const frame*> queue;
+	if ( current_frame.ind >= current_frame.rul->body.size() ) {
+		if ( !current_frame.parent ) evidence_found ( current_frame, evidence );
+		else return { next_frame ( current_frame ) };
+	} else {
+		const predicate* t = current_frame.rul->body[current_frame.ind];
+		int b = builtin ( t, current_frame );
+		if ( b == 1 ) {
+			frame& r = frame::init ( this, current_frame );
+			r.ground = current_frame.ground;
+			r.ground.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
+			r.ind++;
+			queue.push_back ( &r );
+		} else if ( !b ) return {};
+		auto it = cases.find ( t->pred );
+		if ( it != cases.end() )
+			for ( const rule* rl : it->second )
+				if (const frame* f = match_rule ( current_frame, *t, *rl ))
+					queue.push_front(f);
+	}
+	return queue;
 }
 
 predicate* reasoner::mkpred ( string s, const vector<const predicate*>& v ) {
@@ -253,7 +266,9 @@ float degrees ( float f ) {
 }
 
 
-int reasoner::builtin ( const predicate* t_, frame& f ) {
+int reasoner::builtin ( const predicate* t_, const frame& f ) {
+	if (t_ && dict[t_->pred] == "GND") return 1;
+/*	
 	if ( !t_ ) return -1;
 	const predicate& t = *t_;
 	string p = dict[t.pred];
@@ -336,6 +351,6 @@ int reasoner::builtin ( const predicate* t_, frame& f ) {
 	else if ( p == "rdf:rest" && t0 && dict[t0->pred] == "." && !t0->args.empty() )
 		return ( unify ( t0->args[1], f.substitution, t.args[1], f.substitution, true ) ) ? 1 : 0;
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdf:List" && t0 && dict[t0->pred] == "." ) return 1;
-	else if ( p == "a" && t1 && dict[t1->pred] == "rdfs:Resource" ) return 1;
+	else if ( p == "a" && t1 && dict[t1->pred] == "rdfs:Resource" ) return 1;*/
 	return -1;
 }

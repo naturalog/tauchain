@@ -66,17 +66,19 @@ class reasoner {
 	frame *frames = new frame[max_frames];
 	uint npredicates = 0, nrules = 0, nframes = 0;
 	predicate* GND;
-	int builtin ( const predicate* t, frame& f );
+	int builtin ( const predicate* t, const frame& f );
 	const predicate* evaluate ( const predicate& t, const subst& sub );
 	bool unify ( const predicate* s, const subst& ssub, const predicate* d, subst& dsub, bool f );
 	predlist to_predlist ( const ground_t& g );
 	void evidence_found ( const frame& current_frame, evidence_t& evidence );
 	frame* next_frame ( const frame& current_frame );
-	void match_rule ( frame& current_frame, const predicate& t, const rule& rl, deque<frame*>& queue );
+	const frame* match_rule ( const frame& current_frame, const predicate& t, const rule& rl );
+	deque<const frame*> process_frame ( const frame& current_frame, const cases_t& cases, evidence_t& evidence );
+	deque<const frame*> init( const rule* goal );
 public:
 	reasoner();
 	~reasoner();
-	evidence_t prove ( rule* goal, int maxNumberOfSteps, cases_t& cases );
+	evidence_t prove ( const rule* goal, int maxNumberOfSteps, const cases_t& cases );
 	evidence_t prove ( const qdb& kb, const qlist& query );
 	bool test_reasoner();
 	void printkb();
