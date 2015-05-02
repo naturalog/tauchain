@@ -69,11 +69,14 @@ ostream& operator<< ( ostream& o, const predicate& p ) {
 }
 
 ostream& operator<< ( ostream& o, const rule& r ) {
-	o << "{ ";
-	for ( auto x : r.body ) o << *x << ' ';
-	o << "} => ";
+	if (!r.body.empty()) {
+		o << "{ ";
+		for ( auto x : r.body ) o << *x << ' ';
+		o << "} => ";
+	}
 	if ( r.head ) return o << *r.head;
-	else return o << "{ }";
+//	else return o << "{ }";
+	return o;
 }
 
 ostream& operator<< ( ostream& o, const subst& s ) {
@@ -83,17 +86,19 @@ ostream& operator<< ( ostream& o, const subst& s ) {
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
 	o << endl;
-	for ( pair<const rule*, subst> x : s ) o << '\t' << *x.first << ": " << x.second << endl;
+	for ( pair<const rule*, subst> x : s ) o << '\t' << *x.first << " ; " << x.second << endl;
 	return o;
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
 	for ( pair<int, list<pair<const predicate*, ground_t>>> x : e ) {
-		o << dstr ( x.first ) << ": ";
-		if ( x.second.empty() ) o << " { }";
-		else //for ( pair<const predicate*, ground_t> y : x.second )
-			o << endl << '\t' << *x.second.rbegin()->first << x.second.rbegin()->second;
-		o << endl;
+		o << "predicate: " << dstr ( x.first ) << endl << "ground: { ";
+		for (auto y : x.second) o << endl << '\t' << *y.first << ' ' << y.second;
+		o << '}' << endl;
+//		if ( !x.second.empty() )
+//			o << ": " << endl << '\t' << *x.second.rbegin()->first << x.second.rbegin()->second;
+//			o << endl << '\t' << x.second;
+//		o << endl;
 	}
 	return o;
 }

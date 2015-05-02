@@ -146,7 +146,7 @@ deque<const frame*> reasoner::init( const rule* goal ) {
 }
 
 evidence_t reasoner::prove ( const rule* goal, int max_steps, const cases_t& cases ) {
-	trace ( "dict: " << dict.tostr() << endl );
+//	trace ( "dict: " << dict.tostr() << endl );
 	deque<const frame*> queue = init(goal);
 	uint step = 0;
 	evidence_t evidence;
@@ -158,6 +158,8 @@ evidence_t reasoner::prove ( const rule* goal, int max_steps, const cases_t& cas
 		queue.pop_front();
 		for (auto x : fs) queue.push_back(x); 
 	}
+	cout << "frames: " << endl;
+	for (uint n = 0; n < nframes; ++n) cout << frames[n] << endl;
 	return evidence;
 }
 
@@ -231,7 +233,7 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-	printkb();
+//	printkb();
 	return prove ( &goal, -1, cases );
 }
 
@@ -247,7 +249,6 @@ bool reasoner::test_reasoner() {
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
 
-	cout << "cases:" << endl << cases << endl;
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
 	evidence = prove ( mkrule ( 0, { goal } ), -1, cases );
 	cout << "evidence: " << evidence.size() << " items..." << endl;
