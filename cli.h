@@ -13,11 +13,7 @@ extern bool fnamebase;
 extern jsonld::jsonld_options opts;
 
 class cmd_t {
-public:
-	virtual string desc() const = 0;
-	virtual string help() const = 0;
-	virtual int operator() ( const strings& args ) = 0;
-
+protected:
 	pobj load_json ( string fname = "", bool print = false );
 	pobj load_json ( const strings& args );
 	pobj nodemap ( const strings& args );
@@ -26,6 +22,10 @@ public:
 	qdb toquads ( pobj o );
 	qdb convert ( pobj o );
 	qdb convert ( const string& s, bool bdebugprint = false );
+public:
+	virtual string desc() const = 0;
+	virtual string help() const = 0;
+	virtual int operator() ( const strings& args ) = 0;
 };
 
 typedef pair<map<string, cmd_t*>, map<pair<string, string>, bool*>>  cmds_t;
