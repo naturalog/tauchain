@@ -71,7 +71,7 @@ class reasoner {
 	bool unify ( const predicate* s, const subst& ssub, const predicate* d, subst& dsub, bool f );
 	predlist to_predlist ( const ground_t& g );
 	void evidence_found ( const frame& current_frame, evidence_t& evidence );
-	frame* next_frame ( const frame& current_frame, ground_t& g );
+	frame* next_frame ( const frame& current_frame );
 	void match_rule ( frame& current_frame, const predicate& t, const rule& rl, deque<frame*>& queue );
 public:
 	reasoner();

@@ -109,10 +109,10 @@ void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence
 	}
 }
 
-frame* reasoner::next_frame ( const frame& current_frame, ground_t& g ) {
-	if ( !current_frame.rul->body.empty() ) g.emplace_front ( current_frame.rul, current_frame.substitution );
+frame* reasoner::next_frame ( const frame& current_frame ) {
 	frame& new_frame = frame::init ( this, *current_frame.parent );
-	new_frame.ground = g;
+	new_frame.ground = current_frame.ground;
+	if ( !current_frame.rul->body.empty() ) new_frame.ground.emplace_front ( current_frame.rul, current_frame.substitution );
 	unify ( current_frame.rul->head, current_frame.substitution, new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
 	return &new_frame;
@@ -152,18 +152,17 @@ evidence_t reasoner::prove ( rule* goal, int max_steps, cases_t& cases ) {
 		if ( max_steps != -1 && ( int ) step >= max_steps ) return evidence_t();
 		frame& current_frame = *queue.front();
 		queue.pop_front();
-		ground_t g = current_frame.ground;
 		trace ( current_frame << endl );
 		if ( current_frame.ind >= current_frame.rul->body.size() ) {
 			if ( !current_frame.parent ) evidence_found ( current_frame, evidence );
-			else queue.push_back ( next_frame ( current_frame, g ) );
+			else queue.push_back ( next_frame ( current_frame ) );
 		} else {
 			const predicate* t = current_frame.rul->body[current_frame.ind];
 			int b = builtin ( t, current_frame );
 			if ( b == 1 ) {
-				g.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
 				frame& r = frame::init ( this, current_frame );
-				r.ground = g;
+				r.ground = current_frame.ground;
+				r.ground.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
 				r.ind++;
 				queue.push_back ( &r );
 			} else if ( !b ) continue;
