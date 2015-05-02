@@ -71,11 +71,12 @@ const predicate* reasoner::evaluate ( const predicate& t, const subst& sub ) {
 	}
 }
 
-bool reasoner::unify ( const predicate* _s, const subst& ssub, const predicate* _d, subst& dsub, bool f ) {
-	if ( !_s && !_d ) {
+const predicate* reasoner::unify ( const predicate* _s, const subst& ssub, const predicate* _d, subst& dsub, bool f ) {
+/*	if ( !_s && !_d ) {
 		trace ( "Match two nulls." << endl );
+
 		return true;
-	}
+	}*/
 	const predicate& s = *_s;
 	const predicate& d = *_d;
 	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
@@ -84,22 +85,22 @@ bool reasoner::unify ( const predicate* _s, const subst& ssub, const predicate* 
 		if ( ( p = evaluate ( s, ssub ) ) ) return unify ( p, ssub, _d, dsub, f );
 		else {
 			trace ( "Match." << endl );
-			return true;
+			return &s;
 		}
 	}
 	if ( d.pred >= 0 ) {
-		if ( s.pred != d.pred || s.args.size() != d.args.size() ) return false;
+		if ( s.pred != d.pred || s.args.size() != d.args.size() ) return 0;
 		const predlist& as = s.args, ad = d.args;
 		for ( auto sit = as.begin(), dit = ad.begin(); sit != as.end(); ++sit, ++dit )
 			if ( !unify ( *sit, ssub, *dit, dsub, f ) )
-				return false;
+				return 0;
 		trace ( "Match." << endl );
-		return true;
+		return &s;
 	}
 	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
 	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
 	trace ( "Match with subst: " << dsub << endl );
-	return true;
+	return &d;
 }
 
 void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence ) {
@@ -119,23 +120,19 @@ frame* reasoner::next_frame ( const frame& current_frame ) {
 }
 
 const frame* reasoner::match_rule ( const frame& current_frame, const predicate& t, const rule& rl ) {
-	ground_t ground = current_frame.ground;
-	if ( rl.body.empty() ) ground.emplace_back ( &rl, subst() );
-	frame candidate_frame;
-	candidate_frame.rul = &rl;
-	candidate_frame.ind = 0;
-	candidate_frame.parent = &current_frame;
-	if ( unify ( &t, current_frame.substitution, rl.head, candidate_frame.substitution, true ) ) {
+	subst s;
+	if ( unify ( &t, current_frame.substitution, rl.head, s, true ) ) {
 		trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
 		const frame* ep = &current_frame;
 		while ( ep->parent ) {
 			ep = ep->parent;
-			subst s = current_frame.substitution;
 			if ( ( ep->rul == current_frame.rul ) &&
-			        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, s, false ) )
+				// its ok to const_case cause of the false param
+			        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, const_cast<subst&>(current_frame.substitution), false ) )
 				break;
 		}
-		if ( !ep->parent ) return &frame::init ( this, candidate_frame );
+		if ( !ep->parent ) 
+			return &frame::init ( this, &rl, 0, &current_frame, s, rl.body.empty() ? ground_t{ { &rl, subst() } } : ground_t{} );
 	} else {
 		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
 	}
