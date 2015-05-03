@@ -154,13 +154,13 @@ evidence_t reasoner::prove ( const rule* goal, int max_steps, const cases_t& cas
 	evidence_t evidence;
 
 	cout << "goal: " << *goal << endl << "cases:" << endl << cases << endl;
-	while ( !queue.empty() && ++step ) {
-		if ( max_steps != -1 && ( int ) step >= max_steps ) return {};
+//	while ( !queue.empty() && ++step ) {
+//		if ( max_steps != -1 && ( int ) step >= max_steps ) return {};
 		frame* f = queue.front();
-		queue.pop_front();
+//		queue.pop_front();
 		f->process( cases, evidence );
-		for (auto x : f->next) queue.push_back(x); 
-	}
+//		for (auto x : f->next) queue.push_back(x); 
+//	}
 	cout << "frames: " << endl;
 	for (uint n = 0; n < nframes; ++n) cout << frames[n] << endl;
 	return evidence;
@@ -186,6 +186,7 @@ void frame::process ( const cases_t& cases, evidence_t& evidence ) {
 			for ( const rule* rl : it->second )
 				push_match_rule ( *t, *rl );
 	}
+	for (frame* f : next) f->process(cases, evidence);
 }
 
 predicate* reasoner::mkpred ( string s, const vector<const predicate*>& v ) {
