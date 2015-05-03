@@ -9,6 +9,7 @@
 #ifdef JST
 #include "json_spirit.h"
 using json_spirit::mValue;
+using json_spirit::mObject;
 #endif
 
 struct pred_t {
@@ -138,6 +139,7 @@ struct proof_trace_item {
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
 
+#ifdef JST
 mValue jst(ppti t)
 {
 	mValue o;
@@ -147,7 +149,7 @@ mValue jst(ppti t)
 	o["parent"]=jst(t->parent);
 	return o;
 }
-
+#endif
 
 void ubi ( const ppti i ) {
 	#ifdef UBI
@@ -278,13 +280,14 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 
 pground_t gnd = make_shared<ground_t>();
 
-
+#ifdef JST
 mValue jst(deque<ppti> q)
 {
 	mValue o;
+	mObject & oo = o.get_obj();
 	int i=0;
 	for(auto &j : q)
-		o[i++]=jst(j);
+		oo[i++]=jst(j);
 	return o;
 }
 		
@@ -294,6 +297,7 @@ void out(mValue &v)
 	cout << v;
 	#endif
 }	
+#endif
 
 bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	int step = 0;
