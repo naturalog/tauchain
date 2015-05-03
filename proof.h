@@ -28,13 +28,11 @@ using namespace std;
 using namespace jsonld;
 
 const uint K1 = 1024, M1 = K1 * K1;
-const uint max_predicates = M1, max_rules = M1, max_proofs = M1;
+const uint max_predicates = M1, max_proofs = M1;
 
 extern boost::interprocess::list<thread*> threads;
 extern boost::interprocess::vector<class proof*> proofs;
-typedef /*boost::interprocess::*/vector<const struct predicate*> predlist, rulelist;
-//typedef /*boost::interprocess::*/vector<const struct rule*> rulelist;
-ostream& operator<< ( ostream& o, const rulelist& l );
+typedef /*boost::interprocess::*/vector<const struct predicate*> predlist;
 ostream& operator<< ( ostream& o, const predlist& l );
 
 typedef boost::interprocess::map<int, const class predicate*> subst;
@@ -43,33 +41,22 @@ struct predicate {
 	int pred = 0;
 	predlist args;
 	predlist body;
-	predicate* head;
-	predicate() { head = this; }
-	predicate& init ( int _p = 0, predlist _args = predlist() );
+	predicate& init ( int _p, predlist _args, predlist _body );
 	const predicate* evaluate ( const subst& sub ) const;
-//};
-//
-//struct rule {
-//	const predicate* head = 0;
-//	predlist body;
-	struct rule& init ( const predicate* h, predlist b = predlist() );
 	string dot() const;
 };
-//typedef predicate rule;
-struct rule : public predicate {};
 ostream& operator<< ( ostream& o, const predicate& p );
-ostream& operator<< ( ostream& o, const rule& r );
 
-typedef boost::interprocess::list<pair<const rule*, subst>> ground_t;
+typedef boost::interprocess::list<pair<const predicate*, subst>> ground_t;
 typedef boost::interprocess::map<int, boost::interprocess::list<pair<const predicate*, ground_t>>> evidence_t;
-typedef boost::interprocess::map<int, list<const rule*>> cases_t;
+typedef boost::interprocess::map<int, list<const predicate*>> cases_t;
 
 class proof {
 public:
-	static proof& find ( const rule* goal, const cases_t& cases);
+	static proof& find ( const predicate* goal, const cases_t& cases);
 	friend ostream& operator<< ( ostream& o, const proof& p );
 private:
-	const rule* rul = 0;
+	const predicate* rul = 0;
 	uint ind = 0;
 	const proof* parent = 0;
 	subst sub;
@@ -77,7 +64,7 @@ private:
 	int builtin ( const predicate* t );
 	void process ( const cases_t& cases, evidence_t& evidence );
 	static proof& init ( const proof& f );
-	static proof& init ( const rule* _r = 0, uint _ind = 0, const proof* p = 0, subst _s = subst(), ground_t _g = ground_t() );
+	static proof& init ( const predicate* _r = 0, uint _ind = 0, const proof* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 public:	
 	string dot() const {
 		stringstream r;
@@ -93,25 +80,24 @@ public:
 const predicate* unify ( const predicate& s, const subst& ssub, const predicate& d, subst& dsub, bool f );
 
 extern predicate *predicates;
-extern rule *rules;
+extern predicate *predicates;
 //extern proof *proofs;
-extern uint npredicates, nrules, nproofs;
+extern uint npredicates, npredicates, nproofs;
 
 class reasoner {
 	friend struct proof;
 	predicate* GND;
 	predlist to_predlist ( const ground_t& g );
 
-	deque<proof*> init ( const rule* goal );
+	deque<proof*> init ( const predicate* goal );
 
 	predicate* mkpred ( string s, const predlist& v = predlist() );
-	rule* mkrule ( const predicate* p = 0, const predlist& v = predlist() );
 	const predicate* triple ( const string& s, const string& p, const string& o );
 	const predicate* triple ( const jsonld::quad& q );
 public:
 	reasoner();
 	~reasoner();
-	evidence_t prove ( const rule* goal, int, const cases_t& cases ) { proof::find(goal, cases); return evidence_t();  }
+	evidence_t prove ( const predicate* goal, int, const cases_t& cases ) { proof::find(goal, cases); return evidence_t();  }
 	evidence_t prove ( const qdb& kb, const qlist& query );
 	bool test_reasoner();
 	void printkb();

@@ -22,6 +22,7 @@ int bidict::set ( const string& v ) {
 }
 
 const string bidict::operator[] ( const int& k ) {
+	if (!has(k)) set(::tostr(k));
 	return m.left.find ( k )->second;
 }
 
@@ -43,12 +44,6 @@ string bidict::tostr() {
 	return s.str();
 }
 
-predicate& predicate::init ( int _p, predlist _args ) {
-	pred = _p;
-	args = _args;
-	return *this;
-}
-
 string dstr ( int p ) {
 	if ( !deref ) return tostr ( p );
 	string s = dict[p];
@@ -58,19 +53,18 @@ string dstr ( int p ) {
 }
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
-	if ( p.args.size() == 2 ) 
-		return o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";
-	o << dstr ( p.pred );
-	return p.args.empty() ? o : o << p.args;
-}
-
-ostream& operator<< ( ostream& o, const rule& r ) {
-	if (!r.body.empty()) {
+	if (!p.body.empty()) {
+		o << " -> ";
 		o << "{ ";
-		for ( auto x : r.body ) o << *x << ' ';
+		for ( auto x : p.body ) o << *x << ' ';
 		o << "} ";
 	}
-	if ( r.head ) return o << " -> " << *r.head;
+	if ( p.args.size() == 2 ) 
+		o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";
+	else {
+		o << dstr ( p.pred );
+		p.args.empty() ? o : o << p.args;
+	}
 	return o;
 }
 
@@ -81,7 +75,7 @@ ostream& operator<< ( ostream& o, const subst& s ) {
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
 	o << endl;
-	for ( pair<const rule*, subst> x : s ) o << '\t' << *x.first << " ; " << x.second << endl;
+	for ( pair<const predicate*, subst> x : s ) o << '\t' << *x.first << " ; " << x.second << endl;
 	return o;
 }
 
@@ -99,9 +93,9 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 }
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
-	for ( pair<int, list<const rule*>> x : e ) {
+	for ( pair<int, list<const predicate*>> x : e ) {
 		o << dstr ( x.first ) << ": " << endl;
-		for ( const rule* y : x.second ) o << '\t' << *y << endl;
+		for ( const predicate* y : x.second ) o << '\t' << *y << endl;
 	}
 	return o;
 }
@@ -111,11 +105,11 @@ ostream& operator<< ( ostream& o, const proof& p ) {
 	if ( p.parent ) o << p.parent;
 	else o << "null";
 	o << endl << "\tsubst: " << p.sub << endl << "\tgnd: " << p.ground;
-	o << "\trule: " << ( *p.rul ) << endl << '}' << endl;
+	o << "\tpredicate: " << ( *p.rul ) << endl << '}' << endl;
 	return o;
 }
 /*
-ostream& operator<< ( ostream& o, const rulelist& l ) {
+ostream& operator<< ( ostream& o, const predicatelist& l ) {
 	if ( l.empty() ) return o << "[]";
 	o << '[';
 	for ( auto it = l.cbegin();; ) {

@@ -239,9 +239,10 @@ int main ( int argc, char** argv ) {
 	for (auto x : proofs) o<<x->dot()<<endl;
 	o<<"}";
 	ofstream o1("rules.dot");
-	o1<<"digraph Proof {"<<endl;
-	for (size_t n = 0; n < nrules; ++n) o1<<rules[n].dot()<<endl;
+	o1<<"digraph Predicates {"<<endl;
+	for (size_t n = 0; n < npredicates; ++n) o1<<predicates[n].dot()<<endl;
 	o1<<"}";
+	cout << "Written proof.dot and rules.dot. Use 'dot -Tpng proof.dot > proof.png' etc to visualize." << endl;
 
 	return rval;
 }

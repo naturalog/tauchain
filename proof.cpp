@@ -16,31 +16,29 @@ predicate *temp_preds = new predicate[max_predicates];
 boost::interprocess::vector<proof*> proofs;
 uint ntemppreds = 0;
 
-reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
+reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ), {}, {} ) ) {}
 
 predicate *predicates = new predicate[max_predicates];
-rule *rules = new rule[max_rules];
 //proof *proofs = new proof[max_proofs];
-uint npredicates = 0, nrules = 0, nproofs = 0;
+uint npredicates = 0, nproofs = 0;
 
 reasoner::~reasoner() {
 	delete[] predicates;
-	delete[] rules;
 //	delete[] proofs;
 }
 
-rule& predicate::init ( const predicate* h, predlist b ) {
-//	head = h;
-	assert(h == this);
-	body = b;
-	return (rule&)*this;
+predicate& predicate::init ( int _p, predlist _args, predlist _body ) {
+	pred = _p;
+	args = _args;
+	body = _body;
+	return *this;
 }
 
 proof& proof::init ( const proof& f ) {
 	return init ( f.rul, f.ind, f.parent, f.sub, f.ground );
 }
 
-proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
+proof& proof::init ( const predicate* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
 	if ( nproofs >= max_proofs ) throw "Buffer overflow";
 	proof& f = *new proof;//proofs[nproofs++];
 	proofs.push_back(&f);
@@ -55,11 +53,11 @@ proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground
 
 void reasoner::printkb() {
 	static bool pause = false;
-	cout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nproofs << " proofs. " << endl;
+	cout << endl << "dumping kb with " << npredicates << " predicates, " << npredicates << " predicates and " << nproofs << " proofs. " << endl;
 	cout << "predicates: " <<  endl;
 	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
-	cout << "rules: " << endl;
-	for ( uint n = 0; n < nrules; ++n ) cout << rules[n] << endl;
+	cout << "predicates: " << endl;
+	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
 	cout << "proofs: " << endl;
 	for ( uint n = 0; n < nproofs; ++n ) cout << proofs[n] << endl;
 	if ( pause ) cout << "type <enter> to continue or <c><enter> to stop pausing...";
@@ -76,9 +74,9 @@ const predicate* predicate::evaluate ( const subst& sub ) const {
 		if ( args.empty() ) return this;
 	}
 	const predicate *p;
-	predicate* r = &temp_preds[ntemppreds++].init ( pred );
+	predicate* r = &temp_preds[ntemppreds++].init ( pred, {}, {} );
 	for ( auto x : args )
-		r->args.emplace_back ( ( p = x->evaluate ( sub ) ) ? p : &temp_preds[ntemppreds++].init ( x->pred ) );
+		r->args.emplace_back ( ( p = x->evaluate ( sub ) ) ? p : &temp_preds[ntemppreds++].init ( x->pred, {}, {} ) );
 	return r;
 }
 
@@ -107,7 +105,7 @@ const predicate* unify ( const predicate& s, const subst& ssub, const predicate&
 	return &d;
 }
 
-proof& proof::find ( const rule* goal, const cases_t& cases) {
+proof& proof::find ( const predicate* goal, const cases_t& cases) {
 	proof& f = init( goal );
 	evidence_t& e = *new evidence_t;
 	f.process( *new cases_t(cases), e );
@@ -128,7 +126,7 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		else {
 			proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->sub, ground );
 			if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, sub );
-			if ( rul->head ) unify ( *rul->head, sub, *new_proof.rul->body[new_proof.ind - 1], new_proof.sub, true );
+			if ( rul->pred ) unify ( *rul, sub, *new_proof.rul->body[new_proof.ind - 1], new_proof.sub, true );
 			new_proof.process(cases, evidence);
 			empty = false;
 		}
@@ -138,7 +136,7 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		if ( b == 1 ) {
 			proof& r = proof::init ( *this );
 			r.ground = ground;
-			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( sub ) ), subst() );
+			r.ground.emplace_back ( t->evaluate ( sub ), subst() );
 			r.ind++;
 			//next.push_back ( &r );
 			r.process(cases, evidence);
@@ -146,12 +144,12 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		} else if ( !b ) return;
 		auto it = cases.find ( t->pred );
 		if ( it != cases.end() )
-			for ( const rule* rl : it->second ) {
+			for ( const predicate* rl : it->second ) {
 				subst s;
-				if ( !rl->head || !unify ( *t, sub, *rl->head, s, true ) ) continue;
+				if ( /*!rl->head || */!unify ( *t, sub, *rl, s, true ) ) continue;
 				const proof* ep = parent;
 				for (; ep; ep = ep->parent)
-					if ( ( ep->rul == rul ) && unify ( *ep->rul->head, ep->sub, *rul->head, const_cast<subst&>(sub), false ) )
+					if ( ( ep->rul == rul ) && unify ( *ep->rul, ep->sub, *rul, const_cast<subst&>(sub), false ) )
 						break;
 				if ( ep && ep->parent ) continue;
 				ground_t g;
@@ -168,12 +166,7 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 }
 
 predicate* reasoner::mkpred ( string s, const predlist& v ) {
-	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
-}
-
-rule* reasoner::mkrule ( const predicate* p, const predlist& v ) {
-	return (rule*)(p ? p : &predicates[npredicates++].init(0, v));
-	return &rules[nrules++].init ( p, v );
+	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v, {} );
 }
 
 const predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
@@ -198,20 +191,20 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 		for ( jsonld::pquad quad : *x.second ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 			trace ( "processing quad " << quad->tostring() << endl );
-			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
+			cases[dict[p]].push_back ( triple ( s, p, o ) );
 			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
 			for ( jsonld::pquad y : *kb.at ( o ) ) {
-				rule& rul = (rule&)*triple(*y) ;// mkrule();
+				predicate& rul = (predicate&)*triple(*y) ;// mkpredicate();
 //				rul.head = triple ( *y );
 				if ( kb.find ( s ) != kb.end() )
 					for ( jsonld::pquad z : *kb.at ( s ) )
 						rul.body.push_back ( triple ( *z ) );
-				cases[rul.head->pred].push_back ( &rul );
-				trace ( "added rule " << rul << endl );
+				cases[rul.pred].push_back ( &rul );
+				trace ( "added predicate " << rul << endl );
 			}
 		}
 	}
-	rule& goal = *mkrule();
+	predicate& goal = predicates[npredicates++].init(0, {}, {});
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 //	printkb();
 	return prove ( &goal, -1, cases );
@@ -225,12 +218,12 @@ bool reasoner::test_reasoner() {
 	cases_t cases;
 	typedef predicate* ppredicate;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  } ) );
+//	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {Socrates, Male} )}) );
+//	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  }}) );
+//	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  }}) );
 
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	evidence = prove ( mkrule ( 0, { goal } ), -1, cases );
+//	evidence = prove ( mkpredicate ( 0, { goal } ), -1, cases );
 //	cout << "evidence: " << evidence.size() << " items..." << endl;
 //	cout << evidence << endl;
 //	cout << "QED!" << endl;
@@ -337,8 +330,8 @@ string predicate::dot() const {
 	stringstream r;
 	for (auto x : body) {
 		r << '\"' << *x << '\"';
-		if (head) r << " -> " << '\"' << *head << '\"';
-		else r << " [shape=box]";
+		r << " -> " << '\"' << *this << '\"';
+	//	else r << " [shape=box]";
 		r << ';' << endl;
 	}
 	return r.str();
