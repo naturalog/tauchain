@@ -233,10 +233,15 @@ int main ( int argc, char** argv ) {
 	int rval = ( *cmds.first[argv[1]] ) ( args );
 
 	for (auto x : threads) { x->join(); delete x; } 
-	ofstream o("tau.dot");
+
+	ofstream o("proof.dot");
 	o<<"digraph Proof {"<<endl;
 	for (auto x : proofs) o<<x->dot()<<endl;
 	o<<"}";
+	ofstream o1("rules.dot");
+	o1<<"digraph Proof {"<<endl;
+	for (size_t n = 0; n < nrules; ++n) o1<<rules[n].dot()<<endl;
+	o1<<"}";
 
 	return rval;
 }

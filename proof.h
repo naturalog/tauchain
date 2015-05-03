@@ -45,11 +45,22 @@ struct predicate {
 	predicate& init ( int _p = 0, predlist _args = predlist() );
 	const predicate* evaluate ( const subst& sub ) const;
 };
+ostream& operator<< ( ostream& o, const predicate& p );
 
 struct rule {
 	const predicate* head = 0;
 	predlist body;
 	rule& init ( const predicate* h, predlist b = predlist() );
+	string dot() const {
+		stringstream r;
+		for (auto x : body) {
+			r << '\"' << *x << '\"';
+			if (head) r << " -> " << '\"' << *head << '\"';
+			else r << " [shape=box]";
+			r << ';' << endl;
+		}
+		return r.str();
+	}
 };
 ostream& operator<< ( ostream& o, const rule& r );
 
@@ -79,7 +90,6 @@ public:
 		if (parent) r << " -> \"" << *parent->rul << '\"';
 		else r << " [shape=box]";
 		r << ';' << endl;
-//		if (root) r << "}" << endl;
 		return r.str();
 	}
 };
@@ -115,6 +125,5 @@ ostream& operator<< ( ostream& o, const subst& s );
 ostream& operator<< ( ostream& o, const ground_t& s );
 ostream& operator<< ( ostream& o, const evidence_t& e );
 ostream& operator<< ( ostream& o, const cases_t& e );
-ostream& operator<< ( ostream& o, const predicate& p );
 
 #endif
