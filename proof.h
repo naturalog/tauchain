@@ -62,9 +62,6 @@ private:
 	ground_t ground;
 	deque<proof*> next;
 	int  builtin ( const predicate* t );
-	void evidence_found ( evidence_t& evidence ) const;
-	void push_next_proof();
-	void push_match_rule ( const predicate& t, const rule& rl );
 	void process ( const cases_t& cases, evidence_t& evidence );
 	static proof& init ( const proof& f );
 	static proof& init ( const rule* _r = 0, uint _ind = 0, const proof* p = 0, subst _s = subst(), ground_t _g = ground_t() );

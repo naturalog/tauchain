@@ -5,7 +5,7 @@
         Author: Ohad Asor
 */
 
-#include "reasoner.h"
+#include "proof.h"
 #include "parsers.h"
 #include "rdf.h"
 
@@ -32,11 +32,7 @@ rule& rule::init ( const predicate* h, predlist b ) {
 }
 
 proof& proof::init ( const proof& f ) {
-	//	if ( r->nproofs >= max_proofs ) throw "Buffer overflow";
-	//	const proof& res =
 	return init ( f.rul, f.ind, f.parent, f.substitution, f.ground );
-	//	res.parent = f.parent;
-	//	return res;
 }
 
 proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
@@ -104,40 +100,6 @@ const predicate* unify ( const predicate& s, const subst& ssub, const predicate&
 	return &d;
 }
 
-void proof::evidence_found ( evidence_t& evidence ) const {
-	for ( const predicate* x : rul->body ) {
-		const predicate* t = x->evaluate ( substitution );
-		evidence[t->pred].emplace_back ( t, ground );
-	}
-}
-
-void proof::push_next_proof ( ) {
-	proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->substitution, ground );
-	if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, substitution );
-	if ( rul->head )
-		unify ( *rul->head, substitution, *new_proof.rul->body[new_proof.ind - 1], new_proof.substitution, true );
-	next.emplace_back( &new_proof );
-}
-
-void proof::push_match_rule ( const predicate& t, const rule& rl ) {
-	subst s;
-	if ( rl.head && unify ( t, substitution, *rl.head, s, true ) ) {
-		trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
-		const proof* ep = this;
-		while ( ep->parent ) {
-			ep = ep->parent;
-			if ( ( ep->rul == rul ) &&
-				// its ok to const_case cause of the false param
-			        unify ( *ep->rul->head, ep->substitution, *rul->head, const_cast<subst&>(substitution), false ) )
-				break;
-		}
-		if ( !ep->parent ) 
-			next.push_front( &proof::init ( &rl, 0, this, s, rl.body.empty() ? ground_t{ { &rl, subst() } } : ground_t{} ) );
-	} else {
-		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
-	}
-}
-
 proof& proof::find ( const rule* goal, const cases_t& cases) {
 	proof& f = init( goal );
 	evidence_t e;
@@ -148,8 +110,17 @@ proof& proof::find ( const rule* goal, const cases_t& cases) {
 void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 	trace ( *this << endl );
 	if ( ind >= rul->body.size() ) {
-		if ( !parent ) evidence_found ( evidence );
-		else push_next_proof ( );
+		if ( !parent )
+			for ( const predicate* x : rul->body ) {
+				const predicate* t = x->evaluate ( substitution );
+				evidence[t->pred].emplace_back ( t, ground );
+			}
+		else {
+			proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->substitution, ground );
+			if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, substitution );
+			if ( rul->head ) unify ( *rul->head, substitution, *new_proof.rul->body[new_proof.ind - 1], new_proof.substitution, true );
+			next.emplace_back( &new_proof );
+		}
 	} else {
 		const predicate* t = rul->body[ind];
 		int b = builtin ( t );
@@ -162,9 +133,17 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		} else if ( !b ) return;
 		auto it = cases.find ( t->pred );
 		if ( it != cases.end() )
-			for ( const rule* rl : it->second )
-				push_match_rule ( *t, *rl );
-	}
+			for ( const rule* rl : it->second ) {
+				subst s;
+				if ( !rl->head || !unify ( *t, substitution, *rl->head, s, true ) ) continue;
+				const proof* ep = parent;
+				for (; ep; ep = ep->parent)
+					if ( ( ep->rul == rul ) && unify ( *ep->rul->head, ep->substitution, *rul->head, const_cast<subst&>(substitution), false ) )
+						break;
+				if ( ep && ep->parent ) continue;
+				next.push_front( &proof::init ( rl, 0, this, s, rl->body.empty() ? ground_t{ { rl, subst() } } : ground_t{} ) );
+			}
+		}
 	if (next.empty()) cout << "evidence: " << evidence << endl;
 	else for (proof* f : next) f->process(cases, evidence);
 }

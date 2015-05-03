@@ -1,4 +1,4 @@
-#include "reasoner.h"
+#include "proof.h"
 #include "jsonld.h"
 #include "parsers.h"
 #include "cli.h"

@@ -1,4 +1,4 @@
-#include "reasoner.h"
+#include "proof.h"
 #include "parsers.h"
 
 bidict& dict = *new bidict;

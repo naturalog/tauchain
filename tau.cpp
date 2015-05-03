@@ -3,7 +3,7 @@
 #include "cli.h"
 #include <sstream>
 #include "parsers.h"
-#include "reasoner.h"
+#include "proof.h"
 using namespace std;
 
 #ifdef DEBUG
