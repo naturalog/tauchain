@@ -1,0 +1,446 @@
+[{
+  "@id": "g102",
+  "@graph": [{
+    "@id": "?S",
+    "?P": [{
+      "@id": "?O"
+    }]
+  }, {
+    "@id": "?P",
+    "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
+      "@id": "?R"
+    }]
+  }]
+}, {
+  "@id": "g106",
+  "@graph": [{
+    "@id": "?S",
+    "?R": [{
+      "@id": "?O"
+    }]
+  }]
+}, {
+  "@id": "g110",
+  "@graph": [{
+    "@id": "?C",
+    "@type": ["http://www.w3.org/2000/01/rdf-schema#Class"]
+  }]
+}, {
+  "@id": "g113",
+  "@graph": [{
+    "@id": "?C",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }]
+  }]
+}, {
+  "@id": "g117",
+  "@graph": [{
+    "@id": "?S",
+    "@type": ["?A"]
+  }, {
+    "@id": "?A",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "?B"
+    }]
+  }]
+}, {
+  "@id": "g123",
+  "@graph": [{
+    "@id": "?S",
+    "@type": ["?B"]
+  }]
+}, {
+  "@id": "g127",
+  "@graph": [{
+    "@id": "?A",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "?B"
+    }]
+  }, {
+    "@id": "?B",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "?C"
+    }]
+  }]
+}, {
+  "@id": "g131",
+  "@graph": [{
+    "@id": "?A",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "?C"
+    }]
+  }]
+}, {
+  "@id": "g135",
+  "@graph": [{
+    "@id": "?X",
+    "@type": ["http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty"]
+  }]
+}, {
+  "@id": "g139",
+  "@graph": [{
+    "@id": "?X",
+    "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#member"
+    }]
+  }]
+}, {
+  "@id": "g143",
+  "@graph": [{
+    "@id": "?X",
+    "@type": ["http://www.w3.org/2000/01/rdf-schema#Datatype"]
+  }]
+}, {
+  "@id": "g146",
+  "@graph": [{
+    "@id": "?X",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Literal"
+    }]
+  }]
+}, {
+  "@id": "g150",
+  "@graph": [{
+    "@id": "?S",
+    "@type": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral"],
+    "http://eulersharp.sourceforge.net/2003/03swap/log-rules#clashesWith": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral"
+    }]
+  }]
+}, {
+  "@id": "g51",
+  "@graph": [{
+    "@id": "?S",
+    "?P": [{
+      "@id": "?O"
+    }]
+  }]
+}, {
+  "@id": "g57",
+  "@graph": [{
+    "@id": "?P",
+    "@type": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"]
+  }]
+}, {
+  "@id": "g61",
+  "@graph": [{
+    "@id": "?S",
+    "?P": [{
+      "@id": "?O"
+    }]
+  }, {
+    "@id": "?P",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "?C"
+    }]
+  }]
+}, {
+  "@id": "g66",
+  "@graph": [{
+    "@id": "?S",
+    "@type": ["?C"]
+  }]
+}, {
+  "@id": "g70",
+  "@graph": [{
+    "@id": "?S",
+    "?P": [{
+      "@id": "?O"
+    }]
+  }, {
+    "@id": "?P",
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "?C"
+    }]
+  }]
+}, {
+  "@id": "g74",
+  "@graph": [{
+    "@id": "?O",
+    "@type": ["?C"]
+  }]
+}, {
+  "@id": "g78",
+  "@graph": [{
+    "@id": "?S",
+    "?P": [{
+      "@id": "?O"
+    }]
+  }]
+}, {
+  "@id": "g81",
+  "@graph": [{
+    "@id": "?S",
+    "@type": ["http://www.w3.org/2000/01/rdf-schema#Resource"]
+  }]
+}, {
+  "@id": "g85",
+  "@graph": [{
+    "@id": "?S",
+    "?P": [{
+      "@id": "?O"
+    }]
+  }]
+}, {
+  "@id": "g88",
+  "@graph": [{
+    "@id": "?O",
+    "@type": ["http://www.w3.org/2000/01/rdf-schema#Resource"]
+  }]
+}, {
+  "@id": "g92",
+  "@graph": [{
+    "@id": "?P",
+    "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
+      "@id": "?Q"
+    }]
+  }, {
+    "@id": "?Q",
+    "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
+      "@id": "?R"
+    }]
+  }]
+}, {
+  "@id": "g98",
+  "@graph": [{
+    "@id": "?P",
+    "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
+      "@id": "?R"
+    }]
+  }]
+}, {
+  "@graph": [{
+    "@id": "http://www.w3.org/2000/01/rdf-schema#label",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Literal"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#domain",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Class"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#subject",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#seeAlso",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#comment",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Literal"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Class"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Class"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#List"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#List"
+    }],
+    "@type": ["http://www.w3.org/2002/07/owl#FunctionalProperty"]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#member",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Container"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#range",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Class"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#first",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#List"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "@type": ["http://www.w3.org/2002/07/owl#FunctionalProperty"]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#subPropertyOf",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Class"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#value",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#isDefinedBy",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#subPropertyOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#seeAlso"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#object",
+    "http://www.w3.org/2000/01/rdf-schema#domain": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement"
+    }],
+    "http://www.w3.org/2000/01/rdf-schema#range": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Resource"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#Datatype",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Class"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Container"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Container"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Container"
+    }]
+  }, {
+    "@id": "http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral",
+    "http://www.w3.org/2000/01/rdf-schema#subClassOf": [{
+      "@id": "http://www.w3.org/2000/01/rdf-schema#Literal"
+    }],
+    "@type": ["http://www.w3.org/2000/01/rdf-schema#Datatype"]
+  }, {
+    "@id": "rdfs-rules.n3#",
+    "#rcsid": [{
+      "@value": "$Id: rdfs-rules.n3 2865 2009-05-21 18:28:02Z josd $"
+    }]
+  }, {
+    "@id": "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil",
+    "@type": ["http://www.w3.org/1999/02/22-rdf-syntax-ns#List"]
+  }, {
+    "@id": "g110",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g113"
+    }]
+  }, {
+    "@id": "g102",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g106"
+    }]
+  }, {
+    "@id": "g85",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g88"
+    }]
+  }, {
+    "@id": "g117",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g123"
+    }]
+  }, {
+    "@id": "g92",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g98"
+    }]
+  }, {
+    "@id": "g70",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g74"
+    }]
+  }, {
+    "@id": "g51",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g57"
+    }]
+  }, {
+    "@id": "g127",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g131"
+    }]
+  }, {
+    "@id": "g61",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g66"
+    }]
+  }, {
+    "@id": "g135",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g139"
+    }]
+  }, {
+    "@id": "g143",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g146"
+    }]
+  }, {
+    "@id": "g78",
+    "http://www.w3.org/2000/10/swap/log#implies": [{
+      "@id": "g81"
+    }]
+  }]
+}]
