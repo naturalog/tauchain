@@ -8,6 +8,7 @@
 #include "proof.h"
 #include "parsers.h"
 #include "rdf.h"
+#include <thread>
 
 predicate *temp_preds = new predicate[max_predicates];
 uint ntemppreds = 0;
@@ -37,7 +38,8 @@ proof& proof::init ( const proof& f ) {
 
 proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
 	if ( nproofs >= max_proofs ) throw "Buffer overflow";
-	proof& f = proofs[nproofs++];
+	proof& f = *new proof;//proofs[nproofs++];
+	nproofs++;
 	f.rul = _r;
 	f.ind = _ind;
 	f.parent = p;
@@ -60,7 +62,7 @@ void reasoner::printkb() {
 	if ( pause && getchar() == 'c' ) pause = false;
 }
 
-const predicate* predicate::evaluate ( const map<int, const predicate*>& sub ) const {
+const predicate* predicate::evaluate ( const subst& sub ) const {
 	trace ( "\tEval " << t << " in " << sub << endl );
 	if ( pred < 0 ) {
 		auto it = sub.find ( pred );
@@ -102,13 +104,15 @@ const predicate* unify ( const predicate& s, const subst& ssub, const predicate&
 
 proof& proof::find ( const rule* goal, const cases_t& cases) {
 	proof& f = init( goal );
-	evidence_t e;
-	f.process( cases, e );
+	evidence_t& e = *new evidence_t;
+	f.process( *new cases_t(cases), e );
 	return f;
 }
 
 void proof::process ( const cases_t& cases, evidence_t& evidence ) {
+	auto f = [this, &cases, &evidence](){
 	trace ( *this << endl );
+	bool empty = true;
 	if ( ind >= rul->body.size() ) {
 		if ( !parent )
 			for ( const predicate* x : rul->body ) {
@@ -119,7 +123,8 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 			proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->sub, ground );
 			if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, sub );
 			if ( rul->head ) unify ( *rul->head, sub, *new_proof.rul->body[new_proof.ind - 1], new_proof.sub, true );
-			next.emplace_back( &new_proof );
+			new_proof.process(cases, evidence);
+			empty = false;
 		}
 	} else {
 		const predicate* t = rul->body[ind];
@@ -129,7 +134,9 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 			r.ground = ground;
 			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( sub ) ), subst() );
 			r.ind++;
-			next.push_back ( &r );
+			//next.push_back ( &r );
+			r.process(cases, evidence);
+			empty = false;
 		} else if ( !b ) return;
 		auto it = cases.find ( t->pred );
 		if ( it != cases.end() )
@@ -141,18 +148,27 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 					if ( ( ep->rul == rul ) && unify ( *ep->rul->head, ep->sub, *rul->head, const_cast<subst&>(sub), false ) )
 						break;
 				if ( ep && ep->parent ) continue;
-				next.push_front( &proof::init ( rl, 0, this, s, rl->body.empty() ? ground_t{ { rl, subst() } } : ground_t{} ) );
+				ground_t g;
+				if (rl->body.empty()) g.emplace_back( rl, subst() );
+				//next.push_front( 
+				proof::init ( rl, 0, this, s, g ).process(cases, evidence);
+				empty = false;
 			}
 		}
-	if (next.empty()) cout << "evidence: " << evidence << endl;
-	else for (proof* f : next) f->process(cases, evidence);
+	if (empty) cout << "evidence: " << evidence << endl;
+	};
+	std::thread t(f);
+	t.join();
+//	else for (proof* f : next) 
+//		f->process (cases, evidence );
+//		thread([this, f, &cases, &evidence](){f->process (cases, evidence);});
 }
 
-predicate* reasoner::mkpred ( string s, const vector<const predicate*>& v ) {
+predicate* reasoner::mkpred ( string s, const predlist& v ) {
 	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
 }
 
-rule* reasoner::mkrule ( const predicate* p, const vector<const predicate*>& v ) {
+rule* reasoner::mkrule ( const predicate* p, const predlist& v ) {
 	return &rules[nrules++].init ( p, v );
 }
 
@@ -206,8 +222,8 @@ bool reasoner::test_reasoner() {
 	typedef predicate* ppredicate;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), { mkpred ( "a", {_x, Man } )  } ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), { mkpred ( "a", {_x, Male} )  } ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  } ) );
 
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
 	evidence = prove ( mkrule ( 0, { goal } ), -1, cases );

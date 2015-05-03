@@ -91,7 +91,7 @@ ostream& operator<< ( ostream& o, const ground_t& s ) {
 }
 
 ostream& operator<< ( ostream& o, const evidence_t& e ) {
-	for ( pair<int, list<pair<const predicate*, ground_t>>> x : e ) {
+	for ( auto x : e ) {
 		o << "predicate: " << dstr ( x.first ) << endl << "ground: { ";
 		for (auto y : x.second) o << endl << '\t' << *y.first << ' ' << y.second;
 		o << '}' << endl;
@@ -115,7 +115,7 @@ ostream& operator<< ( ostream& o, const proof& p ) {
 	o << "Frame: " << &p << " {" << endl << "\tind: " << p.ind << endl << "\tparent pointer: ";
 	if ( p.parent ) o << p.parent;
 	else o << "null";
-	o << endl << "\tsubst: " << p.substitution << endl << "\tgnd: " << p.ground;
+	o << endl << "\tsubst: " << p.sub << endl << "\tgnd: " << p.ground;
 	o << "\trule: " << ( *p.rul ) << endl << '}' << endl;
 	return o;
 }
