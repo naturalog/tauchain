@@ -58,7 +58,7 @@ private:
 	const rule* rul = 0;
 	uint ind = 0;
 	const proof* parent = 0;
-	subst substitution;
+	subst sub;
 	ground_t ground;
 	deque<proof*> next;
 	int  builtin ( const predicate* t );

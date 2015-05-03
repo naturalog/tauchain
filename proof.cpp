@@ -32,7 +32,7 @@ rule& rule::init ( const predicate* h, predlist b ) {
 }
 
 proof& proof::init ( const proof& f ) {
-	return init ( f.rul, f.ind, f.parent, f.substitution, f.ground );
+	return init ( f.rul, f.ind, f.parent, f.sub, f.ground );
 }
 
 proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
@@ -41,7 +41,7 @@ proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground
 	f.rul = _r;
 	f.ind = _ind;
 	f.parent = p;
-	f.substitution = _s;
+	f.sub = _s;
 	f.ground = _g;
 	return f;
 }
@@ -112,13 +112,13 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 	if ( ind >= rul->body.size() ) {
 		if ( !parent )
 			for ( const predicate* x : rul->body ) {
-				const predicate* t = x->evaluate ( substitution );
+				const predicate* t = x->evaluate ( sub );
 				evidence[t->pred].emplace_back ( t, ground );
 			}
 		else {
-			proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->substitution, ground );
-			if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, substitution );
-			if ( rul->head ) unify ( *rul->head, substitution, *new_proof.rul->body[new_proof.ind - 1], new_proof.substitution, true );
+			proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->sub, ground );
+			if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, sub );
+			if ( rul->head ) unify ( *rul->head, sub, *new_proof.rul->body[new_proof.ind - 1], new_proof.sub, true );
 			next.emplace_back( &new_proof );
 		}
 	} else {
@@ -127,7 +127,7 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		if ( b == 1 ) {
 			proof& r = proof::init ( *this );
 			r.ground = ground;
-			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( substitution ) ), subst() );
+			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( sub ) ), subst() );
 			r.ind++;
 			next.push_back ( &r );
 		} else if ( !b ) return;
@@ -135,10 +135,10 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		if ( it != cases.end() )
 			for ( const rule* rl : it->second ) {
 				subst s;
-				if ( !rl->head || !unify ( *t, substitution, *rl->head, s, true ) ) continue;
+				if ( !rl->head || !unify ( *t, sub, *rl->head, s, true ) ) continue;
 				const proof* ep = parent;
 				for (; ep; ep = ep->parent)
-					if ( ( ep->rul == rul ) && unify ( *ep->rul->head, ep->substitution, *rul->head, const_cast<subst&>(substitution), false ) )
+					if ( ( ep->rul == rul ) && unify ( *ep->rul->head, ep->sub, *rul->head, const_cast<subst&>(sub), false ) )
 						break;
 				if ( ep && ep->parent ) continue;
 				next.push_front( &proof::init ( rl, 0, this, s, rl->body.empty() ? ground_t{ { rl, subst() } } : ground_t{} ) );
@@ -232,21 +232,21 @@ int proof::builtin ( const predicate* t_ ) {
 	string p = dict[t.pred];
 	if ( p == "GND" ) return 1;
 	if ( t.args.size() != 2 ) throw runtime_error ( "builtin expects to get a predicate with spo" );
-	const predicate* t0 = evaluate ( **t.args.begin(), f.substitution );
-	const predicate* t1 = evaluate ( **++t.args.begin(), f.substitution );
+	const predicate* t0 = evaluate ( **t.args.begin(), f.sub );
+	const predicate* t1 = evaluate ( **++t.args.begin(), f.sub );
 	if ( p == "log:equalTo" ) return ( ( t0 && t1 && t0->pred == t1->pred ) ? 1 : 0 );
 	else if ( p == "log:notEqualTo" ) return ( t0 && t1 && t0->pred != t1->pred ) ? 1 : 0;
 	else if ( p == "math:absoluteValue" ) {
 		if ( t0 && t0->pred > 0 )
-			return ( unify ( mkpred ( tostr ( fabs ( stof ( dict[t0->pred] ) ) ) ), f.substitution, t.args[1], f.substitution, true ) ) ? 1 : 0;
+			return ( unify ( mkpred ( tostr ( fabs ( stof ( dict[t0->pred] ) ) ) ), f.sub, t.args[1], f.sub, true ) ) ? 1 : 0;
 	}
 #define FLOAT_BINARY_BUILTIN(x, y) \
   else if (p == x) \
       return \
         (t0 && t0->pred > 0 && \
-      	(unify(mkpred(tostr(y(stof(dict[t0->pred])))), f.substitution, t.args[1], f.substitution, true))) || \
+      	(unify(mkpred(tostr(y(stof(dict[t0->pred])))), f.sub, t.args[1], f.sub, true))) || \
         (t1 && t1->pred > 0 && \
-      	(unify(mkpred(tostr(y(stof(dict[t0->pred])))), f.substitution, t.args[0], f.substitution, true))) \
+      	(unify(mkpred(tostr(y(stof(dict[t0->pred])))), f.sub, t.args[0], f.sub, true))) \
 	? 1 : 0
 	FLOAT_BINARY_BUILTIN ( "math:degrees", degrees );
 	FLOAT_BINARY_BUILTIN ( "math:cos", cos );
@@ -260,54 +260,54 @@ int proof::builtin ( const predicate* t_ ) {
 	else if ( p == "math:notGreaterThan" ) return ( t0 && t1 && stof ( dict[t0->pred] ) <= stof ( dict[t1->pred] ) ) ? 1 : 0;
 	else if ( p == "math:equalTo" ) return ( t0 && t1 && stof ( dict[t0->pred] ) == stof ( dict[t1->pred] ) ) ? 1 : 0;
 	else if ( p == "math:difference" && t0 ) {
-		float a = stof ( dict[ ( evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.substitution )->pred )] );
-		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a -= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.substitution )->pred] );
-		return ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) ? 1 : 0;
+		float a = stof ( dict[ ( evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.sub )->pred )] );
+		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a -= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.sub )->pred] );
+		return ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) ? 1 : 0;
 	} else if ( p == "math:exponentiation" && t0 ) {
-		float a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.substitution )->pred] );
-		for ( auto ti = t0->args[1]; ti && !ti->args.empty(); ti = ti->args[1] ) a = pow ( a, stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.substitution )->pred] ) );
-		return ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) ? 1 : 0;
+		float a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.sub )->pred] );
+		for ( auto ti = t0->args[1]; ti && !ti->args.empty(); ti = ti->args[1] ) a = pow ( a, stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.sub )->pred] ) );
+		return ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) ? 1 : 0;
 	} else if ( p == "math:integerQuotient" && t0 ) {
-		auto a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.substitution )->pred] );
-		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a /= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.substitution )->pred] );
-		return ( unify ( mkpred ( tostr ( floor ( a ) ) ), f.substitution, t.args[1], f.substitution, true ) ) ? 1 : 0;
+		auto a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.sub )->pred] );
+		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a /= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.sub )->pred] );
+		return ( unify ( mkpred ( tostr ( floor ( a ) ) ), f.sub, t.args[1], f.sub, true ) ) ? 1 : 0;
 	} else if ( p == "math:negation" ) {
 		if ( t0 && t0->pred >= 0 ) {
 			auto a = -stof ( dict[t0->pred] );
-			if ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) return 1;
+			if ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) return 1;
 		} else if ( t1 && t1->pred >= 0 ) {
 			auto a = -stof ( dict[t1->pred] );
-			if ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[0], f.substitution, true ) ) return 1;
+			if ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[0], f.sub, true ) ) return 1;
 		} else return 0;
 	} else if ( p == "math:product" && t0 ) {
-		auto a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.substitution )->pred] );
-		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a *= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.substitution )->pred] );
-		if ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) return 1;
+		auto a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.sub )->pred] );
+		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a *= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.sub )->pred] );
+		if ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) return 1;
 		else return 0;
 	} else if ( p == "math:quotient" && t0 ) {
-		auto a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.substitution )->pred] );
-		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a /= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.substitution )->pred] );
-		if ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) return 1;
+		auto a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.sub )->pred] );
+		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a /= stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.sub )->pred] );
+		if ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) return 1;
 		else return 0;
 	} else if ( p == "math:remainder" && t0 ) {
-		auto a = stoi ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.substitution )->pred] );
-		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a %= stoi ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.substitution )->pred] );
-		if ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) return 1;
+		auto a = stoi ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.sub )->pred] );
+		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a %= stoi ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.sub )->pred] );
+		if ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) return 1;
 		else return 0;
 	} else if ( p == "math:rounded" ) {
 		if ( t0 && t0->pred >= 0 ) {
 			float a = round ( stof ( dict[t0->pred] ) );
-			if ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) return 1;
+			if ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) return 1;
 		} else return 0;
 	} else if ( p == "math:sum" && t0 ) {
-		float a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.substitution )->pred] );
-		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a += stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.substitution )->pred] );
-		if ( unify ( mkpred ( tostr ( a ) ), f.substitution, t.args[1], f.substitution, true ) ) return 1;
+		float a = stof ( dict[evaluate ( *const_cast<const predicate*> ( t0->args[0] ), f.sub )->pred] );
+		for ( auto ti = t0->args[1]; !ti->args.empty(); ti = ti->args[1] ) a += stof ( dict[evaluate ( *const_cast<const predicate*> ( ti->args[0] ), f.sub )->pred] );
+		if ( unify ( mkpred ( tostr ( a ) ), f.sub, t.args[1], f.sub, true ) ) return 1;
 		else return 0;
 	} else if ( p == "rdf:first" && t0 && dict[t0->pred] == "." && !t0->args.empty() )
-		return ( unify ( t0->args[0], f.substitution, t.args[1], f.substitution, true ) ) ? 1 : 0;
+		return ( unify ( t0->args[0], f.sub, t.args[1], f.sub, true ) ) ? 1 : 0;
 	else if ( p == "rdf:rest" && t0 && dict[t0->pred] == "." && !t0->args.empty() )
-		return ( unify ( t0->args[1], f.substitution, t.args[1], f.substitution, true ) ) ? 1 : 0;
+		return ( unify ( t0->args[1], f.sub, t.args[1], f.sub, true ) ) ? 1 : 0;
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdf:List" && t0 && dict[t0->pred] == "." ) return 1;
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdfs:Resource" ) return 1;*/
 	return -1;
