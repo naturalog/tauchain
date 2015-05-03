@@ -22,6 +22,7 @@
 #include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/containers/list.hpp>
 #include <boost/interprocess/containers/vector.hpp>
+#include <thread>
 
 using namespace std;
 using namespace jsonld;
@@ -29,6 +30,7 @@ using namespace jsonld;
 const uint K1 = 1024, M1 = K1 * K1;
 const uint max_predicates = M1, max_rules = M1, max_proofs = M1;
 
+extern boost::interprocess::list<thread*> threads;
 typedef /*boost::interprocess::*/vector<const struct predicate*> predlist;
 typedef /*boost::interprocess::*/vector<const struct rule*> rulelist;
 ostream& operator<< ( ostream& o, const rulelist& l );

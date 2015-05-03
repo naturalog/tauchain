@@ -133,6 +133,35 @@ public:
 	}
 };
 
+#include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
+
+class listen_cmd : public cmd_t {
+	virtual string desc() const { return "Listen to incoming connections and answer queries."; }
+	virtual string help() const { return "Behave as a server. Usage: tau listen <port>"; }
+	virtual int operator() ( const strings& args ) {
+		if (args.size() != 3) { cerr<<help()<<endl; return 1; }
+		using namespace boost::asio;
+		using boost::asio::ip::tcp;
+		io_service ios;
+		ip::tcp::endpoint endpoint(tcp::v4(), stoi(args[2]));
+		ip::tcp::acceptor acceptor(ios, endpoint);
+		for (;;) {
+			ip::tcp::iostream& stream = *new ip::tcp::iostream;
+			acceptor.accept(*stream.rdbuf());
+			stream.expires_from_now(boost::posix_time::seconds(60));
+			threads.push_back(new thread([&stream](){
+				string line;
+				while (stream) {
+					stream >> line;
+					cout << line << endl;
+				}
+			}));
+		}
+		return 0;
+	}
+};
+
 class prove_cmd : public cmd_t {
 	reasoner r;
 public:
@@ -176,6 +205,7 @@ int main ( int argc, char** argv ) {
 			{ string ( "nodemap" ) , new nodemap_cmd },
 			{ string ( "convert" ) , new convert_cmd },
 			{ string ( "prove" ) , new prove_cmd },
+			{ string ( "listen" ) , new listen_cmd }
 		}, {
 			{ { "--no-deref", "show integers only instead of strings" }, &deref },
 			{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
