@@ -6,6 +6,10 @@
 #include <UbigraphAPI.h>
 #include <cmath>
 #endif
+#ifdef JST
+#include "json_spirit.h"
+using json_spirit::mValue;
+#endif
 
 struct pred_t {
 	string pred;
@@ -101,7 +105,8 @@ struct proof_trace_item {
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
 	#ifdef UBI
-	int ubi_node_id;
+	int ubi_node_id=0;
+	bool _keep;
 	#endif
 	operator string() const {
 		stringstream o;
@@ -114,14 +119,34 @@ struct proof_trace_item {
 	#ifdef UBI
 	~proof_trace_item()
 	{
-//		if (!--ubi_node_refcount)
-			ubigraph_remove_vertex( ubi_node_id );
+		if (ubi_node_id)
+		{
+			if(_keep)
+			{
+				ubigraph_set_vertex_attribute ( ubi_node_id, "color", "#55ff55" );
+				ubigraph_set_vertex_attribute ( ubi_node_id, "shape", "cube" );
+			}
+			else
+				ubigraph_remove_vertex( ubi_node_id );
+		}
+	}
+	void keep()
+	{
+		_keep = 1;
 	}
 	#endif
-
-	
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
+
+mValue jst(ppti t)
+{
+	mValue o;
+	o["rule"]=jst(t->rule);
+	o["src"]=jst(t->src);
+	o["ind"]=jst(t->ind);
+	o["parent"]=jst(t->parent);
+	return o;
+}
 
 
 void ubi ( const ppti i ) {
@@ -130,6 +155,7 @@ void ubi ( const ppti i ) {
 		i->ubi_node_id = ubigraph_new_vertex();
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "12" );
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontcolor", "#ffffff" );
+		cout << "setting label to \""<<( ( string ) i->rule ).c_str() <<"\""<< endl; 
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
 
 		if ( !i->parent ) 
@@ -147,14 +173,14 @@ void ubi ( const ppti i ) {
 				ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
 				ubigraph_set_edge_attribute ( e, "color", "#777777" );
 				ubigraph_set_edge_attribute ( e, "width", "2" );
-				ubigraph_set_edge_attribute ( e, "strength", "0.5" );
+				ubigraph_set_edge_attribute ( e, "strength", "1" );
 			}
 			else
 			{
 				ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff9999" );
 				ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
 				ubigraph_set_edge_attribute ( e, "width", "5" );
-				ubigraph_set_edge_attribute ( e, "strength", "0.2" );
+				ubigraph_set_edge_attribute ( e, "strength", "0.1" );
 			}
 		}
 	} 
@@ -166,8 +192,8 @@ void ubi ( const ppti i ) {
 			ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
 			ubigraph_set_edge_attribute ( e, "width", "1" );
 			ubigraph_set_edge_attribute ( e, "oriented", "true" );
-			ubigraph_set_edge_attribute ( e, "strength", "0" );
-//			ubigraph_set_edge_attribute ( e, "visible", "false" );
+			ubigraph_set_edge_attribute ( e, "strength", "0.5" );
+			ubigraph_set_edge_attribute ( e, "visible", "false" );
 		}
 	}
 	/*
@@ -198,7 +224,7 @@ void ubi_add_facts ( evidence_t &cases ) {
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "fontcolor", "#ccffcc" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "color", "#55ff55" );
 				ubigraph_set_vertex_attribute ( it->ubi_node_id, "shape", "cube" );
-				ubigraph_set_vertex_attribute ( it->ubi_node_id, "size", "5" );
+				ubigraph_set_vertex_attribute ( it->ubi_node_id, "size", "3" );
 				
 				if (prev)
 					ubigraph_new_edge ( it->ubi_node_id,  prev);
@@ -252,12 +278,32 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 
 pground_t gnd = make_shared<ground_t>();
 
+
+mValue jst(deque<ppti> q)
+{
+	mValue o;
+	int i=0;
+	for(auto &j : q)
+		o[i++]=jst(j);
+	return o;
+}
+		
+void out(mValue &v)
+{	
+	#ifdef JST
+	cout << v;
+	#endif
+}	
+
 bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	int step = 0;
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
+	#ifdef UBI
+	s->keep();
 	ubi ( s );
+	#endif
 	trace (  "Goal: " << ( string ) goal << endl );
 	while ( queue.size() > 0 ) {
 		trace (  "=======" << endl );
@@ -273,6 +319,9 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		trace ( "c.ind: " << c->ind << endl << "c.rule.body.size(): " << c->rule.body.size() << endl ); //in step 1, rule body is goal
 		// all parts of rule body succeeded...(?)
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
+			#ifdef UBI
+			c->keep();
+			#endif
 			if ( !c->parent ) {
 				trace ( "no parent!" << endl );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
@@ -299,7 +348,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue;
 		}
 		trace ( "Done q" << endl );
-
+		
 		pred_t t = c->rule.body[c->ind];
 		
 		size_t b = builtin ( t, *c );
@@ -310,8 +359,10 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			queue.push_back ( r );
 			ubi ( r );
 			continue;
-		} else if ( b == 0 )   // builtin didnt unify
+		} else if ( b == 0 )
+		{   // builtin didnt unify
 			continue; // else there is no such builtin, continue...
+		}
 
 		trace ( "Checking cases..." << endl );
 		trace ( "looking for case " << t.pred << endl );
@@ -319,6 +370,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			trace ( "No Cases(no such predicate)!" << endl );
 			trace ( "available cases' keys: " << endl );
 			for ( auto x : cases ) trace ( x.first << endl );
+			if(!c->parent) return false;
 			continue;
 		}
 		size_t src = 0;
@@ -532,8 +584,15 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 	}
 	ubi_add_facts ( cases );
 	rule_t goal;
-	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
+	for ( auto q : query ) 
+	{
+		goal.body.push_back ( triple ( *q ) );
+		cout << "goal item: "<<(string)triple ( *q )<<endl;;
+	}
 	prove ( goal, -1, cases, evidence );
+	for ( auto q : query ) 
+		cout << "goal item: "<<(string)triple ( *q )<<endl;;
+
 	return evidence;
 }
 
