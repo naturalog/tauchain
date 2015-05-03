@@ -111,12 +111,12 @@ ostream& operator<< ( ostream& o, const cases_t& e ) {
 	return o;
 }
 
-ostream& operator<< ( ostream& o, const frame& f ) {
-	o << "Frame: " << &f << " {" << endl << "\tind: " << f.ind << endl << "\tparent pointer: ";
-	if ( f.parent ) o << f.parent;
+ostream& operator<< ( ostream& o, const proof& p ) {
+	o << "Frame: " << &p << " {" << endl << "\tind: " << p.ind << endl << "\tparent pointer: ";
+	if ( p.parent ) o << p.parent;
 	else o << "null";
-	o << endl << "\tsubst: " << f.substitution << endl << "\tgnd: " << f.ground;
-	o << "\trule: " << ( *f.rul ) << endl << '}' << endl;
+	o << endl << "\tsubst: " << p.substitution << endl << "\tgnd: " << p.ground;
+	o << "\trule: " << ( *p.rul ) << endl << '}' << endl;
 	return o;
 }
 

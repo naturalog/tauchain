@@ -16,13 +16,13 @@ reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" 
 
 predicate *predicates = new predicate[max_predicates];
 rule *rules = new rule[max_rules];
-frame *frames = new frame[max_frames];
-uint npredicates = 0, nrules = 0, nframes = 0;
+proof *proofs = new proof[max_proofs];
+uint npredicates = 0, nrules = 0, nproofs = 0;
 
 reasoner::~reasoner() {
 	delete[] predicates;
 	delete[] rules;
-	delete[] frames;
+	delete[] proofs;
 }
 
 rule& rule::init ( const predicate* h, predlist b ) {
@@ -31,17 +31,17 @@ rule& rule::init ( const predicate* h, predlist b ) {
 	return *this;
 }
 
-frame& frame::init ( const frame& f ) {
-	//	if ( r->nframes >= max_frames ) throw "Buffer overflow";
-	//	const frame& res =
+proof& proof::init ( const proof& f ) {
+	//	if ( r->nproofs >= max_proofs ) throw "Buffer overflow";
+	//	const proof& res =
 	return init ( f.rul, f.ind, f.parent, f.substitution, f.ground );
 	//	res.parent = f.parent;
 	//	return res;
 }
 
-frame& frame::init ( const rule* _r, uint _ind, const frame* p, subst _s, ground_t _g ) {
-	if ( nframes >= max_frames ) throw "Buffer overflow";
-	frame& f = frames[nframes++];
+proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
+	if ( nproofs >= max_proofs ) throw "Buffer overflow";
+	proof& f = proofs[nproofs++];
 	f.rul = _r;
 	f.ind = _ind;
 	f.parent = p;
@@ -52,13 +52,13 @@ frame& frame::init ( const rule* _r, uint _ind, const frame* p, subst _s, ground
 
 void reasoner::printkb() {
 	static bool pause = false;
-	cout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nframes << " frames. " << endl;
+	cout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nproofs << " proofs. " << endl;
 	cout << "predicates: " <<  endl;
 	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
 	cout << "rules: " << endl;
 	for ( uint n = 0; n < nrules; ++n ) cout << rules[n] << endl;
-	cout << "frames: " << endl;
-	for ( uint n = 0; n < nframes; ++n ) cout << frames[n] << endl;
+	cout << "proofs: " << endl;
+	for ( uint n = 0; n < nproofs; ++n ) cout << proofs[n] << endl;
 	if ( pause ) cout << "type <enter> to continue or <c><enter> to stop pausing...";
 	cout << endl;
 	if ( pause && getchar() == 'c' ) pause = false;
@@ -104,29 +104,26 @@ const predicate* unify ( const predicate& s, const subst& ssub, const predicate&
 	return &d;
 }
 
-void frame::evidence_found ( evidence_t& evidence ) const {
+void proof::evidence_found ( evidence_t& evidence ) const {
 	for ( const predicate* x : rul->body ) {
 		const predicate* t = x->evaluate ( substitution );
 		evidence[t->pred].emplace_back ( t, ground );
 	}
-	cout << "evidence_found: " << endl << evidence << " -- end evidence_found" << endl;
 }
 
-void frame::push_next_frame ( ) {
-	frame& new_frame = frame::init ( *parent );
-	new_frame.ground = ground;
-	if ( !rul->body.empty() ) new_frame.ground.emplace_front ( rul, substitution );
+void proof::push_next_proof ( ) {
+	proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->substitution, ground );
+	if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, substitution );
 	if ( rul->head )
-		unify ( *rul->head, substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
-	new_frame.ind++;
-	next.emplace_back( &new_frame );
+		unify ( *rul->head, substitution, *new_proof.rul->body[new_proof.ind - 1], new_proof.substitution, true );
+	next.emplace_back( &new_proof );
 }
 
-void frame::push_match_rule ( const predicate& t, const rule& rl ) {
+void proof::push_match_rule ( const predicate& t, const rule& rl ) {
 	subst s;
 	if ( rl.head && unify ( t, substitution, *rl.head, s, true ) ) {
 		trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
-		const frame* ep = this;
+		const proof* ep = this;
 		while ( ep->parent ) {
 			ep = ep->parent;
 			if ( ( ep->rul == rul ) &&
@@ -135,47 +132,29 @@ void frame::push_match_rule ( const predicate& t, const rule& rl ) {
 				break;
 		}
 		if ( !ep->parent ) 
-			next.push_front( &frame::init ( &rl, 0, this, s, rl.body.empty() ? ground_t{ { &rl, subst() } } : ground_t{} ) );
+			next.push_front( &proof::init ( &rl, 0, this, s, rl.body.empty() ? ground_t{ { &rl, subst() } } : ground_t{} ) );
 	} else {
 		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
 	}
 }
 
-deque<frame*> reasoner::init( const rule* goal ) {
-	deque<frame*> queue;
-	queue.emplace_back ( &frame::init ( goal ) );
-	return queue;
+proof& proof::find ( const rule* goal, const cases_t& cases) {
+	proof& f = init( goal );
+	evidence_t e;
+	f.process( cases, e );
+	return f;
 }
 
-evidence_t reasoner::prove ( const rule* goal, int max_steps, const cases_t& cases ) {
-//	trace ( "dict: " << dict.tostr() << endl );
-	deque<frame*> queue = init(goal);
-	uint step = 0;
-	evidence_t evidence;
-
-	cout << "goal: " << *goal << endl << "cases:" << endl << cases << endl;
-//	while ( !queue.empty() && ++step ) {
-//		if ( max_steps != -1 && ( int ) step >= max_steps ) return {};
-		frame* f = queue.front();
-//		queue.pop_front();
-		f->process( cases, evidence );
-//		for (auto x : f->next) queue.push_back(x); 
-//	}
-	cout << "frames: " << endl;
-	for (uint n = 0; n < nframes; ++n) cout << frames[n] << endl;
-	return evidence;
-}
-
-void frame::process ( const cases_t& cases, evidence_t& evidence ) {
+void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 	trace ( *this << endl );
 	if ( ind >= rul->body.size() ) {
 		if ( !parent ) evidence_found ( evidence );
-		else push_next_frame ( );
+		else push_next_proof ( );
 	} else {
 		const predicate* t = rul->body[ind];
 		int b = builtin ( t );
 		if ( b == 1 ) {
-			frame& r = frame::init ( *this );
+			proof& r = proof::init ( *this );
 			r.ground = ground;
 			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( substitution ) ), subst() );
 			r.ind++;
@@ -186,7 +165,8 @@ void frame::process ( const cases_t& cases, evidence_t& evidence ) {
 			for ( const rule* rl : it->second )
 				push_match_rule ( *t, *rl );
 	}
-	for (frame* f : next) f->process(cases, evidence);
+	if (next.empty()) cout << "evidence: " << evidence << endl;
+	else for (proof* f : next) f->process(cases, evidence);
 }
 
 predicate* reasoner::mkpred ( string s, const vector<const predicate*>& v ) {
@@ -252,10 +232,10 @@ bool reasoner::test_reasoner() {
 
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
 	evidence = prove ( mkrule ( 0, { goal } ), -1, cases );
-	cout << "evidence: " << evidence.size() << " items..." << endl;
-	cout << evidence << endl;
-	cout << "QED!" << endl;
-	cout << evidence.size() << endl;
+//	cout << "evidence: " << evidence.size() << " items..." << endl;
+//	cout << evidence << endl;
+//	cout << "QED!" << endl;
+//	cout << evidence.size() << endl;
 	return evidence.size();
 }
 
@@ -265,7 +245,7 @@ float degrees ( float f ) {
 }
 
 
-int frame::builtin ( const predicate* t_ ) {
+int proof::builtin ( const predicate* t_ ) {
 	if (t_ && dict[t_->pred] == "GND") return 1;
 /*	
 	if ( !t_ ) return -1;
