@@ -10,6 +10,7 @@
 #include "rdf.h"
 #include <thread>
 #include "misc.h"
+#include <assert.h>
 
 predicate *temp_preds = new predicate[max_predicates];
 boost::interprocess::vector<proof*> proofs;
@@ -28,10 +29,11 @@ reasoner::~reasoner() {
 //	delete[] proofs;
 }
 
-rule& rule::init ( const predicate* h, predlist b ) {
-	head = h;
+rule& predicate::init ( const predicate* h, predlist b ) {
+//	head = h;
+	assert(h == this);
 	body = b;
-	return *this;
+	return (rule&)*this;
 }
 
 proof& proof::init ( const proof& f ) {
@@ -170,6 +172,7 @@ predicate* reasoner::mkpred ( string s, const predlist& v ) {
 }
 
 rule* reasoner::mkrule ( const predicate* p, const predlist& v ) {
+	return (rule*)(p ? p : &predicates[npredicates++].init(0, v));
 	return &rules[nrules++].init ( p, v );
 }
 
@@ -198,8 +201,8 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
 			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
 			for ( jsonld::pquad y : *kb.at ( o ) ) {
-				rule& rul = *mkrule();
-				rul.head = triple ( *y );
+				rule& rul = (rule&)*triple(*y) ;// mkrule();
+//				rul.head = triple ( *y );
 				if ( kb.find ( s ) != kb.end() )
 					for ( jsonld::pquad z : *kb.at ( s ) )
 						rul.body.push_back ( triple ( *z ) );
@@ -328,4 +331,15 @@ int proof::builtin ( const predicate* t_ ) {
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdf:List" && t0 && dict[t0->pred] == "." ) return 1;
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdfs:Resource" ) return 1;*/
 	return -1;
+}
+
+string predicate::dot() const {
+	stringstream r;
+	for (auto x : body) {
+		r << '\"' << *x << '\"';
+		if (head) r << " -> " << '\"' << *head << '\"';
+		else r << " [shape=box]";
+		r << ';' << endl;
+	}
+	return r.str();
 }

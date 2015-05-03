@@ -32,8 +32,8 @@ const uint max_predicates = M1, max_rules = M1, max_proofs = M1;
 
 extern boost::interprocess::list<thread*> threads;
 extern boost::interprocess::vector<class proof*> proofs;
-typedef /*boost::interprocess::*/vector<const struct predicate*> predlist;
-typedef /*boost::interprocess::*/vector<const struct rule*> rulelist;
+typedef /*boost::interprocess::*/vector<const struct predicate*> predlist, rulelist;
+//typedef /*boost::interprocess::*/vector<const struct rule*> rulelist;
 ostream& operator<< ( ostream& o, const rulelist& l );
 ostream& operator<< ( ostream& o, const predlist& l );
 
@@ -42,26 +42,22 @@ typedef boost::interprocess::map<int, const class predicate*> subst;
 struct predicate {
 	int pred = 0;
 	predlist args;
+	predlist body;
+	predicate* head;
+	predicate() { head = this; }
 	predicate& init ( int _p = 0, predlist _args = predlist() );
 	const predicate* evaluate ( const subst& sub ) const;
+//};
+//
+//struct rule {
+//	const predicate* head = 0;
+//	predlist body;
+	struct rule& init ( const predicate* h, predlist b = predlist() );
+	string dot() const;
 };
+//typedef predicate rule;
+struct rule : public predicate {};
 ostream& operator<< ( ostream& o, const predicate& p );
-
-struct rule {
-	const predicate* head = 0;
-	predlist body;
-	rule& init ( const predicate* h, predlist b = predlist() );
-	string dot() const {
-		stringstream r;
-		for (auto x : body) {
-			r << '\"' << *x << '\"';
-			if (head) r << " -> " << '\"' << *head << '\"';
-			else r << " [shape=box]";
-			r << ';' << endl;
-		}
-		return r.str();
-	}
-};
 ostream& operator<< ( ostream& o, const rule& r );
 
 typedef boost::interprocess::list<pair<const rule*, subst>> ground_t;

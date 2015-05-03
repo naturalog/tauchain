@@ -114,7 +114,7 @@ ostream& operator<< ( ostream& o, const proof& p ) {
 	o << "\trule: " << ( *p.rul ) << endl << '}' << endl;
 	return o;
 }
-
+/*
 ostream& operator<< ( ostream& o, const rulelist& l ) {
 	if ( l.empty() ) return o << "[]";
 	o << '[';
@@ -125,7 +125,7 @@ ostream& operator<< ( ostream& o, const rulelist& l ) {
 	}
 	return o << ']' << endl;
 }
-
+*/
 ostream& operator<< ( ostream& o, const predlist& l ) {
 	if ( l.empty() ) return o << "[]";
 	o << '[';
