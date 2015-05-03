@@ -108,6 +108,14 @@ proof& proof::find ( const rule* goal, const cases_t& cases) {
 	f.process( *new cases_t(cases), e );
 	return f;
 }
+boost::interprocess::list<thread*> threads;
+
+struct onexit {
+	~onexit() {
+		for (auto x : threads) { x->join(); delete x; } 
+	}
+} onexit_;
+
 
 void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 	auto f = [this, &cases, &evidence](){
@@ -157,8 +165,8 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		}
 	if (empty) cout << "evidence: " << evidence << endl;
 	};
-	std::thread t(f);
-	t.join();
+	std::thread* t = new thread(f);
+	threads.push_back(t);
 //	else for (proof* f : next) 
 //		f->process (cases, evidence );
 //		thread([this, f, &cases, &evidence](){f->process (cases, evidence);});
