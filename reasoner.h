@@ -56,26 +56,30 @@ struct frame {
 	const frame* parent = 0;
 	subst substitution;
 	ground_t ground;
-	static frame& init ( class reasoner* r, const frame& f );
-	static frame& init ( class reasoner*, const rule* _r = 0, uint _ind = 0, const frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
+	deque<frame*> next;
+	int 	builtin 	( const predicate* t );
+	void 	evidence_found 	( evidence_t& evidence ) const;
+	frame* 	next_frame 	( ) const;
+	frame* 	match_rule 	( const predicate& t, const rule& rl ) const;
+	void	process 	( const cases_t& cases, evidence_t& evidence );
+	static frame& init ( const frame& f );
+	static frame& init ( const rule* _r = 0, uint _ind = 0, const frame* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 };
+
+
+extern predicate *predicates;
+extern rule *rules;
+extern frame *frames;
+extern uint npredicates, nrules, nframes;
+
+const predicate* 	unify 		( const predicate& s, const subst& ssub, const predicate& d, subst& dsub, bool f );
 
 class reasoner {
 	friend struct frame;
-	predicate *predicates = new predicate[max_predicates];
-	rule *rules = new rule[max_rules];
-	frame *frames = new frame[max_frames];
-	uint npredicates = 0, nrules = 0, nframes = 0;
 	predicate* GND;
 	predlist to_predlist ( const ground_t& g );
 
-	int 			builtin 	( const predicate* t, const frame& f );
-	const predicate* 	unify 		( const predicate& s, const subst& ssub, const predicate& d, subst& dsub, bool f );
-	void 			evidence_found 	( const frame& current_frame, evidence_t& evidence );
-	frame* 			next_frame 	( const frame& current_frame );
-	const frame* 		match_rule 	( const frame& current_frame, const predicate& t, const rule& rl );
-	deque<const frame*> 	process_frame 	( const frame& current_frame, const cases_t& cases, evidence_t& evidence );
-	deque<const frame*> 	init		( const rule* goal );
+	deque<frame*> 	init	( const rule* goal );
 
 	predicate* mkpred ( string s, const vector<const predicate*>& v = vector<const predicate*>() );
 	rule* mkrule ( const predicate* p = 0, const vector<const predicate*>& v = vector<const predicate*>() );
