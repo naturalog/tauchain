@@ -16,7 +16,7 @@ public:
 	bidict();
 	int set ( const string& v );
 	void set ( const vector<string>& v );
-	const string operator[] ( const int& k );
+	const string operator[] ( int k );
 	int operator[] ( const string& v );
 	bool has ( int k ) const;
 	bool has ( const string& v ) const;

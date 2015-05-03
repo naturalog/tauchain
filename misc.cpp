@@ -21,7 +21,7 @@ int bidict::set ( const string& v ) {
 	return k;
 }
 
-const string bidict::operator[] ( const int& k ) {
+const string bidict::operator[] ( int k ) {
 	if (!has(k)) set(::tostr(k));
 	return m.left.find ( k )->second;
 }
@@ -54,10 +54,9 @@ string dstr ( int p ) {
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
 	if (!p.body.empty()) {
-		o << " -> ";
 		o << "{ ";
 		for ( auto x : p.body ) o << *x << ' ';
-		o << "} ";
+		o << "} => ";
 	}
 	if ( p.args.size() == 2 ) 
 		o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";

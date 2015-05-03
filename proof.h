@@ -92,8 +92,8 @@ class reasoner {
 	deque<proof*> init ( const predicate* goal );
 
 	predicate* mkpred ( string s, const predlist& v = predlist() );
-	const predicate* triple ( const string& s, const string& p, const string& o );
-	const predicate* triple ( const jsonld::quad& q );
+	predicate* triple ( const string& s, const string& p, const string& o );
+	predicate* triple ( const jsonld::quad& q );
 public:
 	reasoner();
 	~reasoner();

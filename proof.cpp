@@ -56,8 +56,6 @@ void reasoner::printkb() {
 	cout << endl << "dumping kb with " << npredicates << " predicates, " << npredicates << " predicates and " << nproofs << " proofs. " << endl;
 	cout << "predicates: " <<  endl;
 	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
-	cout << "predicates: " << endl;
-	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
 	cout << "proofs: " << endl;
 	for ( uint n = 0; n < nproofs; ++n ) cout << proofs[n] << endl;
 	if ( pause ) cout << "type <enter> to continue or <c><enter> to stop pausing...";
@@ -66,7 +64,7 @@ void reasoner::printkb() {
 }
 
 const predicate* predicate::evaluate ( const subst& sub ) const {
-	trace ( "\tEval " << t << " in " << sub << endl );
+	trace ( "\tEval " << *this << " in " << sub << endl );
 	if ( pred < 0 ) {
 		auto it = sub.find ( pred );
 		return it == sub.end() ? 0 : it->second->evaluate ( sub );
@@ -132,6 +130,7 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		}
 	} else {
 		const predicate* t = rul->body[ind];
+		trace("fetched predicate " << *t <<endl);
 		int b = builtin ( t );
 		if ( b == 1 ) {
 			proof& r = proof::init ( *this );
@@ -166,14 +165,16 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 }
 
 predicate* reasoner::mkpred ( string s, const predlist& v ) {
-	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v, {} );
+	int p = dict.has ( s ) ? dict[s] : dict.set ( s );
+	for (uint n = 0; n < npredicates; ++n) if (predicates[n].pred == p && predicates[n].args == v) return &predicates[n];
+	return &predicates[npredicates++].init ( p, v, {} );
 }
 
-const predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
+predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
 	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
 }
 
-const predicate* reasoner::triple ( const jsonld::quad& q ) {
+predicate* reasoner::triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 }
 
@@ -194,7 +195,7 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 			cases[dict[p]].push_back ( triple ( s, p, o ) );
 			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
 			for ( jsonld::pquad y : *kb.at ( o ) ) {
-				predicate& rul = (predicate&)*triple(*y) ;// mkpredicate();
+				predicate& rul = *triple(*y);
 //				rul.head = triple ( *y );
 				if ( kb.find ( s ) != kb.end() )
 					for ( jsonld::pquad z : *kb.at ( s ) )
@@ -207,6 +208,7 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	predicate& goal = predicates[npredicates++].init(0, {}, {});
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 //	printkb();
+	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
 	return prove ( &goal, -1, cases );
 }
 
@@ -217,13 +219,49 @@ bool reasoner::test_reasoner() {
 	evidence_t evidence;
 	cases_t cases;
 	typedef predicate* ppredicate;
-	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+//	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+
+	qdb q, qu;
+	pqlist ql = make_shared<qlist>();
+	string g = "@default";
+	ql->push_back(make_shared<quad>("Socrates", "a", "Male", g));
+	ql->push_back(make_shared<quad>("_:b1", implication, "_:b0", g));
+	ql->push_back(make_shared<quad>("_:b2", implication, "_:b1", g));
+	q[g] = ql;
+	ql = make_shared<qlist>();
+	ql->push_back(make_shared<quad>("?x", "a", "Mortal", "_:b0"));
+	q["_:b0"] = ql;
+	ql = make_shared<qlist>();
+	ql->push_back(make_shared<quad>("?x", "a", "Man", "_:b1"));
+	q["_:b1"] = ql;
+	ql = make_shared<qlist>();
+	ql->push_back(make_shared<quad>("?x", "a", "Male", "_:b2"));
+	q["_:b2"] = ql;
+	ql = make_shared<qlist>();
+	ql->push_back(make_shared<quad>("?y", "a", "Mortal", g));
+	qu[g] = ql;
+	cout<<q<<endl;
+	cout<<qu<<endl;
+	prove(q, *ql);
+/*
+	cases[dict["a"]].push_back ( triple( "Socrates", "a", "Male" ) );
+	{
+	predicate& pr = *triple( "?x", "a", "Mortal");
+	pr.body.push_back(triple( "?x", "a", "Man"));
+	cases[pr.pred].push_back( &pr );
+	}
+	{
+	predicate& pr = *triple( "?x", "a", "Man");
+	pr.body.push_back(triple( "?x", "a", "Male"));
+	cases[pr.pred].push_back( &pr );
+	}
+*/
 //	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {Socrates, Male} )}) );
 //	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  }}) );
 //	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  }}) );
 
-	predicate* goal = mkpred ( "a", { _y, Mortal } );
-//	evidence = prove ( mkpredicate ( 0, { goal } ), -1, cases );
+//	predicate* goal = triple("?y", "a", "Mortal");// mkpred ( "a", { _y, Mortal } );
+//	evidence = prove ( goal, -1, cases );
 //	cout << "evidence: " << evidence.size() << " items..." << endl;
 //	cout << evidence << endl;
 //	cout << "QED!" << endl;
