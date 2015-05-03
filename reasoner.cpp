@@ -9,6 +9,9 @@
 #include "parsers.h"
 #include "rdf.h"
 
+predicate *temp_preds = new predicate[max_predicates];
+uint ntemppreds = 0;
+
 reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
 
 reasoner::~reasoner() {
@@ -56,33 +59,26 @@ void reasoner::printkb() {
 	if ( pause && getchar() == 'c' ) pause = false;
 }
 
-const predicate* reasoner::evaluate ( const predicate& t, const subst& sub ) {
+const predicate* predicate::evaluate ( const map<int, const predicate*>& sub ) const {
 	trace ( "\tEval " << t << " in " << sub << endl );
-	if ( t.pred < 0 ) {
-		auto it = sub.find ( t.pred );
-		return it == sub.end() ? 0 : evaluate ( *it->second, sub );
-	} else if ( t.args.empty() ) return &t;
-	else {
-		const predicate *p;
-		predicate* r = &predicates[npredicates++].init ( t.pred );
-		for ( auto x : t.args )
-			r->args.emplace_back ( ( p = evaluate ( *x, sub ) ) ? p : &predicates[npredicates++].init ( x->pred ) );
-		return r;
+	if ( pred < 0 ) {
+		auto it = sub.find ( pred );
+		return it == sub.end() ? 0 : it->second->evaluate ( sub );
+	} else { // no braces here in euler.js
+		if ( args.empty() ) return this;
 	}
+	const predicate *p;
+	predicate* r = &temp_preds[ntemppreds++].init ( pred );
+	for ( auto x : args )
+		r->args.emplace_back ( ( p = x->evaluate ( sub ) ) ? p : &temp_preds[ntemppreds++].init ( x->pred ) );
+	return r;
 }
 
-const predicate* reasoner::unify ( const predicate* _s, const subst& ssub, const predicate* _d, subst& dsub, bool f ) {
-/*	if ( !_s && !_d ) {
-		trace ( "Match two nulls." << endl );
-
-		return true;
-	}*/
-	const predicate& s = *_s;
-	const predicate& d = *_d;
+const predicate* reasoner::unify ( const predicate& s, const subst& ssub, const predicate& d, subst& dsub, bool f ) {
 	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
 	const predicate* p;
 	if ( s.pred < 0 ) {
-		if ( ( p = evaluate ( s, ssub ) ) ) return unify ( p, ssub, _d, dsub, f );
+		if ( ( p = s.evaluate ( ssub ) ) ) return unify ( *p, ssub, d, dsub, f );
 		else {
 			trace ( "Match." << endl );
 			return &s;
@@ -92,20 +88,20 @@ const predicate* reasoner::unify ( const predicate* _s, const subst& ssub, const
 		if ( s.pred != d.pred || s.args.size() != d.args.size() ) return 0;
 		const predlist& as = s.args, ad = d.args;
 		for ( auto sit = as.begin(), dit = ad.begin(); sit != as.end(); ++sit, ++dit )
-			if ( !unify ( *sit, ssub, *dit, dsub, f ) )
+			if ( !unify ( **sit, ssub, **dit, dsub, f ) )
 				return 0;
 		trace ( "Match." << endl );
 		return &s;
 	}
-	if ( ( p = evaluate ( d, dsub ) ) ) return unify ( _s, ssub, p, dsub, f );
-	if ( f ) dsub[d.pred] = evaluate ( s, ssub );
+	if ( ( p = d.evaluate ( dsub ) ) ) return unify ( s, ssub, *p, dsub, f );
+	if ( f ) dsub[d.pred] = s.evaluate ( ssub );
 	trace ( "Match with subst: " << dsub << endl );
 	return &d;
 }
 
 void reasoner::evidence_found ( const frame& current_frame, evidence_t& evidence ) {
 	for ( const predicate* x : current_frame.rul->body ) {
-		const predicate* t = evaluate ( *x, current_frame.substitution );
+		const predicate* t = x->evaluate ( current_frame.substitution );
 		evidence[t->pred].emplace_back ( t, current_frame.ground );
 	}
 }
@@ -114,21 +110,22 @@ frame* reasoner::next_frame ( const frame& current_frame ) {
 	frame& new_frame = frame::init ( this, *current_frame.parent );
 	new_frame.ground = current_frame.ground;
 	if ( !current_frame.rul->body.empty() ) new_frame.ground.emplace_front ( current_frame.rul, current_frame.substitution );
-	unify ( current_frame.rul->head, current_frame.substitution, new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
+	if (current_frame.rul->head)
+		unify ( *current_frame.rul->head, current_frame.substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
 	return &new_frame;
 }
 
 const frame* reasoner::match_rule ( const frame& current_frame, const predicate& t, const rule& rl ) {
 	subst s;
-	if ( unify ( &t, current_frame.substitution, rl.head, s, true ) ) {
+	if ( rl.head && unify ( t, current_frame.substitution, *rl.head, s, true ) ) {
 		trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
 		const frame* ep = &current_frame;
 		while ( ep->parent ) {
 			ep = ep->parent;
 			if ( ( ep->rul == current_frame.rul ) &&
 				// its ok to const_case cause of the false param
-			        unify ( ep->rul->head, ep->substitution, current_frame.rul->head, const_cast<subst&>(current_frame.substitution), false ) )
+			        unify ( *ep->rul->head, ep->substitution, *current_frame.rul->head, const_cast<subst&>(current_frame.substitution), false ) )
 				break;
 		}
 		if ( !ep->parent ) 
@@ -175,7 +172,7 @@ deque<const frame*> reasoner::process_frame ( const frame& current_frame, const 
 		if ( b == 1 ) {
 			frame& r = frame::init ( this, current_frame );
 			r.ground = current_frame.ground;
-			r.ground.emplace_back ( &rules[nrules++].init ( evaluate ( *t, current_frame.substitution ) ), subst() );
+			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( current_frame.substitution ) ), subst() );
 			r.ind++;
 			queue.push_back ( &r );
 		} else if ( !b ) return {};

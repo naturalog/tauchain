@@ -36,6 +36,7 @@ struct predicate {
 	int pred = 0;
 	predlist args;
 	predicate& init ( int _p = 0, predlist _args = predlist() );
+	const predicate* evaluate ( const map<int, const predicate*>& sub ) const;
 };
 
 struct rule {
@@ -66,15 +67,20 @@ class reasoner {
 	frame *frames = new frame[max_frames];
 	uint npredicates = 0, nrules = 0, nframes = 0;
 	predicate* GND;
-	int builtin ( const predicate* t, const frame& f );
-	const predicate* evaluate ( const predicate& t, const subst& sub );
-	const predicate* unify ( const predicate* s, const subst& ssub, const predicate* d, subst& dsub, bool f );
 	predlist to_predlist ( const ground_t& g );
-	void evidence_found ( const frame& current_frame, evidence_t& evidence );
-	frame* next_frame ( const frame& current_frame );
-	const frame* match_rule ( const frame& current_frame, const predicate& t, const rule& rl );
-	deque<const frame*> process_frame ( const frame& current_frame, const cases_t& cases, evidence_t& evidence );
-	deque<const frame*> init( const rule* goal );
+
+	int 			builtin 	( const predicate* t, const frame& f );
+	const predicate* 	unify 		( const predicate& s, const subst& ssub, const predicate& d, subst& dsub, bool f );
+	void 			evidence_found 	( const frame& current_frame, evidence_t& evidence );
+	frame* 			next_frame 	( const frame& current_frame );
+	const frame* 		match_rule 	( const frame& current_frame, const predicate& t, const rule& rl );
+	deque<const frame*> 	process_frame 	( const frame& current_frame, const cases_t& cases, evidence_t& evidence );
+	deque<const frame*> 	init		( const rule* goal );
+
+	predicate* mkpred ( string s, const vector<const predicate*>& v = vector<const predicate*>() );
+	rule* mkrule ( const predicate* p = 0, const vector<const predicate*>& v = vector<const predicate*>() );
+	const predicate* triple ( const string& s, const string& p, const string& o );
+	const predicate* triple ( const jsonld::quad& q );
 public:
 	//reasoner(size_t _npreds = max_predicates, size_t _nrules = max_rules, size_t _nframes = max_frames);
 	reasoner();
@@ -83,10 +89,6 @@ public:
 	evidence_t prove ( const qdb& kb, const qlist& query );
 	bool test_reasoner();
 	void printkb();
-	predicate* mkpred ( string s, const vector<const predicate*>& v = vector<const predicate*>() );
-	rule* mkrule ( const predicate* p = 0, const vector<const predicate*>& v = vector<const predicate*>() );
-	const predicate* triple ( const string& s, const string& p, const string& o );
-	const predicate* triple ( const jsonld::quad& q );
 };
 
 ostream& operator<< ( ostream& o, const subst& s );
