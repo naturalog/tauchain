@@ -112,17 +112,17 @@ void frame::evidence_found ( evidence_t& evidence ) const {
 	cout << "evidence_found: " << endl << evidence << " -- end evidence_found" << endl;
 }
 
-frame* frame::next_frame ( ) const {
+void frame::push_next_frame ( ) {
 	frame& new_frame = frame::init ( *parent );
 	new_frame.ground = ground;
 	if ( !rul->body.empty() ) new_frame.ground.emplace_front ( rul, substitution );
 	if ( rul->head )
 		unify ( *rul->head, substitution, *new_frame.rul->body[new_frame.ind], new_frame.substitution, true );
 	new_frame.ind++;
-	return &new_frame;
+	next.emplace_back( &new_frame );
 }
 
-frame* frame::match_rule ( const predicate& t, const rule& rl ) const {
+void frame::push_match_rule ( const predicate& t, const rule& rl ) {
 	subst s;
 	if ( rl.head && unify ( t, substitution, *rl.head, s, true ) ) {
 		trace ( "unification of rule " << rl << " from cases against " << t << " passed" << endl );
@@ -135,11 +135,10 @@ frame* frame::match_rule ( const predicate& t, const rule& rl ) const {
 				break;
 		}
 		if ( !ep->parent ) 
-			return &frame::init ( &rl, 0, this, s, rl.body.empty() ? ground_t{ { &rl, subst() } } : ground_t{} );
+			next.push_front( &frame::init ( &rl, 0, this, s, rl.body.empty() ? ground_t{ { &rl, subst() } } : ground_t{} ) );
 	} else {
 		trace ( "unification of rule " << rl << " from cases against " << t << " failed" << endl );
 	}
-	return 0;
 }
 
 deque<frame*> reasoner::init( const rule* goal ) {
@@ -171,7 +170,7 @@ void frame::process ( const cases_t& cases, evidence_t& evidence ) {
 	trace ( *this << endl );
 	if ( ind >= rul->body.size() ) {
 		if ( !parent ) evidence_found ( evidence );
-		else next.emplace_back( next_frame ( ) );
+		else push_next_frame ( );
 	} else {
 		const predicate* t = rul->body[ind];
 		int b = builtin ( t );
@@ -185,8 +184,7 @@ void frame::process ( const cases_t& cases, evidence_t& evidence ) {
 		auto it = cases.find ( t->pred );
 		if ( it != cases.end() )
 			for ( const rule* rl : it->second )
-				if (frame* f = match_rule ( *t, *rl ))
-					next.push_front(f);
+				push_match_rule ( *t, *rl );
 	}
 }
 
