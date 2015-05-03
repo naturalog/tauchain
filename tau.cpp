@@ -230,7 +230,13 @@ int main ( int argc, char** argv ) {
 		return 0;
 	}
 
-	return ( *cmds.first[argv[1]] ) ( args );
+	int rval = ( *cmds.first[argv[1]] ) ( args );
 
-	return 0;
+	for (auto x : threads) { x->join(); delete x; } 
+	ofstream o("tau.dot");
+	o<<"digraph Proof {"<<endl;
+	for (auto x : proofs) o<<x->dot()<<endl;
+	o<<"}";
+
+	return rval;
 }

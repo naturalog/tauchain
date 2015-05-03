@@ -9,21 +9,23 @@
 #include "parsers.h"
 #include "rdf.h"
 #include <thread>
+#include "misc.h"
 
 predicate *temp_preds = new predicate[max_predicates];
+boost::interprocess::vector<proof*> proofs;
 uint ntemppreds = 0;
 
 reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
 
 predicate *predicates = new predicate[max_predicates];
 rule *rules = new rule[max_rules];
-proof *proofs = new proof[max_proofs];
+//proof *proofs = new proof[max_proofs];
 uint npredicates = 0, nrules = 0, nproofs = 0;
 
 reasoner::~reasoner() {
 	delete[] predicates;
 	delete[] rules;
-	delete[] proofs;
+//	delete[] proofs;
 }
 
 rule& rule::init ( const predicate* h, predlist b ) {
@@ -39,6 +41,7 @@ proof& proof::init ( const proof& f ) {
 proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
 	if ( nproofs >= max_proofs ) throw "Buffer overflow";
 	proof& f = *new proof;//proofs[nproofs++];
+	proofs.push_back(&f);
 	nproofs++;
 	f.rul = _r;
 	f.ind = _ind;
@@ -110,13 +113,6 @@ proof& proof::find ( const rule* goal, const cases_t& cases) {
 }
 boost::interprocess::list<thread*> threads;
 
-struct onexit {
-	~onexit() {
-		for (auto x : threads) { x->join(); delete x; } 
-	}
-} onexit_;
-
-
 void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 	auto f = [this, &cases, &evidence](){
 	trace ( *this << endl );
@@ -165,11 +161,8 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		}
 	if (empty) cout << "evidence: " << evidence << endl;
 	};
-	std::thread* t = new thread(f);
-	threads.push_back(t);
-//	else for (proof* f : next) 
-//		f->process (cases, evidence );
-//		thread([this, f, &cases, &evidence](){f->process (cases, evidence);});
+//	threads.push_back(new thread(f));
+	f();
 }
 
 predicate* reasoner::mkpred ( string s, const predlist& v ) {

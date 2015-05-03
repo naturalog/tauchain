@@ -1,3 +1,6 @@
+#ifndef __MISC_H__
+#define __MISC_H__
+
 #include <map>
 #include <string>
 #include <vector>
@@ -27,3 +30,5 @@ template<typename T> string print ( T t ) {
 	ss << t;
 	return ss.str();
 }
+string dstr ( int p );
+#endif
