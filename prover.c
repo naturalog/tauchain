@@ -157,6 +157,8 @@ struct subst* clone(struct subst* s) {
 }
 
 void pushq(struct queue* _q, struct proof* p) {
+	if (!p)
+		printf("Error: pushq called with null proof\n");
 	struct queue* q = &queues[nqueues++];
 	q->p = p;
 	while (_q->next)
@@ -168,11 +170,13 @@ void pushq(struct queue* _q, struct proof* p) {
 
 void unshift(struct queue** _q, struct proof* p) {
 	struct queue* q = &queues[nqueues++];
+	if (!p)
+		printf("Error: unshift called with null proof\n");
 	q->p = p;
 	if (!*_q) {
-		*_q = &queues[nqueues++];
-		(*_q)->p = 0;
-		(*_q)->next = (*_q)->prev = 0;
+		*_q = q;
+		q->next = q->prev = 0;
+		return;
 	}
 	while ((*_q)->next)
 		_q = &(*_q)->next;
@@ -294,21 +298,21 @@ bool euler_path(struct proof* p) {
 }
 
 void prove(struct predlist* goal, struct ruleset* cases) {
-	struct queue *q = &queues[nqueues++];
-	q->p = &proofs[nproofs++];
-	q->prev = q->next = 0;
-	q->p->s = 0;
-	q->p->g = 0;
+	struct queue *qu = &queues[nqueues++];
 	struct rule* rg = &rules[nrules++];
 	rg->head = 0;
 	rg->body = goal;
-	q->p->rul = rg;
-	q->p->last = rg->body;
+	qu->p = &proofs[nproofs++];
+	qu->prev = qu->next = 0;
+	qu->p->s = 0;
+	qu->p->g = 0;
+	qu->p->rul = rg;
+	qu->p->last = rg->body;
 	struct evidence* e = &evidences[nevidences++];
 	do {
-		struct proof* p = q->p;
-		q->prev = 0;
-		q = q->next;
+		struct proof* p = qu->p;
+		qu->prev = 0;
+		qu = qu->next;
 		printf("popped frame...\n");
 		printp(p);
 		if (!p->last) {
@@ -332,7 +336,7 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 			r->s = clone(p->prev->s);
 			unify(p->rul->head, p->s, r->last->p, &r->s, true);
 			r->last = r->last->next;
-			pushq(q, r);
+			pushq(qu, r);
 			continue;
 		}
 		struct predicate* t = p->last->p;
@@ -358,16 +362,16 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 				r->g = g = copyg(p->g);
 				if (!rs->r->body)
 					pushg( g, rs->r, 0 );
-				unshift(&q, r);
+				unshift(&qu, r);
 				printf("pushed frame...\n");
 				printp(r);
 				printf("queue:\n");
-				printq(q);
+				printq(qu);
 			} else
 				printf("unification failed\n");
 			rs = rs->next;
 		}
-	} while (q);
+	} while (qu);
 	printe(e);
 }
 
