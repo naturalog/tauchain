@@ -57,6 +57,7 @@ void printe(struct evidence* e);
 void printei(struct evidence_item* ei);
 void printr(struct rule* r);
 void printps(struct predicate* p, struct subst* s);
+void printp(struct proof* p);
 struct ruleset* findruleset(struct ruleset* rs, int p);
 struct ruleset* find_or_create_rs_head(struct ruleset* rs, struct predicate* p);
 
@@ -84,16 +85,12 @@ uint size(struct predlist* p) {
 	return r; 
 }
 
-#define ffind(clas, memb, memb_type) \
-	struct clas* find##clas(struct clas* l, memb_type m) { \
-		while (l) { \
-			if (l->memb == m) \
-				return l; \
-		} \
-		return 0; \
-	}
-
-ffind(subst, p, int);
+struct subst* findsubst(struct subst* l, int m) { 
+	while (l) 
+		if (l->p == m) 
+			return l; 
+	return 0; 
+};
 
 struct ruleset* findruleset(struct ruleset* rs, int p) {
 	while (rs) {
@@ -272,12 +269,12 @@ bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct 
 			return true;
 		}
 	}
-	if (!(s->p == s->p && !s->s == !d->s && !s->o == !d->o))
+	if (!(s->p == d->p && !s->s == !d->s && !s->o == !d->o))
 		return false;
 	bool r = true;
 	if (s->s)
 		r &= unify(s->s, ssub, d->s, dsub, f);
-	if (s->s)
+	if (s->o)
 		r &= unify(s->o, ssub, d->o, dsub, f);
 	return r;
 
@@ -295,9 +292,12 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 	q->p->rul = rg;
 	q->p->last = rg->body;
 	struct evidence* e = &evidences[nevidences++];
-	while (!empty(q)) {
+	do {
 		struct proof* p = q->p;
+		q->prev = 0;
 		q = q->next;
+		printf("popped frame...\n");
+		printp(p);
 		if (!p->last) {
 			if (!p->prev) {
 				struct predlist* r;
@@ -327,16 +327,23 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 			continue;
 		}
 		struct predicate* t = p->last->p;
+		printf("fetched predicate: ");
+		printpred(t);
+		printf("\n");
 		struct ruleset* rs = cases;
 		while ((rs = findruleset(rs, t->p))) {
 			struct subst* s = 0;
 			if (unify(t, p->s, rs->r->head, &s, true)) {
+				printf("unification succeeded\n");
 				struct proof* ep = p;
 				while ((ep = ep->prev))
 					if (ep->rul == p->rul &&
 						unify(ep->rul->head, ep->s, p->rul->head, &p->s, false))
 						break;
-				if (ep) continue;
+				if (ep) {
+					printf("Euler path detected\n");
+					continue;
+				}
 				struct ground* g = &grounds[ngrounds++];
 				struct proof* r = &proofs[nproofs++];
 				r->s = s;
@@ -348,9 +355,12 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 				if (!rs->r->body)
 					pushg( g, rs->r, 0 );
 				unshift(&q, r);
-			}
+				printf("pushed frame...\n");
+				printp(r);
+			} else
+				printf("unification failed\n");
 		}
-	}
+	} while (q);
 	printe(e);
 }
 
@@ -403,6 +413,18 @@ void printpred(struct predicate* p) {
 	printpred(p->o);
 }
 
+void printp(struct proof* p) {
+	if (!p)
+		return;
+	printf("rule: ");
+	printr(p->rul);
+	printf("\nremaining: ");
+	printl(p->last);
+	printf("\nprev: %lu\nsubst: ", (p - proofs)/sizeof(struct proof));
+	prints(p->s);
+	printf("\nground:");
+	printg(p->g);
+}
 struct predicate* pred(int s, int p, int o) {
 	struct predicate* ps = &predicates[npredicates++];
 	struct predicate* pp = &predicates[npredicates++];
@@ -410,8 +432,7 @@ struct predicate* pred(int s, int p, int o) {
 	pp->p = p;
 	pp->s = ps;
 	pp->o = po;
-	ps->s = ps->o = 0;
-	po->s = po->o = 0;
+	ps->s = ps->o = po->s = po->o = 0;
 	ps->p = s;
 	po->p = o;
 	printpred(pp);
