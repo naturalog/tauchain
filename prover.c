@@ -1,7 +1,7 @@
 //gcc prover.c -g -Wall
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 
 typedef unsigned int uint;
 typedef char bool;
@@ -64,16 +64,16 @@ struct ruleset* findruleset(struct ruleset* rs, int p);
 struct ruleset* find_or_create_rs_head(struct ruleset* rs, struct predicate* p);
 
 void initmem() {
-	bzero(predicates = malloc(sizeof(struct predicate) * max_predicates), sizeof(struct predicate) * max_predicates);
-	bzero(predlists = malloc(sizeof(struct predlist) * max_predlists), sizeof(struct predlist) * max_predlists);
-	bzero(rules = malloc(sizeof(struct rule) * max_rules), sizeof(struct rule) * max_rules);
-	bzero(substs = malloc(sizeof(struct subst) * max_substs), sizeof(struct subst) * max_substs);
-	bzero(rulesets = malloc(sizeof(struct ruleset) * max_rulesets), sizeof(struct ruleset) * max_rulesets);
-	bzero(grounds = malloc(sizeof(struct ground) * max_grounds), sizeof(struct ground) * max_grounds);
-	bzero(proofs = malloc(sizeof(struct proof) * max_proofs), sizeof(struct proof) * max_proofs);
-	bzero(queues = malloc(sizeof(struct queue) * max_queues), sizeof(struct queue) * max_queues);
-	bzero(evidence_items = malloc(sizeof(struct evidence_item) * max_evidence_items), sizeof(struct evidence_item) * max_evidence_items);
-	bzero(evidences = malloc(sizeof(struct evidence) * max_evidences), sizeof(struct evidence) * max_evidences);
+	memset(predicates = malloc(sizeof(struct predicate) * max_predicates), 0, sizeof(struct predicate) * max_predicates);
+	memset(predlists = malloc(sizeof(struct predlist) * max_predlists), 0, sizeof(struct predlist) * max_predlists);
+	memset(rules = malloc(sizeof(struct rule) * max_rules), 0, sizeof(struct rule) * max_rules);
+	memset(substs = malloc(sizeof(struct subst) * max_substs), 0, sizeof(struct subst) * max_substs);
+	memset(rulesets = malloc(sizeof(struct ruleset) * max_rulesets), 0, sizeof(struct ruleset) * max_rulesets);
+	memset(grounds = malloc(sizeof(struct ground) * max_grounds), 0, sizeof(struct ground) * max_grounds);
+	memset(proofs = malloc(sizeof(struct proof) * max_proofs), 0, sizeof(struct proof) * max_proofs);
+	memset(queues = malloc(sizeof(struct queue) * max_queues), 0, sizeof(struct queue) * max_queues);
+	memset(evidence_items = malloc(sizeof(struct evidence_item) * max_evidence_items), 0, sizeof(struct evidence_item) * max_evidence_items);
+	memset(evidences = malloc(sizeof(struct evidence) * max_evidences), 0, sizeof(struct evidence) * max_evidences);
 }
 
 uint size(struct predlist* p) { 
