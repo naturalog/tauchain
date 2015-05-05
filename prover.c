@@ -327,11 +327,11 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 			if (p->rul->body)
 				pushg(g, p->rul, p->s);
 			struct proof* r = &proofs[nproofs++];
-			*r = *p;
+			*r = *p->prev;
 			r->g = g;
-			r->s = clone(r->s);
-			unify(p->rul->head, p->s, p->last->p, &r->s, true);
-			r->last = p->last->next;
+			r->s = clone(p->prev->s);
+			unify(p->rul->head, p->s, r->last->p, &r->s, true);
+			r->last = r->last->next;
 			pushq(q, r);
 			continue;
 		}
