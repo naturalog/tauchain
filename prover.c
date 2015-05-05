@@ -58,6 +58,8 @@ void printei(struct evidence_item* ei);
 void printr(struct rule* r);
 void printps(struct predicate* p, struct subst* s);
 void printp(struct proof* p);
+void printrs(struct ruleset* rs);
+void printq(struct queue* q);
 struct ruleset* findruleset(struct ruleset* rs, int p);
 struct ruleset* find_or_create_rs_head(struct ruleset* rs, struct predicate* p);
 
@@ -93,12 +95,10 @@ struct subst* findsubst(struct subst* l, int m) {
 };
 
 struct ruleset* findruleset(struct ruleset* rs, int p) {
-	while (rs) {
+	for (; rs; rs = rs->next)
 		if (rs->r && rs->r->head && rs->r->head->p == p)
-			return rs;
-		rs = rs->next;
-	}
-	return 0;
+			break;
+	return rs;
 }
 
 struct ruleset* find_or_create_rs_head(struct ruleset* rs, struct predicate* p) {
@@ -280,6 +280,19 @@ bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct 
 
 }
 
+bool euler_path(struct proof* p) {
+	struct proof* ep = p;
+	while ((ep = ep->prev))
+		if (ep->rul == p->rul &&
+			unify(ep->rul->head, ep->s, p->rul->head, &p->s, false))
+			break;
+	if (ep) {
+		printf("Euler path detected\n");
+		return true;
+	}
+	return false;
+}
+
 void prove(struct predlist* goal, struct ruleset* cases) {
 	struct queue *q = &queues[nqueues++];
 	q->p = &proofs[nproofs++];
@@ -319,11 +332,7 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 			r->s = clone(r->s);
 			unify(p->rul->head, p->s, p->last->p, &r->s, true);
 			r->last = p->last->next;
-			struct queue* _q = q;
-			q = &queues[nqueues++];
-			q->next = _q;
-			q->p = r;
-			q->prev = 0;
+			pushq(q, r);
 			continue;
 		}
 		struct predicate* t = p->last->p;
@@ -331,24 +340,19 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 		printpred(t);
 		printf("\n");
 		struct ruleset* rs = cases;
+		printf("cases:\n");
+		printrs(rs);
 		while ((rs = findruleset(rs, t->p))) {
 			struct subst* s = 0;
 			if (unify(t, p->s, rs->r->head, &s, true)) {
 				printf("unification succeeded\n");
-				struct proof* ep = p;
-				while ((ep = ep->prev))
-					if (ep->rul == p->rul &&
-						unify(ep->rul->head, ep->s, p->rul->head, &p->s, false))
-						break;
-				if (ep) {
-					printf("Euler path detected\n");
+				if (euler_path(p))
 					continue;
-				}
 				struct ground* g = &grounds[ngrounds++];
 				struct proof* r = &proofs[nproofs++];
 				r->s = s;
 				r->rul = rs->r;
-				r->last = rs->r->body;
+				r->last = p->last->next;
 				r->prev = p;
 				r->s = 0;
 				r->g = g = copyg(p->g);
@@ -357,8 +361,11 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 				unshift(&q, r);
 				printf("pushed frame...\n");
 				printp(r);
+				printf("queue:\n");
+				printq(q);
 			} else
 				printf("unification failed\n");
+			rs = rs->next;
 		}
 	} while (q);
 	printe(e);
@@ -424,7 +431,24 @@ void printp(struct proof* p) {
 	prints(p->s);
 	printf("\nground:");
 	printg(p->g);
+	printf("\n");
 }
+
+void printrs(struct ruleset* rs) {
+	if (!rs)
+		return;
+	printr(rs->r);
+	printf("\n");
+	printrs(rs->next);
+}
+
+void printq(struct queue* q) {
+	if (!q)
+		return;
+	printp(q->p);
+	printq(q->next);
+}
+
 struct predicate* pred(int s, int p, int o) {
 	struct predicate* ps = &predicates[npredicates++];
 	struct predicate* pp = &predicates[npredicates++];
