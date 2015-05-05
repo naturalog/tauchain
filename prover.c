@@ -1,4 +1,3 @@
-//gcc prover.c -g -Wall
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,17 +8,17 @@ const bool true = 1;
 const bool false = 0;
 
 struct predicate 	{ int 			p;	struct predicate 	*s, *o;					};
+struct rule 		{ struct predicate* 	p; 	struct predlist*	body;					};
 struct subst 		{ int 			p;	struct predicate* 	pr; 	struct subst* 		next;	};
 struct evidence		{ int 			p;	struct evidence_item* 	item;	struct evidence* 	next;	};
-struct ruleset		{ struct rule*	 	r; 	struct ruleset*		next;					};
+struct ruleset		{ struct rule*	 	r; 					struct ruleset*		next;	};
 struct ground 		{ struct rule* 		r;	struct subst* 		s; 	struct ground* 		next;	};
-struct queue		{ struct proof* 	p;	struct queue* 		next;	struct queue* 		prev;	};
+struct queue		{ struct proof* 	p;	struct queue* 		prev;	struct queue* 		next;	};
 struct evidence_item	{ struct predicate* 	p;	struct ground* 		g;	struct evidence_item* 	next;	};
-struct predlist 	{ struct predicate* 	p; 	struct predlist* 	next; 					};
-struct rule 		{ struct predicate* 	head; 	struct predlist*	body;					};
+struct predlist 	{ struct predicate* 	p; 					struct predlist* 	next; 	};
+struct dict 		{ char*  		s;	int 			n;	struct dict*		next;	};
 struct proof 		{ struct rule* 		rul;	struct predlist*	last;	struct proof* 		prev; struct subst* s; struct ground* g;	};
 
-const uint K1 = 1024;
 const uint max_predicates = 1024;	uint npredicates = 0; 		struct predicate* predicates;
 const uint max_predlists = 1024;	uint npredlists = 0; 		struct predlist* predlists;
 const uint max_rules = 1024;		uint nrules = 0; 		struct rule* rules;
@@ -30,61 +29,57 @@ const uint max_proofs = 1024; 		uint nproofs = 0; 		struct proof* proofs;
 const uint max_queues = 1024; 		uint nqueues = 0; 		struct queue* queues;
 const uint max_evidence_items = 1024; 	uint nevidence_items = 0; 	struct evidence_item* evidence_items;
 const uint max_evidences = 1024; 	uint nevidences = 0; 		struct evidence* evidences;
+const uint max_dicts = 1024; 		uint ndicts = 0; 		struct dict* dicts;
 
 void initmem();
-uint size(struct predlist* p); 
-void pushg(struct ground* g, struct rule* r, struct subst* s);
-void pushe(struct evidence* e, int p, struct evidence_item* ei);
-bool empty(struct queue* q); 
-struct subst* clone(struct subst* s);
-void pushq(struct queue* _q, struct proof* p);
-void unshift(struct queue** _q, struct proof* p);
-void push_back(struct ground** _g, struct rule* r, struct subst* s);
-void setsub(struct subst** s, int p, struct predicate* pr);
-struct predicate* evaluate(struct predicate* p, struct subst* s);
-bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct subst** dsub, bool f);
-void prove(struct predlist* goal, struct ruleset* cases);
-struct predicate* mkpred(int s, int p, int o);
-bool equals(struct predicate* x, struct predicate* y);
-void pushp(struct predlist** l, struct predicate* p);
-void pushr(struct ruleset** _rs, struct predicate* s, struct predicate* o);
-void printpred(struct predicate* p);
-struct predicate* pred(int s, int p, int o);
-void prints(struct subst* s);
-void printl(struct predlist* l);
-void printg(struct ground* g);
-void printe(struct evidence* e);
-void printei(struct evidence_item* ei);
-void printr(struct rule* r);
-void printps(struct predicate* p, struct subst* s);
-void printp(struct proof* p);
-void printrs(struct ruleset* rs);
-void printq(struct queue* q);
-struct ruleset* findruleset(struct ruleset* rs, int p);
-struct ruleset* find_or_create_rs_head(struct ruleset* rs, struct predicate* p);
+void pushg(struct ground* g, struct rule* r, struct subst* s); // push rule and subst pair into ground
+void pushe(struct evidence* e, int p, struct evidence_item* ei); // push evidence item into evidence
+struct subst* clone(struct subst* s); // deep-copy a subst
+void pushq(struct queue* _q, struct proof* p); // push a proof to the back of a proofs queue
+void unshift(struct queue** _q, struct proof* p); // push a proof to the front of the queue
+void setsub(struct subst** s, int p, struct predicate* pr); // pushes a substitution
+struct predicate* evaluate(struct predicate* p, struct subst* s); // evaluates a predicate given a subst
+bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct subst** dsub, bool f); // unification
+void prove(struct predlist* goal, struct ruleset* cases); // backchaining
+bool equals(struct predicate* x, struct predicate* y); // deep-compare predicates
+void pushp(struct predlist** l, struct predicate* p); // push a predicate to a predlist
+void pushr(struct ruleset** _rs, struct predicate* s, struct predicate* o); // push subject and object of s=>o into a ruleset
+void printpred(struct predicate* p, struct dict* d); // print a predicate
+struct predicate* pred(int s, int p, int o, struct dict* d); // create an s/p/o predicate
+void prints(struct subst* s, struct dict* d); // print a subst
+void printl(struct predlist* l, struct dict* d); // print a predlist
+void printg(struct ground* g, struct dict* d); // print a ground struct
+void printe(struct evidence* e, struct dict* d); // print evidence
+void printei(struct evidence_item* ei, struct dict* d); // print single evidence step
+void printr(struct rule* r, struct dict* d);  // print rule
+void printps(struct predicate* p, struct subst* s, struct dict* d); // print a predicate with a subst
+void printp(struct proof* p, struct dict* d); // print a proof element
+void printrs(struct ruleset* rs, struct dict* d); // print a ruleset
+void printq(struct queue* q, struct dict* d); // print a proof queue
+struct ruleset* findruleset(struct ruleset* rs, int p); // find in a ruleset according to predicate
+struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct predicate* p); // finds a predicate in a ruleset or creates a new rule with that predicate if not exists
+int pushw(struct dict** _d, const char* s); // push a string into a dictionary and get its int id
+const char* dgetw(struct dict* d, int n); // decrypt string from dictionary given id
+int readp(struct dict* d, struct ruleset** _r); // read a predicate from user and stores it in a ruleset
+void readr(struct ruleset** _r); // read a rule from the user and stores it in a ruleset
+void menu(struct dict* d);
+
+#define str_input_len 255
+
+struct dict* gdict;
 
 void initmem() {
-	memset(predicates = malloc(sizeof(struct predicate) * max_predicates), 0, sizeof(struct predicate) * max_predicates);
-	memset(predlists = malloc(sizeof(struct predlist) * max_predlists), 0, sizeof(struct predlist) * max_predlists);
-	memset(rules = malloc(sizeof(struct rule) * max_rules), 0, sizeof(struct rule) * max_rules);
-	memset(substs = malloc(sizeof(struct subst) * max_substs), 0, sizeof(struct subst) * max_substs);
-	memset(rulesets = malloc(sizeof(struct ruleset) * max_rulesets), 0, sizeof(struct ruleset) * max_rulesets);
-	memset(grounds = malloc(sizeof(struct ground) * max_grounds), 0, sizeof(struct ground) * max_grounds);
-	memset(proofs = malloc(sizeof(struct proof) * max_proofs), 0, sizeof(struct proof) * max_proofs);
-	memset(queues = malloc(sizeof(struct queue) * max_queues), 0, sizeof(struct queue) * max_queues);
-	memset(evidence_items = malloc(sizeof(struct evidence_item) * max_evidence_items), 0, sizeof(struct evidence_item) * max_evidence_items);
-	memset(evidences = malloc(sizeof(struct evidence) * max_evidences), 0, sizeof(struct evidence) * max_evidences);
-}
-
-uint size(struct predlist* p) { 
-	if (!p) 
-		return 0; 
-	uint r; 
-	while (p) { 
-		p = p->next; 
-		++r; 
-	} 
-	return r; 
+	memset(predicates 	= malloc(sizeof(struct predicate) * max_predicates), 		0, sizeof(struct predicate) * max_predicates);
+	memset(predlists 	= malloc(sizeof(struct predlist) * max_predlists), 		0, sizeof(struct predlist) * max_predlists);
+	memset(rules 		= malloc(sizeof(struct rule) * max_rules), 			0, sizeof(struct rule) * max_rules);
+	memset(substs 		= malloc(sizeof(struct subst) * max_substs), 			0, sizeof(struct subst) * max_substs);
+	memset(rulesets 	= malloc(sizeof(struct ruleset) * max_rulesets), 		0, sizeof(struct ruleset) * max_rulesets);
+	memset(grounds 		= malloc(sizeof(struct ground) * max_grounds), 			0, sizeof(struct ground) * max_grounds);
+	memset(proofs 		= malloc(sizeof(struct proof) * max_proofs), 			0, sizeof(struct proof) * max_proofs);
+	memset(dicts 		= malloc(sizeof(struct dict) * max_dicts), 			0, sizeof(struct dict) * max_dicts);
+	memset(queues 		= malloc(sizeof(struct queue) * max_queues), 			0, sizeof(struct queue) * max_queues);
+	memset(evidence_items 	= malloc(sizeof(struct evidence_item) * max_evidence_items), 	0, sizeof(struct evidence_item) * max_evidence_items);
+	memset(evidences 	= malloc(sizeof(struct evidence) * max_evidences), 		0, sizeof(struct evidence) * max_evidences);
 }
 
 struct subst* findsubst(struct subst* l, int m) { 
@@ -92,26 +87,26 @@ struct subst* findsubst(struct subst* l, int m) {
 		if (l->p == m) 
 			return l; 
 	return 0; 
-};
+}
 
 struct ruleset* findruleset(struct ruleset* rs, int p) {
 	for (; rs; rs = rs->next)
-		if (rs->r && rs->r->head && rs->r->head->p == p)
+		if (rs->r && rs->r->p && rs->r->p->p == p)
 			break;
 	return rs;
 }
 
-struct ruleset* find_or_create_rs_head(struct ruleset* rs, struct predicate* p) {
+struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct predicate* p) {
 	struct ruleset* prev = 0;
 	while (rs) {
-		if (rs->r && rs->r->head && equals(rs->r->head, p))
+		if (rs->r && rs->r->p && equals(rs->r->p, p))
 			return rs;
 		prev = rs;
 		rs = rs->next;
 	}
 	prev->next = &rulesets[nrulesets++];
 	prev->next->r = &rules[nrules++];
-	prev->next->r->head = p;
+	prev->next->r->p = p;
 	prev->next->r->body = 0;
 	return prev->next;
 }
@@ -141,10 +136,6 @@ void pushe(struct evidence* e, int p, struct evidence_item* ei) {
 	e->next->p = p;
 	e->next->item = ei;
 	e->next->next = 0;
-}
-
-bool empty(struct queue* q) { 
-	return !q || (!q->p && !q->next && !q->prev); 
 }
 
 struct subst* clone(struct subst* s) {
@@ -184,20 +175,6 @@ void unshift(struct queue** _q, struct proof* p) {
 	q->prev = 0;
 	q->next = *_q;
 	*_q = q;
-}
-
-void push_back(struct ground** _g, struct rule* r, struct subst* s) {
-	struct ground* g = &grounds[ngrounds++];
-	g->next = 0;
-	g->r = r;
-	g->s = s;
-	if (!*_g)
-		*_g = g;
-	else {
-		while ((*_g)->next)
-			_g = &(*_g)->next;
-		(*_g)->next = g;
-	}
 }
 
 void setsub(struct subst** s, int p, struct predicate* pr) {
@@ -243,18 +220,18 @@ struct predicate* evaluate(struct predicate* p, struct subst* s) {
 	return r;
 }
 
-void printps(struct predicate* p, struct subst* s) {
-	printpred(p);
+void printps(struct predicate* p, struct subst* s, struct dict* d) {
+	printpred(p, d);
 	printf(" [ ");
-	prints(s);
+	prints(s, d);
 	printf(" ] ");
 }
 
 bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct subst** dsub, bool f) {
 	printf("unify called with ");
-	printps(s, ssub);
+	printps(s, ssub, gdict);
 	printf(" and ");
-	printps(d, *dsub);
+	printps(d, *dsub, gdict);
 	printf("\n");
 
 	if (s->p < 0) {
@@ -288,7 +265,7 @@ bool euler_path(struct proof* p) {
 	struct proof* ep = p;
 	while ((ep = ep->prev))
 		if (ep->rul == p->rul &&
-			unify(ep->rul->head, ep->s, p->rul->head, &p->s, false))
+			unify(ep->rul->p, ep->s, p->rul->p, &p->s, false))
 			break;
 	if (ep) {
 		printf("Euler path detected\n");
@@ -300,7 +277,7 @@ bool euler_path(struct proof* p) {
 void prove(struct predlist* goal, struct ruleset* cases) {
 	struct queue *qu = &queues[nqueues++];
 	struct rule* rg = &rules[nrules++];
-	rg->head = 0;
+	rg->p = 0;
 	rg->body = goal;
 	qu->p = &proofs[nproofs++];
 	qu->prev = qu->next = 0;
@@ -314,7 +291,7 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 		qu->prev = 0;
 		qu = qu->next;
 		printf("popped frame...\n");
-		printp(p);
+		printp(p, gdict);
 		if (!p->last) {
 			if (!p->prev) {
 				struct predlist* r;
@@ -334,21 +311,21 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 			*r = *p->prev;
 			r->g = g;
 			r->s = clone(p->prev->s);
-			unify(p->rul->head, p->s, r->last->p, &r->s, true);
+			unify(p->rul->p, p->s, r->last->p, &r->s, true);
 			r->last = r->last->next;
 			pushq(qu, r);
 			continue;
 		}
 		struct predicate* t = p->last->p;
 		printf("fetched predicate: ");
-		printpred(t);
+		printpred(t, gdict);
 		printf("\n");
 		struct ruleset* rs = cases;
 		printf("cases:\n");
-		printrs(rs);
+		printrs(rs, gdict);
 		while ((rs = findruleset(rs, t->p))) {
 			struct subst* s = 0;
-			if (unify(t, p->s, rs->r->head, &s, true)) {
+			if (unify(t, p->s, rs->r->p, &s, true)) {
 				printf("unification succeeded\n");
 				if (euler_path(p))
 					continue;
@@ -364,25 +341,15 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 					pushg( g, rs->r, 0 );
 				unshift(&qu, r);
 				printf("pushed frame...\n");
-				printp(r);
+				printp(r, gdict);
 				printf("queue:\n");
-				printq(qu);
+				printq(qu, gdict);
 			} else
 				printf("unification failed\n");
 			rs = rs->next;
 		}
 	} while (qu);
-	printe(e);
-}
-
-struct predicate* mkpred(int s, int p, int o) {
-	struct predicate* pr = &predicates[npredicates++];
-	pr->p = p;
-	pr->s = &predicates[npredicates++];
-	pr->s->p = s;
-	pr->o->p = o;
-	pr->s->o = pr->s->s = pr->o->s = pr->o->o = 0;
-	return pr;
+	printe(e, gdict);
 }
 
 bool equals(struct predicate* x, struct predicate* y) {
@@ -397,7 +364,7 @@ void pushp(struct predlist** l, struct predicate* p) {
 	}
 	while ((*l)->next && !equals(p, (*l)->p))
 		l = &(*l)->next;
-	if ((*l)->next)
+	if ((*l)->next) 
 		return;
 	(*l)->next = &predlists[npredlists++];
 	(*l)->next->p = p;
@@ -412,48 +379,55 @@ void pushr(struct ruleset** _rs, struct predicate* s, struct predicate* o) {
 		(*_rs)->next = 0;
 	}
 	rs = *_rs;
-	rs = find_or_create_rs_head(rs, o);
+	rs = find_or_create_rs_p(rs, o);
 	pushp(&rs->r->body, s);
 }
 
-void printpred(struct predicate* p) {
+void printpred(struct predicate* p, struct dict* d) {
+	const char* s;
 	if (!p)
 		return;
-	printpred(p->s);
-	printf(" %d ", p->p);
-	printpred(p->o);
+	printpred(p->s, d);
+	if (!d)
+		printf(" %d ", p->p);
+	else {
+		s = dgetw(d, p->p);
+		if (s)
+			puts(s);
+	}
+	printpred(p->o, d);
 }
 
-void printp(struct proof* p) {
+void printp(struct proof* p, struct dict* d) {
 	if (!p)
 		return;
 	printf("rule: ");
-	printr(p->rul);
+	printr(p->rul, d);
 	printf("\nremaining: ");
-	printl(p->last);
+	printl(p->last, d);
 	printf("\nprev: %lu\nsubst: ", (p - proofs)/sizeof(struct proof));
-	prints(p->s);
+	prints(p->s, d);
 	printf("\nground:");
-	printg(p->g);
+	printg(p->g, d);
 	printf("\n");
 }
 
-void printrs(struct ruleset* rs) {
+void printrs(struct ruleset* rs, struct dict* d) {
 	if (!rs)
 		return;
-	printr(rs->r);
+	printr(rs->r, d);
 	printf("\n");
-	printrs(rs->next);
+	printrs(rs->next, d);
 }
 
-void printq(struct queue* q) {
+void printq(struct queue* q, struct dict* d) {
 	if (!q)
 		return;
-	printp(q->p);
-	printq(q->next);
+	printp(q->p, d);
+	printq(q->next, d);
 }
 
-struct predicate* pred(int s, int p, int o) {
+struct predicate* pred(int s, int p, int o, struct dict* d) {
 	struct predicate* ps = &predicates[npredicates++];
 	struct predicate* pp = &predicates[npredicates++];
 	struct predicate* po = &predicates[npredicates++];
@@ -463,79 +437,221 @@ struct predicate* pred(int s, int p, int o) {
 	ps->s = ps->o = po->s = po->o = 0;
 	ps->p = s;
 	po->p = o;
-	printpred(pp);
+	printpred(pp, d);
 	printf(".\n");
 	return pp;
 }
 
-void prints(struct subst* s) {
+void prints(struct subst* s, struct dict* d) {
 	if (!s)
 		return;
 	printf("%d / ", s->p);
-	printpred(s->pr);
+	printpred(s->pr, d);
 	if (s->next)
 		printf(", ");
-	prints(s->next);
+	prints(s->next, d);
 }
 
-void printl(struct predlist* l) {
+void printl(struct predlist* l, struct dict* d) {
 	if (!l)
 		return;
-	printpred(l->p);
+	printpred(l->p, d);
 	printf(", ");
-	printl(l->next);
+	printl(l->next, d);
 }
 
-void printr(struct rule* r) {
+void printr(struct rule* r, struct dict* d) {
 	if (!r)
 		return;
-	printl(r->body);
+	printl(r->body, d);
 	printf(" => ");
-	printpred(r->head);
+	printpred(r->p, d);
 }
 
-void printg(struct ground* g) {
+void printg(struct ground* g, struct dict* d) {
 	if (!g)
 		return;
 	printf("ground: ");
-	printr(g->r);
+	printr(g->r, d);
 	printf(" ");
-	prints(g->s);
+	prints(g->s, d);
 	printf("\n");
-	printg(g->next);
+	printg(g->next, d);
 }
 
-void printei(struct evidence_item* ei) {
+void printei(struct evidence_item* ei, struct dict* d) {
 	if (!ei)
 		return;
 	printf("evidence_item:\n");
-	printpred(ei->p);
+	printpred(ei->p, d);
 	printf("\n");
-	printg(ei->g);
+	printg(ei->g, d);
 	printf("\n");
-	printei(ei->next);
+	printei(ei->next, d);
 }
 
-void printe(struct evidence* e) {
+void printe(struct evidence* e, struct dict* d) {
 	if (!e)
 		return;
 	printf("%d:\n", e->p);
-	printei(e->item);
-	printe(e->next);
+	printei(e->item, d);
+	printe(e->next, d);
+}
+
+int pushw(struct dict** _d, const char* s) {
+	uint c = 1;
+	if (!*_d) {
+		*_d = &dicts[ndicts++];
+		(*_d)->next = 0;
+		(*_d)->s = malloc(strlen(s) + 1);
+		strcpy((*_d)->s, s);
+		return (*_d)->n = c;
+	}
+	struct dict* d = *_d;
+	while (d->next) {
+		++c;
+		d = d->next;
+	}
+	d->next = &dicts[ndicts++];
+	d->s = malloc(strlen(s) + 1);
+	strcpy(d->s, s);
+	return d->n = c;
+}
+
+const char* dgetw(struct dict* d, int n) {
+	if (!d)
+		return 0;
+	if (d->n == n)
+		return d->s;
+	return dgetw(d->next, n);
+}
+
+int _readp(struct dict* d, struct ruleset** _r, char* s, char* p, char* o, int* ns, int *np, int *no) {
+	char ch;
+	uint pos = 0;
+	while ((ch = getchar()) != ' ') {
+		if (ch == '\n' && !pos)
+			continue;
+		else if (pos)
+			return -1;
+		s[pos++] = ch;
+	}
+	s[pos] = 0;
+	pos = 0;
+	while ((ch = getchar()) != ' ') {
+		if (ch == '\n')
+			return -1;
+		p[pos++] = ch;
+	}
+	p[pos] = 0;
+	pos = 0;
+	while (((ch = getchar()) != ' ') && (ch != '\n'))
+		o[pos++] = ch;
+	o[pos] = 0;
+	*ns = pushw(&d, s);
+	*np = pushw(&d, p);
+	*no = pushw(&d, o);
+
+	if (!*_r) {
+		*_r = &rulesets[nrulesets++];
+		(*_r)->next = 0;
+	}
+
+	struct ruleset* r = *_r;
+	while (r->next)
+		r = r->next;
+	r->next = &rulesets[nrulesets++];
+	r->r = &rules[nrules++];
+	r->r->body = 0;
+	r->r->p = pred(*ns, *np, *no, d);
+
+	return (r->r->p - predicates)/sizeof(struct predicate);
+}
+
+int readp(struct dict* d, struct ruleset** _r) {
+	char s[str_input_len], p[str_input_len], o[str_input_len];
+	int ns, np, no;
+	printf("Enter a predicate as 's p o':");
+	int pid = _readp(d, _r, s, p, o, &ns, &np, &no);
+	if (pid != -1)
+		printf("predicate read: %s %s %s ( %d %d %d ) Predicate id: %d\n ", s, p, o, ns, np, no, pid);
+	else
+		printf("Cancelled.\n");
+	return pid;
+}
+
+void readr(struct ruleset** r) {
+	char s[16], o[16], ch;
+	uint pos = 0;
+	int ns, no;
+	printf("Enter two numbers separated by spaces ('s o') such that predicate s implies predicate o: ");
+	while ((ch = getchar()) != ' ')
+		s[pos++] = ch;
+	pos = 0;
+	while ((ch = getchar()) != '\n')
+		o[pos++] = ch;
+	ns = atoi(s);
+	no = atoi(o);
+	pushr(r, &predicates[ns], &predicates[no]);
+}
+
+void menu(struct dict* d) {
+	struct ruleset *kb = 0, *query = 0;
+	struct ruleset** curr = &kb;
+	char ch;
+	while (1) {
+	bool validinput = false;
+	while (!validinput) {
+			if (curr == &query)
+				printf("Press p for entering a new predicate, r for entering a new rule, or q to begin reasoning when done.");
+			else
+				printf("Press p for entering a new predicate, r for entering a new rule, or q to input a query when ready.");
+				fflush(stdout);
+			ch = getchar();
+			switch (ch) {
+			case 'p': 
+				validinput = true;
+				printf("\n");
+				readp(d, curr);
+				break;
+			case 'r': 
+				validinput = true;
+				printf("\n");
+				readr(curr); 
+				break;
+			case 'q': 
+				validinput = true;
+				printf("\n");
+				if (curr != &query)
+					curr = &query;
+				else
+					prove(query, kb);
+				break;
+			default:
+				break;
+			}
+		}
+	}
 }
 
 int main(int argc, char* argv[]) {
 	initmem();
+	gdict = &dicts[ndicts++];
 	struct predlist* goal = &predlists[npredlists++];
 	struct ruleset* cases = 0;
 
+	if (argc == 1) {
+		menu(gdict);
+		return 0;
+	}
+
 	const int socrates = 1, a = 2, human = 3, man = 4, mortal = 5, _x = -6, _y = -7, _z = -8;
-	printf("socrates a man:\t"); 	struct predicate* p1 = pred(socrates, a, man);
-	printf("_x a human:\t"); 	struct predicate* p2 = pred(_x, a, human);
-	printf("_x a man:\t"); 		struct predicate* p3 = pred(_x, a, man);
-	printf("_y a man:\t"); 		struct predicate* p4 = pred(_y, a, human);
-	printf("_y a mortal:\t"); 	struct predicate* p5 = pred(_y, a, mortal);
-	printf("_z a mortal:\t"); 	struct predicate* p6 = pred(_z, a, mortal);
+	printf("socrates a man:\t"); 	struct predicate* p1 = pred(socrates, a, man, gdict);
+	printf("_x a human:\t"); 	struct predicate* p2 = pred(_x, a, human, gdict);
+	printf("_x a man:\t"); 		struct predicate* p3 = pred(_x, a, man, gdict);
+	printf("_y a man:\t"); 		struct predicate* p4 = pred(_y, a, human, gdict);
+	printf("_y a mortal:\t"); 	struct predicate* p5 = pred(_y, a, mortal, gdict);
+	printf("_z a mortal:\t"); 	struct predicate* p6 = pred(_z, a, mortal, gdict);
 
 	pushr(&cases, 0, p1);
 	pushr(&cases, 0, p2);
