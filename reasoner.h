@@ -4,9 +4,11 @@
 #include "json_escape.h"
 
 #ifdef DEBUG
-#define jst(x) std::stdout<<x << ",\n";
+#define jst(x) std::clog <<x << ",\n";
+void jstq(const char *x){ jst (jsq (x) ) }
 #else
 #define jst(x)
+#define jstq(x)
 #endif
 
 struct pred_t {
@@ -123,15 +125,26 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 
 pground_t gnd = make_shared<ground_t>();
 
+
+ostream& operator<< ( ostream& o, deque<ppti> const& r ) {
+	o << "[";
+	for ( auto rr = r.cbegin();; ) {
+		o << *rr;
+		if ( ++rr != r.cend() ) o << ",\n";
+	}
+	return o << "]";
+}
+
+
 bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	int step = 0;
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
-	jst (  "{\"Goal\": " <<  goal << "}");
 	while ( queue.size() > 0 ) {
-		ppti c = queue.pop_front();
-		jst ( *c );
+		jst ( "{\"step\":" << step <<  "\",queue\":" << queue << "}" );
+		ppti c = queue.front();
+		queue.pop_front();
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
@@ -140,31 +153,28 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		}
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
-				trace ( "no parent!" << endl );
+				jstq( "no parent!" );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
 					for (auto gnd_item : *c->ground)
 						tmp.body[0].args.push_back(gnd_item.src.head);
-					trace (  "Adding evidence for " << ( string ) t.pred << ": " <<  *c->ground << endl );
+					//jst( "{\"evidence for \":" << t.pred << ",\n \"ground\": " <<  *c->ground << "}" );
 					evidence[t.pred].push_back ( tmp );
 				}
-
 				continue;
 			}
 
-			trace ( "Q parent: " );
+			//jstq ( "Q with parent, adding:" );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, make_shared<env_t> ( *c->parent->env ) , g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
-			trace (  ( string ) ( *r ) << endl );
-			if (r->parent && !r->parent->parent)
-				trace("subquery "<<  ( string ) ( *r )  << endl);
+			//jst ( *r );
 			queue.push_back ( r ); 
 			continue;
 		}
-		trace ( "Done q" << endl );
+		//jstq ( "Done q" );
 		
 		pred_t t = c->rule.body[c->ind];
 		
@@ -180,13 +190,12 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue; // else there is no such builtin, continue...
 		}
 
-		trace ( "Checking cases..." << endl );
-		trace ( "looking for case " << t.pred << endl );
+		//trace ( "Checking cases..." << endl );
+		jst ( "{\"looking for case\":" << t.pred );
 		if ( cases.find ( t.pred ) == cases.end() ) {
-			trace ( "No Cases(no such predicate)!" << endl );
-			trace ( "available cases' keys: " << endl );
-			for ( auto x : cases ) trace ( x.first << endl );
-			if(!c->parent) return false;
+			jstq ( "No Cases(no such predicate)!" );
+			jstq ( "available cases' keys:" );
+			for ( auto x : cases ) jst ( x.first );
 			continue;
 		}
 		size_t src = 0;
@@ -224,11 +233,11 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	return prove ( rule_t {goal, { goal } }, maxNumberOfSteps, cases, evidence );
 }
+int _indent = 0;
 bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv ) {
-	trace ( indent() << "Unify:" << endl << flush << indent() << "  s: " << ( string ) s << " in " << ( *senv ) << endl << flush;
+	jst ("{\"Unify level\":" << _indent << ",\"s\":" << s << ",\"senv\":" << ( *senv ) << endl << flush;
 	        cout << indent() << "  d: " << ( string ) d << " in " << ( *denv ) << endl << flush );
 	if ( s.pred[0] == '?' ) {
-		trace ( indent() << "  source is var" << endl << flush );
 		try {
 			pred_t sval = evaluate ( s, senv );
 			_indent++;
@@ -241,7 +250,7 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 				throw std::runtime_error ( "Error during unify" );
 			}
 			if ( _indent ) _indent--;
-			trace ( indent() << " Match(free var)!" << endl );
+			jstq ( "Match(free var)!" );
 			return true;
 		} catch ( exception ex ) {
 			bt();
@@ -252,12 +261,9 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 		}
 	}
 	if ( d.pred[0] == '?' ) {
-		trace ( indent() << "  dest is var" << endl << flush );
 		try {
 			pred_t dval = evaluate ( d, denv );
-			trace ( _indent++ );
 			bool b = unify ( s, senv, dval, denv );
-			trace ( _indent-- );
 			return b;
 		} catch ( int n ) {
 			if ( n ) {
@@ -265,8 +271,8 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 				throw std::runtime_error ( "Error during unify" );
 			}
 			( *denv ) [d.pred] = evaluate ( s, senv );
-			trace ( _indent-- );
-			trace (  indent() << " Match!(free var)" << endl );
+			jstq ( "Match(free var)!" );
+
 			return true;
 		} catch ( exception ex ) {
 			throw ex;
@@ -375,7 +381,7 @@ void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t 
 }
 
 evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
-	std::stdout<<x << "[";
+	std::clog << "[";
 
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
