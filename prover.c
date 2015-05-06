@@ -95,7 +95,7 @@ const char help[] =
 "Syntax: <command> args>\n\
 Type '?' for help.\n\
 All inputs that ends with '.' (facts) or '?' (queries) are interpreted as new terms or rules, otherwise as commands.\n\n\
-A non-command line should contain triples, possibly nested with {} brackets (like N3). '=>' predicate is interpreted\n\
+A non-command line should contain triples, possibly nested with {} brackets (like N3). '=>' term is interpreted\n\
 as implication (<http://www.w3.org/2000/10/swap/log#implies>) as well as simply log:implies.\n\
 Commands:\n\n\
 ---------\n\n\
@@ -126,7 +126,7 @@ sw <id>\tSwitch session\n\n";
 
 const char prompt[] = "tau >> ";
 
-#define syn_err { printf("Syntax error."); continue; }
+#define syn_err { printf("Syntax error.\n"); continue; }
 #define str_input_len 255
 
 bool read_num(const char* line, int* x) {
@@ -153,22 +153,35 @@ bool read_two_nums(const char* line, int* x, int* y) {
 	return !*line;	
 }
 
+bool has_no_spaces(const char* s) {
+	uint len = strlen(s);
+	while (len--)
+		if (isspace(s[len]))
+			return false;
+	return true;
+}
+
 void str2term(const char* s, struct term** _p, struct dict* d) {
 	if (!s || !*s) {
 		*_p = 0;
 		return;
 	}
+	if (!*_p)
+		*_p = &terms[nterms++];
 	struct term* p = *_p;
 	p->p = 0;
-	p->s = &terms[nterms++];
-	p->o = &terms[nterms++];
-	int n = 0, m;
+	p->s = 0;//&terms[nterms++];
+	p->o = 0;//&terms[nterms++];
+	int n = 0, m, k;
 	int braces = 0;
+	bool had_braces = false;
 	char pr[str_input_len], __s[str_input_len];
 	const char* _s = s;
 	while (*s) {
-		if (*s == '{')
+		if (*s == '{') {
+			had_braces = true;
 			++braces;
+		}
 		else if (*s == '}') {
 			--braces;
 			++s;
@@ -176,33 +189,72 @@ void str2term(const char* s, struct term** _p, struct dict* d) {
 		if (!braces) {
 			while (isspace(*s) && *s)
 				++s;
-			m = s - _s;
+			if (had_braces)
+				m = s - _s;
 			while (!isspace(*s) && *s) {
 				if (*s == '{' || *s == '}')
 					syn_err;
-				pr[n++] = *s++;
+				if (had_braces)
+					pr[n++] = *s;
+				++s;
 			}
+			if (!had_braces)
+				m = s - _s;
+			while (isspace(*s) && *s)
+				++s;
+			if (!had_braces)
+				while (!isspace(*s) && *s) {
+					if (*s == '{' || *s == '}')
+						syn_err;
+					pr[n++] = *s++;
+				}
 			pr[n] = 0;
 			p->p = pushw(&d, pr);
 			strcpy(__s, s);
 			trim(__s);
-			if (strlen(__s))
-				str2term(__s, &p->s, d);
-			else
-				p->s = 0;
-			memcpy(__s, s, m);
-			__s[m] = 0;
-			trim(__s);
-			if (strlen(__s))
-				str2term(__s, &p->o, d);
+			if (strlen(__s)) {
+				if (has_no_spaces(__s)) {
+					int id = pushw(&d, __s);
+					for (k = 0; k < nterms; ++k)
+						if (terms[k].p == id)
+							if (!terms[k].s && !terms[k].o)
+								p->o = &terms[k];
+					if (!p->o) {
+						p->o = &terms[nterms++];
+						p->o->p = id;
+						p->o->s = p->o->o = 0;
+					}
+				}
+				else
+					str2term(__s, &p->o, d);
+			}
 			else
 				p->o = 0;
+			memcpy(__s, _s, m);
+			__s[m] = 0;
+			trim(__s);
+			if (strlen(__s)) {
+				if (has_no_spaces(__s)) {
+					int id = pushw(&d, __s);
+					for (k = 0; k < nterms; ++k)
+						if (terms[k].p == id)
+							if (!terms[k].s && !terms[k].o)
+								p->s = &terms[k];
+					if (!p->s) {
+						p->s = &terms[nterms++];
+						p->s->p = id;
+						p->s->s = p->s->o = 0;
+					}
+				}
+				else 
+					str2term(__s, &p->s, d);
+			}
+			else
+				p->s = 0;
 			break;
 		}
 		++s;
 	}
-	printf("String %s parsed into term as:\n", s);
-	printterm(p, d);
 }
 
 void printss(struct session* ss) {
@@ -226,49 +278,52 @@ void printcmd(const char* line, struct session* ss) {
 	if (read_num(line, &id)) {
 		switch (*line) {
 		case 'p':
-			if (!*line || isspace(*++line)) {
+			++line;
+			if (!*line || isspace(*line)) {
 				printterm(&terms[id], d);
-				puts("\n");
+				puts("");
 			} else if (*line == 'r') {
 				printp(&proofs[id], d);
-				puts("\n");
+				puts("");
 			}
 			else
 				syn_err;
 			break;
 		case 'r':
 			printr(&rules[id], d);
-			puts("\n");
+			puts("");
 			break;
 		case 's':
-			if (!*line || isspace(*++line)) {
+			++line;
+			if (!*line || isspace(*line)) {
 				prints(&substs[id], d);
-				puts("\n");
+				puts("");
 			} else if (*line == 's') {
 				printss(ss);
-				puts("\n");
+				puts("");
 			}
 			break;
 		case 'g':
 			printg(&grounds[id], d);
-			puts("\n");
+			puts("");
 			break;
 		case 'q':
 			printq(&queues[id], d);
-			puts("\n");
+			puts("");
 			break;
 		case 'e':
 			printe(&evidences[id], d);
-			puts("\n");
+			puts("");
 			break;
 		case 'l':
-			if (!*line || isspace(++line)) {
+			++line;
+			if (!*line || isspace(line)) {
 				printl(&termsets[id], d);
-				puts("\n");
+				puts("");
 			} else {
 				if (*line == 'l') {
 					printrs(&rulesets[id], d);
-					puts("\n");
+					puts("");
 				}
 				else
 					syn_err;
@@ -279,12 +334,13 @@ void printcmd(const char* line, struct session* ss) {
 	else {
 		switch (*line) {
 		case 'p':
-			if (!*line || isspace(*++line)) {
+			++line;
+			if (!*line || isspace(*line)) {
 				puts("Predicates:\n");
 				for (; n < nterms; ++n) {
 					printf("%d\t", n);
 					printterm(&terms[n], d);
-					puts("\n");
+					puts("");
 				}
 			}
 			else {
@@ -293,7 +349,7 @@ void printcmd(const char* line, struct session* ss) {
 					for (; n < nproofs; ++n) {
 						printf("%d\t", n);
 						printp(&proofs[n], d);
-						puts("\n");
+						puts("");
 					}
 				}
 				else
@@ -305,21 +361,22 @@ void printcmd(const char* line, struct session* ss) {
 			for (; n < nrules; ++n) {
 				printf("%d\t", n);
 				printr(&rules[n], d);
-				puts("\n");
+				puts("");
 			}
 			break;
 		case 's':
-			if (!*line || isspace(*++line)) {
+			++line;
+			if (!*line || isspace(*line)) {
 				puts("Substitutions:\n");
 				for (; n < nsubsts; ++n) {
 					printf("%d\t", n);
 					prints(&substs[n], d);
-					puts("\n");
+					puts("");
 				}
 			} else if (*line == 's') {
 				puts("Session:\n");
 				printss(ss);
-				puts("\n");
+				puts("");
 			}
 			break;
 		case 'g':
@@ -327,14 +384,14 @@ void printcmd(const char* line, struct session* ss) {
 			for (; n < ngrounds; ++n) {
 				printf("%d\t", n);
 				printg(&grounds[n], d);
-				puts("\n");
+				puts("");
 			}
 		case 'q':
 			puts("Queues:\n");
 			for (; n < nqueues; ++n) {
 				printf("%d\t", n);
 				printq(&queues[n], d);
-				puts("\n");
+				puts("");
 			}
 			break;
 		case 'e':
@@ -342,16 +399,17 @@ void printcmd(const char* line, struct session* ss) {
 			for (; n < nevidences; ++n) {
 				printf("%d\t", n);
 				printe(&evidences[n], d);
-				puts("\n");
+				puts("");
 			}
 			break;
 		case 'l':
-			if (!*line || isspace(*++line)) {
+			++line;
+			if (!*line || isspace(*line)) {
 				puts("Predicate lists:\n");
 				for (; n < ntermsets; ++n) {
 					printf("%d\t", n);
 					printl(&termsets[n], d);
-					puts("\n");
+					puts("");
 				}
 			}
 			else {
@@ -360,7 +418,7 @@ void printcmd(const char* line, struct session* ss) {
 					for (; n < nrulesets; ++n) {
 						printf("%d\t", n);
 						printrs(&rulesets[n], d);
-						puts("\n");
+						puts("");
 					}
 				}
 				else
@@ -380,23 +438,28 @@ void menu(struct session* ss) {
 	rl_bind_key('\t', rl_complete);
 	while ((line = readline(prompt))) {
 		add_history(line);
-		trim(line);
-		if (!strcmp(line, "?")) {
-			printf(help);
-			continue;
-		}
 		uint szline = strlen(line);
 		if (!line[0] || !line[1]) 
 			syn_err;
 		if (line[szline - 1] == '.' || line[szline - 1] == '?' ) {
 			bool isq = line[szline - 1] == '?';
 			line[szline - 1] = 0;
+			trim(line);
 			struct term* t = &terms[nterms++];
 			str2term(line, &t, ss->d);
+			printf("String %s parsed into term as:\n", line);
+			printterm(t, ss->d);
+			puts("");
 			if (isq) 
 				pushp(&ss->goal, t);
 			else
 				pushp(&ss->kb, t);
+			continue;
+		}
+		trim(line);
+		if (!strcmp(line, "?")) {
+			printf(help);
+			continue;
 		}
 		else if (*line == 'q') {
 			++line;
@@ -430,7 +493,7 @@ void menu(struct session* ss) {
 }
 
 void initmem() {
-	memset(terms 	= malloc(sizeof(struct term) * max_terms), 		0, sizeof(struct term) * max_terms);
+	memset(terms	 	= malloc(sizeof(struct term) * max_terms), 			0, sizeof(struct term) * max_terms);
 	memset(termsets 	= malloc(sizeof(struct termset) * max_termsets), 		0, sizeof(struct termset) * max_termsets);
 	memset(rules 		= malloc(sizeof(struct rule) * max_rules), 			0, sizeof(struct rule) * max_rules);
 	memset(substs 		= malloc(sizeof(struct subst) * max_substs), 			0, sizeof(struct subst) * max_substs);
@@ -445,16 +508,33 @@ void initmem() {
 
 void trim(char *s) {
 	uint len = strlen(s), n;
+	int brackets;
 	if (!len)
 		return;
-	while (isspace ( *s ) && len ) {
+	while ( isspace ( *s ) && len ) {
 		for (n = 0; n < len - 1; ++n)
 			s[n] = s[n + 1];
 		--len;
 	}
-	while (len && isspace ( s[len - 1] ) )
+	while ( len && isspace ( s[len - 1] ))
 		--len;
 	s[len] = 0;
+	if (len <= 1)
+		return;
+	if (*s == '{' && s[len-1] == '}') {
+		brackets = 1;
+		for (n = 1; n < len - 1; ++n) {
+			if (s[n] == '{')
+				brackets++;
+			if (s[n] == '}')
+				brackets--;
+			if (!brackets)
+				return;
+		}
+		s[len - 1] = 0;
+		*s = ' ';
+		trim(s);
+	}
 }
 
 
@@ -795,7 +875,7 @@ void printterm(struct term* p, struct dict* d) {
 	else {
 		s = dgetw(d, p->p);
 		if (s)
-			puts(s);
+			printf(" %s ", s);
 	}
 	printterm(p->o, d);
 }
