@@ -37,10 +37,10 @@ const uint max_evidences = 1024; 	uint nevidences = 0; 		struct evidence* eviden
 const uint max_dicts = 1024; 		uint ndicts = 0; 		struct dict* dicts;
 
 void initmem();
-void pushg(struct ground* g, struct rule* r, struct subst* s); // push rule and subst pair into ground
+void pushg(struct ground** g, struct rule* r, struct subst* s); // push rule and subst pair into ground
 void pushe(struct evidence* e, int p, struct evidence_item* ei); // push evidence item into evidence
 struct subst* clone(struct subst* s); // deep-copy a subst
-void pushq(struct queue* _q, struct proof* p); // push a proof to the back of a proofs queue
+void pushq(struct queue**, struct proof* p); // push a proof to the back of a proofs queue
 void unshift(struct queue** _q, struct proof* p); // push a proof to the front of the queue
 void setsub(struct subst** s, int p, struct term* pr); // pushes a substitution
 struct term* evaluate(struct term* p, struct subst* s); // evaluates a term given a subst
@@ -74,8 +74,8 @@ void printcmd(const char* line, struct session*); // handle print commands
 bool is_implication(int p); // identifies an implication resource
 void trim(char *s); // trim strings from both ends using isspace
 void str2term(const char* s, struct term** p, struct dict* d); // parses a string as term in partial basic N3
-void term2rs(struct term* t, struct ruleset** r); // converts a (complex) term into a ruleset by tracking the implication
-struct ruleset* ts2rs(struct termset* t); // same as term2rs but from termset
+void term2rs(struct term* t, struct ruleset** r, bool fact); // converts a (complex) term into a ruleset by tracking the implication
+struct ruleset* ts2rs(struct termset* t, bool fact); // same as term2rs but from termset
 
 struct dict* gdict; // global dictionary, currently the only used
 int impl1, impl2, impl3;
@@ -465,9 +465,9 @@ void menu(struct session* ss) {
 					++line;
 					if (*line == 'a') {
 		//				ss->rgoal = ts2rs(ss->goal);
-						ss->rkb = ts2rs(ss->kb);
+						ss->rkb = ts2rs(ss->kb, true);
 						prove(ss->goal, ss->rkb);
-						}
+					}
 				}
 				else if (*line == 'p') {
 					++line;
@@ -578,12 +578,23 @@ struct ground* copyg(struct ground* g) {
 	return r;
 }
 
-void pushg(struct ground* g, struct rule* r, struct subst* s) {
+void pushg(struct ground** _g, struct rule* r, struct subst* s) {
+	struct ground* g;
+	if (!*_g) {
+		g = &grounds[ngrounds++];
+		g->r = r;
+		g->s = s;
+		g->next = 0;
+		*_g = g;
+		return;
+	}
+	g = *_g;
 	while (g->next) 
 		g = g->next;
 	g->next = &grounds[ngrounds++];
 	g->next->r = r;
 	g->next->s = s;
+	g->next->next = 0;
 }
 
 void pushe(struct evidence* e, int p, struct evidence_item* ei) {
@@ -604,21 +615,21 @@ struct subst* clone(struct subst* s) {
 	return s;
 }
 
-void pushq(struct queue* _q, struct proof* p) {
+void pushq(struct queue** _q, struct proof* p) {
 	if (!p)
 		printf("Error: pushq called with null proof\n");
-	if (!_q) {
-		_q = &queues[nqueues++];
-		_q->next = _q->prev = 0;
-		_q->p = p;
+	if (!*_q) {
+		*_q = &queues[nqueues++];
+		(*_q)->next = (*_q)->prev = 0;
+		(*_q)->p = p;
 		return;
 	}
 	struct queue* q = &queues[nqueues++];
 	q->p = p;
-	while (_q->next)
-		_q = _q->next;
-	_q->next = q;
-	q->prev = _q;
+	while ((*_q)->next)
+		*_q = (*_q)->next;
+	(*_q)->next = q;
+	q->prev = (*_q);
 	q->next = 0;
 }
 
@@ -632,27 +643,28 @@ void unshift(struct queue** _q, struct proof* p) {
 		q->next = q->prev = 0;
 		return;
 	}
-	while ((*_q)->next)
-		_q = &(*_q)->next;
+	while ((*_q)->prev)
+		_q = &(*_q)->prev;
 	(*_q)->prev = q;
 	q->prev = 0;
 	q->next = *_q;
 	*_q = q;
 }
 
-void term2rs(struct term* t, struct ruleset** r) {
+void term2rs(struct term* t, struct ruleset** r, bool fact) {
 	if (!t)
 		return;
 	if (is_implication(t->p))
 		pushr(r, t->s, t->o);
-	else
-		pushr(r, t, 0);
+	else if (fact)
+		pushr(r, 0, t);
+	else pushr(r, t, 0);
 }
 
-struct ruleset* ts2rs(struct termset* t) {
+struct ruleset* ts2rs(struct termset* t, bool fact) {
 	struct ruleset* r = 0;
 	do {
-		term2rs(t->p, &r);
+		term2rs(t->p, &r, fact);
 	} while ((t = t->next));
 	return r;
 }
@@ -767,9 +779,14 @@ void prove(struct termset* goal, struct ruleset* cases) {
 	qu->p->last = rg->body;
 	struct evidence* e = &evidences[nevidences++];
 	do {
-		struct proof* p = qu->p;
-		qu->prev = 0;
-		qu = qu->next;
+		struct queue *q = qu, *prev = qu;
+		while (q && q->next) {
+			prev = q;
+			q = q->next;
+		}
+		struct proof* p = q->p;
+		prev->next = 0;
+//		qu = qu->next;
 		printf("popped frame...\n");
 		printp(p, gdict);
 		if (!p->last) {
@@ -786,14 +803,14 @@ void prove(struct termset* goal, struct ruleset* cases) {
 			}
 			struct ground* g = &grounds[ngrounds++];
 			if (p->rul->body)
-				pushg(g, p->rul, p->s);
+				pushg(&g, p->rul, p->s);
 			struct proof* r = &proofs[nproofs++];
 			*r = *p->prev;
 			r->g = g;
 			r->s = clone(p->prev->s);
 			unify(p->rul->p, p->s, r->last->p, &r->s, true);
 			r->last = r->last->next;
-			pushq(qu, r);
+			pushq(&qu, r);
 			continue;
 		}
 		struct term* t = p->last->p;
@@ -813,12 +830,12 @@ void prove(struct termset* goal, struct ruleset* cases) {
 				struct proof* r = &proofs[nproofs++];
 				r->s = s;
 				r->rul = rs->r;
-				r->last = p->last->next;
+				r->last = r->rul->body;//p->last->next;
 				r->prev = p;
 				r->s = 0;
 				r->g = g = copyg(p->g);
 				if (!rs->r->body)
-					pushg( g, rs->r, 0 );
+					pushg( &g, rs->r, 0 );
 				unshift(&qu, r);
 				printf("pushed frame...\n");
 				printp(r, gdict);
