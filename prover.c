@@ -695,8 +695,7 @@ void pushq(struct queue** _q, struct proof* p) {
 		(*_q)->p = p;
 		return;
 	}
-	struct queue* q = *_q;//
-	q->p = p;
+	struct queue* q = *_q;
 	while (q->next)
 		q = q->next;
 	q->next = &queues[nqueues++];
@@ -706,17 +705,16 @@ void pushq(struct queue** _q, struct proof* p) {
 }
 
 void unshift(struct queue** _q, struct proof* p) {
-	struct queue* q = &queues[nqueues++];
 	if (!p)
 		printf("Error: unshift called with null proof\n");
-	q->p = p;
 	if (!*_q) {
-		*_q = q;
-		q->next = q->prev = 0;
+		pushq(_q, p);
 		return;
 	}
+	struct queue* q = &queues[nqueues++];
 	while ((*_q)->prev)
 		_q = &(*_q)->prev;
+	q->p = p;
 	(*_q)->prev = q;
 	q->prev = 0;
 	q->next = *_q;
