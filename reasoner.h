@@ -62,7 +62,26 @@ struct rule_t {
 	}
 };
 
-typedef map<string, vector<rule_t>> evidence_t;
+typedef vector<rule_t> rules_t;
+typedef map<string, rules_t> evidence_t;
+
+ostream& operator<< ( ostream& o,  const rules_t &r ) {
+	o << "[";
+	for ( auto rr = r.cbegin();; ) {
+		o << *rr;
+		if ( ++rr != r.cend() ) o << ",\n";
+	}
+	return o << "]\n";
+}
+
+ostream& operator<< ( ostream& o, evidence_t const& r ) {
+	o << "{";
+	for ( auto rr = r.cbegin();; ) {
+		o << jsq(rr->first) << ": " << rr->second;
+		if ( ++rr != r.cend() ) o << ",\n";
+	}
+	return o << "}\n";
+}
 
 struct rule_env {
 	rule_t src;
@@ -190,7 +209,6 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue; // else there is no such builtin, continue...
 		}
 
-		//trace ( "Checking cases..." << endl );
 		jst ( "{\"looking for case\":" << t.pred );
 		if ( cases.find ( t.pred ) == cases.end() ) {
 			jstq ( "No Cases(no such predicate)!" );
@@ -203,7 +221,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		for ( rule_t rl : cases[t.pred] ) {
 			src++;
 			pground_t g = aCopy ( c->ground );
-			trace (  "Check rule: " << ( string ) rl << endl );
+			jst (  "{\"Check rule\":" << rl << "}" );
 			if ( rl.body.size() == 0 ) 
 				g->push_back ( { rl, make_shared<env_t>() } ); //its a fact
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
@@ -211,21 +229,21 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			if ( unify ( t, c->env, rl.head, r->env ) ) {
 				ppti ep = c;
 				while ( ( ep = ep->parent ) ) {
-					trace ( "  ep.src: " << ep->src << endl << "  c.src: " << c->src << endl );
+					jst ( "{\"ep.src\": " << ep->src << ",  \"c.src\": " << c->src << "}" );
 					if ( ep->src == c->src && unify ( ep->rule.head, ep->env, c->rule.head, c->env ) ) {
-						trace ( "  ~~ match ~~ " << endl );
+						jstq ( "  ~~ match ~~ " );
 						break;
 					}
-					trace ( "  ~~  ~~  ~~" << endl );
+					jstq ( "  ~~  ~~  ~~" );
 				}
 				if ( !ep ) {
-					trace ( "Adding to queue: " << ( string ) ( *r ) << endl << flush );
+					jst ( "{\"Adding to queue\": " << *r << "}");
 					queue.push_front ( r );
-				} else trace ( "didn't reach top" << endl );
-				trace ( "Done euler loop" << endl );
-			} else trace ( "No loop here" << endl );
+				} else jstq ( "didn't reach top" );
+				jstq ( "Done euler loop" );
+			} else jstq ( "No loop here" );
 		}
-		trace ( "done rule checks, looping" << endl );
+		jstq ( "done rule checks, looping" );
 	}
 	return false;
 }
@@ -233,10 +251,12 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	return prove ( rule_t {goal, { goal } }, maxNumberOfSteps, cases, evidence );
 }
+
 int _indent = 0;
+
 bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv ) {
-	jst ("{\"Unify level\":" << _indent << ",\"s\":" << s << ",\"senv\":" << ( *senv ) << endl << flush;
-	        cout << indent() << "  d: " << ( string ) d << " in " << ( *denv ) << endl << flush );
+	//jst ("{\"Unify level\":" << _indent << ",\"s\":" << s << ",\"senv\":" << *senv);
+
 	if ( s.pred[0] == '?' ) {
 		try {
 			pred_t sval = evaluate ( s, senv );
@@ -282,28 +302,28 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 		}
 	}
 	if ( s.pred == d.pred && s.args.size() == d.args.size() ) {
-		trace ( indent() << "  Comparison:" << endl << flush );
+		//jstq ("Comparison:"  );
 		for ( size_t i = 0; i < s.args.size(); i++ ) {
 			_indent++;
 			if ( !unify ( s.args[i], senv, d.args[i], denv ) ) {
 				_indent--;
-				trace ( indent() << "    " << ( string ) s.args[i] << " != " << ( string ) d.args[i] << endl << flush );
+				//trace ( indent() << "    " << ( string ) s.args[i] << " != " << ( string ) d.args[i] << endl << flush );
 				return false;
 			}
 			_indent--;
-			trace ( indent() << "    " << ( string ) s.args[i] << " == " << ( string ) d.args[i] << endl << flush );
+			//trace ( indent() << "    " << ( string ) s.args[i] << " == " << ( string ) d.args[i] << endl << flush );
 		}
-		trace ( indent() << "  Equal!" << endl << flush );
+		jstq ( "Equal!" );
 		return true;
 	}
-	trace ( indent() << " No match" << endl << flush );
+	jstq ( "No match" );
 	return false;
 }
 
 pred_t evaluate ( const pred_t t, const penv_t env ) {
-	trace ( indent() << "Eval " << ( string ) t << " in " << ( *env ) << endl );
+	//trace ( indent() << "Eval " << ( string ) t << " in " << ( *env ) << endl );
 	if ( t.pred[0] == '?' ) {
-		trace (  "(" << ( string ) t << " is a var..)" << endl );
+		//trace (  "(" << ( string ) t << " is a var..)" << endl );
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) return evaluate ( it->second, env );
 		else throw int ( 0 );
@@ -334,25 +354,7 @@ inline pred_t mk_res ( string r ) {
 }
 
 bool test_reasoner() {
-	evidence_t evidence, cases;
-	pred_t Socrates = mk_res ( "Socrates" ), Man = mk_res ( "Man" ), Mortal = mk_res ( "Mortal" ), Morrtal = mk_res ( "Morrtal" ), Male = mk_res ( "Male" ), _x = mk_res ( "?x" ), _y = mk_res ( "?y" );
-	cases["a"].push_back ( {{"a", {Socrates, Male}}, {}} );
-	cases["a"].push_back ( {{"a", {_x, Mortal}}    , { {"a", {_x, Man}}, } } );
-	cases["a"].push_back ( {
-		{"a", {_x, Man}},
-		{ {"a", {_x, Male}}, }
-	} );
-
-	bool p = prove ( pred_t {"a", {_y, Mortal}}, -1, cases, evidence );
-	cout << "Prove returned " << p << endl;
-	cout << "evidence: " << evidence.size() << " items..." << endl;
-	for ( auto e : evidence ) {
-		cout << "  " << e.first << ":" << endl;
-		for ( auto ee : e.second ) cout << "    " << ( string ) ee << endl;
-		cout << endl << "---" << endl;
-	}
 	cout << "QED!" << endl;
-	return evidence.size();
 }
 
 pred_t triple ( const string& s, const string& p, const string& o ) {
@@ -402,25 +404,14 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 	}
 	rule_t goal;
 	for ( auto q : query ) 
-	{
 		goal.body.push_back ( triple ( *q ) );
-		cout << "goal item: "<<(string)triple ( *q )<<endl;;
-	}
 	prove ( goal, -1, cases, evidence );
-	for ( auto q : query ) 
-		cout << "goal item: "<<(string)triple ( *q )<<endl;;
-
 	return evidence;
 }
 
 
 void print_evidence ( evidence_t evidence ) {
-	cout << "evidence: " << evidence.size() << " items..." << endl;
-	for ( auto e : evidence ) {
-		cout << "  " << e.first << ":" << endl;
-		for ( auto ee : e.second ) cout << "    " << ( string ) ee << endl;
-		cout << endl << "---" << endl;
-	}
+	jst ( evidence );
 }
 
 const bool use_nquads = false;
