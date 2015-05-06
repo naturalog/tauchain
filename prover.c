@@ -881,6 +881,7 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 	p->s = 0;
 	p->g = 0;
 	p->last = rg->body;
+	p->prev = 0;
 	pushq(&qu, p);
 	struct evidence* e = 0;
 	do {
@@ -1078,7 +1079,7 @@ void printp(struct proof* p, struct dict* d) {
 	printr(p->rul, d);
 	printf("\n\tremaining:\t");
 	printl(p->last, d);
-	printf("\n\tprev:\t%lu\n\tsubst:\t", (p - proofs)/sizeof(struct proof));
+	printf("\n\tprev:\t%lu\n\tsubst:\t", (p->prev - proofs)/sizeof(struct proof));
 	prints(p->s, d);
 	printf("\n\tground:\t");
 	printg(p->g, d);
