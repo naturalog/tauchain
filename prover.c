@@ -547,9 +547,11 @@ void trim(char *s) {
 
 
 struct subst* findsubst(struct subst* l, int m) { 
-	while (l) 
+	while (l) {
 		if (l->p == m) 
-			return l; 
+			return l;
+		l = l->next;
+	}
 	return 0; 
 }
 
@@ -813,7 +815,7 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 			qu = 0;
 		if (p->last) {
 			struct term* t = p->last->p;
-			printf("Trying to track back from ");
+			printf("Tracking back from ");
 			printterm(t, gdict);
 			puts("");
 			struct ruleset* rs = cases;
@@ -837,8 +839,9 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 						continue;
 					struct proof* r = &proofs[nproofs++];
 					r->rul = rs->r;
-					printf("\t\tPushed frame with rule ");
+					printf("\tPushed frame with rule ");
 					printr(r->rul, gdict);
+					puts(".");
 					r->last = r->rul->body;//p->last->next;
 					r->prev = p;
 					r->s = 0;
@@ -847,26 +850,31 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 						printf(" adding ground ");
 						pushg( &r->g, rs->r, 0 );
 						printg(r->g, gdict);
+						puts(".");
 					}
-					puts(".");
 					unshift(&qu, r);
 //					printf("pushed frame...\n");
 //					printp(r, gdict);
 //					printf("queue:\n");
 //					printq(qu, gdict);
-				} else
+				} 
+				else
 					printf("\tunification failed\n");
 				rs = rs->next;
 			}
 		}
 		else if (!p->prev) {
 			struct termset* r;
+			puts("Cannot longer go backward. ");
 			for (r = p->rul->body; r; r = r->next) { 
 				struct term* t = evaluate(r->p, p->s);
+//				printf("\tAdding evidence: ");
+//				printterm(t, gdict);
+//				printf("; ");
+//				printg(p->g, gdict);
+//				puts(".\n");
 				pushe(&e, t, p->g);
 			}
-			puts("Cannot longer go backward. Evidence we currently have:");
-			printe(e, gdict);
 		} else {
 			struct ground* g = 0;
 			printf("Finished one level.");
@@ -996,17 +1004,22 @@ void prints(struct subst* s, struct dict* d) {
 		return;
 	const char* _s = dgetw(d, s->p);
 	if (_s)
-		printf("%s / ", _s);
+		printf("[%s / ", _s);
 	printterm(s->pr, d);
-	if (s->next)
-		printf(", ");
-	prints(s->next, d);
+	if (s->next) {
+		printf("], ");
+		prints(s->next, d);
+	}
+	else
+		printf("] ");
 }
 
 void printl(struct termset* l, struct dict* d) {
 	if (!l)
 		return;
 	printterm(l->p, d);
+	if (!l->next)
+		return;
 	printf(", ");
 	printl(l->next, d);
 }
@@ -1040,7 +1053,7 @@ void printei(struct evidence_item* ei, struct dict* d) {
 		return;
 	printf("evidence_item:\n");
 	printterm(ei->p, d);
-	printf("\n");
+	printf(": ");
 	printg(ei->g, d);
 	printf("\n");
 	printei(ei->next, d);
@@ -1049,14 +1062,14 @@ void printei(struct evidence_item* ei, struct dict* d) {
 void printe(struct evidence* e, struct dict* d) {
 	if (!e)
 		return;
-	if (!d)
+/*	if (!d)
 		printf("%d:\n", e->p);
 	else {
 		const char *s = dgetw(d, e->p);
 		if (s)
 			printf(" %s ", s);
 	}
-
+*/
 	printei(e->item, d);
 	printe(e->next, d);
 }
