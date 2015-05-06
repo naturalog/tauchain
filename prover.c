@@ -84,9 +84,9 @@ void throw(const char*);
 int impl1, impl2, impl3;
 int dict_counter = 1;
 
-const char implication1[] = "http://www.w3.org/2000/10/swap/log#implies";
-const char implication2[] = "log:implies";
-const char implication3[] = "=>";
+const char implication1[] = "log:implies";
+const char implication2[] = "=>";
+const char implication3[] = "http://www.w3.org/2000/10/swap/log#implies";
 
 struct term* GND;
 
@@ -658,10 +658,7 @@ void pushe(struct evidence** _e, struct term* t, struct ground* g) {
 	ei->next = 0;
 	if (!*_e) {
 		(*_e) = &evidences[nevidences++];
-		(*_e)->p = t->p;
-		(*_e)->item = ei;
 		(*_e)->next = 0;
-		return;
 	}
 	e = *_e;
 	while (e->next && e->p != t->p)
@@ -680,7 +677,8 @@ void pushe(struct evidence** _e, struct term* t, struct ground* g) {
 }
 
 struct subst* clone(struct subst* s) {
-	if (!s) return 0;
+	if (!s) 
+		return 0;
 	struct subst* r = &substs[nsubsts++];
 	r->p = s->p;
 	r->pr = s->pr;
@@ -697,13 +695,14 @@ void pushq(struct queue** _q, struct proof* p) {
 		(*_q)->p = p;
 		return;
 	}
-	struct queue* q = &queues[nqueues++];
+	struct queue* q = *_q;//
 	q->p = p;
-	while ((*_q)->next)
-		*_q = (*_q)->next;
-	(*_q)->next = q;
-	q->prev = (*_q);
-	q->next = 0;
+	while (q->next)
+		q = q->next;
+	q->next = &queues[nqueues++];
+	q->next->p = p;
+	q->next->prev = q;
+	q->next->next = 0;
 }
 
 void unshift(struct queue** _q, struct proof* p) {
@@ -727,11 +726,14 @@ void unshift(struct queue** _q, struct proof* p) {
 void term2rs(struct term* t, struct ruleset** r, bool fact, struct dict** d) {
 	if (!t)
 		return;
-	if (is_implication(t->p))
+	if (is_implication(t->p)) 
 		pushr(r, t->s, t->o);
-	else if (fact)
-		pushr(r, GND, t);
-	else pushr(r, t, 0);
+	else {
+		if (fact)
+			pushr(r, 0, t);
+		else 
+			pushr(r, t, 0);
+	}
 }
 
 struct ruleset* ts2rs(struct termset* t, bool fact, struct dict** d) {
@@ -834,9 +836,9 @@ bool euler_path(struct proof* p) {
 }
 
 int builtin(struct term* t, struct proof* p, struct session* ss) {
-	const char* s = dgetw(ss->d, t->p);
-	if (s && !strcmp(s, "GND"))	
-		return 1;
+//	const char* s = dgetw(ss->d, t->p);
+//	if (s && !strcmp(s, "GND"))	
+//		return 1;
 	return -1;
 }
 /*
@@ -872,9 +874,10 @@ void queue_test() {
 }
 */
 void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct session* ss) {
-	struct queue *qu = 0;//&queues[nqueues++];
+	struct queue *qu = 0;
 	struct rule* rg = &rules[nrules++];
 	struct proof* p = &proofs[nproofs++];
+	struct evidence* e = 0;
 	rg->p = 0;
 	rg->body = goal;
 	p->rul = rg;
@@ -883,7 +886,11 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 	p->last = rg->body;
 	p->prev = 0;
 	pushq(&qu, p);
-	struct evidence* e = 0;
+	TRACE(printf("\nprove() called with facts:"));
+	TRACE(printrs(cases, ss->d));
+	TRACE(puts("\nand query:"));
+	TRACE(printl(goal, ss->d));
+	TRACE(puts(""));
 	do {
 		struct queue *q = qu;
 		while (q && q->next) 
@@ -901,9 +908,9 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 			int b = builtin(t, p, ss);
 			if (b == 1) {
 				struct proof* r = &proofs[nproofs++];
+				struct rule* rl = &rules[nrules++];
 				*r = *p;
 				r->g = 0;
-				struct rule* rl = &rules[nrules++];
 				rl->p = evaluate(t, p->s);
 				rl->body = 0;
 				r->g = copyg(p->g);
@@ -912,9 +919,8 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 				pushq(&qu, r);
 		            	continue;
 		        }
-		    	else 
-				if (!b) 
-					continue;
+		    	else if (!b) 
+				continue;
 
 			struct ruleset* rs = cases;
 			while ((rs = findruleset(rs, t->p))) {
@@ -931,14 +937,16 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 						TRACE(prints(s, ss->d));
 					}
 					TRACE(puts(""));
-					if (euler_path(p))
+					if (euler_path(p)) {
+						rs = rs->next;
 						continue;
+					}
 					struct proof* r = &proofs[nproofs++];
 					r->rul = rs->r;
 					TRACE(printf("\tPushed frame with rule "));
 					TRACE(printr(r->rul, ss->d));
 					TRACE(puts("."));
-					r->last = r->rul->body;//p->last->next;
+					r->last = r->rul->body;
 					r->prev = p;
 					r->s = 0;
 					r->g = copyg(p->g);
@@ -949,11 +957,11 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 						TRACE(puts("."));
 					}
 					unshift(&qu, r);
-//					printf("pushed frame...\n");
-//					printp(r, ss->d);
-//					printf("queue:\n");
-//					printq(qu, ss->d);
-				} 
+					TRACE(printf("pushed frame...\n"));
+					TRACE(printp(r, ss->d));
+					TRACE(printf("queue:\n"));
+					TRACE(printq(qu, ss->d));
+				}
 				else {
 					TRACE(printf("\tunification failed\n"));
 				}
@@ -961,38 +969,36 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 			}
 		}
 		else if (!p->prev) {
-			struct termset* r;
 			TRACE(puts("/*-------------- No more backward frames ----------------"));
 			TRACE(puts("Current queue:"));
 			TRACE(printq(qu, ss->d));
 			TRACE(puts("Current proof element:"));
 			TRACE(printp(p, ss->d));
-			for (r = p->rul->body; r; r = r->next) { 
-				struct term* t = evaluate(r->p, p->s);
-//				printf("\tAdding evidence: ");
-//				printterm(t, ss->d);
-//				printf("; ");
-//				printg(p->g, ss->d);
-//				puts(".\n");
-				pushe(&e, t, p->g);
-			}
+			struct termset* r;
+			for (r = p->rul->body; r; r = r->next) 
+				pushe(&e, evaluate(r->p, p->s), p->g);
 			TRACE(puts("-------------------------------------------------------*/"));
 		} else {
 			TRACE(puts("/*---------------- Finished a Rule ----------------------"));
 			struct ground* g = copyg(p->g);
+			struct proof* r = &proofs[nproofs++];
 			if (p->rul->body) {
-				TRACE(printf("Adding ground: "));
+				TRACE(printf("Adding the finished rule's body as ground: "));
 				pushg(&g, p->rul, p->s);
 				TRACE(printg(g, ss->d));
 				TRACE(puts(""));
 			}
-			TRACE(printf("Going a frame back (except ground and subst), and forwarding the index.\nThat frame contains rule: "));
+			TRACE(printf("Going a frame up (except ground and subst that we take up with us), and forwarding the index.\nThat frame contains rule: "));
 			TRACE(printr(p->prev->rul, ss->d));
 			TRACE(puts("."));
-			struct proof* r = &proofs[nproofs++];
 			*r = *p->prev;
 			r->g = g;
 			r->s = clone(p->prev->s);
+//			if (p->prev->s) {
+//				r->s = &substs[nsubsts++];//
+//				*r->s = *p->prev->s;
+//			} else
+//				r->s = 0;
 			unify(p->rul->p, p->s, r->last->p, &r->s, true);
 			TRACE(printf("Forwarding from rule: "));
 			TRACE(printterm(r->last->p, ss->d));
@@ -1079,7 +1085,10 @@ void printp(struct proof* p, struct dict* d) {
 	printr(p->rul, d);
 	printf("\n\tremaining:\t");
 	printl(p->last, d);
-	printf("\n\tprev:\t%lu\n\tsubst:\t", (p->prev - proofs)/sizeof(struct proof));
+	if (p->prev)
+		printf("\n\tprev:\t%lu\n\tsubst:\t", (p->prev - proofs)/sizeof(struct proof));
+	else
+		printf("\n\tprev:\t(null)\n\tsubst:\t");
 	prints(p->s, d);
 	printf("\n\tground:\t");
 	printg(p->g, d);
@@ -1259,6 +1268,7 @@ int main(int argc, char* argv[]) {
 	ss.goal = 0;
 	ss.d = 0;
 	ss.q = 0;
+	pushp(&ss.kb, GND);
 	impl1 = pushw(&ss.d, implication1); // define implication
 	impl2 = pushw(&ss.d, implication2); 
 	impl3 = pushw(&ss.d, implication3);
