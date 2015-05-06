@@ -128,6 +128,11 @@ const char prompt[] = "tau >> ";
 
 #define syn_err { printf("Syntax error.\n"); continue; }
 #define str_input_len 255
+#ifdef DEBUG
+#define TRACE(x) x
+#else
+#define TRACE(X)
+#endif
 
 bool read_num(const char* line, int* x) {
 	*x = 0;
@@ -815,42 +820,40 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 			qu = 0;
 		if (p->last) {
 			struct term* t = p->last->p;
-			printf("Tracking back from ");
-			printterm(t, gdict);
-			puts("");
+			TRACE(printf("Tracking back from "));
+			TRACE(printterm(t, gdict));
+			TRACE(puts(""));
 			struct ruleset* rs = cases;
-//			printf("cases:\n");
-//			printrs(rs, gdict);
 			while ((rs = findruleset(rs, t->p))) {
 				struct subst* s = 0;
-				printf("\tTrying to unify ");
-				printps(t, p->s, gdict);
-				printf(" and ");
-				printps(rs->r->p, s, gdict);
-				printf("... ");
+				TRACE(printf("\tTrying to unify "));
+				TRACE(printps(t, p->s, gdict));
+				TRACE(printf(" and "));
+				TRACE(printps(rs->r->p, s, gdict));
+				TRACE(printf("... "));
 				if (unify(t, p->s, rs->r->p, &s, true)) {
-					printf("\tunification succeeded");
+					TRACE(printf("\tunification succeeded"));
 					if (s) {
-						printf(" with new substitution: ");
-						prints(s, gdict);
+						TRACE(printf(" with new substitution: "));
+						TRACE(prints(s, gdict));
 					}
-					puts("");
+					TRACE(puts(""));
 					if (euler_path(p))
 						continue;
 					struct proof* r = &proofs[nproofs++];
 					r->rul = rs->r;
-					printf("\tPushed frame with rule ");
-					printr(r->rul, gdict);
-					puts(".");
+					TRACE(printf("\tPushed frame with rule "));
+					TRACE(printr(r->rul, gdict));
+					TRACE(puts("."));
 					r->last = r->rul->body;//p->last->next;
 					r->prev = p;
 					r->s = 0;
 					r->g = copyg(p->g);
 					if (!rs->r->body) {
-						printf(" adding ground ");
+						TRACE(printf(" adding ground "));
 						pushg( &r->g, rs->r, 0 );
-						printg(r->g, gdict);
-						puts(".");
+						TRACE(printg(r->g, gdict));
+						TRACE(puts("."));
 					}
 					unshift(&qu, r);
 //					printf("pushed frame...\n");
@@ -858,14 +861,15 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 //					printf("queue:\n");
 //					printq(qu, gdict);
 				} 
-				else
-					printf("\tunification failed\n");
+				else {
+					TRACE(printf("\tunification failed\n"));
+				}
 				rs = rs->next;
 			}
 		}
 		else if (!p->prev) {
 			struct termset* r;
-			puts("Cannot longer go backward. ");
+			TRACE(puts("Cannot longer go backward. "));
 			for (r = p->rul->body; r; r = r->next) { 
 				struct term* t = evaluate(r->p, p->s);
 //				printf("\tAdding evidence: ");
@@ -877,15 +881,15 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 			}
 		} else {
 			struct ground* g = 0;
-			printf("Finished one level.");
+			TRACE(printf("Finished one level."));
 			if (p->rul->body) {
-				printf(" Adding ground: ");
+				TRACE(printf(" Adding ground: "));
 				pushg(&g, p->rul, p->s);
-				printg(g, gdict);
+				TRACE(printg(g, gdict));
 			}
-			printf(" Going a frame back from rule: ");
-			printr(p->prev->rul, gdict);
-			puts(".");
+			TRACE(printf(" Going a frame back from rule: "));
+			TRACE(printr(p->prev->rul, gdict));
+			TRACE(puts("."));
 			struct proof* r = &proofs[nproofs++];
 			*r = *p->prev;
 			r->g = g;
@@ -896,6 +900,8 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 			continue;
 		}
 	} while (qu);
+	puts("\nEvidence:");
+	puts("=========");
 	printe(e, gdict);
 }
 
@@ -1051,7 +1057,7 @@ void printg(struct ground* g, struct dict* d) {
 void printei(struct evidence_item* ei, struct dict* d) {
 	if (!ei)
 		return;
-	printf("evidence_item:\n");
+//	printf("evidence_item:\n");
 	printterm(ei->p, d);
 	printf(": ");
 	printg(ei->g, d);
