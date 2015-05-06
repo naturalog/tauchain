@@ -11,20 +11,21 @@ typedef char bool;
 const bool true = 1;
 const bool false = 0;
 
-struct predicate 	{ int 			p;	struct predicate 	*s, *o;					};
-struct rule 		{ struct predicate* 	p; 	struct predlist*	body;					};
-struct subst 		{ int 			p;	struct predicate* 	pr; 	struct subst* 		next;	};
+struct term 	{ int 			p;	struct term 	*s, *o;					};
+struct rule 		{ struct term* 	p; 	struct termset*	body;						};
+struct subst 		{ int 			p;	struct term* 	pr; 	struct subst* 		next;	};
 struct evidence		{ int 			p;	struct evidence_item* 	item;	struct evidence* 	next;	};
-struct ruleset		{ struct rule*	 	r; 					struct ruleset*		next;	};
 struct ground 		{ struct rule* 		r;	struct subst* 		s; 	struct ground* 		next;	};
 struct queue		{ struct proof* 	p;	struct queue* 		prev;	struct queue* 		next;	};
-struct evidence_item	{ struct predicate* 	p;	struct ground* 		g;	struct evidence_item* 	next;	};
-struct predlist 	{ struct predicate* 	p; 					struct predlist* 	next; 	};
+struct evidence_item	{ struct term* 	p;	struct ground* 		g;	struct evidence_item* 	next;	};
+struct termset	 	{ struct term* 	p; 					struct termset* 	next; 	};
+struct ruleset		{ struct rule*	 	r; 					struct ruleset*		next;	};
 struct dict 		{ char*  		s;	int 			n;	struct dict*		next;	};
-struct proof 		{ struct rule* 		rul;	struct predlist*	last;	struct proof* 		prev; struct subst* s; struct ground* g;	};
+struct session		{ struct queue*		q;	struct ruleset*	rkb, rgoal;	struct termset*	kb, goal;	struct dict*	d;	};
+struct proof 		{ struct rule* 		rul;	struct termset*		last;	struct proof* 		prev; 	struct subst* 	s; 	struct ground* g;	};
 
-const uint max_predicates = 1024;	uint npredicates = 0; 		struct predicate* predicates;
-const uint max_predlists = 1024;	uint npredlists = 0; 		struct predlist* predlists;
+const uint max_terms = 1024;	uint nterms = 0; 		struct term* terms;
+const uint max_termsets = 1024;		uint ntermsets = 0; 		struct termset* termsets;
 const uint max_rules = 1024;		uint nrules = 0; 		struct rule* rules;
 const uint max_substs = 1024; 		uint nsubsts = 0; 		struct subst* substs;
 const uint max_rulesets = 1024; 	uint nrulesets = 0; 		struct ruleset* rulesets;
@@ -41,33 +42,45 @@ void pushe(struct evidence* e, int p, struct evidence_item* ei); // push evidenc
 struct subst* clone(struct subst* s); // deep-copy a subst
 void pushq(struct queue* _q, struct proof* p); // push a proof to the back of a proofs queue
 void unshift(struct queue** _q, struct proof* p); // push a proof to the front of the queue
-void setsub(struct subst** s, int p, struct predicate* pr); // pushes a substitution
-struct predicate* evaluate(struct predicate* p, struct subst* s); // evaluates a predicate given a subst
-bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct subst** dsub, bool f); // unification
-void prove(struct predlist* goal, struct ruleset* cases); // backchaining
-bool equals(struct predicate* x, struct predicate* y); // deep-compare predicates
-void pushp(struct predlist** l, struct predicate* p); // push a predicate to a predlist
-void pushr(struct ruleset** _rs, struct predicate* s, struct predicate* o); // push subject and object of s=>o into a ruleset
-void printpred(struct predicate* p, struct dict* d); // print a predicate
-struct predicate* pred(int s, int p, int o, struct dict* d); // create an s/p/o predicate
+void setsub(struct subst** s, int p, struct term* pr); // pushes a substitution
+struct term* evaluate(struct term* p, struct subst* s); // evaluates a term given a subst
+bool unify(struct term* s, struct subst* ssub, struct term* d, struct subst** dsub, bool f); // unification
+void prove(struct termset* goal, struct ruleset* cases); // backchaining
+bool equals(struct term* x, struct term* y); // deep-compare terms
+void pushp(struct termset** l, struct term* p); // push a term to a termset
+void pushr(struct ruleset** _rs, struct term* s, struct term* o); // push subject and object of s=>o into a ruleset
+void printterm(struct term* p, struct dict* d); // print a term
+struct term* term(int s, int p, int o); // create an s/p/o term
+struct term* mkterm(struct term* s, struct term* p, struct term* o);
+struct rule* mkrule(struct term* s, struct term* p, struct term* o, bool fact);
 void prints(struct subst* s, struct dict* d); // print a subst
-void printl(struct predlist* l, struct dict* d); // print a predlist
+void printl(struct termset* l, struct dict* d); // print a termset
 void printg(struct ground* g, struct dict* d); // print a ground struct
 void printe(struct evidence* e, struct dict* d); // print evidence
 void printei(struct evidence_item* ei, struct dict* d); // print single evidence step
 void printr(struct rule* r, struct dict* d);  // print rule
-void printps(struct predicate* p, struct subst* s, struct dict* d); // print a predicate with a subst
+void printps(struct term* p, struct subst* s, struct dict* d); // print a term with a subst
 void printp(struct proof* p, struct dict* d); // print a proof element
 void printrs(struct ruleset* rs, struct dict* d); // print a ruleset
 void printq(struct queue* q, struct dict* d); // print a proof queue
-struct ruleset* findruleset(struct ruleset* rs, int p); // find in a ruleset according to predicate
-struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct predicate* p); // finds a predicate in a ruleset or creates a new rule with that predicate if not exists
+struct ruleset* findruleset(struct ruleset* rs, int p); // find in a ruleset according to term
+struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct term* p); // finds a term in a ruleset or creates a new rule with that term if not exists
 int pushw(struct dict** _d, const char* s); // push a string into a dictionary and get its int id
 const char* dgetw(struct dict* d, int n); // decrypt string from dictionary given id
-int readp(struct dict* d, struct ruleset** _r); // read a predicate from user and stores it in a ruleset
+bool dgetwn(struct dict* d, const char* s, int* n); // returns the id of a given string in a dict
+int readp(struct dict* d, struct ruleset** _r); // read a term from user and stores it in a ruleset
 void readr(struct ruleset** _r); // read a rule from the user and stores it in a ruleset
-void menu(struct dict* d);
-void trim(char *s);
+void menu(struct session* ss); // run menu
+void printcmd(const char* line, struct dict* d); // handle print commands
+void trim(char *s); // trim strings from both ends using isspace
+void str2term(const char* s, struct term* p, struct dict* d); // parses a string as term in partial basic N3
+
+struct dict* gdict; // global dictionary, currently the only used
+int impl1, impl2, impl3;
+
+const char implication1[] = "http://www.w3.org/2000/10/swap/log#implies";
+const char implication2[] = "log:implies";
+const char implication3[] = "=>";
 
 const char main_menu[] = 
 "Tau deductive reasoner, part of Tau-Chain\n\
@@ -79,34 +92,40 @@ Type '?' for help.\n";
 const char help[] =
 "Syntax: <command> args>\n\
 Type '?' for help.\n\
+All inputs that ends with '.' (facts) or '?' (queries) are interpreted as new terms or rules, otherwise as commands.\n\n\
+A non-command line should contain triples, possibly nested with {} brackets (like N3). '=>' predicate is interpreted\n\
+as implication (<http://www.w3.org/2000/10/swap/log#implies>) as well as simply log:implies.\n\
 Commands:\n\n\
 ---------\n\n\
 Printing commands:\n\
 Syntax: <command> [id] where kb selects kb to list the desired values, and id of the desired value.\n\
 If id is not specified, all values from the specified kind will belisted.\n\
 Exceptions to this syntax is pa that prints everything in memory.\n\n\
-pp [id]\tprints predicates.\n\
+pp [id]\tprints terms.\n\
 pr [id]\tprints rules.\n\
 ps [id]\tprints substitutions.\n\
 pg [id]\tprints grounds.\n\
 pq [id]\tprints queues.\n\
 ppr [id]\tprints proofs.\n\
 pd [id]\tprints dicts.\n\
-pl [id]\tprints predicate lists.\n\
+pl [id]\tprints term lists.\n\
 pll [id]\tprints rule lists.\n\
 pe [id]\tprints evidence.\n\
-pa \tprint everything.\n\n\
-\nInsertion commands:\n\n\
-All commands that end with 's' will cause repeated insertion until a line equals the word 'done' is inserted.\n\
-ip[s] [kb]\tinsert predicate[s].\n\
-ir[s] [kb]\tinsert rule[s].\n\
-\nProof commands:\n\n\
-cq\tcreate a proof queue and print its id.\n\
-nq\tprocess the next frame in the queue.\n";
+pa \tprint everything.\n\
+\n\nProof commands:\n\n\
+qc\tcreate a proof queue and print its id.\n\
+qn\tprocess the next frame in the queue.\n\
+qa\tprocess all frames until full resolution.\n\
+\n\nSession commands:\n\n\
+Each session contain a proof queue, a kb (rule list), a goal (term list) and a dict.\n\
+sc\tClear session\n\
+sn\tCreate session\n\
+sw <id>\tSwitch session\n\n";
 
 const char prompt[] = "tau >> ";
 
 #define syn_err { printf("Syntax error."); continue; }
+#define str_input_len 255
 
 bool read_num(const char* line, int* x) {
 	*x = 0;
@@ -132,7 +151,45 @@ bool read_two_nums(const char* line, int* x, int* y) {
 	return !*line;	
 }
 
-void printcmd(struct dict* d, const char* line) {
+void str2term(const char* s, struct term* p, struct dict* d) {
+	p = 0;
+	p->s = &terms[nterms++];
+	p->o = &terms[nterms++];
+	int len = strlen(s), n = 0, m;
+	int braces = 0;
+	char pr[str_input_len], __s[str_input_len];
+	const char* _s = s;
+	while (s) {
+		if (*s == '{')
+			++braces;
+		else if (*s == '{')
+			--braces;
+		if (!braces) {
+			while (isspace(*s))
+				++s;
+			m = s - _s;
+			while (!isspace(*s)) {
+				if (*s == '{' || *s == '}')
+					syn_err;
+				pr[n++] = *s;
+			}
+			pr[n] = 0;
+			p->p = pushw(&d, pr);
+			strcpy(__s, s);
+			trim(__s);
+			str2term(__s, p->s, d);
+			memcpy(__s, s, m);
+			__s[m] = 0;
+			trim(s[m]);
+			str2term(__s, p->o, d);
+			break;
+		}
+	}
+	printf("String %s parsed into term as:\n", s);
+	printterm(p, d);
+}
+
+void printcmd(const char* line, struct dict* d) {
 	int id;
 	uint n = 0;
 	do 
@@ -140,7 +197,7 @@ void printcmd(struct dict* d, const char* line) {
 		switch (*line) {
 		case 'p':
 			if (isspace(line + 1)) {
-				printpred(&predicates[id], d);
+				printterm(&terms[id], d);
 				puts("\n");
 			} else {
 				if (*line == 'r') {
@@ -173,7 +230,7 @@ void printcmd(struct dict* d, const char* line) {
 			break;
 		case 'l':
 			if (isspace(line + 1)) {
-				printl(&predlists[id], d);
+				printl(&termsets[id], d);
 				puts("\n");
 			} else {
 				if (*line == 'l') {
@@ -189,24 +246,29 @@ void printcmd(struct dict* d, const char* line) {
 	else {
 		switch (*line) {
 		case 'p':
-			if (isspace(line + 1))
-				for (; n < npredicates; ++n) {
+			if (isspace(line + 1)) {
+				puts("Predicates:\n");
+				for (; n < nterms; ++n) {
 					printf("%d\t", n);
-					printpred(&predicates[n], d);
+					printterm(&terms[n], d);
 					puts("\n");
 				}
+			}
 			else {
-				if (*line == 'r')
+				if (*line == 'r') {
+					puts("Proof steps:\n");
 					for (; n < nproofs; ++n) {
 						printf("%d\t", n);
 						printp(&proofs[n], d);
 						puts("\n");
 					}
+				}
 				else
 					syn_err;
 			}
 			break;
 		case 'r':
+			puts("Rules:\n");
 			for (; n < nrules; ++n) {
 				printf("%d\t", n);
 				printr(&rules[n], d);
@@ -214,6 +276,7 @@ void printcmd(struct dict* d, const char* line) {
 			}
 			break;
 		case 's':
+			puts("Substitutions:\n");
 			for (; n < nsubsts; ++n) {
 				printf("%d\t", n);
 				prints(&substs[n], d);
@@ -221,12 +284,14 @@ void printcmd(struct dict* d, const char* line) {
 			}
 			break;
 		case 'g':
+			puts("Grounds:\n");
 			for (; n < ngrounds; ++n) {
 				printf("%d\t", n);
 				printg(&grounds[n], d);
 				puts("\n");
 			}
 		case 'q':
+			puts("Queues:\n");
 			for (; n < nqueues; ++n) {
 				printf("%d\t", n);
 				printq(&queues[n], d);
@@ -234,6 +299,7 @@ void printcmd(struct dict* d, const char* line) {
 			}
 			break;
 		case 'e':
+			puts("Evidence:\n");
 			for (; n < nevidences; ++n) {
 				printf("%d\t", n);
 				printe(&evidences[n], d);
@@ -241,19 +307,23 @@ void printcmd(struct dict* d, const char* line) {
 			}
 			break;
 		case 'l':
-			if (isspace(line + 1))
-				for (; n < npredlists; ++n) {
+			if (isspace(line + 1)) {
+				puts("Predicate lists:\n");
+				for (; n < ntermsets; ++n) {
 					printf("%d\t", n);
-					printl(&predlists[n], d);
+					printl(&termsets[n], d);
 					puts("\n");
 				}
+			}
 			else {
-				if (*line == 'l')
+				if (*line == 'l') {
+					puts("Rule lists:\n");
 					for (; n < nrulesets; ++n) {
 						printf("%d\t", n);
 						printrs(&rulesets[n], d);
 						puts("\n");
 					}
+				}
 				else
 					syn_err;
 			}
@@ -263,9 +333,22 @@ void printcmd(struct dict* d, const char* line) {
 	while(0);
 }
 
-void menu(struct dict* d) {
+// if 'bool fact' is true, then the term is set to the head of the rule
+// otherwise it is set to the body of the rule, indicating this is a query rather a fact
+struct rule* mkrule(struct term* s, struct term* p, struct term* o, bool fact) {
+	struct rule* r = &rules[nrules++];
+	bool b = fact && ( p->p == impl1 || p->p == impl2 || p->p == impl3 );
+	r->p = b ? o : 0;
+	pushp(&r->body, b ? s : mkterm(s, p, o));
+	return r;
+}
+
+// session has to be initialized by the caller
+void menu(struct session* ss) {
 	char* line;
+	struct dict* d = ss->d;
 	puts(main_menu);
+	printf("Session id: %p\n", ss);
 	rl_bind_key('\t', rl_complete);
 	while ((line = readline(prompt))) {
 		add_history(line);
@@ -274,65 +357,53 @@ void menu(struct dict* d) {
 			printf(help);
 			continue;
 		}
+		uint szline = strlen(line);
 		if (!line[0] || !line[1]) 
 			syn_err;
-		if (line[0] == 'p') {
+		if (line[szline - 1] == '.' || line[szline - 1] == '?' ) {
+			bool isq = line[szline - 1] == '?';
+			line[szline - 1] = 0;
+			struct term* t = &terms[nterms++];
+			str2term(line, t, ss->d);
+			if (isq) 
+				pushp(&ss->goal, t);
+			else
+				pushr(&ss->kb, t);
+		}
+		else if (*line == 'q') {
+			++line;
+			if (*line == 'a') {
+				ss->rgoal = mkrule(ss->goal);
+				ss->rkb = mkrule(ss->kb);
+				prove(ss->rgoal, ss->rkb);
+			}
+		}
+		else if (*line == 'p') {
 			++line;
 			if (isspace(++line))
 				syn_err;
+			printcmd(line, d);
+			// p pr rsgqe l ll
+			if (*line == 'a') {
+				printcmd("p", d);
+				printcmd("pr", d);
+				printcmd("r", d);
+				printcmd("s", d);
+				printcmd("g", d);
+				printcmd("q", d);
+				printcmd("e", d);
+				printcmd("l", d);
+				printcmd("ll", d);
+			}
 			continue;
 		}
-
 		free(line);
-	}
-
-
-	struct ruleset *kb = 0, *query = 0;
-	struct ruleset** curr = &kb;
-	char ch;
-	while (1) {
-	bool validinput = false;
-	while (!validinput) {
-			if (curr == &query)
-				printf("Press p for entering a new predicate, r for entering a new rule, or q to begin reasoning when done.");
-			else
-				printf("Press p for entering a new predicate, r for entering a new rule, or q to input a query when ready.");
-				fflush(stdout);
-			ch = getchar();
-			switch (ch) {
-			case 'p': 
-				validinput = true;
-				printf("\n");
-				readp(d, curr);
-				break;
-			case 'r': 
-				validinput = true;
-				printf("\n");
-				readr(curr); 
-				break;
-			case 'q': 
-				validinput = true;
-				printf("\n");
-				if (curr != &query)
-					curr = &query;
-				else
-					prove(query, kb);
-				break;
-			default:
-				break;
-			}
-		}
 	}
 }
 
-
-#define str_input_len 255
-
-struct dict* gdict;
-
 void initmem() {
-	memset(predicates 	= malloc(sizeof(struct predicate) * max_predicates), 		0, sizeof(struct predicate) * max_predicates);
-	memset(predlists 	= malloc(sizeof(struct predlist) * max_predlists), 		0, sizeof(struct predlist) * max_predlists);
+	memset(terms 	= malloc(sizeof(struct term) * max_terms), 		0, sizeof(struct term) * max_terms);
+	memset(termsets 	= malloc(sizeof(struct termset) * max_termsets), 		0, sizeof(struct termset) * max_termsets);
 	memset(rules 		= malloc(sizeof(struct rule) * max_rules), 			0, sizeof(struct rule) * max_rules);
 	memset(substs 		= malloc(sizeof(struct subst) * max_substs), 			0, sizeof(struct subst) * max_substs);
 	memset(rulesets 	= malloc(sizeof(struct ruleset) * max_rulesets), 		0, sizeof(struct ruleset) * max_rulesets);
@@ -345,8 +416,7 @@ void initmem() {
 }
 
 void trim(char *s) {
-	char *end;
-	uint len = strlen(s), n = 0;
+	uint len = strlen(s);
 	while (isspace ( *s ) ) 
 		memcpy(s, s + 1, len--);
 	while (isspace ( s[len - 1] ) )
@@ -369,7 +439,7 @@ struct ruleset* findruleset(struct ruleset* rs, int p) {
 	return rs;
 }
 
-struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct predicate* p) {
+struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct term* p) {
 	struct ruleset* prev = 0;
 	while (rs) {
 		if (rs->r && rs->r->p && equals(rs->r->p, p))
@@ -381,6 +451,7 @@ struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct predicate* p) {
 	prev->next->r = &rules[nrules++];
 	prev->next->r->p = p;
 	prev->next->r->body = 0;
+	prev->next->next = 0;
 	return prev->next;
 }
 
@@ -450,7 +521,7 @@ void unshift(struct queue** _q, struct proof* p) {
 	*_q = q;
 }
 
-void setsub(struct subst** s, int p, struct predicate* pr) {
+void setsub(struct subst** s, int p, struct term* pr) {
 	struct subst* _s = &substs[nsubsts++];
 	_s->p = p;
 	_s->pr = pr;
@@ -464,7 +535,7 @@ void setsub(struct subst** s, int p, struct predicate* pr) {
 	}
 }
 
-struct predicate* evaluate(struct predicate* p, struct subst* s) {
+struct term* evaluate(struct term* p, struct subst* s) {
 	if (p->p < 0) {
 		struct subst* _s = findsubst(s, p->p);
 		if (!_s)
@@ -473,12 +544,12 @@ struct predicate* evaluate(struct predicate* p, struct subst* s) {
 	}
 	if (!p->s && !p->o)
 		return p;
-	struct predicate *a = evaluate(p->s, s), *r = &predicates[npredicates++];
+	struct term *a = evaluate(p->s, s), *r = &terms[nterms++];
 	r->p = p->p;
 	if (a)
 		r->s = a;
 	else {
-		r->s = &predicates[npredicates++];
+		r->s = &terms[nterms++];
 		r->s->p = p->s->p;
 		r->s->s = r->s->o = 0;
 	}
@@ -486,21 +557,21 @@ struct predicate* evaluate(struct predicate* p, struct subst* s) {
 	if (a)
 		r->o = a;
 	else {
-		r->o = &predicates[npredicates++];
+		r->o = &terms[nterms++];
 		r->o->p = p->o->p;
 		r->o->s = r->o->o = 0;
 	}
 	return r;
 }
 
-void printps(struct predicate* p, struct subst* s, struct dict* d) {
-	printpred(p, d);
+void printps(struct term* p, struct subst* s, struct dict* d) {
+	printterm(p, d);
 	printf(" [ ");
 	prints(s, d);
 	printf(" ] ");
 }
 
-bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct subst** dsub, bool f) {
+bool unify(struct term* s, struct subst* ssub, struct term* d, struct subst** dsub, bool f) {
 	printf("unify called with ");
 	printps(s, ssub, gdict);
 	printf(" and ");
@@ -508,13 +579,13 @@ bool unify(struct predicate* s, struct subst* ssub, struct predicate* d, struct 
 	printf("\n");
 
 	if (s->p < 0) {
-		struct predicate* sval = evaluate(s, ssub);
+		struct term* sval = evaluate(s, ssub);
 		if (sval)
 			return unify(sval, ssub, d, dsub, f);
 		return true;
 	}
 	if (d->p < 0) {
-		struct predicate* dval = evaluate(d, *dsub);
+		struct term* dval = evaluate(d, *dsub);
 		if (dval)
 			return unify(s, ssub, dval, dsub, f);
 		else {
@@ -547,7 +618,7 @@ bool euler_path(struct proof* p) {
 	return false;
 }
 
-void prove(struct predlist* goal, struct ruleset* cases) {
+void prove(struct termset* goal, struct ruleset* cases) {
 	struct queue *qu = &queues[nqueues++];
 	struct rule* rg = &rules[nrules++];
 	rg->p = 0;
@@ -567,9 +638,9 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 		printp(p, gdict);
 		if (!p->last) {
 			if (!p->prev) {
-				struct predlist* r;
+				struct termset* r;
 				for (r = p->rul->body; r; r = r->next) {
-					struct predicate* t = evaluate(r->p, p->s);
+					struct term* t = evaluate(r->p, p->s);
 					struct evidence_item* ei = &evidence_items[nevidence_items++];
 					ei->p = t;
 					ei->g = p->g;
@@ -589,9 +660,9 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 			pushq(qu, r);
 			continue;
 		}
-		struct predicate* t = p->last->p;
-		printf("fetched predicate: ");
-		printpred(t, gdict);
+		struct term* t = p->last->p;
+		printf("fetched term: ");
+		printterm(t, gdict);
 		printf("\n");
 		struct ruleset* rs = cases;
 		printf("cases:\n");
@@ -625,26 +696,27 @@ void prove(struct predlist* goal, struct ruleset* cases) {
 	printe(e, gdict);
 }
 
-bool equals(struct predicate* x, struct predicate* y) {
+bool equals(struct term* x, struct term* y) {
 	return (!x == !y) && x && equals(x->s, y->s) && equals(x->o, y->o);
 }
 
-void pushp(struct predlist** l, struct predicate* p) {
-	if (!*l) {
-		*l = &predlists[npredlists++];
-		(*l)->p = 0;
-		(*l)->next = 0;
+void pushp(struct termset** _l, struct term* p) {
+	if (!*_l) {
+		*_l = &termsets[ntermsets++];
+		(*_l)->p = 0;
+		(*_l)->next = 0;
 	}
-	while ((*l)->next && !equals(p, (*l)->p))
-		l = &(*l)->next;
-	if ((*l)->next) 
-		return;
-	(*l)->next = &predlists[npredlists++];
-	(*l)->next->p = p;
-	(*l)->next->next = 0;
+	struct termset* l = *_l;
+	while (l->next && !equals(p, l->p))
+		l = l->next;
+	if (l->next) 
+		return; // already in
+	l->next = &termsets[ntermsets++];
+	l->next->p = p;
+	l->next->next = 0;
 }
 
-void pushr(struct ruleset** _rs, struct predicate* s, struct predicate* o) {
+void pushr(struct ruleset** _rs, struct term* s, struct term* o) {
 	struct ruleset* rs;
 	if (!*_rs) {
 		*_rs = &rulesets[nrulesets++];
@@ -656,11 +728,11 @@ void pushr(struct ruleset** _rs, struct predicate* s, struct predicate* o) {
 	pushp(&rs->r->body, s);
 }
 
-void printpred(struct predicate* p, struct dict* d) {
+void printterm(struct term* p, struct dict* d) {
 	const char* s;
 	if (!p)
 		return;
-	printpred(p->s, d);
+	printterm(p->s, d);
 	if (!d)
 		printf(" %d ", p->p);
 	else {
@@ -668,7 +740,7 @@ void printpred(struct predicate* p, struct dict* d) {
 		if (s)
 			puts(s);
 	}
-	printpred(p->o, d);
+	printterm(p->o, d);
 }
 
 void printp(struct proof* p, struct dict* d) {
@@ -700,18 +772,32 @@ void printq(struct queue* q, struct dict* d) {
 	printq(q->next, d);
 }
 
-struct predicate* pred(int s, int p, int o, struct dict* d) {
-	struct predicate* ps = &predicates[npredicates++];
-	struct predicate* pp = &predicates[npredicates++];
-	struct predicate* po = &predicates[npredicates++];
+struct term* term(int s, int p, int o) {
+	uint n = 0;
+	for (; n < nterms; ++n) {
+		struct term* pn = &terms[n];
+		if (pn->p == p && pn->s && pn->o)
+			if (pn->s->p == s && !pn->s->o && !pn->s->s)
+				if (pn->o->p == o && !pn->o->o && !p->n.o->s)
+					return pn;
+	}
+	struct term* ps = &terms[nterms++];
+	struct term* pp = &terms[nterms++];
+	struct term* po = &terms[nterms++];
 	pp->p = p;
 	pp->s = ps;
 	pp->o = po;
 	ps->s = ps->o = po->s = po->o = 0;
 	ps->p = s;
 	po->p = o;
-	printpred(pp, d);
-	printf(".\n");
+	return pp;
+}
+
+struct term* mkterm(struct term* s, struct term* p, struct term* o) {
+	struct term* pp = &terms[nterms++];
+	pp->p = p;
+	pp->s = s;
+	pp->o = o;
 	return pp;
 }
 
@@ -719,16 +805,16 @@ void prints(struct subst* s, struct dict* d) {
 	if (!s)
 		return;
 	printf("%d / ", s->p);
-	printpred(s->pr, d);
+	printterm(s->pr, d);
 	if (s->next)
 		printf(", ");
 	prints(s->next, d);
 }
 
-void printl(struct predlist* l, struct dict* d) {
+void printl(struct termset* l, struct dict* d) {
 	if (!l)
 		return;
-	printpred(l->p, d);
+	printterm(l->p, d);
 	printf(", ");
 	printl(l->next, d);
 }
@@ -738,7 +824,7 @@ void printr(struct rule* r, struct dict* d) {
 		return;
 	printl(r->body, d);
 	printf(" => ");
-	printpred(r->p, d);
+	printterm(r->p, d);
 }
 
 void printg(struct ground* g, struct dict* d) {
@@ -756,7 +842,7 @@ void printei(struct evidence_item* ei, struct dict* d) {
 	if (!ei)
 		return;
 	printf("evidence_item:\n");
-	printpred(ei->p, d);
+	printterm(ei->p, d);
 	printf("\n");
 	printg(ei->g, d);
 	printf("\n");
@@ -772,7 +858,9 @@ void printe(struct evidence* e, struct dict* d) {
 }
 
 int pushw(struct dict** _d, const char* s) {
-	uint c = 1;
+	int c = 1, n;
+	if (dgetwn(*_d, s, &n))
+		return n;
 	if (!*_d) {
 		*_d = &dicts[ndicts++];
 		(*_d)->next = 0;
@@ -788,6 +876,8 @@ int pushw(struct dict** _d, const char* s) {
 	d->next = &dicts[ndicts++];
 	d->s = malloc(strlen(s) + 1);
 	strcpy(d->s, s);
+	if (s[0] && (s[1] == '?' || s[1] == '_'))
+		c = -c;
 	return d->n = c;
 }
 
@@ -797,6 +887,16 @@ const char* dgetw(struct dict* d, int n) {
 	if (d->n == n)
 		return d->s;
 	return dgetw(d->next, n);
+}
+
+bool dgetwn(struct dict* d, const char* s, int* n) {
+	if (!d || !s)
+		return false;
+	if (!strcmp(d->s, s)) {
+		*n = d->n;
+		return true;
+	}
+	return dgetwn(d->next, s, n);
 }
 
 int _readp(struct dict* d, struct ruleset** _r, char* s, char* p, char* o, int* ns, int *np, int *no) {
@@ -836,20 +936,19 @@ int _readp(struct dict* d, struct ruleset** _r, char* s, char* p, char* o, int* 
 	r->next = &rulesets[nrulesets++];
 	r->r = &rules[nrules++];
 	r->r->body = 0;
-	r->r->p = pred(*ns, *np, *no, d);
+	r->r->p = term(*ns, *np, *no);
 
-	return (r->r->p - predicates)/sizeof(struct predicate);
+	return (r->r->p - terms)/sizeof(struct term);
 }
 
 int readp(struct dict* d, struct ruleset** _r) {
 	char s[str_input_len], p[str_input_len], o[str_input_len];
 	int ns, np, no;
-	printf("Enter a predicate as 's p o':");
 	int pid = _readp(d, _r, s, p, o, &ns, &np, &no);
 	if (pid != -1)
-		printf("predicate read: %s %s %s ( %d %d %d ) Predicate id: %d\n ", s, p, o, ns, np, no, pid);
+		printf("term read: %s %s %s ( %d %d %d ) Predicate id: %d\n ", s, p, o, ns, np, no, pid);
 	else
-		printf("Cancelled.\n");
+		printf("Error.\n");
 	return pid;
 }
 
@@ -857,7 +956,7 @@ void readr(struct ruleset** r) {
 	char s[16], o[16], ch;
 	uint pos = 0;
 	int ns, no;
-	printf("Enter two numbers separated by spaces ('s o') such that predicate s implies predicate o: ");
+	printf("Enter two numbers separated by spaces ('s o') such that term s implies term o: ");
 	while ((ch = getchar()) != ' ')
 		s[pos++] = ch;
 	pos = 0;
@@ -865,27 +964,36 @@ void readr(struct ruleset** r) {
 		o[pos++] = ch;
 	ns = atoi(s);
 	no = atoi(o);
-	pushr(r, &predicates[ns], &predicates[no]);
+	pushr(r, &terms[ns], &terms[no]);
 }
 
 int main(int argc, char* argv[]) {
 	initmem();
 	gdict = &dicts[ndicts++];
-	struct predlist* goal = &predlists[npredlists++];
+	struct termset* goal = &termsets[ntermsets++];
 	struct ruleset* cases = 0;
 
+	struct session ss;
+	ss.kb = 0;
+	ss.goal = 0;
+	ss.d = 0;
+	ss.q = 0;
+	impl1 = pushw(ss.d, implication1); // define implication
+	impl2 = pushw(ss.d, implication2); 
+	impl3 = pushw(ss.d, implication3);
+
 	if (argc == 1) {
-		menu(gdict);
+		menu(&ss);
 		return 0;
 	}
 
 	const int socrates = 1, a = 2, human = 3, man = 4, mortal = 5, _x = -6, _y = -7, _z = -8;
-	printf("socrates a man:\t"); 	struct predicate* p1 = pred(socrates, a, man, gdict);
-	printf("_x a human:\t"); 	struct predicate* p2 = pred(_x, a, human, gdict);
-	printf("_x a man:\t"); 		struct predicate* p3 = pred(_x, a, man, gdict);
-	printf("_y a man:\t"); 		struct predicate* p4 = pred(_y, a, human, gdict);
-	printf("_y a mortal:\t"); 	struct predicate* p5 = pred(_y, a, mortal, gdict);
-	printf("_z a mortal:\t"); 	struct predicate* p6 = pred(_z, a, mortal, gdict);
+	printf("socrates a man:\t"); 	struct term* p1 = term(socrates, a, man);
+	printf("_x a human:\t"); 	struct term* p2 = term(_x, a, human);
+	printf("_x a man:\t"); 		struct term* p3 = term(_x, a, man);
+	printf("_y a man:\t"); 		struct term* p4 = term(_y, a, human);
+	printf("_y a mortal:\t"); 	struct term* p5 = term(_y, a, mortal);
+	printf("_z a mortal:\t"); 	struct term* p6 = term(_z, a, mortal);
 
 	pushr(&cases, 0, p1);
 	pushr(&cases, 0, p2);
