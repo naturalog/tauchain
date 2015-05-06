@@ -188,9 +188,9 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
 	while ( queue.size() > 0 ) {
-		jst ( "{\"step\":" << step << ",\"queue\":" << queue << "}" );
 		ppti c = queue.front();
 		queue.pop_front();
+		jst ( "{\"step\":" << step << ",\"frame\":" << *c << "}" );
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
@@ -264,7 +264,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 					jstq ( "  ~~  ~~  ~~" );
 				}
 				if ( !ep ) {
-					jst ( "{\"Adding to queue\": " << *r << "}");
+					//jst ( "{\"Adding to queue\": " << *r << "}");
 					queue.push_front ( r );
 				} else jstq ( "didn't reach top" );
 				jstq ( "Done euler loop" );
