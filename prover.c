@@ -447,7 +447,7 @@ void printcmd(const char* line, struct session* ss) {
 char* readline(const char* p) {
 	char* l = malloc(str_input_len);
 	size_t sz = str_input_len;
-	printf("\n%s ", p);
+	printf("%s ", p);
 	if (getline(&l, &sz, stdin) < 1)
 		return 0;
 	l[strlen(l) - 1] = 0;
