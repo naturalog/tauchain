@@ -678,7 +678,7 @@ void setsub(struct subst** s, int p, struct term* pr) {
 		*s = _s;
 	else {
 		while ((*s)->next) 
-			s = &(*s)->next;
+			*s = (*s)->next;
 		(*s)->next = _s;
 	}
 }
@@ -779,13 +779,14 @@ void prove(struct termset* goal, struct ruleset* cases) {
 	qu->p->last = rg->body;
 	struct evidence* e = &evidences[nevidences++];
 	do {
-		struct queue *q = qu, *prev = qu;
-		while (q && q->next) {
-			prev = q;
+		struct queue *q = qu;
+		while (q && q->next) 
 			q = q->next;
-		}
 		struct proof* p = q->p;
-		prev->next = 0;
+		if (q->prev)
+			q->prev->next = 0;
+		else
+			qu = 0;
 //		qu = qu->next;
 		printf("popped frame...\n");
 		printp(p, gdict);
@@ -952,7 +953,9 @@ struct term* term(int s, int p, int o) {
 void prints(struct subst* s, struct dict* d) {
 	if (!s)
 		return;
-	printf("%d / ", s->p);
+	const char* _s = dgetw(d, s->p);
+	if (_s)
+		printf("%s / ", _s);
 	printterm(s->pr, d);
 	if (s->next)
 		printf(", ");
