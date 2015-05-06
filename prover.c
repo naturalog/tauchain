@@ -38,7 +38,7 @@ const uint max_evidence_items = 1024; 	uint nevidence_items = 0; 	struct evidenc
 const uint max_evidences = 1024; 	uint nevidences = 0; 		struct evidence* evidences;
 const uint max_dicts = 1024; 		uint ndicts = 0; 		struct dict* dicts;
 
-void initmem();
+void initmem(bool);
 void pushg(struct ground** g, struct rule* r, struct subst* s); // push rule and subst pair into ground
 void pushe(struct evidence** _e, struct term* t, struct ground* g); // push evidence item into evidence
 struct subst* clone(struct subst* s); // deep-copy a subst
@@ -517,6 +517,12 @@ void menu(struct session* ss) {
 						printcmd("l", ss);
 						printcmd("ll", ss);
 					}
+				} else if (*line == 's') {
+					++line;
+					if (*line == 'c') {
+						initmem(false);
+						puts("Memory cleared.");
+					}
 				}
 			}
 		}
@@ -524,18 +530,21 @@ void menu(struct session* ss) {
 	}
 }
 
-void initmem() {
-	memset(terms	 	= malloc(sizeof(struct term) * max_terms), 			0, sizeof(struct term) * max_terms);
-	memset(termsets 	= malloc(sizeof(struct termset) * max_termsets), 		0, sizeof(struct termset) * max_termsets);
-	memset(rules 		= malloc(sizeof(struct rule) * max_rules), 			0, sizeof(struct rule) * max_rules);
-	memset(substs 		= malloc(sizeof(struct subst) * max_substs), 			0, sizeof(struct subst) * max_substs);
-	memset(rulesets 	= malloc(sizeof(struct ruleset) * max_rulesets), 		0, sizeof(struct ruleset) * max_rulesets);
-	memset(grounds 		= malloc(sizeof(struct ground) * max_grounds), 			0, sizeof(struct ground) * max_grounds);
-	memset(proofs 		= malloc(sizeof(struct proof) * max_proofs), 			0, sizeof(struct proof) * max_proofs);
-	memset(dicts 		= malloc(sizeof(struct dict) * max_dicts), 			0, sizeof(struct dict) * max_dicts);
-	memset(queues 		= malloc(sizeof(struct queue) * max_queues), 			0, sizeof(struct queue) * max_queues);
-	memset(evidence_items 	= malloc(sizeof(struct evidence_item) * max_evidence_items), 	0, sizeof(struct evidence_item) * max_evidence_items);
-	memset(evidences 	= malloc(sizeof(struct evidence) * max_evidences), 		0, sizeof(struct evidence) * max_evidences);
+// set alloc to false in order to only zero the memory
+void initmem(bool alloc) {
+	memset(terms	 	= alloc ? malloc(sizeof(struct term) * max_terms) : terms,		0, sizeof(struct term) * max_terms);
+	memset(termsets 	= alloc ? malloc(sizeof(struct termset) * max_termsets) : termsets,	0, sizeof(struct termset) * max_termsets);
+	memset(rules 		= alloc ? malloc(sizeof(struct rule) * max_rules) : rules,		0, sizeof(struct rule) * max_rules);
+	memset(substs 		= alloc ? malloc(sizeof(struct subst) * max_substs) : substs,		0, sizeof(struct subst) * max_substs);
+	memset(rulesets 	= alloc ? malloc(sizeof(struct ruleset) * max_rulesets) : rulesets,	0, sizeof(struct ruleset) * max_rulesets);
+	memset(grounds 		= alloc ? malloc(sizeof(struct ground) * max_grounds) : grounds,	0, sizeof(struct ground) * max_grounds);
+	memset(proofs 		= alloc ? malloc(sizeof(struct proof) * max_proofs) : proofs,		0, sizeof(struct proof) * max_proofs);
+	memset(dicts 		= alloc ? malloc(sizeof(struct dict) * max_dicts) : dicts,		0, sizeof(struct dict) * max_dicts);
+	memset(queues 		= alloc ? malloc(sizeof(struct queue) * max_queues) : queues,		0, sizeof(struct queue) * max_queues);
+	memset(evidences 	= alloc ? malloc(sizeof(struct evidence) * max_evidences) : evidences,	0, sizeof(struct evidence) * max_evidences);
+	memset(evidence_items = alloc ? malloc(sizeof(struct evidence_item) * max_evidence_items) : evidence_items, 0, sizeof(struct evidence_item) * max_evidence_items);
+	nterms = ntermsets = nrules = nsubsts = nrulesets = ngrounds = nproofs = nqueues = nevidence_items = nevidences = ndicts = 0;
+	gdict = &dicts[ndicts++];
 }
 
 void trim(char *s) {
@@ -816,23 +825,60 @@ bool euler_path(struct proof* p) {
 	return false;
 }
 
+int builtin(struct term* t, struct proof* p) {
+	if (!strcmp(dgetw(gdict, t->p), "GND"))
+		return 1;
+	return -1;
+}
+/*
+void queue_test() {
+	struct queue *qu = 0;//&queues[nqueues++];
+	int n = 0;
+	pushq(&qu, 10);
+	struct queue* qq = qu;
+	do {
+		printf("step: %d data: %d\n", n, (int)qq->p);
+	} while (qq = qq->next);
+	for (; n < 7; ++n) {
+		struct queue *q = qu;
+		while (q && q->next) 
+			q = q->next;
+		struct proof* p = q->p;
+		if (q->prev)
+			q->prev->next = 0;
+		else
+			qu = 0;
+		if (!(n%3))
+			pushq(&qu, n+1);
+//		else if (!(n%2))
+			unshift(&qu, (n + 1) * 10);
+		qq = qu;
+		if (!qq) {
+			printf("step: %d queue is null\n", n);
+		}
+		else do {
+			printf("step: %d data: %d\n", n, (int)qq->p);
+		} while (qq = qq->next);
+	}
+}
+*/
 void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
-	struct queue *qu = &queues[nqueues++];
+	struct queue *qu = 0;//&queues[nqueues++];
 	struct rule* rg = &rules[nrules++];
+	struct proof* p = &proofs[nproofs++];
 	rg->p = 0;
 	rg->body = goal;
-	qu->p = &proofs[nproofs++];
-	qu->prev = qu->next = 0;
-	qu->p->s = 0;
-	qu->p->g = 0;
-	qu->p->rul = rg;
-	qu->p->last = rg->body;
+	p->rul = rg;
+	p->s = 0;
+	p->g = 0;
+	p->last = rg->body;
+	pushq(&qu, p);
 	struct evidence* e = 0;
 	do {
 		struct queue *q = qu;
 		while (q && q->next) 
 			q = q->next;
-		struct proof* p = q->p;
+		p = q->p;
 		if (q->prev)
 			q->prev->next = 0;
 		else
@@ -842,6 +888,23 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 			TRACE(printf("Tracking back from "));
 			TRACE(printterm(t, gdict));
 			TRACE(puts(""));
+			int b = builtin(t, p);
+			if (b == 1) {
+				struct proof* r = &proofs[nproofs++];
+				*r = *p;
+				r->g = 0;
+				struct rule* rl = &rules[nrules++];
+				rl->p = evaluate(t, p->s);
+				rl->body = 0;
+				pushg(&r->g, rl, 0);
+				r->last = r->last->next;
+				pushq(&qu, r);
+		            	continue;
+		        }
+		    	else 
+				if (!b) 
+					continue;
+
 			struct ruleset* rs = cases;
 			while ((rs = findruleset(rs, t->p))) {
 				struct subst* s = 0;
@@ -869,7 +932,7 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 					r->s = 0;
 					r->g = copyg(p->g);
 					if (!rs->r->body) {
-						TRACE(printf(" adding ground "));
+						TRACE(printf("\t\tadding ground to new frame "));
 						pushg( &r->g, rs->r, 0 );
 						TRACE(printg(r->g, gdict));
 						TRACE(puts("."));
@@ -888,7 +951,11 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 		}
 		else if (!p->prev) {
 			struct termset* r;
-			TRACE(puts("Cannot longer go backward. "));
+			TRACE(puts("/*-------------- No more backward frames ----------------"));
+			TRACE(puts("Current queue:"));
+			TRACE(printq(qu, gdict));
+			TRACE(puts("Current proof element:"));
+			TRACE(printp(p, gdict));
 			for (r = p->rul->body; r; r = r->next) { 
 				struct term* t = evaluate(r->p, p->s);
 //				printf("\tAdding evidence: ");
@@ -898,15 +965,17 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 //				puts(".\n");
 				pushe(&e, t, p->g);
 			}
+			TRACE(puts("-------------------------------------------------------*/"));
 		} else {
-			struct ground* g = 0;
-			TRACE(printf("Finished one level."));
+			TRACE(puts("/*---------------- Finished a Rule ----------------------"));
+			struct ground* g = copyg(p->g);
 			if (p->rul->body) {
-				TRACE(printf(" Adding ground: "));
+				TRACE(printf("Adding ground: "));
 				pushg(&g, p->rul, p->s);
 				TRACE(printg(g, gdict));
+				TRACE(puts(""));
 			}
-			TRACE(printf(" Going a frame back from rule: "));
+			TRACE(printf("Going a frame back (except ground), and forwarding the index.\nThat frame contains rule: "));
 			TRACE(printr(p->prev->rul, gdict));
 			TRACE(puts("."));
 			struct proof* r = &proofs[nproofs++];
@@ -914,8 +983,25 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 			r->g = g;
 			r->s = clone(p->prev->s);
 			unify(p->rul->p, p->s, r->last->p, &r->s, true);
+			TRACE(printf("Forwarding from rule: "));
+			TRACE(printterm(r->last->p, gdict));
+#ifdef DEBUG			
+			if (r->last->next) {
+				TRACE(printf(" to rule: "));
+				TRACE(printterm(r->last->next->p, gdict));
+			}
+				TRACE(printf(" to null (prev rule also finished). "));
+#endif			
+			TRACE(printf("\nBoth in body of rule: "));
+			TRACE(printr(r->rul, gdict));
 			r->last = r->last->next;
 			pushq(&qu, r);
+			TRACE(printf("Pushed new frame. Current queue:"));
+			TRACE(printq(qu, gdict));
+			TRACE(puts("\nNew proof element:"));
+			TRACE(printp(r, gdict));
+			TRACE(puts("-------------------------------------------------------*/"));
+
 			continue;
 		}
 	} while (qu);
@@ -977,13 +1063,13 @@ void printterm(struct term* p, struct dict* d) {
 void printp(struct proof* p, struct dict* d) {
 	if (!p)
 		return;
-	printf("rule: ");
+	printf("\trule:\t");
 	printr(p->rul, d);
-	printf("\nremaining: ");
+	printf("\n\tremaining:\t");
 	printl(p->last, d);
-	printf("\nprev: %lu\nsubst: ", (p - proofs)/sizeof(struct proof));
+	printf("\n\tprev:\t%lu\n\tsubst:\t", (p - proofs)/sizeof(struct proof));
 	prints(p->s, d);
-	printf("\nground:");
+	printf("\n\tground:\t");
 	printg(p->g, d);
 	printf("\n");
 }
@@ -1000,6 +1086,8 @@ void printq(struct queue* q, struct dict* d) {
 	if (!q)
 		return;
 	printp(q->p, d);
+	if (q->next)
+		puts("");
 	printq(q->next, d);
 }
 
@@ -1216,9 +1304,9 @@ void readr(struct ruleset** r) {
 }
 
 int main(int argc, char* argv[]) {
-	printf("args: %s argc: %d", argv[0], argc);
-	initmem();
-	gdict = &dicts[ndicts++];
+	initmem(true);
+//	queue_test();
+//	exit(0);
 
 	struct session ss;
 	ss.kb = 0;
