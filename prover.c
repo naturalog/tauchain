@@ -607,6 +607,12 @@ struct subst* clone(struct subst* s) {
 void pushq(struct queue* _q, struct proof* p) {
 	if (!p)
 		printf("Error: pushq called with null proof\n");
+	if (!_q) {
+		_q = &queues[nqueues++];
+		_q->next = _q->prev = 0;
+		_q->p = p;
+		return;
+	}
 	struct queue* q = &queues[nqueues++];
 	q->p = p;
 	while (_q->next)
@@ -995,6 +1001,8 @@ int pushw(struct dict** _d, const char* s) {
 		(*_d)->next = 0;
 		(*_d)->s = malloc(strlen(s) + 1);
 		strcpy((*_d)->s, s);
+		if (s[0] && (s[0] == '?' || s[0] == '_'))
+			c = -c;
 		return (*_d)->n = c;
 	}
 	struct dict* d = *_d;
@@ -1005,7 +1013,7 @@ int pushw(struct dict** _d, const char* s) {
 	d->next = &dicts[ndicts++];
 	d->s = malloc(strlen(s) + 1);
 	strcpy(d->s, s);
-	if (s[0] && (s[1] == '?' || s[1] == '_'))
+	if (s[0] && (s[0] == '?' || s[0] == '_'))
 		c = -c;
 	return d->n = c;
 }

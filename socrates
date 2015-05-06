@@ -1,0 +1,6 @@
+socrates a man.
+{ ?x a man } => { ?x a human }.
+{ ?x a human } => { ?x a mortal }.
+?y a mortal?
+qa
+
