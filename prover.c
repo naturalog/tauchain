@@ -11,20 +11,20 @@ typedef char bool;
 const bool true = 1;
 const bool false = 0;
 
-struct term 	{ int 			p;	struct term 	*s, *o;					};
+struct term 		{ int 		p;	struct term 	*s, *o;						};
 struct rule 		{ struct term* 	p; 	struct termset*	body;						};
-struct subst 		{ int 			p;	struct term* 	pr; 	struct subst* 		next;	};
-struct evidence		{ int 			p;	struct evidence_item* 	item;	struct evidence* 	next;	};
-struct ground 		{ struct rule* 		r;	struct subst* 		s; 	struct ground* 		next;	};
-struct queue		{ struct proof* 	p;	struct queue* 		prev;	struct queue* 		next;	};
+struct subst 		{ int 		p;	struct term* 	pr; 		struct subst* 		next;	};
+struct evidence		{ int 		p;	struct evidence_item* 	item;	struct evidence* 	next;	};
+struct ground 		{ struct rule* 	r;	struct subst* 		s; 	struct ground* 		next;	};
+struct queue		{ struct proof*	p;	struct queue* 		prev;	struct queue* 		next;	};
 struct evidence_item	{ struct term* 	p;	struct ground* 		g;	struct evidence_item* 	next;	};
-struct termset	 	{ struct term* 	p; 					struct termset* 	next; 	};
-struct ruleset		{ struct rule*	 	r; 					struct ruleset*		next;	};
-struct dict 		{ char*  		s;	int 			n;	struct dict*		next;	};
-struct session		{ struct queue*		q;	struct ruleset *rkb, *rgoal;	struct termset *kb, *goal;	struct dict*	d;	};
-struct proof 		{ struct rule* 		rul;	struct termset*		last;	struct proof* 		prev; 	struct subst* 	s; 	struct ground* g;	};
+struct termset	 	{ struct term*	p; 					struct termset* 	next; 	};
+struct ruleset		{ struct rule* 	r; 					struct ruleset*		next;	};
+struct dict 		{ char*  	s;	int 			n;	struct dict*		next;	};
+struct session		{ struct queue*	q;	struct ruleset *	rkb;	struct termset *kb, *goal;	struct dict*	d;	};
+struct proof 		{ struct rule* 	rul;	struct termset*		last;	struct proof* 		prev; 	struct subst* 	s; 	struct ground* g;	};
 
-const uint max_terms = 1024;	uint nterms = 0; 		struct term* terms;
+const uint max_terms = 1024;		uint nterms = 0; 		struct term* terms;
 const uint max_termsets = 1024;		uint ntermsets = 0; 		struct termset* termsets;
 const uint max_rules = 1024;		uint nrules = 0; 		struct rule* rules;
 const uint max_substs = 1024; 		uint nsubsts = 0; 		struct subst* substs;
@@ -38,14 +38,14 @@ const uint max_dicts = 1024; 		uint ndicts = 0; 		struct dict* dicts;
 
 void initmem();
 void pushg(struct ground** g, struct rule* r, struct subst* s); // push rule and subst pair into ground
-void pushe(struct evidence* e, int p, struct evidence_item* ei); // push evidence item into evidence
+void pushe(struct evidence** _e, struct term* t, struct ground* g); // push evidence item into evidence
 struct subst* clone(struct subst* s); // deep-copy a subst
 void pushq(struct queue**, struct proof* p); // push a proof to the back of a proofs queue
 void unshift(struct queue** _q, struct proof* p); // push a proof to the front of the queue
 void setsub(struct subst** s, int p, struct term* pr); // pushes a substitution
 struct term* evaluate(struct term* p, struct subst* s); // evaluates a term given a subst
 bool unify(struct term* s, struct subst* ssub, struct term* d, struct subst** dsub, bool f); // unification
-void prove(struct termset* goal, struct ruleset* cases); // backchaining
+void prove(struct termset* goal, struct ruleset* cases, bool interactive); // backchaining
 bool equals(struct term* x, struct term* y); // deep-compare terms
 void pushp(struct termset** l, struct term* p); // push a term to a termset
 void pushr(struct ruleset** _rs, struct term* s, struct term* o); // push subject and object of s=>o into a ruleset
@@ -76,6 +76,7 @@ void trim(char *s); // trim strings from both ends using isspace
 void str2term(const char* s, struct term** p, struct dict* d); // parses a string as term in partial basic N3
 void term2rs(struct term* t, struct ruleset** r, bool fact); // converts a (complex) term into a ruleset by tracking the implication
 struct ruleset* ts2rs(struct termset* t, bool fact); // same as term2rs but from termset
+void throw(const char*);
 
 struct dict* gdict; // global dictionary, currently the only used
 int impl1, impl2, impl3;
@@ -114,8 +115,7 @@ pll [id]\tprints rule lists.\n\
 pe [id]\tprints evidence.\n\
 pss [id]\tprint session.\n\
 \n\nProof commands:\n\n\
-qc\tcreate a proof queue and print its id.\n\
-qn\tprocess the next frame in the queue.\n\
+qi\tinteractive proof.\n\
 qa\tprocess all frames until full resolution.\n\
 \n\nSession commands:\n\n\
 Each session contain a proof queue, a kb (rule list), a goal (term list) and a dict.\n\
@@ -151,6 +151,11 @@ bool read_two_nums(const char* line, int* x, int* y) {
 		*y += *line++ - '0';
 	}
 	return !*line;	
+}
+
+void throw(const char* s) {
+	puts(s);
+	free(0);
 }
 
 bool has_no_spaces(const char* s) {
@@ -266,8 +271,8 @@ void printss(struct session* ss) {
 	printl(ss->goal, ss->d);
 	printf("KB rules:\n");
 	printrs(ss->rkb, ss->d);
-	printf("Goal rules:\n");
-	printrs(ss->rgoal, ss->d);
+//	printf("Goal rules:\n");
+//	printrs(ss->rgoal, ss->d);
 }
 
 void printcmd(const char* line, struct session* ss) {
@@ -444,13 +449,13 @@ void menu(struct session* ss) {
 		add_history(line);
 		uint szline = strlen(line);
 		if (szline) {
-			if (line[szline - 1] == '.' || line[szline - 1] == '?' ) {
+			if ((line[szline - 1] == '.' || line[szline - 1] == '?') && szline > 1 ) {
 				bool isq = line[szline - 1] == '?';
 				line[szline - 1] = 0;
 				trim(line);
 				struct term* t = &terms[nterms++];
 				str2term(line, &t, ss->d);
-				printf("String %s parsed into term as:\n", line);
+//				printf("String %s parsed into term as:\n", line);
 				printterm(t, ss->d);
 				puts("");
 				if (isq) 
@@ -464,9 +469,12 @@ void menu(struct session* ss) {
 				else if (*line == 'q') {
 					++line;
 					if (*line == 'a') {
-		//				ss->rgoal = ts2rs(ss->goal);
 						ss->rkb = ts2rs(ss->kb, true);
-						prove(ss->goal, ss->rkb);
+						prove(ss->goal, ss->rkb, false);
+					}
+					else if (*line == 'i') {
+						ss->rkb = ts2rs(ss->kb, true);
+						prove(ss->goal, ss->rkb, true);
 					}
 				}
 				else if (*line == 'p') {
@@ -579,6 +587,8 @@ struct ground* copyg(struct ground* g) {
 }
 
 void pushg(struct ground** _g, struct rule* r, struct subst* s) {
+	if (!r)
+		throw("Error: ried to add a null rule!\n");
 	struct ground* g;
 	if (!*_g) {
 		g = &grounds[ngrounds++];
@@ -597,11 +607,31 @@ void pushg(struct ground** _g, struct rule* r, struct subst* s) {
 	g->next->next = 0;
 }
 
-void pushe(struct evidence* e, int p, struct evidence_item* ei) {
-	while (e->next) 
+void pushe(struct evidence** _e, struct term* t, struct ground* g) {
+	struct evidence* e;
+	struct evidence_item* ei = &evidence_items[nevidence_items++];
+	ei->p = t;
+	ei->g = g;
+	ei->next = 0;
+	if (!*_e) {
+		(*_e) = &evidences[nevidences++];
+		(*_e)->p = t->p;
+		(*_e)->item = ei;
+		(*_e)->next = 0;
+		return;
+	}
+	e = *_e;
+	while (e->next && e->p != t->p)
 		e = e->next;
+	if (e->p == t->p) {
+		struct evidence_item* i = e->item;
+		while (i->next)
+			i = i->next;
+		i->next = ei;
+		return;
+	}
 	e->next = &evidences[nevidences++];
-	e->next->p = p;
+	e->next->p = t->p;
 	e->next->item = ei;
 	e->next->next = 0;
 }
@@ -720,12 +750,6 @@ void printps(struct term* p, struct subst* s, struct dict* d) {
 }
 
 bool unify(struct term* s, struct subst* ssub, struct term* d, struct subst** dsub, bool f) {
-	printf("unify called with ");
-	printps(s, ssub, gdict);
-	printf(" and ");
-	printps(d, *dsub, gdict);
-	printf("\n");
-
 	if (s->p < 0) {
 		struct term* sval = evaluate(s, ssub);
 		if (sval)
@@ -766,7 +790,7 @@ bool euler_path(struct proof* p) {
 	return false;
 }
 
-void prove(struct termset* goal, struct ruleset* cases) {
+void prove(struct termset* goal, struct ruleset* cases, bool interactive) {
 	struct queue *qu = &queues[nqueues++];
 	struct rule* rg = &rules[nrules++];
 	rg->p = 0;
@@ -777,7 +801,7 @@ void prove(struct termset* goal, struct ruleset* cases) {
 	qu->p->g = 0;
 	qu->p->rul = rg;
 	qu->p->last = rg->body;
-	struct evidence* e = &evidences[nevidences++];
+	struct evidence* e = 0;
 	do {
 		struct queue *q = qu;
 		while (q && q->next) 
@@ -787,24 +811,73 @@ void prove(struct termset* goal, struct ruleset* cases) {
 			q->prev->next = 0;
 		else
 			qu = 0;
-//		qu = qu->next;
-		printf("popped frame...\n");
-		printp(p, gdict);
-		if (!p->last) {
-			if (!p->prev) {
-				struct termset* r;
-				for (r = p->rul->body; r; r = r->next) {
-					struct term* t = evaluate(r->p, p->s);
-					struct evidence_item* ei = &evidence_items[nevidence_items++];
-					ei->p = t;
-					ei->g = p->g;
-					pushe(e, t->p, ei);
-				}
-				continue;
+		if (p->last) {
+			struct term* t = p->last->p;
+			printf("Trying to track back from ");
+			printterm(t, gdict);
+			puts("");
+			struct ruleset* rs = cases;
+//			printf("cases:\n");
+//			printrs(rs, gdict);
+			while ((rs = findruleset(rs, t->p))) {
+				struct subst* s = 0;
+				printf("\tTrying to unify ");
+				printps(t, p->s, gdict);
+				printf(" and ");
+				printps(rs->r->p, s, gdict);
+				printf("... ");
+				if (unify(t, p->s, rs->r->p, &s, true)) {
+					printf("\tunification succeeded");
+					if (s) {
+						printf(" with new substitution: ");
+						prints(s, gdict);
+					}
+					puts("");
+					if (euler_path(p))
+						continue;
+					struct proof* r = &proofs[nproofs++];
+					r->rul = rs->r;
+					printf("\t\tPushed frame with rule ");
+					printr(r->rul, gdict);
+					r->last = r->rul->body;//p->last->next;
+					r->prev = p;
+					r->s = 0;
+					r->g = copyg(p->g);
+					if (!rs->r->body) {
+						printf(" adding ground ");
+						pushg( &r->g, rs->r, 0 );
+						printg(r->g, gdict);
+					}
+					puts(".");
+					unshift(&qu, r);
+//					printf("pushed frame...\n");
+//					printp(r, gdict);
+//					printf("queue:\n");
+//					printq(qu, gdict);
+				} else
+					printf("\tunification failed\n");
+				rs = rs->next;
 			}
-			struct ground* g = &grounds[ngrounds++];
-			if (p->rul->body)
+		}
+		else if (!p->prev) {
+			struct termset* r;
+			for (r = p->rul->body; r; r = r->next) { 
+				struct term* t = evaluate(r->p, p->s);
+				pushe(&e, t, p->g);
+			}
+			puts("Cannot longer go backward. Evidence we currently have:");
+			printe(e, gdict);
+		} else {
+			struct ground* g = 0;
+			printf("Finished one level.");
+			if (p->rul->body) {
+				printf(" Adding ground: ");
 				pushg(&g, p->rul, p->s);
+				printg(g, gdict);
+			}
+			printf(" Going a frame back from rule: ");
+			printr(p->prev->rul, gdict);
+			puts(".");
 			struct proof* r = &proofs[nproofs++];
 			*r = *p->prev;
 			r->g = g;
@@ -813,38 +886,6 @@ void prove(struct termset* goal, struct ruleset* cases) {
 			r->last = r->last->next;
 			pushq(&qu, r);
 			continue;
-		}
-		struct term* t = p->last->p;
-		printf("fetched term: ");
-		printterm(t, gdict);
-		printf("\n");
-		struct ruleset* rs = cases;
-		printf("cases:\n");
-		printrs(rs, gdict);
-		while ((rs = findruleset(rs, t->p))) {
-			struct subst* s = 0;
-			if (unify(t, p->s, rs->r->p, &s, true)) {
-				printf("unification succeeded\n");
-				if (euler_path(p))
-					continue;
-				struct ground* g = &grounds[ngrounds++];
-				struct proof* r = &proofs[nproofs++];
-				r->s = s;
-				r->rul = rs->r;
-				r->last = r->rul->body;//p->last->next;
-				r->prev = p;
-				r->s = 0;
-				r->g = g = copyg(p->g);
-				if (!rs->r->body)
-					pushg( &g, rs->r, 0 );
-				unshift(&qu, r);
-				printf("pushed frame...\n");
-				printp(r, gdict);
-				printf("queue:\n");
-				printq(qu, gdict);
-			} else
-				printf("unification failed\n");
-			rs = rs->next;
 		}
 	} while (qu);
 	printe(e, gdict);
@@ -981,12 +1022,17 @@ void printr(struct rule* r, struct dict* d) {
 void printg(struct ground* g, struct dict* d) {
 	if (!g)
 		return;
-	printf("ground: ");
+//	printf("ground: ");
 	printr(g->r, d);
 	printf(" ");
 	prints(g->s, d);
-	printf("\n");
-	printg(g->next, d);
+//	printf("\n");
+	if (g->next) {
+		printf("; ");
+		printg(g->next, d);
+	}
+	else
+		printf(". ");
 }
 
 void printei(struct evidence_item* ei, struct dict* d) {
@@ -1003,7 +1049,14 @@ void printei(struct evidence_item* ei, struct dict* d) {
 void printe(struct evidence* e, struct dict* d) {
 	if (!e)
 		return;
-	printf("%d:\n", e->p);
+	if (!d)
+		printf("%d:\n", e->p);
+	else {
+		const char *s = dgetw(d, e->p);
+		if (s)
+			printf(" %s ", s);
+	}
+
 	printei(e->item, d);
 	printe(e->next, d);
 }
@@ -1127,8 +1180,6 @@ void readr(struct ruleset** r) {
 int main(int argc, char* argv[]) {
 	initmem();
 	gdict = &dicts[ndicts++];
-	struct termset* goal = &termsets[ntermsets++];
-	struct ruleset* cases = 0;
 
 	struct session ss;
 	ss.kb = 0;
@@ -1139,31 +1190,6 @@ int main(int argc, char* argv[]) {
 	impl2 = pushw(&ss.d, implication2); 
 	impl3 = pushw(&ss.d, implication3);
 
-	if (argc == 1) {
-		menu(&ss);
-		return 0;
-	}
-
-	const int socrates = 1, a = 2, human = 3, man = 4, mortal = 5, _x = -6, _y = -7, _z = -8;
-	printf("socrates a man:\t"); 	struct term* p1 = term(socrates, a, man);
-	printf("_x a human:\t"); 	struct term* p2 = term(_x, a, human);
-	printf("_x a man:\t"); 		struct term* p3 = term(_x, a, man);
-	printf("_y a man:\t"); 		struct term* p4 = term(_y, a, human);
-	printf("_y a mortal:\t"); 	struct term* p5 = term(_y, a, mortal);
-	printf("_z a mortal:\t"); 	struct term* p6 = term(_z, a, mortal);
-
-	pushr(&cases, 0, p1);
-	pushr(&cases, 0, p2);
-	pushr(&cases, 0, p3);
-	pushr(&cases, 0, p4);
-	pushr(&cases, 0, p5);
-
-	pushr(&cases, p3, p2);
-	pushr(&cases, p4, p5);
-
-	goal->p = p6;
-	goal->next = 0;
-
-	prove(goal, cases);
+	menu(&ss);
 	return 0;
 }
