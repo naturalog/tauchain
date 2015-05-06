@@ -17,7 +17,7 @@ struct pred_t {
 	vector<pred_t> args;
 
 	friend ostream& operator<< ( ostream& o, const pred_t &t ) {
-		o << "{\"pred\"   :" << "\"" << jse( t.pred ) << "\"";
+		o << "{\"pred\":" << "\"" << jse( t.pred ) << "\"";
 		if ( t.args.size() ) 
 		{
 			o << ",\"args\":[\n";
@@ -284,7 +284,7 @@ int _indent = 0;
 bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv ) {
 	//jst ("{\"Unify level\":" << _indent << ",\"s\":" << s << ",\"senv\":" << *senv);
 
-	if ( s.pred[0] == '?' ) {
+	if ( s.pred[0] == '?' || s.pred[0] == '_' ) {
 		try {
 			pred_t sval = evaluate ( s, senv );
 			_indent++;
@@ -307,7 +307,7 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 			throw std::runtime_error ( "Error during unify" );
 		}
 	}
-	if ( d.pred[0] == '?' ) {
+	if ( d.pred[0] == '?' || d.pred[0] == '_' ) {
 		try {
 			pred_t dval = evaluate ( d, denv );
 			bool b = unify ( s, senv, dval, denv );
@@ -349,7 +349,7 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 
 pred_t evaluate ( const pred_t t, const penv_t env ) {
 	//trace ( indent() << "Eval " << ( string ) t << " in " << ( *env ) << endl );
-	if ( t.pred[0] == '?' ) {
+	if ( t.pred[0] == '?' || t.pred[0] == '_' ) {
 		//trace (  "(" << ( string ) t << " is a var..)" << endl );
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) return evaluate ( it->second, env );
@@ -438,7 +438,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 
 
 void print_evidence ( evidence_t evidence ) {
-	jst ( "{\"evidence\":" << evidence << "}" );
+	std::cout << "{\"evidence\":" << evidence << "},\n" ;
 	std::cout << "\"end.\"]";
 }
 
