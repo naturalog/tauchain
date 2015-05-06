@@ -3,8 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#ifdef READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
+#endif
 
 typedef unsigned int uint;
 typedef char bool;
@@ -440,18 +442,32 @@ void printcmd(const char* line, struct session* ss) {
 	while(0);
 }
 
+#ifndef READLINE
+char* readline(const char* p) {
+	char* l = malloc(str_input_len);
+	printf("%s", p);
+	if (scanf("%s", l) <= 0)
+		return 0;
+	return l;
+}
+#endif
+
 // session has to be initialized by the caller
 void menu(struct session* ss) {
 	char *line, *_line;
 	gdict = ss->d;
 	puts(main_menu);
 	printf("Session id: %p\n", ss);
+#ifdef READLINE	
 	rl_bind_key('\t', rl_complete);
+#endif
 	while ((_line = readline(prompt))) {
 		line = _line;
 		if (!line)
 			continue;
+#ifdef READLINE			
 		add_history(line);
+#endif
 		uint szline = strlen(line);
 		if (szline) {
 			if ((line[szline - 1] == '.' || line[szline - 1] == '?') && szline > 1 ) {
@@ -1197,6 +1213,7 @@ void readr(struct ruleset** r) {
 }
 
 int main(int argc, char* argv[]) {
+	printf("args: %s argc: %d", argv[0], argc);
 	initmem();
 	gdict = &dicts[ndicts++];
 
