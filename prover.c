@@ -74,7 +74,7 @@ void printcmd(const char* line, struct session*); // handle print commands
 bool is_implication(int p);
 void trim(char *s); // trim strings from both ends using isspace
 void str2term(const char* s, struct term** p, struct dict* d); // parses a string as term in partial basic N3
-void term2rs(struct term* t, struct ruleset* r); // converts a (complex) term into a ruleset by tracking the implication
+void term2rs(struct term* t, struct ruleset** r); // converts a (complex) term into a ruleset by tracking the implication
 struct ruleset* ts2rs(struct termset* t); // same as term2rs but from termset
 
 struct dict* gdict; // global dictionary, currently the only used
@@ -433,13 +433,14 @@ void printcmd(const char* line, struct session* ss) {
 // session has to be initialized by the caller
 void menu(struct session* ss) {
 	char* line;
+	gdict = ss->d;
 	puts(main_menu);
 	printf("Session id: %p\n", ss);
 	rl_bind_key('\t', rl_complete);
 	while ((line = readline(prompt))) {
 		add_history(line);
 		uint szline = strlen(line);
-		if (!line[0] || !line[1]) 
+		if (!*line) 
 			syn_err;
 		if (line[szline - 1] == '.' || line[szline - 1] == '?' ) {
 			bool isq = line[szline - 1] == '?';
@@ -464,8 +465,8 @@ void menu(struct session* ss) {
 		else if (*line == 'q') {
 			++line;
 			if (*line == 'a') {
-				ss->rgoal = ts2rs(ss->goal);
-//				ss->rkb = ts2rs(ss->kb);
+//				ss->rgoal = ts2rs(ss->goal);
+				ss->rkb = ts2rs(ss->kb);
 				prove(ss->goal, ss->rkb);
 			}
 		}
@@ -634,26 +635,19 @@ void unshift(struct queue** _q, struct proof* p) {
 	*_q = q;
 }
 
-void term2rs(struct term* t, struct ruleset* r) {
+void term2rs(struct term* t, struct ruleset** r) {
+	if (!t)
+		return;
 	if (is_implication(t->p))
-		pushr(&r, t->s, t->o);
+		pushr(r, t->s, t->o);
 	else
-		pushr(&r, t, 0);
+		pushr(r, t, 0);
 }
-/*
-struct ruleset* term2rs(struct term* t) {
-	struct ruleset* r = 0;
-	if (is_implication(t->p))
-		pushr(&r, t->s, t->o);
-	else
-		pushr(&r, t, 0);
-	return r;
-}
-*/
+
 struct ruleset* ts2rs(struct termset* t) {
 	struct ruleset* r = 0;
 	do {
-		term2rs(t->p, r);
+		term2rs(t->p, &r);
 	} while ((t = t->next));
 	return r;
 }
