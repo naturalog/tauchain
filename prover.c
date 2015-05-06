@@ -905,6 +905,7 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 				struct rule* rl = &rules[nrules++];
 				rl->p = evaluate(t, p->s);
 				rl->body = 0;
+				r->g = copyg(p->g);
 				pushg(&r->g, rl, 0);
 				r->last = r->last->next;
 				pushq(&qu, r);
@@ -1004,12 +1005,12 @@ void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct
 #endif			
 			TRACE(printf("\nBoth in body of rule: "));
 			TRACE(printr(r->rul, ss->d));
-			r->last = r->last->next;
-			pushq(&qu, r);
 			TRACE(puts("\nPushed new frame. Current queue:"));
 			TRACE(printq(qu, ss->d));
 			TRACE(puts("\nNew proof element:"));
+			r->last = r->last->next;
 			TRACE(printp(r, ss->d));
+			pushq(&qu, r);
 			TRACE(puts("-------------------------------------------------------*/"));
 
 			continue;
