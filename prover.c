@@ -204,8 +204,8 @@ void str2term(const char* s, struct term** _p, struct dict* d) {
 			if (had_braces)
 				m = s - _s;
 			while (!isspace(*s) && *s) {
-				if (*s == '{' || *s == '}')
-					syn_err;
+				if (*s == '{' || *s == '}') 
+					return;
 				if (had_braces)
 					pr[n++] = *s;
 				++s;
@@ -216,8 +216,9 @@ void str2term(const char* s, struct term** _p, struct dict* d) {
 				++s;
 			if (!had_braces)
 				while (!isspace(*s) && *s) {
-					if (*s == '{' || *s == '}')
-						syn_err;
+					if (*s == '{' || *s == '}') {
+						return;
+					}
 					pr[n++] = *s++;
 				}
 			pr[n] = 0;
@@ -445,9 +446,11 @@ void printcmd(const char* line, struct session* ss) {
 #ifndef READLINE
 char* readline(const char* p) {
 	char* l = malloc(str_input_len);
-	printf("%s", p);
-	if (scanf("%s", l) <= 0)
+	size_t sz = str_input_len;
+	printf("\n%s ", p);
+	if (getline(&l, &sz, stdin) < 1)
 		return 0;
+	l[strlen(l) - 1] = 0;
 	return l;
 }
 #endif
