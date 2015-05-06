@@ -1,6 +1,6 @@
 // http://stackoverflow.com/a/7725289
 
-std::stringstream& jse(const std::string& input) {
+std::string jse(const std::string& input) {
     std::stringstream ss;
     for (auto iter = input.cbegin(); iter != input.cend(); iter++) {
         switch (*iter) {
@@ -15,10 +15,6 @@ std::stringstream& jse(const std::string& input) {
             default: ss << *iter; break;
         }
     }
-    return ss;
+    return ss.str();
 }
 
-stringstream& jsq(stringstream &ss, const std::string& input) {
-    ss << "\"" << jse(input) << "\"";
-    return ss;
-}

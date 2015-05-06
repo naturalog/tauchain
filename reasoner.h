@@ -5,8 +5,8 @@
 
 #ifdef DEBUG
 #define jst(x) std::cout << x << ",\n";
-void jstq(const char *x){ jst (jsq(x)) }
-void jstq(const string &x){ jst (jsq(x)) }
+void jstq(const char *x){ jst ("\"" << jse(x) << "\"") }
+void jstq(const string &x){ jst ("\"" << jse(x) << "\"") }
 #else
 #define jst(x)
 #define jstq(x)
@@ -17,7 +17,7 @@ struct pred_t {
 	vector<pred_t> args;
 
 	friend ostream& operator<< ( ostream& o, const pred_t &t ) {
-		o << "{\"pred\"   :" << jsq( t.pred );
+		o << "{\"pred\"   :" << "\"" << jse( t.pred ) << "\"";
 		if ( t.args.size() ) 
 		{
 			o << ",\"args\":[\n";
@@ -40,7 +40,7 @@ ostream& operator<< ( ostream& o, env_t const& r ) {
 	if ( r.size() ) 
 	{
 		for ( auto rr = r.cbegin();; ) {
-			o << jsq(rr->first) << ": " << rr->second;
+			o << "\"" << jse(rr->first) << "\": " << rr->second;
 			if ( ++rr != r.cend() ) o << ",\n";
 			else break;
 		}
@@ -94,7 +94,7 @@ ostream& operator<< ( ostream& o, evidence_t const& r ) {
 	if ( r.size() ) 
 	{
 		for ( auto rr = r.cbegin();; ) {
-			o << rr->first << ": " << rr->second;
+			o << "\"" << jse(rr->first) << "\": " << rr->second;
 			if ( ++rr != r.cend() ) o << ",\n";
 			else break;
 		}
@@ -236,7 +236,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue; // else there is no such builtin, continue...
 		}
 
-		jst ( "{\"looking for case\":" << t.pred );
+		jst ( "{\"looking for case\":" << "\"" << jse(t.pred) << "\"}" );
 		if ( cases.find ( t.pred ) == cases.end() ) {
 			jstq ( "No Cases(no such predicate)!" );
 			jstq ( "available cases' keys:" );
@@ -410,7 +410,7 @@ void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t 
 }
 
 evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
-	std::clog << "[";
+	std::cout << "[";
 
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
@@ -438,7 +438,8 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 
 
 void print_evidence ( evidence_t evidence ) {
-	jst ( evidence );
+	jst ( "{\"evidence\":" << evidence << "}" );
+	std::cout << "\"end.\"]";
 }
 
 const bool use_nquads = false;
