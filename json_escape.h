@@ -3,7 +3,7 @@
 //#include <string>
 //#include <sstream>
 
-std::string escapeJsonString(const std::string& input) {
+std::string jse(const std::string& input) {
     std::ostringstream ss;
     for (auto iter = input.cbegin(); iter != input.cend(); iter++) {
     //C++98/03:
@@ -20,5 +20,11 @@ std::string escapeJsonString(const std::string& input) {
             default: ss << *iter; break;
         }
     }
+    return ss.str();
+}
+
+std::string jsq(const std::string& input) {
+    std::ostringstream ss;
+    ss << "\"" << jse(input) << "\"";
     return ss.str();
 }

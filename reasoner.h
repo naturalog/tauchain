@@ -1,76 +1,62 @@
 // c++ port of euler (EYE) js reasoner
 #include <deque>
 #include "parsers.h"
+#include "json_escape.h"
 
-#ifdef UBI
-#include <UbigraphAPI.h>
-#include <cmath>
-#endif
-#ifdef JST
-#include "json_spirit.h"
-using json_spirit::mValue;
-using json_spirit::mObject;
+#ifdef DEBUG
+#define jst(x) std::stdout<<x << ",\n";
+#else
+#define jst(x)
 #endif
 
 struct pred_t {
 	string pred;
 	vector<pred_t> args;
 
-	ostream& write ( ostream& o ) const {
-		o << pred;
-		if ( args.size() ) {
-			o << "(";
-			for ( auto a = args.cbegin();; ) {
-				a->write ( o );
-				if ( ++a != args.cend() ) o << ", ";
-				else return o << ")";
+	friend ostream& operator<< ( ostream& o, const pred_t &t ) {
+		o << "{\"pred\":" << t.pred;
+		if ( t.args.size() ) {
+			o << "\"args\":[";
+			for ( auto a = t.args.cbegin();; ) {
+				o << *a;
+				if ( ++a != t.args.cend() ) o << ",\n";
 			}
+			o<<"]";
 		}
-		return o;
-	}
-
-	operator string() const {
-		stringstream ss;
-		write ( ss );
-		return ss.str();
+		return o << "}\n";
 	}
 };
-
-int _indent = 0;
-
-string indent() {
-	stringstream ss;
-	for ( int i = 0; i < _indent; i++ ) ss << "##";
-	return ss.str();
-}
 
 typedef map<string, pred_t> env_t;
 typedef std::shared_ptr<env_t> penv_t;
 
 ostream& operator<< ( ostream& o, env_t const& r ) {
-	o << "env of size " << r.size() << "{";
-	for ( auto rr : r ) o << rr.first << ": " << ( string ) rr.second << "; ";
-	return o << "}";
+	o << "{";
+	for ( auto rr = r.cbegin();; ) {
+		o << jsq(rr->first) << ": " << rr->second;
+		if ( ++rr != r.cend() ) o << ",\n";
+	}
+	return o << "}\n";
+}
+
+typedef vector<pred_t> preds_t;
+
+ostream& operator<< ( ostream& o, preds_t const& r ) {
+	o << "[";
+	for ( auto rr = r.cbegin();; ) {
+		o << *rr;
+		if ( ++rr != r.cend() ) o << ",\n";
+	}
+	return o << "]\n";
 }
 
 struct rule_t {
 	pred_t head;
-	vector<pred_t> body;
-	#ifdef UBI
-	int ubi_node_id=0;
-	#endif
-	string tostring() const {
-		stringstream o;
-		o << ( string ) head;
-		if ( body.size() ) {
-			o << " :- ";
-			for ( auto x : body ) x.write ( o );
-		} else
-			o << ".";
-		return o.str();
-	}
-	operator string() const {
-		return tostring();
+	preds_t body;
+
+	friend ostream& operator<< ( ostream& o, const rule_t &t ) {
+		o << "{\"head\":" << t.head << "\"body\":" << t.body << "}\n";
+		return o;
 	}
 };
 
@@ -79,10 +65,9 @@ typedef map<string, vector<rule_t>> evidence_t;
 struct rule_env {
 	rule_t src;
 	penv_t env;
-	operator string() const {
-		stringstream o;
-		o << ( string ) src << " {" << *env << "} ";
-		return o.str();
+	friend ostream& operator<< ( ostream& o, const rule_env &t ) {
+		o << "{\"src\":" << t.src << "\"env\":" << t.env << "}\n";
+		return o;
 	}
 };
 typedef vector<rule_env> ground_t;
@@ -94,9 +79,13 @@ pground_t aCopy ( pground_t f ) {
 	return r;
 }
 
-ostream& operator<< ( ostream& o, ground_t const& g ) {
-	for ( auto gg : g ) o << "   _" << ( string ) gg << "_   ";
-	return o;
+ostream& operator<< ( ostream& o, ground_t const& r ) {
+	o << "[";
+	for ( auto rr = r.cbegin();; ) {
+		o << *rr;
+		if ( ++rr != r.cend() ) o << ",\n";
+	}
+	return o << "]\n";
 }
 
 struct proof_trace_item {
@@ -105,164 +94,18 @@ struct proof_trace_item {
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
-	#ifdef UBI
-	int ubi_node_id=0;
-	bool _keep;
-	#endif
-	operator string() const {
-		stringstream o;
-                o << "<<" << ( string ) rule << src << "," << ind << "(";
-//		o << "{\"rule\":" << ( string ) rule << " srcc: " << src << "," << "ind:"<<ind << ",parent:(";
-		if ( parent ) o << ( string ) ( *parent );
-		o << ") {env:" << ( *env ) << "}[[ground:" << ( *ground ) << "]]";
-		return o.str();
+	friend ostream& operator<< ( ostream& o, const proof_trace_item &t ) {
+		o << "{\"rule\":" << t.rule;
+		o << "\"src\":" << t.src;
+		o << "\"ind\":" << t.ind;
+		if ( t.parent ) o << "\"parent\":" << t.parent;
+		o << "\"env\":" << t.env;
+		o << "\"ground\":" << t.ground;	
+		o << "}\n";
+		return o;
 	}
-	#ifdef UBI
-	~proof_trace_item()
-	{
-		if (ubi_node_id)
-		{
-			if(_keep)
-			{
-				ubigraph_set_vertex_attribute ( ubi_node_id, "color", "#55ff55" );
-				ubigraph_set_vertex_attribute ( ubi_node_id, "shape", "cube" );
-			}
-			else
-				ubigraph_remove_vertex( ubi_node_id );
-		}
-	}
-	void keep()
-	{
-		_keep = 1;
-	}
-	#endif
 };
 typedef std::shared_ptr<proof_trace_item> ppti;
-
-#ifdef JST
-mValue jst(ppti t)
-{
-	mValue o;
-	o["rule"]=jst(t->rule);
-	o["src"]=jst(t->src);
-	o["ind"]=jst(t->ind);
-	o["parent"]=jst(t->parent);
-	return o;
-}
-#endif
-
-void ubi ( const ppti i ) {
-	#ifdef UBI
-	{
-		i->ubi_node_id = ubigraph_new_vertex();
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "12" );
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontcolor", "#ffffff" );
-		cout << "setting label to \""<<( ( string ) i->rule ).c_str() <<"\""<< endl; 
-		ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
-
-		if ( !i->parent ) 
-		{
-			ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff0000" );
-			ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "icosahedron" );
-		}
-		else
-		{
-			ubigraph_set_vertex_attribute ( i->ubi_node_id, "shape", "octahedron" );
-			int e = ubigraph_new_edge ( i->parent->ubi_node_id, i->ubi_node_id );
-			ubigraph_set_edge_attribute ( e, "oriented", "true" );
-			if (i->parent->parent)
-			{
-				ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ffffff" );
-				ubigraph_set_edge_attribute ( e, "color", "#777777" );
-				ubigraph_set_edge_attribute ( e, "width", "2" );
-				ubigraph_set_edge_attribute ( e, "strength", "1" );
-			}
-			else
-			{
-				ubigraph_set_vertex_attribute ( i->ubi_node_id, "color", "#ff9999" );
-				ubigraph_set_edge_attribute ( e, "color", "#00ffff" );
-				ubigraph_set_edge_attribute ( e, "width", "5" );
-				ubigraph_set_edge_attribute ( e, "strength", "0.1" );
-			}
-		}
-	} 
-
-	{
-		if ( i->rule.ubi_node_id)
-		{
-			int e = ubigraph_new_edge ( i->ubi_node_id, i->rule.ubi_node_id );
-			ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
-			ubigraph_set_edge_attribute ( e, "width", "1" );
-			ubigraph_set_edge_attribute ( e, "oriented", "true" );
-			ubigraph_set_edge_attribute ( e, "strength", "0.5" );
-			ubigraph_set_edge_attribute ( e, "visible", "false" );
-		}
-	}
-	/*
-	for (auto g : *i->ground)
-		if ( g.src.ubi_node_id )
-		{
-			int e = ubigraph_new_edge ( i->ubi_node_id, g.src.ubi_node_id );
-			ubigraph_set_edge_attribute ( e, "color", "#aaffaa" );
-			ubigraph_set_edge_attribute ( e, "visible", "false" );
-			ubigraph_set_edge_attribute ( e, "oriented", "true" );
-		}
-	*/
-	
-	#endif
-}
-
-void ubi_add_facts ( evidence_t &cases ) {
-	#ifdef UBI
-	vector<int> ids;
-	int first, prev = 0;
-	for ( auto &c : cases )
-		for(auto it = c.second.begin() ; it != c.second.end() ; ++it)
-			//if ( !r.body.size() ) 
-			{
-				ids.push_back ( (it->ubi_node_id = ubigraph_new_vertex() ) );
-				ubigraph_set_vertex_attribute ( it->ubi_node_id, "fontsize", "16" );
-				//ubigraph_set_vertex_attribute ( it->ubi_node_id, "label", ( ( string ) *it ).c_str() );
-				ubigraph_set_vertex_attribute ( it->ubi_node_id, "fontcolor", "#ccffcc" );
-				ubigraph_set_vertex_attribute ( it->ubi_node_id, "color", "#55ff55" );
-				ubigraph_set_vertex_attribute ( it->ubi_node_id, "shape", "cube" );
-				ubigraph_set_vertex_attribute ( it->ubi_node_id, "size", "3" );
-				
-				if (prev)
-					ubigraph_new_edge ( it->ubi_node_id,  prev);
-				else
-					first = it->ubi_node_id;
-				prev = it->ubi_node_id;
-				
-			}
-	
-	if (prev)
-		ubigraph_new_edge ( prev, first);
-	
-
-	/*
-	//a grid
-	unsigned int w = sqrt ( ids.size() ) + 1;
-	for ( unsigned int x = 0; x < w; x++ ) {
-		unsigned int h = ids.size() / w + 1;
-
-		for ( unsigned int y = 0; y < h; y++ ) {
-			if ( ( x * h + y ) == ids.size() )
-				return;
-
-			cout << ids.size() << " facts, w:" << w <<
-			     ", h:" << h << ", x:" << x << ", y:" << y << endl;
-
-			unsigned int id = ids[x * h + y];
-			if ( x > 0 )
-				ubigraph_new_edge ( id, ids[ ( x - 1 ) * h + y] );
-			if ( y > 0 )
-				ubigraph_new_edge ( id, ids[x * h + y - 1] );
-		}
-	}
-	*/
-	#endif
-}
 
 
 int builtin ( pred_t, proof_trace_item& ) {
@@ -271,7 +114,7 @@ int builtin ( pred_t, proof_trace_item& ) {
 	    -1:no such builtin
 	    0:it didnt unify
 	*/
-	trace ( "NO BEES yet PLZ!" << endl );
+	jst(jsq("NO BEES yet PLZ!\n"));
 	return -1;
 }
 
@@ -280,52 +123,22 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 
 pground_t gnd = make_shared<ground_t>();
 
-#ifdef JST
-mValue jst(deque<ppti> q)
-{
-	mValue o;
-	mObject & oo = o.get_obj();
-	int i=0;
-	for(auto &j : q)
-		oo[i++]=jst(j);
-	return o;
-}
-		
-void out(mValue &v)
-{	
-	#ifdef JST
-	cout << v;
-	#endif
-}	
-#endif
-
 bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	int step = 0;
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
-	#ifdef UBI
-	s->keep();
-	ubi ( s );
-	#endif
-	trace (  "Goal: " << ( string ) goal << endl );
+	jst (  "{\"Goal\": " <<  goal << "}");
 	while ( queue.size() > 0 ) {
-		trace (  "=======" << endl );
-		ppti c = queue.front();
-		trace (  "  c: " << ( string ) ( *c ) << endl );
-		queue.pop_front();
+		ppti c = queue.pop_front();
+		jst ( *c );
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
 			trace (  "TIMEOUT!" << endl );
 			return false;
 		}
-		trace ( "c.ind: " << c->ind << endl << "c.rule.body.size(): " << c->rule.body.size() << endl ); //in step 1, rule body is goal
-		// all parts of rule body succeeded...(?)
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
-			#ifdef UBI
-			c->keep();
-			#endif
 			if ( !c->parent ) {
 				trace ( "no parent!" << endl );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
@@ -348,7 +161,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			trace (  ( string ) ( *r ) << endl );
 			if (r->parent && !r->parent->parent)
 				trace("subquery "<<  ( string ) ( *r )  << endl);
-			queue.push_back ( r ); ubi(r);
+			queue.push_back ( r ); 
 			continue;
 		}
 		trace ( "Done q" << endl );
@@ -361,7 +174,6 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->rule, c->src, c->ind, c->parent, c->env, g} );
 			r->ind++;
 			queue.push_back ( r );
-			ubi ( r );
 			continue;
 		} else if ( b == 0 )
 		{   // builtin didnt unify
@@ -400,7 +212,6 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				if ( !ep ) {
 					trace ( "Adding to queue: " << ( string ) ( *r ) << endl << flush );
 					queue.push_front ( r );
-					ubi ( r );
 				} else trace ( "didn't reach top" << endl );
 				trace ( "Done euler loop" << endl );
 			} else trace ( "No loop here" << endl );
@@ -564,10 +375,7 @@ void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t 
 }
 
 evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
-
-	#ifdef UBI
-	ubigraph_clear();
-	#endif
+	std::stdout<<x << "[";
 
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
@@ -586,7 +394,6 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 				throw std::runtime_error ("HMC_Alpha> bananas is not a formula...");
 		}
 	}
-	ubi_add_facts ( cases );
 	rule_t goal;
 	for ( auto q : query ) 
 	{
