@@ -21,7 +21,7 @@ struct evidence_item	{ struct term* 	p;	struct ground* 		g;	struct evidence_item
 struct termset	 	{ struct term* 	p; 					struct termset* 	next; 	};
 struct ruleset		{ struct rule*	 	r; 					struct ruleset*		next;	};
 struct dict 		{ char*  		s;	int 			n;	struct dict*		next;	};
-struct session		{ struct queue*		q;	struct ruleset*	rkb, rgoal;	struct termset*	kb, goal;	struct dict*	d;	};
+struct session		{ struct queue*		q;	struct ruleset *rkb, *rgoal;	struct termset *kb, *goal;	struct dict*	d;	};
 struct proof 		{ struct rule* 		rul;	struct termset*		last;	struct proof* 		prev; 	struct subst* 	s; 	struct ground* g;	};
 
 const uint max_terms = 1024;	uint nterms = 0; 		struct term* terms;
@@ -51,8 +51,6 @@ void pushp(struct termset** l, struct term* p); // push a term to a termset
 void pushr(struct ruleset** _rs, struct term* s, struct term* o); // push subject and object of s=>o into a ruleset
 void printterm(struct term* p, struct dict* d); // print a term
 struct term* term(int s, int p, int o); // create an s/p/o term
-struct term* mkterm(struct term* s, struct term* p, struct term* o);
-struct rule* mkrule(struct term* s, struct term* p, struct term* o, bool fact);
 void prints(struct subst* s, struct dict* d); // print a subst
 void printl(struct termset* l, struct dict* d); // print a termset
 void printg(struct ground* g, struct dict* d); // print a ground struct
@@ -60,6 +58,7 @@ void printe(struct evidence* e, struct dict* d); // print evidence
 void printei(struct evidence_item* ei, struct dict* d); // print single evidence step
 void printr(struct rule* r, struct dict* d);  // print rule
 void printps(struct term* p, struct subst* s, struct dict* d); // print a term with a subst
+void printss(struct session* s); // print session memory
 void printp(struct proof* p, struct dict* d); // print a proof element
 void printrs(struct ruleset* rs, struct dict* d); // print a ruleset
 void printq(struct queue* q, struct dict* d); // print a proof queue
@@ -71,9 +70,12 @@ bool dgetwn(struct dict* d, const char* s, int* n); // returns the id of a given
 int readp(struct dict* d, struct ruleset** _r); // read a term from user and stores it in a ruleset
 void readr(struct ruleset** _r); // read a rule from the user and stores it in a ruleset
 void menu(struct session* ss); // run menu
-void printcmd(const char* line, struct dict* d); // handle print commands
+void printcmd(const char* line, struct session*); // handle print commands
+bool is_implication(int p);
 void trim(char *s); // trim strings from both ends using isspace
-void str2term(const char* s, struct term* p, struct dict* d); // parses a string as term in partial basic N3
+void str2term(const char* s, struct term** p, struct dict* d); // parses a string as term in partial basic N3
+void term2rs(struct term* t, struct ruleset* r); // converts a (complex) term into a ruleset by tracking the implication
+struct ruleset* ts2rs(struct termset* t); // same as term2rs but from termset
 
 struct dict* gdict; // global dictionary, currently the only used
 int impl1, impl2, impl3;
@@ -100,7 +102,6 @@ Commands:\n\n\
 Printing commands:\n\
 Syntax: <command> [id] where kb selects kb to list the desired values, and id of the desired value.\n\
 If id is not specified, all values from the specified kind will belisted.\n\
-Exceptions to this syntax is pa that prints everything in memory.\n\n\
 pp [id]\tprints terms.\n\
 pr [id]\tprints rules.\n\
 ps [id]\tprints substitutions.\n\
@@ -111,13 +112,14 @@ pd [id]\tprints dicts.\n\
 pl [id]\tprints term lists.\n\
 pll [id]\tprints rule lists.\n\
 pe [id]\tprints evidence.\n\
-pa \tprint everything.\n\
+pss [id]\tprint session.\n\
 \n\nProof commands:\n\n\
 qc\tcreate a proof queue and print its id.\n\
 qn\tprocess the next frame in the queue.\n\
 qa\tprocess all frames until full resolution.\n\
 \n\nSession commands:\n\n\
 Each session contain a proof queue, a kb (rule list), a goal (term list) and a dict.\n\
+Goal and kb are represented both as terms and as implication tree (rules).\n\
 sc\tClear session\n\
 sn\tCreate session\n\
 sw <id>\tSwitch session\n\n";
@@ -151,70 +153,101 @@ bool read_two_nums(const char* line, int* x, int* y) {
 	return !*line;	
 }
 
-void str2term(const char* s, struct term* p, struct dict* d) {
-	p = 0;
+void str2term(const char* s, struct term** _p, struct dict* d) {
+	if (!s || !*s) {
+		*_p = 0;
+		return;
+	}
+	struct term* p = *_p;
+	p->p = 0;
 	p->s = &terms[nterms++];
 	p->o = &terms[nterms++];
-	int len = strlen(s), n = 0, m;
+	int n = 0, m;
 	int braces = 0;
 	char pr[str_input_len], __s[str_input_len];
 	const char* _s = s;
-	while (s) {
+	while (*s) {
 		if (*s == '{')
 			++braces;
-		else if (*s == '{')
+		else if (*s == '}') {
 			--braces;
+			++s;
+		}
 		if (!braces) {
-			while (isspace(*s))
+			while (isspace(*s) && *s)
 				++s;
 			m = s - _s;
-			while (!isspace(*s)) {
+			while (!isspace(*s) && *s) {
 				if (*s == '{' || *s == '}')
 					syn_err;
-				pr[n++] = *s;
+				pr[n++] = *s++;
 			}
 			pr[n] = 0;
 			p->p = pushw(&d, pr);
 			strcpy(__s, s);
 			trim(__s);
-			str2term(__s, p->s, d);
+			if (strlen(__s))
+				str2term(__s, &p->s, d);
+			else
+				p->s = 0;
 			memcpy(__s, s, m);
 			__s[m] = 0;
-			trim(s[m]);
-			str2term(__s, p->o, d);
+			trim(__s);
+			if (strlen(__s))
+				str2term(__s, &p->o, d);
+			else
+				p->o = 0;
 			break;
 		}
+		++s;
 	}
 	printf("String %s parsed into term as:\n", s);
 	printterm(p, d);
 }
 
-void printcmd(const char* line, struct dict* d) {
+void printss(struct session* ss) {
+	printf("Queue:\n");
+	printq(ss->q, ss->d);
+	printf("KB terms:\n");
+	printl(ss->kb, ss->d);
+	printf("Goal terms:\n");
+	printl(ss->goal, ss->d);
+	printf("KB rules:\n");
+	printrs(ss->rkb, ss->d);
+	printf("Goal rules:\n");
+	printrs(ss->rgoal, ss->d);
+}
+
+void printcmd(const char* line, struct session* ss) {
+	struct dict* d = ss->d;
 	int id;
 	uint n = 0;
 	do 
 	if (read_num(line, &id)) {
 		switch (*line) {
 		case 'p':
-			if (isspace(line + 1)) {
+			if (!*line || isspace(*++line)) {
 				printterm(&terms[id], d);
 				puts("\n");
-			} else {
-				if (*line == 'r') {
-					printp(&proofs[id], d);
-					puts("\n");
-				}
-				else
-					syn_err;
+			} else if (*line == 'r') {
+				printp(&proofs[id], d);
+				puts("\n");
 			}
+			else
+				syn_err;
 			break;
 		case 'r':
 			printr(&rules[id], d);
 			puts("\n");
 			break;
 		case 's':
-			prints(&substs[id], d);
-			puts("\n");
+			if (!*line || isspace(*++line)) {
+				prints(&substs[id], d);
+				puts("\n");
+			} else if (*line == 's') {
+				printss(ss);
+				puts("\n");
+			}
 			break;
 		case 'g':
 			printg(&grounds[id], d);
@@ -229,7 +262,7 @@ void printcmd(const char* line, struct dict* d) {
 			puts("\n");
 			break;
 		case 'l':
-			if (isspace(line + 1)) {
+			if (!*line || isspace(++line)) {
 				printl(&termsets[id], d);
 				puts("\n");
 			} else {
@@ -246,7 +279,7 @@ void printcmd(const char* line, struct dict* d) {
 	else {
 		switch (*line) {
 		case 'p':
-			if (isspace(line + 1)) {
+			if (!*line || isspace(*++line)) {
 				puts("Predicates:\n");
 				for (; n < nterms; ++n) {
 					printf("%d\t", n);
@@ -276,10 +309,16 @@ void printcmd(const char* line, struct dict* d) {
 			}
 			break;
 		case 's':
-			puts("Substitutions:\n");
-			for (; n < nsubsts; ++n) {
-				printf("%d\t", n);
-				prints(&substs[n], d);
+			if (!*line || isspace(*++line)) {
+				puts("Substitutions:\n");
+				for (; n < nsubsts; ++n) {
+					printf("%d\t", n);
+					prints(&substs[n], d);
+					puts("\n");
+				}
+			} else if (*line == 's') {
+				puts("Session:\n");
+				printss(ss);
 				puts("\n");
 			}
 			break;
@@ -307,7 +346,7 @@ void printcmd(const char* line, struct dict* d) {
 			}
 			break;
 		case 'l':
-			if (isspace(line + 1)) {
+			if (!*line || isspace(*++line)) {
 				puts("Predicate lists:\n");
 				for (; n < ntermsets; ++n) {
 					printf("%d\t", n);
@@ -333,20 +372,9 @@ void printcmd(const char* line, struct dict* d) {
 	while(0);
 }
 
-// if 'bool fact' is true, then the term is set to the head of the rule
-// otherwise it is set to the body of the rule, indicating this is a query rather a fact
-struct rule* mkrule(struct term* s, struct term* p, struct term* o, bool fact) {
-	struct rule* r = &rules[nrules++];
-	bool b = fact && ( p->p == impl1 || p->p == impl2 || p->p == impl3 );
-	r->p = b ? o : 0;
-	pushp(&r->body, b ? s : mkterm(s, p, o));
-	return r;
-}
-
 // session has to be initialized by the caller
 void menu(struct session* ss) {
 	char* line;
-	struct dict* d = ss->d;
 	puts(main_menu);
 	printf("Session id: %p\n", ss);
 	rl_bind_key('\t', rl_complete);
@@ -364,36 +392,36 @@ void menu(struct session* ss) {
 			bool isq = line[szline - 1] == '?';
 			line[szline - 1] = 0;
 			struct term* t = &terms[nterms++];
-			str2term(line, t, ss->d);
+			str2term(line, &t, ss->d);
 			if (isq) 
 				pushp(&ss->goal, t);
 			else
-				pushr(&ss->kb, t);
+				pushp(&ss->kb, t);
 		}
 		else if (*line == 'q') {
 			++line;
 			if (*line == 'a') {
-				ss->rgoal = mkrule(ss->goal);
-				ss->rkb = mkrule(ss->kb);
-				prove(ss->rgoal, ss->rkb);
+				ss->rgoal = ts2rs(ss->goal);
+//				ss->rkb = ts2rs(ss->kb);
+				prove(ss->goal, ss->rkb);
 			}
 		}
 		else if (*line == 'p') {
 			++line;
-			if (isspace(++line))
+			if (!*line || isspace(*line))
 				syn_err;
-			printcmd(line, d);
+			printcmd(line, ss);
 			// p pr rsgqe l ll
 			if (*line == 'a') {
-				printcmd("p", d);
-				printcmd("pr", d);
-				printcmd("r", d);
-				printcmd("s", d);
-				printcmd("g", d);
-				printcmd("q", d);
-				printcmd("e", d);
-				printcmd("l", d);
-				printcmd("ll", d);
+				printcmd("p", ss);
+				printcmd("pr", ss);
+				printcmd("r", ss);
+				printcmd("s", ss);
+				printcmd("g", ss);
+				printcmd("q", ss);
+				printcmd("e", ss);
+				printcmd("l", ss);
+				printcmd("ll", ss);
 			}
 			continue;
 		}
@@ -416,10 +444,15 @@ void initmem() {
 }
 
 void trim(char *s) {
-	uint len = strlen(s);
-	while (isspace ( *s ) ) 
-		memcpy(s, s + 1, len--);
-	while (isspace ( s[len - 1] ) )
+	uint len = strlen(s), n;
+	if (!len)
+		return;
+	while (isspace ( *s ) && len ) {
+		for (n = 0; n < len - 1; ++n)
+			s[n] = s[n + 1];
+		--len;
+	}
+	while (len && isspace ( s[len - 1] ) )
 		--len;
 	s[len] = 0;
 }
@@ -519,6 +552,30 @@ void unshift(struct queue** _q, struct proof* p) {
 	q->prev = 0;
 	q->next = *_q;
 	*_q = q;
+}
+
+void term2rs(struct term* t, struct ruleset* r) {
+	if (is_implication(t->p))
+		pushr(&r, t->s, t->o);
+	else
+		pushr(&r, t, 0);
+}
+/*
+struct ruleset* term2rs(struct term* t) {
+	struct ruleset* r = 0;
+	if (is_implication(t->p))
+		pushr(&r, t->s, t->o);
+	else
+		pushr(&r, t, 0);
+	return r;
+}
+*/
+struct ruleset* ts2rs(struct termset* t) {
+	struct ruleset* r = 0;
+	do {
+		term2rs(t->p, r);
+	} while ((t = t->next));
+	return r;
 }
 
 void setsub(struct subst** s, int p, struct term* pr) {
@@ -778,7 +835,7 @@ struct term* term(int s, int p, int o) {
 		struct term* pn = &terms[n];
 		if (pn->p == p && pn->s && pn->o)
 			if (pn->s->p == s && !pn->s->o && !pn->s->s)
-				if (pn->o->p == o && !pn->o->o && !p->n.o->s)
+				if (pn->o->p == o && !pn->o->o && !pn->o->s)
 					return pn;
 	}
 	struct term* ps = &terms[nterms++];
@@ -790,14 +847,6 @@ struct term* term(int s, int p, int o) {
 	ps->s = ps->o = po->s = po->o = 0;
 	ps->p = s;
 	po->p = o;
-	return pp;
-}
-
-struct term* mkterm(struct term* s, struct term* p, struct term* o) {
-	struct term* pp = &terms[nterms++];
-	pp->p = p;
-	pp->s = s;
-	pp->o = o;
 	return pp;
 }
 
@@ -857,6 +906,10 @@ void printe(struct evidence* e, struct dict* d) {
 	printe(e->next, d);
 }
 
+bool is_implication(int p) {
+	return p == impl1 || p == impl2 || p == impl3;
+}
+
 int pushw(struct dict** _d, const char* s) {
 	int c = 1, n;
 	if (dgetwn(*_d, s, &n))
@@ -892,7 +945,7 @@ const char* dgetw(struct dict* d, int n) {
 bool dgetwn(struct dict* d, const char* s, int* n) {
 	if (!d || !s)
 		return false;
-	if (!strcmp(d->s, s)) {
+	if (d->s && !strcmp(d->s, s)) {
 		*n = d->n;
 		return true;
 	}
@@ -978,9 +1031,9 @@ int main(int argc, char* argv[]) {
 	ss.goal = 0;
 	ss.d = 0;
 	ss.q = 0;
-	impl1 = pushw(ss.d, implication1); // define implication
-	impl2 = pushw(ss.d, implication2); 
-	impl3 = pushw(ss.d, implication3);
+	impl1 = pushw(&ss.d, implication1); // define implication
+	impl2 = pushw(&ss.d, implication2); 
+	impl3 = pushw(&ss.d, implication3);
 
 	if (argc == 1) {
 		menu(&ss);
