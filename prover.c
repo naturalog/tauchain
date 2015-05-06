@@ -71,7 +71,7 @@ int readp(struct dict* d, struct ruleset** _r); // read a term from user and sto
 void readr(struct ruleset** _r); // read a rule from the user and stores it in a ruleset
 void menu(struct session* ss); // run menu
 void printcmd(const char* line, struct session*); // handle print commands
-bool is_implication(int p);
+bool is_implication(int p); // identifies an implication resource
 void trim(char *s); // trim strings from both ends using isspace
 void str2term(const char* s, struct term** p, struct dict* d); // parses a string as term in partial basic N3
 void term2rs(struct term* t, struct ruleset** r); // converts a (complex) term into a ruleset by tracking the implication
@@ -432,64 +432,63 @@ void printcmd(const char* line, struct session* ss) {
 
 // session has to be initialized by the caller
 void menu(struct session* ss) {
-	char* line;
+	char *line, *_line;
 	gdict = ss->d;
 	puts(main_menu);
 	printf("Session id: %p\n", ss);
 	rl_bind_key('\t', rl_complete);
-	while ((line = readline(prompt))) {
+	while ((_line = readline(prompt))) {
+		line = _line;
+		if (!line)
+			continue;
 		add_history(line);
 		uint szline = strlen(line);
-		if (!*line) 
-			syn_err;
-		if (line[szline - 1] == '.' || line[szline - 1] == '?' ) {
-			bool isq = line[szline - 1] == '?';
-			line[szline - 1] = 0;
-			trim(line);
-			struct term* t = &terms[nterms++];
-			str2term(line, &t, ss->d);
-			printf("String %s parsed into term as:\n", line);
-			printterm(t, ss->d);
-			puts("");
-			if (isq) 
-				pushp(&ss->goal, t);
-			else
-				pushp(&ss->kb, t);
-			continue;
-		}
-		trim(line);
-		if (!strcmp(line, "?")) {
-			printf(help);
-			continue;
-		}
-		else if (*line == 'q') {
-			++line;
-			if (*line == 'a') {
-//				ss->rgoal = ts2rs(ss->goal);
-				ss->rkb = ts2rs(ss->kb);
-				prove(ss->goal, ss->rkb);
+		if (szline) {
+			if (line[szline - 1] == '.' || line[szline - 1] == '?' ) {
+				bool isq = line[szline - 1] == '?';
+				line[szline - 1] = 0;
+				trim(line);
+				struct term* t = &terms[nterms++];
+				str2term(line, &t, ss->d);
+				printf("String %s parsed into term as:\n", line);
+				printterm(t, ss->d);
+				puts("");
+				if (isq) 
+					pushp(&ss->goal, t);
+				else
+					pushp(&ss->kb, t);
+			} else {
+				trim(line);
+				if (!strcmp(line, "?")) 
+					printf(help);
+				else if (*line == 'q') {
+					++line;
+					if (*line == 'a') {
+		//				ss->rgoal = ts2rs(ss->goal);
+						ss->rkb = ts2rs(ss->kb);
+						prove(ss->goal, ss->rkb);
+						}
+				}
+				else if (*line == 'p') {
+					++line;
+					if (!*line || isspace(*line))
+						syn_err;
+					printcmd(line, ss);
+					if (*line == 'a') {
+						printcmd("p", ss);
+						printcmd("pr", ss);
+						printcmd("r", ss);
+						printcmd("s", ss);
+						printcmd("g", ss);
+						printcmd("q", ss);
+						printcmd("e", ss);
+						printcmd("l", ss);
+						printcmd("ll", ss);
+					}
+				}
 			}
 		}
-		else if (*line == 'p') {
-			++line;
-			if (!*line || isspace(*line))
-				syn_err;
-			printcmd(line, ss);
-			// p pr rsgqe l ll
-			if (*line == 'a') {
-				printcmd("p", ss);
-				printcmd("pr", ss);
-				printcmd("r", ss);
-				printcmd("s", ss);
-				printcmd("g", ss);
-				printcmd("q", ss);
-				printcmd("e", ss);
-				printcmd("l", ss);
-				printcmd("ll", ss);
-			}
-			continue;
-		}
-		free(line);
+		free(_line);
 	}
 }
 
@@ -832,10 +831,13 @@ bool equals(struct term* x, struct term* y) {
 }
 
 void pushp(struct termset** _l, struct term* p) {
+	if (!p)
+		return;
 	if (!*_l) {
 		*_l = &termsets[ntermsets++];
-		(*_l)->p = 0;
+		(*_l)->p = p;
 		(*_l)->next = 0;
+		return;
 	}
 	struct termset* l = *_l;
 	while (l->next && !equals(p, l->p))
