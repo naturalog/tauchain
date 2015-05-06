@@ -4,8 +4,9 @@
 #include "json_escape.h"
 
 #ifdef DEBUG
-#define jst(x) std::clog <<x << ",\n";
-void jstq(const char *x){ jst (jsq (x) ) }
+#define jst(x) std::cout << x << ",\n";
+void jstq(const char *x){ jst (jsq(x)) }
+void jstq(const string &x){ jst (jsq(x)) }
 #else
 #define jst(x)
 #define jstq(x)
@@ -16,16 +17,18 @@ struct pred_t {
 	vector<pred_t> args;
 
 	friend ostream& operator<< ( ostream& o, const pred_t &t ) {
-		o << "{\"pred\":" << t.pred;
-		if ( t.args.size() ) {
-			o << "\"args\":[";
+		o << "{\"pred\"   :" << jsq( t.pred );
+		if ( t.args.size() ) 
+		{
+			o << ",\"args\":[\n";
 			for ( auto a = t.args.cbegin();; ) {
 				o << *a;
 				if ( ++a != t.args.cend() ) o << ",\n";
+				else break;
 			}
 			o<<"]";
 		}
-		return o << "}\n";
+		return o << "}";
 	}
 };
 
@@ -34,22 +37,30 @@ typedef std::shared_ptr<env_t> penv_t;
 
 ostream& operator<< ( ostream& o, env_t const& r ) {
 	o << "{";
-	for ( auto rr = r.cbegin();; ) {
-		o << jsq(rr->first) << ": " << rr->second;
-		if ( ++rr != r.cend() ) o << ",\n";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << jsq(rr->first) << ": " << rr->second;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}
 	}
-	return o << "}\n";
+	return o << "}";
 }
 
 typedef vector<pred_t> preds_t;
 
 ostream& operator<< ( ostream& o, preds_t const& r ) {
 	o << "[";
-	for ( auto rr = r.cbegin();; ) {
-		o << *rr;
-		if ( ++rr != r.cend() ) o << ",\n";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << *rr;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}
 	}
-	return o << "]\n";
+	return o << "]";
 }
 
 struct rule_t {
@@ -57,7 +68,7 @@ struct rule_t {
 	preds_t body;
 
 	friend ostream& operator<< ( ostream& o, const rule_t &t ) {
-		o << "{\"head\":" << t.head << "\"body\":" << t.body << "}\n";
+		o << "{\"head\":" << t.head << ",\"body\":" << t.body << "}";
 		return o;
 	}
 };
@@ -67,18 +78,26 @@ typedef map<string, rules_t> evidence_t;
 
 ostream& operator<< ( ostream& o,  const rules_t &r ) {
 	o << "[";
-	for ( auto rr = r.cbegin();; ) {
-		o << *rr;
-		if ( ++rr != r.cend() ) o << ",\n";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << *rr;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}	
 	}
 	return o << "]\n";
 }
 
 ostream& operator<< ( ostream& o, evidence_t const& r ) {
 	o << "{";
-	for ( auto rr = r.cbegin();; ) {
-		o << rr->first << ": " << rr->second;
-		if ( ++rr != r.cend() ) o << ",\n";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << rr->first << ": " << rr->second;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}
 	}
 	return o << "}\n";
 }
@@ -87,7 +106,7 @@ struct rule_env {
 	rule_t src;
 	penv_t env;
 	friend ostream& operator<< ( ostream& o, const rule_env &t ) {
-		o << "{\"src\":" << t.src << "\"env\":" << t.env << "}\n";
+		o << "{\"src\":" << t.src << ",\"env\":" << *t.env << "}\n";
 		return o;
 	}
 };
@@ -102,9 +121,13 @@ pground_t aCopy ( pground_t f ) {
 
 ostream& operator<< ( ostream& o, ground_t const& r ) {
 	o << "[";
-	for ( auto rr = r.cbegin();; ) {
-		o << *rr;
-		if ( ++rr != r.cend() ) o << ",\n";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << *rr;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}
 	}
 	return o << "]\n";
 }
@@ -117,11 +140,11 @@ struct proof_trace_item {
 	std::shared_ptr<ground_t> ground;
 	friend ostream& operator<< ( ostream& o, const proof_trace_item &t ) {
 		o << "{\"rule\":" << t.rule;
-		o << "\"src\":" << t.src;
-		o << "\"ind\":" << t.ind;
-		if ( t.parent ) o << "\"parent\":" << t.parent;
-		o << "\"env\":" << t.env;
-		o << "\"ground\":" << t.ground;	
+		o << ",\"src\":" << t.src;
+		o << ",\"ind\":" << t.ind;
+		if ( t.parent ) o << ",\"parent\":" << *t.parent;
+		o << ",\"env\":" << *t.env;
+		o << ",\"ground\":" << *t.ground;	
 		o << "}\n";
 		return o;
 	}
@@ -135,7 +158,7 @@ int builtin ( pred_t, proof_trace_item& ) {
 	    -1:no such builtin
 	    0:it didnt unify
 	*/
-	jst(jsq("NO BEES yet PLZ!\n"));
+	jstq("NO BEES yet PLZ!");
 	return -1;
 }
 
@@ -147,9 +170,13 @@ pground_t gnd = make_shared<ground_t>();
 
 ostream& operator<< ( ostream& o, deque<ppti> const& r ) {
 	o << "[";
-	for ( auto rr = r.cbegin();; ) {
-		o << **rr;
-		if ( ++rr != r.cend() ) o << ",\n";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << **rr;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}
 	}
 	return o << "]";
 }
