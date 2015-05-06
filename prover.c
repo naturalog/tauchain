@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 typedef unsigned int uint;
 typedef char bool;
@@ -63,6 +67,98 @@ const char* dgetw(struct dict* d, int n); // decrypt string from dictionary give
 int readp(struct dict* d, struct ruleset** _r); // read a predicate from user and stores it in a ruleset
 void readr(struct ruleset** _r); // read a rule from the user and stores it in a ruleset
 void menu(struct dict* d);
+void trim(char *s);
+
+const char main_menu[] = 
+"Tau deductive reasoner, part of Tau-Chain\n\
+Based on Euler (EYE) reasoner\n\
+http://idni.org\n\
+=========================================\n\n\
+Syntax: <command> args>\n\
+Type '?' for help.\n";
+const char help[] =
+"Syntax: <command> args>\n\
+Type '?' for help.\n\
+Commands:\n\n\
+---------\n\n\
+Printing commands:\n\
+Syntax: <command> [kb] [id] where kb selects kb to list the desired values, and id of the desired value.\n\
+If kb is not specified, all values are listed. If id is not specified, all values within the given kb are listed.\n\
+Exceptions to this syntax are pi and pk as below.\n\n\
+pp [kb] [id]\tprints predicates.\n\
+pr [kb] [id]\tprints rules.\n\
+ps [kb] [id]\tprints substitutions.\n\
+pg [kb] [id]\tprints grounds.\n\
+pq [kb] [id]\tprints queues.\n\
+ppr [kb] [id]\tprints proofs.\n\
+pd [kb] [id]\tprints dicts.\n\
+pl [kb] [id]\tprints predicate lists.\n\
+pe [kb] [id]\tprints evidence.\n\
+pi [kb]\tprints available ids\n\
+pk [kb]\tprint a whole kb by id or list all kb's\n\n\
+\nInsertion commands:\n\n\
+All commands that end with 's' will cause repeated insertion until a line equals the word 'done' is inserted.\n\
+ip[s] [kb]\tinsert predicate[s].\n\
+ir[s] [kb]\tinsert rule[s].\n\
+\nProof commands:\n\n\
+cq\tcreate a proof queue and print its id.\n\
+nq\tprocess the next frame in the queue.\n";
+
+const char prompt[] = "tau >> ";
+
+void menu(struct dict* d) {
+	char* line;
+	puts(main_menu);
+	rl_bind_key('\t', rl_complete);
+	while ((line = readline(prompt))) {
+		add_history(line);
+		trim(line);
+		if (!strcmp(line, "?")) {
+			printf(help);
+			continue;
+		}
+		free(line);
+	}
+
+
+	struct ruleset *kb = 0, *query = 0;
+	struct ruleset** curr = &kb;
+	char ch;
+	while (1) {
+	bool validinput = false;
+	while (!validinput) {
+			if (curr == &query)
+				printf("Press p for entering a new predicate, r for entering a new rule, or q to begin reasoning when done.");
+			else
+				printf("Press p for entering a new predicate, r for entering a new rule, or q to input a query when ready.");
+				fflush(stdout);
+			ch = getchar();
+			switch (ch) {
+			case 'p': 
+				validinput = true;
+				printf("\n");
+				readp(d, curr);
+				break;
+			case 'r': 
+				validinput = true;
+				printf("\n");
+				readr(curr); 
+				break;
+			case 'q': 
+				validinput = true;
+				printf("\n");
+				if (curr != &query)
+					curr = &query;
+				else
+					prove(query, kb);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+}
+
 
 #define str_input_len 255
 
@@ -81,6 +177,17 @@ void initmem() {
 	memset(evidence_items 	= malloc(sizeof(struct evidence_item) * max_evidence_items), 	0, sizeof(struct evidence_item) * max_evidence_items);
 	memset(evidences 	= malloc(sizeof(struct evidence) * max_evidences), 		0, sizeof(struct evidence) * max_evidences);
 }
+
+void trim(char *s) {
+	char *end;
+	uint len = strlen(s), n = 0;
+	while (isspace ( *s ) ) 
+		memcpy(s, s + 1, len--);
+	while (isspace ( s[len - 1] ) )
+		--len;
+	s[len] = 0;
+}
+
 
 struct subst* findsubst(struct subst* l, int m) { 
 	while (l) 
@@ -593,45 +700,6 @@ void readr(struct ruleset** r) {
 	ns = atoi(s);
 	no = atoi(o);
 	pushr(r, &predicates[ns], &predicates[no]);
-}
-
-void menu(struct dict* d) {
-	struct ruleset *kb = 0, *query = 0;
-	struct ruleset** curr = &kb;
-	char ch;
-	while (1) {
-	bool validinput = false;
-	while (!validinput) {
-			if (curr == &query)
-				printf("Press p for entering a new predicate, r for entering a new rule, or q to begin reasoning when done.");
-			else
-				printf("Press p for entering a new predicate, r for entering a new rule, or q to input a query when ready.");
-				fflush(stdout);
-			ch = getchar();
-			switch (ch) {
-			case 'p': 
-				validinput = true;
-				printf("\n");
-				readp(d, curr);
-				break;
-			case 'r': 
-				validinput = true;
-				printf("\n");
-				readr(curr); 
-				break;
-			case 'q': 
-				validinput = true;
-				printf("\n");
-				if (curr != &query)
-					curr = &query;
-				else
-					prove(query, kb);
-				break;
-			default:
-				break;
-			}
-		}
-	}
 }
 
 int main(int argc, char* argv[]) {
