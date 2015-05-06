@@ -77,7 +77,7 @@ ostream& operator<< ( ostream& o,  const rules_t &r ) {
 ostream& operator<< ( ostream& o, evidence_t const& r ) {
 	o << "{";
 	for ( auto rr = r.cbegin();; ) {
-		o << jsq(rr->first) << ": " << rr->second;
+		o << rr->first << ": " << rr->second;
 		if ( ++rr != r.cend() ) o << ",\n";
 	}
 	return o << "}\n";
@@ -148,7 +148,7 @@ pground_t gnd = make_shared<ground_t>();
 ostream& operator<< ( ostream& o, deque<ppti> const& r ) {
 	o << "[";
 	for ( auto rr = r.cbegin();; ) {
-		o << *rr;
+		o << **rr;
 		if ( ++rr != r.cend() ) o << ",\n";
 	}
 	return o << "]";
@@ -161,7 +161,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
 	while ( queue.size() > 0 ) {
-		jst ( "{\"step\":" << step <<  "\",queue\":" << queue << "}" );
+		jst ( "{\"step\":" << step << ",\"queue\":" << queue << "}" );
 		ppti c = queue.front();
 		queue.pop_front();
 		pground_t g = aCopy ( c->ground );
