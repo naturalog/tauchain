@@ -82,20 +82,20 @@ Type '?' for help.\n\
 Commands:\n\n\
 ---------\n\n\
 Printing commands:\n\
-Syntax: <command> [kb] [id] where kb selects kb to list the desired values, and id of the desired value.\n\
-If kb is not specified, all values are listed. If id is not specified, all values within the given kb are listed.\n\
-Exceptions to this syntax are pi and pk as below.\n\n\
-pp [kb] [id]\tprints predicates.\n\
-pr [kb] [id]\tprints rules.\n\
-ps [kb] [id]\tprints substitutions.\n\
-pg [kb] [id]\tprints grounds.\n\
-pq [kb] [id]\tprints queues.\n\
-ppr [kb] [id]\tprints proofs.\n\
-pd [kb] [id]\tprints dicts.\n\
-pl [kb] [id]\tprints predicate lists.\n\
-pe [kb] [id]\tprints evidence.\n\
-pi [kb]\tprints available ids\n\
-pk [kb]\tprint a whole kb by id or list all kb's\n\n\
+Syntax: <command> [id] where kb selects kb to list the desired values, and id of the desired value.\n\
+If id is not specified, all values from the specified kind will belisted.\n\
+Exceptions to this syntax is pa that prints everything in memory.\n\n\
+pp [id]\tprints predicates.\n\
+pr [id]\tprints rules.\n\
+ps [id]\tprints substitutions.\n\
+pg [id]\tprints grounds.\n\
+pq [id]\tprints queues.\n\
+ppr [id]\tprints proofs.\n\
+pd [id]\tprints dicts.\n\
+pl [id]\tprints predicate lists.\n\
+pll [id]\tprints rule lists.\n\
+pe [id]\tprints evidence.\n\
+pa \tprint everything.\n\n\
 \nInsertion commands:\n\n\
 All commands that end with 's' will cause repeated insertion until a line equals the word 'done' is inserted.\n\
 ip[s] [kb]\tinsert predicate[s].\n\
@@ -105,6 +105,163 @@ cq\tcreate a proof queue and print its id.\n\
 nq\tprocess the next frame in the queue.\n";
 
 const char prompt[] = "tau >> ";
+
+#define syn_err { printf("Syntax error."); continue; }
+
+bool read_num(const char* line, int* x) {
+	*x = 0;
+	while (isdigit(*line)) {
+		*x *= 10;
+		*x += *line++ - '0';
+	}
+	return !*line;	
+}
+
+bool read_two_nums(const char* line, int* x, int* y) {
+	*x = *y = 0;
+	while (isdigit(*line)) {
+		*x *= 10;
+		*x += *line++ - '0';
+	}
+	if (!isspace(*line))
+		return false;
+	while (isdigit(*line)) {
+		*y *= 10;
+		*y += *line++ - '0';
+	}
+	return !*line;	
+}
+
+void printcmd(struct dict* d, const char* line) {
+	int id;
+	uint n = 0;
+	do 
+	if (read_num(line, &id)) {
+		switch (*line) {
+		case 'p':
+			if (isspace(line + 1)) {
+				printpred(&predicates[id], d);
+				puts("\n");
+			} else {
+				if (*line == 'r') {
+					printp(&proofs[id], d);
+					puts("\n");
+				}
+				else
+					syn_err;
+			}
+			break;
+		case 'r':
+			printr(&rules[id], d);
+			puts("\n");
+			break;
+		case 's':
+			prints(&substs[id], d);
+			puts("\n");
+			break;
+		case 'g':
+			printg(&grounds[id], d);
+			puts("\n");
+			break;
+		case 'q':
+			printq(&queues[id], d);
+			puts("\n");
+			break;
+		case 'e':
+			printe(&evidences[id], d);
+			puts("\n");
+			break;
+		case 'l':
+			if (isspace(line + 1)) {
+				printl(&predlists[id], d);
+				puts("\n");
+			} else {
+				if (*line == 'l') {
+					printrs(&rulesets[id], d);
+					puts("\n");
+				}
+				else
+					syn_err;
+			}
+			break;
+		}
+	}
+	else {
+		switch (*line) {
+		case 'p':
+			if (isspace(line + 1))
+				for (; n < npredicates; ++n) {
+					printf("%d\t", n);
+					printpred(&predicates[n], d);
+					puts("\n");
+				}
+			else {
+				if (*line == 'r')
+					for (; n < nproofs; ++n) {
+						printf("%d\t", n);
+						printp(&proofs[n], d);
+						puts("\n");
+					}
+				else
+					syn_err;
+			}
+			break;
+		case 'r':
+			for (; n < nrules; ++n) {
+				printf("%d\t", n);
+				printr(&rules[n], d);
+				puts("\n");
+			}
+			break;
+		case 's':
+			for (; n < nsubsts; ++n) {
+				printf("%d\t", n);
+				prints(&substs[n], d);
+				puts("\n");
+			}
+			break;
+		case 'g':
+			for (; n < ngrounds; ++n) {
+				printf("%d\t", n);
+				printg(&grounds[n], d);
+				puts("\n");
+			}
+		case 'q':
+			for (; n < nqueues; ++n) {
+				printf("%d\t", n);
+				printq(&queues[n], d);
+				puts("\n");
+			}
+			break;
+		case 'e':
+			for (; n < nevidences; ++n) {
+				printf("%d\t", n);
+				printe(&evidences[n], d);
+				puts("\n");
+			}
+			break;
+		case 'l':
+			if (isspace(line + 1))
+				for (; n < npredlists; ++n) {
+					printf("%d\t", n);
+					printl(&predlists[n], d);
+					puts("\n");
+				}
+			else {
+				if (*line == 'l')
+					for (; n < nrulesets; ++n) {
+						printf("%d\t", n);
+						printrs(&rulesets[n], d);
+						puts("\n");
+					}
+				else
+					syn_err;
+			}
+			break;
+		}
+	}
+	while(0);
+}
 
 void menu(struct dict* d) {
 	char* line;
@@ -117,6 +274,15 @@ void menu(struct dict* d) {
 			printf(help);
 			continue;
 		}
+		if (!line[0] || !line[1]) 
+			syn_err;
+		if (line[0] == 'p') {
+			++line;
+			if (isspace(++line))
+				syn_err;
+			continue;
+		}
+
 		free(line);
 	}
 
