@@ -13,18 +13,7 @@ typedef char bool;
 const bool true = 1;
 const bool false = 0;
 
-struct term 		{ int 		p;	struct term 	*s, *o;						};
-struct rule 		{ struct term* 	p; 	struct termset*	body;						};
-struct subst 		{ int 		p;	struct term* 	pr; 		struct subst* 		next;	};
-struct evidence		{ int 		p;	struct evidence_item* 	item;	struct evidence* 	next;	};
-struct ground 		{ struct rule* 	r;	struct subst* 		s; 	struct ground* 		next;	};
-struct queue		{ struct proof*	p;	struct queue* 		prev;	struct queue* 		next;	};
-struct evidence_item	{ struct term* 	p;	struct ground* 		g;	struct evidence_item* 	next;	};
-struct termset	 	{ struct term*	p; 					struct termset* 	next; 	};
-struct ruleset		{ struct rule* 	r; 					struct ruleset*		next;	};
-struct dict 		{ char*  	s;	int 			n;	struct dict*		next;	};
-struct session		{ struct queue*	q;	struct ruleset *	rkb;	struct termset *kb, *goal;	struct dict*	d;	};
-struct proof 		{ struct rule* 	rul;	struct termset*		last;	struct proof* 		prev; 	struct subst* 	s; 	struct ground* g;	};
+#include "prover.h"
 
 const uint max_terms = 1024;		uint nterms = 0; 		struct term* terms;
 const uint max_termsets = 1024;		uint ntermsets = 0; 		struct termset* termsets;
@@ -38,45 +27,6 @@ const uint max_evidence_items = 1024; 	uint nevidence_items = 0; 	struct evidenc
 const uint max_evidences = 1024; 	uint nevidences = 0; 		struct evidence* evidences;
 const uint max_dicts = 1024; 		uint ndicts = 0; 		struct dict* dicts;
 
-void initmem(bool);
-void pushg(struct ground** g, struct rule* r, struct subst* s); // push rule and subst pair into ground
-void pushe(struct evidence** _e, struct term* t, struct ground* g); // push evidence item into evidence
-struct subst* clone(struct subst* s); // deep-copy a subst
-void pushq(struct queue**, struct proof* p); // push a proof to the back of a proofs queue
-void unshift(struct queue** _q, struct proof* p); // push a proof to the front of the queue
-void setsub(struct subst** s, int p, struct term* pr); // pushes a substitution
-struct term* evaluate(struct term* p, struct subst* s); // evaluates a term given a subst
-bool unify(struct term* s, struct subst* ssub, struct term* d, struct subst** dsub, bool f); // unification
-void prove(struct termset* goal, struct ruleset* cases, bool interactive, struct session* ss); // backchaining
-bool equals(struct term* x, struct term* y); // deep-compare terms
-void pushp(struct termset** l, struct term* p); // push a term to a termset
-void pushr(struct ruleset** _rs, struct term* s, struct term* o); // push subject and object of s=>o into a ruleset
-void printterm(struct term* p, struct dict* d); // print a term
-struct term* term(int s, int p, int o); // create an s/p/o term
-void prints(struct subst* s, struct dict* d); // print a subst
-void printl(struct termset* l, struct dict* d); // print a termset
-void printg(struct ground* g, struct dict* d); // print a ground struct
-void printe(struct evidence* e, struct dict* d); // print evidence
-void printei(struct evidence_item* ei, struct dict* d); // print single evidence step
-void printr(struct rule* r, struct dict* d);  // print rule
-void printps(struct term* p, struct subst* s, struct dict* d); // print a term with a subst
-void printss(struct session* s); // print session memory
-void printp(struct proof* p, struct dict* d); // print a proof element
-void printrs(struct ruleset* rs, struct dict* d); // print a ruleset
-void printq(struct queue* q, struct dict* d); // print a proof queue
-struct ruleset* findruleset(struct ruleset* rs, int p); // find in a ruleset according to term
-struct ruleset* find_or_create_rs_p(struct ruleset* rs, struct term* p); // finds a term in a ruleset or creates a new rule with that term if not exists
-int pushw(struct dict** _d, const char* s); // push a string into a dictionary and get its int id
-const char* dgetw(struct dict* d, int n); // decrypt string from dictionary given id
-bool dgetwn(struct dict* d, const char* s, int* n); // returns the id of a given string in a dict
-void readr(struct ruleset** _r); // read a rule from the user and stores it in a ruleset
-void menu(struct session* ss); // run menu
-void printcmd(const char* line, struct session*); // handle print commands
-bool is_implication(int p); // identifies an implication resource
-void trim(char *s); // trim strings from both ends using isspace
-void str2term(const char* s, struct term** p, struct dict* d); // parses a string as term in partial basic N3
-void term2rs(struct term* t, struct ruleset** r, bool fact, struct dict** d); // converts a (complex) term into a ruleset by tracking the implication
-struct ruleset* ts2rs(struct termset* t, bool fact, struct dict** d); // same as term2rs but from termset
 void throw(const char*);
 
 //struct dict* ss->d; // global dictionary, currently the only used
@@ -1253,7 +1203,7 @@ bool dgetwn(struct dict* d, const char* s, int* n) {
 	return dgetwn(d->next, s, n);
 }
 
-int main(int argc, char* argv[]) {
+void init_prover() {
 	initmem(true);
 //	queue_test();
 //	exit(0);
@@ -1274,6 +1224,5 @@ int main(int argc, char* argv[]) {
 	GND->p = pushw(&ss.d, "GND");
 	GND->s = GND->o = 0;
 
-	menu(&ss);
-	return 0;
+//	menu(&ss);
 }
