@@ -205,7 +205,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
 					for (auto gnd_item : *c->ground)
 						tmp.body[0].args.push_back(gnd_item.src.head);
-					//jst( "{\"evidence for \":" << t.pred << ",\n \"ground\": " <<  *c->ground << "}" );
+					jst( "{\"evidence for\":\"" << jse(t.pred) << "\",\n\"env\": " <<  *c->env << "}" );
 					evidence[t.pred].push_back ( tmp );
 				}
 				continue;
