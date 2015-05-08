@@ -211,7 +211,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		ppti c = queue.front();
 		queue.pop_front();
 		if(step) jst("},");
-		jst ( "{\"@type\":\"tau:step\",\"step\":" << step << ",\"tau:frame\":" << *c);
+		jst ( "{\"@type\":\"tau:step\",\"tau:id\":" << step << ",\"tau:frame\":" << *c);
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
@@ -226,7 +226,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
 					for (auto gnd_item : *c->ground)
 						tmp.body[0].args.push_back(gnd_item.src.head);
-					jst( ",\"adding evidence\":{\"evidence for\":\"" << jse(t.pred) << "\",\n\"env\": " <<  *c->env << "}" );
+					jst( ",\"tau:adding evidence\":{\"tau:evidence for\":\"" << jse(t.pred) << "\",\n\"tau:env\": " <<  *c->env << "}" );
 					evidence[t.pred].push_back ( tmp );
 				}
 				continue;
@@ -257,21 +257,21 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue; // else there is no such builtin, continue...
 		}
 
-		jst ( ",\"looking for case\":" << "\"" << jse(t.pred) << "\"" );
+		jst ( ",\"tau:looking for case\":" << "\"" << jse(t.pred) << "\"" );
 		if ( cases.find ( t.pred ) == cases.end() ) {
-			jst ( ",\"No Cases(no such predicate)!\":true" );
-			jst ( ",\"available cases' keys:\":[" );
+			jst ( ",\"tau:No Cases(no such predicate)!\":true" );
+			jst ( ",\"tau:available cases' keys:\":[" );
 			for ( auto x : cases ) 
 				jst ( "\"" + jse(x.first) + "\"," );
 			continue;
 		}
 		size_t src = 0;
 		//for each rule with the predicate we are trying to prove...
-		jst (  ",\"Checking rules\":[" );
+		jst (  ",\"tau:Checking rules\":[" );
 		for ( rule_t rl : cases[t.pred] ) {
 			src++;
 			pground_t g = aCopy ( c->ground );
-			jst (  "{\"@type\":\"http://tauchain.org/rulecheck\", \"rule\":" << rl );
+			jst (  "{\"@type\":\"tau:rulecheck\", \"tau:rule\":" << rl );
 			if ( rl.body.size() == 0 ) 
 				g->push_back ( { rl, make_shared<env_t>() } ); //its a fact
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
@@ -281,17 +281,17 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				while ( ( ep = ep->parent ) ) {
 					//jst ( "{\"ep.src\": " << ep->src << ",  \"c.src\": " << c->src << "}" );
 					if ( ep->src == c->src && unify ( ep->rule.head, ep->env, c->rule.head, c->env ) ) {
-						jst ( ",\" ~~ match ~~ \":true" );
+						jst ( ",\"tau: ~~ match ~~ \":true" );
 						break;
 					}
-					jst ( ",\" ~~  ~~  ~~ \":true" );
+					jst ( ",\"tau: ~~  ~~  ~~ \":true" );
 				}
 				if ( !ep ) {
-					jst ( ",\"Adding to queue\": " << *r );
+					jst ( ",\"tau:Adding to queue\": " << *r );
 					queue.push_front ( r );
-				} else jst ( ",\"didn't reach top\":true" );
-				jst ( ",\"Done euler loop\":true" );
-			} else jst ( ",\"No loop here\":true" );
+				} else jst ( ",\"tau:didn't reach top\":true" );
+				jst ( ",\"tau:Done euler loop\":true" );
+			} else jst ( ",\"tau:No loop here\":true" );
 			jst("},");
 		}
 		jst ( "\"done\"]" );
