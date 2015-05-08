@@ -17,10 +17,10 @@ struct pred_t {
 	vector<pred_t> args;
 
 	friend ostream& operator<< ( ostream& o, const pred_t &t ) {
-		o << "{\"pred\":" << "\"" << jse( t.pred ) << "\"";
+		o << "{\"tau:pred\":" << "\"" << jse( t.pred ) << "\"";
 		if ( t.args.size() ) 
 		{
-			o << ",\"args\":[\n";
+			o << ",\"tau:args\":[\n";
 			for ( auto a = t.args.cbegin();; ) {
 				o << *a;
 				if ( ++a != t.args.cend() ) o << ",\n";
@@ -28,7 +28,7 @@ struct pred_t {
 			}
 			o<<"]";
 		}
-		o << ",\"@type\":\"http://tauchain.org/pred\"";
+		o << ",\"@type\":\"tau:pred\"";
 
 		return o << "}";
 	}
@@ -37,40 +37,19 @@ struct pred_t {
 typedef map<string, pred_t> env_t;
 typedef std::shared_ptr<env_t> penv_t;
 
-ostream& operator<< ( ostream& o, env_t const& r ) {
-	o << "{";
-	o << "\"@type\":\"http://tauchain.org/env\"";
-	if ( r.size() ) 
-	{
-		for ( auto rr = r.cbegin();; ) {
-			o << ",\"" << jse(rr->first) << "\": " << rr->second;
-			if ( ++rr == r.cend() )break;
-		}
-	}
-	return o << "}";
-}
+ostream& operator<< ( ostream& o, env_t const& r );
+
 
 typedef vector<pred_t> preds_t;
 
-ostream& operator<< ( ostream& o, preds_t const& r ) {
-	o << "[";
-	if ( r.size() ) 
-	{
-		for ( auto rr = r.cbegin();; ) {
-			o << *rr;
-			if ( ++rr != r.cend() ) o << ",\n";
-			else break;
-		}
-	}
-	return o << "]";
-}
+ostream& operator<< ( ostream& o, preds_t const& r );
 
 struct rule_t {
 	pred_t head;
 	preds_t body;
 
 	friend ostream& operator<< ( ostream& o, const rule_t &t ) {
-		o << "{\"head\":" << t.head << ",\"body\":" << t.body << ",\"@type\":\"http://tauchain.org/rule\"}";
+		o << "{\"tau:head\":" << t.head << ",\"tau:body\":" << t.body << ",\"@type\":\"tau:rule\"}";
 		return o;
 	}
 };
@@ -78,42 +57,23 @@ struct rule_t {
 typedef vector<rule_t> rules_t;
 typedef map<string, rules_t> evidence_t;
 
-ostream& operator<< ( ostream& o,  const rules_t &r ) {
-	o << "[";
-	if ( r.size() ) 
-	{
-		for ( auto rr = r.cbegin();; ) {
-			o << *rr;
-			if ( ++rr != r.cend() ) o << ",\n";
-			else break;
-		}	
-	}
-	return o << "]\n";
-}
+ostream& operator<< ( ostream& o,  const rules_t &r );
+ostream& operator<< ( ostream& o, evidence_t const& r );
 
-ostream& operator<< ( ostream& o, evidence_t const& r ) {
-	o << "{";
-	o << "\"@type\":\"http://tauchain.org/evidence\"";
-	if ( r.size() ) 
-	{
-		for ( auto rr = r.cbegin();; ) {
-			o << ",\"" << jse(rr->first) << "\": " << rr->second;
-			if ( ++rr == r.cend() ) break;
-		}
-	}
-	return o << "}\n";
-}
 
 struct rule_env {
 	rule_t src;
 	penv_t env;
 	friend ostream& operator<< ( ostream& o, const rule_env &t ) {
-		o << "{\"src\":" << t.src << ",\"env\":" << *t.env << ",\"@type\":\"http://tauchain.org/rule_env\"}\n";
+		o << "{\"tau:src\":" << t.src << ",\"tau:env\":" << *t.env << ",\"@type\":\"tau:rule_env\"}\n";
 		return o;
 	}
 };
 typedef vector<rule_env> ground_t;
 typedef std::shared_ptr<ground_t> pground_t;
+
+ostream& operator<< ( ostream& o, ground_t const& r );
+
 
 pground_t aCopy ( pground_t f ) {
 	pground_t r = make_shared<ground_t>();
@@ -121,18 +81,6 @@ pground_t aCopy ( pground_t f ) {
 	return r;
 }
 
-ostream& operator<< ( ostream& o, ground_t const& r ) {
-	o << "[";
-	if ( r.size() ) 
-	{
-		for ( auto rr = r.cbegin();; ) {
-			o << *rr;
-			if ( ++rr != r.cend() ) o << ",\n";
-			else break;
-		}
-	}
-	return o << "]\n";
-}
 
 struct proof_trace_item {
 	rule_t rule;
@@ -141,13 +89,13 @@ struct proof_trace_item {
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
 	friend ostream& operator<< ( ostream& o, const proof_trace_item &t ) {
-		o << "{\"rule\":" << t.rule;
-		o << ",\"src\":" << t.src;
-		o << ",\"ind\":" << t.ind;
-		if ( t.parent ) o << ",\"parent\":" << *t.parent;
-		o << ",\"env\":" << *t.env;
-		o << ",\"ground\":" << *t.ground;
-		o << ",\"@type\":\"http://tauchain.org/frame\"";
+		o << "{\"tau:rule\":" << t.rule;
+		o << ",\"tau:src\":" << t.src;
+		o << ",\"tau:ind\":" << t.ind;
+		if ( t.parent ) o << ",\"tau:parent\":" << *t.parent;
+		o << ",\"tau:env\":" << *t.env;
+		o << ",\"tau:ground\":" << *t.ground;
+		o << ",\"@type\":\"tau:fame\"";
 		o << "}\n";
 		return o;
 	}
@@ -169,6 +117,75 @@ pred_t evaluate ( const pred_t t, const penv_t env );
 bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv );
 
 pground_t gnd = make_shared<ground_t>();
+
+
+ostream& operator<< ( ostream& o, preds_t const& r ) {
+	o << "[";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << *rr;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}
+	}
+	return o << "]";
+}
+
+
+ostream& operator<< ( ostream& o,  const rules_t &r ) {
+	o << "[";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << *rr;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}	
+	}
+	return o << "]\n";
+}
+
+ostream& operator<< ( ostream& o, env_t const& r ) {
+	o << "{";
+	o << "\"@type\":\"tau:env\"";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << ",\"" << jse(rr->first) << "\": " << rr->second;
+			if ( ++rr == r.cend() )break;
+		}
+	}
+	return o << "}";
+}
+
+
+ostream& operator<< ( ostream& o, evidence_t const& r ) {
+	o << "{";
+	o << "\"@type\":\"tau:evidence\"";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << ",\"" << jse(rr->first) << "\": " << rr->second;
+			if ( ++rr == r.cend() ) break;
+		}
+	}
+	return o << "}\n";
+}
+
+
+ostream& operator<< ( ostream& o, ground_t const& r ) {
+	o << "[";
+	if ( r.size() ) 
+	{
+		for ( auto rr = r.cbegin();; ) {
+			o << *rr;
+			if ( ++rr != r.cend() ) o << ",\n";
+			else break;
+		}
+	}
+	return o << "]\n";
+}
 
 
 ostream& operator<< ( ostream& o, deque<ppti> const& r ) {
@@ -194,7 +211,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		ppti c = queue.front();
 		queue.pop_front();
 		if(step) jst("},");
-		jst ( "{\"@type\":\"http://tauchain.org/step\",\"step\":" << step << ",\"frame\":" << *c);
+		jst ( "{\"@type\":\"tau:step\",\"step\":" << step << ",\"tau:frame\":" << *c);
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
@@ -203,7 +220,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		}
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
-				jst( ",\"no parent!\":true" );
+				jst( ",\"tau:no parent!\":true" );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
@@ -418,7 +435,7 @@ void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t 
 }
 
 evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
-	std::cout << "[";
+	std::cout << "{\"@context\":{\"tau\":\"http://tauchain.org/\"},\"@graph\":[";
 
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
@@ -446,7 +463,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 
 
 void print_evidence ( evidence_t evidence ) {
-	std::cout << ",{\"evidence\":" << evidence << "}]\n" ;
+	std::cout << ",{\"evidence\":" << evidence << "}]}\n" ;
 }
 
 const bool use_nquads = false;
