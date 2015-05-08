@@ -4,12 +4,12 @@
 #include "json_escape.h"
 
 #ifdef DEBUG
-#define jst(x) std::cout << x << ",\n";
-void jstq(const char *x){ jst ("\"" << jse(x) << "\"") }
-void jstq(const string &x){ jst ("\"" << jse(x) << "\"") }
+#define jst(x) std::cout << x << "\n";
+//void jstq(const char *x){ jst ("\"" << jse(x) << "\"") }
+//void jstq(const string &x){ jst ("\"" << jse(x) << "\"") }
 #else
 #define jst(x)
-#define jstq(x)
+//#define jstq(x)
 #endif
 
 struct pred_t {
@@ -28,6 +28,8 @@ struct pred_t {
 			}
 			o<<"]";
 		}
+		o << ",\"@type\":\"http://tauchain.org/pred\"";
+
 		return o << "}";
 	}
 };
@@ -37,12 +39,12 @@ typedef std::shared_ptr<env_t> penv_t;
 
 ostream& operator<< ( ostream& o, env_t const& r ) {
 	o << "{";
+	o << "\"@type\":\"http://tauchain.org/env\"";
 	if ( r.size() ) 
 	{
 		for ( auto rr = r.cbegin();; ) {
-			o << "\"" << jse(rr->first) << "\": " << rr->second;
-			if ( ++rr != r.cend() ) o << ",\n";
-			else break;
+			o << ",\"" << jse(rr->first) << "\": " << rr->second;
+			if ( ++rr == r.cend() )break;
 		}
 	}
 	return o << "}";
@@ -68,7 +70,7 @@ struct rule_t {
 	preds_t body;
 
 	friend ostream& operator<< ( ostream& o, const rule_t &t ) {
-		o << "{\"head\":" << t.head << ",\"body\":" << t.body << "}";
+		o << "{\"head\":" << t.head << ",\"body\":" << t.body << ",\"@type\":\"http://tauchain.org/rule\"}";
 		return o;
 	}
 };
@@ -91,12 +93,12 @@ ostream& operator<< ( ostream& o,  const rules_t &r ) {
 
 ostream& operator<< ( ostream& o, evidence_t const& r ) {
 	o << "{";
+	o << "\"@type\":\"http://tauchain.org/evidence\"";
 	if ( r.size() ) 
 	{
 		for ( auto rr = r.cbegin();; ) {
-			o << "\"" << jse(rr->first) << "\": " << rr->second;
-			if ( ++rr != r.cend() ) o << ",\n";
-			else break;
+			o << ",\"" << jse(rr->first) << "\": " << rr->second;
+			if ( ++rr == r.cend() ) break;
 		}
 	}
 	return o << "}\n";
@@ -106,7 +108,7 @@ struct rule_env {
 	rule_t src;
 	penv_t env;
 	friend ostream& operator<< ( ostream& o, const rule_env &t ) {
-		o << "{\"src\":" << t.src << ",\"env\":" << *t.env << "}\n";
+		o << "{\"src\":" << t.src << ",\"env\":" << *t.env << ",\"@type\":\"http://tauchain.org/rule_env\"}\n";
 		return o;
 	}
 };
@@ -144,7 +146,8 @@ struct proof_trace_item {
 		o << ",\"ind\":" << t.ind;
 		if ( t.parent ) o << ",\"parent\":" << *t.parent;
 		o << ",\"env\":" << *t.env;
-		o << ",\"ground\":" << *t.ground;	
+		o << ",\"ground\":" << *t.ground;
+		o << ",\"@type\":\"http://tauchain.org/frame\"";
 		o << "}\n";
 		return o;
 	}
@@ -158,7 +161,7 @@ int builtin ( pred_t, proof_trace_item& ) {
 	    -1:no such builtin
 	    0:it didnt unify
 	*/
-	jstq("NO BEES yet PLZ!");
+	//jstq("NO BEES yet PLZ!");
 	return -1;
 }
 
@@ -190,7 +193,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	while ( queue.size() > 0 ) {
 		ppti c = queue.front();
 		queue.pop_front();
-		jst ( "{\"step\":" << step << ",\"frame\":" << *c << "}" );
+		if(step) jst("},");
+		jst ( "{\"@type\":\"http://tauchain.org/step\",\"step\":" << step << ",\"frame\":" << *c);
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
@@ -199,13 +203,13 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		}
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
 			if ( !c->parent ) {
-				jstq( "no parent!" );
+				jst( ",\"no parent!\":true" );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
 					pred_t t = evaluate ( c->rule.body[i], c->env );
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
 					for (auto gnd_item : *c->ground)
 						tmp.body[0].args.push_back(gnd_item.src.head);
-					jst( "{\"evidence for\":\"" << jse(t.pred) << "\",\n\"env\": " <<  *c->env << "}" );
+					jst( ",\"adding evidence\":{\"evidence for\":\"" << jse(t.pred) << "\",\n\"env\": " <<  *c->env << "}" );
 					evidence[t.pred].push_back ( tmp );
 				}
 				continue;
@@ -217,7 +221,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
 			r->ind++;
 			//jst ( *r );
-			queue.push_back ( r ); 
+			queue.push_back ( r );
 			continue;
 		}
 		//jstq ( "Done q" );
@@ -236,19 +240,21 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			continue; // else there is no such builtin, continue...
 		}
 
-		jst ( "{\"looking for case\":" << "\"" << jse(t.pred) << "\"}" );
+		jst ( ",\"looking for case\":" << "\"" << jse(t.pred) << "\"" );
 		if ( cases.find ( t.pred ) == cases.end() ) {
-			jstq ( "No Cases(no such predicate)!" );
-			jstq ( "available cases' keys:" );
-			for ( auto x : cases ) jst ( x.first );
+			jst ( ",\"No Cases(no such predicate)!\":true" );
+			jst ( ",\"available cases' keys:\":[" );
+			for ( auto x : cases ) 
+				jst ( "\"" + jse(x.first) + "\"," );
 			continue;
 		}
 		size_t src = 0;
 		//for each rule with the predicate we are trying to prove...
+		jst (  ",\"Checking rules\":[" );
 		for ( rule_t rl : cases[t.pred] ) {
 			src++;
 			pground_t g = aCopy ( c->ground );
-			jst (  "{\"Check rule\":" << rl << "}" );
+			jst (  "{\"@type\":\"http://tauchain.org/rulecheck\", \"rule\":" << rl );
 			if ( rl.body.size() == 0 ) 
 				g->push_back ( { rl, make_shared<env_t>() } ); //its a fact
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
@@ -256,22 +262,24 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			if ( unify ( t, c->env, rl.head, r->env ) ) {
 				ppti ep = c;
 				while ( ( ep = ep->parent ) ) {
-					jst ( "{\"ep.src\": " << ep->src << ",  \"c.src\": " << c->src << "}" );
+					//jst ( "{\"ep.src\": " << ep->src << ",  \"c.src\": " << c->src << "}" );
 					if ( ep->src == c->src && unify ( ep->rule.head, ep->env, c->rule.head, c->env ) ) {
-						jstq ( "  ~~ match ~~ " );
+						jst ( ",\" ~~ match ~~ \":true" );
 						break;
 					}
-					jstq ( "  ~~  ~~  ~~" );
+					jst ( ",\" ~~  ~~  ~~ \":true" );
 				}
 				if ( !ep ) {
-					//jst ( "{\"Adding to queue\": " << *r << "}");
+					jst ( ",\"Adding to queue\": " << *r );
 					queue.push_front ( r );
-				} else jstq ( "didn't reach top" );
-				jstq ( "Done euler loop" );
-			} else jstq ( "No loop here" );
+				} else jst ( ",\"didn't reach top\":true" );
+				jst ( ",\"Done euler loop\":true" );
+			} else jst ( ",\"No loop here\":true" );
+			jst("},");
 		}
-		jstq ( "done rule checks, looping" );
+		jst ( "\"done\"]" );
 	}
+	jst ( "}" );
 	return false;
 }
 
@@ -297,7 +305,7 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 				throw std::runtime_error ( "Error during unify" );
 			}
 			if ( _indent ) _indent--;
-			jstq ( "Match(free var)!" );
+			//jstq ( "Match(free var)!" );
 			return true;
 		} catch ( exception ex ) {
 			bt();
@@ -318,7 +326,7 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 				throw std::runtime_error ( "Error during unify" );
 			}
 			( *denv ) [d.pred] = evaluate ( s, senv );
-			jstq ( "Match(free var)!" );
+			//jstq ( "Match(free var)!" );
 
 			return true;
 		} catch ( exception ex ) {
@@ -340,10 +348,10 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 			_indent--;
 			//trace ( indent() << "    " << ( string ) s.args[i] << " == " << ( string ) d.args[i] << endl << flush );
 		}
-		jstq ( "Equal!" );
+		//jstq ( "Equal!" );
 		return true;
 	}
-	jstq ( "No match" );
+	//jstq ( "No match" );
 	return false;
 }
 
@@ -438,8 +446,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 
 
 void print_evidence ( evidence_t evidence ) {
-	std::cout << "{\"evidence\":" << evidence << "},\n" ;
-	std::cout << "\"end.\"]";
+	std::cout << ",{\"evidence\":" << evidence << "}]\n" ;
 }
 
 const bool use_nquads = false;
