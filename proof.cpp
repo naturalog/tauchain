@@ -218,7 +218,6 @@ bool reasoner::test_reasoner() {
 	//	exit(0);
 	evidence_t evidence;
 	cases_t cases;
-	typedef predicate* ppredicate;
 //	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 
 	qdb q, qu;

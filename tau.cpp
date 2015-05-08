@@ -5,9 +5,7 @@
 #include "parsers.h"
 #include "proof.h"
 namespace prover{
-extern "C" {
 #include "prover.h"
-}
 }
 using namespace std;
 
