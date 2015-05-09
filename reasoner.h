@@ -445,13 +445,14 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			/*if (o == true)
 				 ?//query? what do? add it as a triple or not?
-			else if (o == false)
+			*/
+			if (o == "false")
 				{}//negation, ignored, added as triple
-			else*/ if (kb.find(o) != kb.end())
+			else if (kb.find(o) != kb.end())
 				for ( const auto &y : *kb[o] )
 					add_rule(triple(*y), s, kb, cases);
 			else
-				throw std::runtime_error ("HMC_Alpha> bananas is not a formula...");
+				throw std::runtime_error ("HMC_Alpha> bananas is not a formula...:\"" + o + "\"");
 		}
 	}
 	rule_t goal;
