@@ -95,7 +95,7 @@ struct proof_trace_item {
 		if ( t.parent ) o << ",\"tau:parent\":" << *t.parent;
 		o << ",\"tau:env\":" << *t.env;
 		o << ",\"tau:ground\":" << *t.ground;
-		o << ",\"@type\":\"tau:fame\"";
+		o << ",\"@type\":\"tau:frame\"";
 		o << "}\n";
 		return o;
 	}
@@ -446,7 +446,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 			/*if (o == true)
 				 ?//query? what do? add it as a triple or not?
 			*/
-			if (o == "false")
+			if (o == "LITERAL:FALSE")//"false")
 				{}//negation, ignored, added as triple
 			else if (kb.find(o) != kb.end())
 				for ( const auto &y : *kb[o] )
