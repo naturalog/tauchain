@@ -18,13 +18,19 @@ void menu();
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-ostream& dout = dout;
+#ifdef IRC
+ostream& dout = *new ofstream("/tmp/irc.freenode.net/#zennet/in");
+ostream& derr = *new ofstream("/tmp/irc.freenode.net/#zennet/in");
+#else
+ostream& dout = cout;
+ostream& derr = cerr;
+#endif
 
 class listen_cmd : public cmd_t {
 	virtual string desc() const { return "Listen to incoming connections and answer queries."; }
 	virtual string help() const { return "Behave as a server. Usage: tau listen <port>"; }
 	virtual int operator() ( const strings& args ) {
-		if (args.size() != 3) { cerr<<help()<<endl; return 1; }
+		if (args.size() != 3) { derr<<help()<<endl; return 1; }
 		using namespace boost::asio;
 		using boost::asio::ip::tcp;
 		io_service ios;
@@ -46,6 +52,8 @@ class listen_cmd : public cmd_t {
 	}
 };
 
+#define ever ;;
+
 class prove_cmd : public cmd_t {
 public:
 	reasoner r;
@@ -66,16 +74,21 @@ public:
 		if ( args.size() == 2 )
 			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
 		else try {
+#ifdef IRC
+				prover::initmem();
+				for(ever) { try {
+#endif
 				qdb kb = !quad_in ? convert ( args[2] ) : load_quads(args[2]);
 				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );
 				qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
 				auto e = r.prove ( kb, merge ( query ) );
 				dout << "evidence: " << endl << e << endl;
-				//	menu();
-				//		dout << "dict: " << endl << dict.tostr()<<endl;
+#ifdef IRC
+				} catch (exception& ex) { derr<<ex.what()<<endl; } }
+#endif
 				return 0;
 			} catch ( exception& ex ) {
-				cerr << ex.what() << endl;
+				derr << ex.what() << endl;
 				return 1;
 			}
 		return 0;
@@ -83,7 +96,7 @@ public:
 };
 
 int main ( int argc, char** argv ) {
-	prover::initmem(true);
+	prover::initmem();
 	cmds_t cmds = { {
 			{ string ( "expand" ) , new expand_cmd },
 			{ string ( "toquads" ) , new toquads_cmd },

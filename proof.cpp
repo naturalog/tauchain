@@ -307,7 +307,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 		kb[x.first] = x.second;*/
 	for ( jsonld::pquad quad : *kb.at("@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		dout << "PRED: " << p << endl;
+//		dout << "PRED: " << p << endl;
 		if (p[0] == '?' || (p.find('#') != string::npos && s[p.find('#')+1] == '?'))
 			for (string pr : predicates)
 				addrules(s, pr, o, ss, kb);

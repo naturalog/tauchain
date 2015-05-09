@@ -3,30 +3,50 @@
 #include "parsers.h"
 #include "cli.h"
 #include <boost/algorithm/string.hpp>
+#ifdef IRC
+#include "pstream.h"
+#endif
 
 using namespace boost::algorithm;
+
 
 qdb cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
 	try {
 		qdb r;
 		istream* pis = &cin;
+#ifdef IRC
+		pis = new redi::ipstream("tail -n 0 -F /tmp/irc.freenode.net/#zennet/out", redi::pstreams::pstdout);
+//		pis->seekg(0, pis->end);
+#else
 		if (fname != "")
 			pis = new ifstream(fname);
+#endif			
 		istream& is = *pis;
 		string line;
 		stringstream ss;
-		while (getline(is, line)) {
+		while (!is.eof()) {
+			getline(is, line);
 			trim(line);
-			if (line == "fin.")
-				break;
+			if (!line.size() || line == "\n")
+				continue;
+#ifdef IRC
+			string magic = "botau: ";
+			auto pos = line.find(magic);
+			if (pos == string::npos)
+				continue;
+			line = line.substr(pos + magic.size());
+			cout << line;
+#endif
+			if (endsWith(line, "fin."))
+				return readqdb(ss);
 			ss << line;
 		}
 		if (fname != "")
 			delete pis;
 		return readqdb(ss);
 	} catch (exception& ex) {
-		cerr << "Error reading quads: " << ex.what() << endl;
+		derr << "Error reading quads: " << ex.what() << endl;
 	}
 	if ( print ) 
 		dout << q << endl;

@@ -37,6 +37,7 @@ pstring pstr ( const char* s );
 pstring pstr ( const unsigned char* s );
 
 extern std::ostream& dout;
+extern std::ostream& derr;
 
 class obj {
 protected:

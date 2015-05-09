@@ -17,8 +17,11 @@ cli.o: cli.cpp proof.h misc.h rdf.h object.h jsonld.h json_spirit.h strings.h pa
 object.o: object.cpp object.h
 
 debug: CXXFLAGS += -DDEBUG
+irc: CXXFLAGS += -DIRC
 
 debug: $(OBJECTS) $(EXECUTABLE)
+	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
+irc: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
 
 $(EXECUTABLE): $(OBJECTS) 

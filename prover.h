@@ -71,7 +71,7 @@ struct session {
 	evidence* e;
 };
 
-void initmem(bool);
+void initmem();
 void pushg(ground** g, rule* r, subst* s);		// push rule and subst pair into ground
 void pushe(evidence** _e, term* t, ground* g); 		// push evidence item into evidence
 subst* clone(subst* s); 				// deep-copy a subst

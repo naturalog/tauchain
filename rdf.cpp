@@ -314,7 +314,8 @@ qdb readqdb ( istream& is) {
 						c = "@default";
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
 				}
-//				dout << pq->tostring() << endl;
+				dout << pq->tostring() << endl;
+				sleep(0.1);
 				if (q.find(c) == q.end())
 					q[c] = make_shared<qlist>();
 				q[c]->push_back(pq);
@@ -365,7 +366,7 @@ int expand_cmd::operator() ( const strings& args ) {
 	os1.close();
 	os2.close();
 	string c = string ( "diff " ) + fn1.get() + string ( " " ) + fn2.get();
-	if ( system ( c.c_str() ) ) cerr << "command " << c << " failed." << endl;
+	if ( system ( c.c_str() ) ) derr << "command " << c << " failed." << endl;
 	close ( fd1 );
 	close ( fd2 );
 
@@ -390,7 +391,7 @@ int convert_cmd::operator() ( const strings& args ) {
 		dout << convert ( args[2] ) << endl;
 		return 0;
 	} catch ( exception& ex ) {
-		std::cerr << ex.what() << endl;
+		derr << ex.what() << endl;
 		return 1;
 	}
 }
@@ -412,7 +413,7 @@ int toquads_cmd::operator() ( const strings& args ) {
 	try {
 		dout << toquads ( args ) << endl;
 	} catch ( exception& ex ) {
-		cerr << ex.what() << endl;
+		derr << ex.what() << endl;
 		return 1;
 	}
 	return 0;
@@ -434,7 +435,7 @@ int nodemap_cmd::operator() ( const strings& args ) {
 	try {
 		dout << nodemap ( args )->toString() << endl;
 	} catch ( exception& ex ) {
-		cerr << ex.what() << endl;
+		derr << ex.what() << endl;
 		return 1;
 	}
 	return 0;
