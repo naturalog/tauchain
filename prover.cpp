@@ -1223,7 +1223,7 @@ int pushw(dict** _d, const char* s) {
 	d->next->s = new char[strlen(s) + 1];
 	strcpy(d->next->s, s);
 	int c = dict_counter++;
-	if (*s == '?' || *s == '_')
+	if (*s == '?'/* || *s == '_'*/)
 		c = -c;
 	TRACE(printf("Added to dictionary '%s' = %d.\n", s, c));
 	return d->next->n = c;

@@ -56,6 +56,7 @@ pqlist mk_qlist();
 
 ostream& operator<< ( ostream& o, const qdb& );
 ostream& operator<< ( ostream& o, const qlist& );
+qdb readqdb ( istream& is );
 
 class jsonld_api;
 class rdf_db: public qdb {

@@ -9,7 +9,7 @@ using namespace jsonld;
 
 typedef vector<string> strings;
 
-extern bool fnamebase;
+extern bool fnamebase, quad_in;
 extern jsonld::jsonld_options opts;
 
 class cmd_t {
@@ -22,6 +22,7 @@ protected:
 	qdb toquads ( pobj o );
 	qdb convert ( pobj o );
 	qdb convert ( const string& s, bool bdebugprint = false );
+	qdb load_quads ( string fname, bool print = true );
 public:
 	virtual string desc() const = 0;
 	virtual string help() const = 0;

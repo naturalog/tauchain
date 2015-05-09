@@ -12,7 +12,7 @@ auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
 #endif
-bool autobt = false, _pause = false, __printkb = false, fnamebase = true;
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false;
 jsonld::jsonld_options opts;
 
 void menu();
@@ -183,9 +183,9 @@ public:
 		if ( args.size() == 2 )
 			cout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
 		else try {
-				qdb kb = convert ( args[2] );
+				qdb kb = !quad_in ? convert ( args[2] ) : load_quads(args[2]);
 				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );
-				qdb query = convert ( load_json(args[3]) );
+				qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
 				auto e = r.prove ( kb, merge ( query ) );
 				cout << "evidence: " << endl << e << endl;
 				//	menu();
@@ -214,7 +214,8 @@ int main ( int argc, char** argv ) {
 			{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
 			{ { "--shorten", "on IRIs containig # show only what after #" }, &shorten },
 			{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
-			{ { "--base", "set file://<filename> as base in JsonLDOptions" }, &fnamebase }
+			{ { "--base", "set file://<filename> as base in JsonLDOptions" }, &fnamebase },
+			{ { "--quads", "set input format for prove command as quads" }, &quad_in }
 		}
 	};
 	strings args;

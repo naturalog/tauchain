@@ -257,6 +257,7 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 }
 
 bool haspredvar(const qdb& x) {
+	return false;
 	for (auto y : x)
 		for (auto quad : *y.second)
 			if (quad->pred->value[0] == '?') {

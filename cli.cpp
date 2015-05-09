@@ -3,6 +3,21 @@
 #include "parsers.h"
 #include "cli.h"
 
+qdb cmd_t::load_quads ( string fname, bool print ) {
+	qdb q;
+	try {
+		if ( fname == "" )
+			return readqdb(cin);
+		ifstream is ( fname );
+		return readqdb(is);
+	} catch (exception& ex) {
+		cerr << "Error reading quads: " << ex.what() << endl;
+	}
+	if ( print ) 
+		cout << q << endl;
+	return q;
+}
+
 pobj cmd_t::load_json ( string fname, bool print ) {
 	json_spirit::mValue v;
 	if ( fname == "" ) json_spirit::read_stream ( cin, v );

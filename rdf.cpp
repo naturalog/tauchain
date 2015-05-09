@@ -264,3 +264,65 @@ string quad::tostring ( ) {
 	ss << " .";
 	return ss.str();
 }
+
+#include <boost/algorithm/string.hpp>
+using namespace std;
+using namespace boost::algorithm;
+
+namespace jsonld {
+
+qdb readqdb ( istream& is) {
+	string s,p,o,c;
+	bool quotes = false;
+	const char quote = '\"';
+	int pos = -1;
+	char ch;
+	pquad pq;
+	qdb q;
+	auto tr = [](string s){
+		trim_if(s, is_any_of(" <>"));
+		return s;
+	};
+	while (is.get(ch)) {
+		if (ch == quote) {
+			quotes = !quotes;
+			continue;
+		}
+		if (!quotes) {
+			if (isspace(ch) || ch == '\r' || ch == '\n') {
+				if (pos != -1)
+					++pos;
+				continue;
+			}
+			if (pos == -1)
+				pos = 0;
+			if (ch == '.') {
+				if (p == "=>")
+					p = implication;
+				if (pos == 2)
+					pq = make_shared<quad>(tr(s), tr(p), tr(o), c = "@default");
+				else if (pos == 3) {
+					c = tr(c);
+					if (!c.size())
+						c = "@default";
+					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
+				}
+				cout << pq->tostring() << endl;
+				if (q.find(c) == q.end())
+					q[c] = make_shared<qlist>();
+				q[c]->push_back(pq);
+				pos = -1;
+				s=p=o=c="";
+			} else
+				switch (pos) {
+				case 0: s += ch; break;
+				case 1: p += ch; break;
+				case 2: o += ch; break;
+				case 3: c += ch; break;
+				default: break;
+				}
+		}
+	}
+	return q;
+}
+}
