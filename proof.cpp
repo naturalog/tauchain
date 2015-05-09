@@ -229,7 +229,16 @@ prover::term* pred2term(const predicate* p, prover::dict** d) {
 	return t;
 }
 
+int szqdb(const qdb& x) {
+	int r = 0;
+	for (auto y : x)
+		r += y.second->size();
+	return r;
+}
+
 void reasoner::addrules(string s, string p, string o, prover::session& ss, const qdb& kb) {
+	if (p[0] == '?')
+		throw 0;
 	prover::rule* r = &prover::rules[prover::nrules++];
 	r->p = pred2term(triple ( s, p, o ), &ss.d);
 	r->body = 0;
@@ -247,16 +256,59 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 	}
 }
 
-bool reasoner::prove ( const qdb &kb, const qlist& query ) {
+bool haspredvar(const qdb& x) {
+	for (auto y : x)
+		for (auto quad : *y.second)
+			if (quad->pred->value[0] == '?') {
+				cout << quad->tostring() << endl;
+				return true;
+			}
+	return false;
+}
+
+bool reasoner::prove ( qdb kb, qlist query ) {
 	prover::session ss;
 	memset(&ss, 0, sizeof(prover::session));
 	set<string> predicates;
+	qdb tmp;
 	for (auto x : kb)
-		for (auto quad : *x.second)
-			predicates.insert(quad->pred->value);
+		for (auto q : *x.second)
+			if (q->pred->value[0] != '?') 
+				for (auto _z : kb) 
+					for (auto quad : *_z.second) {
+						string s = quad->subj->value, p = quad->pred->value, o = quad->object->value;
+						if (p[0] != '?') {
+							if (tmp.find(x.first) == tmp.end())
+								tmp[x.first] = make_shared<jsonld::qlist>();
+							tmp[x.first]->push_back(make_shared<jsonld::quad>(s, p, o, _z.first));
+						} else for (auto t : kb) {
+							for (auto t1 : *t.second) {
+								p = t1->pred->value;
+								if (p[0] != '?') {
+									if (tmp.find(t.first) == tmp.end())
+										tmp[t.first] = make_shared<jsonld::qlist>();
+									tmp[t.first]->push_back(make_shared<jsonld::quad>(s, p, o, t.first));
+								}
+							}
+						}
+					}
+//				predicates.insert(quad->pred->value);
+	kb = tmp;
+/*	while (haspredvar(kb)) {
+		cout << szqdb(kb) << endl;
+		for (auto x : kb)
+			for (auto q : *x.second)
+				if (q->pred->value[0] != '?') {
+					x.second->remove(q);
+					break;
+				}
+	}
+	for (auto x : tmp)
+		kb[x.first] = x.second;*/
 	for ( jsonld::pquad quad : *kb.at("@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		if (p[0] == '?')
+		cout << "PRED: " << p << endl;
+		if (p[0] == '?' || (p.find('#') != string::npos && s[p.find('#')+1] == '?'))
 			for (string pr : predicates)
 				addrules(s, pr, o, ss, kb);
 		else

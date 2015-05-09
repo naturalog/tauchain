@@ -28,7 +28,7 @@ using namespace std;
 using namespace jsonld;
 
 const uint K1 = 1024, M1 = K1 * K1;
-const uint max_predicates = M1, max_rules = M1, max_proofs = M1;
+const uint max_predicates = 10*M1, max_rules = 10*M1, max_proofs = 10*M1;
 
 extern boost::interprocess::list<thread*> threads;
 extern boost::interprocess::vector<class proof*> proofs;
@@ -121,7 +121,7 @@ public:
 	reasoner();
 	~reasoner();
 //	bool prove ( const rule* goal, int, const cases_t& cases ) { return proof::find(goal, cases); }
-	bool prove ( const qdb& kb, const qlist& query );
+	bool prove ( qdb kb, qlist query );
 	bool test_reasoner();
 	void printkb();
 };
