@@ -271,7 +271,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 	prover::session ss;
 	memset(&ss, 0, sizeof(prover::session));
 	set<string> predicates;
-	qdb tmp;
+/*	qdb tmp;
 	for (auto x : kb)
 		for (auto q : *x.second)
 			if (q->pred->value[0] != '?') 
@@ -295,7 +295,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 					}
 //				predicates.insert(quad->pred->value);
 	kb = tmp;
-/*	while (haspredvar(kb)) {
+	while (haspredvar(kb)) {
 		cout << szqdb(kb) << endl;
 		for (auto x : kb)
 			for (auto q : *x.second)
