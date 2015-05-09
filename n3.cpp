@@ -22,23 +22,43 @@ string ctx = "@default";
 map<string, string> prefixes;
 bool addcomma = false;
 
-void n3(string s, bool isq) {
+vector<string> split_dots(string s) {
+	vector<string> r;
+	int curly = 0;
+	bool quotes = false;
+	const char* x = s.c_str();
+	const char* y = s.c_str();
+	stringstream ss;
+	while (*x) {
+		switch (*x) {
+		case '{': curly++; break;
+		case '}': curly--; break;
+		case '\"': 
+			if (!(x-y) || ((x-y) == 1 && *(x-1) != '\\' && ((x-y) != 2 && *(x-2) != '\\')))
+				quotes = !quotes;
+			break;
+		default: break;
+		}
+		ss << *x;
+		if ((!quotes && !curly && *x == '.') || !++x) {
+			r.push_back(ss.str());
+			ss = stringstream();
+			y = x;
+		}
+	}
+	return r;
+}
+
+string n3(string s, bool isq) {
+	stringstream ss;
 	trim(s);
-//	auto pos = s.find('\n');
-//	while (pos != string::npos) {
-//		s.erase(pos);
-//		pos = s.find('\n');
-//	}
-//	s.erase(remove(s.begin(), s.end(), '\n'), s.end());
-//	s.erase(remove(s.begin(), s.end(), '\r'), s.end());
 	replace_all(s, "\n", " ");
 	replace_all(s, "\r", " ");
 	const size_t sz = s.size();
-	cout<<s<<endl;
 	if (sz && s[0] == '#')
-		return 0;
+		return "";
 	prover::term* t;
-	cout<<"[{\"@graph\":\"@id:\":\""<<ctx<<"\",[";
+	ss<<"[{\"@graph\":\"@id:\":\""<<ctx<<"\",[";
 	if (starts_with(s, "@prefix")) {
 		// @prefix name: <url>.
 		string ns, url;
@@ -59,11 +79,22 @@ void n3(string s, bool isq) {
 			if (s.size() > 1 && substr(s, 1, s.size() - 2).find('{') == string::npos) {
 				string x = between(s, '{', '}');
 				trim(x);
+				auto a = split_dots(x);
+
 			} else {
 				// we expect to have a bare (no {}) predicate
 				string p = between(x, '}', '{');
+      				ss<< "\"@id\": \""
+					<< n3(between(x.substr(x.substr(0, x.size()-1).find('{')),'{'.'}'), isq) 
+					<< "\", \""
+					<< p
+					<< "\": { \"@id\": \"" 
+					<< n3(between(x.substr(x.substr(1, x.size()-1).find('{')),'{'.'}'), isq) 
+					<<"\" } } ";
+      			printf( "\"@id\": \"%s\", \"%s\": { \"@id\": \"%s\" } } ", s.c_str(), p.c_str(), o.c_str());
 				trim(p);
-				
+				n3(between(x,'{'.'}'), isq);
+				n3(between(x,'{'.'}'), isq);
 			}
 		}
 		
@@ -74,13 +105,14 @@ void n3(string s, bool isq) {
 			trim(su);
 			trim(p);
 			trim(o);
-			if (addcomma) cout<<',';
-      			printf( "\"@id\": \"%s\", \"%s\": { \"@id\": \"%s\" } } ", s.c_str(), p.c_str(), o.c_str());
+			if (addcomma) ss<<',';
+      			ss<< "\"@id\": \""<<su<<"\", \""<<p<<"\": { \"@id\": \""<<o<<"\" } } ";
 			addcomma = true;
 			cout << "s: " << a[0] << " p: " << a[1] << " o: " << a[2] << endl;
 		}
 	}
-	cout<<"]}";
+	ss<<"]}";
+	return ss.str();
 //	if (a.size() == 2)
 //		return mkpred(a[0].c_str(), a[1].c_str(), a[2].c_str());
 }
@@ -88,6 +120,6 @@ void n3(string s, bool isq) {
 int main(int, char**) {
 	string s;
 	while (getline(cin, s, '.'))
-		n3(s);
+		cout<<n3(s)<<endl;
 	return 0;
 }
