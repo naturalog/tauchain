@@ -242,10 +242,12 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 			prover::rule* r = &prover::rules[prover::nrules++];
 			r->p = pred2term(triple ( s, p, o ), &ss.d);
 			r->body = 0;
-			prover::pushr(&ss.rkb, r);
 //			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
-			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
-			for ( jsonld::pquad y : *kb.at ( o ) ) {
+			if ( p != implication || kb.find ( o ) == kb.end() ) {
+				prover::pushr(&ss.rkb, r);
+				continue;
+			}
+			else for ( jsonld::pquad y : *kb.at ( o ) ) {
 				r = &prover::rules[prover::nrules++];
 				r->p = pred2term(triple ( *y ), &ss.d);
 				r->body = 0;

@@ -903,7 +903,7 @@ void prove(session* ss) {
 	p->last = rg->body;
 	p->prev = 0;
 	pushq(&qu, p);
-	TRACE(printf("\nprove() called with facts:"));
+	TRACE(puts("\nprove() called with facts:"));
 	TRACE(printrs(cases, ss->d));
 	TRACE(puts("\nand query:"));
 	TRACE(printl(goal, ss->d));
@@ -1029,8 +1029,13 @@ void pushr(ruleset** _rs, rule* r) {
 		(*_rs)->next = 0;
 	}
 	ruleset* rs = *_rs;
-	while (rs->next)
+	if (rs->r == r)
+		return;
+	while (rs->next) {
 		rs = rs->next;
+		if (rs->r == r)
+			return;
+	}
 	rs->next = &rulesets[nrulesets++];
 	rs->next->r = r;
 	rs->next->next = 0;
@@ -1084,7 +1089,7 @@ void printrs(ruleset* rs, dict* d) {
 	if (!rs)
 		return;
 	printr(rs->r, d);
-	printf("\n");
+	puts("");
 	printrs(rs->next, d);
 }
 
