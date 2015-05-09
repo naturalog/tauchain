@@ -18,6 +18,8 @@ void menu();
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+ostream& dout = dout;
+
 class listen_cmd : public cmd_t {
 	virtual string desc() const { return "Listen to incoming connections and answer queries."; }
 	virtual string help() const { return "Behave as a server. Usage: tau listen <port>"; }
@@ -36,7 +38,7 @@ class listen_cmd : public cmd_t {
 				string line;
 				while (stream) {
 					stream >> line;
-					cout << line << endl;
+					dout << line << endl;
 				}
 			}));
 		}
@@ -58,19 +60,19 @@ public:
 	}
 	virtual int operator() ( const strings& args ) {
 		if ( ( args.size() == 3 && args[1] == "help" ) || ( args.size() != 2 && args.size() != 4 ) ) {
-			cout << help();
+			dout << help();
 			return 1;
 		}
 		if ( args.size() == 2 )
-			cout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
+			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
 		else try {
 				qdb kb = !quad_in ? convert ( args[2] ) : load_quads(args[2]);
 				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );
 				qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
 				auto e = r.prove ( kb, merge ( query ) );
-				cout << "evidence: " << endl << e << endl;
+				dout << "evidence: " << endl << e << endl;
 				//	menu();
-				//		cout << "dict: " << endl << dict.tostr()<<endl;
+				//		dout << "dict: " << endl << dict.tostr()<<endl;
 				return 0;
 			} catch ( exception& ex ) {
 				cerr << ex.what() << endl;
@@ -102,21 +104,21 @@ int main ( int argc, char** argv ) {
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
 	process_flags ( cmds, args );
 	if ( argc == 1 ) {
-		cout << endl << "Input kb as quads, then query." << endl << "After finished inserting kb, write a line \"fin.\" in order to move to query." << endl<< "Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl << endl ;
+		dout << endl << "Input kb as quads, then query." << endl << "After finished inserting kb, write a line \"fin.\" in order to move to query." << endl<< "Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl << endl ;
 		prove_cmd p;
 		quad_in = true;
 		return p({"","","",""});
 /*		qdb kb = p.load_quads("");
 		qdb query = p.load_quads("");
 		auto e = p.r.prove ( kb, merge ( query ) );
-		cout << "evidence: " << endl << e << endl;*/
+		dout << "evidence: " << endl << e << endl;*/
 	}
 	if (( cmds.first.find ( argv[1] ) == cmds.first.end() && args[1] != "help" ) ) {
 		print_usage ( cmds );
 		return 1;
 	}
 	if ( args[1] == "help" && argc == 3 ) {
-		cout << cmds.first[string ( argv[2] )]->help();
+		dout << cmds.first[string ( argv[2] )]->help();
 		return 0;
 	}
 	if ( args[1] == "help" && argc == 2 ) {
@@ -136,7 +138,7 @@ int main ( int argc, char** argv ) {
 	o1<<"digraph Predicates {"<<endl;
 	for (size_t n = 0; n < npredicates; ++n) o1<<predicates[n].dot()<<endl;
 	o1<<"}";
-	cout << "Written proof.dot and rules.dot. Use 'dot -Tpng proof.dot > proof.png' etc to visualize." << endl;
+	dout << "Written proof.dot and rules.dot. Use 'dot -Tpng proof.dot > proof.png' etc to visualize." << endl;
 */
 	return rval;
 }

@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <execinfo.h>
+#include <ostream>
 
 //#include "logger.h"
 extern bool deref, shorten;
@@ -34,6 +35,8 @@ typedef std::shared_ptr<bool> pbool;
 pstring pstr ( const string& s );
 pstring pstr ( const char* s );
 pstring pstr ( const unsigned char* s );
+
+extern std::ostream& dout;
 
 class obj {
 protected:

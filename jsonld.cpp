@@ -1050,7 +1050,7 @@ string download ( const string& url ) {
 		    string ( "curl_easy_perform() failed: " )
 		    + curl_easy_strerror ( res ) );
 	string r = out.str();
-	cout << "downloaded file: " << r << endl;
+	dout << "downloaded file: " << r << endl;
 	return r;
 }
 

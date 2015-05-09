@@ -136,8 +136,8 @@ void menu() {
 	/*	 static map<char, string> menu1 = {
 			{'d', "print dict"}
 			};
-		cout << "now what?" << endl;
-		for (auto x : menu1) cout << x.first << ":\t" << x.second << endl;
+		dout << "now what?" << endl;
+		for (auto x : menu1) dout << x.first << ":\t" << x.second << endl;
 	*/
 }
 

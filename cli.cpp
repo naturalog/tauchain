@@ -29,7 +29,7 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 		cerr << "Error reading quads: " << ex.what() << endl;
 	}
 	if ( print ) 
-		cout << q << endl;
+		dout << q << endl;
 	return q;
 }
 
@@ -42,7 +42,7 @@ pobj cmd_t::load_json ( string fname, bool print ) {
 	}
 	pobj r =  jsonld::convert ( v );
 	if ( !r ) throw runtime_error ( "Couldn't read input." );
-	if ( print ) cout << r->toString() << endl;
+	if ( print ) dout << r->toString() << endl;
 	return r;
 }
 
@@ -75,8 +75,8 @@ qdb cmd_t::toquads ( pobj o ) {
 		if ( !g.second || !g.second->MAP() ) throw logic_error ( "Expected map in nodemap." );
 		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
-	//	cout << "Converting: " << endl << o->toString() << endl;
-	//	cout << "Converted: " << endl << r << endl;
+	//	dout << "Converting: " << endl << o->toString() << endl;
+	//	dout << "Converted: " << endl << r << endl;
 	return r;
 }
 
@@ -86,9 +86,9 @@ qdb cmd_t::convert ( pobj o ) {
 
 qdb cmd_t::convert ( const string& s, bool debugprint ) {
 	if ( fnamebase ) opts.base = pstr ( string ( "file://" ) + s + "#" );
-	if ( debugprint ) cout << " Converting: " << s;
+	if ( debugprint ) dout << " Converting: " << s;
 	qdb r = convert ( load_json ( s ) );
-	if ( debugprint ) cout << " Converted: " << r << endl;
+	if ( debugprint ) dout << " Converted: " << r << endl;
 	return r;
 }
 
@@ -102,13 +102,13 @@ void process_flags ( const cmds_t& cmds, strings& args ) {
 }
 
 void print_usage ( const cmds_t& cmds ) {
-	cout << endl << "Tau-Chain by http://idni.org" << endl;
-	cout << endl << "Usage:" << endl;
-	cout << "\ttau help <command>\t\tPrints usage of <command>." << endl;
-	cout << "\ttau <command> [<args>]\t\tRun <command> with <args>." << endl;
-	cout << endl << "Available commands:" << endl << endl;
-	for ( auto c : cmds.first ) cout << '\t' << c.first << '\t' << c.second->desc() << endl;
-	cout << endl << "Available flags:" << endl << endl;
-	for ( auto c : cmds.second ) cout << '\t' << c.first.first << '\t' << c.first.second << endl;
-	cout << endl;
+	dout << endl << "Tau-Chain by http://idni.org" << endl;
+	dout << endl << "Usage:" << endl;
+	dout << "\ttau help <command>\t\tPrints usage of <command>." << endl;
+	dout << "\ttau <command> [<args>]\t\tRun <command> with <args>." << endl;
+	dout << endl << "Available commands:" << endl << endl;
+	for ( auto c : cmds.first ) dout << '\t' << c.first << '\t' << c.second->desc() << endl;
+	dout << endl << "Available flags:" << endl << endl;
+	for ( auto c : cmds.second ) dout << '\t' << c.first.first << '\t' << c.first.second << endl;
+	dout << endl;
 }

@@ -26,7 +26,7 @@ pnode mkliteral ( string value, pstring datatype, pstring language ) {
 	pnode r = make_shared <node> ( node::LITERAL );
 	r->type = "literal";
 	r->value = value;
-	//	cout<<"mkliteral value: "<<value<<endl;
+	//	dout<<"mkliteral value: "<<value<<endl;
 	r->datatype = datatype ? *datatype : XSD_STRING;
 	if ( language ) r->lang = *language;
 	return r;
@@ -36,14 +36,14 @@ pnode mkiri ( string iri ) {
 	pnode r = make_shared <node> ( node::IRI );
 	r->type = "IRI";
 	r->value = iri;
-	//	cout<<"mkiri value: "<<iri<<endl;
+	//	dout<<"mkiri value: "<<iri<<endl;
 	return r;
 }
 
 pnode mkbnode ( string attribute ) {
 	pnode r = make_shared <node> ( node::BNODE );
 	r->type = "blank node";
-	//	cout<<"mkbnode value: "<<attribute<<endl;
+	//	dout<<"mkbnode value: "<<attribute<<endl;
 	r->value = attribute;
 	return r;
 }
@@ -314,7 +314,7 @@ qdb readqdb ( istream& is) {
 						c = "@default";
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
 				}
-//				cout << pq->tostring() << endl;
+//				dout << pq->tostring() << endl;
 				if (q.find(c) == q.end())
 					q[c] = make_shared<qlist>();
 				q[c]->push_back(pq);
@@ -346,11 +346,11 @@ string expand_cmd::help() const {
 }
 int expand_cmd::operator() ( const strings& args ) {
 	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 4 ) {
-		cout << help();
+		dout << help();
 		return 1;
 	}
 	pobj e;
-	cout << ( e = jsonld::expand ( load_json ( args ) ) )->toString() << endl;
+	dout << ( e = jsonld::expand ( load_json ( args ) ) )->toString() << endl;
 	if ( args.size() == 3 ) return 0;
 	boost::filesystem::path tmpdir = boost::filesystem::temp_directory_path();
 	const string tmpfile_template =  tmpdir.string() + "/XXXXXX";
@@ -383,11 +383,11 @@ string convert_cmd::help() const {
 }
 int convert_cmd::operator() ( const strings& args ) {
 	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
-		cout << help();
+		dout << help();
 		return 1;
 	}
 	try {
-		cout << convert ( args[2] ) << endl;
+		dout << convert ( args[2] ) << endl;
 		return 0;
 	} catch ( exception& ex ) {
 		std::cerr << ex.what() << endl;
@@ -406,11 +406,11 @@ string toquads_cmd::help() const {
 }
 int toquads_cmd::operator() ( const strings& args ) {
 	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
-		cout << help();
+		dout << help();
 		return 1;
 	}
 	try {
-		cout << toquads ( args ) << endl;
+		dout << toquads ( args ) << endl;
 	} catch ( exception& ex ) {
 		cerr << ex.what() << endl;
 		return 1;
@@ -428,11 +428,11 @@ string nodemap_cmd::help() const {
 }
 int nodemap_cmd::operator() ( const strings& args ) {
 	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
-		cout << help();
+		dout << help();
 		return 1;
 	}
 	try {
-		cout << nodemap ( args )->toString() << endl;
+		dout << nodemap ( args )->toString() << endl;
 	} catch ( exception& ex ) {
 		cerr << ex.what() << endl;
 		return 1;

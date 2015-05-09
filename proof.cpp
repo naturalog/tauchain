@@ -54,15 +54,15 @@ proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground
 
 void reasoner::printkb() {
 	static bool pause = false;
-	cout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nproofs << " proofs. " << endl;
-	cout << "predicates: " <<  endl;
-	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
-	cout << "rules: " << endl;
-	for ( uint n = 0; n < nrules; ++n ) cout << rules[n] << endl;
-	cout << "proofs: " << endl;
-	for ( uint n = 0; n < nproofs; ++n ) cout << proofs[n] << endl;
-	if ( pause ) cout << "type <enter> to continue or <c><enter> to stop pausing...";
-	cout << endl;
+	dout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nproofs << " proofs. " << endl;
+	dout << "predicates: " <<  endl;
+	for ( uint n = 0; n < npredicates; ++n ) dout << predicates[n] << endl;
+	dout << "rules: " << endl;
+	for ( uint n = 0; n < nrules; ++n ) dout << rules[n] << endl;
+	dout << "proofs: " << endl;
+	for ( uint n = 0; n < nproofs; ++n ) dout << proofs[n] << endl;
+	if ( pause ) dout << "type <enter> to continue or <c><enter> to stop pausing...";
+	dout << endl;
 	if ( pause && getchar() == 'c' ) pause = false;
 }
 
@@ -160,7 +160,7 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 				empty = false;
 			}
 		}
-	if (empty) cout << "evidence: " << evidence << endl;
+	if (empty) dout << "evidence: " << evidence << endl;
 	};
 //	threads.push_back(new thread(f));
 	f();
@@ -260,7 +260,7 @@ bool haspredvar(const qdb& x) {
 	for (auto y : x)
 		for (auto quad : *y.second)
 			if (quad->pred->value[0] == '?') {
-				cout << quad->tostring() << endl;
+				dout << quad->tostring() << endl;
 				return true;
 			}
 	return false;
@@ -295,7 +295,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 //				predicates.insert(quad->pred->value);
 	kb = tmp;
 	while (haspredvar(kb)) {
-		cout << szqdb(kb) << endl;
+		dout << szqdb(kb) << endl;
 		for (auto x : kb)
 			for (auto q : *x.second)
 				if (q->pred->value[0] != '?') {
@@ -307,7 +307,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 		kb[x.first] = x.second;*/
 	for ( jsonld::pquad quad : *kb.at("@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		cout << "PRED: " << p << endl;
+		dout << "PRED: " << p << endl;
 		if (p[0] == '?' || (p.find('#') != string::npos && s[p.find('#')+1] == '?'))
 			for (string pr : predicates)
 				addrules(s, pr, o, ss, kb);
@@ -333,7 +333,7 @@ fin.
 */
 
 //	dict.set ( "a" );
-	//	cout <<"dict:"<<endl<< dict.tostr() << endl;
+	//	dout <<"dict:"<<endl<< dict.tostr() << endl;
 	//	exit(0);
 //	evidence_t evidence;
 /*	cases_t cases;
@@ -345,9 +345,9 @@ fin.
 */
 //	predicate* goal = mkpred ( "a", { _y, Mortal } );
 //	return prove ( mkrule ( 0, { goal } ), -1, cases );
-//	cout << "evidence: " << evidence.size() << " items..." << endl;
-//	cout << evidence << endl;
-//	cout << evidence.size() << endl;
+//	dout << "evidence: " << evidence.size() << " items..." << endl;
+//	dout << evidence << endl;
+//	dout << evidence.size() << endl;
 //	return evidence.size();
 	return 1;
 }

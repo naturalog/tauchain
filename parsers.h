@@ -23,7 +23,7 @@ void list_parser_options ( raptor_world *world = raptor_new_world() ) {
 	for ( size_t i = 0; i < raptor_option_get_count(); i++ )
 		if ( raptor_option_description* od = raptor_world_get_option_description (
 		        world, RAPTOR_DOMAIN_PARSER, ( raptor_option ) i ) )
-			cout << od->name << '\t' << od->label << endl;
+			dout << od->name << '\t' << od->label << endl;
 }
 
 pnode mknode ( const raptor_term* t ) {
