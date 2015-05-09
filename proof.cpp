@@ -67,7 +67,7 @@ void reasoner::printkb() {
 }
 
 const predicate* predicate::evaluate ( const subst& sub ) const {
-	trace ( "\tEval " << t << " in " << sub << endl );
+	trace ( "\tEval " << *this << " in " << sub << endl );
 	if ( pred < 0 ) {
 		auto it = sub.find ( pred );
 		return it == sub.end() ? 0 : it->second->evaluate ( sub );

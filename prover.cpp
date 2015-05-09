@@ -465,7 +465,7 @@ void printcmd(const char* line, session* ss) {
 
 #ifndef READLINE
 char* readline(const char* p) {
-	char l[str_input_len];
+	char* l = new char[str_input_len];
 	size_t sz = str_input_len;
 	printf("%s ", p);
 	if (!cin.getline(l, sz))
@@ -673,6 +673,9 @@ void pushe(evidence** _e, term* t, ground* g) {
 	if (!*_e) {
 		(*_e) = &evidences[nevidences++];
 		(*_e)->next = 0;
+		(*_e)->p = t->p;
+		(*_e)->item = ei;
+		return;
 	}
 	e = *_e;
 	while (e->next && e->p != t->p)
@@ -1180,6 +1183,8 @@ int pushw(dict** _d, const char* s) {
 	int n;
 	if (!*_d) {
 		*_d = &dicts[ndicts++];
+		(*_d)->s = 0;
+		(*_d)->n = 0;
 		(*_d)->next = 0;
 	}
 	dict* d = *_d;

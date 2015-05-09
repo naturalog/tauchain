@@ -4,9 +4,7 @@
 #include <sstream>
 #include "parsers.h"
 #include "proof.h"
-namespace prover{
 #include "prover.h"
-}
 using namespace std;
 
 #ifdef DEBUG
@@ -14,7 +12,7 @@ auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
 #endif
-bool autobt = false, _pause = false, __printkb = false, fnamebase = false;
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true;
 jsonld::jsonld_options opts;
 
 void menu();
@@ -203,6 +201,7 @@ public:
 };
 
 int main ( int argc, char** argv ) {
+	prover::initmem(true);
 	cmds_t cmds = { {
 			{ string ( "expand" ) , new expand_cmd },
 			{ string ( "toquads" ) , new toquads_cmd },
