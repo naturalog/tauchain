@@ -220,7 +220,7 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 prover::term* pred2term(const predicate* p, prover::dict** d) {
 	if (!p) return 0;
 	prover::term* t = &prover::terms[prover::nterms++];
-	t->p = prover::pushw(d, dict[p->pred].c_str());
+	t->p = prover::pushw(d, dstr(p->pred).c_str());
 	if (p->args.size()) {
 		t->s = pred2term(p->args[0], d);
 		t->o = pred2term(p->args[1], d);

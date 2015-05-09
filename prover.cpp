@@ -919,6 +919,9 @@ void prove(session* ss) {
 			qu = 0;
 		if (p->last) {
 			term* t = p->last->p;
+			TRACE(printf("Tracking back from "));
+			TRACE(printterm(t, ss->d));
+			TRACE(puts(""));
 			int b = builtin(t, p, ss);
 			if (b == 1) {
 				proof* r = &proofs[nproofs++];
@@ -939,7 +942,18 @@ void prove(session* ss) {
 			ruleset* rs = cases;
 			while ((rs = findruleset(rs, t->p))) {
 				subst* s = 0;
+				TRACE(printf("\tTrying to unify "));
+				TRACE(printps(t, p->s, ss->d));
+				TRACE(printf(" and "));
+				TRACE(printps(rs->r->p, s, ss->d));
+				TRACE(printf("... "));
 				if (unify(t, p->s, rs->r->p, &s, true)) {
+					(printf("\tunification succeeded"));
+					if (s) {
+						TRACE(printf(" with new substitution: "));
+						TRACE(prints(s, ss->d));
+					}
+					TRACE(puts(""));
 					if (euler_path(p)) {
 						rs = rs->next;
 						continue;
@@ -953,6 +967,10 @@ void prove(session* ss) {
 					if (!rs->r->body) 
 						pushg( &r->g, rs->r, 0 );
 					unshift(&qu, r);
+					TRACE(printf("queue:\n"));
+					TRACE(printq(qu, ss->d));
+				} else {
+					TRACE(printf("\tunification failed\n"));
 				}
 				rs = rs->next;
 			}
