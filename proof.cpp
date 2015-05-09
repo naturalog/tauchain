@@ -111,10 +111,12 @@ proof& proof::find ( const predicate* goal, const cases_t& cases) {
 }
 boost::interprocess::list<thread*> threads;
 
-void proof::process ( const cases_t& cases, evidence_t& evidence ) {
-	auto f = [this, &cases, &evidence](){
+bool proof::process ( const cases_t& cases, evidence_t& evidence ) {
+//	auto f = [this, &cases, &evidence](){
+	dequeue<proof> queue;
 	trace ( *this << endl );
 	bool empty = true;
+	while (!queue.empty()) {
 	if ( ind >= rul->body.size() ) {
 		if ( !parent )
 			for ( const predicate* x : rul->body ) {
@@ -158,10 +160,10 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 				empty = false;
 			}
 		}
-	if (empty) cout << "evidence: " << evidence << endl;
 	};
 //	threads.push_back(new thread(f));
-	f();
+	cout << "evidence: " << evidence << endl;
+//	f();
 }
 
 predicate* reasoner::mkpred ( string s, const predlist& v ) {

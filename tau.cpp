@@ -186,7 +186,8 @@ public:
 			cout << ( r.test_reasoner() ? "pass" : "fail" ) << endl;
 		else try {
 				qdb kb = convert ( args[2] );
-				qdb query = convert ( args[3], true );
+				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );
+				qdb query = convert ( load_json(args[3]) );
 				auto e = r.prove ( kb, merge ( query ) );
 				cout << "evidence: " << endl << e << endl;
 				//	menu();

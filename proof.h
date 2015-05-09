@@ -62,7 +62,7 @@ private:
 	subst sub;
 	ground_t ground;
 	int builtin ( const predicate* t );
-	void process ( const cases_t& cases, evidence_t& evidence );
+	bool process ( const cases_t& cases, evidence_t& evidence );
 	static proof& init ( const proof& f );
 	static proof& init ( const predicate* _r = 0, uint _ind = 0, const proof* p = 0, subst _s = subst(), ground_t _g = ground_t() );
 public:	

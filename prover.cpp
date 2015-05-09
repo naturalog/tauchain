@@ -96,6 +96,21 @@ const char prompt[] = "tau >> ";
 #define TRACE(X)
 #endif
 
+#define PUSH_FUNC(set, item, member, sets, nsets) \
+	void push##item(set** s, item* i) { \
+	if (!*set) { \
+		*set = &sets[nsets]; \
+		(*set)->m = i; \
+		(*set)->next = 0; \
+	} \
+	set* ss = *set; \
+	while (ss->next) \
+		ss = ss->next; \
+	ss->next = &sets[nsets++]; \
+	ss->next->m = i; \
+	ss->next->next = 0;
+
+
 bool read_num(const char* line, int* x) {
 	*x = 0;
 	while (isdigit(*line)) {
@@ -127,6 +142,54 @@ bool has_no_spaces(const char* s) {
 			return false;
 	return true;
 }
+/*
+struct quad {
+	const char *s, *p, *o, *c;
+};
+
+ruleset* quad(quad* qs, uint sz, session* ss, bool isq) {
+	ruleset* rs = 0;
+	quad* qq = qs;
+	uint n;
+	while (qs != &qq[sz]) {
+		term* t = &terms[nterms++];
+		t->p = pushw(&ss->d, qs->p);
+		t->s = pushw(&ss->d, qs->s);
+		t->o = pushw(&ss->d, qs->o);
+		if (is_implication(t->p)) 
+			for (n = 0; n < sz; ++n) {
+				if (strcmp(qq[k].c, qs->s))
+					continue;
+				rule* r = &rules[nrules++];
+				r->p = mkterm(qq[n]);
+				r->body = 0;
+				for (k = 0; k < sz; ++k)
+					if (!strcmp(qq[k].c, qs->o))
+						pushp(&r->body, qq[k].o);
+			}
+		
+	}
+}
+
+rule* quad(int p, term* s, term* o, bool isq) {
+	rule* r = &rules[nrules++];
+	r->p = 0;
+	r->body = 0;
+	if (is_implication(p)) {
+		r->p = o;
+		pushp(&r->body, s);
+	}
+	term* t = &terms[nterms++];
+	t->p = p;
+	t->s = s;
+	t->o = o;
+	if (isq)
+		pushp(&r->body, t);
+	else
+		r->p = t;
+	return r;
+}
+*/
 
 void str2term(const char* s, term** _p, dict* d) {
 	if (!s || !*s) {
@@ -436,9 +499,12 @@ void menu(session* ss) {
 		if (szline) {
 			if ((line[szline - 1] == '.' || line[szline - 1] == '?') && szline > 1 ) {
 				bool isq = line[szline - 1] == '?';
-				line[szline - 1] = 0;
+				if (isq)
+					line[szline - 1] = '.';
 				trim(line);
+//				pushr(
 				term* t = &terms[nterms++];
+//				pushr(isq ? &ss->goal : ss->
 				str2term(line, &t, ss->d);
 //				printf("String %s parsed into term as:\n", line);
 				printterm(t, ss->d);
@@ -704,7 +770,7 @@ void setsub(subst** s, int p, term* pr) {
 		*s = _s;
 	else {
 		while ((*s)->next) 
-			*s = (*s)->next;
+			s = &(*s)->next;
 		(*s)->next = _s;
 	}
 }
@@ -853,9 +919,6 @@ void prove(termset* goal, ruleset* cases, bool, session* ss) {
 			qu = 0;
 		if (p->last) {
 			term* t = p->last->p;
-			TRACE(printf("Tracking back from "));
-			TRACE(printterm(t, ss->d));
-			TRACE(puts(""));
 			int b = builtin(t, p, ss);
 			if (b == 1) {
 				proof* r = &proofs[nproofs++];
@@ -876,100 +939,39 @@ void prove(termset* goal, ruleset* cases, bool, session* ss) {
 			ruleset* rs = cases;
 			while ((rs = findruleset(rs, t->p))) {
 				subst* s = 0;
-				TRACE(printf("\tTrying to unify "));
-				TRACE(printps(t, p->s, ss->d));
-				TRACE(printf(" and "));
-				TRACE(printps(rs->r->p, s, ss->d));
-				TRACE(printf("... "));
 				if (unify(t, p->s, rs->r->p, &s, true)) {
-					TRACE(printf("\tunification succeeded"));
-					if (s) {
-						TRACE(printf(" with new substitution: "));
-						TRACE(prints(s, ss->d));
-					}
-					TRACE(puts(""));
 					if (euler_path(p)) {
 						rs = rs->next;
 						continue;
 					}
 					proof* r = &proofs[nproofs++];
 					r->rul = rs->r;
-					TRACE(printf("\tPushed frame with rule "));
-					TRACE(printr(r->rul, ss->d));
-					TRACE(puts("."));
 					r->last = r->rul->body;
 					r->prev = p;
-					r->s = 0;
+					r->s = s;
 					r->g = copyg(p->g);
-					if (!rs->r->body) {
-						TRACE(printf("\t\tadding ground to new frame "));
+					if (!rs->r->body) 
 						pushg( &r->g, rs->r, 0 );
-						TRACE(printg(r->g, ss->d));
-						TRACE(puts("."));
-					}
 					unshift(&qu, r);
-					TRACE(printf("pushed frame...\n"));
-					TRACE(printp(r, ss->d));
-					TRACE(printf("queue:\n"));
-					TRACE(printq(qu, ss->d));
-				}
-				else {
-					TRACE(printf("\tunification failed\n"));
 				}
 				rs = rs->next;
 			}
 		}
 		else if (!p->prev) {
-			TRACE(puts("/*-------------- No more backward frames ----------------"));
-			TRACE(puts("Current queue:"));
-			TRACE(printq(qu, ss->d));
-			TRACE(puts("Current proof element:"));
-			TRACE(printp(p, ss->d));
 			termset* r;
 			for (r = p->rul->body; r; r = r->next) 
 				pushe(&e, evaluate(r->p, p->s), p->g);
-			TRACE(puts("-------------------------------------------------------*/"));
 		} else {
-			TRACE(puts("/*---------------- Finished a Rule ----------------------"));
 			ground* g = copyg(p->g);
 			proof* r = &proofs[nproofs++];
-			if (p->rul->body) {
-				TRACE(printf("Adding the finished rule's body as ground: "));
+			if (p->rul->body)
 				pushg(&g, p->rul, p->s);
-				TRACE(printg(g, ss->d));
-				TRACE(puts(""));
-			}
-			TRACE(printf("Going a frame up (except ground and subst that we take up with us), and forwarding the index.\nThat frame contains rule: "));
-			TRACE(printr(p->prev->rul, ss->d));
-			TRACE(puts("."));
 			*r = *p->prev;
 			r->g = g;
 			r->s = clone(p->prev->s);
-//			if (p->prev->s) {
-//				r->s = &substs[nsubsts++];//
-//				*r->s = *p->prev->s;
-//			} else
-//				r->s = 0;
 			unify(p->rul->p, p->s, r->last->p, &r->s, true);
-			TRACE(printf("Forwarding from rule: "));
-			TRACE(printterm(r->last->p, ss->d));
-#ifdef DEBUG			
-			if (r->last->next) {
-				TRACE(printf(" to rule: "));
-				TRACE(printterm(r->last->next->p, ss->d));
-			}
-			else
-				TRACE(printf(" to null (prev rule also finished). "));
-#endif			
-			TRACE(printf("\nBoth in body of rule: "));
-			TRACE(printr(r->rul, ss->d));
-			TRACE(puts("\nPushed new frame. Current queue:"));
-			TRACE(printq(qu, ss->d));
-			TRACE(puts("\nNew proof element:"));
 			r->last = r->last->next;
-			TRACE(printp(r, ss->d));
 			pushq(&qu, r);
-			TRACE(puts("-------------------------------------------------------*/"));
 
 			continue;
 		}
@@ -1000,6 +1002,20 @@ void pushp(termset** _l, term* p) {
 	l->next = &termsets[ntermsets++];
 	l->next->p = p;
 	l->next->next = 0;
+}
+
+void pushr(ruleset** _rs, rule* r) {
+	if (!*_rs) {
+		*_rs = &rulesets[nrulesets++];
+		(*_rs)->r = r;
+		(*_rs)->next = 0;
+	}
+	ruleset* rs = *_rs;
+	while (rs->next)
+		rs = rs->next;
+	rs->next = &rulesets[nrulesets++];
+	rs->next->r = r;
+	rs->next->next = 0;
 }
 
 void pushr(ruleset** _rs, term* s, term* o) {

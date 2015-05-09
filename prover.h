@@ -58,7 +58,7 @@ struct queue {
 
 struct dict {
 	char* s;
-	int	n;
+	int n;
 	dict* next;
 };
 
