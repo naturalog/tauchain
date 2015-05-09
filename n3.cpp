@@ -1,7 +1,7 @@
 #include <cstring>
 #include <cstdio>
 #include "strings.h"
-#include "prover.h"
+//#include "prover.h"
 #include <boost/algorithm/string.hpp>
 #include <map>
 #include <vector>
@@ -42,14 +42,14 @@ vector<string> split_dots(string s) {
 		ss << *x;
 		if ((!quotes && !curly && *x == '.') || !++x) {
 			r.push_back(ss.str());
-			ss = stringstream();
+			ss.clear();
 			y = x;
 		}
 	}
 	return r;
 }
 
-string n3(string s, bool isq) {
+string n3(string s) {
 	stringstream ss;
 	trim(s);
 	replace_all(s, "\n", " ");
@@ -57,7 +57,7 @@ string n3(string s, bool isq) {
 	const size_t sz = s.size();
 	if (sz && s[0] == '#')
 		return "";
-	prover::term* t;
+//	prover::term* t;
 	ss<<"[{\"@graph\":\"@id:\":\""<<ctx<<"\",[";
 	if (starts_with(s, "@prefix")) {
 		// @prefix name: <url>.
@@ -76,32 +76,32 @@ string n3(string s, bool isq) {
 		if (s[0] == '{') {
 			if (s[sz - 1] != '}')
 				throw runtime_error(string("Error: expected } in ") + s);
-			if (s.size() > 1 && substr(s, 1, s.size() - 2).find('{') == string::npos) {
+			if (s.size() > 1 && s.substr(1, s.size() - 2).find('{') == string::npos) {
 				string x = between(s, '{', '}');
 				trim(x);
 				auto a = split_dots(x);
-
+				ss << "[{\"@graph\":[";
+				for (auto z : a)
+					ss << n3(z);
+				ss << "]";
 			} else {
 				// we expect to have a bare (no {}) predicate
-				string p = between(x, '}', '{');
+				string p = between(s, '}', '{');
+				trim(p);
       				ss<< "\"@id\": \""
-					<< n3(between(x.substr(x.substr(0, x.size()-1).find('{')),'{'.'}'), isq) 
+					<< n3(between(s.substr(s.substr(0, s.size()-1).find('{')),'{','}') )
 					<< "\", \""
 					<< p
 					<< "\": { \"@id\": \"" 
-					<< n3(between(x.substr(x.substr(1, x.size()-1).find('{')),'{'.'}'), isq) 
+					<< n3(between(s.substr(s.substr(1, s.size()-1).find('{')),'{','}') ) 
 					<<"\" } } ";
-      			printf( "\"@id\": \"%s\", \"%s\": { \"@id\": \"%s\" } } ", s.c_str(), p.c_str(), o.c_str());
-				trim(p);
-				n3(between(x,'{'.'}'), isq);
-				n3(between(x,'{'.'}'), isq);
 			}
 		}
 		
 		vector<string> a;
 		split( a, s, is_any_of(" "), token_compress_on );
 		if (a.size() == 2) {
-			string su = a[0], p = a[1], p = a[2];
+			string su = a[0], p = a[1], o = a[2];
 			trim(su);
 			trim(p);
 			trim(o);

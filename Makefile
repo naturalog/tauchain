@@ -32,4 +32,6 @@ clean:
 	rm -rf tau $(OBJECTS) ubi/client.o
 
 ppjson: ppjson.cpp
-	clang++ -std=c++1y ppjson.cpp -lcurl -oppjson -Wall -rdynamic -ggdb
+	clang++ -std=c++11 ppjson.cpp -oppjson -Wall -ggdb
+n3: n3.cpp
+	clang++ -std=c++11 n3.cpp -on3 -Wall -ggdb -rdynamic
