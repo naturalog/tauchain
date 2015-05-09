@@ -4,12 +4,9 @@
 #include "json_escape.h"
 
 #ifdef DEBUG
-#define jst(x) std::cout << x << "\n";
-//void jstq(const char *x){ jst ("\"" << jse(x) << "\"") }
-//void jstq(const string &x){ jst ("\"" << jse(x) << "\"") }
+#define jst(x) std::cout << x;
 #else
 #define jst(x)
-//#define jstq(x)
 #endif
 
 struct pred_t {
@@ -20,10 +17,10 @@ struct pred_t {
 		o << "{\"tau:pred\":" << "\"" << jse( t.pred ) << "\"";
 		if ( t.args.size() ) 
 		{
-			o << ",\"tau:args\":[\n";
+			o << ",\"tau:args\":[";
 			for ( auto a = t.args.cbegin();; ) {
 				o << *a;
-				if ( ++a != t.args.cend() ) o << ",\n";
+				if ( ++a != t.args.cend() ) o << ",";
 				else break;
 			}
 			o<<"]";
@@ -65,7 +62,7 @@ struct rule_env {
 	rule_t src;
 	penv_t env;
 	friend ostream& operator<< ( ostream& o, const rule_env &t ) {
-		o << "{\"tau:src\":" << t.src << ",\"tau:env\":" << *t.env << ",\"@type\":\"tau:rule_env\"}\n";
+		o << "{\"tau:src\":" << t.src << ",\"tau:env\":" << *t.env << ",\"@type\":\"tau:rule_env\"}";
 		return o;
 	}
 };
@@ -92,11 +89,11 @@ struct proof_trace_item {
 		o << "{\"tau:rule\":" << t.rule;
 		o << ",\"tau:src\":" << t.src;
 		o << ",\"tau:ind\":" << t.ind;
-		if ( t.parent ) o << ",\"tau:parent\":" << *t.parent;
+		//if ( t.parent ) o << ",\"tau:parent\":" << *t.parent;
 		o << ",\"tau:env\":" << *t.env;
 		o << ",\"tau:ground\":" << *t.ground;
 		o << ",\"@type\":\"tau:frame\"";
-		o << "}\n";
+		o << "}";
 		return o;
 	}
 };
@@ -125,7 +122,7 @@ ostream& operator<< ( ostream& o, preds_t const& r ) {
 	{
 		for ( auto rr = r.cbegin();; ) {
 			o << *rr;
-			if ( ++rr != r.cend() ) o << ",\n";
+			if ( ++rr != r.cend() ) o << ",";
 			else break;
 		}
 	}
@@ -139,11 +136,11 @@ ostream& operator<< ( ostream& o,  const rules_t &r ) {
 	{
 		for ( auto rr = r.cbegin();; ) {
 			o << *rr;
-			if ( ++rr != r.cend() ) o << ",\n";
+			if ( ++rr != r.cend() ) o << ",";
 			else break;
 		}	
 	}
-	return o << "]\n";
+	return o << "]";
 }
 
 ostream& operator<< ( ostream& o, env_t const& r ) {
@@ -170,7 +167,7 @@ ostream& operator<< ( ostream& o, evidence_t const& r ) {
 			if ( ++rr == r.cend() ) break;
 		}
 	}
-	return o << "}\n";
+	return o << "}";
 }
 
 
@@ -180,11 +177,11 @@ ostream& operator<< ( ostream& o, ground_t const& r ) {
 	{
 		for ( auto rr = r.cbegin();; ) {
 			o << *rr;
-			if ( ++rr != r.cend() ) o << ",\n";
+			if ( ++rr != r.cend() ) o << ",";
 			else break;
 		}
 	}
-	return o << "]\n";
+	return o << "]";
 }
 
 
@@ -194,7 +191,7 @@ ostream& operator<< ( ostream& o, deque<ppti> const& r ) {
 	{
 		for ( auto rr = r.cbegin();; ) {
 			o << **rr;
-			if ( ++rr != r.cend() ) o << ",\n";
+			if ( ++rr != r.cend() ) o << ",";
 			else break;
 		}
 	}
@@ -210,8 +207,8 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	while ( queue.size() > 0 ) {
 		ppti c = queue.front();
 		queue.pop_front();
-		if(step) jst("},");
-		jst ( "{\"@type\":\"tau:step\",\"tau:id\":" << step << ",\"tau:frame\":" << *c);
+		if(step) cout << "},\n";
+		cout << "{\"@type\":\"tau:step\",\"tau:id\":" << step << ",\"tau:frame\":" << *c;
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
@@ -226,13 +223,13 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 					rule_t tmp = {t, {{ "GND", {}}} };//well...
 					for (auto gnd_item : *c->ground)
 						tmp.body[0].args.push_back(gnd_item.src.head);
-					jst( ",\"tau:adding evidence\":{\"tau:evidence for\":\"" << jse(t.pred) << "\",\n\"tau:env\": " <<  *c->env << "}" );
+					jst( ",\"tau:adding evidence\":{\"tau:evidence for\":\"" << jse(t.pred) << "\",\"tau:env\": " <<  *c->env << "}" );
 					evidence[t.pred].push_back ( tmp );
 				}
 				continue;
 			}
 
-			//jstq ( "Q with parent, adding:" );
+			jst ( "\"tau:success\":true" );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, make_shared<env_t> ( *c->parent->env ) , g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
@@ -435,7 +432,7 @@ void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t 
 }
 
 evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
-	std::cout << "{\"@context\":{\"tau\":\"http://tauchain.org/\"},\"@graph\":[";
+	std::cout << "{\"@context\":{\"tau\":\"http://tauchain.org/\"},\"@graph\":[\n";
 
 	evidence_t evidence, cases;
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
@@ -464,7 +461,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 
 
 void print_evidence ( evidence_t evidence ) {
-	std::cout << ",{\"evidence\":" << evidence << "}]}\n" ;
+	std::cout << "\n,{\"evidence\":" << evidence << "}]}\n" ;
 }
 
 const bool use_nquads = false;
