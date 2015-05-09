@@ -1,4 +1,4 @@
-#define READLINE
+//#define READLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,15 +9,10 @@
 #include <readline/history.h>
 #endif
 #include <iostream>
-using namespace std;
-/*
-typedef unsigned int uint;
-typedef char bool;
-const bool true = 1;
-const bool false = 0;
-*/
-namespace prover {
 #include "prover.h"
+using namespace std;
+
+namespace prover {
 const uint max_terms = 1024;		uint nterms = 0; 		term* terms;
 const uint max_termsets = 1024;		uint ntermsets = 0; 		termset* termsets;
 const uint max_rules = 1024;		uint nrules = 0; 		rule* rules;
@@ -473,7 +468,7 @@ char* readline(const char* p) {
 	char l[str_input_len];
 	size_t sz = str_input_len;
 	printf("%s ", p);
-	if (cin.getline(&l, &sz, cin) < 1)
+	if (!cin.getline(l, sz))
 		return 0;
 	l[strlen(l) - 1] = 0;
 	return l;
@@ -521,11 +516,11 @@ void menu(session* ss) {
 					++line;
 					if (*line == 'a') {
 						ss->rkb = ts2rs(ss->kb, true);
-						prove(ss->goal, ss->rkb, false, ss);
+						prove(ss);
 					}
 					else if (*line == 'i') {
 						ss->rkb = ts2rs(ss->kb, true);
-						prove(ss->goal, ss->rkb, true, ss);
+						prove(ss);
 					}
 				}
 				else if (*line == 'p') {
@@ -890,7 +885,9 @@ void queue_test() {
 	}
 }
 */
-void prove(termset* goal, ruleset* cases, bool, session* ss) {
+void prove(session* ss) {
+	termset* goal = ss->goal;
+	ruleset* cases = ss->rkb;
 	queue *qu = 0;
 	rule* rg = &rules[nrules++];
 	proof* p = &proofs[nproofs++];

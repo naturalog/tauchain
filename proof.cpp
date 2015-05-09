@@ -10,6 +10,7 @@
 #include "rdf.h"
 #include <thread>
 #include "misc.h"
+#include "prover.h"
 
 predicate *temp_preds = new predicate[max_predicates];
 boost::interprocess::vector<proof*> proofs;
@@ -186,7 +187,8 @@ qlist merge ( const qdb& q ) {
 	for ( auto x : q ) for ( auto y : *x.second ) r.push_back ( y );
 	return r;
 }
-
+/*
+orig from f429a7d:
 evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
 	cases_t cases;
@@ -212,6 +214,56 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 //	printkb();
 	return prove ( &goal, -1, cases );
+}
+*/
+
+prover::term* pred2term(const predicate* p, prover::dict** d) {
+	if (!p) return 0;
+	prover::term* t = &prover::terms[prover::nterms++];
+	t->p = prover::pushw(d, dict[p->pred].c_str());
+	if (p->args.size()) {
+		t->s = pred2term(p->args[0], d);
+		t->o = pred2term(p->args[1], d);
+	} else
+		t->s = t->o = 0;
+	return t;
+}
+
+evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
+//	evidence_t evidence;
+//	cases_t cases;
+	prover::session ss;
+	memset(&ss, 0, sizeof(prover::session));
+//	trace ( "Reasoner called with quads kb: " << endl << kb << endl << "And query: " << endl << query << endl );
+	for ( const pair<string, jsonld::pqlist>& x : kb ) {
+		for ( jsonld::pquad quad : *x.second ) {
+			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+//			trace ( "processing quad " << quad->tostring() << endl );
+			prover::rule* r = &prover::rules[prover::nrules++];
+			r->p = pred2term(triple ( s, p, o ), &ss.d);
+			r->body = 0;
+			prover::pushr(&ss.rkb, r);
+//			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
+			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
+			for ( jsonld::pquad y : *kb.at ( o ) ) {
+				r = &prover::rules[prover::nrules++];
+				r->p = pred2term(triple ( *y ), &ss.d);
+				r->body = 0;
+				if ( kb.find ( s ) != kb.end() )
+					for ( jsonld::pquad z : *kb.at ( s ) )
+						prover::pushp(&r->body, pred2term( triple ( *z ), &ss.d ) );
+				prover::pushr(&ss.rkb, r);
+//				cases[rul.head->pred].push_back ( &rul );
+//				trace ( "added rule " << rul << endl );
+			}
+		}
+	}
+	rule& goal = *mkrule();
+	for ( auto q : query ) 
+		prover::pushp(&ss.goal, pred2term( triple ( *q ), &ss.d ) );
+//	printkb();
+	prover::prove(&ss);//prove ( &goal, -1, cases );
+	return evidence_t();
 }
 
 bool reasoner::test_reasoner() {
