@@ -4,30 +4,22 @@ LDFLAGS=-lcurl
 SOURCES=tau.cpp jsonld.cpp rdf.cpp
 
 debug: CXXFLAGS += -DDEBUG
-jst: CXXFLAGS += -DJST
-
-ubi-tau: CXXFLAGS += -DDEBUG -DUBI  -I./ubi/
-ubi-tau: LDFLAGS += `xmlrpc-c-config  c++2 client --libs --cflags` 
-
 
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=tau
 
 
 all: $(SOURCES) $(EXECUTABLE)
-jst: $(SOURCES) $(EXECUTABLE)
 debug: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-ubi-tau: $(OBJECTS) ubi/client.o
-	$(CC) $(OBJECTS) ubi/client.o -o $@ $(LDFLAGS)
 .cpp.o:
 	$(CC) $(CXXFLAGS) $< -o $@
 
 clean:
-	rm -rf tau $(OBJECTS) ubi/client.o
+	rm -rf tau $(OBJECTS) 
 
 euler: euler.hmc.cpp
 	g++ -std=c++1y euler.hmc.cpp -oeuler -Wall -ggdb
