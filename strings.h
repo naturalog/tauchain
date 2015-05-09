@@ -2,6 +2,10 @@
 #define __STRINGS_H__
 
 #include <string>
+#include <sstream>
+#include <stdexcept>
+#include <algorithm>
+#include <memory>
 using namespace std;
 
 const string str_base = "@base";

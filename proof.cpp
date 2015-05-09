@@ -166,12 +166,12 @@ void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 	f();
 }
 
-predicate* reasoner::mkpred ( string s, const predlist& v ) {
-	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
-}
-
 rule* reasoner::mkrule ( const predicate* p, const predlist& v ) {
 	return &rules[nrules++].init ( p, v );
+}
+
+predicate* reasoner::mkpred ( string s, const predlist& v ) {
+	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
 }
 
 const predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
@@ -255,7 +255,7 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 			predicates.insert(quad->pred->value);
 	for ( jsonld::pquad quad : *kb.at("@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		if (p[0] == '?' || p[1] == '_')
+		if (p[0] == '?')
 			for (string pr : predicates)
 				addrules(s, pr, o, ss, kb);
 		else
