@@ -101,6 +101,10 @@ extern rule *rules;
 //extern proof *proofs;
 extern uint npredicates, nrules, nproofs;
 
+namespace prover {
+struct session;
+}
+
 class reasoner {
 	friend struct proof;
 	predicate* GND;
@@ -112,6 +116,7 @@ class reasoner {
 	rule* mkrule ( const predicate* p = 0, const predlist& v = predlist() );
 	const predicate* triple ( const string& s, const string& p, const string& o );
 	const predicate* triple ( const jsonld::quad& q );
+	void addrules(string s, string p, string o, prover::session& ss, const qdb& kb);
 public:
 	reasoner();
 	~reasoner();

@@ -229,33 +229,38 @@ prover::term* pred2term(const predicate* p, prover::dict** d) {
 	return t;
 }
 
+void reasoner::addrules(string s, string p, string o, prover::session& ss, const qdb& kb) {
+	prover::rule* r = &prover::rules[prover::nrules++];
+	r->p = pred2term(triple ( s, p, o ), &ss.d);
+	r->body = 0;
+	if ( p != implication || kb.find ( o ) == kb.end() ) 
+		prover::pushr(&ss.rkb, r);
+	else for ( jsonld::pquad y : *kb.at ( o ) ) {
+		r = &prover::rules[prover::nrules++];
+		r->p = pred2term(triple ( *y ), &ss.d);
+		r->body = 0;
+		if ( kb.find ( s ) != kb.end() )
+			for ( jsonld::pquad z : *kb.at ( s ) )
+				prover::pushp(&r->body, pred2term( triple ( *z ), &ss.d ) );
+		prover::pushr(&ss.rkb, r);
+//				trace ( "added rule " << rul << endl );
+	}
+}
 evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	prover::session ss;
 	memset(&ss, 0, sizeof(prover::session));
-//	trace ( "Reasoner called with quads kb: " << endl << kb << endl << "And query: " << endl << query << endl );
-//	for ( const pair<string, jsonld::pqlist>& x : kb ) {
-		for ( jsonld::pquad quad : *kb.at("@default")/**x.second*/ ) {
-			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-//			trace ( "processing quad " << quad->tostring() << endl );
-			prover::rule* r = &prover::rules[prover::nrules++];
-			r->p = pred2term(triple ( s, p, o ), &ss.d);
-			r->body = 0;
-			if ( p != implication || kb.find ( o ) == kb.end() ) {
-				prover::pushr(&ss.rkb, r);
-				continue;
-			}
-			else for ( jsonld::pquad y : *kb.at ( o ) ) {
-				r = &prover::rules[prover::nrules++];
-				r->p = pred2term(triple ( *y ), &ss.d);
-				r->body = 0;
-				if ( kb.find ( s ) != kb.end() )
-					for ( jsonld::pquad z : *kb.at ( s ) )
-						prover::pushp(&r->body, pred2term( triple ( *z ), &ss.d ) );
-				prover::pushr(&ss.rkb, r);
-//				trace ( "added rule " << rul << endl );
-			}
-		}
-//	}
+	set<string> predicates;
+	for (auto x : kb)
+		for (auto quad : *x.second)
+			predicates.insert(quad->pred->value);
+	for ( jsonld::pquad quad : *kb.at("@default")) {
+		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+		if (p[0] == '?' || p[1] == '_')
+			for (string pr : predicates)
+				addrules(s, pr, o, ss, kb);
+		else
+			addrules(s, p, o, ss, kb);
+	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) 
 		prover::pushp(&ss.goal, pred2term( triple ( *q ), &ss.d ) );
