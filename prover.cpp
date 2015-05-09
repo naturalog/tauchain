@@ -13,17 +13,17 @@
 using namespace std;
 
 namespace prover {
-const uint max_terms = 1024;		uint nterms = 0; 		term* terms;
-const uint max_termsets = 1024;		uint ntermsets = 0; 		termset* termsets;
-const uint max_rules = 1024;		uint nrules = 0; 		rule* rules;
-const uint max_substs = 1024; 		uint nsubsts = 0; 		subst* substs;
-const uint max_rulesets = 1024; 	uint nrulesets = 0; 		ruleset* rulesets;
-const uint max_grounds = 1024; 		uint ngrounds = 0; 		ground* grounds;
-const uint max_proofs = 1024; 		uint nproofs = 0; 		proof* proofs;
-const uint max_queues = 1024; 		uint nqueues = 0; 		queue* queues;
-const uint max_evidence_items = 1024; 	uint nevidence_items = 0; 	evidence_item* evidence_items;
-const uint max_evidences = 1024; 	uint nevidences = 0; 		evidence* evidences;
-const uint max_dicts = 1024; 		uint ndicts = 0; 		dict* dicts;
+const uint max_terms = 1024*1024;		uint nterms = 0; 		term* terms;
+const uint max_termsets = 1024*1024;		uint ntermsets = 0; 		termset* termsets;
+const uint max_rules = 1024*1024;		uint nrules = 0; 		rule* rules;
+const uint max_substs = 1024*1024; 		uint nsubsts = 0; 		subst* substs;
+const uint max_rulesets = 1024*1024; 	uint nrulesets = 0; 		ruleset* rulesets;
+const uint max_grounds = 1024*1024; 		uint ngrounds = 0; 		ground* grounds;
+const uint max_proofs = 1024*1024; 		uint nproofs = 0; 		proof* proofs;
+const uint max_queues = 1024*1024; 		uint nqueues = 0; 		queue* queues;
+const uint max_evidence_items = 1024*1024; 	uint nevidence_items = 0; 	evidence_item* evidence_items;
+const uint max_evidences = 1024*1024; 	uint nevidences = 0; 		evidence* evidences;
+const uint max_dicts = 1024*1024; 		uint ndicts = 0; 		dict* dicts;
 
 void printps(term* p, subst* s, dict* d); // print a term with a subst
 ruleset* find_or_create_rs_p(ruleset* rs, term* p);	// finds a term in a ruleset or creates a new rule with that term if not exists

@@ -266,7 +266,8 @@ bool reasoner::prove ( const qdb &kb, const qlist& query ) {
 	for ( auto q : query ) 
 		prover::pushp(&ss.goal, pred2term( triple ( *q ), &ss.d ) );
 //	printkb();
-	return prover::prove(&ss);
+	prover::prove(&ss);
+	return ss.e;
 }
 
 bool reasoner::test_reasoner() {
@@ -275,7 +276,7 @@ bool reasoner::test_reasoner() {
 	//	exit(0);
 //	evidence_t evidence;
 	cases_t cases;
-//	typedef predicate* ppredicate;
+	typedef predicate* ppredicate;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
