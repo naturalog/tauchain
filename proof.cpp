@@ -230,19 +230,16 @@ prover::term* pred2term(const predicate* p, prover::dict** d) {
 }
 
 evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
-//	evidence_t evidence;
-//	cases_t cases;
 	prover::session ss;
 	memset(&ss, 0, sizeof(prover::session));
 //	trace ( "Reasoner called with quads kb: " << endl << kb << endl << "And query: " << endl << query << endl );
-	for ( const pair<string, jsonld::pqlist>& x : kb ) {
-		for ( jsonld::pquad quad : *x.second ) {
+//	for ( const pair<string, jsonld::pqlist>& x : kb ) {
+		for ( jsonld::pquad quad : *kb.at("@default")/**x.second*/ ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 //			trace ( "processing quad " << quad->tostring() << endl );
 			prover::rule* r = &prover::rules[prover::nrules++];
 			r->p = pred2term(triple ( s, p, o ), &ss.d);
 			r->body = 0;
-//			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
 			if ( p != implication || kb.find ( o ) == kb.end() ) {
 				prover::pushr(&ss.rkb, r);
 				continue;
@@ -255,16 +252,15 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 					for ( jsonld::pquad z : *kb.at ( s ) )
 						prover::pushp(&r->body, pred2term( triple ( *z ), &ss.d ) );
 				prover::pushr(&ss.rkb, r);
-//				cases[rul.head->pred].push_back ( &rul );
 //				trace ( "added rule " << rul << endl );
 			}
 		}
-	}
+//	}
 	rule& goal = *mkrule();
 	for ( auto q : query ) 
 		prover::pushp(&ss.goal, pred2term( triple ( *q ), &ss.d ) );
 //	printkb();
-	prover::prove(&ss);//prove ( &goal, -1, cases );
+	prover::prove(&ss);
 	return evidence_t();
 }
 

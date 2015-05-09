@@ -620,7 +620,7 @@ ruleset* findruleset(ruleset* rs, int p) {
 ruleset* find_or_create_rs_p(ruleset* rs, term* p) {
 	ruleset* prev = 0;
 	while (rs) {
-		if (rs->r && rs->r->p && equals(rs->r->p, p))
+		if (/*rs->r && rs->r->p &&*/ equals(rs->r->p, p))
 			return rs;
 		prev = rs;
 		rs = rs->next;
@@ -979,6 +979,8 @@ void prove(session* ss) {
 			termset* r;
 			for (r = p->rul->body; r; r = r->next) 
 				pushe(&e, evaluate(r->p, p->s), p->g);
+			TRACE(printf("no prev frame. queue:\n"));
+			TRACE(printq(qu, ss->d));
 		} else {
 			ground* g = copyg(p->g);
 			proof* r = &proofs[nproofs++];
@@ -990,7 +992,8 @@ void prove(session* ss) {
 			unify(p->rul->p, p->s, r->last->p, &r->s, true);
 			r->last = r->last->next;
 			pushq(&qu, r);
-
+			TRACE(printf("finished a frame. queue:\n"));
+			TRACE(printq(qu, ss->d));
 			continue;
 		}
 	} while (qu);
