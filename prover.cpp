@@ -967,8 +967,8 @@ void prove(session* ss) {
 					if (!rs->r->body) 
 						pushg( &r->g, rs->r, 0 );
 					unshift(&qu, r);
-					TRACE(printf("queue:\n"));
-					TRACE(printq(qu, ss->d));
+//					TRACE(printf("queue:\n"));
+//					TRACE(printq(qu, ss->d));
 				} else {
 					TRACE(printf("\tunification failed\n"));
 				}
@@ -980,7 +980,7 @@ void prove(session* ss) {
 			for (r = p->rul->body; r; r = r->next) 
 				pushe(&ss->e, evaluate(r->p, p->s), p->g);
 			TRACE(printf("no prev frame. queue:\n"));
-			TRACE(printq(qu, ss->d));
+//			TRACE(printq(qu, ss->d));
 		} else {
 			ground* g = copyg(p->g);
 			proof* r = &proofs[nproofs++];
@@ -993,7 +993,7 @@ void prove(session* ss) {
 			r->last = r->last->next;
 			pushq(&qu, r);
 			TRACE(printf("finished a frame. queue:\n"));
-			TRACE(printq(qu, ss->d));
+//			TRACE(printq(qu, ss->d));
 			continue;
 		}
 	} while (qu);

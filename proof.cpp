@@ -282,8 +282,8 @@ bool reasoner::test_reasoner() {
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  } ) );
 
-	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	return prove ( mkrule ( 0, { goal } ), -1, cases );
+//	predicate* goal = mkpred ( "a", { _y, Mortal } );
+//	return prove ( mkrule ( 0, { goal } ), -1, cases );
 //	cout << "evidence: " << evidence.size() << " items..." << endl;
 //	cout << evidence << endl;
 //	cout << evidence.size() << endl;
