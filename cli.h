@@ -34,4 +34,32 @@ typedef pair<map<string, cmd_t*>, map<pair<string, string>, bool*>>  cmds_t;
 void print_usage ( const cmds_t& cmds );
 void process_flags ( const cmds_t& cmds, strings& args );
 
+class expand_cmd : public cmd_t {
+public:
+	virtual string desc() const;
+	virtual string help() const;
+	virtual int operator() ( const strings& args );
+};
+
+class convert_cmd : public cmd_t {
+public:
+	virtual string desc() const;
+	virtual string help() const;
+	virtual int operator() ( const strings& args );
+};
+
+class toquads_cmd : public cmd_t {
+public:
+	virtual string desc() const;
+	virtual string help() const;
+	virtual int operator() ( const strings& args );
+};
+
+class nodemap_cmd : public cmd_t {
+public:
+	virtual string desc() const;
+	virtual string help() const;
+	virtual int operator() ( const strings& args );
+};
+
 #endif

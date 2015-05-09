@@ -58,7 +58,7 @@ ostream& operator<< ( ostream& o, const predicate& p ) {
 	o << dstr ( p.pred );
 	return p.args.empty() ? o : o << p.args;
 }
-
+/*
 ostream& operator<< ( ostream& o, const rule& r ) {
 	if (!r.body.empty()) {
 		o << "{ ";
@@ -109,7 +109,7 @@ ostream& operator<< ( ostream& o, const proof& p ) {
 	o << "\tpredicate: " << ( *p.rul ) << endl << '}' << endl;
 	return o;
 }
-/*
+*
 ostream& operator<< ( ostream& o, const predicatelist& l ) {
 	if ( l.empty() ) return o << "[]";
 	o << '[';

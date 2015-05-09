@@ -2,14 +2,29 @@
 #include "jsonld.h"
 #include "parsers.h"
 #include "cli.h"
+#include <boost/algorithm/string.hpp>
+
+using namespace boost::algorithm;
 
 qdb cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
 	try {
-		if ( fname == "" )
-			return readqdb(cin);
-		ifstream is ( fname );
-		return readqdb(is);
+		qdb r;
+		istream* pis = &cin;
+		if (fname != "")
+			pis = new ifstream(fname);
+		istream& is = *pis;
+		string line;
+		stringstream ss;
+		while (getline(is, line)) {
+			trim(line);
+			if (line == "fin.")
+				break;
+			ss << line;
+		}
+		if (fname != "")
+			delete pis;
+		return readqdb(ss);
 	} catch (exception& ex) {
 		cerr << "Error reading quads: " << ex.what() << endl;
 	}

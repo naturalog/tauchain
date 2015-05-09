@@ -11,7 +11,7 @@
 #include <thread>
 #include "misc.h"
 #include "prover.h"
-
+/*
 predicate *temp_preds = new predicate[max_predicates];
 boost::interprocess::vector<proof*> proofs;
 uint ntemppreds = 0;
@@ -111,9 +111,9 @@ proof& proof::find ( const rule* goal, const cases_t& cases) {
 	evidence_t& e = *new evidence_t;
 	f.process( *new cases_t(cases), e );
 	return f;
-}
+}*/
 boost::interprocess::list<thread*> threads;
-
+/*
 void proof::process ( const cases_t& cases, evidence_t& evidence ) {
 	auto f = [this, &cases, &evidence](){
 	trace ( *this << endl );
@@ -170,24 +170,6 @@ rule* reasoner::mkrule ( const predicate* p, const predlist& v ) {
 	return &rules[nrules++].init ( p, v );
 }
 
-predicate* reasoner::mkpred ( string s, const predlist& v ) {
-	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
-}
-
-const predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
-	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
-}
-
-const predicate* reasoner::triple ( const jsonld::quad& q ) {
-	return triple ( q.subj->value, q.pred->value, q.object->value );
-}
-
-qlist merge ( const qdb& q ) {
-	qlist r;
-	for ( auto x : q ) for ( auto y : *x.second ) r.push_back ( y );
-	return r;
-}
-/*
 orig from f429a7d:
 evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	evidence_t evidence;
@@ -216,8 +198,19 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	return prove ( &goal, -1, cases );
 }
 */
+shared_ptr<predicate> reasoner::mkpred ( string s, const predlist& v ) {
+	return make_shared<predicate>( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
+}
 
-prover::term* pred2term(const predicate* p, prover::dict** d) {
+shared_ptr<const predicate> reasoner::triple ( const string& s, const string& p, const string& o ) {
+	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
+}
+
+shared_ptr<const predicate> reasoner::triple ( const jsonld::quad& q ) {
+	return triple ( q.subj->value, q.pred->value, q.object->value );
+}
+
+prover::term* pred2term(shared_ptr<const predicate> p, prover::dict** d) {
 	if (!p) return 0;
 	prover::term* t = &prover::terms[prover::nterms++];
 	t->p = prover::pushw(d, dstr(p->pred).c_str());
@@ -254,6 +247,12 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 		prover::pushr(&ss.rkb, r);
 //				trace ( "added rule " << rul << endl );
 	}
+}
+
+qlist merge ( const qdb& q ) {
+	qlist r;
+	for ( auto x : q ) for ( auto y : *x.second ) r.push_back ( y );
+	return r;
 }
 
 bool haspredvar(const qdb& x) {
@@ -315,7 +314,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 		else
 			addrules(s, p, o, ss, kb);
 	}
-	rule& goal = *mkrule();
+//	rule& goal = *mkrule();
 	for ( auto q : query ) 
 		prover::pushp(&ss.goal, pred2term( triple ( *q ), &ss.d ) );
 //	printkb();
@@ -324,23 +323,33 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 }
 
 bool reasoner::test_reasoner() {
-	dict.set ( "a" );
+/*
+
+to perform the socrates test, put the following three lines in a file say f, and run "tau < f":
+socrates a man.  ?x a man _:b0.  ?x a mortal _:b1.  _:b0 => _:b1.  
+fin.  
+?p a mortal.
+
+*/
+
+//	dict.set ( "a" );
 	//	cout <<"dict:"<<endl<< dict.tostr() << endl;
 	//	exit(0);
 //	evidence_t evidence;
-	cases_t cases;
+/*	cases_t cases;
 	typedef predicate* ppredicate;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  } ) );
-
+*/
 //	predicate* goal = mkpred ( "a", { _y, Mortal } );
 //	return prove ( mkrule ( 0, { goal } ), -1, cases );
 //	cout << "evidence: " << evidence.size() << " items..." << endl;
 //	cout << evidence << endl;
 //	cout << evidence.size() << endl;
 //	return evidence.size();
+	return 1;
 }
 
 float degrees ( float f ) {
@@ -348,10 +357,10 @@ float degrees ( float f ) {
 	return f * 180 / pi;
 }
 
-
+/*
 int proof::builtin ( const predicate* t_ ) {
 	if (t_ && dict[t_->pred] == "GND") return 1;
-/*	
+	
 	if ( !t_ ) return -1;
 	const predicate& t = *t_;
 	string p = dict[t.pred];
@@ -434,6 +443,6 @@ int proof::builtin ( const predicate* t_ ) {
 	else if ( p == "rdf:rest" && t0 && dict[t0->pred] == "." && !t0->args.empty() )
 		return ( unify ( t0->args[1], f.sub, t.args[1], f.sub, true ) ) ? 1 : 0;
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdf:List" && t0 && dict[t0->pred] == "." ) return 1;
-	else if ( p == "a" && t1 && dict[t1->pred] == "rdfs:Resource" ) return 1;*/
+	else if ( p == "a" && t1 && dict[t1->pred] == "rdfs:Resource" ) return 1;
 	return -1;
-}
+}*/

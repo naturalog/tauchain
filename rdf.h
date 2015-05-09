@@ -2,6 +2,7 @@
 #define __RDF_DATA__
 
 #include "object.h"
+#include <list>
 
 using namespace std;
 

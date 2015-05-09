@@ -28,25 +28,27 @@ using namespace std;
 using namespace jsonld;
 
 const uint K1 = 1024, M1 = K1 * K1;
-const uint max_predicates = 10*M1, max_rules = 10*M1, max_proofs = 10*M1;
+const uint max_predicates = 1, max_rules = 1, max_proofs = 1;
 
 extern boost::interprocess::list<thread*> threads;
+/*
 extern boost::interprocess::vector<class proof*> proofs;
-typedef /*boost::interprocess::*/vector<const struct predicate*> predlist;
-typedef /*boost::interprocess::*/vector<const struct rule*> rulelist;
+typedef vector<const struct rule*> rulelist;
 ostream& operator<< ( ostream& o, const rulelist& l );
-ostream& operator<< ( ostream& o, const predlist& l );
 
 typedef boost::interprocess::map<int, const class predicate*> subst;
+*/
 
+typedef vector<shared_ptr<const struct predicate>> predlist;
 struct predicate {
 	int pred = 0;
 	predlist args;
-	predicate& init ( int _p = 0, predlist _args = predlist() ) { pred = _p; args = _args; return *this; }
-	const predicate* evaluate ( const subst& sub ) const;
+	predicate( int _p = 0, predlist _args = predlist() ) : pred(_p), args(_args) { }
+//	const predicate* evaluate ( const subst& sub ) const;
 };
+ostream& operator<< ( ostream& o, const predlist& l );
 ostream& operator<< ( ostream& o, const predicate& p );
-
+/*
 struct rule {
 	const predicate* head = 0;
 	predlist body;
@@ -100,35 +102,35 @@ extern predicate *predicates;
 extern rule *rules;
 //extern proof *proofs;
 extern uint npredicates, nrules, nproofs;
-
+*/
 namespace prover {
 struct session;
 }
 
 class reasoner {
 	friend struct proof;
-	predicate* GND;
-	predlist to_predlist ( const ground_t& g );
+//	predicate* GND;
+//	predlist to_predlist ( const ground_t& g );
 
-	deque<proof*> init ( const rule* goal );
+//	deque<proof*> init ( const rule* goal );
 
-	predicate* mkpred ( string s, const predlist& v = predlist() );
-	rule* mkrule ( const predicate* p = 0, const predlist& v = predlist() );
-	const predicate* triple ( const string& s, const string& p, const string& o );
-	const predicate* triple ( const jsonld::quad& q );
+	shared_ptr<predicate> mkpred ( string s, const predlist& v = predlist() );
+//	rule* mkrule ( const predicate* p = 0, const predlist& v = predlist() );
+	shared_ptr<const predicate> triple ( const string& s, const string& p, const string& o );
+	shared_ptr<const predicate> triple ( const jsonld::quad& q );
 	void addrules(string s, string p, string o, prover::session& ss, const qdb& kb);
 public:
-	reasoner();
-	~reasoner();
+//	reasoner();
+//	~reasoner();
 //	bool prove ( const rule* goal, int, const cases_t& cases ) { return proof::find(goal, cases); }
 	bool prove ( qdb kb, qlist query );
 	bool test_reasoner();
-	void printkb();
+//	void printkb();
 };
-
+/*
 ostream& operator<< ( ostream& o, const subst& s );
 ostream& operator<< ( ostream& o, const ground_t& s );
 ostream& operator<< ( ostream& o, const evidence_t& e );
 ostream& operator<< ( ostream& o, const cases_t& e );
-
+*/
 #endif

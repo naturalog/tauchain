@@ -1,4 +1,9 @@
 #include "jsonld.h"
+#include "cli.h"
+#include <boost/filesystem.hpp>
+#include "parsers.h"
+#include "proof.h"
+#include "prover.h"
 
 namespace jsonld {
 
@@ -299,6 +304,8 @@ qdb readqdb ( istream& is) {
 			if (ch == '.') {
 				if (p == "=>")
 					p = implication;
+				if (pos == 1 && s == "fin")
+					return q;
 				if (pos == 2)
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), c = "@default");
 				else if (pos == 3) {
@@ -307,7 +314,7 @@ qdb readqdb ( istream& is) {
 						c = "@default";
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
 				}
-				cout << pq->tostring() << endl;
+//				cout << pq->tostring() << endl;
 				if (q.find(c) == q.end())
 					q[c] = make_shared<qlist>();
 				q[c]->push_back(pq);
@@ -325,4 +332,110 @@ qdb readqdb ( istream& is) {
 	}
 	return q;
 }
+}
+
+string expand_cmd::desc() const {
+	return "Run expansion algorithm http://www.w3.org/TR/json-ld-api/#expansion-algorithms including all dependant algorithms.";
+}
+string expand_cmd::help() const {
+	stringstream ss ( "Usage:" );
+	ss << endl << "\ttau expand [JSON-LD input filename]";
+	ss << endl << "\ttau expand [JSON-LD input filename] [JSON-LD output to compare to]";
+	ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+	return ss.str();
+}
+int expand_cmd::operator() ( const strings& args ) {
+	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 4 ) {
+		cout << help();
+		return 1;
+	}
+	pobj e;
+	cout << ( e = jsonld::expand ( load_json ( args ) ) )->toString() << endl;
+	if ( args.size() == 3 ) return 0;
+	boost::filesystem::path tmpdir = boost::filesystem::temp_directory_path();
+	const string tmpfile_template =  tmpdir.string() + "/XXXXXX";
+	std::unique_ptr<char> fn1 ( strdup ( tmpfile_template.c_str() ) );
+	std::unique_ptr<char> fn2 ( strdup ( tmpfile_template.c_str() ) );
+	int fd1 = mkstemp ( fn1.get() );
+	int fd2 = mkstemp ( fn2.get() );
+
+	ofstream os1 ( fn1.get() ), os2 ( fn2.get() );
+	os1 << json_spirit::write_string ( jsonld::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
+	os2 << json_spirit::write_string ( jsonld::convert ( load_json ( args[3] ) ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
+	os1.close();
+	os2.close();
+	string c = string ( "diff " ) + fn1.get() + string ( " " ) + fn2.get();
+	if ( system ( c.c_str() ) ) cerr << "command " << c << " failed." << endl;
+	close ( fd1 );
+	close ( fd2 );
+
+	return 0;
+}
+
+
+string convert_cmd::desc() const {
+	return "Convert JSON-LD to quads including all dependent algorithms.";
+}
+string convert_cmd::help() const {
+	stringstream ss ( "Usage: tau expand [JSON-LD input filename]" );
+	ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+	return ss.str();
+}
+int convert_cmd::operator() ( const strings& args ) {
+	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
+		cout << help();
+		return 1;
+	}
+	try {
+		cout << convert ( args[2] ) << endl;
+		return 0;
+	} catch ( exception& ex ) {
+		std::cerr << ex.what() << endl;
+		return 1;
+	}
+}
+
+string toquads_cmd::desc() const {
+	return "Run JSON-LD->RDF algorithm http://www.w3.org/TR/json-ld-api/#deserialize-json-ld-to-rdf-algorithm of already-expanded input.";
+}
+string toquads_cmd::help() const {
+	stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
+	ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+	ss << "Note that input has to be expanded first, so you might want to pipe it with 'tau expand' command." << endl;
+	return ss.str();
+}
+int toquads_cmd::operator() ( const strings& args ) {
+	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
+		cout << help();
+		return 1;
+	}
+	try {
+		cout << toquads ( args ) << endl;
+	} catch ( exception& ex ) {
+		cerr << ex.what() << endl;
+		return 1;
+	}
+	return 0;
+}
+
+string nodemap_cmd::desc() const {
+	return "Run JSON-LD node map generation algorithm.";
+}
+string nodemap_cmd::help() const {
+	stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
+	ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+	return ss.str();
+}
+int nodemap_cmd::operator() ( const strings& args ) {
+	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
+		cout << help();
+		return 1;
+	}
+	try {
+		cout << nodemap ( args )->toString() << endl;
+	} catch ( exception& ex ) {
+		cerr << ex.what() << endl;
+		return 1;
+	}
+	return 0;
 }

@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <boost/filesystem.hpp>
 #include "cli.h"
 #include <sstream>
 #include "parsers.h"
@@ -16,124 +15,6 @@ bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_i
 jsonld::jsonld_options opts;
 
 void menu();
-
-class expand_cmd : public cmd_t {
-public:
-	virtual string desc() const {
-		return "Run expansion algorithm http://www.w3.org/TR/json-ld-api/#expansion-algorithms including all dependant algorithms.";
-	}
-	virtual string help() const {
-		stringstream ss ( "Usage:" );
-		ss << endl << "\ttau expand [JSON-LD input filename]";
-		ss << endl << "\ttau expand [JSON-LD input filename] [JSON-LD output to compare to]";
-		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
-		return ss.str();
-	}
-	virtual int operator() ( const strings& args ) {
-		if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 4 ) {
-			cout << help();
-			return 1;
-		}
-		pobj e;
-		cout << ( e = jsonld::expand ( load_json ( args ) ) )->toString() << endl;
-		if ( args.size() == 3 ) return 0;
-		boost::filesystem::path tmpdir = boost::filesystem::temp_directory_path();
-		const string tmpfile_template =  tmpdir.string() + "/XXXXXX";
-		std::unique_ptr<char> fn1 ( strdup ( tmpfile_template.c_str() ) );
-		std::unique_ptr<char> fn2 ( strdup ( tmpfile_template.c_str() ) );
-		int fd1 = mkstemp ( fn1.get() );
-		int fd2 = mkstemp ( fn2.get() );
-
-		ofstream os1 ( fn1.get() ), os2 ( fn2.get() );
-		os1 << json_spirit::write_string ( jsonld::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
-		os2 << json_spirit::write_string ( jsonld::convert ( load_json ( args[3] ) ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
-		os1.close();
-		os2.close();
-		string c = string ( "diff " ) + fn1.get() + string ( " " ) + fn2.get();
-		if ( system ( c.c_str() ) ) cerr << "command " << c << " failed." << endl;
-		close ( fd1 );
-		close ( fd2 );
-
-		return 0;
-	}
-};
-
-class convert_cmd : public cmd_t {
-public:
-	virtual string desc() const {
-		return "Convert JSON-LD to quads including all dependent algorithms.";
-	}
-	virtual string help() const {
-		stringstream ss ( "Usage: tau expand [JSON-LD input filename]" );
-		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
-		return ss.str();
-	}
-	virtual int operator() ( const strings& args ) {
-		if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
-			cout << help();
-			return 1;
-		}
-		try {
-			cout << convert ( args[2] ) << endl;
-			return 0;
-		} catch ( exception& ex ) {
-			std::cerr << ex.what() << endl;
-			return 1;
-		}
-	}
-};
-
-class toquads_cmd : public cmd_t {
-public:
-	virtual string desc() const {
-		return "Run JSON-LD->RDF algorithm http://www.w3.org/TR/json-ld-api/#deserialize-json-ld-to-rdf-algorithm of already-expanded input.";
-	}
-	virtual string help() const {
-		stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
-		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
-		ss << "Note that input has to be expanded first, so you might want to pipe it with 'tau expand' command." << endl;
-		return ss.str();
-	}
-	virtual int operator() ( const strings& args ) {
-		if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
-			cout << help();
-			return 1;
-		}
-		try {
-			cout << toquads ( args ) << endl;
-		} catch ( exception& ex ) {
-			cerr << ex.what() << endl;
-			return 1;
-		}
-		return 0;
-	}
-};
-
-class nodemap_cmd : public cmd_t {
-public:
-	virtual string desc() const {
-		return "Run JSON-LD node map generation algorithm.";
-	}
-	virtual string help() const {
-		stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
-		ss << endl << "If input filename is unspecified, reads from stdin." << endl;
-		return ss.str();
-	}
-	virtual int operator() ( const strings& args ) {
-		if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
-			cout << help();
-			return 1;
-		}
-		try {
-			cout << nodemap ( args )->toString() << endl;
-		} catch ( exception& ex ) {
-			cerr << ex.what() << endl;
-			return 1;
-		}
-		return 0;
-	}
-};
-
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
@@ -164,8 +45,8 @@ class listen_cmd : public cmd_t {
 };
 
 class prove_cmd : public cmd_t {
-	reasoner r;
 public:
+	reasoner r;
 	virtual string desc() const {
 		return "Run a query against a knowledgebase.";
 	}
@@ -195,7 +76,6 @@ public:
 				cerr << ex.what() << endl;
 				return 1;
 			}
-		if ( __printkb ) r.printkb();
 		return 0;
 	}
 };
@@ -213,7 +93,7 @@ int main ( int argc, char** argv ) {
 			{ { "--no-deref", "show integers only instead of strings" }, &deref },
 			{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
 			{ { "--shorten", "on IRIs containig # show only what after #" }, &shorten },
-			{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
+		//	{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
 			{ { "--base", "set file://<filename> as base in JsonLDOptions" }, &fnamebase },
 			{ { "--quads", "set input format for prove command as quads" }, &quad_in }
 		}
@@ -221,7 +101,17 @@ int main ( int argc, char** argv ) {
 	strings args;
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
 	process_flags ( cmds, args );
-	if ( argc == 1 || ( cmds.first.find ( argv[1] ) == cmds.first.end() && args[1] != "help" ) ) {
+	if ( argc == 1 ) {
+		cout << endl << "Input kb as quads, then query." << endl << "After finished inserting kb, write a line \"fin.\" in order to move to query." << endl<< "Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl << endl ;
+		prove_cmd p;
+		quad_in = true;
+		return p({"","","",""});
+/*		qdb kb = p.load_quads("");
+		qdb query = p.load_quads("");
+		auto e = p.r.prove ( kb, merge ( query ) );
+		cout << "evidence: " << endl << e << endl;*/
+	}
+	if (( cmds.first.find ( argv[1] ) == cmds.first.end() && args[1] != "help" ) ) {
 		print_usage ( cmds );
 		return 1;
 	}

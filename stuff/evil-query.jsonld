@@ -8,10 +8,6 @@
   "@graph": [
     {
       "@id": "rdf:Bag",
-      "@type": [
-        "rdfs:Resource",
-        "rdfs:Class"
-      ],
       "rdfs:subClassOf": {
         "@id": "rdfs:Resource"
       }
