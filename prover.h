@@ -68,6 +68,7 @@ struct session {
 	ruleset *rkb;
 	termset *kb, *goal;
 	dict* d;
+	evidence* e;
 };
 
 void initmem(bool);

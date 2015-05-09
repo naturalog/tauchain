@@ -246,7 +246,8 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 //				trace ( "added rule " << rul << endl );
 	}
 }
-evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
+
+bool reasoner::prove ( const qdb &kb, const qlist& query ) {
 	prover::session ss;
 	memset(&ss, 0, sizeof(prover::session));
 	set<string> predicates;
@@ -265,29 +266,27 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 	for ( auto q : query ) 
 		prover::pushp(&ss.goal, pred2term( triple ( *q ), &ss.d ) );
 //	printkb();
-	prover::prove(&ss);
-	return evidence_t();
+	return prover::prove(&ss);
 }
 
 bool reasoner::test_reasoner() {
 	dict.set ( "a" );
 	//	cout <<"dict:"<<endl<< dict.tostr() << endl;
 	//	exit(0);
-	evidence_t evidence;
+//	evidence_t evidence;
 	cases_t cases;
-	typedef predicate* ppredicate;
+//	typedef predicate* ppredicate;
 	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
 	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  } ) );
 
 	predicate* goal = mkpred ( "a", { _y, Mortal } );
-	evidence = prove ( mkrule ( 0, { goal } ), -1, cases );
+	return prove ( mkrule ( 0, { goal } ), -1, cases );
 //	cout << "evidence: " << evidence.size() << " items..." << endl;
 //	cout << evidence << endl;
-//	cout << "QED!" << endl;
 //	cout << evidence.size() << endl;
-	return evidence.size();
+//	return evidence.size();
 }
 
 float degrees ( float f ) {

@@ -18,7 +18,11 @@ string between(string x, char y, char z) {
 	return x.substr(py, pz - py);
 }
 
-prover::term* n3(string s) {
+string ctx = "@default";
+map<string, string> prefixes;
+bool addcomma = false;
+
+void n3(string s, bool isq) {
 	trim(s);
 //	auto pos = s.find('\n');
 //	while (pos != string::npos) {
@@ -29,12 +33,12 @@ prover::term* n3(string s) {
 //	s.erase(remove(s.begin(), s.end(), '\r'), s.end());
 	replace_all(s, "\n", " ");
 	replace_all(s, "\r", " ");
+	const size_t sz = s.size();
 	cout<<s<<endl;
-	if (s.size() && s[0] == '#')
+	if (sz && s[0] == '#')
 		return 0;
 	prover::term* t;
-	string ctx;
-	map<string, string> prefixes;
+	cout<<"[{\"@graph\":\"@id:\":\""<<ctx<<"\",[";
 	if (starts_with(s, "@prefix")) {
 		// @prefix name: <url>.
 		string ns, url;
@@ -49,12 +53,34 @@ prover::term* n3(string s) {
 		else
 			prefixes[ns] = url;
 	} else {
+		if (s[0] == '{') {
+			if (s[sz - 1] != '}')
+				throw runtime_error(string("Error: expected } in ") + s);
+			if (s.size() > 1 && substr(s, 1, s.size() - 2).find('{') == string::npos) {
+				string x = between(s, '{', '}');
+				trim(x);
+			} else {
+				// we expect to have a bare (no {}) predicate
+				string p = between(x, '}', '{');
+				trim(p);
+				
+			}
+		}
+		
 		vector<string> a;
 		split( a, s, is_any_of(" "), token_compress_on );
 		if (a.size() == 2) {
+			string su = a[0], p = a[1], p = a[2];
+			trim(su);
+			trim(p);
+			trim(o);
+			if (addcomma) cout<<',';
+      			printf( "\"@id\": \"%s\", \"%s\": { \"@id\": \"%s\" } } ", s.c_str(), p.c_str(), o.c_str());
+			addcomma = true;
 			cout << "s: " << a[0] << " p: " << a[1] << " o: " << a[2] << endl;
 		}
 	}
+	cout<<"]}";
 //	if (a.size() == 2)
 //		return mkpred(a[0].c_str(), a[1].c_str(), a[2].c_str());
 }

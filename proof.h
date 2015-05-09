@@ -120,8 +120,8 @@ class reasoner {
 public:
 	reasoner();
 	~reasoner();
-	evidence_t prove ( const rule* goal, int, const cases_t& cases ) { proof::find(goal, cases); return evidence_t();  }
-	evidence_t prove ( const qdb& kb, const qlist& query );
+	bool prove ( const rule* goal, int, const cases_t& cases ) { proof::find(goal, cases); return evidence_t();  }
+	bool prove ( const qdb& kb, const qlist& query );
 	bool test_reasoner();
 	void printkb();
 };

@@ -181,7 +181,7 @@ public:
 			return 1;
 		}
 		if ( args.size() == 2 )
-			cout << ( r.test_reasoner() ? "pass" : "fail" ) << endl;
+			cout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
 		else try {
 				qdb kb = convert ( args[2] );
 				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );

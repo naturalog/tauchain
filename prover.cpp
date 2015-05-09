@@ -894,7 +894,7 @@ void prove(session* ss) {
 	queue *qu = 0;
 	rule* rg = &rules[nrules++];
 	proof* p = &proofs[nproofs++];
-	evidence* e = 0;
+	ss->e = 0;
 	rg->p = 0;
 	rg->body = goal;
 	p->rul = rg;
@@ -978,7 +978,7 @@ void prove(session* ss) {
 		else if (!p->prev) {
 			termset* r;
 			for (r = p->rul->body; r; r = r->next) 
-				pushe(&e, evaluate(r->p, p->s), p->g);
+				pushe(&ss->e, evaluate(r->p, p->s), p->g);
 			TRACE(printf("no prev frame. queue:\n"));
 			TRACE(printq(qu, ss->d));
 		} else {
@@ -999,7 +999,7 @@ void prove(session* ss) {
 	} while (qu);
 	puts("\nEvidence:");
 	puts("=========");
-	printe(e, ss->d);
+	printe(ss->e, ss->d);
 }
 
 bool equals(term* x, term* y) {
