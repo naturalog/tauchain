@@ -6,7 +6,7 @@ SOURCES=tau.cpp jsonld.cpp rdf.cpp
 debug: CXXFLAGS += -DDEBUG
 jst: CXXFLAGS += -DJST
 
-ubi-tau: CXXFLAGS += -DDEBUG -DUBI  -I./ubi/
+ubi-tau: CXXFLAGS += -DUBI  -I./ubi/
 ubi-tau: LDFLAGS += `xmlrpc-c-config  c++2 client --libs --cflags` 
 
 

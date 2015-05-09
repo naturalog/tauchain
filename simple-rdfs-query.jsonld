@@ -1,0 +1,12 @@
+{
+  "@context": {
+  },
+  "@graph": [
+    {
+      "@id": "rdf:Bag",
+      "rdfs:subClassOf": {
+        "@id": "rdfs:Resource"
+      }
+    }
+  ]
+}

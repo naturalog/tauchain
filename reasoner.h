@@ -101,7 +101,7 @@ ostream& operator<< ( ostream& o, ground_t const& g ) {
 
 struct proof_trace_item {
 	rule_t rule;
-	int src, ind; // source of what, index of what?
+	int src, ind;
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
@@ -122,10 +122,10 @@ struct proof_trace_item {
 	{
 		if (ubi_node_id)
 		{
-			if(_keep)
+			if(!_keep)
 			{
-				ubigraph_set_vertex_attribute ( ubi_node_id, "color", "#55ff55" );
-				ubigraph_set_vertex_attribute ( ubi_node_id, "shape", "cube" );
+				ubigraph_set_vertex_attribute ( ubi_node_id, "color", "#ffff55" );
+				//ubigraph_set_vertex_attribute ( ubi_node_id, "shape", "cube" );
 			}
 			else
 				ubigraph_remove_vertex( ubi_node_id );
@@ -134,6 +134,8 @@ struct proof_trace_item {
 	void keep()
 	{
 		_keep = 1;
+		ubigraph_set_vertex_attribute ( ubi_node_id, "color", "#55ff55" );
+		ubigraph_set_vertex_attribute ( ubi_node_id, "shape", "cube" );
 	}
 	#endif
 };
@@ -157,7 +159,7 @@ void ubi ( const ppti i ) {
 		i->ubi_node_id = ubigraph_new_vertex();
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontsize", "12" );
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "fontcolor", "#ffffff" );
-		cout << "setting label to \""<<( ( string ) i->rule ).c_str() <<"\""<< endl; 
+		cout << "setting label to \""<<(string)( i->rule.body.size() ? i->rule.body[i->ind] : i->rule.head) <<"\""<< endl; 
 		ubigraph_set_vertex_attribute ( i->ubi_node_id, "label", ( ( string ) i->rule ).c_str() );
 
 		if ( !i->parent ) 
@@ -187,7 +189,8 @@ void ubi ( const ppti i ) {
 		}
 	} 
 
-	{
+	
+	/*
 		if ( i->rule.ubi_node_id)
 		{
 			int e = ubigraph_new_edge ( i->ubi_node_id, i->rule.ubi_node_id );
@@ -197,8 +200,9 @@ void ubi ( const ppti i ) {
 			ubigraph_set_edge_attribute ( e, "strength", "0.5" );
 			ubigraph_set_edge_attribute ( e, "visible", "false" );
 		}
-	}
-	/*
+	
+	*/
+	/*xxx
 	for (auto g : *i->ground)
 		if ( g.src.ubi_node_id )
 		{
@@ -304,14 +308,13 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	deque<ppti> queue;
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
-	#ifdef UBI
-	s->keep();
-	ubi ( s );
-	#endif
 	trace (  "Goal: " << ( string ) goal << endl );
 	while ( queue.size() > 0 ) {
 		trace (  "=======" << endl );
 		ppti c = queue.front();
+		#ifdef UBI
+		ubi ( c );
+		#endif
 		trace (  "  c: " << ( string ) ( *c ) << endl );
 		queue.pop_front();
 		pground_t g = aCopy ( c->ground );
@@ -348,7 +351,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			trace (  ( string ) ( *r ) << endl );
 			if (r->parent && !r->parent->parent)
 				trace("subquery "<<  ( string ) ( *r )  << endl);
-			queue.push_back ( r ); ubi(r);
+			queue.push_back ( r ); //ubi(r);
 			continue;
 		}
 		trace ( "Done q" << endl );
@@ -361,7 +364,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->rule, c->src, c->ind, c->parent, c->env, g} );
 			r->ind++;
 			queue.push_back ( r );
-			ubi ( r );
+			//ubi ( r );
 			continue;
 		} else if ( b == 0 )
 		{   // builtin didnt unify
@@ -400,7 +403,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				if ( !ep ) {
 					trace ( "Adding to queue: " << ( string ) ( *r ) << endl << flush );
 					queue.push_front ( r );
-					ubi ( r );
+					//ubi ( r );
 				} else trace ( "didn't reach top" << endl );
 				trace ( "Done euler loop" << endl );
 			} else trace ( "No loop here" << endl );
@@ -413,10 +416,16 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 bool prove ( pred_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& evidence ) {
 	return prove ( rule_t {goal, { goal } }, maxNumberOfSteps, cases, evidence );
 }
+
+bool isvar(string p)
+{
+	return p.length() and (p[0] == '?' || p[0] == '_');
+}
+
 bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t denv ) {
 	trace ( indent() << "Unify:" << endl << flush << indent() << "  s: " << ( string ) s << " in " << ( *senv ) << endl << flush;
 	        cout << indent() << "  d: " << ( string ) d << " in " << ( *denv ) << endl << flush );
-	if ( s.pred[0] == '?' ) {
+	if ( isvar(s.pred) ) {
 		trace ( indent() << "  source is var" << endl << flush );
 		try {
 			pred_t sval = evaluate ( s, senv );
@@ -440,7 +449,7 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 			throw std::runtime_error ( "Error during unify" );
 		}
 	}
-	if ( d.pred[0] == '?' ) {
+	if ( isvar(d.pred)) {
 		trace ( indent() << "  dest is var" << endl << flush );
 		try {
 			pred_t dval = evaluate ( d, denv );
@@ -485,7 +494,7 @@ bool unify ( const pred_t s, const penv_t senv, const pred_t d, const penv_t den
 
 pred_t evaluate ( const pred_t t, const penv_t env ) {
 	trace ( indent() << "Eval " << ( string ) t << " in " << ( *env ) << endl );
-	if ( t.pred[0] == '?' ) {
+	if ( isvar(t.pred ) ) {
 		trace (  "(" << ( string ) t << " is a var..)" << endl );
 		auto it = env->find ( t.pred );
 		if ( it != env->end() ) return evaluate ( it->second, env );
@@ -577,16 +586,16 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
 			/*if (o == true)
 				 ?//query? what do? add it as a triple or not?
-			else if (o == false)
+			else*/ if (o == "FALSE:LITERAL")
 				{}//negation, ignored, added as triple
-			else*/ if (kb.find(o) != kb.end())
+			else if (kb.find(o) != kb.end())
 				for ( const auto &y : *kb[o] )
 					add_rule(triple(*y), s, kb, cases);
 			else
 				throw std::runtime_error ("HMC_Alpha> bananas is not a formula...");
 		}
 	}
-	ubi_add_facts ( cases );
+	//ubi_add_facts ( cases );
 	rule_t goal;
 	for ( auto q : query ) 
 	{
