@@ -45,7 +45,7 @@ vector<string> split_dots(string s) {
 		ss << *x;
 		if ((!quotes && !curly && !angle && *x == '.') || !*(x+1)) {
 			string t = ss.str();
-			r.push_back(t);
+			r.push_back((*(x+1))?t.substr(0, t.size()-1):t);
 			ss.str("");
 			ss.clear();
 			y = ++x;
@@ -54,6 +54,8 @@ vector<string> split_dots(string s) {
 	}
 	return r;
 }
+
+const string id = "\"@id\": ";
 
 string n3(string s) {
 	stringstream ss;
@@ -64,7 +66,6 @@ string n3(string s) {
 	if (sz && s[0] == '#')
 		return "";
 //	prover::term* t;
-	ss<<"[{\"@graph\":\"@id:\":\""<<ctx<<"\",[";
 	if (starts_with(s, "@prefix")) {
 		// @prefix name: <url>.
 		string ns, url;
@@ -80,27 +81,37 @@ string n3(string s) {
 			prefixes[ns] = url;
 	} else {
 		if (s[0] == '{') {
-			if (s[sz - 1] != '}')
-				throw runtime_error(string("Error: expected } in ") + s);
+			if (s[sz - 1] == '.')
+				s = s.substr(0, s.size()-1);
+				trim(s);
+			if (s[sz - 1] != '}') {
+//				throw runtime_error(string("Error: expected } in ") + s);
+				string su = n3(between(s, '{', '}'));
+				string po = strrchr(s.c_str(), '}') + 1;
+				vector<string> a;
+				split( a, s, is_any_of(" "), token_compress_on );
+				string p = a[0], o = a[1];
+	      			ss<< id<<su<<"\",\n"<<p<<"\": {\n"<<id<<"\""<<o<<"\n\" } } ";
+			}
 			if (s.size() > 1 && s.substr(1, s.size() - 2).find('{') == string::npos) {
 				string x = between(s, '{', '}');
 				trim(x);
 				auto a = split_dots(x);
-				ss << "[{\"@graph\":[";
+				ss << "[{\"@graph\":[\n";
 				for (auto z : a)
-					ss << n3(z);
+					ss << n3(z) << endl;
 				ss << "]";
 			} else {
 				// we expect to have a bare (no {}) predicate
 				string p = between(s, '}', '{');
 				trim(p);
-      				ss<< "\"@id\": \""
+      				ss<< id
 					<< n3(between(s.substr(s.substr(0, s.size()-1).find('{')),'{','}') )
-					<< "\", \""
+					<< "\",\n\""
 					<< p
-					<< "\": { \"@id\": \"" 
+					<< "\"\n" << id  
 					<< n3(between(s.substr(s.substr(1, s.size()-1).find('{')),'{','}') ) 
-					<<"\" } } ";
+					<<"\"\n } } ";
 			}
 		}
 		
@@ -112,12 +123,11 @@ string n3(string s) {
 			trim(p);
 			trim(o);
 			if (addcomma) ss<<',';
-      			ss<< "\"@id\": \""<<su<<"\", \""<<p<<"\": { \"@id\": \""<<o<<"\" } } ";
+      			ss<< id<<su<<"\", \""<<p<<"\": {\n"<<id<<"\""<<o<<"\" } } ";
 			addcomma = true;
 //			cout << "s: " << a[0] << " p: " << a[1] << " o: " << a[2] << endl;
 		}
 	}
-	ss<<"]}";
 	return ss.str();
 //	if (a.size() == 2)
 //		return mkpred(a[0].c_str(), a[1].c_str(), a[2].c_str());
@@ -132,7 +142,9 @@ int main(int, char**) {
 			continue;
 		ss << line;
 	}
+	cout<<"[{\"@graph\":{\"@id:\":\""<<ctx<<"\",[";
 	for (string s : split_dots(ss.str()) )
 		cout<<n3(s)<<endl;
+	cout<<"}]}";
 	return 0;
 }
