@@ -53,17 +53,19 @@ string dstr ( int p ) {
 }
 
 ostream& operator<< ( ostream& o, const predicate& p ) {
-	if (!p.body.empty()) {
-		o << "{ ";
-		for ( auto x : p.body ) o << *x << ' ';
-		o << "} => ";
-	}
 	if ( p.args.size() == 2 ) 
-		o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";
-	else {
-		o << dstr ( p.pred );
-		p.args.empty() ? o : o << p.args;
+	return o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";
+	o << dstr ( p.pred );
+	return p.args.empty() ? o : o << p.args;
+}
+
+ostream& operator<< ( ostream& o, const rule& r ) {
+	if (!r.body.empty()) {
+		o << "{ ";
+		for ( auto x : r.body ) o << *x << ' ';
+		o << "} ";
 	}
+	if ( r.head ) return o << " -> " << *r.head;
 	return o;
 }
 
@@ -74,7 +76,7 @@ ostream& operator<< ( ostream& o, const subst& s ) {
 
 ostream& operator<< ( ostream& o, const ground_t& s ) {
 	o << endl;
-	for ( pair<const predicate*, subst> x : s ) o << '\t' << *x.first << " ; " << x.second << endl;
+	for ( auto x : s ) o << '\t' << *x.first << " ; " << x.second << endl;
 	return o;
 }
 
@@ -92,9 +94,9 @@ ostream& operator<< ( ostream& o, const evidence_t& e ) {
 }
 
 ostream& operator<< ( ostream& o, const cases_t& e ) {
-	for ( pair<int, list<const predicate*>> x : e ) {
+	for ( auto x : e ) {
 		o << dstr ( x.first ) << ": " << endl;
-		for ( const predicate* y : x.second ) o << '\t' << *y << endl;
+		for ( auto y : x.second ) o << '\t' << *y << endl;
 	}
 	return o;
 }

@@ -10,27 +10,27 @@
 #include "rdf.h"
 #include <thread>
 #include "misc.h"
-#include <assert.h>
 
 predicate *temp_preds = new predicate[max_predicates];
 boost::interprocess::vector<proof*> proofs;
 uint ntemppreds = 0;
 
-reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ), {}, {} ) ) {}
+reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
 
 predicate *predicates = new predicate[max_predicates];
+rule *rules = new rule[max_rules];
 //proof *proofs = new proof[max_proofs];
-uint npredicates = 0, nproofs = 0;
+uint npredicates = 0, nrules = 0, nproofs = 0;
 
 reasoner::~reasoner() {
 	delete[] predicates;
+	delete[] rules;
 //	delete[] proofs;
 }
 
-predicate& predicate::init ( int _p, predlist _args, predlist _body ) {
-	pred = _p;
-	args = _args;
-	body = _body;
+rule& rule::init ( const predicate* h, predlist b ) {
+	head = h;
+	body = b;
 	return *this;
 }
 
@@ -38,7 +38,7 @@ proof& proof::init ( const proof& f ) {
 	return init ( f.rul, f.ind, f.parent, f.sub, f.ground );
 }
 
-proof& proof::init ( const predicate* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
+proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
 	if ( nproofs >= max_proofs ) throw "Buffer overflow";
 	proof& f = *new proof;//proofs[nproofs++];
 	proofs.push_back(&f);
@@ -53,9 +53,11 @@ proof& proof::init ( const predicate* _r, uint _ind, const proof* p, subst _s, g
 
 void reasoner::printkb() {
 	static bool pause = false;
-	cout << endl << "dumping kb with " << npredicates << " predicates, " << npredicates << " predicates and " << nproofs << " proofs. " << endl;
+	cout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nproofs << " proofs. " << endl;
 	cout << "predicates: " <<  endl;
 	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
+	cout << "rules: " << endl;
+	for ( uint n = 0; n < nrules; ++n ) cout << rules[n] << endl;
 	cout << "proofs: " << endl;
 	for ( uint n = 0; n < nproofs; ++n ) cout << proofs[n] << endl;
 	if ( pause ) cout << "type <enter> to continue or <c><enter> to stop pausing...";
@@ -64,7 +66,7 @@ void reasoner::printkb() {
 }
 
 const predicate* predicate::evaluate ( const subst& sub ) const {
-	trace ( "\tEval " << *this << " in " << sub << endl );
+	trace ( "\tEval " << t << " in " << sub << endl );
 	if ( pred < 0 ) {
 		auto it = sub.find ( pred );
 		return it == sub.end() ? 0 : it->second->evaluate ( sub );
@@ -72,9 +74,9 @@ const predicate* predicate::evaluate ( const subst& sub ) const {
 		if ( args.empty() ) return this;
 	}
 	const predicate *p;
-	predicate* r = &temp_preds[ntemppreds++].init ( pred, {}, {} );
+	predicate* r = &temp_preds[ntemppreds++].init ( pred );
 	for ( auto x : args )
-		r->args.emplace_back ( ( p = x->evaluate ( sub ) ) ? p : &temp_preds[ntemppreds++].init ( x->pred, {}, {} ) );
+		r->args.emplace_back ( ( p = x->evaluate ( sub ) ) ? p : &temp_preds[ntemppreds++].init ( x->pred ) );
 	return r;
 }
 
@@ -103,7 +105,7 @@ const predicate* unify ( const predicate& s, const subst& ssub, const predicate&
 	return &d;
 }
 
-proof& proof::find ( const predicate* goal, const cases_t& cases) {
+proof& proof::find ( const rule* goal, const cases_t& cases) {
 	proof& f = init( goal );
 	evidence_t& e = *new evidence_t;
 	f.process( *new cases_t(cases), e );
@@ -111,12 +113,10 @@ proof& proof::find ( const predicate* goal, const cases_t& cases) {
 }
 boost::interprocess::list<thread*> threads;
 
-bool proof::process ( const cases_t& cases, evidence_t& evidence ) {
-//	auto f = [this, &cases, &evidence](){
-	dequeue<proof> queue;
+void proof::process ( const cases_t& cases, evidence_t& evidence ) {
+	auto f = [this, &cases, &evidence](){
 	trace ( *this << endl );
 	bool empty = true;
-	while (!queue.empty()) {
 	if ( ind >= rul->body.size() ) {
 		if ( !parent )
 			for ( const predicate* x : rul->body ) {
@@ -126,18 +126,17 @@ bool proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		else {
 			proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->sub, ground );
 			if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, sub );
-			if ( rul->pred ) unify ( *rul, sub, *new_proof.rul->body[new_proof.ind - 1], new_proof.sub, true );
+			if ( rul->head ) unify ( *rul->head, sub, *new_proof.rul->body[new_proof.ind - 1], new_proof.sub, true );
 			new_proof.process(cases, evidence);
 			empty = false;
 		}
 	} else {
 		const predicate* t = rul->body[ind];
-		trace("fetched predicate " << *t <<endl);
 		int b = builtin ( t );
 		if ( b == 1 ) {
 			proof& r = proof::init ( *this );
 			r.ground = ground;
-			r.ground.emplace_back ( t->evaluate ( sub ), subst() );
+			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( sub ) ), subst() );
 			r.ind++;
 			//next.push_back ( &r );
 			r.process(cases, evidence);
@@ -145,12 +144,12 @@ bool proof::process ( const cases_t& cases, evidence_t& evidence ) {
 		} else if ( !b ) return;
 		auto it = cases.find ( t->pred );
 		if ( it != cases.end() )
-			for ( const predicate* rl : it->second ) {
+			for ( const rule* rl : it->second ) {
 				subst s;
-				if ( /*!rl->head || */!unify ( *t, sub, *rl, s, true ) ) continue;
+				if ( !rl->head || !unify ( *t, sub, *rl->head, s, true ) ) continue;
 				const proof* ep = parent;
 				for (; ep; ep = ep->parent)
-					if ( ( ep->rul == rul ) && unify ( *ep->rul, ep->sub, *rul, const_cast<subst&>(sub), false ) )
+					if ( ( ep->rul == rul ) && unify ( *ep->rul->head, ep->sub, *rul->head, const_cast<subst&>(sub), false ) )
 						break;
 				if ( ep && ep->parent ) continue;
 				ground_t g;
@@ -160,23 +159,25 @@ bool proof::process ( const cases_t& cases, evidence_t& evidence ) {
 				empty = false;
 			}
 		}
+	if (empty) cout << "evidence: " << evidence << endl;
 	};
 //	threads.push_back(new thread(f));
-	cout << "evidence: " << evidence << endl;
-//	f();
+	f();
 }
 
 predicate* reasoner::mkpred ( string s, const predlist& v ) {
-	int p = dict.has ( s ) ? dict[s] : dict.set ( s );
-	for (uint n = 0; n < npredicates; ++n) if (predicates[n].pred == p && predicates[n].args == v) return &predicates[n];
-	return &predicates[npredicates++].init ( p, v, {} );
+	return &predicates[npredicates++].init ( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
 }
 
-predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
+rule* reasoner::mkrule ( const predicate* p, const predlist& v ) {
+	return &rules[nrules++].init ( p, v );
+}
+
+const predicate* reasoner::triple ( const string& s, const string& p, const string& o ) {
 	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
 }
 
-predicate* reasoner::triple ( const jsonld::quad& q ) {
+const predicate* reasoner::triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 }
 
@@ -194,23 +195,22 @@ evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
 		for ( jsonld::pquad quad : *x.second ) {
 			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 			trace ( "processing quad " << quad->tostring() << endl );
-			cases[dict[p]].push_back ( triple ( s, p, o ) );
+			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
 			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
 			for ( jsonld::pquad y : *kb.at ( o ) ) {
-				predicate& rul = *triple(*y);
-//				rul.head = triple ( *y );
+				rule& rul = *mkrule();
+				rul.head = triple ( *y );
 				if ( kb.find ( s ) != kb.end() )
 					for ( jsonld::pquad z : *kb.at ( s ) )
 						rul.body.push_back ( triple ( *z ) );
-				cases[rul.pred].push_back ( &rul );
-				trace ( "added predicate " << rul << endl );
+				cases[rul.head->pred].push_back ( &rul );
+				trace ( "added rule " << rul << endl );
 			}
 		}
 	}
-	predicate& goal = predicates[npredicates++].init(0, {}, {});
+	rule& goal = *mkrule();
 	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
 //	printkb();
-	for ( uint n = 0; n < npredicates; ++n ) cout << predicates[n] << endl;
 	return prove ( &goal, -1, cases );
 }
 
@@ -220,49 +220,14 @@ bool reasoner::test_reasoner() {
 	//	exit(0);
 	evidence_t evidence;
 	cases_t cases;
-//	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+	typedef predicate* ppredicate;
+	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
+	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  } ) );
 
-	qdb q, qu;
-	pqlist ql = make_shared<qlist>();
-	string g = "@default";
-	ql->push_back(make_shared<quad>("Socrates", "a", "Male", g));
-	ql->push_back(make_shared<quad>("_:b1", implication, "_:b0", g));
-	ql->push_back(make_shared<quad>("_:b2", implication, "_:b1", g));
-	q[g] = ql;
-	ql = make_shared<qlist>();
-	ql->push_back(make_shared<quad>("?x", "a", "Mortal", "_:b0"));
-	q["_:b0"] = ql;
-	ql = make_shared<qlist>();
-	ql->push_back(make_shared<quad>("?x", "a", "Man", "_:b1"));
-	q["_:b1"] = ql;
-	ql = make_shared<qlist>();
-	ql->push_back(make_shared<quad>("?x", "a", "Male", "_:b2"));
-	q["_:b2"] = ql;
-	ql = make_shared<qlist>();
-	ql->push_back(make_shared<quad>("?y", "a", "Mortal", g));
-	qu[g] = ql;
-	cout<<q<<endl;
-	cout<<qu<<endl;
-	prove(q, *ql);
-/*
-	cases[dict["a"]].push_back ( triple( "Socrates", "a", "Male" ) );
-	{
-	predicate& pr = *triple( "?x", "a", "Mortal");
-	pr.body.push_back(triple( "?x", "a", "Man"));
-	cases[pr.pred].push_back( &pr );
-	}
-	{
-	predicate& pr = *triple( "?x", "a", "Man");
-	pr.body.push_back(triple( "?x", "a", "Male"));
-	cases[pr.pred].push_back( &pr );
-	}
-*/
-//	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {Socrates, Male} )}) );
-//	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  }}) );
-//	cases[dict["a"]].push_back ( &predicates[npredicates++].init(0, {},{mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  }}) );
-
-//	predicate* goal = triple("?y", "a", "Mortal");// mkpred ( "a", { _y, Mortal } );
-//	evidence = prove ( goal, -1, cases );
+	predicate* goal = mkpred ( "a", { _y, Mortal } );
+	evidence = prove ( mkrule ( 0, { goal } ), -1, cases );
 //	cout << "evidence: " << evidence.size() << " items..." << endl;
 //	cout << evidence << endl;
 //	cout << "QED!" << endl;
@@ -363,15 +328,4 @@ int proof::builtin ( const predicate* t_ ) {
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdf:List" && t0 && dict[t0->pred] == "." ) return 1;
 	else if ( p == "a" && t1 && dict[t1->pred] == "rdfs:Resource" ) return 1;*/
 	return -1;
-}
-
-string predicate::dot() const {
-	stringstream r;
-	for (auto x : body) {
-		r << '\"' << *x << '\"';
-		r << " -> " << '\"' << *this << '\"';
-	//	else r << " [shape=box]";
-		r << ';' << endl;
-	}
-	return r.str();
 }

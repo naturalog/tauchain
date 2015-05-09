@@ -237,7 +237,7 @@ int main ( int argc, char** argv ) {
 	int rval = ( *cmds.first[argv[1]] ) ( args );
 
 	for (auto x : threads) { x->join(); delete x; } 
-
+/*
 	ofstream o("proof.dot");
 	o<<"digraph Proof {"<<endl;
 	for (auto x : proofs) o<<x->dot()<<endl;
@@ -247,6 +247,6 @@ int main ( int argc, char** argv ) {
 	for (size_t n = 0; n < npredicates; ++n) o1<<predicates[n].dot()<<endl;
 	o1<<"}";
 	cout << "Written proof.dot and rules.dot. Use 'dot -Tpng proof.dot > proof.png' etc to visualize." << endl;
-
+*/
 	return rval;
 }
