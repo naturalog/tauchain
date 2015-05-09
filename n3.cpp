@@ -25,6 +25,7 @@ bool addcomma = false;
 vector<string> split_dots(string s) {
 	vector<string> r;
 	int curly = 0;
+	int angle = 0;
 	bool quotes = false;
 	const char* x = s.c_str();
 	const char* y = s.c_str();
@@ -33,6 +34,8 @@ vector<string> split_dots(string s) {
 		switch (*x) {
 		case '{': curly++; break;
 		case '}': curly--; break;
+		case '<': angle++; break;
+		case '>': angle--; break;
 		case '\"': 
 			if (!(x-y) || ((x-y) == 1 && *(x-1) != '\\' && ((x-y) != 2 && *(x-2) != '\\')))
 				quotes = !quotes;
@@ -40,11 +43,14 @@ vector<string> split_dots(string s) {
 		default: break;
 		}
 		ss << *x;
-		if ((!quotes && !curly && *x == '.') || !++x) {
-			r.push_back(ss.str());
+		if ((!quotes && !curly && !angle && *x == '.') || !*(x+1)) {
+			string t = ss.str();
+			r.push_back(t);
+			ss.str("");
 			ss.clear();
-			y = x;
-		}
+			y = ++x;
+		} else
+			++x;
 	}
 	return r;
 }
@@ -67,7 +73,7 @@ string n3(string s) {
 		if (ns == ":") ns = "";
 		url = between(s, '<', '>');
 		trim(url);
-		cout<<"@prefix ns: " << ns << " url: " << url << endl;
+//		cout<<"@prefix ns: " << ns << " url: " << url << endl;
 		if (!ns.size())
 			ctx = ns;
 		else
@@ -108,7 +114,7 @@ string n3(string s) {
 			if (addcomma) ss<<',';
       			ss<< "\"@id\": \""<<su<<"\", \""<<p<<"\": { \"@id\": \""<<o<<"\" } } ";
 			addcomma = true;
-			cout << "s: " << a[0] << " p: " << a[1] << " o: " << a[2] << endl;
+//			cout << "s: " << a[0] << " p: " << a[1] << " o: " << a[2] << endl;
 		}
 	}
 	ss<<"]}";
@@ -118,8 +124,15 @@ string n3(string s) {
 }
 
 int main(int, char**) {
-	string s;
-	while (getline(cin, s, '.'))
+	string line;
+	stringstream ss;
+	while ( getline(cin, line) ) {
+		trim(line);
+		if (line[0] == '#')
+			continue;
+		ss << line;
+	}
+	for (string s : split_dots(ss.str()) )
 		cout<<n3(s)<<endl;
 	return 0;
 }

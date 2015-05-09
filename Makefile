@@ -34,4 +34,4 @@ clean:
 ppjson: ppjson.cpp
 	clang++ -std=c++11 ppjson.cpp -oppjson -Wall -ggdb
 n3: n3.cpp
-	clang++ -std=c++11 n3.cpp -on3 -Wall -ggdb -rdynamic
+	g++ n3.cpp -on3 -Wall -ggdb -rdynamic -std=c++11
