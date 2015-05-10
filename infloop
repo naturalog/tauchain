@@ -1,0 +1,13 @@
+?x eq ?y A.
+?y eq ?x B.
+?x eq ?y C.
+?y eq ?z C.
+?x eq ?z D.
+C => D.
+A => B.
+X eq Y.
+Y eq Z.
+Z eq A.
+fin.
+?xx eq A.
+fin.

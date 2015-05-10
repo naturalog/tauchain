@@ -25,52 +25,8 @@ const uint max_rules = MEM;		uint nrules = 0; 		rule* rules = 0;
 const uint max_proofs = MEM; 		uint nproofs = 0; 		proof* proofs = 0;
 
 void printps(term* p, subst* s); // print a term with a subst
-int impl1, impl2, impl3;
-int dict_counter = 1;
-const char implication1[] = "http://www.w3.org/2000/10/swap/log#implies";
 
 term* GND;
-
-const char main_menu[] = 
-"Tau deductive reasoner, part of Tau-Chain\n\
-Based on Euler (EYE) reasoner\n\
-http://idni.org\n\
-=========================================\n\n\
-Syntax: <command> args>\n\
-Type '?' for help.\n";
-const char help[] =
-"Syntax: <command> args>\n\
-Type '?' for help.\n\
-All inputs that ends with '.' (facts) or '?' (queries) are interpreted as new terms or rules, otherwise as commands.\n\n\
-A non-command line should contain triples, possibly nested with {} brackets (like N3). '=>' term is interpreted\n\
-as implication (<http://www.w3.org/2000/10/swap/log#implies>) as well as simply log:implies.\n\
-Commands:\n\n\
----------\n\n\
-Printing commands:\n\
-Syntax: <command> [id] where kb selects kb to list the desired values, and id of the desired value.\n\
-If id is not specified, all values from the specified kind will belisted.\n\
-pp [id]\tprints terms.\n\
-pr [id]\tprints rules.\n\
-ps [id]\tprints substitutions.\n\
-pg [id]\tprints grounds.\n\
-pq [id]\tprints queues.\n\
-ppr [id]\tprints proofs.\n\
-pd [id]\tprints dicts.\n\
-pl [id]\tprints term lists.\n\
-pll [id]\tprints rule lists.\n\
-pe [id]\tprints evidence.\n\
-pss [id]\tprint session.\n\
-\n\nProof commands:\n\n\
-qi\tinteractive proof.\n\
-qa\tprocess all frames until full resolution.\n\
-\n\nSession commands:\n\n\
-Each session contain a proof queue, a kb (rule list), a goal (term list) and a dict.\n\
-Goal and kb are represented both as terms and as implication tree (rules).\n\
-sc\tClear session\n\
-sn\tCreate session\n\
-sw <id>\tSwitch session\n\n";
-
-const char prompt[] = "tau >> ";
 
 #ifdef DEBUG
 #define TRACE(x) x
@@ -89,37 +45,6 @@ void initmem() {
 	rules 		= new rule[max_rules];
 	proofs 		= new proof[max_proofs];
 	nterms = ntermsets = nrules = nproofs = 0;
-}
-
-void trim(char *s) {
-	uint len = strlen(s), n;
-	int brackets;
-	if (!len)
-		return;
-	while ( isspace ( *s ) && len ) {
-		for (n = 0; n < len - 1; ++n)
-			s[n] = s[n + 1];
-		--len;
-	}
-	while ( len && isspace ( s[len - 1] ))
-		--len;
-	s[len] = 0;
-	if (len <= 1)
-		return;
-	if (*s == '{' && s[len-1] == '}') {
-		brackets = 1;
-		for (n = 1; n < len - 1; ++n) {
-			if (s[n] == '{')
-				brackets++;
-			if (s[n] == '}')
-				brackets--;
-			if (!brackets)
-				return;
-		}
-		s[len - 1] = 0;
-		*s = ' ';
-		trim(s);
-	}
 }
 
 term* evaluate(term* p, subst& s) {
@@ -392,17 +317,5 @@ void printe(const evidence& e) {
 			printg(x.second);
 			dout << endl;
 		}
-}
-
-bool is_implication(int p) {
-	return p == impl1 || p == impl2 || p == impl3;
-}
-
-inline int pushw(const char* s) {
-	return gdict.set(s);
-}
-
-inline const char* dgetw(int n) {
-	return gdict[n].c_str();
 }
 }
