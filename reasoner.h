@@ -137,7 +137,7 @@ struct proof_trace_item {
 		o << ",\"@id\":\":frame" << t.step << "\"";
 
 		//o << ",\"tau:rule\":" << t.rule;
-		o << ",\"tau:rule\":\"" << t.rule.pp()  <<"\"";
+		o << ",\"tau:rule\":\"" << jse(t.rule.pp())  <<"\"";
 		o << ",\"tau:src\":" << t.src;
 		o << ",\"tau:ind\":" << t.ind;
 		if ( t.parent ) o << ",\"tau:parent\":\":frame" << t.parent->step << "\"";
@@ -190,8 +190,8 @@ ostream& operator<< ( ostream& o,  const rules_t &r ) {
 	if ( r.size() ) 
 	{
 		for ( auto rr = r.cbegin();; ) {
-			o << *rr;
-			if ( ++rr != r.cend() ) o << ",";
+			o << "\"" << jse(rr->pp()) << "\"";
+			if ( ++rr != r.cend() ) o << ", ";
 			else break;
 		}	
 	}
@@ -260,7 +260,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
 	while ( queue.size() > 0 ) {
-		if(step) cout << "}\n,";
+		if(step) jst("}\n,");
 		cout << "{\"tau:queue size\":\"" << queue.size() << "\"},\n";
 		ppti c = queue.front();
 		queue.pop_front();
@@ -487,7 +487,7 @@ void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t 
 	else
 		throw std::runtime_error (s + "is not a graph in our kb");
 	cases[rule.head.pred].push_back ( rule );
-	cout << rule << "\n,\n";
+	cout << "\"" << jse(rule.pp())  <<"\",\n";
 	
 }
 
