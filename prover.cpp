@@ -28,12 +28,12 @@ const uint max_proofs = 10*MEM; 		uint nproofs = 0; 		proof* proofs = 0;
 const uint max_queues = 10*MEM; 		uint nqueues = 0; 		queue* queues = 0;
 const uint max_evidence_items = MEM; 	uint nevidence_items = 0; 	evidence_item* evidence_items = 0;
 const uint max_evidences = MEM; 	uint nevidences = 0; 		evidence* evidences = 0;
-const uint max_dicts = MEM; 		uint ndicts = 0; 		dict* dicts = 0;
+//const uint max_dicts = MEM; 		uint ndicts = 0; 		dict* dicts = 0;
 
-void printps(term* p, subst* s, dict* d); // print a term with a subst
+void printps(term* p, subst* s); // print a term with a subst
 ruleset* find_or_create_rs_p(ruleset* rs, term* p);	// finds a term in a ruleset or creates a new rule with that term if not exists
-void str2term(const char* s, term** p, dict* d);	// parses a string as term in partial basic N3
-void term2rs(term* t, ruleset** r, bool fact, dict** d);// converts a (complex) term into a ruleset by tracking the implication
+void str2term(const char* s, term** p);	// parses a string as term in partial basic N3
+void term2rs(term* t, ruleset** r, bool fact);// converts a (complex) term into a ruleset by tracking the implication
 ruleset* ts2rs(termset* t, bool fact);	// same as term2rs but from termset
 
 //dict* ss->d; // global dictionary, currently the only used
@@ -41,9 +41,9 @@ ruleset* ts2rs(termset* t, bool fact);	// same as term2rs but from termset
 int impl1, impl2, impl3;
 int dict_counter = 1;
 
-const char implication1[] = "log:implies";
-const char implication2[] = "=>";
-const char implication3[] = "http://www.w3.org/2000/10/swap/log#implies";
+//const char implication1[] = "log:implies";
+//const char implication2[] = "=>";
+const char implication1[] = "http://www.w3.org/2000/10/swap/log#implies";
 
 term* GND;
 
@@ -143,7 +143,7 @@ bool has_no_spaces(const char* s) {
 	return true;
 }
 
-void str2term(const char* s, term** _p, dict* d) {
+void str2term(const char* s, term** _p) {
 	if (!s || !*s) {
 		*_p = 0;
 		return;
@@ -193,12 +193,12 @@ void str2term(const char* s, term** _p, dict* d) {
 					pr[n++] = *s++;
 				}
 			pr[n] = 0;
-			p->p = pushw(&d, pr);
+			p->p = pushw(pr);
 			strcpy(__s, s);
 			trim(__s);
 			if (strlen(__s)) {
 				if (has_no_spaces(__s)) {
-					int id = pushw(&d, __s);
+					int id = pushw(__s);
 					for (k = 0; k < nterms; ++k)
 						if (terms[k].p == id)
 							if (!terms[k].s && !terms[k].o)
@@ -210,7 +210,7 @@ void str2term(const char* s, term** _p, dict* d) {
 					}
 				}
 				else
-					str2term(__s, &p->o, d);
+					str2term(__s, &p->o);
 			}
 			else
 				p->o = 0;
@@ -219,7 +219,7 @@ void str2term(const char* s, term** _p, dict* d) {
 			trim(__s);
 			if (strlen(__s)) {
 				if (has_no_spaces(__s)) {
-					int id = pushw(&d, __s);
+					int id = pushw(__s);
 					for (k = 0; k < nterms; ++k)
 						if (terms[k].p == id)
 							if (!terms[k].s && !terms[k].o)
@@ -231,7 +231,7 @@ void str2term(const char* s, term** _p, dict* d) {
 					}
 				}
 				else 
-					str2term(__s, &p->s, d);
+					str2term(__s, &p->s);
 			}
 			else
 				p->s = 0;
@@ -243,19 +243,13 @@ void str2term(const char* s, term** _p, dict* d) {
 
 void printss(session* ss) {
 	dout<<"Queue:\n";
-	printq(ss->q, ss->d);
+	printq(ss->q);
 	dout<<"KB terms:\n";
-	printl(ss->kb, ss->d);
+	printl(ss->kb);
 	dout<<"Goal terms:\n";
-	printl(ss->goal, ss->d);
+	printl(ss->goal);
 	dout<<"KB rules:\n";
-	printrs(ss->rkb, ss->d);
-	dout<<"Dictionary:\n";
-	dict* d = ss->d;
-	while (d) {
-		dout<< d->n<<" = "<< d->s<<endl;
-		d = d->next;
-	}
+	printrs(ss->rkb);
 }
 
 // set alloc to false in order to only zero the memory
@@ -266,7 +260,7 @@ void initmem() {
 	if (rulesets) delete[] rulesets;
 	if (grounds) delete[] grounds;
 	if (proofs) delete[] proofs;
-	if (dicts) delete[] dicts;
+//	if (dicts) delete[] dicts;
 	if (queues) delete[] queues;
 	if (evidences) delete[] evidences;
 	if (evidence_items) delete[] evidence_items;
@@ -282,7 +276,7 @@ void initmem() {
 	queues 		= new queue[max_queues];
 	evidences 	= new evidence[max_evidences];
 	evidence_items = new evidence_item[max_evidence_items];
-	nterms = ntermsets = nrules = nsubsts = nrulesets = ngrounds = nproofs = nqueues = nevidence_items = nevidences = ndicts = 0;
+	nterms = ntermsets = nrules = nsubsts = nrulesets = ngrounds = nproofs = nqueues = nevidence_items = nevidences = 0;
 //	ss->d = 0;//&dicts[ndicts++];
 }
 
@@ -519,10 +513,10 @@ term* evaluate(term* p, subst* s) {
 	return r;
 }
 
-void printps(term* p, subst* s, dict* d) {
-	printterm(p, d);
+void printps(term* p, subst* s) {
+	printterm(p);
 	dout<<" [ ";
-	prints(s, d);
+	prints(s);
 	dout<<" ] ";
 }
 
@@ -590,9 +584,9 @@ void prove(session* ss) {
 	p->prev = 0;
 	pushq(&qu, p);
 	TRACE(dout<<"\nprove() called with facts:");
-	TRACE(printrs(cases, ss->d));
+	TRACE(printrs(cases));
 	TRACE(dout<<"\nand query:");
-	TRACE(printl(goal, ss->d));
+	TRACE(printl(goal));
 	TRACE(dout<<endl);
 	do {
 		queue *q = qu;
@@ -606,7 +600,7 @@ void prove(session* ss) {
 		if (p->last) {
 			term* t = p->last->p;
 			TRACE(dout<<"Tracking back from ");
-			TRACE(printterm(t, ss->d));
+			TRACE(printterm(t));
 			TRACE(dout<<endl);
 			int b = builtin(t, p, ss);
 			if (b == 1) {
@@ -629,15 +623,15 @@ void prove(session* ss) {
 			while ((rs = findruleset(rs, t->p))) {
 				subst* s = 0;
 				TRACE(dout<<"\tTrying to unify ");
-				TRACE(printps(t, p->s, ss->d));
+				TRACE(printps(t, p->s));
 				TRACE(dout<<" and ");
-				TRACE(printps(rs->r->p, s, ss->d));
+				TRACE(printps(rs->r->p, s));
 				TRACE(dout<<"... ");
 				if (unify(t, p->s, rs->r->p, &s, true)) {
 					TRACE(dout<<"\tunification succeeded");
 					if (s) {
 						TRACE(dout<<" with new substitution: ");
-						TRACE(prints(s, ss->d));
+						TRACE(prints(s));
 					}
 					TRACE(dout<<endl);
 					if (euler_path(p)) {
@@ -654,7 +648,7 @@ void prove(session* ss) {
 						pushg( &r->g, rs->r, 0 );
 					unshift(&qu, r);
 //					TRACE(dout<<"queue:\n"));
-//					TRACE(printq(qu, ss->d));
+//					TRACE(printq(qu));
 				} else {
 					TRACE(dout<<"\tunification failed\n");
 				}
@@ -666,7 +660,7 @@ void prove(session* ss) {
 			for (r = p->rul->body; r; r = r->next) 
 				pushe(&ss->e, evaluate(r->p, p->s), p->g);
 			TRACE(dout<<"no prev frame. queue:\n");
-//			TRACE(printq(qu, ss->d));
+//			TRACE(printq(qu));
 		} else {
 			ground* g = copyg(p->g);
 			proof* r = &proofs[nproofs++];
@@ -679,13 +673,13 @@ void prove(session* ss) {
 			r->last = r->last->next;
 			pushq(&qu, r);
 			TRACE(dout<<"finished a frame. queue:\n");
-//			TRACE(printq(qu, ss->d));
+//			TRACE(printq(qu));
 			continue;
 		}
 	} while (qu);
 	dout<<"\nEvidence:";
 	dout<<"========="<<endl;
-	printe(ss->e, ss->d);
+	printe(ss->e);
 }
 
 bool equals(term* x, term* y) {
@@ -742,132 +736,128 @@ void pushr(ruleset** _rs, term* s, term* o) {
 	pushp(&rs->r->body, s);
 }
 
-void printterm(term* p, dict* d) {
+void printterm(term* p) {
 	const char* s;
 	if (!p)
 		return;
-	printterm(p->s, d);
-	if (!d)
-		dout<<' '<<p->p<<' ';
-	else {
-		s = gdict[p->p].c_str();
-		if (s)
-			dout<<' '<<s<<' ';
-	}
-	printterm(p->o, d);
+	printterm(p->s);
+	s = gdict[p->p].c_str();
+	if (s)
+		dout<<' '<<s<<' ';
+	printterm(p->o);
 }
 
-void printp(proof* p, dict* d) {
+void printp(proof* p) {
 	if (!p)
 		return;
 	dout<<"\trule:\t";
-	printr(p->rul, d);
+	printr(p->rul);
 	dout<<"\n\tremaining:\t";
-	printl(p->last, d);
+	printl(p->last);
 	if (p->prev)
 		dout<<"\n\tprev:\t"<<(p->prev - proofs)/sizeof(proof)<<"\n\tsubst:\t";
 	else
 		dout<<"\n\tprev:\t(null)\n\tsubst:\t";
-	prints(p->s, d);
+	prints(p->s);
 	dout<<"\n\tground:\t";
-	printg(p->g, d);
+	printg(p->g);
 	dout<<"\n";
 }
 
-void printrs(ruleset* rs, dict* d) {
+void printrs(ruleset* rs) {
 	if (!rs)
 		return;
-	printr(rs->r, d);
+	printr(rs->r);
 	dout<<endl;
-	printrs(rs->next, d);
+	printrs(rs->next);
 }
 
-void printq(queue* q, dict* d) {
+void printq(queue* q) {
 	if (!q)
 		return;
-	printp(q->p, d);
+	printp(q->p);
 	if (q->next)
 		dout<<endl;
-	printq(q->next, d);
+	printq(q->next);
 }
 
-void prints(subst* s, dict* d) {
+void prints(subst* s) {
 	if (!s)
 		return;
 	const char* _s = gdict[s->p].c_str();
 	if (_s)
 		dout<<"["<<_s<<" / ";
-	printterm(s->pr, d);
+	printterm(s->pr);
 	if (s->next) {
 		dout<<"], ";
-		prints(s->next, d);
+		prints(s->next);
 	}
 	else
 		dout<<"] ";
 }
 
-void printl(termset* l, dict* d) {
+void printl(termset* l) {
 	if (!l)
 		return;
-	printterm(l->p, d);
+	printterm(l->p);
 	if (!l->next)
 		return;
 	dout<<", ";
-	printl(l->next, d);
+	printl(l->next);
 }
 
-void printr(rule* r, dict* d) {
+void printr(rule* r) {
 	if (!r)
 		return;
-	printl(r->body, d);
+	printl(r->body);
 	dout<<" => ";
-	printterm(r->p, d);
+	printterm(r->p);
 }
 
-void printg(ground* g, dict* d) {
+void printg(ground* g) {
 	if (!g)
 		return;
 //	dout<<"ground: ");
-	printr(g->r, d);
+	printr(g->r);
 	dout<<" ";
-	prints(g->s, d);
+	prints(g->s);
 //	dout<<"\n");
 	if (g->next) {
 		dout<<"; ";
-		printg(g->next, d);
+		printg(g->next);
 	}
 	else
 		dout<<". ";
 }
 
-void printei(evidence_item* ei, dict* d) {
+void printei(evidence_item* ei) {
 	if (!ei)
 		return;
 //	dout<<"evidence_item:\n");
-	printterm(ei->p, d);
+	printterm(ei->p);
 	dout<<": ";
-	printg(ei->g, d);
+	printg(ei->g);
 	dout<<"\n";
 	sleep(0.1);
-	printei(ei->next, d);
+	printei(ei->next);
 }
 
-void printe(evidence* e, dict* d) {
+void printe(evidence* e) {
 	if (!e)
 		return;
-	printei(e->item, d);
-	printe(e->next, d);
+	printei(e->item);
+	printe(e->next);
 }
 
 bool is_implication(int p) {
 	return p == impl1 || p == impl2 || p == impl3;
 }
 
-int pushw(dict**, const char* s) {
+inline int pushw(const char* s) {
 	return gdict.set(s);
 }
 
-const char* dgetw(dict*, int n) {
+inline const char* dgetw(int n) {
 	return gdict[n].c_str();
 }
 
@@ -878,18 +868,20 @@ void init_prover() {
 
 	session ss;
 //	gsession = &ss;
-	ss.d = 0;//ss->d;
+//	ss.d = 0;//ss->d;
 	ss.kb = 0;
 	ss.rkb = 0;
 	ss.goal = 0;
-	ss.d = 0;
+//	ss.d = 0;
 	ss.q = 0;
 	pushp(&ss.kb, GND);
-	impl1 = pushw(&ss.d, implication1); // define implication
-	impl2 = pushw(&ss.d, implication2); 
-	impl3 = pushw(&ss.d, implication3);
+//	impl1 = pushw(&ss.d, implication1); // define implication
+//	impl2 = pushw(&ss.d, implication2); 
+//	impl3 = pushw(&ss.d, implication3);
 	GND = &terms[nterms++];
-	GND->p = pushw(&ss.d, "GND");
+	dict.set("GND");
+	impl1 = dict.set(implication1);
+//	GND->p = pushw(&ss.d, "GND");
 	GND->s = GND->o = 0;
 
 //	menu(&ss);

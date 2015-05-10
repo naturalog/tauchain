@@ -210,13 +210,13 @@ shared_ptr<const predicate> reasoner::triple ( const jsonld::quad& q ) {
 	return triple ( q.subj->value, q.pred->value, q.object->value );
 }
 
-prover::term* pred2term(shared_ptr<const predicate> p, prover::dict** d) {
+prover::term* pred2term(shared_ptr<const predicate> p) {
 	if (!p) return 0;
 	prover::term* t = &prover::terms[prover::nterms++];
-	t->p = prover::pushw(d, dstr(p->pred).c_str());
+	t->p = dict.set(dstr(p->pred));
 	if (p->args.size()) {
-		t->s = pred2term(p->args[0], d);
-		t->o = pred2term(p->args[1], d);
+		t->s = pred2term(p->args[0]);
+		t->o = pred2term(p->args[1]);
 	} else
 		t->s = t->o = 0;
 	return t;
@@ -233,17 +233,17 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 	if (p[0] == '?')
 		throw 0;
 	prover::rule* r = &prover::rules[prover::nrules++];
-	r->p = pred2term(triple ( s, p, o ), &ss.d);
+	r->p = pred2term(triple ( s, p, o ));
 	r->body = 0;
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
 		prover::pushr(&ss.rkb, r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
-		r->p = pred2term(triple ( *y ), &ss.d);
+		r->p = pred2term(triple ( *y ));
 		r->body = 0;
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
-				prover::pushp(&r->body, pred2term( triple ( *z ), &ss.d ) );
+				prover::pushp(&r->body, pred2term( triple ( *z ) ) );
 		prover::pushr(&ss.rkb, r);
 //				trace ( "added rule " << rul << endl );
 	}
@@ -316,7 +316,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 	}
 //	rule& goal = *mkrule();
 	for ( auto q : query ) 
-		prover::pushp(&ss.goal, pred2term( triple ( *q ), &ss.d ) );
+		prover::pushp(&ss.goal, pred2term( triple ( *q ) ) );
 //	printkb();
 	prover::prove(&ss);
 	return ss.e;

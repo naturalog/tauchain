@@ -56,18 +56,18 @@ struct queue {
 	queue* prev;
 	queue* next;
 };
-
+/*
 struct dict {
 	char* s;
 	int n;
 	dict* next;
 };
-
+*/
 struct session {
 	queue* q;
 	ruleset *rkb;
 	termset *kb, *goal;
-	dict* d;
+//	dict* d;
 	evidence* e;
 };
 
@@ -84,22 +84,22 @@ void prove(session* ss);				// backchaining
 bool equals(term* x, term* y);				// deep-compare terms
 void pushp(termset** l, term* p);			// push a term to a termset
 void pushr(ruleset** _rs, term* s, term* o);		// push subject and object of s=>o into a ruleset
-void printterm(term* p, dict* d);			// print a term
+void printterm(term* p);				// print a term
 //term* term(int s, int p, int o);			// create an s/p/o term
-void prints(subst* s, dict* d);				// print a subst
-void printl(termset* l, dict* d); 			// print a termset
-void printg(ground* g, dict* d);			// print a ground struct
-void printe(evidence* e, dict* d);			// print evidence
-void printei(evidence_item* ei, dict* d);		// print single evidence step
-void printr(rule* r, dict* d);				// print rule
+void prints(subst* s);				// print a subst
+void printl(termset* l); 			// print a termset
+void printg(ground* g);			// print a ground struct
+void printe(evidence* e);			// print evidence
+void printei(evidence_item* ei);		// print single evidence step
+void printr(rule* r);				// print rule
 void printss(session* s);				// print session memory
-void printp(proof* p, dict* d);				// print a proof element
-void printrs(ruleset* rs, dict* d);			// print a ruleset
-void printq(queue* q, dict* d);				// print a proof queue
+void printp(proof* p);				// print a proof element
+void printrs(ruleset* rs);			// print a ruleset
+void printq(queue* q);				// print a proof queue
 ruleset* findruleset(ruleset* rs, int p);		// find in a ruleset according to term
-int pushw(dict** _d, const char* s);			// push a string into a dictionary and get its int id
-const char* dgetw(dict* d, int n);			// decrypt string from dictionary given id
-bool dgetwn(dict* d, const char* s, int* n);		// returns the id of a given string in a dict
+int pushw( const char* s);			// push a string into a dictionary and get its int id
+const char* dgetw( int n);			// decrypt string from dictionary given id
+bool dgetwn( const char* s, int* n);		// returns the id of a given string in a dict
 void readr(ruleset** _r);				// read a rule from the user and stores it in a ruleset
 void menu(session* ss);					// run menu
 void printcmd(const char* line, session*);		// handle print commands
@@ -127,6 +127,6 @@ extern uint nevidence_items;
 extern evidence_item* evidence_items;
 extern uint nevidences;
 extern evidence* evidences;
-extern uint ndicts;
-extern dict* dicts;
+//extern uint ndicts;
+//extern dict* dicts;
 }
