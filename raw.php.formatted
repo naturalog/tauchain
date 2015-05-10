@@ -1,0 +1,871 @@
+[
+    {
+        "@graph": [
+            {
+                "rdfs:domain": [
+                    {
+                        "@id": "?C"
+                    }
+                ],
+                "@id": "?P"
+            },
+            {
+                "?P": [
+                    {
+                        "@id": "?Y"
+                    }
+                ],
+                "@id": "?X"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g2"
+            }
+        ],
+        "@id": "_:g1"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:domain": [
+                    {
+                        "@id": "?D"
+                    }
+                ],
+                "@id": "?P"
+            }
+        ],
+        "@id": "_:g10"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "?D"
+                    }
+                ],
+                "@id": "?C"
+            },
+            {
+                "@id": "?P",
+                "rdfs:range": [
+                    {
+                        "@id": "?C"
+                    }
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g12"
+            }
+        ],
+        "@id": "_:g11"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:range": [
+                    {
+                        "@id": "?D"
+                    }
+                ]
+            }
+        ],
+        "@id": "_:g12"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:subPropertyOf": [
+                    {
+                        "@id": "?Q"
+                    }
+                ]
+            },
+            {
+                "?P": [
+                    {
+                        "@id": "?O"
+                    }
+                ],
+                "@id": "?S"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g14"
+            }
+        ],
+        "@id": "_:g13"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?S",
+                "?Q": [
+                    {
+                        "@id": "?O"
+                    }
+                ]
+            }
+        ],
+        "@id": "_:g14"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:subPropertyOf": [
+                    {
+                        "@id": "?Q"
+                    }
+                ]
+            },
+            {
+                "@id": "?Q",
+                "rdfs:subPropertyOf": [
+                    {
+                        "@id": "?R"
+                    }
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g16"
+            }
+        ],
+        "@id": "_:g15"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:subPropertyOf": [
+                    {
+                        "@id": "?R"
+                    }
+                ]
+            }
+        ],
+        "@id": "_:g16"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:subPropertyOf": [
+                    {
+                        "@id": "?Q"
+                    }
+                ]
+            },
+            {
+                "rdfs:domain": [
+                    {
+                        "@id": "?C"
+                    }
+                ],
+                "@id": "?Q"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g18"
+            }
+        ],
+        "@id": "_:g17"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:domain": [
+                    {
+                        "@id": "?C"
+                    }
+                ],
+                "@id": "?P"
+            }
+        ],
+        "@id": "_:g18"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:subPropertyOf": [
+                    {
+                        "@id": "?Q"
+                    }
+                ]
+            },
+            {
+                "@id": "?Q",
+                "rdfs:range": [
+                    {
+                        "@id": "?C"
+                    }
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g20"
+            }
+        ],
+        "@id": "_:g19"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?X",
+                "@type": [
+                    "?C"
+                ]
+            }
+        ],
+        "@id": "_:g2"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:range": [
+                    {
+                        "@id": "?C"
+                    }
+                ]
+            }
+        ],
+        "@id": "_:g20"
+    },
+    {
+        "@graph": [
+            {
+                "?P": [
+                    {
+                        "@id": "?O"
+                    }
+                ],
+                "@id": "?S"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g22"
+            }
+        ],
+        "@id": "_:g21"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "@type": [
+                    "rdf:Property"
+                ]
+            }
+        ],
+        "@id": "_:g22"
+    },
+    {
+        "@graph": [
+            {
+                "?P": [
+                    {
+                        "@id": "?O"
+                    }
+                ],
+                "@id": "?S"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g24"
+            }
+        ],
+        "@id": "_:g23"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?S",
+                "@type": [
+                    "rdfs:Resource"
+                ]
+            }
+        ],
+        "@id": "_:g24"
+    },
+    {
+        "@graph": [
+            {
+                "?P": [
+                    {
+                        "@id": "?O"
+                    }
+                ],
+                "@id": "?S"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g26"
+            }
+        ],
+        "@id": "_:g25"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?O",
+                "@type": [
+                    "rdfs:Resource"
+                ]
+            }
+        ],
+        "@id": "_:g26"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?C",
+                "@type": [
+                    "rdfs:Class"
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g28"
+            }
+        ],
+        "@id": "_:g27"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "rdfs:Resource"
+                    }
+                ],
+                "@id": "?C"
+            }
+        ],
+        "@id": "_:g28"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?X",
+                "@type": [
+                    "rdfs:ContainerMembershipProperty"
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g30"
+            }
+        ],
+        "@id": "_:g29"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?P",
+                "rdfs:range": [
+                    {
+                        "@id": "?C"
+                    }
+                ]
+            },
+            {
+                "?P": [
+                    {
+                        "@id": "?Y"
+                    }
+                ],
+                "@id": "?X"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g4"
+            }
+        ],
+        "@id": "_:g3"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?X",
+                "rdfs:subPropertyOf": [
+                    {
+                        "@id": "rdfs:member"
+                    }
+                ]
+            }
+        ],
+        "@id": "_:g30"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?X",
+                "@type": [
+                    "rdfs:Datatype"
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g32"
+            }
+        ],
+        "@id": "_:g31"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "rdfs:Literal"
+                    }
+                ],
+                "@id": "?X"
+            }
+        ],
+        "@id": "_:g32"
+    },
+    {
+        "@graph": [
+            {
+                "http://eulersharp.sourceforge.net/2003/03swap/log-rules#clashesWith": [
+                    {
+                        "@id": "rdf:XMLLiteral"
+                    }
+                ],
+                "@id": "?S",
+                "@type": [
+                    "rdf:XMLLiteral"
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "FALSE:LITERAL"
+            }
+        ],
+        "@id": "_:g33"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?Y",
+                "@type": [
+                    "?C"
+                ]
+            }
+        ],
+        "@id": "_:g4"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "?D"
+                    }
+                ],
+                "@id": "?C"
+            },
+            {
+                "@id": "?X",
+                "@type": [
+                    "?C"
+                ]
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g6"
+            }
+        ],
+        "@id": "_:g5"
+    },
+    {
+        "@graph": [
+            {
+                "@id": "?X",
+                "@type": [
+                    "?D"
+                ]
+            }
+        ],
+        "@id": "_:g6"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "?D"
+                    }
+                ],
+                "@id": "?C"
+            },
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "?E"
+                    }
+                ],
+                "@id": "?D"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g8"
+            }
+        ],
+        "@id": "_:g7"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "?E"
+                    }
+                ],
+                "@id": "?C"
+            }
+        ],
+        "@id": "_:g8"
+    },
+    {
+        "@graph": [
+            {
+                "rdfs:subClassOf": [
+                    {
+                        "@id": "?D"
+                    }
+                ],
+                "@id": "?C"
+            },
+            {
+                "rdfs:domain": [
+                    {
+                        "@id": "?C"
+                    }
+                ],
+                "@id": "?P"
+            }
+        ],
+        "http://www.w3.org/2000/10/swap/log#implies": [
+            {
+                "@id": "_:g10"
+            }
+        ],
+        "@id": "_:g9"
+    },
+    {
+        "rdfs:subClassOf": [
+            {
+                "@id": "rdfs:Container"
+            }
+        ],
+        "@id": "rdf:Alt"
+    },
+    {
+        "rdfs:subClassOf": [
+            {
+                "@id": "rdfs:Container"
+            }
+        ],
+        "@id": "rdf:Bag"
+    },
+    {
+        "rdfs:subClassOf": [
+            {
+                "@id": "rdfs:Container"
+            }
+        ],
+        "@id": "rdf:Seq"
+    },
+    {
+        "rdfs:subClassOf": [
+            {
+                "@id": "rdfs:Literal"
+            }
+        ],
+        "@id": "rdf:XMLLiteral",
+        "@type": [
+            "rdfs:Datatype"
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:List"
+            }
+        ],
+        "@id": "rdf:first",
+        "@type": [
+            "owl:FunctionalProperty",
+            "rdf:Property"
+        ],
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ]
+    },
+    {
+        "@id": "rdf:nil",
+        "@type": [
+            "rdf:list"
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:Statement"
+            }
+        ],
+        "@id": "rdf:object",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:Statement"
+            }
+        ],
+        "@id": "rdf:predicate",
+        "rdfs:range": [
+            {
+                "@id": "rdf:Property"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:List"
+            }
+        ],
+        "@id": "rdf:rest",
+        "@type": [
+            "owl:FunctionalProperty",
+            "rdf:Property"
+        ],
+        "rdfs:range": [
+            {
+                "@id": "rdf:List"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:Statement"
+            }
+        ],
+        "@id": "rdf:subject",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ],
+        "@id": "rdf:type",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Class"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ],
+        "@id": "rdf:value",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ]
+    },
+    {
+        "rdfs:subClassOf": [
+            {
+                "@id": "rdf:Property"
+            }
+        ],
+        "@id": "rdfs:ContainerMembershipProperty"
+    },
+    {
+        "rdfs:subClassOf": [
+            {
+                "@id": "rdfs:Class"
+            }
+        ],
+        "@id": "rdfs:Datatype"
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ],
+        "@id": "rdfs:comment",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Literal"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:Property"
+            }
+        ],
+        "@id": "rdfs:domain",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Class"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ],
+        "@id": "rdfs:isDefinedBy",
+        "rdfs:subPropertyOf": [
+            {
+                "@id": "rdfs:seeAlso"
+            }
+        ],
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ],
+        "@id": "rdfs:label",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Literal"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Container"
+            }
+        ],
+        "@id": "rdfs:member",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:Property"
+            }
+        ],
+        "@id": "rdfs:range",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Class"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ],
+        "@id": "rdfs:seeAlso",
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Resource"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdfs:Class"
+            }
+        ],
+        "@id": "rdfs:subClassOf",
+        "@type": [
+            "rdf:Property"
+        ],
+        "rdfs:range": [
+            {
+                "@id": "rdfs:Class"
+            }
+        ]
+    },
+    {
+        "@id": "rdfs:subPropertOf",
+        "rdfs:range": [
+            {
+                "@id": "rdf:Property"
+            }
+        ]
+    },
+    {
+        "rdfs:domain": [
+            {
+                "@id": "rdf:Property"
+            }
+        ],
+        "@id": "rdfs:subPropertyOf",
+        "@type": [
+            "rdf:Property"
+        ],
+        "rdfs:range": [
+            {
+                "@id": "rdf:Property"
+            }
+        ]
+    }
+]

@@ -26,9 +26,25 @@ struct pred_t {
 			o<<"]";
 		}
 		o << ",\"@type\":\"tau:pred\"";
-
 		return o << "}";
 	}
+	string pp () const {
+		stringstream o;
+
+		o << pred;
+		if ( args.size() ) {
+			o << "(";
+			for ( auto a = args.cbegin();; ) {
+				o << a->pp();
+				if ( ++a != args.cend() ) o << ", ";
+				else {o << ")"; break;};
+			}
+		}
+		return o.str();
+	}
+
+
+	
 };
 
 typedef map<string, pred_t> env_t;
@@ -49,6 +65,18 @@ struct rule_t {
 		o << "{\"tau:head\":" << t.head << ",\"tau:body\":" << t.body << ",\"@type\":\"tau:rule\"}";
 		return o;
 	}
+	string pp() const {
+		stringstream o;
+		o << head.pp();
+		if ( body.size() ) {
+			o << " <= { ";
+			for ( auto x : body ) o << x.pp() << ".";
+			o << "}";
+		}
+		o << ".";
+		return o.str();
+	}
+
 };
 
 typedef vector<rule_t> rules_t;
@@ -81,18 +109,45 @@ pground_t aCopy ( pground_t f ) {
 
 struct proof_trace_item {
 	rule_t rule;
-	int src, ind; // source of what, index of what?
+	int src, ind, step;
 	std::shared_ptr<proof_trace_item> parent;
 	std::shared_ptr<env_t> env;
 	std::shared_ptr<ground_t> ground;
+	
+	proof_trace_item(
+		rule_t _rule,
+		int _src, int _ind,
+		std::shared_ptr<proof_trace_item> _parent,
+		std::shared_ptr<env_t> _env,
+		std::shared_ptr<ground_t> _ground
+	)
+	{
+		rule = _rule;
+		src = _src; ind = _ind;
+		parent = _parent;
+		//level = parent ? parent->level + 1 : 0;
+		env = _env;
+		ground = _ground;
+	}
+	
 	friend ostream& operator<< ( ostream& o, const proof_trace_item &t ) {
-		o << "{\"tau:rule\":" << t.rule;
+		o << "{";
+
+		o << "\"@type\":\"tau:frame\"";
+		o << ",\"@id\":\":frame" << t.step << "\"";
+
+		//o << ",\"tau:rule\":" << t.rule;
+		o << ",\"tau:rule\":\"" << t.rule.pp();
 		o << ",\"tau:src\":" << t.src;
 		o << ",\"tau:ind\":" << t.ind;
-		//if ( t.parent ) o << ",\"tau:parent\":" << *t.parent;
+		if ( t.parent ) o << ",\"tau:parent\":\":frame" << t.parent->step << "\"";
+		
+		int level = 0;
+		std::shared_ptr<proof_trace_item> p = t.parent; while(p) {level++; p=p->parent;};
+		o << ",\"tau:level\":" << level;
+		
 		o << ",\"tau:env\":" << *t.env;
 		o << ",\"tau:ground\":" << *t.ground;
-		o << ",\"@type\":\"tau:frame\"";
 		o << "}";
 		return o;
 	}
@@ -205,9 +260,11 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	ppti s = make_shared<proof_trace_item> ( proof_trace_item { goal, 0, 0, 0, make_shared<env_t>(), gnd } );
 	queue.emplace_back ( s );
 	while ( queue.size() > 0 ) {
+		if(step) cout << "}\n,";
+		jst("{\"tau:queue size\":\"" << queue.size() << "\"},\n");
 		ppti c = queue.front();
 		queue.pop_front();
-		if(step) cout << "},\n";
+		c->step = step;
 		cout << "{\"@type\":\"tau:step\",\"tau:id\":" << step << ",\"tau:frame\":" << *c;
 		pground_t g = aCopy ( c->ground );
 		step++;
@@ -216,6 +273,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 			return false;
 		}
 		if ( ( size_t ) c->ind >= c->rule.body.size() ) {
+			jst ( ",\"tau:success\":true" );
 			if ( !c->parent ) {
 				jst( ",\"tau:no parent!\":true" );
 				for ( size_t i = 0; i < c->rule.body.size(); i++ ) {
@@ -229,7 +287,6 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 				continue;
 			}
 
-			jst ( "\"tau:success\":true" );
 			if ( c->rule.body.size() != 0 ) g->push_back ( {c->rule, c->env} );
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {c->parent->rule, c->parent->src, c->parent->ind, c->parent->parent, make_shared<env_t> ( *c->parent->env ) , g} );
 			unify ( c->rule.head, c->env, r->rule.body[r->ind], r->env );
@@ -257,9 +314,10 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		jst ( ",\"tau:looking for case\":" << "\"" << jse(t.pred) << "\"" );
 		if ( cases.find ( t.pred ) == cases.end() ) {
 			jst ( ",\"tau:No Cases(no such predicate)!\":true" );
-			jst ( ",\"tau:available cases' keys:\":[" );
+			jst ( ",\"tau:available cases' keys\":[" );
 			for ( auto x : cases ) 
 				jst ( "\"" + jse(x.first) + "\"," );
+			jst ("\"that's all folks\"]");
 			continue;
 		}
 		size_t src = 0;
@@ -293,7 +351,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		}
 		jst ( "\"done\"]" );
 	}
-	jst ( "}" );
+	if(step) cout << "}\n,\n";
 	return false;
 }
 
@@ -429,6 +487,8 @@ void add_rule(const pred_t head, const string s, jsonld::rdf_db &kb, evidence_t 
 	else
 		throw std::runtime_error (s + "is not a graph in our kb");
 	cases[rule.head.pred].push_back ( rule );
+	cout << rule << "\n,\n";
+	
 }
 
 evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) {
@@ -438,12 +498,12 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 	/*the way we store rules in jsonld is: graph1 implies graph2*/
 	for ( const auto& quad : graph ) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );
-		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) {
+		cases[p].push_back ( { { p, { mk_res ( s ), mk_res ( o ) }}, {}} );//add it as a triple
+		if ( p == "http://www.w3.org/2000/10/swap/log#implies" ) { //also add it as a rule
 			/*if (o == true)
 				 ?//query? what do? add it as a triple or not?
 			*/
-			if (o == "LITERAL:FALSE")//"false")
+			if (o == "FALSE:LITERAL")
 				{}//negation, ignored, added as triple
 			else if (kb.find(o) != kb.end())
 				for ( const auto &y : *kb[o] )
@@ -461,7 +521,7 @@ evidence_t prove ( const qlist& graph, const qlist& query, jsonld::rdf_db &kb ) 
 
 
 void print_evidence ( evidence_t evidence ) {
-	std::cout << "\n,{\"evidence\":" << evidence << "}]}\n" ;
+	std::cout << "\n{\"evidence\":" << evidence << "}]}\n" ;
 }
 
 const bool use_nquads = false;

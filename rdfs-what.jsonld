@@ -1,0 +1,12 @@
+{
+  "@context": {
+  },
+  "@graph": [
+    {
+      "@id": "rdf:Bag",
+      "?PPP": {
+        "@id": "?OOO"
+      }
+    }
+  ]
+}

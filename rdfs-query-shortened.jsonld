@@ -1,0 +1,12 @@
+{
+  "@context": {
+  },
+  "@graph": [
+    {
+      "@id": "rdf:Alt",
+      "rdfs:subClassOf": {
+        "@id": "rdfs:Resource"
+      }
+    }
+  ]
+}
