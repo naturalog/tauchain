@@ -58,69 +58,7 @@ ostream& operator<< ( ostream& o, const predicate& p ) {
 	o << dstr ( p.pred );
 	return p.args.empty() ? o : o << p.args;
 }
-/*
-ostream& operator<< ( ostream& o, const rule& r ) {
-	if (!r.body.empty()) {
-		o << "{ ";
-		for ( auto x : r.body ) o << *x << ' ';
-		o << "} ";
-	}
-	if ( r.head ) return o << " -> " << *r.head;
-	return o;
-}
 
-ostream& operator<< ( ostream& o, const subst& s ) {
-	for ( pair<int, const predicate*> x : s ) o << dstr ( x.first ) << " / " << *x.second << "; ";
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const ground_t& s ) {
-	o << endl;
-	for ( auto x : s ) o << '\t' << *x.first << " ; " << x.second << endl;
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const evidence_t& e ) {
-	for ( auto x : e ) {
-		o << "predicate: " << dstr ( x.first ) << endl << "ground: { ";
-		for (auto y : x.second) o << endl << '\t' << *y.first << ' ' << y.second;
-		o << '}' << endl;
-//		if ( !x.second.empty() )
-//			o << ": " << endl << '\t' << *x.second.rbegin()->first << x.second.rbegin()->second;
-//			o << endl << '\t' << x.second;
-//		o << endl;
-	}
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const cases_t& e ) {
-	for ( auto x : e ) {
-		o << dstr ( x.first ) << ": " << endl;
-		for ( auto y : x.second ) o << '\t' << *y << endl;
-	}
-	return o;
-}
-
-ostream& operator<< ( ostream& o, const proof& p ) {
-	o << "Frame: " << &p << " {" << endl << "\tind: " << p.ind << endl << "\tparent pointer: ";
-	if ( p.parent ) o << p.parent;
-	else o << "null";
-	o << endl << "\tsubst: " << p.sub << endl << "\tgnd: " << p.ground;
-	o << "\tpredicate: " << ( *p.rul ) << endl << '}' << endl;
-	return o;
-}
-*
-ostream& operator<< ( ostream& o, const predicatelist& l ) {
-	if ( l.empty() ) return o << "[]";
-	o << '[';
-	for ( auto it = l.cbegin();; ) {
-		o << *it;
-		if ( ++it == l.end() ) break;
-		else o << ',';
-	}
-	return o << ']' << endl;
-}
-*/
 ostream& operator<< ( ostream& o, const predlist& l ) {
 	if ( l.empty() ) return o << "[]";
 	o << '[';
@@ -130,15 +68,6 @@ ostream& operator<< ( ostream& o, const predlist& l ) {
 		else o << ',';
 	}
 	return o << ']';
-}
-
-void menu() {
-	/*	 static map<char, string> menu1 = {
-			{'d', "print dict"}
-			};
-		dout << "now what?" << endl;
-		for (auto x : menu1) dout << x.first << ":\t" << x.second << endl;
-	*/
 }
 
 bool endsWith ( const string& x, const string& y ) {

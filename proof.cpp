@@ -11,193 +11,8 @@
 #include <thread>
 #include "misc.h"
 #include "prover.h"
-/*
-predicate *temp_preds = new predicate[max_predicates];
-boost::interprocess::vector<proof*> proofs;
-uint ntemppreds = 0;
-
-reasoner::reasoner() : GND ( &predicates[npredicates++].init ( dict.set ( "GND" ) ) ) {}
-
-predicate *predicates = new predicate[max_predicates];
-rule *rules = new rule[max_rules];
-//proof *proofs = new proof[max_proofs];
-uint npredicates = 0, nrules = 0, nproofs = 0;
-
-reasoner::~reasoner() {
-	delete[] predicates;
-	delete[] rules;
-//	delete[] proofs;
-}
-
-rule& rule::init ( const predicate* h, predlist b ) {
-	head = h;
-	body = b;
-	return *this;
-}
-
-proof& proof::init ( const proof& f ) {
-	return init ( f.rul, f.ind, f.parent, f.sub, f.ground );
-}
-
-proof& proof::init ( const rule* _r, uint _ind, const proof* p, subst _s, ground_t _g ) {
-	if ( nproofs >= max_proofs ) throw "Buffer overflow";
-	proof& f = *new proof;//proofs[nproofs++];
-	proofs.push_back(&f);
-	nproofs++;
-	f.rul = _r;
-	f.ind = _ind;
-	f.parent = p;
-	f.sub = _s;
-	f.ground = _g;
-	return f;
-}
-
-void reasoner::printkb() {
-	static bool pause = false;
-	dout << endl << "dumping kb with " << npredicates << " predicates, " << nrules << " rules and " << nproofs << " proofs. " << endl;
-	dout << "predicates: " <<  endl;
-	for ( uint n = 0; n < npredicates; ++n ) dout << predicates[n] << endl;
-	dout << "rules: " << endl;
-	for ( uint n = 0; n < nrules; ++n ) dout << rules[n] << endl;
-	dout << "proofs: " << endl;
-	for ( uint n = 0; n < nproofs; ++n ) dout << proofs[n] << endl;
-	if ( pause ) dout << "type <enter> to continue or <c><enter> to stop pausing...";
-	dout << endl;
-	if ( pause && getchar() == 'c' ) pause = false;
-}
-
-const predicate* predicate::evaluate ( const subst& sub ) const {
-	trace ( "\tEval " << *this << " in " << sub << endl );
-	if ( pred < 0 ) {
-		auto it = sub.find ( pred );
-		return it == sub.end() ? 0 : it->second->evaluate ( sub );
-	} else { // no braces here in euler.js
-		if ( args.empty() ) return this;
-	}
-	const predicate *p;
-	predicate* r = &temp_preds[ntemppreds++].init ( pred );
-	for ( auto x : args )
-		r->args.emplace_back ( ( p = x->evaluate ( sub ) ) ? p : &temp_preds[ntemppreds++].init ( x->pred ) );
-	return r;
-}
-
-const predicate* unify ( const predicate& s, const subst& ssub, const predicate& d, subst& dsub, bool f ) {
-	trace ( "\tUnify s: " << s << " in " << ( ssub ) << " with " << d << " in " << dsub << endl );
-	const predicate* p;
-	if ( s.pred < 0 ) {
-		if ( ( p = s.evaluate ( ssub ) ) ) return unify ( *p, ssub, d, dsub, f );
-		else {
-			trace ( "Match." << endl );
-			return &s;
-		}
-	}
-	if ( d.pred >= 0 ) {
-		if ( s.pred != d.pred || s.args.size() != d.args.size() ) return 0;
-		const predlist& as = s.args, ad = d.args;
-		for ( auto sit = as.begin(), dit = ad.begin(); sit != as.end(); ++sit, ++dit )
-			if ( !unify ( **sit, ssub, **dit, dsub, f ) )
-				return 0;
-		trace ( "Match." << endl );
-		return &s;
-	}
-	if ( ( p = d.evaluate ( dsub ) ) ) return unify ( s, ssub, *p, dsub, f );
-	if ( f ) dsub[d.pred] = s.evaluate ( ssub );
-	trace ( "Match with subst: " << dsub << endl );
-	return &d;
-}
-
-proof& proof::find ( const rule* goal, const cases_t& cases) {
-	proof& f = init( goal );
-	evidence_t& e = *new evidence_t;
-	f.process( *new cases_t(cases), e );
-	return f;
-}*/
 boost::interprocess::list<thread*> threads;
-/*
-void proof::process ( const cases_t& cases, evidence_t& evidence ) {
-	auto f = [this, &cases, &evidence](){
-	trace ( *this << endl );
-	bool empty = true;
-	if ( ind >= rul->body.size() ) {
-		if ( !parent )
-			for ( const predicate* x : rul->body ) {
-				const predicate* t = x->evaluate ( sub );
-				evidence[t->pred].emplace_back ( t, ground );
-			}
-		else {
-			proof& new_proof = init ( parent->rul, parent->ind + 1, parent->parent, parent->sub, ground );
-			if ( !rul->body.empty() ) new_proof.ground.emplace_front ( rul, sub );
-			if ( rul->head ) unify ( *rul->head, sub, *new_proof.rul->body[new_proof.ind - 1], new_proof.sub, true );
-			new_proof.process(cases, evidence);
-			empty = false;
-		}
-	} else {
-		const predicate* t = rul->body[ind];
-		int b = builtin ( t );
-		if ( b == 1 ) {
-			proof& r = proof::init ( *this );
-			r.ground = ground;
-			r.ground.emplace_back ( &rules[nrules++].init ( t->evaluate ( sub ) ), subst() );
-			r.ind++;
-			//next.push_back ( &r );
-			r.process(cases, evidence);
-			empty = false;
-		} else if ( !b ) return;
-		auto it = cases.find ( t->pred );
-		if ( it != cases.end() )
-			for ( const rule* rl : it->second ) {
-				subst s;
-				if ( !rl->head || !unify ( *t, sub, *rl->head, s, true ) ) continue;
-				const proof* ep = parent;
-				for (; ep; ep = ep->parent)
-					if ( ( ep->rul == rul ) && unify ( *ep->rul->head, ep->sub, *rul->head, const_cast<subst&>(sub), false ) )
-						break;
-				if ( ep && ep->parent ) continue;
-				ground_t g;
-				if (rl->body.empty()) g.emplace_back( rl, subst() );
-				//next.push_front( 
-				proof::init ( rl, 0, this, s, g ).process(cases, evidence);
-				empty = false;
-			}
-		}
-	if (empty) dout << "evidence: " << evidence << endl;
-	};
-//	threads.push_back(new thread(f));
-	f();
-}
 
-rule* reasoner::mkrule ( const predicate* p, const predlist& v ) {
-	return &rules[nrules++].init ( p, v );
-}
-
-orig from f429a7d:
-evidence_t reasoner::prove ( const qdb &kb, const qlist& query ) {
-	evidence_t evidence;
-	cases_t cases;
-	trace ( "Reasoner called with quads kb: " << endl << kb << endl << "And query: " << endl << query << endl );
-	for ( const pair<string, jsonld::pqlist>& x : kb ) {
-		for ( jsonld::pquad quad : *x.second ) {
-			const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-			trace ( "processing quad " << quad->tostring() << endl );
-			cases[dict[p]].push_back ( mkrule ( triple ( s, p, o ) ) );
-			if ( p != implication || kb.find ( o ) == kb.end() ) continue;
-			for ( jsonld::pquad y : *kb.at ( o ) ) {
-				rule& rul = *mkrule();
-				rul.head = triple ( *y );
-				if ( kb.find ( s ) != kb.end() )
-					for ( jsonld::pquad z : *kb.at ( s ) )
-						rul.body.push_back ( triple ( *z ) );
-				cases[rul.head->pred].push_back ( &rul );
-				trace ( "added rule " << rul << endl );
-			}
-		}
-	}
-	rule& goal = *mkrule();
-	for ( auto q : query ) goal.body.push_back ( triple ( *q ) );
-//	printkb();
-	return prove ( &goal, -1, cases );
-}
-*/
 shared_ptr<predicate> reasoner::mkpred ( string s, const predlist& v ) {
 	return make_shared<predicate>( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
 }
@@ -234,18 +49,15 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 		throw 0;
 	prover::rule* r = &prover::rules[prover::nrules++];
 	r->p = pred2term(triple ( s, p, o ));
-	r->body = 0;
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
-		prover::pushr(&ss.rkb, r);
+		ss.rkb[r->p->p].push_back(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
 		r->p = pred2term(triple ( *y ));
-		r->body = 0;
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
-				prover::pushp(&r->body, pred2term( triple ( *z ) ) );
-		prover::pushr(&ss.rkb, r);
-//				trace ( "added rule " << rul << endl );
+				r->body.push_front( pred2term( triple ( *z ) ) );
+		ss.rkb[r->p->p].push_back(r);
 	}
 }
 
@@ -268,58 +80,19 @@ bool haspredvar(const qdb& x) {
 
 bool reasoner::prove ( qdb kb, qlist query ) {
 	prover::session ss;
-	memset(&ss, 0, sizeof(prover::session));
 	set<string> predicates;
-/*	qdb tmp;
-	for (auto x : kb)
-		for (auto q : *x.second)
-			if (q->pred->value[0] != '?') 
-				for (auto _z : kb) 
-					for (auto quad : *_z.second) {
-						string s = quad->subj->value, p = quad->pred->value, o = quad->object->value;
-						if (p[0] != '?') {
-							if (tmp.find(x.first) == tmp.end())
-								tmp[x.first] = make_shared<jsonld::qlist>();
-							tmp[x.first]->push_back(make_shared<jsonld::quad>(s, p, o, _z.first));
-						} else for (auto t : kb) {
-							for (auto t1 : *t.second) {
-								p = t1->pred->value;
-								if (p[0] != '?') {
-									if (tmp.find(t.first) == tmp.end())
-										tmp[t.first] = make_shared<jsonld::qlist>();
-									tmp[t.first]->push_back(make_shared<jsonld::quad>(s, p, o, t.first));
-								}
-							}
-						}
-					}
-//				predicates.insert(quad->pred->value);
-	kb = tmp;
-	while (haspredvar(kb)) {
-		dout << szqdb(kb) << endl;
-		for (auto x : kb)
-			for (auto q : *x.second)
-				if (q->pred->value[0] != '?') {
-					x.second->remove(q);
-					break;
-				}
-	}
-	for (auto x : tmp)
-		kb[x.first] = x.second;*/
 	for ( jsonld::pquad quad : *kb.at("@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-//		dout << "PRED: " << p << endl;
 		if (p[0] == '?' || (p.find('#') != string::npos && s[p.find('#')+1] == '?'))
 			for (string pr : predicates)
 				addrules(s, pr, o, ss, kb);
 		else
 			addrules(s, p, o, ss, kb);
 	}
-//	rule& goal = *mkrule();
-	for ( auto q : query ) 
-		prover::pushp(&ss.goal, pred2term( triple ( *q ) ) );
-//	printkb();
+	for ( auto q : query )
+		ss.goal.push_front( pred2term( triple ( *q ) ) );
 	prover::prove(&ss);
-	return ss.e;
+	return ss.e.size();
 }
 
 bool reasoner::test_reasoner() {
@@ -331,24 +104,6 @@ fin.
 ?p a mortal.
 
 */
-
-//	dict.set ( "a" );
-	//	dout <<"dict:"<<endl<< dict.tostr() << endl;
-	//	exit(0);
-//	evidence_t evidence;
-/*	cases_t cases;
-	typedef predicate* ppredicate;
-	ppredicate Socrates = mkpred ( "Socrates" ), Man = mkpred ( "Man" ), Mortal = mkpred ( "Mortal" ), Male = mkpred ( "Male" ), _x = mkpred ( "?x" ), _y = mkpred ( "?y" );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {Socrates, Male} ) ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Mortal} ), predlist{ mkpred ( "a", {_x, Man } )  } ) );
-	cases[dict["a"]].push_back ( mkrule ( mkpred ( "a", {_x, Man   } ), predlist{ mkpred ( "a", {_x, Male} )  } ) );
-*/
-//	predicate* goal = mkpred ( "a", { _y, Mortal } );
-//	return prove ( mkrule ( 0, { goal } ), -1, cases );
-//	dout << "evidence: " << evidence.size() << " items..." << endl;
-//	dout << evidence << endl;
-//	dout << evidence.size() << endl;
-//	return evidence.size();
 	return 1;
 }
 

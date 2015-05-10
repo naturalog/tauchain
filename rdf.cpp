@@ -1,4 +1,3 @@
-#include "jsonld.h"
 #include "cli.h"
 #include <boost/filesystem.hpp>
 #include "parsers.h"
@@ -304,7 +303,7 @@ qdb readqdb ( istream& is) {
 			if (ch == '.') {
 				if (p == "=>")
 					p = implication;
-				if (pos == 1 && s == "fin")
+				if (pos == 0 && s == "fin")
 					return q;
 				if (pos == 2)
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), c = "@default");
@@ -315,7 +314,9 @@ qdb readqdb ( istream& is) {
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
 				}
 				dout << pq->tostring() << endl;
+#ifdef IRC				
 				sleep(0.1);
+#endif				
 				if (q.find(c) == q.end())
 					q[c] = make_shared<qlist>();
 				q[c]->push_back(pq);

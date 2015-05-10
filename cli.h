@@ -11,6 +11,7 @@ typedef vector<string> strings;
 
 extern bool fnamebase, quad_in;
 extern jsonld::jsonld_options opts;
+extern string chan;
 
 class cmd_t {
 protected:
@@ -22,7 +23,7 @@ protected:
 	qdb toquads ( pobj o );
 	qdb convert ( pobj o );
 	qdb convert ( const string& s, bool bdebugprint = false );
-	qdb load_quads ( string fname, bool print = true );
+	qdb load_quads ( string fname, bool print = false );
 public:
 	virtual string desc() const = 0;
 	virtual string help() const = 0;

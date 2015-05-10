@@ -9,14 +9,13 @@
 
 using namespace boost::algorithm;
 
-
 qdb cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
 	try {
 		qdb r;
 		istream* pis = &cin;
 #ifdef IRC
-		pis = new redi::ipstream("tail -n 0 -F /tmp/irc.freenode.net/#zennet/out", redi::pstreams::pstdout);
+		pis = new redi::ipstream(string("tail -n 0 -F /tmp/irc.freenode.net/#")+chan+"/out", redi::pstreams::pstdout);
 //		pis->seekg(0, pis->end);
 #else
 		if (fname != "")
@@ -36,7 +35,7 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 			if (pos == string::npos)
 				continue;
 			line = line.substr(pos + magic.size());
-			cout << line;
+//			cout << line;
 #endif
 			if (endsWith(line, "fin."))
 				return readqdb(ss);
