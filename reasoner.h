@@ -137,7 +137,7 @@ struct proof_trace_item {
 		o << ",\"@id\":\":frame" << t.step << "\"";
 
 		//o << ",\"tau:rule\":" << t.rule;
-		o << ",\"tau:rule\":\"" << t.rule.pp();
+		o << ",\"tau:rule\":\"" << t.rule.pp()  <<"\"";
 		o << ",\"tau:src\":" << t.src;
 		o << ",\"tau:ind\":" << t.ind;
 		if ( t.parent ) o << ",\"tau:parent\":\":frame" << t.parent->step << "\"";
@@ -326,7 +326,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		for ( rule_t rl : cases[t.pred] ) {
 			src++;
 			pground_t g = aCopy ( c->ground );
-			jst (  "{\"@type\":\"tau:rulecheck\", \"tau:rule\":" << rl );
+			jst (  "{\"@type\":\"tau:rulecheck\", \"tau:rule\":\"" << rl.pp() <<"\"" );
 			if ( rl.body.size() == 0 ) 
 				g->push_back ( { rl, make_shared<env_t>() } ); //its a fact
 			ppti r = make_shared<proof_trace_item> ( proof_trace_item {rl, ( int ) src, 0, c, make_shared<env_t>(), g} );// why already here and not later?
