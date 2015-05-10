@@ -284,7 +284,7 @@ void prints(const subst& s) {
 		printterm(*x.second);
 		dout << ";";
 	}
-	dout << ']' << endl;
+	dout << "] ";
 }
 
 void printl(const termset& l) {
