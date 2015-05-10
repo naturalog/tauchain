@@ -315,7 +315,7 @@ qdb readqdb ( istream& is) {
 				}
 				dout << pq->tostring() << endl;
 #ifdef IRC				
-				sleep(0.1);
+				sleep(0.5);
 #endif				
 				if (q.find(c) == q.end())
 					q[c] = make_shared<qlist>();

@@ -19,10 +19,13 @@ void menu();
 #include <boost/asio/ip/tcp.hpp>
 
 #ifdef IRC
+ostream& dout = *new ofstream(string("/tmp/irc.freenode.net/#zennet/in"));
+ostream& derr = *new ofstream(string("/tmp/irc.freenode.net/#zennet/in"));
 string chan;
-#endif
+#else
 ostream& dout = cout;
 ostream& derr = cerr;
+#endif
 
 class listen_cmd : public cmd_t {
 	virtual string desc() const { return "Listen to incoming connections and answer queries."; }
@@ -97,8 +100,6 @@ int main ( int argc, char** argv ) {
 #ifdef IRC	
 	chan = argv[1];
 	argc--;
-	ostream& dout = *new ofstream(string("/tmp/irc.freenode.net/#") + chan + "/in");
-	ostream& derr = *new ofstream(string("/tmp/irc.freenode.net/#") + chan + "/in");
 #endif	
 	prover::initmem();
 	cmds_t cmds = { {

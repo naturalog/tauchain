@@ -13,11 +13,11 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
 	try {
 		qdb r;
+#ifndef IRC
 		istream* pis = &cin;
-#ifdef IRC
-		pis = new redi::ipstream(string("tail -n 0 -F /tmp/irc.freenode.net/#")+chan+"/out", redi::pstreams::pstdout);
+#else		
+		static istream* pis = new redi::ipstream(string("tail -n 0 -F /tmp/irc.freenode.net/#")+chan+"/out", redi::pstreams::pstdout);
 //		pis->seekg(0, pis->end);
-#else
 		if (fname != "")
 			pis = new ifstream(fname);
 #endif			
