@@ -12,6 +12,11 @@
 #include <execinfo.h>
 #include <ostream>
 
+#ifdef DEBUG
+#define TRACE(x) x
+#else
+#define TRACE(X)
+#endif
 //#include "logger.h"
 extern bool deref, shorten;
 //#define DEBUG

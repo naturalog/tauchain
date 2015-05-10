@@ -12,6 +12,7 @@
 #include <ostream>
 #include "misc.h"
 #include <utility>
+#include "object.h"
 bidict& gdict = dict;
 #include "prover.h"
 extern std::ostream& dout;
@@ -27,12 +28,6 @@ const uint max_proofs = MEM; 		uint nproofs = 0; 		proof* proofs = 0;
 void printps(term* p, subst* s); // print a term with a subst
 
 term* GND;
-
-#ifdef DEBUG
-#define TRACE(x) x
-#else
-#define TRACE(X)
-#endif
 
 // set alloc to false in order to only zero the memory
 void initmem() {
@@ -317,7 +312,7 @@ void printe(const evidence& e) {
 			printg(x.second);
 			dout << endl;
 #ifdef IRC
-			sleep(0.5);
+			sleep(1);
 #endif
 		}
 }

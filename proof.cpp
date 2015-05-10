@@ -34,6 +34,13 @@ prover::term* pred2term(shared_ptr<const predicate> p) {
 		t->o = pred2term(p->args[1]);
 	} else
 		t->s = t->o = 0;
+/*	TRACE(dout<<*p<<endl);
+	TRACE(printterm(*t));
+	TRACE(dout<<p->pred<<endl);
+	TRACE(dout<<endl<<t->p<<endl);
+	TRACE(dout<<t->p<<endl);
+	TRACE(dout<<endl);*/
+	TRACE(dout<<t->p<<endl);
 	return t;
 }
 
@@ -53,11 +60,17 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 		ss.rkb[r->p->p].push_back(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
-		r->p = pred2term(triple ( *y ));
+		prover::term* tt = pred2term(triple ( *y ));
+		TRACE(dout<<tt->p<<endl);
+		r->p = tt;
+		TRACE(printr(*r));
+		TRACE(dout<<endl);
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
 				r->body.push_front( pred2term( triple ( *z ) ) );
 		ss.rkb[r->p->p].push_back(r);
+		TRACE(printr(*r));
+		TRACE(dout<<endl);
 	}
 }
 
@@ -83,10 +96,10 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 	set<string> predicates;
 	for ( jsonld::pquad quad : *kb.at("@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-		if (p[0] == '?' || (p.find('#') != string::npos && s[p.find('#')+1] == '?'))
-			for (string pr : predicates)
-				addrules(s, pr, o, ss, kb);
-		else
+//		if (p[0] == '?' || (p.find('#') != string::npos && s[p.find('#')+1] == '?'))
+//			for (string pr : predicates)
+//				addrules(s, pr, o, ss, kb);
+//		else
 			addrules(s, p, o, ss, kb);
 	}
 	for ( auto q : query )
