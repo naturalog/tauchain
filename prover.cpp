@@ -147,8 +147,8 @@ void prove(session* ss) {
 	TRACE(printl(goal));
 	TRACE(dout<<endl);
 	do {
-		p = qu.front();
-		qu.pop_front();
+		p = qu.back();
+		qu.pop_back();
 		if (p->last != p->rul->body.end()) {
 			term* t = *p->last;
 			TRACE(dout<<"Tracking back from ");
@@ -197,7 +197,7 @@ void prove(session* ss) {
 					r->g = ground(p->g);
 					if (rl->body.empty())
 						r->g.emplace_back(rl, subst());
-					qu.push_back(r);
+					qu.push_front(r);
 //					TRACE(dout<<"queue:\n"));
 //					TRACE(printq(qu));
 				} else {
@@ -222,8 +222,8 @@ void prove(session* ss) {
 			r->s = p->prev->s;
 			unify(p->rul->p, p->s, *r->last, r->s, true);
 			++r->last;
-			qu.push_front(r);
-			TRACE(dout<<"finished a frame. queue:\n");
+			qu.push_back(r);
+			TRACE(dout<<"finished a frame. queue size:" << qu.size() << endl);
 //			TRACE(printq(qu));
 			continue;
 		}
@@ -278,13 +278,13 @@ void printq(const queue& q) {
 }
 
 void prints(const subst& s) {
-	dout << '[';
+//	dout << '[';
 	for (auto x : s) {
-		dout<<"["<<dstr(x.first)<<" / ";
+		dout<<dstr(x.first)<<" / ";
 		printterm(*x.second);
 		dout << ";";
 	}
-	dout << "] ";
+//	dout << "] ";
 }
 
 void printl(const termset& l) {
@@ -316,6 +316,9 @@ void printe(const evidence& e) {
 			dout << ": ";
 			printg(x.second);
 			dout << endl;
+#ifdef IRC
+			sleep(0.5);
+#endif
 		}
 }
 }
