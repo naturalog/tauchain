@@ -40,7 +40,7 @@ prover::term* pred2term(shared_ptr<const predicate> p) {
 	TRACE(dout<<endl<<t->p<<endl);
 	TRACE(dout<<t->p<<endl);
 	TRACE(dout<<endl);*/
-	TRACE(dout<<t->p<<endl);
+	//TRACE(dout<<t->p<<endl);
 	return t;
 }
 
@@ -61,16 +61,16 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
 		prover::term* tt = pred2term(triple ( *y ));
-		TRACE(dout<<tt->p<<endl);
+	//	TRACE(dout<<tt->p<<endl);
 		r->p = tt;
-		TRACE(printr(*r));
-		TRACE(dout<<endl);
+	//	TRACE(printr(*r));
+	//	TRACE(dout<<endl);
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
 				r->body.push_front( pred2term( triple ( *z ) ) );
 		ss.rkb[r->p->p].push_back(r);
-		TRACE(printr(*r));
-		TRACE(dout<<endl);
+	//	TRACE(printr(*r));
+	//	TRACE(dout<<endl);
 	}
 }
 

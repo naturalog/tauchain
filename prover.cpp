@@ -77,16 +77,13 @@ void printps(term& p, subst& s) {
 }
 
 bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
-	if (s->p < 0) {
-		term* sval = evaluate(s, ssub);
-		if (sval)
-			return unify(sval, ssub, d, dsub, f);
-		return true;
-	}
+	term* v;
+	if (!s && !d) return true;
+	if (s->p < 0) 
+		return (v = evaluate(s, ssub)) ? unify(v, ssub, d, dsub, f) : true;
 	if (d->p < 0) {
-		term* dval = evaluate(d, dsub);
-		if (dval)
-			return unify(s, ssub, dval, dsub, f);
+		if ((v = evaluate(d, dsub)))
+			return unify(s, ssub, v, dsub, f);
 		else {
 			if (f)
 				dsub[d->p] = evaluate(s, ssub);
@@ -95,13 +92,7 @@ bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
 	}
 	if (!(s->p == d->p && !s->s == !d->s && !s->o == !d->o))
 		return false;
-	bool r = true;
-	if (s->s)
-		r &= unify(s->s, ssub, d->s, dsub, f);
-	if (s->o)
-		r &= unify(s->o, ssub, d->o, dsub, f);
-	return r;
-
+	return unify(s->s, ssub, d->s, dsub, f) && unify(s->o, ssub, d->o, dsub, f);
 }
 
 bool euler_path(proof* p) {
@@ -167,7 +158,10 @@ void prove(session* ss) {
 			auto it = cases.find(t->p);
 			if (it == cases.end())
 				continue;
-			list<rule*> rs = it->second;
+//			for (auto x : cases) {
+//			if (x.first >= 0 && x.first != t->p)
+//				continue;
+			list<rule*>& rs = it->second;
 			for (rule* rl : rs) {
 				subst s;
 				TRACE(dout<<"\tTrying to unify ");
@@ -199,7 +193,7 @@ void prove(session* ss) {
 					TRACE(dout<<"\tunification failed\n");
 				}
 			}
-		}
+		}//}
 		else if (!p->prev) {
 			for (auto r = p->rul->body.begin(); r != p->rul->body.end(); ++r) {
 				term* t = evaluate(*r, p->s);
