@@ -1,0 +1,1 @@
+python3 -c "import json, sys; json.load(open(sys.argv[1], 'r'))"

@@ -261,11 +261,11 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 	queue.emplace_back ( s );
 	while ( queue.size() > 0 ) {
 		if(step) cout << "}\n,";
-		jst("{\"tau:queue size\":\"" << queue.size() << "\"},\n");
+		cout << "{\"tau:queue size\":\"" << queue.size() << "\"},\n";
 		ppti c = queue.front();
 		queue.pop_front();
 		c->step = step;
-		cout << "{\"@type\":\"tau:step\",\"tau:id\":" << step << ",\"tau:frame\":" << *c;
+		jst("{\"@type\":\"tau:step\",\"tau:id\":" << step << ",\"tau:frame\":" << *c);
 		pground_t g = aCopy ( c->ground );
 		step++;
 		if ( maxNumberOfSteps != -1 && step >= maxNumberOfSteps ) {
@@ -351,7 +351,7 @@ bool prove ( rule_t goal, int maxNumberOfSteps, evidence_t& cases, evidence_t& e
 		}
 		jst ( "\"done\"]" );
 	}
-	if(step) cout << "}\n,\n";
+	if(step) jst( "}\n,\n");
 	return false;
 }
 
