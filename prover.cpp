@@ -9,23 +9,26 @@
 #include <readline/history.h>
 #endif
 #include <iostream>
-#include "prover.h"
 #include <ostream>
+#include "misc.h"
+bidict& gdict = dict;
+#include "prover.h"
 extern std::ostream& dout;
 using namespace std;
 
 namespace prover {
-const uint max_terms = 1024*1024;		uint nterms = 0; 		term* terms = 0;
-const uint max_termsets = 1024*1024;		uint ntermsets = 0; 		termset* termsets = 0;
-const uint max_rules = 1024*1024;		uint nrules = 0; 		rule* rules = 0;
-const uint max_substs = 1024*1024; 		uint nsubsts = 0; 		subst* substs = 0;
-const uint max_rulesets = 1024*1024; 	uint nrulesets = 0; 		ruleset* rulesets = 0;
-const uint max_grounds = 1024*1024; 		uint ngrounds = 0; 		ground* grounds = 0;
-const uint max_proofs = 10*1024*1024; 		uint nproofs = 0; 		proof* proofs = 0;
-const uint max_queues = 10*1024*1024; 		uint nqueues = 0; 		queue* queues = 0;
-const uint max_evidence_items = 1024*1024; 	uint nevidence_items = 0; 	evidence_item* evidence_items = 0;
-const uint max_evidences = 1024*1024; 	uint nevidences = 0; 		evidence* evidences = 0;
-const uint max_dicts = 1024*1024; 		uint ndicts = 0; 		dict* dicts = 0;
+const uint MEM = 1024 * 1024 * 16;
+const uint max_terms = MEM;		uint nterms = 0; 		term* terms = 0;
+const uint max_termsets = MEM;		uint ntermsets = 0; 		termset* termsets = 0;
+const uint max_rules = MEM;		uint nrules = 0; 		rule* rules = 0;
+const uint max_substs = MEM; 		uint nsubsts = 0; 		subst* substs = 0;
+const uint max_rulesets = MEM; 	uint nrulesets = 0; 		ruleset* rulesets = 0;
+const uint max_grounds = MEM; 		uint ngrounds = 0; 		ground* grounds = 0;
+const uint max_proofs = 10*MEM; 		uint nproofs = 0; 		proof* proofs = 0;
+const uint max_queues = 10*MEM; 		uint nqueues = 0; 		queue* queues = 0;
+const uint max_evidence_items = MEM; 	uint nevidence_items = 0; 	evidence_item* evidence_items = 0;
+const uint max_evidences = MEM; 	uint nevidences = 0; 		evidence* evidences = 0;
+const uint max_dicts = MEM; 		uint ndicts = 0; 		dict* dicts = 0;
 
 void printps(term* p, subst* s, dict* d); // print a term with a subst
 ruleset* find_or_create_rs_p(ruleset* rs, term* p);	// finds a term in a ruleset or creates a new rule with that term if not exists
@@ -139,54 +142,6 @@ bool has_no_spaces(const char* s) {
 			return false;
 	return true;
 }
-/*
-struct quad {
-	const char *s, *p, *o, *c;
-};
-
-ruleset* quad(quad* qs, uint sz, session* ss, bool isq) {
-	ruleset* rs = 0;
-	quad* qq = qs;
-	uint n;
-	while (qs != &qq[sz]) {
-		term* t = &terms[nterms++];
-		t->p = pushw(&ss->d, qs->p);
-		t->s = pushw(&ss->d, qs->s);
-		t->o = pushw(&ss->d, qs->o);
-		if (is_implication(t->p)) 
-			for (n = 0; n < sz; ++n) {
-				if (strcmp(qq[k].c, qs->s))
-					continue;
-				rule* r = &rules[nrules++];
-				r->p = mkterm(qq[n]);
-				r->body = 0;
-				for (k = 0; k < sz; ++k)
-					if (!strcmp(qq[k].c, qs->o))
-						pushp(&r->body, qq[k].o);
-			}
-		
-	}
-}
-
-rule* quad(int p, term* s, term* o, bool isq) {
-	rule* r = &rules[nrules++];
-	r->p = 0;
-	r->body = 0;
-	if (is_implication(p)) {
-		r->p = o;
-		pushp(&r->body, s);
-	}
-	term* t = &terms[nterms++];
-	t->p = p;
-	t->s = s;
-	t->o = o;
-	if (isq)
-		pushp(&r->body, t);
-	else
-		r->p = t;
-	return r;
-}
-*/
 
 void str2term(const char* s, term** _p, dict* d) {
 	if (!s || !*s) {
@@ -301,259 +256,8 @@ void printss(session* ss) {
 		dout<< d->n<<" = "<< d->s<<endl;
 		d = d->next;
 	}
-//	dout<<"Goal rules:\n");
-//	printrs(ss->rgoal, ss->d);
-}
-/*
-void printcmd(const char* line, session* ss) {
-	dict* d = ss->d;
-	int id;
-	uint n = 0;
-	do 
-	if (read_num(line, &id)) {
-		switch (*line) {
-		case 'p':
-			++line;
-			if (!*line || isspace(*line)) {
-				printterm(&terms[id], d);
-				dout<<endl;
-			} else if (*line == 'r') {
-				printp(&proofs[id], d);
-				dout<<endl;
-			}
-			else
-				syn_err;
-			break;
-		case 'r':
-			printr(&rules[id], d);
-			dout<<endl;
-			break;
-		case 's':
-			++line;
-			if (!*line || isspace(*line)) {
-				prints(&substs[id], d);
-				dout<<endl;
-			} else if (*line == 's') {
-				printss(ss);
-				dout<<endl;
-			}
-			break;
-		case 'g':
-			printg(&grounds[id], d);
-			dout<<endl;
-			break;
-		case 'q':
-			printq(&queues[id], d);
-			dout<<endl;
-			break;
-		case 'e':
-			printe(&evidences[id], d);
-			dout<<endl;
-			break;
-		case 'l':
-			++line;
-			if (!*line || isspace(*line)) {
-				printl(&termsets[id], d);
-				dout<<endl;
-			} else {
-				if (*line == 'l') {
-					printrs(&rulesets[id], d);
-					dout<<endl;
-				}
-				else
-					syn_err;
-			}
-			break;
-		}
-	}
-	else {
-		switch (*line) {
-		case 'p':
-			++line;
-			if (!*line || isspace(*line)) {
-				dout<<"Predicates:\n");
-				for (; n < nterms; ++n) {
-					dout<<n<<'\t';
-					printterm(&terms[n], d);
-					dout<<endl;
-				}
-			}
-			else {
-				if (*line == 'r') {
-					dout<<"Proof steps:\n");
-					for (; n < nproofs; ++n) {
-						dout<<n<<'\t';
-						printp(&proofs[n], d);
-						dout<<endl;
-					}
-				}
-				else
-					syn_err;
-			}
-			break;
-		case 'r':
-			dout<<"Rules:\n");
-			for (; n < nrules; ++n) {
-				dout<<n<<'\t';
-				printr(&rules[n], d);
-				dout<<endl;
-			}
-			break;
-		case 's':
-			++line;
-			if (!*line || isspace(*line)) {
-				dout<<"Substitutions:\n");
-				for (; n < nsubsts; ++n) {
-					dout<<n<<'\t';
-					prints(&substs[n], d);
-					dout<<endl;
-				}
-			} else if (*line == 's') {
-				dout<<"Session:\n");
-				printss(ss);
-				dout<<endl;
-			}
-			break;
-		case 'g':
-			dout<<"Grounds:\n");
-			for (; n < ngrounds; ++n) {
-				dout<<n<<'\t';
-				printg(&grounds[n], d);
-				dout<<endl;
-			}
-		case 'q':
-			dout<<"Queues:\n");
-			for (; n < nqueues; ++n) {
-				dout<<"%d\t", n);
-				printq(&queues[n], d);
-				dout<<endl;
-			}
-			break;
-		case 'e':
-			dout<<"Evidence:\n");
-			for (; n < nevidences; ++n) {
-				dout<<"%d\t", n);
-				printe(&evidences[n], d);
-				dout<<endl;
-			}
-			break;
-		case 'l':
-			++line;
-			if (!*line || isspace(*line)) {
-				dout<<"Predicate lists:\n");
-				for (; n < ntermsets; ++n) {
-					dout<<"%d\t", n);
-					printl(&termsets[n], d);
-					dout<<endl;
-				}
-			}
-			else {
-				if (*line == 'l') {
-					dout<<"Rule lists:\n");
-					for (; n < nrulesets; ++n) {
-						dout<<"%d\t", n);
-						printrs(&rulesets[n], d);
-						dout<<endl;
-					}
-				}
-				else
-					syn_err;
-			}
-			break;
-		}
-	}
-	while(0);
 }
 
-#ifndef READLINE
-char* readline(const char* p) {
-	char* l = new char[str_input_len];
-	size_t sz = str_input_len;
-	dout<<"%s ", p);
-	if (!cin.getline(l, sz))
-		return 0;
-	l[strlen(l) - 1] = 0;
-	return l;
-}
-#endif
-
-// session has to be initialized by the caller
-void menu(session* ss) {
-	char *line, *_line;
-	dout<<main_menu);
-	dout<<"Session id: %p\n", (void*)ss);
-#ifdef READLINE	
-	rl_bind_key('\t', rl_complete);
-#endif
-	while ((_line = readline(prompt))) {
-		line = _line;
-		if (!line)
-			continue;
-#ifdef READLINE			
-		add_history(line);
-#endif
-		uint szline = strlen(line);
-		if (szline) {
-			if ((line[szline - 1] == '.' || line[szline - 1] == '?') && szline > 1 ) {
-				bool isq = line[szline - 1] == '?';
-				if (isq)
-					line[szline - 1] = '.';
-				trim(line);
-//				pushr(
-				term* t = &terms[nterms++];
-//				pushr(isq ? &ss->goal : ss->
-				str2term(line, &t, ss->d);
-//				dout<<"String %s parsed into term as:\n", line);
-				printterm(t, ss->d);
-				dout<<endl;
-				if (isq) 
-					pushp(&ss->goal, t);
-				else
-					pushp(&ss->kb, t);
-			} else {
-				trim(line);
-				if (!strcmp(line, "?")) 
-					dout<<help);
-				else if (*line == 'q') {
-					++line;
-					if (*line == 'a') {
-						ss->rkb = ts2rs(ss->kb, true);
-						prove(ss);
-					}
-					else if (*line == 'i') {
-						ss->rkb = ts2rs(ss->kb, true);
-						prove(ss);
-					}
-				}
-				else if (*line == 'p') {
-					++line;
-					if (!*line || isspace(*line))
-						syn_err;
-					printcmd(line, ss);
-					if (*line == 'a') {
-						printcmd("p", ss);
-						printcmd("pr", ss);
-						printcmd("r", ss);
-						printcmd("s", ss);
-						printcmd("g", ss);
-						printcmd("q", ss);
-						printcmd("e", ss);
-						printcmd("l", ss);
-						printcmd("ll", ss);
-					}
-				} else if (*line == 's') {
-					++line;
-					if (*line == 'c') {
-						initmem(false);
-						dout<<"Memory cleared.");
-					}
-				}
-			}
-		}
-		free(_line);
-	}
-}
-*/
 // set alloc to false in order to only zero the memory
 void initmem() {
 	if (terms) delete[] terms;
@@ -574,7 +278,7 @@ void initmem() {
 	rulesets 	= new ruleset[max_rulesets];
 	grounds		= new ground[max_grounds];
 	proofs 		= new proof[max_proofs];
-	dicts 		= new dict[max_dicts];
+//	dicts 		= new dict[max_dicts];
 	queues 		= new queue[max_queues];
 	evidences 	= new evidence[max_evidences];
 	evidence_items = new evidence_item[max_evidence_items];
@@ -857,7 +561,7 @@ bool euler_path(proof* p) {
 			unify(ep->rul->p, ep->s, p->rul->p, &p->s, false))
 			break;
 	if (ep) {
-		dout<<"Euler path detected\n";
+		TRACE(dout<<"Euler path detected\n");
 		return true;
 	}
 	return false;
@@ -869,38 +573,7 @@ int builtin(term*, proof*, session*) {
 //		return 1;
 	return -1;
 }
-/*
-void queue_test() {
-	queue *qu = 0;//&queues[nqueues++];
-	int n = 0;
-	pushq(&qu, 10);
-	queue* qq = qu;
-	do {
-		dout<<"step: %d data: %d\n", n, (int)qq->p);
-	} while (qq = qq->next);
-	for (; n < 7; ++n) {
-		queue *q = qu;
-		while (q && q->next) 
-			q = q->next;
-		proof* p = q->p;
-		if (q->prev)
-			q->prev->next = 0;
-		else
-			qu = 0;
-		if (!(n%3))
-			pushq(&qu, n+1);
-//		else if (!(n%2))
-			unshift(&qu, (n + 1) * 10);
-		qq = qu;
-		if (!qq) {
-			dout<<"step: %d queue is null\n", n);
-		}
-		else do {
-			dout<<"step: %d data: %d\n", n, (int)qq->p);
-		} while (qq = qq->next);
-	}
-}
-*/
+
 void prove(session* ss) {
 	termset* goal = ss->goal;
 	ruleset* cases = ss->rkb;
@@ -1077,7 +750,7 @@ void printterm(term* p, dict* d) {
 	if (!d)
 		dout<<' '<<p->p<<' ';
 	else {
-		s = dgetw(d, p->p);
+		s = gdict[p->p].c_str();
 		if (s)
 			dout<<' '<<s<<' ';
 	}
@@ -1117,32 +790,11 @@ void printq(queue* q, dict* d) {
 		dout<<endl;
 	printq(q->next, d);
 }
-/*
-term* mkterm(int s, int p, int o) {
-	uint n = 0;
-	for (; n < nterms; ++n) {
-		term* pn = &terms[n];
-		if (pn->p == p && pn->s && pn->o)
-			if (pn->s->p == s && !pn->s->o && !pn->s->s)
-				if (pn->o->p == o && !pn->o->o && !pn->o->s)
-					return pn;
-	}
-	term* ps = &terms[nterms++];
-	term* pp = &terms[nterms++];
-	term* po = &terms[nterms++];
-	pp->p = p;
-	pp->s = ps;
-	pp->o = po;
-	ps->s = ps->o = po->s = po->o = 0;
-	ps->p = s;
-	po->p = o;
-	return pp;
-}
-*/
+
 void prints(subst* s, dict* d) {
 	if (!s)
 		return;
-	const char* _s = dgetw(d, s->p);
+	const char* _s = gdict[s->p].c_str();
 	if (_s)
 		dout<<"["<<_s<<" / ";
 	printterm(s->pr, d);
@@ -1203,14 +855,6 @@ void printei(evidence_item* ei, dict* d) {
 void printe(evidence* e, dict* d) {
 	if (!e)
 		return;
-/*	if (!d)
-		dout<<"%d:\n", e->p);
-	else {
-		const char *s = dgetw(d, e->p);
-		if (s)
-			dout<<" %s ", s);
-	}
-*/
 	printei(e->item, d);
 	printe(e->next, d);
 }
@@ -1219,49 +863,12 @@ bool is_implication(int p) {
 	return p == impl1 || p == impl2 || p == impl3;
 }
 
-int pushw(dict** _d, const char* s) {
-	int n;
-	if (!*_d) {
-		*_d = &dicts[ndicts++];
-		(*_d)->s = 0;
-		(*_d)->n = 0;
-		(*_d)->next = 0;
-	}
-	dict* d = *_d;
-	if (dgetwn(d, s, &n))
-		return n;
-	while (d->next) 
-		d = d->next;
-	d->next = &dicts[ndicts++];
-	d->next->next = 0;
-	d->next->s = new char[strlen(s) + 1];
-	strcpy(d->next->s, s);
-	int c = dict_counter++;
-	if (*s == '?'/* || *s == '_'*/)
-		c = -c;
-	TRACE(dout<<"Added to dictionary '"<<s<<"' = "<<c<<".\n");
-	return d->next->n = c;
+int pushw(dict**, const char* s) {
+	return gdict.set(s);
 }
 
-const char* dgetw(dict* d, int n) {
-	if (!d) {
-		TRACE(dout<<"Note: dictionary request failed for id"<<n<<endl);
-//		TRACE(printss(gsession));
-		return 0;
-	}
-	if (d->n == n)
-		return d->s;
-	return dgetw(d->next, n);
-}
-
-bool dgetwn(dict* d, const char* s, int* n) {
-	if (!d || !s)
-		return false;
-	if (d->s && !strcmp(d->s, s)) {
-		*n = d->n;
-		return true;
-	}
-	return dgetwn(d->next, s, n);
+const char* dgetw(dict*, int n) {
+	return gdict[n].c_str();
 }
 
 void init_prover() {
