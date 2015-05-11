@@ -2,6 +2,7 @@
 #include <boost/filesystem.hpp>
 #include "parsers.h"
 #include "prover.h"
+#include <iomanip>
 
 namespace jsonld {
 
@@ -57,7 +58,7 @@ rdf_db::rdf_db ( jsonld_api& api_ ) :
 
 ostream& operator<< ( ostream& o, const qlist& x ) {
 	for ( pquad q : x )
-		o << '\t' << q->tostring ( ) << endl;
+		o << q->tostring ( ) << endl;
 	return o;
 }
 
@@ -231,8 +232,8 @@ string quad::tostring ( ) {
 		}
 		return string ( "<>" );
 	};
-	ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object ) << ' ';
-	if ( graph->value != str_default ) ss << f ( graph );
+	ss <<setw(10)<< f ( subj ) << setw(10)<<' ' << f ( pred ) <<setw(10)<<' ' << f ( object );
+	if ( graph->value != str_default ) ss <<setw(10)<<' ' << f ( graph );
 	ss << " .";
 	return ss.str();
 }
@@ -357,7 +358,7 @@ int convert_cmd::operator() ( const strings& args ) {
 		return 1;
 	}
 	try {
-		dout << convert ( args[2] ) << endl;
+		dout << std::setw(20) << convert ( args[2] ) << endl;
 		return 0;
 	} catch ( exception& ex ) {
 		derr << ex.what() << endl;

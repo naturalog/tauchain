@@ -283,17 +283,19 @@ void printq(const queue& q) {
 void prints(const subst& s) {
 //	dout << '[';
 	for (auto x : s) {
-		dout<<dstr(x.first)<<" / ";
+		dout<<"        "<<dstr(x.first)<<"    /    ";
 		printterm(*x.second);
-		dout << ";";
+		dout << endl;
 	}
 //	dout << "] ";
 }
 
 void printl(const termset& l) {
-	for (auto x : l) {
-		printterm(*x);
-		dout << ',';
+	auto x = l.begin();
+	while (x != l.end()) {
+		printterm(**x);
+		if (++x != l.end())
+			dout << ',';
 	}
 }
 
@@ -305,8 +307,13 @@ void printr(const rule& r) {
 
 void printg(const ground& g) {
 	for (auto x : g) {
+		dout<<"    ";
 		printr(*x.first);
-		dout<<':';
+		if (x.second.empty()) {
+			dout << endl;
+			continue;
+		}
+		dout<<" under substitution: "<<endl;
 		prints(x.second);
 	}
 	dout<<'.';
@@ -316,7 +323,7 @@ void printe(const evidence& e) {
 	for (auto y : e)
 		for (auto x : y.second) {
 			printterm(*x.first);
-			dout << ": ";
+			dout << ":"<<endl;
 			printg(x.second);
 			dout << endl;
 #ifdef IRC
@@ -343,7 +350,7 @@ shared_ptr<const predicate> reasoner::triple ( const jsonld::quad& q ) {
 prover::term* pred2term(shared_ptr<const predicate> p) {
 	if (!p) return 0;
 	prover::term* t = &prover::terms[prover::nterms++];
-	t->p = dict.set(dstr(p->pred));
+	t->p = p->pred;//dict.set(p->pred);
 	if (p->args.size()) {
 		t->s = pred2term(p->args[0]);
 		t->o = pred2term(p->args[1]);
