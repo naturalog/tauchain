@@ -24,7 +24,7 @@ public:
 };
 
 extern bidict& dict;
-extern int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND;
+extern int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType;
 
 template<typename T> string print ( T t ) {
 	stringstream ss;

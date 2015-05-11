@@ -15,6 +15,7 @@ bidict::bidict() {
 	rdfsResource = set("rdfs:Resource"); 
 	rdfList = set("rdf:List");
 	Dot = set(".");
+	rdfsType = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 }
 
 void bidict::set ( const vector<string>& v ) {

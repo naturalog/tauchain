@@ -45,37 +45,6 @@ pnode mkbnode ( string attribute ) {
 	r->value = attribute;
 	return r;
 }
-/*
-    somap node::toObject ( bool useNativeTypes ) {
-    if ( type==IRI || type==BNODE ) { somap r; r[str_id]=mk_str_obj(at("value"));return r; }
-    somap rval;
-    rval[ str_value ] = mk_str_obj(at ( "value" ));
-    auto it = find ( "language" );
-    if ( it != end() ) rval[ str_lang ] = mk_str_obj(it->second);
-    else {
-    string type = at ( "datatype" ), value = at ( "value" );
-    if ( useNativeTypes ) {
-    if ( XSD_STRING == type ) {
-    } else if ( XSD_BOOLEAN == type  ) {
-    if ( value == "true"  ) rval[ str_value] = make_shared<bool_obj> ( true );
-    else if ( value == "false" ) rval[ str_value] = make_shared<bool_obj> ( false );
-    else rval[ str_type] = mk_str_obj(type);
-    } else if ( ( XSD_INTEGER == type && is_int ( value ) ) ( XSD_DOUBLE == type && is_double ( value ) ) ) {
-    double d = std::stod ( value );
-    if ( !::isnan ( d ) && !::isinf ( d ) ) {
-    if ( XSD_INTEGER == type ) {
-    int64_t i = d;
-    if ( tostr ( i ) == value ) rval[ str_value] = make_shared<uint64_t_obj> ( i );
-    } else if ( XSD_DOUBLE == type )
-    rval[ str_value] = make_shared<double_obj> ( d );
-    else throw "This should never happen as we checked the type was either integer or double";
-    }
-    } else rval[str_type] = mk_str_obj ( type );
-    } else if ( XSD_STRING != type  ) rval[str_type] = mk_str_obj ( type );
-    }
-    return rval;
-    }
-*/
 
 const pnode first = mkiri ( RDF_FIRST );
 const pnode rest = mkiri ( RDF_REST );
@@ -94,7 +63,7 @@ ostream& operator<< ( ostream& o, const qlist& x ) {
 
 ostream& operator<< ( ostream& o, const qdb& q ) {
 	for ( auto x : q )
-		o << x.first << *x.second << endl;
+		o /*<< x.first*/ << *x.second;
 	return o;
 }
 

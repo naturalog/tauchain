@@ -19,7 +19,7 @@ bidict& gdict = dict;
 using namespace std;
 extern ostream& dout;
 
-int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND;
+int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType;
 
 namespace prover {
 
@@ -121,7 +121,7 @@ int builtin(term& t, proof& p, session*) {
 			return unify(t0->s, p.s, t.o, p.s, true) ? 1 : 0;
 	if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 			return unify(t0->o, p.s, t.o, p.s, true) ? 1 : 0;
-	if (t.p == A) {
+	if (t.p == A || t.p == rdfsType) {
 		if (!t1) 
 			return -1;
 		if ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource)
@@ -173,10 +173,11 @@ void prove(session* ss) {
 			auto it = cases.find(t->p);
 			if (it == cases.end())
 				continue;
-//			for (auto x : cases) {
-//			if (x.first >= 0 && x.first != t->p)
-//				continue;
-			list<rule*>& rs = it->second;
+			for (auto x : cases) {
+			if (x.first >= 0 && x.first != t->p)
+				continue;
+			list<rule*>& rs = x.second;
+//			list<rule*>& rs = it->second;
 			for (rule* rl : rs) {
 				subst s;
 				TRACE(dout<<"\tTrying to unify ";
@@ -206,7 +207,7 @@ void prove(session* ss) {
 					TRACE(dout<<"\tunification failed\n");
 				}
 			}
-		}//}
+		}}
 		else if (!p->prev) {
 			for (auto r = p->rul->body.begin(); r != p->rul->body.end(); ++r) {
 				term* t = evaluate(*r, p->s);
