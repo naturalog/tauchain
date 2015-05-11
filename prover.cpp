@@ -13,11 +13,13 @@
 #include "misc.h"
 #include <utility>
 #include "object.h"
-bidict& gdict = dict;
 #include "prover.h"
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
+using namespace boost::algorithm;
 extern ostream& dout;
+bidict& gdict = dict;
 
 int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType;
 
@@ -240,6 +242,16 @@ bool equals(term* x, term* y) {
 	return (!x == !y) && x && equals(x->s, y->s) && equals(x->o, y->o);
 }
 
+string format(const term& p) {
+	stringstream ss;
+	if (p.s)
+		ss << format (*p.s);
+	ss<<' '<<dstr(p.p)<<' ';
+	if (p.o)
+		ss << format (*p.o);
+	return ss.str();
+}
+
 void printterm(const term& p) {
 	if (p.s)
 		printterm(*p.s);
@@ -290,6 +302,17 @@ void prints(const subst& s) {
 //	dout << "] ";
 }
 
+string format(const termset& l) {
+	stringstream ss;
+	auto x = l.begin();
+	while (x != l.end()) {
+		ss << format (**x);
+		if (++x != l.end())
+			ss << ',';
+	}
+	return ss.str();
+}
+
 void printl(const termset& l) {
 	auto x = l.begin();
 	while (x != l.end()) {
@@ -305,6 +328,14 @@ void printr(const rule& r) {
 	printterm(*r.p);
 }
 
+string format(const rule& r) {
+	stringstream ss;
+	if (!r.body.empty())
+		ss << format(r.body) << " => ";
+	ss << format(*r.p);
+	return ss.str();
+}
+
 void printg(const ground& g) {
 	for (auto x : g) {
 		dout<<"    ";
@@ -315,8 +346,12 @@ void printg(const ground& g) {
 		}
 		dout<<" under substitution: "<<endl;
 		prints(x.second);
+		string s = format(*x.first);
+		for (auto y : x.second)
+			replace_all(s, dstr(y.first), format(*y.second));
+		dout<<"        After replacement: " << s << endl;
 	}
-	dout<<'.';
+//	dout<<'.';
 }
 
 void printe(const evidence& e) {
