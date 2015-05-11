@@ -1,4 +1,4 @@
-#include "proof.h"
+#include "prover.h"
 #include "jsonld.h"
 #include "parsers.h"
 #include "cli.h"

@@ -324,3 +324,84 @@ void printe(const evidence& e) {
 		}
 }
 }
+
+list<thread*> threads;
+
+shared_ptr<predicate> reasoner::mkpred ( string s, const predlist& v ) {
+	return make_shared<predicate>( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
+}
+
+shared_ptr<const predicate> reasoner::triple ( const string& s, const string& p, const string& o ) {
+	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
+}
+
+shared_ptr<const predicate> reasoner::triple ( const jsonld::quad& q ) {
+	return triple ( q.subj->value, q.pred->value, q.object->value );
+}
+
+prover::term* pred2term(shared_ptr<const predicate> p) {
+	if (!p) return 0;
+	prover::term* t = &prover::terms[prover::nterms++];
+	t->p = dict.set(dstr(p->pred));
+	if (p->args.size()) {
+		t->s = pred2term(p->args[0]);
+		t->o = pred2term(p->args[1]);
+	} else
+		t->s = t->o = 0;
+	return t;
+}
+
+int szqdb(const qdb& x) {
+	int r = 0;
+	for (auto y : x)
+		r += y.second->size();
+	return r;
+}
+
+void reasoner::addrules(string s, string p, string o, prover::session& ss, const qdb& kb) {
+	if (p[0] == '?')
+		throw 0;
+	prover::rule* r = &prover::rules[prover::nrules++];
+	r->p = pred2term(triple ( s, p, o ));
+	if ( p != implication || kb.find ( o ) == kb.end() ) 
+		ss.rkb[r->p->p].push_back(r);
+	else for ( jsonld::pquad y : *kb.at ( o ) ) {
+		r = &prover::rules[prover::nrules++];
+		prover::term* tt = pred2term(triple ( *y ));
+		r->p = tt;
+		if ( kb.find ( s ) != kb.end() )
+			for ( jsonld::pquad z : *kb.at ( s ) )
+				r->body.push_front( pred2term( triple ( *z ) ) );
+		ss.rkb[r->p->p].push_back(r);
+	}
+}
+
+qlist merge ( const qdb& q ) {
+	qlist r;
+	for ( auto x : q ) for ( auto y : *x.second ) r.push_back ( y );
+	return r;
+}
+
+bool reasoner::prove ( qdb kb, qlist query ) {
+	prover::session ss;
+	set<string> predicates;
+	for ( jsonld::pquad quad : *kb.at("@default")) {
+		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+			addrules(s, p, o, ss, kb);
+	}
+	for ( auto q : query )
+		ss.goal.push_front( pred2term( triple ( *q ) ) );
+	prover::prove(&ss);
+	return ss.e.size();
+}
+
+bool reasoner::test_reasoner() {
+	cout << "to perform the socrates test, put the following three lines in a file say f, and run \"tau < f\":"<<endl
+		<<"socrates a man.  ?x a man _:b0.  ?x a mortal _:b1.  _:b0 => _:b1."<<endl<<"fin."<<endl<<"?p a mortal."<<endl;
+	return 1;
+}
+
+float degrees ( float f ) {
+	static float pi = acos ( -1 );
+	return f * 180 / pi;
+}

@@ -1,7 +1,6 @@
 #include "cli.h"
 #include <boost/filesystem.hpp>
 #include "parsers.h"
-#include "proof.h"
 #include "prover.h"
 
 namespace jsonld {

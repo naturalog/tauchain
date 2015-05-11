@@ -2,7 +2,6 @@
 #include "cli.h"
 #include <sstream>
 #include "parsers.h"
-#include "proof.h"
 #include "prover.h"
 using namespace std;
 

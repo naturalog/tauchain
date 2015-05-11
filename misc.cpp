@@ -1,4 +1,4 @@
-#include "proof.h"
+#include "prover.h"
 #include "parsers.h"
 #include "misc.h"
 
