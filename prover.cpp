@@ -15,30 +15,31 @@
 #include "object.h"
 bidict& gdict = dict;
 #include "prover.h"
-extern std::ostream& dout;
+
 using namespace std;
+extern ostream& dout;
+
+int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND;
 
 namespace prover {
-const uint MEM = 1024 * 1024;
-const uint max_terms = MEM;		uint nterms = 0; 		term* terms = 0;
-const uint max_termsets = MEM;		uint ntermsets = 0; 		termset* termsets = 0;
-const uint max_rules = MEM;		uint nrules = 0; 		rule* rules = 0;
-const uint max_proofs = MEM; 		uint nproofs = 0; 		proof* proofs = 0;
+
+term* terms = 0;
+termset* termsets = 0;
+rule* rules = 0;
+proof* proofs = 0;
+uint nterms, ntermsets, nrules, nproofs;
 
 void printps(term* p, subst* s); // print a term with a subst
 
-term* GND;
-
-// set alloc to false in order to only zero the memory
 void initmem() {
 	if (terms) delete[] terms;
-	if (rules) delete[] rules;
-	if (proofs) delete[] proofs;
-
-	terms	 	= new term[max_terms];
-	termsets 	= new termset[max_termsets];
-	rules 		= new rule[max_rules];
-	proofs 		= new proof[max_proofs];
+	if (termsets) delete[] terms;
+	if (rules) delete[] terms;
+	if (proofs) delete[] terms;
+	terms = new term[max_terms];
+	termsets = new termset[max_termsets];
+	rules = new rule[max_rules];
+	proofs = new proof[max_proofs];
 	nterms = ntermsets = nrules = nproofs = 0;
 }
 
@@ -108,10 +109,24 @@ bool euler_path(proof* p) {
 	return false;
 }
 
-int builtin(term*, proof*, session*) {
-//	const char* s = dgetw(ss->d, t->p);
-//	if (s && !strcmp(s, "GND"))	
-//		return 1;
+int builtin(term& t, proof& p, session*) {
+	if (t.p == GND) return 1;
+	term* t0 = evaluate(t.s, p.s);
+	term* t1 = evaluate(t.o, p.s);
+	if (t.p == logequalTo)
+		return t0 && t1 && t.p == t1->p ? 1 : 0;
+	if (t.p == lognotEqualTo)
+		return t0 && t1 && t0->p != t1->p ? 1 : 0;
+	if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
+			return unify(t0->s, p.s, t.o, p.s, true) ? 1 : 0;
+	if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
+			return unify(t0->o, p.s, t.o, p.s, true) ? 1 : 0;
+	if (t.p == A) {
+		if (!t1) 
+			return -1;
+		if ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource)
+			return 1;
+	}
 	return -1;
 }
 
@@ -127,20 +142,20 @@ void prove(session* ss) {
 	p->last = rg->body.begin();
 	p->prev = 0;
 	qu.push_back(p);
-	TRACE(dout<<"\nprove() called with facts:");
-	TRACE(printrs(cases));
-	TRACE(dout<<"\nand query:");
-	TRACE(printl(goal));
-	TRACE(dout<<endl);
+	TRACE(dout<<"\nprove() called with facts:";
+		printrs(cases);
+		dout<<"\nand query:";
+		printl(goal);
+		dout<<endl);
 	do {
 		p = qu.back();
 		qu.pop_back();
 		if (p->last != p->rul->body.end()) {
 			term* t = *p->last;
-			TRACE(dout<<"Tracking back from ");
-			TRACE(printterm(*t));
-			TRACE(dout<<endl);
-			int b = builtin(t, p, ss);
+			TRACE(dout<<"Tracking back from ";
+				printterm(*t);
+				dout<<endl);
+			int b = builtin(*t, *p, ss);
 			if (b == 1) {
 				proof* r = &proofs[nproofs++];
 				rule* rl = &rules[nrules++];
@@ -164,18 +179,18 @@ void prove(session* ss) {
 			list<rule*>& rs = it->second;
 			for (rule* rl : rs) {
 				subst s;
-				TRACE(dout<<"\tTrying to unify ");
-				TRACE(printps(*t, p->s));
-				TRACE(dout<<" and ");
-				TRACE(printps(*rl->p, s));
-				TRACE(dout<<"... ");
+				TRACE(dout<<"\tTrying to unify ";
+					printps(*t, p->s);
+					dout<<" and ";
+					printps(*rl->p, s);
+					dout<<"... ");
 				if (unify(t, p->s, rl->p, s, true)) {
-					TRACE(dout<<"\tunification succeeded");
-					TRACE(if (s.size()) {
-						TRACE(dout<<" with new substitution: ");
-						TRACE(prints(s));
-					});
-					TRACE(dout<<endl);
+					TRACE(dout<<"\tunification succeeded";
+						if (s.size()) {
+							dout<<" with new substitution: ";
+							prints(s);
+						};
+						dout<<endl);
 					if (euler_path(p))
 						continue;
 					proof* r = &proofs[nproofs++];
@@ -187,8 +202,6 @@ void prove(session* ss) {
 					if (rl->body.empty())
 						r->g.emplace_back(rl, subst());
 					qu.push_front(r);
-//					TRACE(dout<<"queue:\n"));
-//					TRACE(printq(qu));
 				} else {
 					TRACE(dout<<"\tunification failed\n");
 				}
@@ -242,7 +255,7 @@ void printp(proof* p) {
 	dout<<"\n\tremaining:\t";
 //	printl(p->last);
 	if (p->prev)
-		dout<<"\n\tprev:\t"<<(p->prev - proofs)/sizeof(proof)<<"\n\tsubst:\t";
+		dout<<"\n\tprev:\t"<<p->prev<<"\n\tsubst:\t";
 	else
 		dout<<"\n\tprev:\t(null)\n\tsubst:\t";
 	prints(p->s);

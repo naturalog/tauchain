@@ -1,11 +1,20 @@
 #include "proof.h"
 #include "parsers.h"
+#include "misc.h"
 
 bidict& dict = *new bidict;
 bool deref = true, shorten = false;
 
 bidict::bidict() {
-	set ( "GND" );
+	GND = set ( "GND" );
+	logequalTo = set ( "log:equalTo");
+	lognotEqualTo = set ("log:notEqualTo");
+	rdffirst = set("rdf:first"); 
+	rdfrest = set("rdf:rest");
+	A = set("a");
+	rdfsResource = set("rdfs:Resource"); 
+	rdfList = set("rdf:List");
+	Dot = set(".");
 }
 
 void bidict::set ( const vector<string>& v ) {

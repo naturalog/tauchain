@@ -76,7 +76,7 @@ public:
 			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
 		else try {
 #ifdef IRC
-				prover::initmem();
+				prover::initmem(true);
 				for(ever) { try {
 #endif
 				qdb kb = !quad_in ? convert ( args[2] ) : load_quads(args[2]);
