@@ -85,7 +85,7 @@ void printps(term& p, subst& s) {
 
 bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
 	term* v;
-	if (!s && !d) return true;
+	if (!s && !d) return false;
 	if (s->p < 0) 
 		return (v = evaluate(s, ssub)) ? unify(v, ssub, d, dsub, f) : true;
 	if (d->p < 0) {
