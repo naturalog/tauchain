@@ -1,11 +1,11 @@
+#ifdef IRC
+#include "pstream.h"
+#endif
 #include "prover.h"
 #include "jsonld.h"
 #include "parsers.h"
 #include "cli.h"
 #include <boost/algorithm/string.hpp>
-#ifdef IRC
-#include "pstream.h"
-#endif
 
 using namespace boost::algorithm;
 
@@ -13,20 +13,25 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
 	try {
 		qdb r;
-#ifndef IRC
+//#ifndef IRC
 		istream* pis = &cin;
-#else		
-		static istream* pis = new redi::ipstream(string("tail -n 0 -F /tmp/irc.freenode.net/#")+chan+"/out", redi::pstreams::pstdout);
-//		pis->seekg(0, pis->end);
 		if (fname != "")
 			pis = new ifstream(fname);
-#endif			
 		istream& is = *pis;
+//#else		
+//		string pp = string("tail -n 0 -f /tmp/irc.freenode.net/#")+chan+"/out";
+//		static istream* pis = new redi::ipstream(pp/*, redi::pstreams::pstdout | redi::pstreams::newpg*/);
+//		cerr<<pp<<endl;
+//#endif			
+//		istream& is = *pis;
 		string line;
 		stringstream ss;
 		while (!is.eof()) {
 			getline(is, line);
 			trim(line);
+#ifdef IRC
+			sleep(1);
+#endif
 			if (!line.size() || line == "\n")
 				continue;
 #ifdef IRC
@@ -41,8 +46,10 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 				return readqdb(ss);
 			ss << line;
 		}
+#ifndef IRC		
 		if (fname != "")
 			delete pis;
+#endif			
 		return readqdb(ss);
 	} catch (exception& ex) {
 		derr << "Error reading quads: " << ex.what() << endl;

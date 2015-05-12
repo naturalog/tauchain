@@ -34,14 +34,18 @@ uint nterms, ntermsets, nrules, nproofs;
 void printps(term* p, subst* s); // print a term with a subst
 
 void initmem() {
-	if (terms) delete[] terms;
-	if (termsets) delete[] terms;
-	if (rules) delete[] terms;
-	if (proofs) delete[] terms;
-	terms = new term[max_terms];
-	termsets = new termset[max_termsets];
-	rules = new rule[max_rules];
-	proofs = new proof[max_proofs];
+	static bool once = false;
+	if (!once) {
+		terms = new term[max_terms];
+		termsets = new termset[max_termsets];
+		rules = new rule[max_rules];
+		proofs = new proof[max_proofs];
+		once = true;
+	}
+//	memset(terms, 0, sizeof(term) * max_terms);
+//	memset(termsets, 0, sizeof(termset) * max_termsets);
+//	memset(rules, 0, sizeof(rule) * max_rules);
+//	memset(proofs, 0, sizeof(proof) * max_proofs);
 	nterms = ntermsets = nrules = nproofs = 0;
 }
 
