@@ -17,14 +17,14 @@ void menu();
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#ifdef IRC
-ostream& dout = *new ofstream(string("/tmp/irc.freenode.net/#zennet/in"));
-ostream& derr = *new ofstream(string("/tmp/irc.freenode.net/#zennet/in"));
-string chan;
-#else
+//#ifdef IRC
+//ostream& dout = *new ofstream(string("/tmp/irc.freenode.net/#zennet11/in"));
+//ostream& derr = *new ofstream(string("/tmp/irc.freenode.net/#zennet11/in"));
+//string chan;
+//#else
 ostream& dout = cout;
 ostream& derr = cerr;
-#endif
+//#endif
 
 class listen_cmd : public cmd_t {
 	virtual string desc() const { return "Listen to incoming connections and answer queries."; }
@@ -75,16 +75,22 @@ public:
 			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
 		else try {
 #ifdef IRC
-				prover::initmem(true);
+				prover::initmem();
 				for(ever) { try {
-#endif
+				dout << "Ready." << endl;
+				qdb kb = load_quads("");
+				qdb query = load_quads("");
+				auto e = r.prove ( kb, merge ( query ) );
+				dout << "evidence: " << endl << e << endl;
+				} catch (exception& ex) { dout<<ex.what()<<endl; } 
+				sleep(1);
+				}
+#else
 				qdb kb = !quad_in ? convert ( args[2] ) : load_quads(args[2]);
 				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );
 				qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
 				auto e = r.prove ( kb, merge ( query ) );
 				dout << "evidence: " << endl << e << endl;
-#ifdef IRC
-				} catch (exception& ex) { derr<<ex.what()<<endl; } }
 #endif
 				return 0;
 			} catch ( exception& ex ) {
@@ -97,8 +103,8 @@ public:
 
 int main ( int argc, char** argv ) {
 #ifdef IRC	
-	chan = argv[1];
-	argc--;
+//	chan = argv[1];
+//	argc--;
 #endif	
 	prover::initmem();
 	cmds_t cmds = { {
@@ -121,7 +127,7 @@ int main ( int argc, char** argv ) {
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
 	process_flags ( cmds, args );
 	if ( argc == 1 ) {
-		dout << endl << "Input kb as quads, then query." << endl << "After finished inserting kb, write a line \"fin.\" in order to move to query." << endl<< "Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl << endl ;
+		dout << endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl;
 		prove_cmd p;
 		quad_in = true;
 		return p({"","","",""});

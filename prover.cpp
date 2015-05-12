@@ -34,14 +34,18 @@ uint nterms, ntermsets, nrules, nproofs;
 void printps(term* p, subst* s); // print a term with a subst
 
 void initmem() {
-	if (terms) delete[] terms;
-	if (termsets) delete[] terms;
-	if (rules) delete[] terms;
-	if (proofs) delete[] terms;
-	terms = new term[max_terms];
-	termsets = new termset[max_termsets];
-	rules = new rule[max_rules];
-	proofs = new proof[max_proofs];
+	static bool once = false;
+	if (!once) {
+		terms = new term[max_terms];
+		termsets = new termset[max_termsets];
+		rules = new rule[max_rules];
+		proofs = new proof[max_proofs];
+		once = true;
+	}
+//	memset(terms, 0, sizeof(term) * max_terms);
+//	memset(termsets, 0, sizeof(termset) * max_termsets);
+//	memset(rules, 0, sizeof(rule) * max_rules);
+//	memset(proofs, 0, sizeof(proof) * max_proofs);
 	nterms = ntermsets = nrules = nproofs = 0;
 }
 
@@ -81,7 +85,8 @@ void printps(term& p, subst& s) {
 
 bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
 	term* v;
-	if (!s && !d) return true;
+	if (!s && !d) 
+		return true;
 	if (s->p < 0) 
 		return (v = evaluate(s, ssub)) ? unify(v, ssub, d, dsub, f) : true;
 	if (d->p < 0) {
@@ -116,7 +121,7 @@ int builtin(term& t, proof& p, session*) {
 	term* t0 = evaluate(t.s, p.s);
 	term* t1 = evaluate(t.o, p.s);
 	if (t.p == logequalTo)
-		return t0 && t1 && t.p == t1->p ? 1 : 0;
+		return t0 && t1 && t0->p == t1->p ? 1 : 0;
 	if (t.p == lognotEqualTo)
 		return t0 && t1 && t0->p != t1->p ? 1 : 0;
 	if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))

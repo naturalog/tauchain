@@ -232,8 +232,10 @@ string quad::tostring ( ) {
 		}
 		return string ( "<>" );
 	};
-	ss <<setw(10)<< f ( subj ) << setw(10)<<' ' << f ( pred ) <<setw(10)<<' ' << f ( object );
-	if ( graph->value != str_default ) ss <<setw(10)<<' ' << f ( graph );
+	ss << f ( subj ) << ' ' << f ( pred ) <<' ' << f ( object );
+	if ( graph->value != str_default ) ss <<' ' << f ( graph );
+//	ss <<setw(10)<< f ( subj ) << setw(10)<<' ' << f ( pred ) <<setw(10)<<' ' << f ( object );
+//	if ( graph->value != str_default ) ss <<setw(10)<<' ' << f ( graph );
 	ss << " .";
 	return ss.str();
 }
@@ -282,7 +284,7 @@ qdb readqdb ( istream& is) {
 						c = "@default";
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
 				}
-//				dout << pq->tostring() << endl;
+				dout << pq->tostring() << endl;
 #ifdef IRC				
 				sleep(1);
 #endif				
