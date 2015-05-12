@@ -29,6 +29,7 @@ int main() {
 		cout << r() << o() << string("B_") + names[n] << "."<<endl;
 		cout << r() << o() << string("B_") + names[n] << "."<<endl;
 		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-		cout << string("B_") + names[n] << " => " << string("A_") + names[n] << endl;
+		cout << string("B_") + names[n] << " => " << string("A_") + names[n] << '.' << endl;
 	}
+	cout<<"fin."<<endl;
 }
