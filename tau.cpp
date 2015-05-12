@@ -81,7 +81,9 @@ public:
 				qdb query = load_quads("");
 				auto e = r.prove ( kb, merge ( query ) );
 				dout << "evidence: " << endl << e << endl;
-				} catch (exception& ex) { derr<<ex.what()<<endl; } }
+				} catch (exception& ex) { derr<<ex.what()<<endl; } 
+				sleep(1);
+				}
 #else
 				qdb kb = !quad_in ? convert ( args[2] ) : load_quads(args[2]);
 				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );
