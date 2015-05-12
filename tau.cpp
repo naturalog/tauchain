@@ -77,11 +77,12 @@ public:
 #ifdef IRC
 				prover::initmem();
 				for(ever) { try {
+				dout << "Ready." << endl;
 				qdb kb = load_quads("");
 				qdb query = load_quads("");
 				auto e = r.prove ( kb, merge ( query ) );
 				dout << "evidence: " << endl << e << endl;
-				} catch (exception& ex) { derr<<ex.what()<<endl; } 
+				} catch (exception& ex) { dout<<ex.what()<<endl; } 
 				sleep(1);
 				}
 #else
@@ -126,7 +127,7 @@ int main ( int argc, char** argv ) {
 	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
 	process_flags ( cmds, args );
 	if ( argc == 1 ) {
-		dout << endl << "Input kb as quads, then query." << endl << "After finished inserting kb, write a line \"fin.\" in order to move to query." << endl<< "Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl << endl ;
+		dout << endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl;
 		prove_cmd p;
 		quad_in = true;
 		return p({"","","",""});

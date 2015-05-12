@@ -121,7 +121,7 @@ int builtin(term& t, proof& p, session*) {
 	term* t0 = evaluate(t.s, p.s);
 	term* t1 = evaluate(t.o, p.s);
 	if (t.p == logequalTo)
-		return t0 && t1 && t.p == t1->p ? 1 : 0;
+		return t0 && t1 && t0->p == t1->p ? 1 : 0;
 	if (t.p == lognotEqualTo)
 		return t0 && t1 && t0->p != t1->p ? 1 : 0;
 	if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
