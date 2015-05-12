@@ -28,13 +28,16 @@ int main() {
 		string w = o();
 		cout << names[n] << w << string("A_") + names[n] << "."<<endl;
 		cout << r() << w << string("B_") + names[n] << "."<<endl;
-//		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-//		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-//		cout << r() << o() << string("B_") + names[n] << "."<<endl;
+		cout << r() << o() << string("B_") + names[n] << "."<<endl;
+		cout << r() << o() << string("B_") + names[n] << "."<<endl;
+		cout << r() << o() << string("B_") + names[n] << "."<<endl;
 		cout << string("B_") + names[n] << " => " << string("A_") + names[n] << '.' << endl;
 	}
-	for (uint n = 0; n < 5; ++n) 
+	for (uint n = 0; n < 15; ++n) 
 		cout << r() << o() << '.' << endl;
-	cout<<"fin."<<endl<<"?x goesTo theCoffee."<<endl;
-	cout<<"?y goesTo theMovie."<<endl<<"fin."<<endl;
+	cout << "?x" << cf <<"T1."<<endl;
+	cout << "?x" << mv <<"T1."<<endl;
+	cout << "?x staysAt Home T2."<<endl;
+	cout << "T1 => T2."<<endl;
+	cout<<"fin."<<endl<<"?y staysAt Home."<<endl<<"fin."<<endl;
 }
