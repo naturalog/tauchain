@@ -8,7 +8,7 @@ typedef Marpa_Symbol_ID sym;
 typedef Marpa_Rule_ID rule;
 typedef size_t pos;
 
-struct Grammar{
+struct Marpa{
 	uint num_syms = 0;
 	Marpa_Grammar g;
 	map<sym,regex> regexes;
@@ -212,15 +212,36 @@ struct Grammar{
 
 
 
+string load_n3_cmd::desc() const {
+	return "load n3";
+}
+string load_n3_cmd::help() const {
+	stringstream ss ( "Usage:" );
+	ss << endl << "\ttau expand [JSON-LD input filename]";
+	ss << endl << "\ttau expand [JSON-LD input filename] [JSON-LD output to compare to]";
+	ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+	return ss.str();
+}
+int load_n3_cmd::operator() ( const strings& args ) {
+	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 4 ) {
+		dout << help();
+		return 1;
+	}
+	pobj grammar = load_json ( "n3.jsonld" );
+	#ifdef marpa
+	Marpa m;
+	m.add(grammar["document"]);
+	//...
+	#endif
+	return 0;
+}
 
 
 
-
-	
-	
 	
 /*
 resources
 https://github.com/jeffreykegler/libmarpa/blob/master/test/simple/rule1.c#L18
 https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900
 https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
+*/
