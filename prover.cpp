@@ -323,9 +323,44 @@ void printl(const termset& l) {
 }
 
 void printr(const rule& r) {
-	printl(r.body);
-	dout<<" => ";
+	if(!r.body.empty())
+	{
+		printl(r.body);
+		dout<<" => ";
+	}
 	printterm(*r.p);
+	if(r.body.empty())
+		dout<<".";
+}
+
+void printterm_substs(const term& p, const subst& s) {
+	if (p.s)
+		printterm_substs(*p.s, s);
+	dout<<' '<<dstr(p.p);
+	if(s.find(p.p) != s.end())
+	{
+		dout << '(';
+		printterm(*s.at(p.p));
+		dout << ')';
+	}
+	dout <<' ';
+	if (p.o)
+		printterm_substs(*p.o, s);
+}
+
+void printl_substs(const termset& l, const subst& s) {
+	auto x = l.begin();
+	while (x != l.end()) {
+		printterm_substs(**x, s);
+		if (++x != l.end())
+			dout << ',';
+	}
+}
+
+void printr_substs(const rule& r, const subst& s) {
+	printl_substs(r.body, s);
+	dout<<" => ";
+	printterm_substs(*r.p, s);
 }
 
 string format(const rule& r) {
@@ -339,17 +374,11 @@ string format(const rule& r) {
 void printg(const ground& g) {
 	for (auto x : g) {
 		dout<<"    ";
-		printr(*x.first);
+		printr_substs(*x.first, x.second);
 		if (x.second.empty()) {
 			dout << endl;
 			continue;
 		}
-		dout<<" under substitution: "<<endl;
-		prints(x.second);
-		string s = format(*x.first);
-		for (auto y : x.second)
-			replace_all(s, dstr(y.first), format(*y.second));
-		dout<<"        After replacement: " << s << endl;
 	}
 //	dout<<'.';
 }
@@ -358,9 +387,13 @@ void printe(const evidence& e) {
 	for (auto y : e)
 		for (auto x : y.second) {
 			printterm(*x.first);
+			if (x.second.size()==1&&x.second.front().second.empty()) dout << "."<<endl;
+			else
+			{
 			dout << ":"<<endl;
 			printg(x.second);
 			dout << endl;
+			}
 #ifdef IRC
 			sleep(1);
 #endif
