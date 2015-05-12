@@ -23,17 +23,23 @@ string o() {
 int main() {
 	srand(time(0));
 	random_shuffle(names.begin(), names.end());
+	uint sz = names.size();
+	for (uint k = 0; k < 25; ++k) 
+		for (uint n = 0; n < sz; ++n) {
+			string s = names[n];
+			random_shuffle(s.begin(), s.end());
+			names.push_back(s);
+		}
+
 	for (uint n = 0; n < names.size(); ++n) {
-//		if (n % 10 != 0) continue;
 		string w = o();
 		cout << names[n] << w << string("A_") + names[n] << "."<<endl;
 		cout << r() << w << string("B_") + names[n] << "."<<endl;
-		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-		cout << r() << o() << string("B_") + names[n] << "."<<endl;
+		for (uint k = 0; k < sz; ++k)
+			cout << r() << o() << string("B_") + names[n] << "."<<endl;
 		cout << string("B_") + names[n] << " => " << string("A_") + names[n] << '.' << endl;
 	}
-	for (uint n = 0; n < 15; ++n) 
+	for (uint n = 0; n < sz; ++n) 
 		cout << r() << o() << '.' << endl;
 	cout << "?x" << cf <<"T1."<<endl;
 	cout << "?x" << mv <<"T1."<<endl;

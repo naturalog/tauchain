@@ -282,7 +282,7 @@ qdb readqdb ( istream& is) {
 						c = "@default";
 					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
 				}
-				dout << pq->tostring() << endl;
+//				dout << pq->tostring() << endl;
 #ifdef IRC				
 				sleep(1);
 #endif				

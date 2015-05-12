@@ -106,7 +106,7 @@ void printq(const queue& q);				// print a proof queue
 bool is_implication(int p);				// identifies an implication resource
 void trim(char *s);					// trim strings from both ends using isspace
 
-const uint MEM = 1024 * 1024;
+const uint MEM = 1024 * 1024 * 20;
 const uint max_terms = MEM;
 const uint max_termsets = MEM;
 const uint max_rules = MEM;
