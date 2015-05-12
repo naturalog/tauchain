@@ -24,12 +24,17 @@ int main() {
 	srand(time(0));
 	random_shuffle(names.begin(), names.end());
 	for (uint n = 0; n < names.size(); ++n) {
-		cout << names[n] << o() << string("A_") + names[n] << "."<<endl;
-		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-		cout << r() << o() << string("B_") + names[n] << "."<<endl;
-		cout << r() << o() << string("B_") + names[n] << "."<<endl;
+//		if (n % 10 != 0) continue;
+		string w = o();
+		cout << names[n] << w << string("A_") + names[n] << "."<<endl;
+		cout << r() << w << string("B_") + names[n] << "."<<endl;
+//		cout << r() << o() << string("B_") + names[n] << "."<<endl;
+//		cout << r() << o() << string("B_") + names[n] << "."<<endl;
+//		cout << r() << o() << string("B_") + names[n] << "."<<endl;
 		cout << string("B_") + names[n] << " => " << string("A_") + names[n] << '.' << endl;
 	}
-	cout<<"fin."<<endl;
+	for (uint n = 0; n < 5; ++n) 
+		cout << r() << o() << '.' << endl;
+	cout<<"fin."<<endl<<"?x goesTo theCoffee."<<endl;
+	cout<<"?y goesTo theMovie."<<endl<<"fin."<<endl;
 }
