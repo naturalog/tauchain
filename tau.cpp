@@ -3,9 +3,6 @@
 #include <sstream>
 #include "parsers.h"
 #include "prover.h"
-#ifdef marpa
-#include "marpa.cpp"
-#endif
 using namespace std;
 
 #ifdef DEBUG
@@ -112,7 +109,7 @@ int main ( int argc, char** argv ) {
 	prover::initmem();
 	cmds_t cmds = { {
 			#ifdef marpa
-			{ string ( "load n3" ) , new load_n3_cmd },
+			{ string ( "load_n3" ) , new load_n3_cmd },
 			#endif
 			{ string ( "expand" ) , new expand_cmd },
 			{ string ( "toquads" ) , new toquads_cmd },

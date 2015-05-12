@@ -95,7 +95,7 @@ public: \
 	type##_obj(const type& o = type()) { data = std::make_shared<type>(); *data = o; } \
 	type##_obj(const std::shared_ptr<type> o) : data(o) { }  \
 	virtual std::shared_ptr<type> getter() { \
-	/*trace( "queried object of type "<<type_str()<<" and value "<<toString());*/ \
+	trace( "queried object of type "<<type_str()<<" and value "<<toString()); \
 	return data; } \
 	virtual string type_str() const { return #type; } \
 	virtual bool equals(const obj& o) const { \
