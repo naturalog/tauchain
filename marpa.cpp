@@ -72,7 +72,11 @@ int load_n3_cmd::operator() ( const strings& args )
 		return 1;
 	}
 	pobj grammar = load_json("n3-grammar.jsonld");
-	cout << grammar->MAP();
+	psomap m1 = grammar->MAP();
+	olist m2 = *(*m1)["@graph"]->LIST();
+	for (pobj x: m2)
+		//cout << x.first << " : " << x.second << endl;
+		cout << x << endl;
 
 	Marpa m;
 	//m.load_grammar(grammar["document"]);
