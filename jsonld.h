@@ -19,7 +19,6 @@
 #include "object.h"
 #include "strings.h"
 #include "rdf.h"
-#include "jsonld.h"
 using namespace std;
 
 inline string resolve ( pstring base_, const string& ref ) {
