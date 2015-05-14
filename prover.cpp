@@ -19,7 +19,7 @@
 using namespace boost::algorithm;
 bidict& gdict = dict;
 
-int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType;
+int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf;
 
 namespace prover {
 
@@ -114,7 +114,7 @@ bool euler_path(proof* p) {
 	return false;
 }
 
-int builtin(term& t, proof& p, session*) {
+int builtin(term& t, proof& p, session* ss) {
 	if (t.p == GND) return 1;
 	term* t0 = evaluate(t.s, p.s);
 	term* t1 = evaluate(t.o, p.s);
@@ -131,6 +131,27 @@ int builtin(term& t, proof& p, session*) {
 			return -1;
 		if ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource)
 			return 1;
+		session s2;
+		s2.kb = ss->kb;
+		term vA(L"?A", 0, 0);
+		term q1(rdfssubClassOf, &vA, t1);
+		s2.goal.push_front(&q1);
+		prove(&s2);
+		if (s2.e.empty()) 
+			return -1;
+		std::list<std::pair<term*, ground>> answers = s2.e[rdfssubClassOf];
+		std::list<int> classes;
+		for (auto tg : answers) {
+			int subclasser = tg.second.front().second[t1->p]->p;
+			session s3;
+			s3.kb = ss->kb;
+			term sc(subclasser);
+			term q2(A, t0, &sc);
+			s3.goal.push_front(&q2);
+			prove(&s3);
+			if (!s3.e.empty())
+				return 1;
+		}
 	}
 	return -1;
 }
@@ -179,8 +200,8 @@ void prove(session* ss) {
 			if (it == cases.end())
 				continue;
 			for (auto x : cases) {
-			if (x.first >= 0 && x.first != t->p)
-				continue;
+//			if (x.first >= 0 && x.first != t->p)
+//				continue;
 			std::list<rule*>& rs = x.second;
 //			list<rule*>& rs = it->second;
 			for (rule* rl : rs) {
@@ -195,7 +216,7 @@ void prove(session* ss) {
 						if (s.size()) {
 							dout<<" with new substitution: ";
 							prints(s);
-						};
+						}
 						dout << std::endl);
 					if (euler_path(p))
 						continue;
