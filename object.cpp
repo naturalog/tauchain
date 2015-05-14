@@ -1,8 +1,6 @@
 #include "object.h"
 #include <iostream>
 
-using namespace std;
-
 #ifdef DEBUG
 void bt() {
 	void *trace[16];
@@ -25,7 +23,7 @@ void bt() {
 }
 
 void dopause() {
-	clog << "press any key to continue, b for backtrace, or a to always show backtrace, or c to stop pausing...";
+	std::clog << "press any key to continue, b for backtrace, or a to always show backtrace, or c to stop pausing...";
 	char ch = getchar();
 	if ( ch == 'b' || ( autobt = ( ch == 'a' ) ) ) bt();
 	else if ( ch == 'c' ) autobt = _pause = false;
@@ -42,13 +40,13 @@ pstring pstr ( const string& s ) {
 	return std::make_shared<string> ( s );
 }
 
-pstring pstr ( const char* s ) {
+pstring pstr ( const wchar_t* s ) {
 	return s ? pstr ( string ( s ) ) : 0;
 }
 
-pstring pstr ( const unsigned char* s ) {
-	return pstr ( ( const char* ) s );
-}
+//pstring pstr ( const unsigned char* s ) {
+//	return pstr ( ( const char* ) s );
+//}
 
 size_t obj::size() {
 	if ( LIST() ) return LIST()->size();

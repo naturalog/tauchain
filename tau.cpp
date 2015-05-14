@@ -3,7 +3,6 @@
 #include <sstream>
 #include "parsers.h"
 #include "prover.h"
-using namespace std;
 
 #ifdef DEBUG
 auto dummy = []() {
@@ -22,15 +21,15 @@ void menu();
 //ostream& derr = *new ofstream(string("/tmp/irc.freenode.net/#zennet11/in"));
 //string chan;
 //#else
-ostream& dout = cout;
-ostream& derr = cerr;
+std::wostream& dout = std::wcout;
+std::wostream& derr = std::wcerr;
 //#endif
-
+/*
 class listen_cmd : public cmd_t {
-	virtual string desc() const { return "Listen to incoming connections and answer queries."; }
-	virtual string help() const { return "Behave as a server. Usage: tau listen <port>"; }
+	virtual std::string desc() const { return "Listen to incoming connections and answer queries."; }
+	virtual std::string help() const { return "Behave as a server. Usage: tau listen <port>"; }
 	virtual int operator() ( const strings& args ) {
-		if (args.size() != 3) { derr<<help()<<endl; return 1; }
+		if (args.size() != 3) { derr<<help()<<std::endl; return 1; }
 		using namespace boost::asio;
 		using boost::asio::ip::tcp;
 		io_service ios;
@@ -51,28 +50,28 @@ class listen_cmd : public cmd_t {
 		return 0;
 	}
 };
-
+*/
 #define ever ;;
 
 class prove_cmd : public cmd_t {
 public:
 	reasoner r;
-	virtual string desc() const {
+	virtual std::string desc() const {
 		return "Run a query against a knowledgebase.";
 	}
-	virtual string help() const {
-		stringstream ss ( "Usage:" );
-		ss << endl << "\ttau prove\tRun socrates unit test";
-		ss << endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << tab << "Resolves the query." << endl;
+	virtual std::string help() const {
+		std::stringstream ss ( "Usage:" );
+		ss << std::endl << "\ttau prove\tRun socrates unit test";
+		ss << std::endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << "\tResolves the query." << std::endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
-		if ( ( args.size() == 3 && args[1] == "help" ) || ( args.size() != 2 && args.size() != 4 ) ) {
-			dout << help();
+		if ( ( args.size() == 3 && args[1] == L"help" ) || ( args.size() != 2 && args.size() != 4 ) ) {
+			dout << ws(help());
 			return 1;
 		}
 		if ( args.size() == 2 )
-			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << endl;
+			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << std::endl;
 		else try {
 #ifdef IRC
 				prover::initmem();
@@ -81,20 +80,20 @@ public:
 				qdb kb = load_quads("");
 				qdb query = load_quads("");
 				auto e = r.prove ( kb, merge ( query ) );
-				dout << "evidence: " << endl << e << endl;
+				dout << "evidence: " << std::endl << e << endl;
 				} catch (exception& ex) { dout<<ex.what()<<endl; } 
 				sleep(1);
 				}
 #else
 				qdb kb = !quad_in ? convert ( args[2] ) : load_quads(args[2]);
-				opts.base = pstr ( string ( "file://" ) + args[2] + "#" );
+				opts.base = pstr ( string ( L"file://" ) + args[2] + L"#" );
 				qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
 				auto e = r.prove ( kb, merge ( query ) );
-				dout << "evidence: " << endl << e << endl;
+				dout << "evidence: " << std::endl << e << std::endl;
 #endif
 				return 0;
-			} catch ( exception& ex ) {
-				derr << ex.what() << endl;
+			} catch ( std::exception& ex ) {
+				derr << ex.what() << std::endl;
 				return 1;
 			}
 		return 0;
@@ -102,59 +101,55 @@ public:
 };
 
 int main ( int argc, char** argv ) {
-#ifdef IRC	
-//	chan = argv[1];
-//	argc--;
-#endif	
 	prover::initmem();
 	cmds_t cmds = { {
 			#ifdef marpa
-			{ string ( "load_n3" ) , new load_n3_cmd },
+			{ string ( L"load_n3" ) , new load_n3_cmd },
 			#endif
-			{ string ( "expand" ) , new expand_cmd },
-			{ string ( "toquads" ) , new toquads_cmd },
-			{ string ( "nodemap" ) , new nodemap_cmd },
-			{ string ( "convert" ) , new convert_cmd },
-			{ string ( "prove" ) , new prove_cmd },
-			{ string ( "listen" ) , new listen_cmd }
+			{ string ( L"expand" ) , new expand_cmd },
+			{ string ( L"toquads" ) , new toquads_cmd },
+			{ string ( L"nodemap" ) , new nodemap_cmd },
+			{ string ( L"convert" ) , new convert_cmd },
+			{ string ( L"prove" ) , new prove_cmd }
+//			{ string ( "listen" ) , new listen_cmd }
 		}, {
-			{ { "--no-deref", "show integers only instead of strings" }, &deref },
-			{ { "--pause", "pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
-			{ { "--shorten", "on IRIs containig # show only what after #" }, &shorten },
+			{ { L"--no-deref", L"show integers only instead of strings" }, &deref },
+			{ { L"--pause", L"pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
+			{ { L"--shorten", L"on IRIs containig # show only what after #" }, &shorten },
 		//	{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
-			{ { "--base", "set file://<filename> as base in JsonLDOptions" }, &fnamebase },
-			{ { "--quads", "set input format for prove command as quads" }, &quad_in }
+			{ { L"--base", L"set file://<filename> as base in JsonLDOptions" }, &fnamebase },
+			{ { L"--quads", L"set input format for prove command as quads" }, &quad_in }
 		}
 	};
 	strings args;
-	for ( int n = 0; n < argc; ++n ) args.push_back ( argv[n] );
+	for ( int n = 0; n < argc; ++n ) args.push_back ( ws(std::string(argv[n])) );
 	process_flags ( cmds, args );
 	if ( argc == 1 ) {
-		dout << endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << endl;
+		dout << std::endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << std::endl;
 		prove_cmd p;
 		quad_in = true;
-		return p({"","","",""});
+		return p({L"",L"",L"",L""});
 /*		qdb kb = p.load_quads("");
 		qdb query = p.load_quads("");
 		auto e = p.r.prove ( kb, merge ( query ) );
-		dout << "evidence: " << endl << e << endl;*/
+		dout << "evidence: " << std::endl << e << endl;*/
 	}
-	if (( cmds.first.find ( argv[1] ) == cmds.first.end() && args[1] != "help" ) ) {
+	if (( cmds.first.find ( args[1] ) == cmds.first.end() && args[1] != L"help" ) ) {
 		print_usage ( cmds );
 		return 1;
 	}
-	if ( args[1] == "help" && argc == 3 ) {
-		dout << cmds.first[string ( argv[2] )]->help();
+	if ( args[1] == L"help" && argc == 3 ) {
+		dout << ws(cmds.first[string ( args[2] )]->help());
 		return 0;
 	}
-	if ( args[1] == "help" && argc == 2 ) {
+	if ( args[1] == L"help" && argc == 2 ) {
 		print_usage ( cmds );
 		return 0;
 	}
 
-	int rval = ( *cmds.first[argv[1]] ) ( args );
+	int rval = ( *cmds.first[args[1]] ) ( args );
 
-	for (auto x : threads) { x->join(); delete x; } 
+//	for (auto x : threads) { x->join(); delete x; } 
 /*
 	ofstream o("proof.dot");
 	o<<"digraph Proof {"<<endl;

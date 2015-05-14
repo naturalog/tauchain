@@ -14,10 +14,10 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 	try {
 		qdb r;
 //#ifndef IRC
-		istream* pis = &cin;
-		if (fname != "")
-			pis = new ifstream(fname);
-		istream& is = *pis;
+		std::wistream* pis = &std::wcin;
+		if (fname != L"")
+			pis = new std::wifstream(ws(fname));
+		std::wistream& is = *pis;
 //#else		
 //		string pp = string("tail -n 0 -f /tmp/irc.freenode.net/#")+chan+"/out";
 //		static istream* pis = new redi::ipstream(pp/*, redi::pstreams::pstdout | redi::pstreams::newpg*/);
@@ -25,55 +25,55 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 //#endif			
 //		istream& is = *pis;
 		string line;
-		stringstream ss;
+		std::wstringstream ss;
 		while (!is.eof()) {
 			getline(is, line);
 			trim(line);
 #ifdef IRC
 			sleep(1);
 #endif
-			if (!line.size() || line == "\n")
+			if (!line.size() || line == L"\n")
 				continue;
 #ifdef IRC
-			string magic = "botau: ";
+			string magic = L"botau: ";
 			auto pos = line.find(magic);
 			if (pos == string::npos)
 				continue;
 			line = line.substr(pos + magic.size());
 //			cout << line;
 #endif
-			if (endsWith(line, "fin."))
+			if (endsWith(line, L"fin."))
 				return readqdb(ss);
 			ss << line;
 		}
 #ifndef IRC		
-		if (fname != "")
+		if (fname != L"")
 			delete pis;
 #endif			
 		return readqdb(ss);
-	} catch (exception& ex) {
-		derr << "Error reading quads: " << ex.what() << endl;
+	} catch (std::exception& ex) {
+		derr << L"Error reading quads: " << ex.what() << std::endl;
 	}
 	if ( print ) 
-		dout << q << endl;
+		dout << q << std::endl;
 	return q;
 }
 
 pobj cmd_t::load_json ( string fname, bool print ) {
-	json_spirit::mValue v;
-	if ( fname == "" ) json_spirit::read_stream ( cin, v );
+	json_spirit::wmValue v;
+	if ( fname == L"" ) json_spirit::read_stream ( std::wcin, v );
 	else {
-		ifstream is ( fname );
+		std::wifstream is ( ws(fname) );
 		json_spirit::read_stream ( is, v );
 	}
 	pobj r =  jsonld::convert ( v );
-	if ( !r ) throw runtime_error ( "Couldn't read input." );
-	if ( print ) dout << r->toString() << endl;
+	if ( !r ) throw wruntime_error ( L"Couldn't read input." );
+	if ( print ) dout << r->toString() << std::endl;
 	return r;
 }
 
 pobj cmd_t::load_json ( const strings& args ) {
-	return load_json ( args.size() > 2 ? args[2] : "" );
+	return load_json ( args.size() > 2 ? args[2] : L"" );
 }
 
 pobj cmd_t::nodemap ( const strings& args ) {
@@ -98,11 +98,11 @@ qdb cmd_t::toquads ( pobj o ) {
 	auto nodeMap = o;
 	for ( auto g : *nodeMap->MAP() ) {
 		if ( jsonld::is_rel_iri ( g.first ) ) continue;
-		if ( !g.second || !g.second->MAP() ) throw logic_error ( "Expected map in nodemap." );
+		if ( !g.second || !g.second->MAP() ) throw wruntime_error ( L"Expected map in nodemap." );
 		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
-	//	dout << "Converting: " << endl << o->toString() << endl;
-	//	dout << "Converted: " << endl << r << endl;
+	//	dout << "Converting: " << std::endl << o->toString() << std::endl;
+	//	dout << "Converted: " << std::endl << r << std::endl;
 	return r;
 }
 
@@ -111,10 +111,10 @@ qdb cmd_t::convert ( pobj o ) {
 }
 
 qdb cmd_t::convert ( const string& s, bool debugprint ) {
-	if ( fnamebase ) opts.base = pstr ( string ( "file://" ) + s + "#" );
-	if ( debugprint ) dout << " Converting: " << s;
+	if ( fnamebase ) opts.base = pstr ( string ( L"file://" ) + s + L"#" );
+	if ( debugprint ) dout << L" Converting: " << s;
 	qdb r = convert ( load_json ( s ) );
-	if ( debugprint ) dout << " Converted: " << r << endl;
+	if ( debugprint ) dout << L" Converted: " << r << std::endl;
 	return r;
 }
 
@@ -128,13 +128,13 @@ void process_flags ( const cmds_t& cmds, strings& args ) {
 }
 
 void print_usage ( const cmds_t& cmds ) {
-	dout << endl << "Tau-Chain by http://idni.org" << endl;
-	dout << endl << "Usage:" << endl;
-	dout << "\ttau help <command>\t\tPrints usage of <command>." << endl;
-	dout << "\ttau <command> [<args>]\t\tRun <command> with <args>." << endl;
-	dout << endl << "Available commands:" << endl << endl;
-	for ( auto c : cmds.first ) dout << '\t' << c.first << '\t' << c.second->desc() << endl;
-	dout << endl << "Available flags:" << endl << endl;
-	for ( auto c : cmds.second ) dout << '\t' << c.first.first << '\t' << c.first.second << endl;
-	dout << endl;
+	dout << std::endl << L"Tau-Chain by http://idni.org" << std::endl;
+	dout << std::endl << L"Usage:" << std::endl;
+	dout << L"\ttau help <command>\t\tPrints usage of <command>." << std::endl;
+	dout << L"\ttau <command> [<args>]\t\tRun <command> with <args>." << std::endl;
+	dout << std::endl << L"Available commands:" << std::endl << std::endl;
+	for ( auto c : cmds.first ) dout << tab << c.first << tab << ws(c.second->desc()) << std::endl;
+	dout << std::endl << L"Available flags:" << std::endl << std::endl;
+	for ( auto c : cmds.second ) dout << tab << c.first.first << tab << c.first.second << std::endl;
+	dout << std::endl;
 }

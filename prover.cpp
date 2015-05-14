@@ -16,9 +16,7 @@
 #include "prover.h"
 #include <boost/algorithm/string.hpp>
 
-using namespace std;
 using namespace boost::algorithm;
-extern ostream& dout;
 bidict& gdict = dict;
 
 int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType;
@@ -153,7 +151,7 @@ void prove(session* ss) {
 		printrs(cases);
 		dout<<"\nand query:";
 		printl(goal);
-		dout<<endl);
+		dout << std::endl);
 	do {
 		p = qu.back();
 		qu.pop_back();
@@ -161,7 +159,7 @@ void prove(session* ss) {
 			term* t = *p->last;
 			TRACE(dout<<"Tracking back from ";
 				printterm(*t);
-				dout<<endl);
+				dout << std::endl);
 			int b = builtin(*t, *p, ss);
 			if (b == 1) {
 				proof* r = &proofs[nproofs++];
@@ -183,7 +181,7 @@ void prove(session* ss) {
 			for (auto x : cases) {
 			if (x.first >= 0 && x.first != t->p)
 				continue;
-			list<rule*>& rs = x.second;
+			std::list<rule*>& rs = x.second;
 //			list<rule*>& rs = it->second;
 			for (rule* rl : rs) {
 				subst s;
@@ -198,7 +196,7 @@ void prove(session* ss) {
 							dout<<" with new substitution: ";
 							prints(s);
 						};
-						dout<<endl);
+						dout << std::endl);
 					if (euler_path(p))
 						continue;
 					proof* r = &proofs[nproofs++];
@@ -233,13 +231,13 @@ void prove(session* ss) {
 			unify(p->rul->p, p->s, *r->last, r->s, true);
 			++r->last;
 			qu.push_back(r);
-			TRACE(dout<<"finished a frame. queue size:" << qu.size() << endl);
+			TRACE(dout<<L"finished a frame. queue size:" << qu.size() << std::endl);
 //			TRACE(printq(qu));
 			continue;
 		}
 	} while (!qu.empty());
-	dout<<"\nEvidence:";
-	dout<<"========="<<endl;
+	dout << L"\nEvidence:\n";
+	dout << L"=========" << std::endl;
 	printe(ss->e);
 }
 
@@ -248,10 +246,10 @@ bool equals(term* x, term* y) {
 }
 
 string format(const term& p) {
-	stringstream ss;
+	std::wstringstream ss;
 	if (p.s)
 		ss << format (*p.s);
-	ss<<' '<<dstr(p.p)<<' ';
+	ss << L' ' << dstr(p.p) << L' ';
 	if (p.o)
 		ss << format (*p.o);
 	return ss.str();
@@ -260,7 +258,7 @@ string format(const term& p) {
 void printterm(const term& p) {
 	if (p.s)
 		printterm(*p.s);
-	dout<<' '<<dstr(p.p)<<' ';
+	dout << L' ' << dstr(p.p) << L' ';
 	if (p.o)
 		printterm(*p.o);
 }
@@ -268,52 +266,52 @@ void printterm(const term& p) {
 void printp(proof* p) {
 	if (!p)
 		return;
-	dout<<"\trule:\t";
+	dout << L"\trule:\t";
 	printr(*p->rul);
-	dout<<"\n\tremaining:\t";
+	dout << L"\n\tremaining:\t";
 //	printl(p->last);
 	if (p->prev)
-		dout<<"\n\tprev:\t"<<p->prev<<"\n\tsubst:\t";
+		dout << L"\n\tprev:\t" << p->prev << L"\n\tsubst:\t";
 	else
-		dout<<"\n\tprev:\t(null)\n\tsubst:\t";
+		dout << L"\n\tprev:\t(null)\n\tsubst:\t";
 	prints(p->s);
-	dout<<"\n\tground:\t";
+	dout << L"\n\tground:\t";
 	printg(p->g);
-	dout<<"\n";
+	dout << L"\n";
 }
 
 void printrs(const ruleset& rs) {
 	for (auto x : rs)
 		for (auto y : x.second) {
 			printr(*y);
-			dout << endl;
+			dout << std::endl;
 		}
 }
 
 void printq(const queue& q) {
 	for (auto x : q) {
 		printp(x);
-		dout << endl;
+		dout << std::endl;
 	}
 }
 
 void prints(const subst& s) {
 //	dout << '[';
 	for (auto x : s) {
-		dout<<"        "<<dstr(x.first)<<"    /    ";
+		dout << L"        " << dstr(x.first) << L" / ";
 		printterm(*x.second);
-		dout << endl;
+		dout << std::endl;
 	}
 //	dout << "] ";
 }
 
 string format(const termset& l) {
-	stringstream ss;
+	std::wstringstream ss;
 	auto x = l.begin();
 	while (x != l.end()) {
 		ss << format (**x);
 		if (++x != l.end())
-			ss << ',';
+			ss << L',';
 	}
 	return ss.str();
 }
@@ -323,7 +321,7 @@ void printl(const termset& l) {
 	while (x != l.end()) {
 		printterm(**x);
 		if (++x != l.end())
-			dout << ',';
+			dout << L',';
 	}
 }
 
@@ -331,24 +329,24 @@ void printr(const rule& r) {
 	if(!r.body.empty())
 	{
 		printl(r.body);
-		dout<<" => ";
+		dout << L" => ";
 	}
 	printterm(*r.p);
 	if(r.body.empty())
-		dout<<".";
+		dout << L".";
 }
 
 void printterm_substs(const term& p, const subst& s) {
 	if (p.s)
 		printterm_substs(*p.s, s);
-	dout<<' '<<dstr(p.p);
+	dout << L' ' << dstr(p.p);
 	if(s.find(p.p) != s.end())
 	{
-		dout << '(';
+		dout << L'(';
 		printterm(*s.at(p.p));
-		dout << ')';
+		dout << L')';
 	}
-	dout <<' ';
+	dout << L' ';
 	if (p.o)
 		printterm_substs(*p.o, s);
 }
@@ -358,30 +356,30 @@ void printl_substs(const termset& l, const subst& s) {
 	while (x != l.end()) {
 		printterm_substs(**x, s);
 		if (++x != l.end())
-			dout << ',';
+			dout << L',';
 	}
 }
 
 void printr_substs(const rule& r, const subst& s) {
 	printl_substs(r.body, s);
-	dout<<" => ";
+	dout << L" => ";
 	printterm_substs(*r.p, s);
 }
 
 string format(const rule& r) {
-	stringstream ss;
+	std::wstringstream ss;
 	if (!r.body.empty())
-		ss << format(r.body) << " => ";
+		ss << format(r.body) << L" => ";
 	ss << format(*r.p);
 	return ss.str();
 }
 
 void printg(const ground& g) {
 	for (auto x : g) {
-		dout<<"    ";
+		dout << L"    ";
 		printr_substs(*x.first, x.second);
 		if (x.second.empty()) {
-			dout << endl;
+			dout << std::endl;
 			continue;
 		}
 	}
@@ -392,12 +390,13 @@ void printe(const evidence& e) {
 	for (auto y : e)
 		for (auto x : y.second) {
 			printterm(*x.first);
-			if (x.second.size()==1&&x.second.front().second.empty()) dout << "."<<endl;
+			if ( x.second.size() == 1 && x.second.front().second.empty()) 
+				dout << L"." << std::endl;
 			else
 			{
-			dout << ":"<<endl;
-			printg(x.second);
-			dout << endl;
+				dout << L":" << std::endl;
+				printg(x.second);
+				dout << std::endl;
 			}
 #ifdef IRC
 			sleep(1);
@@ -405,8 +404,6 @@ void printe(const evidence& e) {
 		}
 }
 }
-
-list<thread*> threads;
 
 shared_ptr<predicate> reasoner::mkpred ( string s, const predlist& v ) {
 	return make_shared<predicate>( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
@@ -440,7 +437,7 @@ int szqdb(const qdb& x) {
 }
 
 void reasoner::addrules(string s, string p, string o, prover::session& ss, const qdb& kb) {
-	if (p[0] == '?')
+	if (p[0] == L'?')
 		throw 0;
 	prover::rule* r = &prover::rules[prover::nrules++];
 	r->p = pred2term(triple ( s, p, o ));
@@ -465,8 +462,8 @@ qlist merge ( const qdb& q ) {
 
 bool reasoner::prove ( qdb kb, qlist query ) {
 	prover::session ss;
-	set<string> predicates;
-	for ( jsonld::pquad quad : *kb.at("@default")) {
+	std::set<string> predicates;
+	for ( jsonld::pquad quad : *kb.at(L"@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 			addrules(s, p, o, ss, kb);
 	}
@@ -477,8 +474,8 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 }
 
 bool reasoner::test_reasoner() {
-	cout << "to perform the socrates test, put the following three lines in a file say f, and run \"tau < f\":"<<endl
-		<<"socrates a man.  ?x a man _:b0.  ?x a mortal _:b1.  _:b0 => _:b1."<<endl<<"fin."<<endl<<"?p a mortal."<<endl;
+	dout << L"to perform the socrates test, put the following three lines in a file say f, and run \"tau < f\":" << std::endl
+		<<L"socrates a man.  ?x a man _:b0.  ?x a mortal _:b1.  _:b0 => _:b1." << std::endl<<L"fin." << std::endl<<L"?p a mortal." << std::endl;
 	return 1;
 }
 

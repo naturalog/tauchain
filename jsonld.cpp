@@ -4,7 +4,7 @@
 
 namespace jsonld {
 
-pcontext context_t::parse ( pobj localContext, vector<string> remoteContexts ) {
+pcontext context_t::parse ( pobj localContext, std::vector<string> remoteContexts ) {
 	pdefined_t defined = make_shared<defined_t>();
 	context_t result ( options );
 	if ( !localContext || !localContext->LIST() ) localContext = mk_olist_obj ( olist ( 1, localContext ) );
@@ -20,27 +20,27 @@ pcontext context_t::parse ( pobj localContext, vector<string> remoteContexts ) {
 			pstring s1 = p1 ? p1->STR() : 0;
 			string uri = resolve ( s1, *s );
 			if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() )
-				throw std::runtime_error ( RECURSIVE_CONTEXT_INCLUSION + tab + uri );
+				throw wruntime_error ( RECURSIVE_CONTEXT_INCLUSION + tab + uri );
 			remoteContexts.push_back ( uri );
 			pobj remoteContext = fromURL ( uri );
 			if ( remoteContext && !remoteContext->map_and_has ( str_context ) )
-				throw std::runtime_error ( INVALID_REMOTE_CONTEXT + tab + context->toString() );
+				throw wruntime_error ( INVALID_REMOTE_CONTEXT + tab + context->toString() );
 			context = remoteContext ? ( *remoteContext->MAP() ) [str_context] : 0;
 			result = *result.parse ( context, remoteContexts );
 			continue;
 		}
-		if ( !context->MAP() ) throw std::runtime_error ( INVALID_LOCAL_CONTEXT + string ( "\r\n" ) + context->toString() );
+		if ( !context->MAP() ) throw wruntime_error ( INVALID_LOCAL_CONTEXT + string ( L"\r\n" ) + context->toString() );
 		somap& cm = *context->MAP();
-		auto it = cm.find ( "@base" );
+		auto it = cm.find ( L"@base" );
 		if ( !remoteContexts.size() && it != cm.end() ) {
 			pobj value = it->second;
-			if ( value->Null() ) result.MAP()->erase ( "@base" );
+			if ( value->Null() ) result.MAP()->erase ( L"@base" );
 			else if ( pstring s = value->STR() ) {
-				if ( is_abs_iri ( *s ) ) ( *result.MAP() ) ["@base"] = value;
+				if ( is_abs_iri ( *s ) ) ( *result.MAP() ) [L"@base"] = value;
 				else {
-					pstring baseUri = ( *result.MAP() ) ["@base"]->STR();
-					if ( !is_abs_iri ( *baseUri ) ) throw std::runtime_error ( INVALID_BASE_IRI + tab + ( baseUri ? *baseUri : string ( "" ) ) );
-					( *result.MAP() ) ["@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
+					pstring baseUri = ( *result.MAP() ) [L"@base"]->STR();
+					if ( !is_abs_iri ( *baseUri ) ) throw wruntime_error ( INVALID_BASE_IRI + tab + ( baseUri ? *baseUri : string ( L"" ) ) );
+					( *result.MAP() ) [L"@base"] = make_shared<string_obj> ( resolve ( baseUri, *s ) );
 				}
 			} else throw Ex9;
 		}
@@ -57,7 +57,7 @@ pcontext context_t::parse ( pobj localContext, vector<string> remoteContexts ) {
 			pobj value = it->second;
 			if ( value->Null() ) result.MAP()->erase ( it );
 			else if ( pstring s = value->STR() ) getlang ( result ) = make_shared<string_obj> ( lower ( *s ) );
-			else throw std::runtime_error ( INVALID_DEFAULT_LANGUAGE + tab + value->toString() );
+			else throw wruntime_error ( INVALID_DEFAULT_LANGUAGE + tab + value->toString() );
 		}
 		for ( auto it : cm ) {
 			if ( is ( it.first, { str_base, str_vocab, str_lang } ) ) continue;
@@ -72,10 +72,10 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 	auto dit = defined.find ( term );
 	if ( dit != defined.end() ) {
 		if ( dit->second ) return;
-		throw std::runtime_error ( CYCLIC_IRI_MAPPING + tab + term );
+		throw wruntime_error ( CYCLIC_IRI_MAPPING + tab + term );
 	}
 	defined[term] = false;
-	if ( keyword ( term ) ) throw std::runtime_error ( KEYWORD_REDEFINITION + tab + term );
+	if ( keyword ( term ) ) throw wruntime_error ( KEYWORD_REDEFINITION + tab + term );
 	term_defs->erase ( term ); // 4
 	auto it = context->find ( term );
 	psomap m;
@@ -87,22 +87,22 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 	somap value;
 	if ( it->second->STR() ) value = *newMap ( str_id, it->second )->MAP();
 	else if ( auto x = it->second->MAP() ) value = *x;
-	else throw std::runtime_error ( INVALID_TERM_DEFINITION );
+	else throw wruntime_error ( INVALID_TERM_DEFINITION );
 	somap defn;//, &val = *value->MAP();
 	if ( ( it = value.find ( str_type ) ) != value.end() ) { // 10
-		if ( !it->second->STR() ) throw std::runtime_error ( INVALID_TYPE_MAPPING );
+		if ( !it->second->STR() ) throw wruntime_error ( INVALID_TYPE_MAPPING );
 		string type ( *expand_iri ( it->second->STR(), false, true, context, pdefined ) );
-		if ( type != str_id && type != str_vocab && !is_abs_iri ( type ) ) throw std::runtime_error ( INVALID_TYPE_MAPPING + tab + type );
+		if ( type != str_id && type != str_vocab && !is_abs_iri ( type ) ) throw wruntime_error ( INVALID_TYPE_MAPPING + tab + type );
 		defn[str_type] = make_shared<string_obj> ( type );
 	}
 	// 11
 	if ( ( it = value.find ( str_reverse ) ) != value.end() ) {
 		if ( throw_if_not_contains ( value, str_id, INVALID_REVERSE_PROPERTY ) && !it->second->STR() ) throw Ex5;
 		string reverse = *expand_iri ( value.at ( str_reverse )->STR(), false, true, context, pdefined );
-		if ( !is_abs_iri ( reverse ) ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "Non-absolute @reverse IRI: " ) + reverse );
+		if ( !is_abs_iri ( reverse ) ) throw wruntime_error ( INVALID_IRI_MAPPING + string ( L"Non-absolute @reverse IRI: " ) + reverse );
 		defn [str_id] = make_shared<string_obj> ( reverse );
-		if ( ( it = value.find ( "@container" ) ) != value.end() && is ( *it->second->STR(), { string ( str_set ), str_index }, Ex6 ) )
-			defn ["@container"] = it->second;
+		if ( ( it = value.find ( L"@container" ) ) != value.end() && is ( *it->second->STR(), { string ( str_set ), str_index }, Ex6 ) )
+			defn [L"@container"] = it->second;
 		defn[str_reverse] = make_shared<bool_obj> ( ( *pdefined ) [term] = true );
 		( *term_defs ) [term] = mk_somap_obj ( defn );
 		return;
@@ -116,7 +116,7 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 			if ( *res == str_context ) throw Ex2;
 			defn [str_id] = make_shared<string_obj> ( res );
 		} else throw Ex3;
-	} else if ( ( ( colIndex = term.find ( ":" ) ) != string::npos ) /*|| ( term.size() && term[0] == '?' )*/ ) {
+	} else if ( ( ( colIndex = term.find ( L":" ) ) != string::npos ) /*|| ( term.size() && term[0] == '?' )*/ ) {
 		if ( colIndex != string::npos ) {
 			string prefix = term.substr ( 0, colIndex ), suffix = term.substr ( colIndex + 1 );
 			if ( has ( context, prefix ) ) create_term_def ( context, prefix, pdefined );
@@ -129,10 +129,10 @@ void context_t::create_term_def ( const psomap context, const string term, pdefi
 	else throw Ex4;
 
 	// 16
-	( ( it = value.find ( "@container" ) ) != value.end() ) && it->second->STR() &&
-	is ( *it->second->STR(), { str_list, string ( str_set ), str_index, str_lang }, Ex10 ) && ( defn["@container"] = it->second );
+	( ( it = value.find ( L"@container" ) ) != value.end() ) && it->second->STR() &&
+	is ( *it->second->STR(), { str_list, string ( str_set ), str_index, str_lang }, Ex10 ) && ( defn[L"@container"] = it->second );
 
-	auto i1 = value.find ( str_lang ), i2 = value.find ( "type" );
+	auto i1 = value.find ( str_lang ), i2 = value.find ( L"type" );
 	pstring lang;
 	if ( i1 != value.end() && i2 == value.end() ) {
 		if ( !i1->second->Null() || ( lang = i2->second->STR() ) ) getlang ( defn ) = lang ? make_shared<string_obj> ( lower ( *lang ) ) : 0;
@@ -152,10 +152,10 @@ pstring context_t::expand_iri ( const pstring value, bool relative, bool vocab, 
 		if ( auto td = it->second->MAP() ) return ( it = td->find ( str_id ) ) != td->end() ? it->second->STR() : 0;
 		return 0;
 	} else {
-		size_t colIndex = value->find ( ":" );
+		size_t colIndex = value->find ( L":" );
 		if ( colIndex != string::npos ) {
 			string prefix = value->substr ( 0, colIndex ), suffix = value->substr ( colIndex + 1 );
-			if ( prefix == "_" || startsWith ( suffix, "//" ) ) return value;
+			if ( prefix == L"_" || startsWith ( suffix, L"//" ) ) return value;
 			else {
 				if ( has ( context, prefix ) && ( defined->find ( prefix ) == defined->end() || !defined->at ( prefix ) ) )
 					create_term_def ( context, prefix, defined );
@@ -167,7 +167,7 @@ pstring context_t::expand_iri ( const pstring value, bool relative, bool vocab, 
 		else if ( relative ) {
 			auto base = get ( MAP(), str_base );
 			return pstr ( resolve ( base ? base->STR() : 0, *value ) );
-		} else if ( context && is_rel_iri ( *value ) ) throw std::runtime_error ( INVALID_IRI_MAPPING + string ( "not an absolute IRI: " ) + *value );
+		} else if ( context && is_rel_iri ( *value ) ) throw wruntime_error ( INVALID_IRI_MAPPING + string ( L"not an absolute IRI: " ) + *value );
 	}
 	return value;
 }
@@ -176,15 +176,15 @@ psomap_obj context_t::getInverse() {
 	if ( inverse ) return inverse;
 	inverse = mk_somap_obj();
 	pstring defaultLanguage = getlang ( MAP() )->STR();
-	if ( !defaultLanguage ) ( *MAP() ) [str_lang] = mk_str_obj ( defaultLanguage = pstr ( "@none" ) );
+	if ( !defaultLanguage ) ( *MAP() ) [str_lang] = mk_str_obj ( defaultLanguage = pstr ( L"@none" ) );
 
 	for ( auto x : *term_defs ) {
 		string term = x.first;
 		auto it = term_defs->find ( term );
 		psomap definition = it == term_defs->end() || !it->second ? 0 : it->second->MAP();
 		if ( !definition ) continue;
-		pstring container = ( ( it = definition->find ( "@container" ) ) == definition->end() || !it->second ) ? 0 : it->second->STR();
-		if ( !container ) container = pstr ( "@none" );
+		pstring container = ( ( it = definition->find ( L"@container" ) ) == definition->end() || !it->second ) ? 0 : it->second->STR();
+		if ( !container ) container = pstr ( L"@none" );
 		pstring iri = ( ( it = definition->find ( str_id ) ) == definition->end() ) || !it->second ? 0 : it->second->STR();
 
 		psomap_obj containerMap = mk_somap_obj ( iri ? inverse->MAP()->at ( *iri )->MAP() : 0 );
@@ -208,20 +208,20 @@ psomap_obj context_t::getInverse() {
 		} else if ( haslang ( definition ) ) {
 			psomap lang_map = gettype ( type_lang_map )->MAP();
 			pstring language = getlang ( definition )->STR();
-			if ( !language ) ( *definition ) [str_lang] = mk_str_obj ( language = pstr ( "@null" ) );
+			if ( !language ) ( *definition ) [str_lang] = mk_str_obj ( language = pstr ( L"@null" ) );
 			if ( !has ( lang_map, language ) ) ( *lang_map ) [ *language ] = make_shared<string_obj> ( term );
 		} else {
 			psomap lang_map = getlang ( type_lang_map )->MAP();
 			if ( !haslang ( lang_map ) ) ( * lang_map ) [str_lang] = make_shared<string_obj> ( term );
-			if ( !hasnone ( lang_map ) ) ( * lang_map ) ["@none"] = make_shared<string_obj> ( term );
+			if ( !hasnone ( lang_map ) ) ( * lang_map ) [L"@none"] = make_shared<string_obj> ( term );
 			psomap typeMap = gettype ( type_lang_map )->MAP();
-			if ( !hasnone ( typeMap ) ) ( *typeMap ) ["@none"] = make_shared<string_obj> ( term );
+			if ( !hasnone ( typeMap ) ) ( *typeMap ) [L"@none"] = make_shared<string_obj> ( term );
 		}
 	}
 	return inverse;
 }
 
-pstring context_t::selectTerm ( string iri, vector<string>& containers, string typeLanguage, vector<string>& preferredValues ) {
+pstring context_t::selectTerm ( string iri, std::vector<string>& containers, string typeLanguage, std::vector<string>& preferredValues ) {
 	auto inv = getInverse();
 	auto containerMap = inv->MAP()->at ( iri )->MAP();
 	for ( string container : containers ) {
@@ -264,13 +264,13 @@ map<string, string> context_t::getPrefixes ( bool onlyCommonPrefixes ) {
 	map<string, string> prefixes;
 	for ( auto x : *term_defs ) {
 		string term = x.first;
-		if ( term.find ( ":" ) != string::npos ) continue;
+		if ( term.find ( L":" ) != string::npos ) continue;
 		psomap td = term_defs->at ( term )->MAP();
 		if ( !td ) continue;
 		pstring id = td->at ( str_id )->STR();
 		if ( !id ) continue;
-		if ( startsWith ( term, "@" ) || startsWith ( *id, "@" ) ) continue;
-		if ( !onlyCommonPrefixes || endsWith ( *id, "/" ) || endsWith ( *id, "#" ) ) prefixes[term] = *id;
+		if ( startsWith ( term, L"@" ) || startsWith ( *id, L"@" ) ) continue;
+		if ( !onlyCommonPrefixes || endsWith ( *id, L"/" ) || endsWith ( *id, L"#" ) ) prefixes[term] = *id;
 	}
 	return prefixes;
 }
@@ -332,10 +332,10 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 			if ( key == str_context ) continue;
 			pstring exp_prop = act_ctx->expand_iri ( pstr ( key ), true/*? false*/, true, 0, 0 );
 			pobj exp_val = 0;
-			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?'/*  vars support - out of spec */ && exp_prop->find ( ":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
+			if ( !exp_prop || ( ( ( *exp_prop ) [0] != '?'/*  vars support - out of spec */ && exp_prop->find ( L":" ) == string::npos ) && !keyword ( *exp_prop ) ) ) continue;
 			if ( keyword ( *exp_prop ) ) {
 				if ( act_prop && *act_prop == str_reverse ) throw Ex12;
-				if ( has ( result, exp_prop ) ) throw std::runtime_error ( COLLIDING_KEYWORDS + tab + *exp_prop + string ( " already exists in result" ) );
+				if ( has ( result, exp_prop ) ) throw wruntime_error ( COLLIDING_KEYWORDS + tab + *exp_prop + string ( L" already exists in result" ) );
 				if ( *exp_prop == str_id ) {
 					if ( !value->STR() ) throw Ex13;
 					exp_val = make_shared <string_obj> ( act_ctx->expand_iri ( value->STR(), true, false, 0, 0 ) );
@@ -355,25 +355,25 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 				} else if ( *exp_prop == str_graph ) exp_val = expand ( act_ctx, pstr ( str_graph ), value );
 				else if ( *exp_prop == str_value ) {
 					if ( value && ( value->MAP() || value->LIST() ) )
-						throw std::runtime_error ( INVALID_VALUE_OBJECT_VALUE + tab + string ( "value of " ) + *exp_prop + string ( " must be a scalar or null" ) );
+						throw wruntime_error ( INVALID_VALUE_OBJECT_VALUE + tab + string ( L"value of " ) + *exp_prop + string ( L" must be a scalar or null" ) );
 					if ( ! ( exp_val = value ) ) {
 						( *result->MAP() ) [str_value] = 0;
 						continue;
 					}
 				} else if ( *exp_prop == str_lang ) {
 					if ( !value->STR() )
-						throw std::runtime_error (
+						throw wruntime_error (
 						    INVALID_LANGUAGE_TAGGED_STRING + tab
-						    + string ( "Value of " ) + *exp_prop
-						    + string ( " must be a string" ) );
+						    + string ( L"Value of " ) + *exp_prop
+						    + string ( L" must be a string" ) );
 					exp_val = make_shared <string_obj
 					          > ( lower ( *value->STR() ) );
 				} else if ( *exp_prop == str_index ) {
 					if ( !value->STR() )
-						throw std::runtime_error (
+						throw wruntime_error (
 						    INVALID_INDEX_VALUE + tab
-						    + string ( "Value of " ) + *exp_prop
-						    + string ( " must be a string" ) );
+						    + string ( L"Value of " ) + *exp_prop
+						    + string ( L" must be a string" ) );
 					exp_val = value;
 				} else if ( *exp_prop == str_list ) {
 					if ( act_prop && *act_prop == str_graph )
@@ -415,7 +415,7 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 							for ( pobj item : *items ) {
 								if ( has ( item->MAP(), str_value )
 								        || has ( item->MAP(), str_list ) )
-									throw std::runtime_error (
+									throw wruntime_error (
 									    INVALID_REVERSE_PROPERTY_VALUE );
 								if ( !has ( reverseMap, property ) )
 									( *reverseMap ) [property] =
@@ -445,11 +445,11 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 						                    olist ( 1, languageValue ) );
 					for ( pobj item : *languageValue->LIST() ) {
 						if ( !item->STR() )
-							throw std::runtime_error (
+							throw wruntime_error (
 							    INVALID_LANGUAGE_MAP_VALUE + tab
-							    + string ( "Expected " )
+							    + string ( L"Expected " )
 							    + item->toString()
-							    + string ( " to be a string" ) );
+							    + string ( L" to be a string" ) );
 						somap tmp;
 						tmp[str_value] = item;
 						tmp[str_lang] = make_shared <string_obj
@@ -518,36 +518,36 @@ pobj jsonld_api::expand ( pcontext act_ctx, pstring act_prop, pobj element ) {
 			if ( typeremoved )
 				ks.erase ( str_type );
 			if ( ( langremoved && typeremoved ) || ks.size() )
-				throw std::runtime_error (
+				throw wruntime_error (
 				    INVALID_VALUE_OBJECT + tab
-				    + string ( "value object has unknown keys" ) );
+				    + string ( L"value object has unknown keys" ) );
 			pobj rval = getvalue ( result );
 			if ( !rval )
 				result = 0;
 			else if ( !rval->STR() && haslang ( result ) )
-				throw std::runtime_error (
+				throw wruntime_error (
 				    INVALID_LANGUAGE_TAGGED_VALUE + tab
 				    + string (
-				        "when @language is used, @value must be a string" ) );
+				        L"when @language is used, @value must be a string" ) );
 			else if ( hastype ( result ) )
 				if ( ! ( gettype ( result )->STR() )
-				        || startsWith ( *gettype ( result )->STR(), "_:" )
-				        || gettype ( result )->STR()->find ( ":" )
+				        || startsWith ( *gettype ( result )->STR(), L"_:" )
+				        || gettype ( result )->STR()->find ( L":" )
 				        == string::npos )
-					throw std::runtime_error (
+					throw wruntime_error (
 					    INVALID_TYPED_VALUE + tab
 					    + string (
-					        "value of @type must be an IRI" ) );
+					        L"value of @type must be an IRI" ) );
 		} else if ( hastype ( result ) ) {
 			pobj rtype = gettype ( result );
 			if ( !rtype->LIST() )
 				( *result->MAP() ) [str_type] = mk_olist_obj ( olist ( 1, rtype ) );
 		} else if ( hasset ( result ) || haslist ( result ) ) {
 			if ( result->MAP()->size() > ( hasindex ( result ) ? 2 : 1 ) )
-				throw std::runtime_error (
+				throw wruntime_error (
 				    INVALID_SET_OR_LIST_OBJECT + tab
 				    + string (
-				        "@set or @list may only contain @index" ) );
+				        L"@set or @list may only contain @index" ) );
 			if ( hasset ( result ) )
 				result = getset ( result );
 		}
@@ -582,14 +582,14 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 	if ( !has ( nodeMap, activeGraph ) ) ( *nodeMap ) [activeGraph] = mk_somap_obj();
 	psomap graph = nodeMap->at ( activeGraph )->MAP(), node = ( activeSubject && activeSubject->STR() ) ?  graph->at ( *activeSubject->STR() )->MAP() : 0;
 	if ( hastype ( elem ) ) {
-		vector<string> oldTypes, newTypes;
+		std::vector<string> oldTypes, newTypes;
 		if ( gettype ( elem )->LIST() ) oldTypes = vec2vec ( gettype ( elem )->LIST() );
 		else {
-			oldTypes = vector<string>();	//mk_olist_obj();
+			oldTypes = std::vector<string>();	//mk_olist_obj();
 			oldTypes.push_back ( *elem->at ( str_type )->STR() );
 		}
 		for ( string item : oldTypes ) {
-			if ( startsWith ( item, "_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
+			if ( startsWith ( item, L"_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
 			else newTypes.push_back ( item );
 		}
 		( *elem ) [str_type] = gettype ( elem )->LIST() ? ( pobj ) mk_olist_obj ( vec2vec ( newTypes ) ) : make_shared <string_obj> ( newTypes[0] );
@@ -607,7 +607,7 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 		if ( hasid ( elem ) && elem->at ( str_id ) && elem->at ( str_id )->STR() ) {
 			id = *elem->at ( str_id )->STR();
 			elem->erase ( str_id );
-			if ( startsWith ( id, "_:" ) ) id = gen_bnode_id ( id );
+			if ( startsWith ( id, L"_:" ) ) id = gen_bnode_id ( id );
 		} else id = gen_bnode_id();
 		if ( !has ( graph, id ) ) {
 			somap tmp;
@@ -657,7 +657,7 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 			for ( auto z : *elem ) {
 				string property = z.first;
 				pobj value = z.second;
-				if ( startsWith ( property, "_:" ) ) property = gen_bnode_id ( property );
+				if ( startsWith ( property, L"_:" ) ) property = gen_bnode_id ( property );
 				if ( !has ( node, property ) ) ( *node ) [property] = mk_olist_obj();
 				gen_node_map ( value, nodeMap, activeGraph, make_shared <string_obj> ( id ), make_shared <string> ( property ), 0 );
 			}
@@ -700,7 +700,7 @@ prdf_db jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 
 pobj expand ( pobj input, jsonld_options opts ) {
 	if ( !input ) return 0;
-	if ( input->STR() && input->STR()->find ( ":" ) != string::npos ) {
+	if ( input->STR() && input->STR()->find ( L":" ) != string::npos ) {
 		input = load ( *input->STR() ).document;
 		if ( !opts.base )
 			opts.base = pstr ( *input->STR() );
@@ -723,14 +723,14 @@ pobj expand ( pobj input, jsonld_options opts ) {
 }
 
 size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
-	string data ( ( const char* ) ptr, ( size_t ) size * n );
+	std::string data ( ( const char* ) ptr, ( size_t ) size * n );
 	* ( ( std::stringstream* ) stream ) << data << std::endl;
 	return size * n;
 }
 
 string download ( const string& url ) {
 	static const string ACCEPT_HEADER =
-	    "application/ld+json, application/json;q=0.9, application/javascript;q=0.5, text/javascript;q=0.5, text/plain;q=0.2, */*;q=0.1";
+	    L"application/ld+json, application/json;q=0.9, application/javascript;q=0.5, text/javascript;q=0.5, text/plain;q=0.2, */*;q=0.1";
 	struct curl_slist *headers = 0;
 	headers = curl_slist_append ( headers, "Content-Type: text/xml" );
 	curl_easy_setopt ( curl, CURLOPT_HTTPHEADER, headers );
@@ -738,21 +738,21 @@ string download ( const string& url ) {
 	curl_easy_setopt ( curl, CURLOPT_FOLLOWLOCATION, 1L );
 	curl_easy_setopt ( curl, CURLOPT_NOSIGNAL, 1 );
 	curl_easy_setopt ( curl, CURLOPT_ACCEPT_ENCODING, "deflate" );
-	std::stringstream out;
+	std::wstringstream out;
 	curl_easy_setopt ( curl, CURLOPT_WRITEFUNCTION, write_data );
 	curl_easy_setopt ( curl, CURLOPT_WRITEDATA, &out );
 	CURLcode res = curl_easy_perform ( curl );
 	if ( res != CURLE_OK )
 		throw std::runtime_error (
-		    string ( "curl_easy_perform() failed: " )
+		    std::string ( "curl_easy_perform() failed: " )
 		    + curl_easy_strerror ( res ) );
 	string r = out.str();
-	dout << "downloaded file: " << r << endl;
+	dout << L"downloaded file: " << r << std::endl;
 	return r;
 }
 
 pobj fromURL ( const string& url ) {
-	json_spirit::mValue r;
+	json_spirit::wmValue r;
 	json_spirit::read_string ( download ( url ), r );
 	return convert ( r );
 }
@@ -763,13 +763,13 @@ remote_doc_t load ( const string& url ) {
 	try {
 		doc.document = fromURL ( url );
 	} catch ( ... ) {
-		throw std::runtime_error ( LOADING_REMOTE_CONTEXT_FAILED + tab + url );
+		throw wruntime_error ( LOADING_REMOTE_CONTEXT_FAILED + tab + url );
 	}
 	return doc;
 }
 
-json_spirit::mValue convert ( obj& v ) {
-	typedef json_spirit::mValue val;
+json_spirit::wmValue convert ( obj& v ) {
+	typedef json_spirit::wmValue val;
 	val r;
 	if ( v.UINT() ) return val ( *v.UINT() );
 	if ( v.INT() )  return val ( *v.INT() );
@@ -788,11 +788,11 @@ json_spirit::mValue convert ( obj& v ) {
 	}
 }
 
-json_spirit::mValue convert ( pobj v ) {
+json_spirit::wmValue convert ( pobj v ) {
 	return convert ( *v );
 }
 
-pobj convert ( const json_spirit::mValue& v ) {
+pobj convert ( const json_spirit::wmValue& v ) {
 	using namespace std;
 	pobj r;
 	if ( v.is_uint64() ) r = make_shared<uint64_t_obj> ( v.get_uint64() );
@@ -815,7 +815,7 @@ pobj convert ( const json_spirit::mValue& v ) {
 }
 
 pstring removeBase ( pobj, string ) {
-	return pstr ( "" );
+	return pstr ( L"" );
 }
 
 pstring removeBase ( pobj o, pstring iri ) {
@@ -879,7 +879,7 @@ bool keyword ( pobj p ) {
 }
 
 bool is_abs_iri ( const string& s ) {
-	return ( s.find ( ":" ) != string::npos ) || ( s.size() && s[0] == '?' );
+	return ( s.find ( L":" ) != string::npos ) || ( s.size() && s[0] == L'?' );
 }
 
 bool is_rel_iri ( const string& s ) {
@@ -896,14 +896,14 @@ bool isvalue ( pobj v ) {
 	return v && v->MAP() && hasvalue ( v->MAP() );
 }
 
-polist vec2vec ( const vector<string>& x ) {
+polist vec2vec ( const std::vector<string>& x ) {
 	polist res = mk_olist();
 	for ( auto t : x ) res->push_back ( make_shared <string_obj> ( t ) );
 	return res;
 }
 
-vector<string> vec2vec ( polist x ) {
-	vector<string> res;
+std::vector<string> vec2vec ( polist x ) {
+	std::vector<string> res;
 	for ( auto t : *x ) res.push_back ( *t->STR() );
 	return res;
 }
@@ -915,7 +915,7 @@ void add_all ( polist l, pobj v ) {
 
 context_t::context_t ( const jsonld_options& o ) :
 	somap_obj(), options ( o ) {
-	if ( options.base ) ( *MAP() ) [ "@base" ] = make_shared <string_obj> ( *options.base );
+	if ( options.base ) ( *MAP() ) [ L"@base" ] = make_shared <string_obj> ( *options.base );
 }
 
 pstring context_t::getContainer ( string prop ) {
@@ -1004,8 +1004,8 @@ void jsonld_api::mergeValue ( somap& obj, string key, pobj value ) {
 
 string jsonld_api::gen_bnode_id ( string id ) {
 	if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) return bnode_id_map[id];
-	stringstream ss;
-	ss << "_:b" << ( blankNodeCounter++ );
+	std::wstringstream ss;
+	ss << L"_:b" << ( blankNodeCounter++ );
 	return bnode_id_map[id] = ss.str();
 }
 

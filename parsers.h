@@ -10,11 +10,11 @@
 
 #include "jsonld.h"
 #include "json_spirit.h"
-using namespace std;
+//using namespace std;
 
 namespace jsonld {
-json_spirit::mValue convert ( obj& v );
-json_spirit::mValue convert ( pobj v );
+json_spirit::wmValue convert ( obj& v );
+json_spirit::wmValue convert ( pobj v );
 }
 
 #ifdef USE_RAPTOR
