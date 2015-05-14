@@ -405,28 +405,20 @@ void printe(const evidence& e) {
 }
 }
 
-shared_ptr<predicate> reasoner::mkpred ( string s, const predlist& v ) {
-	return make_shared<predicate>( dict.has ( s ) ? dict[s] : dict.set ( s ), v );
-}
-
-shared_ptr<const predicate> reasoner::triple ( const string& s, const string& p, const string& o ) {
-	return mkpred ( p, { mkpred ( s ), mkpred ( o ) } );
-}
-
-shared_ptr<const predicate> reasoner::triple ( const jsonld::quad& q ) {
-	return triple ( q.subj->value, q.pred->value, q.object->value );
-}
-
-prover::term* pred2term(shared_ptr<const predicate> p) {
-	if (!p) return 0;
+prover::term* mkterm(const wchar_t* p, const wchar_t* s = 0, const wchar_t* o = 0) {
 	prover::term* t = &prover::terms[prover::nterms++];
-	t->p = p->pred;//dict.set(p->pred);
-	if (p->args.size()) {
-		t->s = pred2term(p->args[0]);
-		t->o = pred2term(p->args[1]);
-	} else
-		t->s = t->o = 0;
+	t->p = dict.set(string(p));
+	if (s) t->s = mkterm(s, 0, 0);
+	if (o) t->o = mkterm(o, 0, 0);
 	return t;
+}
+
+prover::term* mkterm(string s, string p, string o) {
+	return mkterm(p.c_str(), s.c_str(), o.c_str());
+}
+
+prover::term* quad2term(const quad& p) {
+	return mkterm(p.pred->value.c_str(), p.subj->value.c_str(), p.object->value.c_str());
 }
 
 int szqdb(const qdb& x) {
@@ -440,16 +432,16 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 	if (p[0] == L'?')
 		throw 0;
 	prover::rule* r = &prover::rules[prover::nrules++];
-	r->p = pred2term(triple ( s, p, o ));
+	r->p = mkterm(s, p, o );
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
 		ss.rkb[r->p->p].push_back(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
-		prover::term* tt = pred2term(triple ( *y ));
+		prover::term* tt = quad2term( *y );
 		r->p = tt;
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
-				r->body.push_front( pred2term( triple ( *z ) ) );
+				r->body.push_front( quad2term( *z ) );
 		ss.rkb[r->p->p].push_back(r);
 	}
 }
@@ -462,13 +454,13 @@ qlist merge ( const qdb& q ) {
 
 bool reasoner::prove ( qdb kb, qlist query ) {
 	prover::session ss;
-	std::set<string> predicates;
+	//std::set<string> predicates;
 	for ( jsonld::pquad quad : *kb.at(L"@default")) {
 		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 			addrules(s, p, o, ss, kb);
 	}
 	for ( auto q : query )
-		ss.goal.push_front( pred2term( triple ( *q ) ) );
+		ss.goal.push_front( quad2term( *q ) );
 	prover::prove(&ss);
 	return ss.e.size();
 }
