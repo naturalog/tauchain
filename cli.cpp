@@ -64,7 +64,10 @@ pobj cmd_t::load_json ( string fname, bool print ) {
 	if ( fname == L"" ) json_spirit::read_stream ( std::wcin, v );
 	else {
 		std::wifstream is ( ws(fname) );
-		json_spirit::read_stream ( is, v );
+		if (!is.is_open())
+			throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
+		if (!json_spirit::read_stream ( is, v ))
+			throw std::runtime_error("couldnt load json");
 	}
 	pobj r =  jsonld::convert ( v );
 	if ( !r ) throw wruntime_error ( L"Couldn't read input." );

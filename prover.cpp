@@ -153,6 +153,10 @@ int builtin(term& t, proof& p, session* ss) {
 				return 1;
 		}
 	}
+	#ifdef marpa
+	if (t.p == marpa_parsed) {
+	#endif
+
 	return -1;
 }
 
