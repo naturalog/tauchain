@@ -48,6 +48,7 @@ void initmem() {
 }
 
 term* evaluate(term* p, subst& s) {
+	if (!p) return 0;
 	if (p->p < 0) {
 		auto it = s.find(p->p);
 		return it == s.end() ? 0 : evaluate(s[p->p], s);
@@ -123,30 +124,36 @@ int builtin(term& t, proof& p, session* ss) {
 	if (t.p == lognotEqualTo)
 		return t0 && t1 && t0->p != t1->p ? 1 : 0;
 	if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-			return unify(t0->s, p.s, t.o, p.s, true) ? 1 : 0;
+		return unify(t0->s, p.s, t.o, p.s, true) ? 1 : 0;
 	if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-			return unify(t0->o, p.s, t.o, p.s, true) ? 1 : 0;
+		return unify(t0->o, p.s, t.o, p.s, true) ? 1 : 0;
 	if (t.p == A || t.p == rdfsType) {
-		if (!t1) 
-			return -1;
-		if ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource)
+		if (t1 && ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource))
 			return 1;
+		if (!t.o) 
+			return -1;
+		if (!t0) t0 = t.s;
+		if (!t1) t0 = t.o;
 		session s2;
-		s2.kb = ss->kb;
+		s2.rkb = ss->rkb;
 		term vA(L"?A", 0, 0);
-		term q1(rdfssubClassOf, &vA, t1);
+		term q1(rdfssubClassOf, &vA, t.s);
 		s2.goal.push_front(&q1);
 		prove(&s2);
 		if (s2.e.empty()) 
 			return -1;
-		std::list<std::pair<term*, ground>> answers = s2.e[rdfssubClassOf];
+		auto it = s2.e.find(rdfssubClassOf);
+		if (it == s2.e.end()) return -1;
+		std::list<std::pair<term*, ground>> answers = it->second;
 		std::list<int> classes;
 		for (auto tg : answers) {
-			int subclasser = tg.second.front().second[t1->p]->p;
+			auto iit = tg.second.front().second.find(t.o->p);
+			if (iit == tg.second.front().second.end()) continue;
+			int subclasser = iit->second->p;
 			session s3;
-			s3.kb = ss->kb;
+			s3.rkb = ss->rkb;
 			term sc(subclasser);
-			term q2(A, t0, &sc);
+			term q2(A, t.s, &sc);
 			s3.goal.push_front(&q2);
 			prove(&s3);
 			if (!s3.e.empty())
@@ -187,7 +194,7 @@ void prove(session* ss) {
 				rule* rl = &rules[nrules++];
 				*r = *p;
 				rl->p = evaluate(t, p->s);
-				r->g = ground(p->g);
+				r->g = p->g;
 				r->g.emplace_back(rl, subst());
 				++r->last;
 				qu.push_back(r);
@@ -225,7 +232,7 @@ void prove(session* ss) {
 					r->last = r->rul->body.begin();
 					r->prev = p;
 					r->s = s;
-					r->g = ground(p->g);
+					r->g = p->g;
 					if (rl->body.empty())
 						r->g.emplace_back(rl, subst());
 					qu.push_front(r);
@@ -411,14 +418,14 @@ void printe(const evidence& e) {
 	for (auto y : e)
 		for (auto x : y.second) {
 			printterm(*x.first);
-			if ( x.second.size() == 1 && x.second.front().second.empty()) 
-				dout << L"." << std::endl;
-			else
-			{
+//			if ( x.second.size() == 1 && x.second.front().second.empty()) 
+//				dout << L"." << std::endl;
+//			else
+//			{
 				dout << L":" << std::endl;
 				printg(x.second);
 				dout << std::endl;
-			}
+//			}
 #ifdef IRC
 			sleep(1);
 #endif
