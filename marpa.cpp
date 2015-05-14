@@ -71,10 +71,25 @@ int load_n3_cmd::operator() ( const strings& args )
 		dout << help();
 		return 1;
 	}
-	pobj grammar = load_json("n3-grammar.jsonld");
-	cout << grammar->MAP();
+	pobj grammar = load_json();
+	string gfn = "n3-grammar.jsonld";
+	qdb kb = convert ( gfn );
+	opts.base = pstr ( string ( "file://" ) + gfn + "#" );
+
+
+
+	string root = "http://www.w3.org/2000/10/swap/grammar/n3#document";
 
 	Marpa m;
+	m.
+
+	//qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
+	//auto e = r.prove ( kb, merge ( query ) );
+	//dout << "evidence: " << endl << e << endl;
+
+
+
+
 	//m.load_grammar(grammar["document"]);
 	return 0;
 }
@@ -267,3 +282,10 @@ https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900
 https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
 */
 
+
+
+/*psomap m1 = grammar->MAP();
+olist m2 = *(*m1)["@graph"]->LIST();
+for (pobj x: m2)
+	//cout << x.first << " : " << x.second << endl;
+	cout << x << endl;*/
