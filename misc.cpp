@@ -61,7 +61,7 @@ string dstr ( int p ) {
 	if ( s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 }
-
+/*
 std::wostream& operator<< ( std::wostream& o, const predicate& p ) {
 	if ( p.args.size() == 2 ) 
 	return o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";
@@ -79,7 +79,7 @@ std::wostream& operator<< ( std::wostream& o, const predlist& l ) {
 	}
 	return o << L']';
 }
-
+*/
 bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
 }
