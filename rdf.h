@@ -4,21 +4,21 @@
 #include "object.h"
 #include <list>
 
-using namespace std;
+//using namespace std;
 
 namespace jsonld {
 
-typedef map<string, string> ssmap;
+typedef std::map<string, string> ssmap;
 typedef std::shared_ptr<ssmap> pssmap;
 
 class node;
 typedef std::shared_ptr<node> pnode;
-typedef map<string, pnode> snmap;
+typedef std::map<string, pnode> snmap;
 typedef std::shared_ptr<snmap> psnmap;
 
 class node {
 public:
-	string type, value, datatype, lang;
+	string value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE } _type;
 	node ( const node_type& t ) : _type ( t ) { }
 	string tostring();
@@ -45,9 +45,9 @@ public:
 };
 
 typedef std::shared_ptr<quad> pquad;
-typedef list<pquad> qlist;
+typedef std::list<pquad> qlist;
 typedef std::shared_ptr<qlist> pqlist;
-typedef map<string, pqlist> qdb;
+typedef std::map<string, pqlist> qdb;
 
 extern const pnode first;
 extern const pnode rest;
@@ -55,9 +55,9 @@ extern const pnode nil;
 
 pqlist mk_qlist();
 
-ostream& operator<< ( ostream& o, const qdb& );
-ostream& operator<< ( ostream& o, const qlist& );
-qdb readqdb ( istream& is );
+std::wostream& operator<< ( std::wostream& o, const qdb& );
+std::wostream& operator<< ( std::wostream& o, const qlist& );
+qdb readqdb ( std::wistream& is );
 
 class jsonld_api;
 class rdf_db: public qdb {

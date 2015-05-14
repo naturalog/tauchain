@@ -11,6 +11,8 @@
 #include <signal.h>
 #include <execinfo.h>
 #include <ostream>
+#include "strings.h"
+#include <iostream>
 
 #ifdef DEBUG
 #define TRACE(x) x
@@ -26,23 +28,25 @@ extern bool deref, shorten;
 extern bool autobt, _pause;
 void bt();
 void dopause();
-#define trace(x) std::clog<<__FILE__<<':'<<__LINE__<<'\t'<<x; if (_pause) dopause()
+#define trace(x) std::wclog<<__FILE__<<':'<<__LINE__<<tab<<x; if (_pause) dopause()
 #else
 void bt();
 #define trace(x)
 #endif
 
 typedef std::nullptr_t null;
-typedef std::string string;
+//typedef std::string string;
 typedef std::shared_ptr<string> pstring;
+//typedef std::shared_ptr<wstring> pwstring;
 typedef std::shared_ptr<bool> pbool;
 
+//pwstring pwstr ( const wstring& s );
 pstring pstr ( const string& s );
-pstring pstr ( const char* s );
-pstring pstr ( const unsigned char* s );
+pstring pstr ( const wchar_t* s );
+//pstring pstr ( const unsigned char* s );
 
-extern std::ostream& dout;
-extern std::ostream& derr;
+extern std::wostream& dout;
+extern std::wostream& derr;
 
 class obj {
 protected:
@@ -82,7 +86,7 @@ public:
 	std::shared_ptr<obj> MAP ( const string& k );
 	bool map_and_has ( const string& k );
 	bool map_and_has_null ( const string& k );
-	virtual string type_str() const = 0;
+	virtual std::string type_str() const = 0;
 	virtual bool equals ( const obj& o ) const = 0;
 	virtual pobj clone() const = 0;
 	string toString ( );
@@ -95,9 +99,8 @@ public: \
 	type##_obj(const type& o = type()) { data = std::make_shared<type>(); *data = o; } \
 	type##_obj(const std::shared_ptr<type> o) : data(o) { }  \
 	virtual std::shared_ptr<type> getter() { \
-	trace( "queried object of type "<<type_str()<<" and value "<<toString()); \
 	return data; } \
-	virtual string type_str() const { return #type; } \
+	virtual std::string type_str() const { return #type; } \
 	virtual bool equals(const obj& o) const { \
 		if ( type_str() != o.type_str() ) return false; \
 		auto od = ((const type##_obj&)o).data; \
@@ -166,7 +169,7 @@ struct jsonld_options {
 	pstring base = 0;//pstr ( "http://tauchain.org/" );
 	pbool compactArrays = std::make_shared<bool> ( true );
 	std::shared_ptr<class obj> expandContext = 0;
-	pstring processingMode = pstr ( "json-ld-1.0" );
+	pstring processingMode = pstr ( L"json-ld-1.0" );
 	pbool embed = 0;
 	pbool isexplicit = std::make_shared<bool> ( true );
 	pbool omitDefault = 0;

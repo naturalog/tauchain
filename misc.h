@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 #include <boost/bimap.hpp>
-using namespace std;
+#include "strings.h"
+//using namespace std;
 
 class bidict {
 	//	map<int, string> m1;
@@ -15,7 +16,7 @@ class bidict {
 public:
 	bidict();
 	int set ( const string& v );
-	void set ( const vector<string>& v );
+	void set ( const std::vector<string>& v );
 	const string operator[] ( int k );
 	int operator[] ( const string& v );
 	bool has ( int k ) const;

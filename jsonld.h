@@ -19,8 +19,7 @@
 #include "object.h"
 #include "strings.h"
 #include "rdf.h"
-#include "jsonld.h"
-using namespace std;
+//using namespace std;
 
 inline string resolve ( pstring base_, const string& ref ) {
 	return base_ ? *base_ + ref : ref;
@@ -54,16 +53,16 @@ bool keyword ( const string& key );
 bool keyword ( pstring key );
 
 #define KW_SHORTCUTS(x) \
-const string kw##x = string("@") + #x;\
-template<typename T> inline bool has##x(T t) { return has(t,kw##x); } \
-inline const pobj& get##x(pobj p) { return p->MAP()->at(kw##x); } \
-inline const pobj& get##x(obj& p) { return p.MAP()->at(kw##x); } \
-inline const pobj& get##x(psomap p) { return p->at(kw##x); } \
-inline const pobj& get##x(somap p) { return p.at(kw##x); } \
-inline const pobj sget##x(pobj p) { return has##x(p->MAP()) ? p->MAP()->at(kw##x) : 0; } \
-inline const pobj sget##x(obj& p) { return has##x(p.MAP()) ? p.MAP()->at(kw##x) : 0; } \
-inline const pobj sget##x(psomap p) { return has##x(p) ? p->at(kw##x) : 0; } \
-inline const pobj sget##x(somap p) { return has##x(p) ? p.at(kw##x) : 0; }
+const string kw##x = string(L"@") + ws(#x);\
+template<typename T> inline bool has##x(T t) { return 	has(t, kw##x); } \
+inline const pobj& get##x(pobj p) { return 		p->MAP()->at(kw##x); } \
+inline const pobj& get##x(obj& p) { return		p.MAP()->at(kw##x); } \
+inline const pobj& get##x(psomap p) { return 		p->at(kw##x); } \
+inline const pobj& get##x(somap p) { return 		p.at(kw##x); } \
+inline const pobj sget##x(pobj p) { return 		has##x(p->MAP()) ? p->MAP()->at(kw##x) : 0; } \
+inline const pobj sget##x(obj& p) { return 		has##x(p.MAP()) ? p.MAP()->at(kw##x) : 0; } \
+inline const pobj sget##x(psomap p) { return 		has##x(p) ? p->at(kw##x) : 0; } \
+inline const pobj sget##x(somap p) { return 		has##x(p) ? p.at(kw##x) : 0; }
 KW_SHORTCUTS ( base )
 KW_SHORTCUTS ( id )
 KW_SHORTCUTS ( index )
@@ -90,8 +89,8 @@ bool is_abs_iri ( const string& s );
 bool is_rel_iri ( const string& s );
 pobj newMap ( const string& k, pobj v );
 bool isvalue ( pobj v );
-polist vec2vec ( const vector<string>& x );
-vector<string> vec2vec ( polist x );
+polist vec2vec ( const std::vector<string>& x );
+std::vector<string> vec2vec ( polist x );
 void add_all ( polist l, pobj v );
 
 struct remote_doc_t {
@@ -109,7 +108,7 @@ size_t write_data ( void *ptr, size_t size, size_t n, void *stream );
 string download ( const string& url );
 pobj fromURL ( const string& url );
 remote_doc_t load ( const string& url );
-pobj convert ( const json_spirit::mValue& v );
+pobj convert ( const json_spirit::wmValue& v );
 
 class context_t: public somap_obj {
 private:
@@ -124,7 +123,7 @@ public:
 
 	typedef std::shared_ptr<context_t> pcontext;
 	//Context Processing Algorithm http://json-ld.org/spec/latest/json-ld-api/#context-processing-algorithms
-	pcontext parse ( pobj localContext, vector<string> remoteContexts = vector<string>() );
+	pcontext parse ( pobj localContext, std::vector<string> remoteContexts = std::vector<string>() );
 	void create_term_def ( const psomap context, const string term, pdefined_t pdefined );
 	pstring expand_iri ( const pstring value, bool relative, bool vocab, const psomap context, pdefined_t defined );
 
@@ -139,7 +138,7 @@ public:
 	int compareShortestLeast ( string a, pstring b );
 	int compareShortestLeast ( pstring a, string b );
 	// http://json-ld.org/spec/latest/json-ld-api/#term-selection
-	pstring selectTerm ( string iri, vector<string>& containers, string typeLanguage, vector<string>& preferredValues );
+	pstring selectTerm ( string iri, std::vector<string>& containers, string typeLanguage, std::vector<string>& preferredValues );
 	pstring compactIri ( string iri, bool relativeToVocab );
 	pstring compactIri ( pstring iri, bool relativeToVocab );
 	pstring compactIri ( pstring iri, pobj value, bool relativeToVocab, bool reverse );
@@ -164,7 +163,7 @@ public:
 	static map<string, string> bnode_id_map;
 
 	jsonld_api ( pobj input, jsonld_options opts );
-	jsonld_api ( jsonld_options opts_ = jsonld_options ( "" ) ) :
+	jsonld_api ( jsonld_options opts_ = jsonld_options ( L"" ) ) :
 		opts ( opts_ ) {
 	}
 private:
@@ -181,7 +180,7 @@ public:
 	static void mergeValue ( psomap obj, string key, pobj value );
 	static void mergeValue ( somap& obj, pstring key, pobj value );
 	static void mergeValue ( somap& obj, string key, pobj value );
-	string gen_bnode_id ( string id = "" );
+	string gen_bnode_id ( string id = L"" );
 	void gen_node_map ( pobj element, psomap nodeMap );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring act_prop, psomap list );

@@ -24,8 +24,7 @@ marpa.o: marpa.cpp cli.h rdf.h object.h parsers.h jsonld.h json_spirit.h \
 
 debug: CXXFLAGS += -DDEBUG
 irc: CXXFLAGS += -DIRC
-marpa: CXXFLAGS += -Dmarpa
-	OBJECTS += marpa.o
+marpa: CXXFLAGS += -Dmarpa OBJECTS += marpa.o
 
 marpa: $(OBJECTS) marpa.o $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o tau $(LDFLAGS)

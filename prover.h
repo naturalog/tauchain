@@ -22,21 +22,20 @@
 #include <thread>
 #include "misc.h"
 
-using namespace std;
+//using namespace std;
 using namespace jsonld;
 
 const uint K1 = 1024, M1 = K1 * K1;
 const uint max_predicates = 1, max_rules = 1, max_proofs = 1;
 
-extern list<thread*> threads;
-typedef vector<shared_ptr<const struct predicate>> predlist;
+typedef std::vector<shared_ptr<const struct predicate>> predlist;
 struct predicate {
 	int pred = 0;
 	predlist args;
 	predicate( int _p = 0, predlist _args = predlist() ) : pred(_p), args(_args) { }
 };
-ostream& operator<< ( ostream& o, const predlist& l );
-ostream& operator<< ( ostream& o, const predicate& p );
+std::wostream& operator<< ( std::wostream& o, const predlist& l );
+std::wostream& operator<< ( std::wostream& o, const predicate& p );
 
 namespace prover {
 struct session;
@@ -60,7 +59,7 @@ struct term {
 	term() : p(0), s(0), o(0) {}
 };
 
-typedef forward_list<term*> termset;
+typedef std::forward_list<term*> termset;
 
 struct rule {
 	term* p;
@@ -68,10 +67,10 @@ struct rule {
 	rule() : p(0), body(0) {}
 };
 
-typedef map<int, list<rule*>> ruleset;
-typedef map<int, term*> subst;
-typedef list<pair<rule*, subst>> ground;
-typedef map<int, list<pair<term*, ground>>> evidence;
+typedef std::map<int, std::list<rule*>> ruleset;
+typedef std::map<int, term*> subst;
+typedef std::list<std::pair<rule*, subst>> ground;
+typedef std::map<int, std::list<std::pair<term*, ground>>> evidence;
 
 struct proof {
 	rule* rul;
@@ -81,7 +80,7 @@ struct proof {
 	ground g;
 	proof() : rul(0), last(0), prev(0) {}
 };
-typedef deque<proof*> queue;
+typedef std::deque<proof*> queue;
 
 struct session {
 	ruleset rkb;
@@ -106,7 +105,7 @@ void printq(const queue& q);				// print a proof queue
 bool is_implication(int p);				// identifies an implication resource
 void trim(char *s);					// trim strings from both ends using isspace
 
-const uint MEM = 1024 * 1024 * 4;
+const uint MEM = 1024 * 256;
 const uint max_terms = MEM;
 const uint max_termsets = MEM;
 const uint max_rules = MEM;

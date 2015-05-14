@@ -6,19 +6,19 @@ bidict& dict = *new bidict;
 bool deref = true, shorten = false;
 
 bidict::bidict() {
-	GND = set ( "GND" );
-	logequalTo = set ( "log:equalTo");
-	lognotEqualTo = set ("log:notEqualTo");
-	rdffirst = set("rdf:first"); 
-	rdfrest = set("rdf:rest");
-	A = set("a");
-	rdfsResource = set("rdfs:Resource"); 
-	rdfList = set("rdf:List");
-	Dot = set(".");
-	rdfsType = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
+	GND = set ( L"GND" );
+	logequalTo = set ( L"log:equalTo");
+	lognotEqualTo = set (L"log:notEqualTo");
+	rdffirst = set(L"rdf:first"); 
+	rdfrest = set(L"rdf:rest");
+	A = set(L"a");
+	rdfsResource = set(L"rdfs:Resource"); 
+	rdfList = set(L"rdf:List");
+	Dot = set(L".");
+	rdfsType = set(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 }
 
-void bidict::set ( const vector<string>& v ) {
+void bidict::set ( const std::vector<string>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
@@ -26,7 +26,7 @@ int bidict::set ( const string& v ) {
 	auto it = m.right.find ( v );
 	if ( it != m.right.end() ) return it->second;
 	int k = m.size();
-	if ( v[0] == '?'/* || v[0] == '_'*/ ) k = -k;
+	if ( v[0] == L'?'/* || v[0] == '_'*/ ) k = -k;
 	m.insert ( bm::value_type ( k, v ) );
 	return k;
 }
@@ -49,8 +49,8 @@ bool bidict::has ( const string& v ) const {
 }
 
 string bidict::tostr() {
-	stringstream s;
-	for ( auto x : m.right ) s << x.first << " := " << x.second << endl;
+	std::wstringstream s;
+	for ( auto x : m.right ) s << x.first << L" := " << x.second << std::endl;
 	return s.str();
 }
 
@@ -58,26 +58,26 @@ string dstr ( int p ) {
 	if ( !deref ) return tostr ( p );
 	string s = dict[p];
 	if ( !shorten ) return s;
-	if ( s.find ( "#" ) == string::npos ) return s;
-	return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
+	if ( s.find ( L"#" ) == string::npos ) return s;
+	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 }
 
-ostream& operator<< ( ostream& o, const predicate& p ) {
+std::wostream& operator<< ( std::wostream& o, const predicate& p ) {
 	if ( p.args.size() == 2 ) 
 	return o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";
 	o << dstr ( p.pred );
 	return p.args.empty() ? o : o << p.args;
 }
 
-ostream& operator<< ( ostream& o, const predlist& l ) {
-	if ( l.empty() ) return o << "[]";
-	o << '[';
+std::wostream& operator<< ( std::wostream& o, const predlist& l ) {
+	if ( l.empty() ) return o << L"[]";
+	o << L'[';
 	for ( predlist::const_iterator it = l.cbegin();; ) {
 		o << **it;
 		if ( ++it == l.end() ) break;
 		else o << ',';
 	}
-	return o << ']';
+	return o << L']';
 }
 
 bool endsWith ( const string& x, const string& y ) {
