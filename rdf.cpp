@@ -245,6 +245,7 @@ qdb readqdb ( std::wistream& is) {
 	qdb q;
 	auto tr = [](string s){
 		trim_if(s, is_any_of(L" <>"));
+//		trim(s);
 		return s;
 	};
 	while (is.get(ch)) {
@@ -281,7 +282,7 @@ qdb readqdb ( std::wistream& is) {
 					q[c] = make_shared<qlist>();
 				q[c]->push_back(pq);
 				pos = -1;
-				s=p=o=c=L"";
+				s = p = o = c = L"";
 			} else
 				switch (pos) {
 				case 0: s += ch; break;

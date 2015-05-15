@@ -38,7 +38,7 @@ string indent() {
 	if (!_indent) return string();
 	stringstream ss;
 //	ss << _indent;
-	for (int n = 0; n < _indent; ++n) ss << '\t';//"    ";
+	for (int n = 0; n < _indent; ++n) ss << "     ";
 	return ws(ss.str());
 }
 
@@ -180,8 +180,9 @@ int builtin(term& t, proof& p, session* ss) {
 			dout<<"... ";
 			bool u = unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
 			if (u) {
-				dout<<"passed with new substitution:"<<std::endl << indent();
+				dout << "passed with new substitution: ";
 				prints(*p.s);
+				dout << std::endl;
 			} else dout << "failed";
 			dout << std::endl;
 			return u ? 1 : -1;
@@ -317,7 +318,7 @@ void prove(session* ss) {
 	dout << KNRM;
 	dout << std::endl << indent() << "Evidence:\n";
 	printe(ss->e);
-	dout << indent()/* << "=========================="*/ << std::endl;
+//	dout << indent()/* << "=========================="*/ << std::endl;
 	_indent--;
 }
 
@@ -336,11 +337,15 @@ string format(const term& p) {
 }
 
 void printterm(const term& p) {
-	if (p.s)
+	if (p.s) {
 		printterm(*p.s);
-	dout << L' ' << dstr(p.p) << L' ';
-	if (p.o)
+		dout << L' ';
+	}
+	dout << dstr(p.p);
+	if (p.o) {
+		dout << L' ';
 		printterm(*p.o);
+	}
 }
 
 void printp(proof* p) {
@@ -383,7 +388,7 @@ void prints(const subst& s) {
 	for (auto x : s) {
 		dout << dstr(x.first) << L" / ";
 		printterm(*x.second);
-	//	dout << std::endl;
+		dout << ' ';// << std::endl;
 	}
 //	dout << "] ";
 }
@@ -421,18 +426,20 @@ void printr(const rule& r) {
 }
 
 void printterm_substs(const term& p, const subst& s) {
-	if (p.s)
+	if (p.s) {
 		printterm_substs(*p.s, s);
-	dout << L' ' << dstr(p.p);
-	if(s.find(p.p) != s.end())
-	{
-		dout << L'(';
-		printterm(*s.at(p.p));
-		dout << L')';
+		dout << L' ';
 	}
-	dout << L' ';
-	if (p.o)
+	dout << dstr(p.p);
+	if(s.find(p.p) != s.end()) {
+		dout << L" (";
+		printterm(*s.at(p.p));
+		dout << L" )";
+	}
+	if (p.o) {
+		dout << L' ';
 		printterm_substs(*p.o, s);
+	}
 }
 
 void printl_substs(const termset& l, const subst& s) {
@@ -473,16 +480,11 @@ void printe(const evidence& e) {
 		for (auto x : y.second) {
 			dout << indent();
 			printterm(*x.first);
-//			if ( x.second.size() == 1 && x.second.front().second.empty()) 
-//				dout << L"." << std::endl;
-//			else
-//			{
-				dout << L":" << std::endl;
-				++_indent;
-				printg(x.second);
-				--_indent;
-				dout << std::endl;
-//			}
+			dout << L":" << std::endl;
+			++_indent;
+			printg(x.second);
+			--_indent;
+			dout << std::endl;
 #ifdef IRC
 			sleep(1);
 #endif
