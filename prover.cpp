@@ -30,7 +30,8 @@ rule* rules = 0;
 proof* proofs = 0;
 uint nterms, ntermsets, nrules, nproofs;
 
-void printps(term* p, subst* s); // print a term with a subst
+//void printps(term* p, subst* s); // print a term with a subst
+void printterm_substs(const term& p, const subst& s);
 
 void initmem() {
 	static bool once = false;
@@ -75,14 +76,14 @@ term* evaluate(term* p, subst& s) {
 	}
 	return r;
 }
-
+/*
 void printps(term& p, subst& s) {
 	printterm(p);
 	dout<<" [ ";
 	prints(s);
 	dout<<" ] ";
 }
-
+*/
 bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
 	term* v;
 	if (!s && !d) 
@@ -164,17 +165,17 @@ int builtin(term& t, proof& p, session* ss) {
 			prove(&s3);
 			std::pair<term*, ground> e = s3.e[A].front();
 			dout<<"\tTrying to unify ";
-			printps(*e.first, *e.second.front().second);
+			printterm_substs(*e.first, *e.second.front().second);
 			dout<<" and ";
-			printps(**p.last, *p.s);
+			printterm_substs(**p.last, *p.s);
 			dout<<"... ";
-			bool u = unify(e.first, *p.s/*e.second.front().second*/, *p.last, *p.s, true);
+			bool u = unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
 			if (u) {
 				dout<<"passed with new substitution:"<<std::endl;
 				prints(*p.s);
 			} else dout << "failed";
 			dout << std::endl;
-			return u ? 1 : -1;
+			return u ? 1 : 0;
 //			return unify(s3.e[A].front().first, *s3.e[A].front().second.front().second, &t, *p.s, true);
 //			if (!s3.e.empty())
 //				return 1;
@@ -201,13 +202,13 @@ void prove(session* ss) {
 	qu.push_back(p);
 	TRACE(dout<<"\nprove() called with facts:\n";
 		printrs(cases);
-//		dout<<"\nand query:\n";
-//		printl(goal);
+		dout<<"\nand query:\n";
+		printl(goal);
 		dout << std::endl);
 	do {
 		p = qu.back();
 		qu.pop_back();
-//		TRACE(dout<<"popped frame:\n";printp(p));
+		TRACE(dout<<"popped frame:\n";printp(p));
 		if (p->last != p->rul->body.end()) {
 			term* t = *p->last;
 			TRACE(dout<<"Tracking back from ";
@@ -240,9 +241,9 @@ void prove(session* ss) {
 			for (rule* rl : rs) {
 				subst s;
 				TRACE(dout<<"\tTrying to unify ";
-					printps(*t, *p->s);
+					printterm_substs(*t, *p->s);
 					dout<<" and ";
-					printps(*rl->p, s);
+					printterm_substs(*rl->p, s);
 					dout<<"... ");
 				if (unify(t, *p->s, rl->p, s, true)) {
 					TRACE(dout<<"\tunification succeeded";
@@ -262,7 +263,7 @@ void prove(session* ss) {
 					if (rl->body.empty())
 						r->g.emplace_back(rl, make_shared<subst>());
 					qu.push_front(r);
-//					TRACE(dout<<"pushing frame:\n";printp(r));
+					TRACE(dout<<"pushing frame:\n";printp(r));
 				} else {
 					TRACE(dout<<"\tunification failed\n");
 				}
@@ -286,7 +287,7 @@ void prove(session* ss) {
 			unify(p->rul->p, *p->s, *r->last, *r->s, true);
 			++r->last;
 			qu.push_back(r);
-//			TRACE(dout<<"pushing frame:\n";printp(r));
+			TRACE(dout<<"pushing frame:\n";printp(r));
 			TRACE(dout<<L"finished a frame. queue size:" << qu.size() << std::endl);
 //			TRACE(printq(qu));
 			continue;
@@ -302,7 +303,7 @@ void prove(session* ss) {
 	dout << KNRM;
 	dout << "\nEvidence:\n";
 	printe(ss->e);
-//	dout << "==========================" << std::endl;
+	dout << "==========================" << std::endl;
 }
 
 bool equals(term* x, term* y) {
@@ -361,9 +362,9 @@ void printq(const queue& q) {
 void prints(const subst& s) {
 //	dout << '[';
 	for (auto x : s) {
-		dout << L"        " << dstr(x.first) << L" / ";
+		dout << dstr(x.first) << L" / ";
 		printterm(*x.second);
-		dout << std::endl;
+	//	dout << std::endl;
 	}
 //	dout << "] ";
 }
@@ -442,10 +443,8 @@ void printg(const ground& g) {
 	for (auto x : g) {
 		dout << L"    ";
 		printr_substs(*x.first, *x.second);
-		if (!x.second || x.second->empty()) {
+		if (!x.second || x.second->empty()) 
 			dout << std::endl;
-			continue;
-		}
 	}
 //	dout<<'.';
 }
