@@ -48,26 +48,26 @@ struct term {
 	term(const string& _p, term* _s = 0, term* _o = 0) : term(dict.set(_p), _s, _o) {}
 };
 
-typedef std::forward_list<term*> termset;
+typedef std::set/*forward_list*/<term*> termset;
 
 struct rule {
 	term* p;
 	termset body;
-	rule() : p(0), body(0) {}
+	rule() : p(0) {}
 };
 
 typedef std::map<int, std::list<rule*>> ruleset;
 typedef std::map<int, term*> subst;
-typedef std::list<std::pair<rule*, subst>> ground;
+typedef std::list<std::pair<rule*, std::shared_ptr<subst>>> ground;
 typedef std::map<int, std::list<std::pair<term*, ground>>> evidence;
 
 struct proof {
 	rule* rul;
 	termset::iterator last;
 	proof* prev;
-	subst s;
+	std::shared_ptr<subst> s;
 	ground g;
-	proof() : rul(0), last(0), prev(0) {}
+	proof() : rul(0), prev(0), s(make_shared<subst>()) {}
 };
 typedef std::deque<proof*> queue;
 
@@ -81,18 +81,18 @@ void initmem();
 term* evaluate(term* p, subst* s); 			// evaluates a term given a subst
 bool unify(term* s, subst* ssub, term* d, subst** dsub, bool f); // unification
 void prove(session* ss);				// backchaining
-bool equals(term* x, term* y);				// deep-compare terms
+//bool equals(term* x, term* y);				// deep-compare terms
 void printterm(const term& p);				// print a term
 void prints(const subst& s);				// print a subst
 void printl(const termset& l);
 void printg(const ground& g);			// print a ground struct
 void printe(const evidence& e);			// print evidence
 void printr(const rule& r);				// print rule
-void printp(const proof& p);				// print a proof element
 void printrs(const ruleset& rs);			// print a ruleset
 void printq(const queue& q);				// print a proof queue
-bool is_implication(int p);				// identifies an implication resource
-void trim(char *s);					// trim strings from both ends using isspace
+void printp(proof* p);
+//bool is_implication(int p);				// identifies an implication resource
+//void trim(char *s);					// trim strings from both ends using isspace
 
 const uint MEM = 1024 * 256;
 const uint max_terms = MEM;

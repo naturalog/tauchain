@@ -14,6 +14,7 @@
 #include <utility>
 #include "object.h"
 #include "prover.h"
+#include <iterator>
 #include <boost/algorithm/string.hpp>
 
 using namespace boost::algorithm;
@@ -106,7 +107,7 @@ bool euler_path(proof* p) {
 	proof* ep = p;
 	while ((ep = ep->prev))
 		if (ep->rul == p->rul &&
-			unify(ep->rul->p, ep->s, p->rul->p, p->s, false))
+			unify(ep->rul->p, *ep->s, p->rul->p, *p->s, false))
 			break;
 	if (ep) {
 		TRACE(dout<<"Euler path detected\n");
@@ -117,16 +118,16 @@ bool euler_path(proof* p) {
 
 int builtin(term& t, proof& p, session* ss) {
 	if (t.p == GND) return 1;
-	term* t0 = evaluate(t.s, p.s);
-	term* t1 = evaluate(t.o, p.s);
+	term* t0 = evaluate(t.s, *p.s);
+	term* t1 = evaluate(t.o, *p.s);
 	if (t.p == logequalTo)
 		return t0 && t1 && t0->p == t1->p ? 1 : 0;
 	if (t.p == lognotEqualTo)
 		return t0 && t1 && t0->p != t1->p ? 1 : 0;
 	if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		return unify(t0->s, p.s, t.o, p.s, true) ? 1 : 0;
+		return unify(t0->s, *p.s, t.o, *p.s, true) ? 1 : 0;
 	if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		return unify(t0->o, p.s, t.o, p.s, true) ? 1 : 0;
+		return unify(t0->o, *p.s, t.o, *p.s, true) ? 1 : 0;
 	if (t.p == A || t.p == rdfsType) {
 		if (t1 && ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource))
 			return 1;
@@ -138,7 +139,7 @@ int builtin(term& t, proof& p, session* ss) {
 		s2.rkb = ss->rkb;
 		term vA(L"?A", 0, 0);
 		term q1(rdfssubClassOf, &vA, t.s);
-		s2.goal.push_front(&q1);
+		s2.goal.insert(&q1);
 		prove(&s2);
 		if (s2.e.empty()) 
 			return -1;
@@ -147,14 +148,14 @@ int builtin(term& t, proof& p, session* ss) {
 		std::list<std::pair<term*, ground>> answers = it->second;
 		std::list<int> classes;
 		for (auto tg : answers) {
-			auto iit = tg.second.front().second.find(t.o->p);
-			if (iit == tg.second.front().second.end()) continue;
+			auto iit = tg.second.front().second->find(t.o->p);
+			if (iit == tg.second.front().second->end()) continue;
 			int subclasser = iit->second->p;
 			session s3;
 			s3.rkb = ss->rkb;
 			term sc(subclasser);
 			term q2(A, t.s, &sc);
-			s3.goal.push_front(&q2);
+			s3.goal.insert(&q2);
 			prove(&s3);
 			if (!s3.e.empty())
 				return 1;
@@ -179,14 +180,15 @@ void prove(session* ss) {
 	p->last = rg->body.begin();
 	p->prev = 0;
 	qu.push_back(p);
-	TRACE(dout<<"\nprove() called with facts:";
+	TRACE(dout<<"\nprove() called with facts:\n";
 		printrs(cases);
-		dout<<"\nand query:";
+		dout<<"\nand query:\n";
 		printl(goal);
 		dout << std::endl);
 	do {
 		p = qu.back();
 		qu.pop_back();
+		TRACE(dout<<"popped frame:\n";printp(p));
 		if (p->last != p->rul->body.end()) {
 			term* t = *p->last;
 			TRACE(dout<<"Tracking back from ";
@@ -197,11 +199,12 @@ void prove(session* ss) {
 				proof* r = &proofs[nproofs++];
 				rule* rl = &rules[nrules++];
 				*r = *p;
-				rl->p = evaluate(t, p->s);
+				rl->p = evaluate(t, *p->s);
 				r->g = p->g;
-				r->g.emplace_back(rl, subst());
+				r->g.emplace_back(rl, make_shared<subst>());
 				++r->last;
 				qu.push_back(r);
+//				TRACE(dout<<"pushing frame:\n";printp(r));
 		            	continue;
 		        }
 		    	else if (!b) 
@@ -218,11 +221,11 @@ void prove(session* ss) {
 			for (rule* rl : rs) {
 				subst s;
 				TRACE(dout<<"\tTrying to unify ";
-					printps(*t, p->s);
+					printps(*t, *p->s);
 					dout<<" and ";
 					printps(*rl->p, s);
 					dout<<"... ");
-				if (unify(t, p->s, rl->p, s, true)) {
+				if (unify(t, *p->s, rl->p, s, true)) {
 					TRACE(dout<<"\tunification succeeded";
 						if (s.size()) {
 							dout<<" with new substitution: ";
@@ -235,11 +238,12 @@ void prove(session* ss) {
 					r->rul = rl;
 					r->last = r->rul->body.begin();
 					r->prev = p;
-					r->s = s;
+					r->s = make_shared<subst>(s);
 					r->g = p->g;
 					if (rl->body.empty())
-						r->g.emplace_back(rl, subst());
+						r->g.emplace_back(rl, make_shared<subst>());
 					qu.push_front(r);
+//					TRACE(dout<<"pushing frame:\n";printp(r));
 				} else {
 					TRACE(dout<<"\tunification failed\n");
 				}
@@ -247,11 +251,11 @@ void prove(session* ss) {
 		}}
 		else if (!p->prev) {
 			for (auto r = p->rul->body.begin(); r != p->rul->body.end(); ++r) {
-				term* t = evaluate(*r, p->s);
+				term* t = evaluate(*r, *p->s);
 				ss->e[t->p].emplace_back(t, p->g);
 			}
 			TRACE(dout<<"no prev frame. queue:\n");
-//			TRACE(printq(qu));
+			TRACE(printq(qu));
 		} else {
 			ground g = p->g;
 			proof* r = &proofs[nproofs++];
@@ -259,10 +263,11 @@ void prove(session* ss) {
 				g.emplace_back(p->rul, p->s);
 			*r = *p->prev;
 			r->g = g;
-			r->s = p->prev->s;
-			unify(p->rul->p, p->s, *r->last, r->s, true);
+			r->s = make_shared<subst>(*p->prev->s);
+			unify(p->rul->p, *p->s, *r->last, *r->s, true);
 			++r->last;
 			qu.push_back(r);
+//			TRACE(dout<<"pushing frame:\n";printp(r));
 			TRACE(dout<<L"finished a frame. queue size:" << qu.size() << std::endl);
 //			TRACE(printq(qu));
 			continue;
@@ -300,13 +305,12 @@ void printp(proof* p) {
 		return;
 	dout << L"\trule:\t";
 	printr(*p->rul);
-	dout << L"\n\tremaining:\t";
-//	printl(p->last);
+//	dout << L"\n\tindex:\t" << std::distance(p->rul->body.begin(), p->last) << std::end;
 	if (p->prev)
 		dout << L"\n\tprev:\t" << p->prev << L"\n\tsubst:\t";
 	else
 		dout << L"\n\tprev:\t(null)\n\tsubst:\t";
-	prints(p->s);
+	if (p->s) prints(*p->s);
 	dout << L"\n\tground:\t";
 	printg(p->g);
 	dout << L"\n";
@@ -363,7 +367,8 @@ void printr(const rule& r) {
 		printl(r.body);
 		dout << L" => ";
 	}
-	printterm(*r.p);
+	if (r.p)
+		printterm(*r.p);
 	if(r.body.empty())
 		dout << L".";
 }
@@ -409,8 +414,8 @@ string format(const rule& r) {
 void printg(const ground& g) {
 	for (auto x : g) {
 		dout << L"    ";
-		printr_substs(*x.first, x.second);
-		if (x.second.empty()) {
+		printr_substs(*x.first, *x.second);
+		if (!x.second || x.second->empty()) {
 			dout << std::endl;
 			continue;
 		}
@@ -473,7 +478,7 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 		r->p = tt;
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
-				r->body.push_front( quad2term( *z ) );
+				r->body.insert( quad2term( *z ) );
 		ss.rkb[r->p->p].push_back(r);
 	}
 }
@@ -492,7 +497,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 			addrules(s, p, o, ss, kb);
 	}
 	for ( auto q : query )
-		ss.goal.push_front( quad2term( *q ) );
+		ss.goal.insert( quad2term( *q ) );
 	prover::prove(&ss);
 	return ss.e.size();
 }
