@@ -145,7 +145,7 @@ int builtin(term& t, proof& p, session* ss) {
 		s2.goal.insert(&q1);
 		s2.goal.insert(&q2);
 		prove(&s2);
-		return ss->e.empty() ? -1 : 1;
+		return s2.e.empty() ? -1 : 1;
 /*		term q1(rdfssubClassOf, vA, *t1);
 		s2.goal.insert(&q1);
 		prove(&s2);
