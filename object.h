@@ -14,8 +14,10 @@
 #include "strings.h"
 #include <iostream>
 
+string indent();
+
 #ifdef DEBUG
-#define TRACE(x) x
+#define TRACE(x) dout << indent(); x
 #else
 #define TRACE(X)
 #endif

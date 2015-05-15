@@ -101,6 +101,7 @@ public:
 };
 
 int main ( int argc, char** argv ) {
+	std::locale indentLocale(std::locale::classic(), new IndentFacet());
 	prover::initmem();
 	cmds_t cmds = { {
 			#ifdef marpa

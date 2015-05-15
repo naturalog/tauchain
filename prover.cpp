@@ -33,6 +33,15 @@ uint nterms, ntermsets, nrules, nproofs;
 //void printps(term* p, subst* s); // print a term with a subst
 void printterm_substs(const term& p, const subst& s);
 
+int _indent = 0;
+string indent() {
+	if (!_indent) return string();
+	stringstream ss;
+//	ss << _indent;
+	for (int n = 0; n < _indent; ++n) ss << '\t';//"    ";
+	return ws(ss.str());
+}
+
 void initmem() {
 	static bool once = false;
 	if (!once) {
@@ -164,18 +173,18 @@ int builtin(term& t, proof& p, session* ss) {
 			s3.goal.insert(&q2);
 			prove(&s3);
 			std::pair<term*, ground> e = s3.e[A].front();
-			dout<<"\tTrying to unify ";
+			dout<<indent()<<"Trying to unify ";
 			printterm_substs(*e.first, *e.second.front().second);
 			dout<<" and ";
 			printterm_substs(**p.last, *p.s);
 			dout<<"... ";
 			bool u = unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
 			if (u) {
-				dout<<"passed with new substitution:"<<std::endl;
+				dout<<"passed with new substitution:"<<std::endl << indent();
 				prints(*p.s);
 			} else dout << "failed";
 			dout << std::endl;
-			return u ? 1 : 0;
+			return u ? 1 : -1;
 //			return unify(s3.e[A].front().first, *s3.e[A].front().second.front().second, &t, *p.s, true);
 //			if (!s3.e.empty())
 //				return 1;
@@ -189,6 +198,7 @@ int builtin(term& t, proof& p, session* ss) {
 }
 
 void prove(session* ss) {
+	_indent++;
 	termset& goal = ss->goal;
 	ruleset& cases = ss->rkb;
 	queue qu;
@@ -200,9 +210,9 @@ void prove(session* ss) {
 	p->last = rg->body.begin();
 	p->prev = 0;
 	qu.push_back(p);
-	TRACE(dout<<"\nprove() called with facts:\n";
+	TRACE(dout<<"prove() called with facts:\n";
 		printrs(cases);
-		dout<<"\nand query:\n";
+		dout<<indent()<<"and query:"<<std::endl<<indent();
 		printl(goal);
 		dout << std::endl);
 	do {
@@ -297,17 +307,18 @@ void prove(session* ss) {
 			continue;
 		}
 	} while (!qu.empty());
-	dout << "==========================" << std::endl;
+	dout << indent()/* << "=========================="*/ << std::endl;
 	dout << KRED;
-	dout<<"Facts:\n";
+	dout << indent() << "Facts:\n";
 	printrs(cases);
 	dout << KYEL;
-	dout << "Query:\n";
+	dout << indent() << "Query:\n" << indent();
 	printl(goal);
 	dout << KNRM;
-	dout << "\nEvidence:\n";
+	dout << std::endl << indent() << "Evidence:\n";
 	printe(ss->e);
-	dout << "==========================" << std::endl;
+	dout << indent()/* << "=========================="*/ << std::endl;
+	_indent--;
 }
 
 bool equals(term* x, term* y) {
@@ -335,22 +346,26 @@ void printterm(const term& p) {
 void printp(proof* p) {
 	if (!p)
 		return;
-	dout << L"\trule:\t";
+	dout <<indent()<< L"rule:\t";
 	printr(*p->rul);
+	dout<<std::endl<<indent();
 //	dout << L"\n\tindex:\t" << std::distance(p->rul->body.begin(), p->last) << std::end;
 	if (p->prev)
-		dout << L"\n\tprev:\t" << p->prev << L"\n\tsubst:\t";
+		dout << L"prev:\t" << p->prev <<std::endl<<indent()<< L"subst:\t";
 	else
-		dout << L"\n\tprev:\t(null)\n\tsubst:\t";
+		dout << L"prev:\t(null)"<<std::endl<<indent()<<"subst:\t";
 	if (p->s) prints(*p->s);
-	dout << L"\n\tground:\t";
+	dout <<std::endl<<indent()<< L"ground:\t";
+	++_indent;
 	printg(p->g);
+	--_indent;
 	dout << L"\n";
 }
 
 void printrs(const ruleset& rs) {
 	for (auto x : rs)
 		for (auto y : x.second) {
+			dout << indent();
 			printr(*y);
 			dout << std::endl;
 		}
@@ -445,7 +460,7 @@ string format(const rule& r) {
 
 void printg(const ground& g) {
 	for (auto x : g) {
-		dout << L"    ";
+		dout << indent();
 		printr_substs(*x.first, *x.second);
 		if (!x.second || x.second->empty()) 
 			dout << std::endl;
@@ -456,13 +471,16 @@ void printg(const ground& g) {
 void printe(const evidence& e) {
 	for (auto y : e)
 		for (auto x : y.second) {
+			dout << indent();
 			printterm(*x.first);
 //			if ( x.second.size() == 1 && x.second.front().second.empty()) 
 //				dout << L"." << std::endl;
 //			else
 //			{
 				dout << L":" << std::endl;
+				++_indent;
 				printg(x.second);
+				--_indent;
 				dout << std::endl;
 //			}
 #ifdef IRC
