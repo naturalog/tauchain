@@ -135,35 +135,39 @@ int builtin(term& t, proof& p, session* ss) {
 //			return -1;
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
-		// {?A rdfs:subClassOf t1. ?t0 a ?A} => {t0 a t1}.
-		// {?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
 		session s2;
 		s2.rkb = ss->rkb;
-		term vA(L"?A");
-		term q1(rdfssubClassOf, vA, *t1);
-		term q2(A, *t0, vA);
-		s2.goal.insert(&q1);
-		s2.goal.insert(&q2);
-		prove(&s2);
-		return s2.e.empty() ? -1 : 1;
-/*		term q1(rdfssubClassOf, vA, *t1);
+		term& vA = terms[nterms++];
+		vA.p = dict.set(L"?A");
+		vA.s = vA.o = 0;
+		term& q1 = terms[nterms++];
+		q1.p = rdfssubClassOf;
+		q1.s = &vA;
+		q1.o = t1;
 		s2.goal.insert(&q1);
 		prove(&s2);
 		auto it = s2.e.find(rdfssubClassOf);
 		if (it == s2.e.end()) return -1;
-//		std::list<std::pair<term*, ground>> answers = it->second;
 		for (auto tg : it->second) {
 			int subclasser = tg.first->s->p;
 			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
 			session s3;
 			s3.rkb = ss->rkb;
-			term sc(subclasser);
-			term q2(A, *t0, sc);
+			term& sc = terms[nterms++];
+			sc.p = subclasser;
+			sc.o = sc.s = 0;
+			term& q2 = terms[nterms++];
+			q2.p = A;
+			q2.s = t0;
+			q2.o = &sc;
 			s3.goal.insert(&q2);
 			prove(&s3);
-			if (!s3.e.empty())
-				return 1;
-		}*/
+//typedef std::list<std::pair<rule*, std::shared_ptr<subst>>> ground;
+//typedef std::map<int, std::list<std::pair<term*, ground>>> evidence;
+			return unify(s3.e[A].front().first, *s3.e[A].front().second.front().second, &t, *p.s, true);
+//			if (!s3.e.empty())
+//				return 1;
+		}
 	}
 	#ifdef marpa
 	if (t.p == marpa_parsed) {
