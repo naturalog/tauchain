@@ -1,10 +1,11 @@
-//#include tau.h
+#include "prover.h"
 //#include "marpa.h"
 #include <boost/regex.hpp>
 #include "object.h"
 #include "cli.h"
 
 using namespace std;
+using namespace prover;
 
 const string pmatches = "http://www.w3.org/2000/10/swap/grammar/bnf#matches";
 const string pmbos = "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence";
@@ -20,22 +21,25 @@ struct Marpa{
 	map<sym,boost::regex> regexes;
 	map<sym,string> names;
 	map<pos,size_t> lengths;
+	reasoner &grmr;
 
-	void load_grammar(pobj grammar)
+	void load_grammar(reasoner _grmr, string root)
 	{
-		//sym start = add(grammar["document"]);
-		/*start_symbol_set(start);
-		precompute();*/
+		grmr = _grmr;
+		sym start = add(root);
+		start_symbol_set(start);
+		precompute();
 	}
 
-
 	//create marpa symbols and rules from grammar description in rdf
-	sym add(pobj x)
+	sym add(string x)
 	{
-		sym s;/* = symbol_new();
-		if (x.has(pmbos))
+		sym s = symbol_new();
+		term var("?X");
+		term bind;
+		if ((bind = grmr.query(term(pmbos, term(x), var))[var]))
 			//mbos is supposed to be a list of lists
-			for i in x[pmbos]
+		/*for i in x[pmbos]
 		rule_new(x, add_list(i))
 		elif x.has(pmatches)
 		regexes[s] = x[pmatches];*/
@@ -48,6 +52,69 @@ struct Marpa{
 		r = rule_new(s, [add(i) for i in x])
 		return s
 	}*/
+
+
+
+void check_int(int result){
+	if (result < 0)//== -2)
+		error();
+	return result;
+}
+
+void check_null(int result){
+	if (result == NULL)
+		error();
+	return result;
+}
+
+void error_clear(){
+	//marpa_g_error_clear(g);
+}
+
+sym symbol_new()
+{
+	num_syms++;
+	return 5;//check_int(marpa_g_symbol_new(g));
+}
+
+rule_id rule_new(sym lhs, syms rhs) {
+		return 5;//check_int(marpa_g_rule_new(g, lhs, rhs, rds.size()));
+	}
+
+rule_id sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=false){
+	return 5;//check_int(marpa_g_sequence_new(g, lhs, rhs, separator, min, proper ? MARPA_PROPER_SEPARATION : 0));
+}
+
+void precompute(s):
+	//check_int(marpa_g_precompute(g));
+	print_events();
+}
+
+void print_events()
+{/*
+	int count = check_int(marpa_g_event_count(g));
+	dout << '%s events'%count
+	if (count > 0)
+	{
+		Marpa_Event e;
+		for (int i = 0; i < count; i++)
+		{
+			int etype = check_int(marpa_g_event(g, &e, i));
+			dout << etype << ", " << e.t_value;
+		}
+	}*/
+}
+
+void start_symbol_set(sym s){
+	//check_int( marpa_g_start_symbol_set(g, s) );
+}
+
+void error()
+{/*
+	int e = marpa_g_error(g, NULL);
+	throw(new exception(e + ": " + errors[e]));*/
+}
+
 
 };
 
@@ -71,26 +138,12 @@ int load_n3_cmd::operator() ( const strings& args )
 		dout << help();
 		return 1;
 	}
-	pobj grammar = load_json();
-	string gfn = "n3-grammar.jsonld";
-	qdb kb = convert ( gfn );
-	opts.base = pstr ( string ( "file://" ) + gfn + "#" );
-
-
-
-	string root = "http://www.w3.org/2000/10/swap/grammar/n3#document";
 
 	Marpa m;
-	m.
-
-	//qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
-	//auto e = r.prove ( kb, merge ( query ) );
-	//dout << "evidence: " << endl << e << endl;
-
-
-
-
-	//m.load_grammar(grammar["document"]);
+	m.load_grammar(
+		reasoner("n3-grammar.jsonld"), 
+		"http://www.w3.org/2000/10/swap/grammar/n3#document"));
+	//m.parse(args[2]);
 	return 0;
 }
 
@@ -211,67 +264,6 @@ void parse (string inp)
 
 
 
-
-void check_int(int result){
-	if (result < 0)//== -2)
-		error();
-	return result;
-}
-
-void check_null(int result){
-	if (result == NULL)
-		error();
-	return result;
-}
-
-void error_clear(){
-	marpa_g_error_clear(g);
-}
-
-sym symbol_new()
-{
-	num_syms++;
-	return check_int(marpa_g_symbol_new(g));
-}
-
-rule_id rule_new(sym lhs, syms rhs) {
-		return check_int(marpa_g_rule_new(g, lhs, rhs, rds.size()));
-	}
-
-rule_id sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=false){
-	return check_int(marpa_g_sequence_new(g, lhs, rhs, separator, min,
-		proper ? MARPA_PROPER_SEPARATION : 0));
-}
-
-void precompute(s):
-	check_int(marpa_g_precompute(g));
-	print_events();
-}
-
-void print_events()
-{
-	int count = check_int(marpa_g_event_count(g));
-	dout << '%s events'%count
-	if (count > 0)
-	{
-		Marpa_Event e;
-		for (int i = 0; i < count; i++)
-		{
-			int etype = check_int(marpa_g_event(g, &e, i));
-			dout << etype << ", " << e.t_value;
-		}
-	}
-}
-
-void start_symbol_set(sym_id s){
-	check_int( marpa_g_start_symbol_set(g, s) );
-}
-
-void error(){
-	int e = marpa_g_error(g, NULL);
-	throw(new exception(e + ": " + errors[e]));
-}
-
  */
 
 
@@ -283,9 +275,15 @@ https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
 */
 
 
-
+/*
+trashbin
 /*psomap m1 = grammar->MAP();
 olist m2 = *(*m1)["@graph"]->LIST();
 for (pobj x: m2)
 	//cout << x.first << " : " << x.second << endl;
 	cout << x << endl;*/
+	
+	//qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
+	//auto e = r.prove ( kb, merge ( query ) );
+	//dout << "evidence: " << endl << e << endl;
+*/
