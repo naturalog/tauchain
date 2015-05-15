@@ -278,10 +278,13 @@ void prove(session* ss) {
 		}
 	} while (!qu.empty());
 	dout << "==========================" << std::endl;
+	dout << KRED;
 	dout<<"Facts:\n";
 	printrs(cases);
+	dout << KYEL;
 	dout << "Query:\n";
 	printl(goal);
+	dout << KNRM;
 	dout << "\nEvidence:\n";
 	printe(ss->e);
 //	dout << "==========================" << std::endl;
