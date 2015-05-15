@@ -34,13 +34,37 @@ uint nterms, ntermsets, nrules, nproofs;
 void printterm_substs(const term& p, const subst& s);
 
 int _indent = 0;
+string proc;
 string indent() {
 	if (!_indent) return string();
-	stringstream ss;
+	std::wstringstream ss;
 //	ss << _indent;
-	for (int n = 0; n < _indent; ++n) ss << "     ";
-	return ws(ss.str());
+	string str = L"(";
+	str += proc;
+	str += L") ";
+	ss << std::setw(_indent * 8) << str;
+//	for (int n = 0; n < _indent; ++n) ss << "     ";
+	return ss.str();
 }
+
+struct _setproc {
+	string prev;
+	_setproc(const string& p) {
+		prev = prover::proc;
+		prover::proc = p;
+		++_indent;
+	}
+	~_setproc() {
+		prover::proc = prev;
+		--_indent;
+	}
+};
+
+#ifdef DEBUG
+#define setproc(x) _setproc __setproc(x)
+#else
+#define setproc(x)
+#endif
 
 void initmem() {
 	static bool once = false;
@@ -59,6 +83,7 @@ void initmem() {
 }
 
 term* evaluate(term* p, subst& s) {
+	setproc(L"evaluate");
 	if (!p) return 0;
 	if (p->p < 0) {
 		auto it = s.find(p->p);
@@ -94,6 +119,7 @@ void printps(term& p, subst& s) {
 }
 */
 bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
+	setproc(L"unify");
 	term* v;
 	if (!s && !d) 
 		return true;
@@ -127,6 +153,7 @@ bool euler_path(proof* p) {
 }
 
 int builtin(term& t, proof& p, session* ss) {
+	setproc(L"builtin");
 	if (t.p == GND) return 1;
 	term* t0 = evaluate(t.s, *p.s);
 	term* t1 = evaluate(t.o, *p.s);
@@ -158,6 +185,7 @@ int builtin(term& t, proof& p, session* ss) {
 		prove(&s2);
 		auto it = s2.e.find(rdfssubClassOf);
 		if (it == s2.e.end()) return -1;
+		bool res = true;
 		for (auto tg : it->second) {
 			int subclasser = tg.first->s->p;
 			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
@@ -173,23 +201,20 @@ int builtin(term& t, proof& p, session* ss) {
 			s3.goal.insert(&q2);
 			prove(&s3);
 			std::pair<term*, ground> e = s3.e[A].front();
-			dout<<indent()<<"Trying to unify ";
-			printterm_substs(*e.first, *e.second.front().second);
-			dout<<" and ";
-			printterm_substs(**p.last, *p.s);
-			dout<<"... ";
 			bool u = unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
-			if (u) {
-				dout << "passed with new substitution: ";
-				prints(*p.s);
-				dout << std::endl;
-			} else dout << "failed";
-			dout << std::endl;
-			return u ? 1 : -1;
-//			return unify(s3.e[A].front().first, *s3.e[A].front().second.front().second, &t, *p.s, true);
-//			if (!s3.e.empty())
-//				return 1;
-		}
+			res &= u;
+			TRACE(dout << "Trying to unify ";
+				printterm_substs(*e.first, *e.second.front().second);
+				dout<<" and ";
+				printterm_substs(**p.last, *p.s);
+				dout<<"... ";
+				if (u) {
+					dout << "passed with new substitution: ";
+					prints(*p.s);
+					dout << std::endl;
+				} else dout << "failed" << std::endl);
+			}
+		return res ? 1 : -1;
 	}
 	#ifdef marpa
 	if (t.p == marpa_parsed) {
@@ -199,7 +224,7 @@ int builtin(term& t, proof& p, session* ss) {
 }
 
 void prove(session* ss) {
-	_indent++;
+	setproc(L"prove");
 	termset& goal = ss->goal;
 	ruleset& cases = ss->rkb;
 	queue qu;
@@ -216,6 +241,7 @@ void prove(session* ss) {
 		dout<<indent()<<"and query:"<<std::endl<<indent();
 		printl(goal);
 		dout << std::endl);
+	_indent++;
 	do {
 		p = qu.back();
 		qu.pop_back();
@@ -234,7 +260,8 @@ void prove(session* ss) {
 				TRACE(dout << "builtin added rule: ";
 					printr(*rl);
 					dout << " by evaluating ";
-					printterm_substs(*t, *p->s));
+					printterm_substs(*t, *p->s);
+					dout << std::endl);
 				r->g = p->g;
 				r->g.emplace_back(rl, make_shared<subst>());
 				++r->last;
@@ -255,13 +282,13 @@ void prove(session* ss) {
 //			list<rule*>& rs = it->second;
 			for (rule* rl : rs) {
 				subst s;
-				TRACE(dout<<"\tTrying to unify ";
-					printterm_substs(*t, *p->s);
-					dout<<" and ";
-					printterm_substs(*rl->p, s);
-					dout<<"... ");
 				if (unify(t, *p->s, rl->p, s, true)) {
-					TRACE(dout<<"\tunification succeeded";
+					TRACE(dout<<"\tTrying to unify ";
+						printterm_substs(*t, *p->s);
+						dout<<" and ";
+						printterm_substs(*rl->p, s);
+						dout<<"... ";
+						dout<<"\tunification succeeded";
 						if (s.size()) {
 							dout<<" with new substitution: ";
 							prints(s);
@@ -280,7 +307,7 @@ void prove(session* ss) {
 					qu.push_front(r);
 					TRACE(dout<<"pushing frame:\n";printp(r));
 				} else {
-					TRACE(dout<<"\tunification failed\n");
+				//	TRACE(dout<<"\tunification failed\n");
 				}
 			}
 		}}
@@ -289,8 +316,8 @@ void prove(session* ss) {
 				term* t = evaluate(*r, *p->s);
 				ss->e[t->p].emplace_back(t, p->g);
 			}
-			TRACE(dout<<"no prev frame. queue:\n");
-			TRACE(printq(qu));
+			//TRACE(dout<<"no prev frame. queue:\n");
+			//TRACE(printq(qu));
 		} else {
 			ground g = p->g;
 			proof* r = &proofs[nproofs++];
@@ -308,11 +335,11 @@ void prove(session* ss) {
 			continue;
 		}
 	} while (!qu.empty());
-	dout << indent()/* << "=========================="*/ << std::endl;
+//	dout << indent()/* << "=========================="*/ << std::endl;
 	dout << KRED;
 	dout << indent() << "Facts:\n";
 	printrs(cases);
-	dout << KYEL;
+	dout << KGRN;
 	dout << indent() << "Query:\n" << indent();
 	printl(goal);
 	dout << KNRM;
@@ -351,7 +378,8 @@ void printterm(const term& p) {
 void printp(proof* p) {
 	if (!p)
 		return;
-	dout <<indent()<< L"rule:\t";
+	dout << KCYN;
+	dout << indent() << L"rule:\t";
 	printr(*p->rul);
 	dout<<std::endl<<indent();
 //	dout << L"\n\tindex:\t" << std::distance(p->rul->body.begin(), p->last) << std::end;
@@ -360,11 +388,12 @@ void printp(proof* p) {
 	else
 		dout << L"prev:\t(null)"<<std::endl<<indent()<<"subst:\t";
 	if (p->s) prints(*p->s);
-	dout <<std::endl<<indent()<< L"ground:\t";
+	dout <<std::endl<<indent()<< L"ground:" << std::endl;
 	++_indent;
 	printg(p->g);
 	--_indent;
 	dout << L"\n";
+	dout << KNRM;
 }
 
 void printrs(const ruleset& rs) {
