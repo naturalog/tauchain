@@ -129,37 +129,41 @@ int builtin(term& t, proof& p, session* ss) {
 	if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		return unify(t0->o, *p.s, t.o, *p.s, true) ? 1 : 0;
 	if (t.p == A || t.p == rdfsType) {
-		if (t1 && ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource))
-			return 1;
-		if (!t.o) 
-			return -1;
+//		if (t1 && ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource))
+//			return 1;
+//		if (!t.o) 
+//			return -1;
 		if (!t0) t0 = t.s;
-		if (!t1) t0 = t.o;
+		if (!t1) t1 = t.o;
+		// {?A rdfs:subClassOf t1. ?t0 a ?A} => {t0 a t1}.
+		// {?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
 		session s2;
 		s2.rkb = ss->rkb;
-		term vA(L"?A", 0, 0);
-		term q1(rdfssubClassOf, &vA, t.s);
+		term vA(L"?A");
+		term q1(rdfssubClassOf, vA, *t1);
+		term q2(A, *t0, vA);
+		s2.goal.insert(&q1);
+		s2.goal.insert(&q2);
+		prove(&s2);
+		return ss->e.empty() ? -1 : 1;
+/*		term q1(rdfssubClassOf, vA, *t1);
 		s2.goal.insert(&q1);
 		prove(&s2);
-		if (s2.e.empty()) 
-			return -1;
 		auto it = s2.e.find(rdfssubClassOf);
 		if (it == s2.e.end()) return -1;
-		std::list<std::pair<term*, ground>> answers = it->second;
-		std::list<int> classes;
-		for (auto tg : answers) {
-			auto iit = tg.second.front().second->find(t.o->p);
-			if (iit == tg.second.front().second->end()) continue;
-			int subclasser = iit->second->p;
+//		std::list<std::pair<term*, ground>> answers = it->second;
+		for (auto tg : it->second) {
+			int subclasser = tg.first->s->p;
+			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
 			session s3;
 			s3.rkb = ss->rkb;
 			term sc(subclasser);
-			term q2(A, t.s, &sc);
+			term q2(A, *t0, sc);
 			s3.goal.insert(&q2);
 			prove(&s3);
 			if (!s3.e.empty())
 				return 1;
-		}
+		}*/
 	}
 	#ifdef marpa
 	if (t.p == marpa_parsed) {
@@ -182,13 +186,13 @@ void prove(session* ss) {
 	qu.push_back(p);
 	TRACE(dout<<"\nprove() called with facts:\n";
 		printrs(cases);
-		dout<<"\nand query:\n";
-		printl(goal);
+//		dout<<"\nand query:\n";
+//		printl(goal);
 		dout << std::endl);
 	do {
 		p = qu.back();
 		qu.pop_back();
-		TRACE(dout<<"popped frame:\n";printp(p));
+//		TRACE(dout<<"popped frame:\n";printp(p));
 		if (p->last != p->rul->body.end()) {
 			term* t = *p->last;
 			TRACE(dout<<"Tracking back from ";
@@ -273,9 +277,14 @@ void prove(session* ss) {
 			continue;
 		}
 	} while (!qu.empty());
-	dout << L"\nEvidence:\n";
-	dout << L"=========" << std::endl;
+	dout << "==========================" << std::endl;
+	dout<<"Facts:\n";
+	printrs(cases);
+	dout << "Query:\n";
+	printl(goal);
+	dout << "\nEvidence:\n";
 	printe(ss->e);
+//	dout << "==========================" << std::endl;
 }
 
 bool equals(term* x, term* y) {

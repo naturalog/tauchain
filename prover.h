@@ -43,9 +43,11 @@ namespace prover {
 struct term {
 	int p;
 	term *s, *o;
-	term() : p(0), s(0), o(0) {}
-	term(int _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
-	term(const string& _p, term* _s = 0, term* _o = 0) : term(dict.set(_p), _s, _o) {}
+	term()						: p(0), s(0), o(0) {}
+	term(int _p)					: p(_p), s(0), o(0) {}
+	term(int _p, term& _s, term& _o)		: p(_p), s(&_s), o(&_o) {}
+	term(const string& _p)				: term(dict.set(_p)) {}
+	term(const string& _p, term& _s, term& _o)	: term(dict.set(_p), _s, _o) {}
 };
 
 typedef std::set/*forward_list*/<term*> termset;

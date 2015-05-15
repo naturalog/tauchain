@@ -76,12 +76,12 @@ public:
 #ifdef IRC
 				prover::initmem();
 				for(ever) { try {
-				dout << "Ready." << endl;
-				qdb kb = load_quads("");
-				qdb query = load_quads("");
+				dout << "Ready." << std::endl;
+				qdb kb = load_quads(L"");
+				qdb query = load_quads(L"");
 				auto e = r.prove ( kb, merge ( query ) );
-				dout << "evidence: " << std::endl << e << endl;
-				} catch (exception& ex) { dout<<ex.what()<<endl; } 
+				dout << "evidence: " << std::endl << e << std::endl;
+				} catch (std::exception& ex) { dout<<ex.what()<<std::endl; } 
 				sleep(1);
 				}
 #else
