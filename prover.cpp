@@ -220,6 +220,10 @@ void prove(session* ss) {
 				rule* rl = &rules[nrules++];
 				*r = *p;
 				rl->p = evaluate(t, *p->s);
+				TRACE(dout << "builtin added rule: ";
+					printr(*rl);
+					dout << " by evaluating ";
+					printterm_substs(*t, *p->s));
 				r->g = p->g;
 				r->g.emplace_back(rl, make_shared<subst>());
 				++r->last;
