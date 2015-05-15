@@ -162,9 +162,20 @@ int builtin(term& t, proof& p, session* ss) {
 			q2.o = &sc;
 			s3.goal.insert(&q2);
 			prove(&s3);
-//typedef std::list<std::pair<rule*, std::shared_ptr<subst>>> ground;
-//typedef std::map<int, std::list<std::pair<term*, ground>>> evidence;
-			return unify(s3.e[A].front().first, *s3.e[A].front().second.front().second, &t, *p.s, true);
+			std::pair<term*, ground> e = s3.e[A].front();
+			dout<<"\tTrying to unify ";
+			printps(*e.first, *e.second.front().second);
+			dout<<" and ";
+			printps(**p.last, *p.s);
+			dout<<"... ";
+			bool u = unify(e.first, *e.second.front().second, *p.last, *p.s, true);
+			if (u) {
+				dout<<"passed with new substitution:"<<std::endl;
+				prints(*p.s);
+			} else dout << "failed";
+			dout << std::endl;
+			return u ? -1 : 1;
+//			return unify(s3.e[A].front().first, *s3.e[A].front().second.front().second, &t, *p.s, true);
 //			if (!s3.e.empty())
 //				return 1;
 		}
