@@ -168,13 +168,13 @@ int builtin(term& t, proof& p, session* ss) {
 			dout<<" and ";
 			printps(**p.last, *p.s);
 			dout<<"... ";
-			bool u = unify(e.first, *e.second.front().second, *p.last, *p.s, true);
+			bool u = unify(e.first, *p.s/*e.second.front().second*/, *p.last, *p.s, true);
 			if (u) {
 				dout<<"passed with new substitution:"<<std::endl;
 				prints(*p.s);
 			} else dout << "failed";
 			dout << std::endl;
-			return u ? -1 : 1;
+			return u ? 1 : -1;
 //			return unify(s3.e[A].front().first, *s3.e[A].front().second.front().second, &t, *p.s, true);
 //			if (!s3.e.empty())
 //				return 1;
@@ -223,7 +223,7 @@ void prove(session* ss) {
 				r->g.emplace_back(rl, make_shared<subst>());
 				++r->last;
 				qu.push_back(r);
-//				TRACE(dout<<"pushing frame:\n";printp(r));
+				TRACE(dout<<"pushing frame:\n";printp(r));
 		            	continue;
 		        }
 		    	else if (!b) 
