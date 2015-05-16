@@ -30,7 +30,6 @@ rule* rules = 0;
 proof* proofs = 0;
 uint nterms, ntermsets, nrules, nproofs;
 
-//void printps(term* p, subst* s); // print a term with a subst
 void printterm_substs(const term& p, const subst& s);
 
 int _indent = 0;
@@ -38,7 +37,6 @@ std::list<string> proc;
 string indent() {
 	if (!_indent) return string();
 	std::wstringstream ss;
-//	ss << _indent;
 	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
 		string str = L"(";
 		str += *it;
@@ -46,7 +44,6 @@ string indent() {
 		ss << std::setw(8) << str;
 	}
 	ss  << '\t' << std::setw(_indent * 2);
-//	for (int n = 0; n < _indent; ++n) ss << "     ";
 	return ss.str();
 }
 
