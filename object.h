@@ -17,7 +17,7 @@
 string indent();
 
 #ifdef DEBUG
-#define TRACE(x) if ((int)proc.size() < level) { dout << indent(); x; }
+#define TRACE(x) if ((int)proc.size() <= level) { dout << indent(); x; }
 #else
 #define TRACE(X)
 #endif

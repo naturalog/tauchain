@@ -207,7 +207,7 @@ int builtin(term& t, proof& p, session* ss) {
 		prove(&s2);
 		auto it = s2.e.find(rdfssubClassOf);
 		if (it == s2.e.end()) return -1;
-		bool res = true;
+		bool res = false;
 		for (auto tg : it->second) {
 			int subclasser = tg.first->s->p;
 			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
@@ -223,10 +223,12 @@ int builtin(term& t, proof& p, session* ss) {
 			s3.goal.insert(&q2);
 			prove(&s3);
 //			std::pair<term*, ground> e = s3.e[A].front();
-//			for (auto e : s2.e[rdfssubClassOf])
-//				res &= unify(e.first, /**p.s*/*e.second.front().second, t0, *p.s, true);
-			for (auto e : s3.e[A]) 
-				res &= unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
+			for (auto e : s2.e[rdfssubClassOf])
+				for (auto g : e.second)
+					res |= unify(e.first->s, /**p.s*/*g.second, &t, *p.s, true);
+			for (auto e : s3.e[A])
+				for (auto g : e.second)
+					res |= unify(e.first->o, /**p.s*/*g.second, &t, *p.s, true);
 		}
 		return res ? 1 : -1;
 	}
@@ -250,8 +252,9 @@ void prove(session* ss) {
 	p->last = rg->body.begin();
 	p->prev = 0;
 	qu.push_back(p);
-	TRACE(dout << KRED << "Facts:\n"; printrs(cases));
-	TRACE(dout << KGRN << "Query:\n"; printl(goal); dout << KNRM << std::endl);
+	TRACE(dout << KRED << "Facts:\n";);
+	TRACE(printrs(cases));
+	TRACE(dout << KGRN << "Query:\t"; printl(goal); dout << KNRM << std::endl);
 	_indent++;
 	do {
 		p = qu.back();
