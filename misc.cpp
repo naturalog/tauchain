@@ -4,6 +4,7 @@
 
 bidict& dict = *new bidict;
 bool deref = true, shorten = false;
+int level;
 
 bidict::bidict() {
 	GND = set ( L"GND" );

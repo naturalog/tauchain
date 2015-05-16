@@ -173,4 +173,6 @@ inline std::string ws(const string& s) { return std::string(s.begin(), s.end());
 #define KCYN  "\x1B[36m"
 #define KWHT  "\x1B[37m"
 
+extern int level;
+
 #endif
