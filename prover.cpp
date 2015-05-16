@@ -34,15 +34,18 @@ uint nterms, ntermsets, nrules, nproofs;
 void printterm_substs(const term& p, const subst& s);
 
 int _indent = 0;
-string proc;
+std::list<string> proc;
 string indent() {
 	if (!_indent) return string();
 	std::wstringstream ss;
 //	ss << _indent;
-	string str = L"(";
-	str += proc;
-	str += L") ";
-	ss << std::setw(_indent * 8) << str;
+	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
+		string str = L"(";
+		str += *it;
+		str += L") ";
+		ss << std::setw(8) << str;
+	}
+	ss  << '\t' << std::setw(_indent * 2);
 //	for (int n = 0; n < _indent; ++n) ss << "     ";
 	return ss.str();
 }
@@ -50,14 +53,10 @@ string indent() {
 struct _setproc {
 	string prev;
 	_setproc(const string& p) {
-		prev = prover::proc;
-		prover::proc = p;
-//		TRACE(dout << std::endl);
-		++_indent;
+		prover::proc.push_front(p);
 	}
 	~_setproc() {
-		prover::proc = prev;
-		--_indent;
+		prover::proc.pop_front();
 	}
 };
 
@@ -154,7 +153,7 @@ bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
 		if (r) {
 			dout << "passed";
 			if (ns) {
-				dout << "with new substitution: " << dict[d->p] << " / ";
+				dout << " with new substitution: " << dict[d->p] << " / ";
 				printterm(*dsub[d->p]);
 			}
 		} else dout << "failed";
@@ -224,35 +223,11 @@ int builtin(term& t, proof& p, session* ss) {
 			s3.goal.insert(&q2);
 			prove(&s3);
 //			std::pair<term*, ground> e = s3.e[A].front();
-			for (auto e : s2.e[A]) {
-				bool u = unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
-				res &= u;
-				TRACE(dout << "Trying to unify ";
-					printterm_substs(*e.first, *e.second.front().second);
-					dout<<" and ";
-					printterm_substs(**p.last, *p.s);
-					dout<<"... ";
-					if (u) {
-						dout << "passed with new substitution: ";
-						prints(*p.s);
-						dout << std::endl;
-					} else dout << "failed" << std::endl);
-				}
-			for (auto e : s3.e[A]) {
-				bool u = unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
-				res &= u;
-				TRACE(dout << "Trying to unify ";
-					printterm_substs(*e.first, *e.second.front().second);
-					dout<<" and ";
-					printterm_substs(**p.last, *p.s);
-					dout<<"... ";
-					if (u) {
-						dout << "passed with new substitution: ";
-						prints(*p.s);
-						dout << std::endl;
-					} else dout << "failed" << std::endl);
-				}
-			}
+			for (auto e : s2.e[rdfssubClassOf])
+				res &= unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
+			for (auto e : s3.e[A]) 
+				res &= unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
+		}
 		return res ? 1 : -1;
 	}
 	#ifdef marpa
@@ -275,11 +250,8 @@ void prove(session* ss) {
 	p->last = rg->body.begin();
 	p->prev = 0;
 	qu.push_back(p);
-	TRACE(dout<<"prove() called with facts:\n";
-		printrs(cases);
-		dout<<indent()<<"and query:"<<std::endl<<indent();
-		printl(goal);
-		dout << std::endl);
+	TRACE(dout << KRED << "Facts:\n"; printrs(cases));
+	TRACE(dout << KGRN << "Query:\n"; printl(goal); dout << KNRM);
 	_indent++;
 	do {
 		p = qu.back();
@@ -322,17 +294,6 @@ void prove(session* ss) {
 			for (rule* rl : rs) {
 				subst s;
 				if (unify(t, *p->s, rl->p, s, true)) {
-					TRACE(dout<<"Trying to unify ";
-						printterm_substs(*t, *p->s);
-						dout<<" and ";
-						printterm_substs(*rl->p, s);
-						dout<<"... ";
-						dout<<"unification succeeded";
-						if (s.size()) {
-							dout<<" with new substitution: ";
-							prints(s);
-						}
-						dout << std::endl);
 					if (euler_path(p))
 						continue;
 					proof* r = &proofs[nproofs++];
@@ -374,18 +335,10 @@ void prove(session* ss) {
 			continue;
 		}
 	} while (!qu.empty());
-//	dout << indent()/* << "=========================="*/ << std::endl;
-	dout << KRED;
-	dout << indent() << "Facts:\n";
-	printrs(cases);
-	dout << KGRN;
-	dout << indent() << "Query:\n" << indent();
-	printl(goal);
-	dout << KNRM;
-	dout << std::endl << indent() << "Evidence:\n";
-	printe(ss->e);
-//	dout << indent()/* << "=========================="*/ << std::endl;
 	_indent--;
+//	dout << indent()/* << "=========================="*/ << std::endl;
+	TRACE(dout << KWHT << "Evidence:\n"; printe(ss->e); dout << KNRM);
+//	dout << indent()/* << "=========================="*/ << std::endl;
 }
 
 bool equals(term* x, term* y) {
