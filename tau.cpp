@@ -9,7 +9,7 @@ auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
 #endif
-bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false;
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 jsonld::jsonld_options opts;
 
 void menu();
@@ -101,7 +101,6 @@ public:
 };
 
 int main ( int argc, char** argv ) {
-	std::locale indentLocale(std::locale::classic(), new IndentFacet());
 	prover::initmem();
 	cmds_t cmds = { {
 			#ifdef marpa
@@ -119,7 +118,8 @@ int main ( int argc, char** argv ) {
 			{ { L"--shorten", L"on IRIs containig # show only what after #" }, &shorten },
 		//	{ { "--printkb", "print predicates, rules and frames at the end of prove command" }, &__printkb },
 			{ { L"--base", L"set file://<filename> as base in JsonLDOptions" }, &fnamebase },
-			{ { L"--quads", L"set input format for prove command as quads" }, &quad_in }
+			{ { L"--quads", L"set input format for prove command as quads" }, &quad_in },
+			{ { L"--nocolor", L"disable color output" }, &nocolor }
 		}
 	};
 	strings args;
@@ -133,11 +133,13 @@ int main ( int argc, char** argv ) {
 			level = std::stoi(args[n+1]);
 			args.erase(args.begin() + n + 1);
 			args.erase(args.begin() + n);
-			argc -= 2;
 			break;
 		}
 	
 	process_flags ( cmds, args );
+	if (nocolor)
+		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
+	argc = args.size();
 	if ( argc == 1 ) {
 		dout << std::endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << std::endl;
 		prove_cmd p;

@@ -164,14 +164,7 @@ template<typename T> string tostr ( T t ) {
 inline string ws(const std::string& s) { return string(s.begin(), s.end()); }
 inline std::string ws(const string& s) { return std::string(s.begin(), s.end()); }
 
-#define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
-#define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
+extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
 
 extern int level;
 

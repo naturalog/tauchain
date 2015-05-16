@@ -223,8 +223,8 @@ int builtin(term& t, proof& p, session* ss) {
 			s3.goal.insert(&q2);
 			prove(&s3);
 //			std::pair<term*, ground> e = s3.e[A].front();
-			for (auto e : s2.e[rdfssubClassOf])
-				res &= unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
+//			for (auto e : s2.e[rdfssubClassOf])
+//				res &= unify(e.first, /**p.s*/*e.second.front().second, t0, *p.s, true);
 			for (auto e : s3.e[A]) 
 				res &= unify(e.first, /**p.s*/*e.second.front().second, &t, *p.s, true);
 		}
@@ -251,7 +251,7 @@ void prove(session* ss) {
 	p->prev = 0;
 	qu.push_back(p);
 	TRACE(dout << KRED << "Facts:\n"; printrs(cases));
-	TRACE(dout << KGRN << "Query:\n"; printl(goal); dout << KNRM);
+	TRACE(dout << KGRN << "Query:\n"; printl(goal); dout << KNRM << std::endl);
 	_indent++;
 	do {
 		p = qu.back();

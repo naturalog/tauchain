@@ -95,3 +95,13 @@ string lower ( const string& s_ ) {
 	std::transform ( s.begin(), s.end(), s.begin(), ::tolower );
 	return s;
 }
+
+string KNRM = L"\x1B[0m";
+string KRED = L"\x1B[31m";
+string KGRN = L"\x1B[32m";
+string KYEL = L"\x1B[33m";
+string KBLU = L"\x1B[34m";
+string KMAG = L"\x1B[35m";
+string KCYN = L"\x1B[36m";
+string KWHT = L"\x1B[37m";
+

@@ -7,7 +7,7 @@ using namespace jsonld;
 
 typedef std::vector<string> strings;
 
-extern bool fnamebase, quad_in;
+extern bool fnamebase, quad_in, nocolor;
 extern jsonld::jsonld_options opts;
 extern string chan;
 
