@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -ggdb
+CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -ggdb -DDEBUG
 LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread
 OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o
 
@@ -23,7 +23,7 @@ marpa.o: marpa.cpp cli.h rdf.h object.h parsers.h jsonld.h json_spirit.h \
  strings.h prover.h misc.h
 
 debug: CXXFLAGS += -DDEBUG
-irc: CXXFLAGS += -DIRC
+irc: CXXFLAGS += -DIRC -DDEBUG
 marpa: CXXFLAGS += -Dmarpa OBJECTS += marpa.o
 
 marpa: $(OBJECTS) marpa.o $(EXECUTABLE)
