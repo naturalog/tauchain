@@ -9,8 +9,9 @@
 
 using namespace boost::algorithm;
 
-qdb cmd_t::load_quads ( string fname, bool print ) {
+std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
+	bool empty = true;
 	try {
 		qdb r;
 //#ifndef IRC
@@ -29,34 +30,49 @@ qdb cmd_t::load_quads ( string fname, bool print ) {
 		while (!is.eof()) {
 			getline(is, line);
 			trim(line);
-#ifdef IRC
-			sleep(1);
-#endif
+			empty = false;
 			if (!line.size() || line == L"\n")
 				continue;
+			static string magic = L"botau: ", lvl = L"level ", fin = L"fin.";
 #ifdef IRC
-			string magic = L"botau: ";
 			auto pos = line.find(magic);
 			if (pos == string::npos)
 				continue;
 			line = line.substr(pos + magic.size());
-//			cout << line;
 #endif
-			if (endsWith(line, L"fin."))
-				return readqdb(ss);
+			trim(line);
+			if (startsWith(line, lvl)) {
+				try {
+				line = line.substr(lvl.size());
+				int n = 0;
+				while (std::iswdigit(line[++n]));
+				level = std::stoi(line.substr(0, n));
+				dout << "level changed to " << level << std::endl;
+				} catch (std::exception& ex) { derr<<ex.what()<<std::endl; }
+				catch (...) {}
+				continue;
+			}
+//			cout << line;
+			if (endsWith(line, fin)) {
+				string x = line.substr(0, line.size() - fin.size());
+				trim(x);
+				ss << x;
+				break;
+//				return empty ? 0 : std::make_shared<qdb>(readqdb(ss));
+			}
 			ss << line;
 		}
 #ifndef IRC		
 		if (fname != L"")
 			delete pis;
 #endif			
-		return readqdb(ss);
+		return empty ? 0 : std::make_shared<qdb>(readqdb(ss));
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
 	}
 	if ( print ) 
 		dout << q << std::endl;
-	return q;
+	return std::make_shared<qdb>(q);
 }
 
 pobj cmd_t::load_json ( string fname, bool print ) {

@@ -21,7 +21,7 @@ protected:
 	qdb toquads ( pobj o );
 	qdb convert ( pobj o );
 	qdb convert ( const string& s, bool bdebugprint = false );
-	qdb load_quads ( string fname, bool print = true );
+	std::shared_ptr<qdb> load_quads ( string fname, bool print = true );
 public:
 	virtual std::string desc() const = 0;
 	virtual std::string help() const = 0;

@@ -43,7 +43,7 @@ string indent() {
 		str += L") ";
 		ss << std::setw(8) << str;
 	}
-	ss  << '\t' << std::setw(_indent * 2);
+	ss << '\t' << std::setw(_indent * 2);
 	return ss.str();
 }
 
@@ -202,12 +202,13 @@ int builtin(term& t, proof& p, session* ss) {
 		q1.o = t1;
 		s2.goal.insert(&q1);
 		prove(&s2);
+		TRACE(dout << "s2 returned evidence: " << std::endl; printe(s2.e));
 		auto it = s2.e.find(rdfssubClassOf);
 		if (it == s2.e.end()) return -1;
 		bool res = false;
 		for (auto tg : it->second) {
 			int subclasser = tg.first->s->p;
-			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
+//			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
 			session s3;
 			s3.rkb = ss->rkb;
 			term& sc = terms[nterms++];
@@ -219,13 +220,14 @@ int builtin(term& t, proof& p, session* ss) {
 			q2.o = &sc;
 			s3.goal.insert(&q2);
 			prove(&s3);
+			TRACE(dout << "s3 returned evidence: " << std::endl; printe(s2.e));
 //			std::pair<term*, ground> e = s3.e[A].front();
 			for (auto e : s2.e[rdfssubClassOf])
 				for (auto g : e.second)
-					res |= unify(e.first->s, /**p.s*/*g.second, &t, *p.s, true);
+					res |= unify(e.first, /**p.s*/*g.second, &t, *p.s, true);
 			for (auto e : s3.e[A])
 				for (auto g : e.second)
-					res |= unify(e.first->o, /**p.s*/*g.second, &t, *p.s, true);
+					res |= unify(e.first, /**p.s*/*g.second, &t, *p.s, true);
 		}
 		return res ? 1 : -1;
 	}
@@ -506,9 +508,6 @@ void printe(const evidence& e) {
 			printg(x.second);
 			--_indent;
 			dout << std::endl;
-#ifdef IRC
-			sleep(1);
-#endif
 		}
 }
 }
