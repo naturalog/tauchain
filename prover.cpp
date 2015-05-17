@@ -43,7 +43,7 @@ string indent() {
 		str += L") ";
 		ss << std::setw(8) << str;
 	}
-	ss << '\t' << std::setw(_indent * 2);
+	ss << "    " << std::setw(_indent * 2);
 	return ss.str();
 }
 
@@ -202,10 +202,10 @@ int builtin(term& t, proof& p, session* ss) {
 		q1.o = t1;
 		s2.goal.insert(&q1);
 		prove(&s2);
-		TRACE(dout << "s2 returned evidence: " << std::endl; printe(s2.e));
+//		TRACE(dout << "s2 returned evidence: " << std::endl; printe(s2.e));
 		auto it = s2.e.find(rdfssubClassOf);
 		if (it == s2.e.end()) return -1;
-		bool res = false;
+		bool res = true;
 		for (auto tg : it->second) {
 			int subclasser = tg.first->s->p;
 //			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
@@ -220,14 +220,18 @@ int builtin(term& t, proof& p, session* ss) {
 			q2.o = &sc;
 			s3.goal.insert(&q2);
 			prove(&s3);
-			TRACE(dout << "s3 returned evidence: " << std::endl; printe(s2.e));
+//			TRACE(dout << "s3 returned evidence: " << std::endl; printe(s3.e));
 //			std::pair<term*, ground> e = s3.e[A].front();
 			for (auto e : s2.e[rdfssubClassOf])
-				for (auto g : e.second)
-					res |= unify(e.first, /**p.s*/*g.second, &t, *p.s, true);
+				for (auto g : e.second) {
+					(*p.s)[t.s->p] = e.first->o;
+				//	res |= unify(&t, /**p.s*/*g.second, &t, *p.s, true);
+				}
 			for (auto e : s3.e[A])
-				for (auto g : e.second)
-					res |= unify(e.first, /**p.s*/*g.second, &t, *p.s, true);
+				for (auto g : e.second) {
+					(*p.s)[t.o->p] = e.first->s;
+				//	res |= unify(&t, /**p.s*/*g.second, &t, *p.s, true);
+				}
 		}
 		return res ? 1 : -1;
 	}
@@ -253,8 +257,8 @@ void prove(session* ss) {
 	qu.push_back(p);
 	TRACE(dout << KRED << "Facts:\n";);
 	TRACE(printrs(cases));
-	TRACE(dout << KGRN << "Query:\t"; printl(goal); dout << KNRM << std::endl);
-	_indent++;
+	TRACE(dout << KGRN << "Query: "; printl(goal); dout << KNRM << std::endl);
+	++_indent;
 	do {
 		p = qu.back();
 		qu.pop_back();
@@ -308,9 +312,7 @@ void prove(session* ss) {
 						r->g.emplace_back(rl, make_shared<subst>());
 					qu.push_front(r);
 //					TRACE(dout<<"pushing frame:\n";printp(r));
-				} else {
-				//	TRACE(dout<<"\tunification failed\n");
-				}
+				} 
 			}
 		}}
 		else if (!p->prev) {
@@ -337,10 +339,9 @@ void prove(session* ss) {
 			continue;
 		}
 	} while (!qu.empty());
-	_indent--;
-//	dout << indent()/* << "=========================="*/ << std::endl;
-	TRACE(dout << KWHT << "Evidence:\n"; printe(ss->e); dout << KNRM);
-//	dout << indent()/* << "=========================="*/ << std::endl;
+	--_indent;
+	TRACE(dout << KWHT << "Evidence:" << std::endl; 
+		printe(ss->e); dout << KNRM);
 }
 
 bool equals(term* x, term* y) {
@@ -373,16 +374,15 @@ void printp(proof* p) {
 	if (!p)
 		return;
 	dout << KCYN;
-	dout << indent() << L"rule:\t";
+	dout << indent() << L"rule:   ";
 	printr(*p->rul);
 	dout<<std::endl<<indent();
-//	dout << L"\n\tindex:\t" << std::distance(p->rul->body.begin(), p->last) << std::end;
 	if (p->prev)
-		dout << L"prev:\t" << p->prev <<std::endl<<indent()<< L"subst:\t";
+		dout << L"prev:   " << p->prev <<std::endl<<indent()<< L"subst:  ";
 	else
-		dout << L"prev:\t(null)"<<std::endl<<indent()<<"subst:\t";
+		dout << L"prev:   (null)"<<std::endl<<indent()<<"subst:  ";
 	if (p->s) prints(*p->s);
-	dout <<std::endl<<indent()<< L"ground:" << std::endl;
+	dout <<std::endl<<indent()<< L"ground: " << std::endl;
 	++_indent;
 	printg(p->g);
 	--_indent;
