@@ -22,6 +22,7 @@ bidict& gdict = dict;
 
 int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf;
 
+int _indent = 0;
 namespace prover {
 
 rule* rules = 0;
@@ -31,7 +32,6 @@ uint nrules, nproofs;
 void printterm_substs(const term& p, const subst& s);
 
 std::set<const term*> term::terms;
-int _indent = 0;
 std::list<string> proc;
 string indent() {
 	if (!_indent) return string();
@@ -128,7 +128,7 @@ bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f)
 bool euler_path(proof* p) {
 	proof* ep = p;
 	while ((ep = ep->prev))
-		if (ep->rul == p->rul &&
+		if (!ep->rul->p == !p->rul->p &&
 			unify(*ep->rul->p, *ep->s, *p->rul->p, *p->s, false))
 			break;
 	if (ep) {
@@ -160,10 +160,15 @@ int builtin(const term& t, session& ss) {
 //			return -1;
 //{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
 //{t0 rdfs:subClassOf t1. ?S a t0} => {?S a t1}.
+		proof* ep = &p;
+		while ((ep = ep->prev))
+//			if (equals(*ep->last, &t)) // == A || (*ep->last)->p == rdfsResource)
+			if (unify(*ep->rul->p, *ep->s, t, *p.s, false))
+				return 0;
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
-		static bool once = false;
-		if (!once) once = true; else return -1;
+//		static bool once = false;
+//		if (!once) once = true; else return -1;
 		proof* f = &proofs[nproofs++];
 		rule* rl = &rules[nrules++];
 		const term* vs = term::make(L"?S");
@@ -175,6 +180,7 @@ int builtin(const term& t, session& ss) {
 		f->last = rl->body().begin();
 		f->g = p.g;
 		f->g.emplace_back(rl, subst());
+		ss.q.push_back(&p);
 		ss.q.push_back(f);
 		r = 0;
 /*
@@ -226,6 +232,7 @@ int builtin(const term& t, session& ss) {
 }
 
 void prove(session& ss) {
+	++_indent;
 	setproc(L"prove");
 	termset& goal = ss.goal;
 	ruleset& cases = ss.kb;
@@ -278,6 +285,7 @@ void prove(session& ss) {
 				const term* t = evaluate(**r, *p.s);
 				ss.e[t->p].emplace_back(t, p.g);
 			}
+		//	ss.q.clear();
 		} else {
 			ground g = p.g;
 			proof* r = &proofs[nproofs++];
@@ -292,6 +300,7 @@ void prove(session& ss) {
 			continue;
 		}
 	} while (!ss.q.empty());
+	--_indent;
 	--_indent;
 	TRACE(dout << KWHT << "Evidence:" << std::endl; 
 		printe(ss.e); dout << KNRM);
@@ -446,6 +455,7 @@ void printg(const ground& g) {
 	for (auto x : g) {
 		dout << indent();
 		printr_substs(*x.first, x.second);
+		dout << std::endl;
 	}
 //	dout<<'.';
 }
