@@ -27,7 +27,7 @@ void bidict::set ( const std::vector<string>& v ) {
 int bidict::set ( const string& v ) {
 	auto it = m.right.find ( v );
 	if ( it != m.right.end() ) return it->second;
-	int k = m.size();
+	int k = m.size() + 1;
 	if ( v[0] == L'?'/* || v[0] == '_'*/ ) k = -k;
 	m.insert ( bm::value_type ( k, v ) );
 	return k;
@@ -59,6 +59,7 @@ string bidict::tostr() {
 string dstr ( int p ) {
 	if ( !deref ) return tostr ( p );
 	string s = dict[p];
+	if (s == L"GND") throw 0;
 	if ( !shorten ) return s;
 	if ( s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );

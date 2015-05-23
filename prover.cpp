@@ -24,14 +24,13 @@ int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot,
 
 namespace prover {
 
-term* terms = 0;
-termset* termsets = 0;
 rule* rules = 0;
 proof* proofs = 0;
-uint nterms, ntermsets, nrules, nproofs;
+uint nrules, nproofs;
 
 void printterm_substs(const term& p, const subst& s);
 
+std::set<const term*> term::terms;
 int _indent = 0;
 std::list<string> proc;
 string indent() {
@@ -66,92 +65,60 @@ struct _setproc {
 void initmem() {
 	static bool once = false;
 	if (!once) {
-		terms = new term[max_terms];
-		termsets = new termset[max_termsets];
 		rules = new rule[max_rules];
 		proofs = new proof[max_proofs];
 		once = true;
 	}
-//	memset(terms, 0, sizeof(term) * max_terms);
-//	memset(termsets, 0, sizeof(termset) * max_termsets);
-//	memset(rules, 0, sizeof(rule) * max_rules);
-//	memset(proofs, 0, sizeof(proof) * max_proofs);
-	nterms = ntermsets = nrules = nproofs = 0;
+	nrules = nproofs = 0;
 }
 
-term* evaluate(term* p, subst& s) {
+const term* evaluate(const term& p, const subst& s) {
 	setproc(L"evaluate");
-	term* r;
-	if (!p) return 0;
-	if (p->p < 0) {
-		auto it = s.find(p->p);
-		r = it == s.end() ? 0 : evaluate(s[p->p], s);
-	} else if (!p->s && !p->o)
-		r = p;
+	if (p.p < 0) {
+		auto it = s.find(p.p);
+		return it == s.end() ? 0 : evaluate(*it->second, s);
+	} else if (!p.s && !p.o)
+		return &p;
 	else {
-		term *a = evaluate(p->s, s);
-		r = &terms[nterms++];
-		r->p = p->p;
-		if (a)
-			r->s = a;
-		else {
-			r->s = &terms[nterms++];
-			r->s->p = p->s->p;
-			r->s->s = r->s->o = 0;
-		}
-		a = evaluate(p->o, s);
-		if (a)
-			r->o = a;
-		else {
-			r->o = &terms[nterms++];
-			r->o->p = p->o->p;
-			r->o->s = r->o->o = 0;
-		}
+		const term* a = evaluate(*p.s, s);
+		const term* b = evaluate(*p.o, s);
+		const term* r = term::make(p.p, a ? a : term::make(p.s->p), b ? b : term::make(p.o->p));
+		TRACE(printterm_substs(p, s); dout << " = "; if (!r) dout << "(null)"; else printterm(*r); dout << std::endl);
+		return r;
 	}
-	TRACE(printterm_substs(*p, s); dout << " = "; if (!r) dout << "(null)"; else printterm(*r); dout << std::endl);
-	return r;
 }
-/*
-void printps(term& p, subst& s) {
-	printterm(p);
-	dout<<" [ ";
-	prints(s);
-	dout<<" ] ";
-}
-*/
-bool unify(term* s, subst& ssub, term* d, subst& dsub, bool f) {
+
+bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f) {
 	setproc(L"unify");
-	term* v;
+	const term* v;
 	bool r, ns = false;
-	if (!s && !d) {
-		TRACE(dout << "unification of two nulls returned true" << std::endl);
-		return true;
-	}
-	else if (s->p < 0) 
-		r = (v = evaluate(s, ssub)) ? unify(v, ssub, d, dsub, f) : true;
-	else if (d->p < 0) {
+	if (s.p < 0) 
+		r = (v = evaluate(s, ssub)) ? unify(*v, ssub, d, dsub, f) : true;
+	else if (d.p < 0) {
 		if ((v = evaluate(d, dsub)))
-			r = unify(s, ssub, v, dsub, f);
+			r = unify(s, ssub, *v, dsub, f);
 		else {
 			if (f) {
-				dsub[d->p] = evaluate(s, ssub);
+				dsub[d.p] = evaluate(s, ssub);
 				ns = true;
 			}
 			r = true;
 		}
-	} else if (!(s->p == d->p && !s->s == !d->s && !s->o == !d->o))
+	} else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o))
 		r = false;
-	else r = unify(s->s, ssub, d->s, dsub, f) && unify(s->o, ssub, d->o, dsub, f);
+	else {
+		r = !s.s || (unify(*s.s, ssub, *d.s, dsub, f) && unify(*s.o, ssub, *d.o, dsub, f));
+	}
 	TRACE(dout << "Trying to unify ";
-		printterm_substs(*s, ssub);
+		printterm_substs(s, ssub);
 		dout<<" with ";
-		printterm_substs(*d, dsub);
+		printterm_substs(d, dsub);
 		dout<<"... ";
 		if (r) {
 			dout << "passed";
 			if (ns) {
-				dout << " with new substitution: " << dict[d->p] << " / ";
-				printterm(*dsub[d->p]);
+				dout << " with new substitution: " << dict[d.p] << " / ";
+				printterm(*dsub[d.p]);
 			}
 		} else dout << "failed";
 		dout << std::endl);
@@ -162,7 +129,7 @@ bool euler_path(proof* p) {
 	proof* ep = p;
 	while ((ep = ep->prev))
 		if (ep->rul == p->rul &&
-			unify(ep->rul->p, *ep->s, p->rul->p, *p->s, false))
+			unify(*ep->rul->p, *ep->s, *p->rul->p, *p->s, false))
 			break;
 	if (ep) {
 		TRACE(dout<<"Euler path detected\n");
@@ -171,20 +138,22 @@ bool euler_path(proof* p) {
 	return false;
 }
 
-int builtin(term& t, proof& p, session* ss) {
+int builtin(const term& t, session& ss) {
 	setproc(L"builtin");
-	if (t.p == GND) return 1;
-	term* t0 = evaluate(t.s, *p.s);
-	term* t1 = evaluate(t.o, *p.s);
-	if (t.p == logequalTo)
-		return t0 && t1 && t0->p == t1->p ? 1 : 0;
-	if (t.p == lognotEqualTo)
-		return t0 && t1 && t0->p != t1->p ? 1 : 0;
-	if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		return unify(t0->s, *p.s, t.o, *p.s, true) ? 1 : 0;
-	if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		return unify(t0->o, *p.s, t.o, *p.s, true) ? 1 : 0;
-	if (t.p == A || t.p == rdfsType) {
+	int r = -1;
+	proof& p = *ss.p;
+	const term* t0 = t.s ? evaluate(*t.s, *p.s) : 0;
+	const term* t1 = t.o ? evaluate(*t.o, *p.s) : 0;
+	if (t.p == GND) r = 1;
+	else if (t.p == logequalTo)
+		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
+	else if (t.p == lognotEqualTo)
+		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
+	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
+		r = unify(*t0->s, *p.s, *t.o, *p.s, true) ? 1 : 0;
+	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
+		r = unify(*t0->o, *p.s, *t.o, *p.s, true) ? 1 : 0;
+	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 //		if (t1 && ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource))
 //			return 1;
 //		if (!t.o) 
@@ -192,159 +161,127 @@ int builtin(term& t, proof& p, session* ss) {
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
 		session s2;
-		s2.rkb = ss->rkb;
-		term& vA = terms[nterms++];
-		vA.p = dict.set(L"?A");
-		vA.s = vA.o = 0;
-		term& q1 = terms[nterms++];
-		q1.p = rdfssubClassOf;
-		q1.s = &vA;
-		q1.o = t1;
-		s2.goal.insert(&q1);
-		prove(&s2);
+		s2.kb = ss.kb;
+		const term* vA = term::make(dict.set(L"?A"));
+		const term* q1 = term::make(rdfssubClassOf, vA, t1);
+		s2.goal.insert(q1);
+		prove(s2);
 //		TRACE(dout << "s2 returned evidence: " << std::endl; printe(s2.e));
 		auto it = s2.e.find(rdfssubClassOf);
-		if (it == s2.e.end()) return -1;
-		bool res = true;
-		for (auto tg : it->second) {
-			int subclasser = tg.first->s->p;
-//			TRACE(dout << "subclasser: " << dict[subclasser] << std::endl);
-			session s3;
-			s3.rkb = ss->rkb;
-			term& sc = terms[nterms++];
-			sc.p = subclasser;
-			sc.o = sc.s = 0;
-			term& q2 = terms[nterms++];
-			q2.p = A;
-			q2.s = t0;
-			q2.o = &sc;
-			s3.goal.insert(&q2);
-			prove(&s3);
-//			TRACE(dout << "s3 returned evidence: " << std::endl; printe(s3.e));
-//			std::pair<term*, ground> e = s3.e[A].front();
-			for (auto e : s2.e[rdfssubClassOf])
-				for (auto g : e.second) {
-					(*p.s)[t.s->p] = e.first->o;
-				//	res |= unify(&t, /**p.s*/*g.second, &t, *p.s, true);
-				}
-			for (auto e : s3.e[A])
-				for (auto g : e.second) {
-					(*p.s)[t.o->p] = e.first->s;
-				//	res |= unify(&t, /**p.s*/*g.second, &t, *p.s, true);
-				}
+		if (it != s2.e.end()) {
+			bool res = true;
+			for (auto tg : it->second) {
+				int subclasser = tg.first->s->p;
+				session s3;
+				s3.kb = ss.kb;
+				const term* sc = term::make(subclasser);
+				const term* q2 = term::make(A, t0, sc);
+				s3.goal.insert(q2);
+				prove(s3);
+				for (auto e : s2.e[rdfssubClassOf])
+					for (auto g : e.second)
+						(*p.s)[t.s->p] = e.first->o;
+				for (auto e : s3.e[A])
+					for (auto g : e.second)
+						(*p.s)[t.o->p] = e.first->s;
+			}
+			r = res ? 1 : -1;
 		}
-		return res ? 1 : -1;
 	}
-	#ifdef marpa
-	if (t.p == marpa_parsed) {
-	#endif
+	if (r == 1) {
+		proof* r = &proofs[nproofs++];
+		rule* rl = &rules[nrules++];
+		rl->p = evaluate(t, *p.s);
+		*r = p;//(proof)p;
+		r->rul = rl;
+		TRACE(dout << "builtin added rule: ";
+			printr(*rl);
+			dout << " by evaluating ";
+			printterm_substs(t, *p.s);
+			dout << std::endl);
+		r->g = p.g;
+		r->g.emplace_back(rl, subst());
+		++r->last;
+		ss.q.push_back(r);
+		TRACE(dout<<"pushing frame:\n";printp(r));
+	}
 
-	return -1;
+	return r;
 }
 
-void prove(session* ss) {
+void prove(session& ss) {
 	setproc(L"prove");
-	termset& goal = ss->goal;
-	ruleset& cases = ss->rkb;
-	queue qu;
+	termset& goal = ss.goal;
+	ruleset& cases = ss.kb;
 	rule* rg = &rules[nrules++];
-	proof* p = &proofs[nproofs++];
+	ss.p = &proofs[nproofs++];
 	rg->p = 0;
-	rg->body = goal;
-	p->rul = rg;
-	p->last = rg->body.begin();
-	p->prev = 0;
-	qu.push_back(p);
+	rg->body(goal);
+	ss.p->rul = rg;
+	ss.p->last = rg->body().begin();
+	ss.p->prev = 0;
+	ss.q.push_back(ss.p);
 	TRACE(dout << KRED << "Facts:\n";);
 	TRACE(printrs(cases));
 	TRACE(dout << KGRN << "Query: "; printl(goal); dout << KNRM << std::endl);
 	++_indent;
 	do {
-		p = qu.back();
-		qu.pop_back();
-		TRACE(dout<<"popped frame:\n";printp(p));
-		if (p->last != p->rul->body.end()) {
-			term* t = *p->last;
+		ss.p = ss.q.back();
+		ss.q.pop_back();
+		proof& p = *ss.p;
+		TRACE(dout<<"popped frame:\n";printp(&p));
+		if (p.callback.target<int(struct session&)>() && !p.callback(ss)) continue;
+		if (p.last != p.rul->body().end()) {
+			const term* t = *p.last;
+			if (!t) throw 0;
 			TRACE(dout<<"Tracking back from ";
 				printterm(*t);
 				dout << std::endl);
-			int b = builtin(*t, *p, ss);
-			if (b == 1) {
-				proof* r = &proofs[nproofs++];
-				rule* rl = &rules[nrules++];
-				*r = *p;
-				rl->p = evaluate(t, *p->s);
-				TRACE(dout << "builtin added rule: ";
-					printr(*rl);
-					dout << " by evaluating ";
-					printterm_substs(*t, *p->s);
-					dout << std::endl);
-				r->g = p->g;
-				r->g.emplace_back(rl, make_shared<subst>());
-				++r->last;
-				qu.push_back(r);
-//				TRACE(dout<<"pushing frame:\n";printp(r));
-		            	continue;
-		        }
-		    	else if (!b) 
-				continue;
+			if (builtin(*t, ss) != -1) continue;
 
-			auto it = cases.find(t->p);
-			if (it == cases.end())
-				continue;
-			for (auto x : cases) {
-//			if (x.first >= 0 && x.first != t->p)
-//				continue;
-			std::list<rule*>& rs = x.second;
-//			list<rule*>& rs = it->second;
-			for (rule* rl : rs) {
-				subst s;
-				if (unify(t, *p->s, rl->p, s, true)) {
-					if (euler_path(p))
-						continue;
-					proof* r = &proofs[nproofs++];
-					r->rul = rl;
-					r->last = r->rul->body.begin();
-					r->prev = p;
-					r->s = make_shared<subst>(s);
-					r->g = p->g;
-					if (rl->body.empty())
-						r->g.emplace_back(rl, make_shared<subst>());
-					qu.push_front(r);
-//					TRACE(dout<<"pushing frame:\n";printp(r));
-				} 
+			for (auto x : cases)
+				for (const rule* rl : x.second) {
+					subst s;
+					if (unify(*t, *p.s, *rl->p, s, true)) {
+							if (euler_path(&p))
+							continue;
+						proof* r = &proofs[nproofs++];
+						r->rul = rl;
+						r->last = r->rul->body().begin();
+						r->prev = &p;
+						r->s = std::make_shared<subst>(s);
+						r->g = p.g;
+						if (rl->body().empty())
+							r->g.emplace_back(rl, subst());
+						ss.q.push_front(r);
+					} 
+				}
+		}
+		else if (!p.prev) {
+			for (auto r = p.rul->body().begin(); r != p.rul->body().end(); ++r) {
+				const term* t = evaluate(**r, *p.s);
+				ss.e[t->p].emplace_back(t, p.g);
 			}
-		}}
-		else if (!p->prev) {
-			for (auto r = p->rul->body.begin(); r != p->rul->body.end(); ++r) {
-				term* t = evaluate(*r, *p->s);
-				ss->e[t->p].emplace_back(t, p->g);
-			}
-			//TRACE(dout<<"no prev frame. queue:\n");
-			//TRACE(printq(qu));
 		} else {
-			ground g = p->g;
+			ground g = p.g;
 			proof* r = &proofs[nproofs++];
-			if (!p->rul->body.empty())
-				g.emplace_back(p->rul, p->s);
-			*r = *p->prev;
+			if (!p.rul->body().empty())
+				g.emplace_back(p.rul, *p.s);
+			*r = *p.prev;
 			r->g = g;
-			r->s = make_shared<subst>(*p->prev->s);
-			unify(p->rul->p, *p->s, *r->last, *r->s, true);
+			r->s = std::make_shared<subst>(*p.prev->s);
+			unify(*p.rul->p, *p.s, **r->last, *r->s, true);
 			++r->last;
-			qu.push_back(r);
-//			TRACE(dout<<"pushing frame:\n";printp(r));
-//			TRACE(dout<<L"finished a frame. queue size:" << qu.size() << std::endl);
-//			TRACE(printq(qu));
+			ss.q.push_back(r);
 			continue;
 		}
-	} while (!qu.empty());
+	} while (!ss.q.empty());
 	--_indent;
 	TRACE(dout << KWHT << "Evidence:" << std::endl; 
-		printe(ss->e); dout << KNRM);
+		printe(ss.e); dout << KNRM);
 }
 
-bool equals(term* x, term* y) {
+bool equals(const term* x, const term* y) {
 	return (!x == !y) && x && equals(x->s, y->s) && equals(x->o, y->o);
 }
 
@@ -359,6 +296,7 @@ string format(const term& p) {
 }
 
 void printterm(const term& p) {
+	if (!p) return;
 	if (p.s) {
 		printterm(*p.s);
 		dout << L' ';
@@ -381,7 +319,7 @@ void printp(proof* p) {
 		dout << L"prev:   " << p->prev <<std::endl<<indent()<< L"subst:  ";
 	else
 		dout << L"prev:   (null)"<<std::endl<<indent()<<"subst:  ";
-	if (p->s) prints(*p->s);
+	prints(*p->s);
 	dout <<std::endl<<indent()<< L"ground: " << std::endl;
 	++_indent;
 	printg(p->g);
@@ -437,14 +375,14 @@ void printl(const termset& l) {
 }
 
 void printr(const rule& r) {
-	if(!r.body.empty())
+	if(!r.body().empty())
 	{
-		printl(r.body);
+		printl(r.body());
 		dout << L" => ";
 	}
 	if (r.p)
 		printterm(*r.p);
-	if(r.body.empty())
+	if(r.body().empty())
 		dout << L".";
 }
 
@@ -475,25 +413,23 @@ void printl_substs(const termset& l, const subst& s) {
 }
 
 void printr_substs(const rule& r, const subst& s) {
-	printl_substs(r.body, s);
+	printl_substs(r.body(), s);
 	dout << L" => ";
 	printterm_substs(*r.p, s);
 }
 
 string format(const rule& r) {
 	std::wstringstream ss;
-	if (!r.body.empty())
-		ss << format(r.body) << L" => ";
-	ss << format(*r.p);
+	if (!r.body().empty())
+		ss << format(r.body()) << L" => ";
+	ss << format(r.p);
 	return ss.str();
 }
 
 void printg(const ground& g) {
 	for (auto x : g) {
 		dout << indent();
-		printr_substs(*x.first, *x.second);
-		if (!x.second || x.second->empty()) 
-			dout << std::endl;
+		printr_substs(*x.first, x.second);
 	}
 //	dout<<'.';
 }
@@ -512,19 +448,18 @@ void printe(const evidence& e) {
 }
 }
 
-prover::term* mkterm(const wchar_t* p, const wchar_t* s = 0, const wchar_t* o = 0) {
-	prover::term* t = &prover::terms[prover::nterms++];
-	t->p = dict.set(string(p));
-	if (s) t->s = mkterm(s, 0, 0);
-	if (o) t->o = mkterm(o, 0, 0);
-	return t;
+const prover::term* mkterm(const wchar_t* p, const wchar_t* s = 0, const wchar_t* o = 0) {
+//	prover::term* t = &prover::terms[prover::nterms++];
+	const prover::term* ps = s ? mkterm(s, 0, 0) : 0;
+	const prover::term* po = o ? mkterm(o, 0, 0) : 0;
+	return prover::term::make(dict.set(string(p)), ps, po);
 }
 
-prover::term* mkterm(string s, string p, string o) {
+const prover::term* mkterm(string s, string p, string o) {
 	return mkterm(p.c_str(), s.c_str(), o.c_str());
 }
 
-prover::term* quad2term(const quad& p) {
+const prover::term* quad2term(const quad& p) {
 	return mkterm(p.pred->value.c_str(), p.subj->value.c_str(), p.object->value.c_str());
 }
 
@@ -541,15 +476,16 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 	prover::rule* r = &prover::rules[prover::nrules++];
 	r->p = mkterm(s, p, o );
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
-		ss.rkb[r->p->p].push_back(r);
+		ss.kb[r->p->p].push_back(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
-		prover::term* tt = quad2term( *y );
+//		r = prover::rule();
+		const prover::term* tt = quad2term( *y );
 		r->p = tt;
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
-				r->body.insert( quad2term( *z ) );
-		ss.rkb[r->p->p].push_back(r);
+				r->body( quad2term( *z ) );
+		ss.kb[r->p->p].push_back(r);
 	}
 }
 
@@ -568,7 +504,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 	}
 	for ( auto q : query )
 		ss.goal.insert( quad2term( *q ) );
-	prover::prove(&ss);
+	prover::prove(ss);
 	return ss.e.size();
 }
 
