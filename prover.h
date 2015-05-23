@@ -10,7 +10,6 @@
 #include "parsers.h"
 #include <functional>
 
-//using namespace std;
 using namespace jsonld;
 
 const uint K1 = 1024, M1 = K1 * K1;
@@ -32,10 +31,10 @@ class term {
 	static std::set<const term*> terms;
 	term()						: p(0), s(0), o(0) {}
 	term(int _p, const term* _s, const term* _o)	: p(_p), s(_s), o(_o) {}
-//	term(const term& x)				: p(x.p), s(x.s), o(x.o) {}
 public:
 	const int p;
 	const term *s, *o;
+	static const term* make(string p, const term* s = 0, const term* o = 0) { return make(dict.set(p), s, o); }
 	static const term* make(int p, const term* s = 0, const term* o = 0) {
 		if (!p) throw 0;
 		for (auto x : terms) 
@@ -45,10 +44,7 @@ public:
 		terms.insert(t); 
 		return t;
 	}
-//	term(const string& _p)				: term(dict.set(_p)) {}
-//	term(const string& _p, term& _s, term& _o)	: term(dict.set(_p), _s, _o) {}
 	operator bool() const { return p; }
-	term& operator=(const term& x) { const_cast<int&>(p) = x.p; s = x.s; o = x.o;  return *this; }
 	bool operator!=(const term& x) const { return !((*this) == x); }
 	bool operator==(const term& x) const {
 		if (p != x.p) return false;
@@ -68,8 +64,6 @@ public:
 	void body(const termset& b) { _body = b; }
 	void body(const term* t) { _body.insert(t); }
 	bool operator==(const rule& x) const { return p == x.p && body() == x.body(); }
-//	rule& operator=(const rule& x) { p = x.p; body = x.body; return *this; }
-//	rule(const rule& x) : p(x.p), body(x.body) {}
 	rule(){}
 	rule(const term* _p) : p(_p) {}
 };
@@ -100,29 +94,22 @@ struct session {
 };
 
 void initmem();
-//term* evaluate(term* p, subst* s); 			// evaluates a term given a subst
-//bool unify(term* s, subst* ssub, term* d, subst** dsub, bool f); // unification
-void prove(session& ss);				// backchaining
-//bool equals(term* x, term* y);				// deep-compare terms
-void printterm(const term& p);				// print a term
-void prints(const subst& s);				// print a subst
+void prove(session& ss);
+void printterm(const term& p);
+void prints(const subst& s);
 void printl(const termset& l);
-void printg(const ground& g);			// print a ground struct
-void printe(const evidence& e);			// print evidence
-void printr(const rule& r);				// print rule
-void printrs(const ruleset& rs);			// print a ruleset
-void printq(const queue& q);				// print a proof queue
+void printg(const ground& g);
+void printe(const evidence& e);
+void printr(const rule& r);
+void printrs(const ruleset& rs);
+void printq(const queue& q);
 void printp(proof* p);
-//bool is_implication(int p);				// identifies an implication resource
-//void trim(char *s);					// trim strings from both ends using isspace
 
 const uint MEM = 1024 * 256;
 const uint max_terms = MEM;
 const uint max_termsets = MEM;
 const uint max_rules = MEM;
 const uint max_proofs = MEM;
-extern term* terms;
-extern termset* termsets;
 extern rule* rules;
 extern proof* proofs;
 extern uint nterms, ntermsets, nrules, nproofs;

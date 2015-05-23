@@ -158,12 +158,28 @@ int builtin(const term& t, session& ss) {
 //			return 1;
 //		if (!t.o) 
 //			return -1;
+//{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+//{t0 rdfs:subClassOf t1. ?S a t0} => {?S a t1}.
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
+		static bool once = false;
+		if (!once) once = true; else return -1;
+		proof* f = &proofs[nproofs++];
+		rule* rl = &rules[nrules++];
+		const term* vs = term::make(L"?S");
+		rl->body ( term::make ( rdfssubClassOf, t0, t1 ) );
+		rl->body ( term::make ( A,              vs, t0 ) );
+		rl->p    = term::make ( A,              vs, t1 ) ;
+		f->rul = rl;
+		f->prev = p.prev;
+		f->last = rl->body().begin();
+		f->g = p.g;
+		f->g.emplace_back(rl, subst());
+		ss.q.push_back(f);
+		r = 0;
+/*
 		session s2;
 		s2.kb = ss.kb;
-		const term* vA = term::make(dict.set(L"?A"));
-		const term* q1 = term::make(rdfssubClassOf, vA, t1);
 		s2.goal.insert(q1);
 		prove(s2);
 //		TRACE(dout << "s2 returned evidence: " << std::endl; printe(s2.e));
@@ -186,13 +202,13 @@ int builtin(const term& t, session& ss) {
 						(*p.s)[t.o->p] = e.first->s;
 			}
 			r = res ? 1 : -1;
-		}
+		}*/
 	}
 	if (r == 1) {
 		proof* r = &proofs[nproofs++];
 		rule* rl = &rules[nrules++];
 		rl->p = evaluate(t, *p.s);
-		*r = p;//(proof)p;
+		*r = p;
 		r->rul = rl;
 		TRACE(dout << "builtin added rule: ";
 			printr(*rl);
@@ -243,7 +259,7 @@ void prove(session& ss) {
 				for (const rule* rl : x.second) {
 					subst s;
 					if (unify(*t, *p.s, *rl->p, s, true)) {
-							if (euler_path(&p))
+						if (euler_path(&p))
 							continue;
 						proof* r = &proofs[nproofs++];
 						r->rul = rl;
