@@ -154,35 +154,32 @@ int builtin(const term& t, session& ss) {
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(*t0->o, *p.s, *t.o, *p.s, true) ? 1 : 0;
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
-//		if (t1 && ((t1->p == rdfList && t0 && t0->p == Dot) || t1->p == rdfsResource))
-//			return 1;
-//		if (!t.o) 
-//			return -1;
-//{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
-//{t0 rdfs:subClassOf t1. ?S a t0} => {?S a t1}.
-		proof* ep = &p;
-		while ((ep = ep->prev))
-//			if (equals(*ep->last, &t)) // == A || (*ep->last)->p == rdfsResource)
-			if (unify(*ep->rul->p, *ep->s, t, *p.s, false))
-				return 0;
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
-//		static bool once = false;
-//		if (!once) once = true; else return -1;
+//		static std::set<proof*> ps;
+//		if (ps.find(&p) != ps.end()) {
+//			ps.erase(&p);
+//			return -1;
+//		}
+		const term* vs = term::make(L"?S");
+//		if (p.rul->p && p.rul->p->s == vs) 
+//			return -1;
 		proof* f = &proofs[nproofs++];
 		rule* rl = &rules[nrules++];
-		const term* vs = term::make(L"?S");
 		rl->body ( term::make ( rdfssubClassOf, t0, t1 ) );
 		rl->body ( term::make ( A,              vs, t0 ) );
 		rl->p    = term::make ( A,              vs, t1 ) ;
+		p.rul->body(rl->p);
 		f->rul = rl;
-		f->prev = p.prev;
+		f->prev = &p;//.prev;
 		f->last = rl->body().begin();
-		f->g = p.g;
-		f->g.emplace_back(rl, subst());
-		ss.q.push_back(&p);
-		ss.q.push_back(f);
-		r = 0;
+		f->g.clear();
+		if (euler_path(f)) 
+			return -1;
+		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
+//		ps.insert(f);
+		ss.q.push_front(f);
+		r = 1;
 /*
 		session s2;
 		s2.kb = ss.kb;
@@ -215,7 +212,7 @@ int builtin(const term& t, session& ss) {
 		rule* rl = &rules[nrules++];
 		rl->p = evaluate(t, *p.s);
 		*r = p;
-		r->rul = rl;
+//		r->rul = rl;
 		TRACE(dout << "builtin added rule: ";
 			printr(*rl);
 			dout << " by evaluating ";
@@ -263,7 +260,7 @@ void prove(session& ss) {
 			if (builtin(*t, ss) != -1) continue;
 
 			for (auto x : cases)
-				for (const rule* rl : x.second) {
+				for (auto rl : x.second) {
 					subst s;
 					if (unify(*t, *p.s, *rl->p, s, true)) {
 						if (euler_path(&p))
@@ -299,6 +296,10 @@ void prove(session& ss) {
 			ss.q.push_back(r);
 			continue;
 		}
+		if (p.next) {
+			*p.next->s = *p.s;
+			ss.q.push_back(p.next);
+		}
 	} while (!ss.q.empty());
 	--_indent;
 	--_indent;
@@ -307,7 +308,7 @@ void prove(session& ss) {
 }
 
 bool equals(const term* x, const term* y) {
-	return (!x == !y) && x && equals(x->s, y->s) && equals(x->o, y->o);
+	return (!x == !y) && (!x || (x && equals(x->s, y->s) && equals(x->o, y->o)));
 }
 
 string format(const term& p) {

@@ -27,9 +27,9 @@ public:
 
 namespace prover {
 bool equals(const class term* x, const class term* y);
+void printterm(const class term& p);
 class term {
 	static std::set<const term*> terms;
-	term()						: p(0), s(0), o(0) {}
 	term(int _p, const term* _s, const term* _o)	: p(_p), s(_s), o(_o) {}
 public:
 	const int p;
@@ -38,10 +38,13 @@ public:
 	static const term* make(int p, const term* s = 0, const term* o = 0) {
 		if (!p) throw 0;
 		for (auto x : terms) 
-			if (x->p == p && equals(s, x->s) && equals(o, x->o))
+			if (x->p == p && equals(s, x->s) && equals(o, x->o)) {
+//				dout << "term::make found existing term: "; printterm(*x); dout << std::endl;
 				return x;
+			}
 		term* t = new term(p,s,o);
 		terms.insert(t); 
+//		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
 		return t;
 	}
 	operator bool() const { return p; }
@@ -68,19 +71,19 @@ public:
 	rule(const term* _p) : p(_p) {}
 };
 
-typedef std::map<int, std::list<const rule*>> ruleset;
+typedef std::map<int, std::list<rule*>> ruleset;
 typedef std::map<int, const term*> subst;
 typedef std::list<std::pair<const rule*, subst>> ground;
 typedef std::map<int, std::list<std::pair<const term*, ground>>> evidence;
 
 struct proof {
-	const rule* rul;
+	rule* rul;
 	termset::const_iterator last;
-	proof* prev;
+	proof *prev, *next;
 	std::shared_ptr<subst> s;
 	ground g;
 	std::function<int(struct session&)> callback;
-	proof() : rul(0), prev(0), s(std::make_shared<subst>()) {}
+	proof() : rul(0), prev(0), next(0), s(std::make_shared<subst>()) {}
 };
 
 typedef std::deque<proof*> queue;
