@@ -129,7 +129,7 @@ bool euler_path(proof* p) {
 	proof* ep = p;
 	while ((ep = ep->prev))
 		if (!ep->rul->p == !p->rul->p &&
-			unify(*ep->rul->p, *ep->s, *p->rul->p, *p->s, false))
+			unify(*ep->rul->p, ep->s, *p->rul->p, p->s, false))
 			break;
 	if (ep) TRACE(dout<<"Euler path detected\n");
 	return ep;
@@ -139,17 +139,17 @@ int builtin(const term& t, session& ss) {
 	setproc(L"builtin");
 	int r = -1;
 	proof& p = *ss.p;
-	const term* t0 = t.s ? evaluate(*t.s, *p.s) : 0;
-	const term* t1 = t.o ? evaluate(*t.o, *p.s) : 0;
+	const term* t0 = t.s ? evaluate(*t.s, p.s) : 0;
+	const term* t1 = t.o ? evaluate(*t.o, p.s) : 0;
 	if (t.p == GND) r = 1;
 	else if (t.p == logequalTo)
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(*t0->s, *p.s, *t.o, *p.s, true) ? 1 : 0;
+		r = unify(*t0->s, p.s, *t.o, p.s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(*t0->o, *p.s, *t.o, *p.s, true) ? 1 : 0;
+		r = unify(*t0->o, p.s, *t.o, p.s, true) ? 1 : 0;
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
@@ -160,31 +160,36 @@ int builtin(const term& t, session& ss) {
 		_rl->body ( term::make ( A,              vs, t0 ) );
 		_rl->p    = term::make ( A,              vs, t1 ) ;
 		const rule* rl = *ss.kb[_rl->p->p].insert(_rl).first;
+		unify(*rl->p, p.s, t, f->s, true);
 		//TRACE(dout << "Rule: "; printr(*_rl);dout<<std::endl);
 		//TRACE(dout << "Rule: "; printr(*rl);dout<<std::endl);
 		f->rul = rl;
 		f->prev = &p;//.prev;
 		f->last = rl->body().begin();
-		f->g.clear();
+		f->g = p.g;
+//		f->s = p.s;
+//		f->g.clear();
 		if (euler_path(f)) 
 			return -1;
-		ss.q.push_back(f);
+		ss.q.push_front(f);
 		//TRACE(dout << "builtin added rule: "; printr(*rl);dout<<" where t0 = "; printterm(*t0);dout<<" t1 = ";printterm(*t1);dout<<std::endl);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
-		r = 1;
+		r = -1;
 	}
 	if (r == 1) {
 		proof* r = &proofs[nproofs++];
 		rule* rl = &rules[nrules++];
-		rl->p = evaluate(t, *p.s);
+		rl->p = evaluate(t, p.s);
 		*r = p;
 		TRACE(dout << "builtin added rule: "; printr(*rl);
-			dout << " by evaluating "; printterm_substs(t, *p.s); dout << std::endl);
+			dout << " by evaluating "; printterm_substs(t, p.s); dout << std::endl);
 		r->g = p.g;
 		r->g.emplace_back(rl, subst());
 		++r->last;
-		ss.q.push_front(r);
-		TRACE(dout<<"pushing frame:\n";printp(r));
+		if (!euler_path(r)) {
+			ss.q.push_back(r);
+			TRACE(dout<<"pushing frame:\n";printp(r));
+		} else return -1;
 	}
 
 	return r;
@@ -224,14 +229,14 @@ void prove(session& ss) {
 			for (auto x : cases)
 				for (auto rl : x.second) {
 					subst s;
-					if (unify(*t, *p.s, *rl->p, s, true)) {
+					if (unify(*t, p.s, *rl->p, s, true)) {
 						if (euler_path(&p))
 							continue;
 						proof* r = &proofs[nproofs++];
 						r->rul = rl;
 						r->last = r->rul->body().begin();
 						r->prev = &p;
-						r->s = std::make_shared<subst>(s);
+						r->s = s;
 						r->g = p.g;
 						if (rl->body().empty())
 							r->g.emplace_back(rl, subst());
@@ -241,7 +246,7 @@ void prove(session& ss) {
 		}
 		else if (!p.prev) {
 			for (auto r = p.rul->body().begin(); r != p.rul->body().end(); ++r) {
-				const term* t = evaluate(**r, *p.s);
+				const term* t = evaluate(**r, p.s);
 				ss.e[t->p].emplace_back(t, p.g);
 			}
 		//	ss.q.clear();
@@ -249,18 +254,14 @@ void prove(session& ss) {
 			ground g = p.g;
 			proof* r = &proofs[nproofs++];
 			if (!p.rul->body().empty())
-				g.emplace_back(p.rul, *p.s);
+				g.emplace_back(p.rul, p.s);
 			*r = *p.prev;
 			r->g = g;
-			r->s = std::make_shared<subst>(*p.prev->s);
-			unify(*p.rul->p, *p.s, **r->last, *r->s, true);
+			r->s = p.prev->s;
+			unify(*p.rul->p, p.s, **r->last, r->s, true);
 			++r->last;
 			ss.q.push_back(r);
 			continue;
-		}
-		if (p.next) {
-			*p.next->s = *p.s;
-			ss.q.push_back(p.next);
 		}
 	} while (!ss.q.empty());
 	--_indent;
@@ -311,7 +312,7 @@ void printp(proof* p) {
 		dout << L"prev:   " << p->prev <<std::endl<<indent()<< L"subst:  ";
 	else
 		dout << L"prev:   (null)"<<std::endl<<indent()<<"subst:  ";
-	prints(*p->s);
+	prints(p->s);
 	dout <<std::endl<<indent()<< L"ground: " << std::endl;
 	++_indent;
 	printg(p->g);

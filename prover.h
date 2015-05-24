@@ -83,11 +83,11 @@ typedef std::map<int, std::list<std::pair<const term*, ground>>> evidence;
 struct proof {
 	const rule* rul;
 	termset::const_iterator last;
-	proof *prev, *next;
-	std::shared_ptr<subst> s;
+	proof *prev;
+	subst s;
 	ground g;
 	std::function<int(struct session&)> callback;
-	proof() : rul(0), prev(0), next(0), s(std::make_shared<subst>()) {}
+	proof() : rul(0), prev(0) {}
 };
 
 typedef std::deque<proof*> queue;
