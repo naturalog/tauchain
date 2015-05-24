@@ -282,29 +282,11 @@ string format(const term& p) {
 	return ss.str();
 }
 
-bool equals(const term* x, const term* y) {
-	if (!x) return !y;
-	return format(*x) == format(*y);
-//	return (!x == !y) && (!x || (equals(x->s, y->s) && equals(x->o, y->o)));
-}
-
-void printterm(const term& p) {
-	dout << format(p);
-//	if (!p) return;
-//	if (p.s) {
-//		printterm(*p.s);
-//		dout << L' ';
-//	}
-//	dout << dstr(p.p);
-//	if (p.o) {
-//		dout << L' ';
-//		printterm(*p.o);
-//	}
-}
+bool equals(const term* x, const term* y) { if (!x) return !y; return format(*x) == format(*y); }
+void printterm(const term& p) { dout << format(p); }
 
 void printp(proof* p) {
-	if (!p)
-		return;
+	if (!p) return;
 	dout << KCYN;
 	dout << indent() << L"rule:   ";
 	printr(*p->rul);
@@ -339,13 +321,11 @@ void printq(const queue& q) {
 }
 
 void prints(const subst& s) {
-//	dout << '[';
 	for (auto x : s) {
 		dout << dstr(x.first) << L" / ";
 		printterm(*x.second);
 		dout << ' ';// << std::endl;
 	}
-//	dout << "] ";
 }
 
 string format(const termset& l) {
@@ -359,16 +339,7 @@ string format(const termset& l) {
 	return ss.str();
 }
 
-void printl(const termset& l) {
-	dout << format(l);
-//	auto x = l.begin();
-//	while (x != l.end()) {
-//		printterm(**x);
-//		if (++x != l.end())
-//			dout << L',';
-//	}
-}
-
+void printl(const termset& l) { dout << format(l); }
 
 void printterm_substs(const term& p, const subst& s) {
 	if (p.s) {
@@ -420,7 +391,6 @@ void printg(const ground& g) {
 		printr_substs(*x.first, x.second);
 		dout << std::endl;
 	}
-//	dout<<'.';
 }
 
 void printe(const evidence& e) {
@@ -437,40 +407,29 @@ void printe(const evidence& e) {
 }
 }
 
-const prover::term* mkterm(const wchar_t* p, const wchar_t* s = 0, const wchar_t* o = 0) {
-//	prover::term* t = &prover::terms[prover::nterms++];
-	const prover::term* ps = s ? mkterm(s, 0, 0) : 0;
-	const prover::term* po = o ? mkterm(o, 0, 0) : 0;
-	return prover::term::make(dict.set(string(p)), ps, po);
+const prover::term* mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& q) {
+	const prover::term* ps = s ? prover::term::make(dict.set(s), 0, 0, q.subj) : 0;
+	const prover::term* po = o ? prover::term::make(dict.set(o), 0, 0, q.object) : 0;
+	return prover::term::make(dict.set(string(p)), ps, po, q.pred);
 }
 
-const prover::term* mkterm(string s, string p, string o) {
-	return mkterm(p.c_str(), s.c_str(), o.c_str());
+const prover::term* mkterm(string s, string p, string o, const quad& q) {
+	return mkterm(p.c_str(), s.c_str(), o.c_str(), q);
 }
 
 const prover::term* quad2term(const quad& p) {
-	return mkterm(p.pred->value.c_str(), p.subj->value.c_str(), p.object->value.c_str());
+	return mkterm(p.subj->value, p.pred->value, p.object->value, p);
 }
 
-int szqdb(const qdb& x) {
-	int r = 0;
-	for (auto y : x)
-		r += y.second->size();
-	return r;
-}
-
-void reasoner::addrules(string s, string p, string o, prover::session& ss, const qdb& kb) {
-	if (p[0] == L'?')
-		throw 0;
+void addrules(pquad q, prover::session& ss, const qdb& kb) {
 	prover::rule* r = &prover::rules[prover::nrules++];
-	r->p = mkterm(s, p, o );
+	r->p = quad2term(*q);
+	const string &s = q->subj->value, &p = q->pred->value, &o = q->object->value;
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
 		ss.kb[r->p->p].insert(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
-//		r = prover::rule();
-		const prover::term* tt = quad2term( *y );
-		r->p = tt;
+		r->p = quad2term( *y );
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
 				r->body( quad2term( *z ) );
@@ -487,10 +446,10 @@ qlist merge ( const qdb& q ) {
 bool reasoner::prove ( qdb kb, qlist query ) {
 	prover::session ss;
 	//std::set<string> predicates;
-	for ( jsonld::pquad quad : *kb.at(L"@default")) {
-		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
-			addrules(s, p, o, ss, kb);
-	}
+	for ( jsonld::pquad quad : *kb.at(L"@default")) 
+		addrules(quad, ss, kb);
+//		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
+//			addrules(s, p, o, ss, kb);
 	for ( auto q : query )
 		ss.goal.insert( quad2term( *q ) );
 	prover::prove(ss);

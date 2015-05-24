@@ -23,9 +23,7 @@ string node::tostring() {
 
 pnode mkliteral ( string value, pstring datatype, pstring language ) {
 	pnode r = make_shared <node> ( node::LITERAL );
-//	r->type = "literal";
 	r->value = value;
-	//	dout<<"mkliteral value: "<<value<<endl;
 	r->datatype = datatype ? *datatype : XSD_STRING;
 	if ( language ) r->lang = *language;
 	return r;
@@ -33,16 +31,12 @@ pnode mkliteral ( string value, pstring datatype, pstring language ) {
 
 pnode mkiri ( string iri ) {
 	pnode r = make_shared <node> ( node::IRI );
-//	r->type = "IRI";
 	r->value = iri;
-	//	dout<<"mkiri value: "<<iri<<endl;
 	return r;
 }
 
 pnode mkbnode ( string attribute ) {
 	pnode r = make_shared <node> ( node::BNODE );
-//	r->type = "blank node";
-	//	dout<<"mkbnode value: "<<attribute<<endl;
 	r->value = attribute;
 	return r;
 }
@@ -207,8 +201,8 @@ quad::quad ( string subj, string pred, string object, string graph ) :
 quad::quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph ) :
 	quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) { }
 
-quad::quad ( pnode subj, pnode pred, pnode object, string graph ) :
-	quad_base ( subj, pred, object, startsWith ( graph, L"_:" ) ? mkbnode ( graph ) : mkiri ( graph ) ) { }
+quad::quad ( pnode s, pnode p, pnode o, string c ) :
+	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( c ) : mkiri ( c ) ) { }
 
 string quad::tostring ( ) {
 	std::wstringstream ss;

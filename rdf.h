@@ -28,18 +28,14 @@ pnode mkliteral ( string value, pstring datatype, pstring language );
 pnode mkiri ( string iri );
 pnode mkbnode ( string attribute );
 
-typedef std::tuple<pnode, pnode, pnode, pnode> quad_base;
-
-class quad: public quad_base {
+class quad {
 	quad ( string subj, string pred, pnode object, string graph );
 public:
-	pnode &subj = std::get <0> ( *this ), &pred = std::get <1> ( *this ),
-	       &object = std::get <2> ( *this ), &graph = std::get <3> ( *this );
+	pnode subj, pred, object, graph;
 
 	quad ( string subj, string pred, string object, string graph );
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph );
 	quad ( pnode subj, pnode pred, pnode object, string graph );
-	using quad_base::quad_base;
 
 	string tostring ( );
 };

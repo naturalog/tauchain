@@ -19,7 +19,6 @@ struct session;
 }
 
 class reasoner {
-	void addrules(string s, string p, string o, prover::session& ss, const qdb& kb);
 public:
 	bool prove ( qdb kb, qlist query );
 	bool test_reasoner();
@@ -29,23 +28,23 @@ namespace prover {
 bool equals(const class term* x, const class term* y);
 void printterm(const class term& p);
 class term {
-//	static std::set<const term*> terms;
 	static std::map<int, std::map<const term*, std::map<const term*, const term*>>> terms; // pso
 	term(int _p, const term* _s, const term* _o)	: p(_p), s(_s), o(_o) {}
+	pnode node;
 public:
 	const int p;
 	const term *s, *o;
-	static const term* make(string p, const term* s = 0, const term* o = 0) { return make(dict.set(p), s, o); }
-	static const term* make(int p, const term* s = 0, const term* o = 0) {
+	static const term* make(string p, const term* s = 0, const term* o = 0, pnode node = 0) { return make(dict.set(p), s, o, node); }
+	static const term* make(int p, const term* s = 0, const term* o = 0, pnode node = 0) {
 		for (auto y : terms[p])
 			for (auto x : y.second)
-				if (x.second->p == p && equals(s, x.second->s) && equals(o, x.second->o)) {
-//				dout << "term::make found existing term: "; printterm(*x); dout << " where requested term: "; printterm({p,s,o}); dout << std::endl;
-					return x.second;
-				}
+				if (x.second->p == p && !s == !x.second->s && !o == !x.second->o
+					&& (!s || equals(s, x.second->s))
+					&& (!o || equals(o, x.second->o)))
+						return x.second;
 		term* t = new term(p,s,o);
-//		terms.insert(t);
 		terms[p][s][o] = t;
+		t->node = node;
 //		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
 		return t;
 	}
