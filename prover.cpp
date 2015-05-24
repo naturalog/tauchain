@@ -74,18 +74,19 @@ void initmem() {
 
 const term* evaluate(const term& p, const subst& s) {
 	setproc(L"evaluate");
+	const term* r;
 	if (p.p < 0) {
 		auto it = s.find(p.p);
-		return it == s.end() ? 0 : evaluate(*it->second, s);
+		r = it == s.end() ? 0 : evaluate(*it->second, s);
 	} else if (!p.s && !p.o)
-		return &p;
+		r = &p;
 	else {
 		const term* a = evaluate(*p.s, s);
 		const term* b = evaluate(*p.o, s);
-		const term* r = term::make(p.p, a ? a : term::make(p.s->p), b ? b : term::make(p.o->p));
-		TRACE(printterm_substs(p, s); dout << " = "; if (!r) dout << "(null)"; else printterm(*r); dout << std::endl);
-		return r;
+		r = term::make(p.p, a ? a : term::make(p.s->p), b ? b : term::make(p.o->p));
 	}
+	TRACE(printterm_substs(p, s); dout << " = "; if (!r) dout << "(null)"; else printterm(*r); dout << std::endl);
+	return r;
 }
 
 bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f) {
@@ -106,9 +107,8 @@ bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f)
 		}
 	} else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o))
 		r = false;
-	else {
+	else
 		r = !s.s || (unify(*s.s, ssub, *d.s, dsub, f) && unify(*s.o, ssub, *d.o, dsub, f));
-	}
 	TRACE(dout << "Trying to unify ";
 		printterm_substs(s, ssub);
 		dout<<" with ";
@@ -131,11 +131,8 @@ bool euler_path(proof* p) {
 		if (!ep->rul->p == !p->rul->p &&
 			unify(*ep->rul->p, *ep->s, *p->rul->p, *p->s, false))
 			break;
-	if (ep) {
-		TRACE(dout<<"Euler path detected\n");
-		return true;
-	}
-	return false;
+	if (ep) TRACE(dout<<"Euler path detected\n");
+	return ep;
 }
 
 int builtin(const term& t, session& ss) {
@@ -156,75 +153,37 @@ int builtin(const term& t, session& ss) {
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
-//		static std::set<proof*> ps;
-//		if (ps.find(&p) != ps.end()) {
-//			ps.erase(&p);
-//			return -1;
-//		}
 		const term* vs = term::make(L"?S");
-//		if (p.rul->p && p.rul->p->s == vs) 
-//			return -1;
 		proof* f = &proofs[nproofs++];
-		rule* rl = &rules[nrules++];
-		rl->body ( term::make ( rdfssubClassOf, t0, t1 ) );
-		rl->body ( term::make ( A,              vs, t0 ) );
-		rl->p    = term::make ( A,              vs, t1 ) ;
-//		p.rul->body(rl->p);
-//		if (ss.kb[rl->p->p].find(rl) != ss.kb[rl->p->p].end())
-//			return -1;
-		ss.kb[rl->p->p].insert(rl);
+		rule* _rl = &rules[nrules++];
+		_rl->body ( term::make ( rdfssubClassOf, t0, t1 ) );
+		_rl->body ( term::make ( A,              vs, t0 ) );
+		_rl->p    = term::make ( A,              vs, t1 ) ;
+		const rule* rl = *ss.kb[_rl->p->p].insert(_rl).first;
+		//TRACE(dout << "Rule: "; printr(*_rl);dout<<std::endl);
+		//TRACE(dout << "Rule: "; printr(*rl);dout<<std::endl);
 		f->rul = rl;
 		f->prev = &p;//.prev;
 		f->last = rl->body().begin();
 		f->g.clear();
 		if (euler_path(f)) 
 			return -1;
-//		ps.insert(f);
 		ss.q.push_back(f);
+		//TRACE(dout << "builtin added rule: "; printr(*rl);dout<<" where t0 = "; printterm(*t0);dout<<" t1 = ";printterm(*t1);dout<<std::endl);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
-		r = 1;
-/*
-		session s2;
-		s2.kb = ss.kb;
-		s2.goal.insert(q1);
-		prove(s2);
-//		TRACE(dout << "s2 returned evidence: " << std::endl; printe(s2.e));
-		auto it = s2.e.find(rdfssubClassOf);
-		if (it != s2.e.end()) {
-			bool res = true;
-			for (auto tg : it->second) {
-				int subclasser = tg.first->s->p;
-				session s3;
-				s3.kb = ss.kb;
-				const term* sc = term::make(subclasser);
-				const term* q2 = term::make(A, t0, sc);
-				s3.goal.insert(q2);
-				prove(s3);
-				for (auto e : s2.e[rdfssubClassOf])
-					for (auto g : e.second)
-						(*p.s)[t.s->p] = e.first->o;
-				for (auto e : s3.e[A])
-					for (auto g : e.second)
-						(*p.s)[t.o->p] = e.first->s;
-			}
-			r = res ? 1 : -1;
-		}*/
+		r = -1;
 	}
 	if (r == 1) {
 		proof* r = &proofs[nproofs++];
 		rule* rl = &rules[nrules++];
 		rl->p = evaluate(t, *p.s);
 		*r = p;
-//		r->rul = rl;
-		TRACE(dout << "builtin added rule: ";
-			printr(*rl);
-			dout << " by evaluating ";
-			printterm_substs(t, *p.s);
-			dout << std::endl);
+		TRACE(dout << "builtin added rule: "; printr(*rl);
+			dout << " by evaluating "; printterm_substs(t, *p.s); dout << std::endl);
 		r->g = p.g;
 		r->g.emplace_back(rl, subst());
 		++r->last;
-		ss.q.push_back(r);
+		ss.q.push_front(r);
 		TRACE(dout<<"pushing frame:\n";printp(r));
 	}
 
@@ -310,9 +269,6 @@ void prove(session& ss) {
 		printe(ss.e); dout << KNRM);
 }
 
-bool equals(const term* x, const term* y) {
-	return (!x == !y) && (!x || (x && equals(x->s, y->s) && equals(x->o, y->o)));
-}
 
 string format(const term& p) {
 	std::wstringstream ss;
@@ -324,17 +280,24 @@ string format(const term& p) {
 	return ss.str();
 }
 
+bool equals(const term* x, const term* y) {
+	if (!x) return !y;
+	return format(*x) == format(*y);
+//	return (!x == !y) && (!x || (equals(x->s, y->s) && equals(x->o, y->o)));
+}
+
 void printterm(const term& p) {
-	if (!p) return;
-	if (p.s) {
-		printterm(*p.s);
-		dout << L' ';
-	}
-	dout << dstr(p.p);
-	if (p.o) {
-		dout << L' ';
-		printterm(*p.o);
-	}
+	dout << format(p);
+//	if (!p) return;
+//	if (p.s) {
+//		printterm(*p.s);
+//		dout << L' ';
+//	}
+//	dout << dstr(p.p);
+//	if (p.o) {
+//		dout << L' ';
+//		printterm(*p.o);
+//	}
 }
 
 void printp(proof* p) {
@@ -395,25 +358,15 @@ string format(const termset& l) {
 }
 
 void printl(const termset& l) {
-	auto x = l.begin();
-	while (x != l.end()) {
-		printterm(**x);
-		if (++x != l.end())
-			dout << L',';
-	}
+	dout << format(l);
+//	auto x = l.begin();
+//	while (x != l.end()) {
+//		printterm(**x);
+//		if (++x != l.end())
+//			dout << L',';
+//	}
 }
 
-void printr(const rule& r) {
-	if(!r.body().empty())
-	{
-		printl(r.body());
-		dout << L" => ";
-	}
-	if (r.p)
-		printterm(*r.p);
-	if(r.body().empty())
-		dout << L".";
-}
 
 void printterm_substs(const term& p, const subst& s) {
 	if (p.s) {
@@ -449,10 +402,14 @@ void printr_substs(const rule& r, const subst& s) {
 
 string format(const rule& r) {
 	std::wstringstream ss;
-	if (!r.body().empty())
-		ss << format(r.body()) << L" => ";
-	ss << format(r.p);
+	if(!r.body().empty()) 	ss << format(r.body()) << L" => ";
+	if (r.p) 		ss << format(*r.p);
+	if(r.body().empty()) 	ss << L".";
 	return ss.str();
+}
+
+void printr(const rule& r) {
+	dout << format(r);
 }
 
 void printg(const ground& g) {

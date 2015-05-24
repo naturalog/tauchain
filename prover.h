@@ -39,12 +39,12 @@ public:
 		if (!p) throw 0;
 		for (auto x : terms) 
 			if (x->p == p && equals(s, x->s) && equals(o, x->o)) {
-//				dout << "term::make found existing term: "; printterm(*x); dout << std::endl;
+				dout << "term::make found existing term: "; printterm(*x); dout << " where requested term: "; printterm({p,s,o}); dout << std::endl;
 				return x;
 			}
 		term* t = new term(p,s,o);
 		terms.insert(t); 
-//		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
+		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
 		return t;
 	}
 	operator bool() const { return p; }
@@ -57,6 +57,7 @@ public:
 	}
 };
 typedef std::set<const term*> termset;
+string format(const class rule& r);
 
 class rule {
 	termset _body;
@@ -69,7 +70,10 @@ public:
 	rule(){}
 	rule(const term* _p) : p(_p) {}
 };
-struct cmp { bool operator()(const rule* x, const rule* y) { if (!x != !y) return !x; if (!x) return true; return x->p < y->p && x->body() < y->body(); } };
+struct cmp { bool operator()(const rule* x, const rule* y) {
+	if (!x != !y) return !x;
+	if (!x) return false;
+	return format(*x) < format(*y);} };
 
 typedef std::map<int, std::set<const rule*, cmp>> ruleset;
 typedef std::map<int, const term*> subst;
