@@ -31,7 +31,8 @@ uint nrules, nproofs;
 
 void printterm_substs(const term& p, const subst& s);
 
-std::set<const term*> term::terms;
+//std::set<const term*> term::terms;
+std::map<int, std::map<const term*, std::map<const term*, const term*>>> term::terms;
 std::list<string> proc;
 string indent() {
 	if (!_indent) return string();
