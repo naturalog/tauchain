@@ -169,16 +169,19 @@ int builtin(const term& t, session& ss) {
 		rl->body ( term::make ( rdfssubClassOf, t0, t1 ) );
 		rl->body ( term::make ( A,              vs, t0 ) );
 		rl->p    = term::make ( A,              vs, t1 ) ;
-		p.rul->body(rl->p);
+//		p.rul->body(rl->p);
+//		if (ss.kb[rl->p->p].find(rl) != ss.kb[rl->p->p].end())
+//			return -1;
+		ss.kb[rl->p->p].insert(rl);
 		f->rul = rl;
 		f->prev = &p;//.prev;
 		f->last = rl->body().begin();
 		f->g.clear();
 		if (euler_path(f)) 
 			return -1;
-		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
 //		ps.insert(f);
-		ss.q.push_front(f);
+		ss.q.push_back(f);
+		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
 		r = 1;
 /*
 		session s2;
@@ -503,7 +506,7 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 	prover::rule* r = &prover::rules[prover::nrules++];
 	r->p = mkterm(s, p, o );
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
-		ss.kb[r->p->p].push_back(r);
+		ss.kb[r->p->p].insert(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
 //		r = prover::rule();
@@ -512,7 +515,7 @@ void reasoner::addrules(string s, string p, string o, prover::session& ss, const
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
 				r->body( quad2term( *z ) );
-		ss.kb[r->p->p].push_back(r);
+		ss.kb[r->p->p].insert(r);
 	}
 }
 

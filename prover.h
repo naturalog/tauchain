@@ -56,7 +56,6 @@ public:
 		return true;
 	}
 };
-
 typedef std::set<const term*> termset;
 
 class rule {
@@ -70,14 +69,15 @@ public:
 	rule(){}
 	rule(const term* _p) : p(_p) {}
 };
+struct cmp { bool operator()(const rule* x, const rule* y) { if (!x != !y) return !x; if (!x) return true; return x->p < y->p && x->body() < y->body(); } };
 
-typedef std::map<int, std::list<rule*>> ruleset;
+typedef std::map<int, std::set<const rule*, cmp>> ruleset;
 typedef std::map<int, const term*> subst;
 typedef std::list<std::pair<const rule*, subst>> ground;
 typedef std::map<int, std::list<std::pair<const term*, ground>>> evidence;
 
 struct proof {
-	rule* rul;
+	const rule* rul;
 	termset::const_iterator last;
 	proof *prev, *next;
 	std::shared_ptr<subst> s;
