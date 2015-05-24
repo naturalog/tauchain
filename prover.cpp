@@ -171,7 +171,7 @@ int builtin(const term& t, session& ss) {
 		ss.q.push_back(f);
 		//TRACE(dout << "builtin added rule: "; printr(*rl);dout<<" where t0 = "; printterm(*t0);dout<<" t1 = ";printterm(*t1);dout<<std::endl);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
-		r = -1;
+		r = 1;
 	}
 	if (r == 1) {
 		proof* r = &proofs[nproofs++];

@@ -276,7 +276,7 @@ qdb readqdb ( std::wistream& is) {
 				}
 				dout << pq->tostring() << std::endl;
 #ifdef IRC				
-				sleep(1);
+				sleep(0.1);
 #endif				
 				if (q.find(c) == q.end())
 					q[c] = make_shared<qlist>();

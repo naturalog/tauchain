@@ -16,11 +16,6 @@ void menu();
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-//#ifdef IRC
-//ostream& dout = *new ofstream(string("/tmp/irc.freenode.net/#zennet11/in"));
-//ostream& derr = *new ofstream(string("/tmp/irc.freenode.net/#zennet11/in"));
-//string chan;
-//#else
 std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 //#endif
