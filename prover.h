@@ -39,12 +39,12 @@ public:
 		if (!p) throw 0;
 		for (auto x : terms) 
 			if (x->p == p && equals(s, x->s) && equals(o, x->o)) {
-				dout << "term::make found existing term: "; printterm(*x); dout << " where requested term: "; printterm({p,s,o}); dout << std::endl;
+//				dout << "term::make found existing term: "; printterm(*x); dout << " where requested term: "; printterm({p,s,o}); dout << std::endl;
 				return x;
 			}
 		term* t = new term(p,s,o);
 		terms.insert(t); 
-		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
+//		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
 		return t;
 	}
 	operator bool() const { return p; }
