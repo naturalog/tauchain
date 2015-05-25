@@ -8,6 +8,8 @@ typedef wstring str;
 typedef wchar_t chr;
 typedef const wchar_t cchr;
 using namespace jsonld;
+#include <boost/algorithm/string.hpp>
+using namespace boost::algorithm;
 
 list<quad> parse_nqline(const wchar_t* s) {
 	list<quad> r;
@@ -17,11 +19,13 @@ list<quad> parse_nqline(const wchar_t* s) {
 		pnode subject;
 		if (*s == L'<') {
 			while (*++s != L'>') t += *s;
+			trim(t);
 			subject = mkiri(t);
 			++s;
 		}
 		else if (*s == L'_') {
 			while (!iswspace(*s)) t += *s++;
+			trim(t);
 			subject = mkbnode(t);
 		}
 		else throw runtime_error("expected iri or bnode subject");
@@ -31,6 +35,7 @@ list<quad> parse_nqline(const wchar_t* s) {
 		pnode pred;
 		if (*s == L'<') {
 			while (*++s != L'>') t += *s;
+			trim(t);
 			pred = mkiri(t);
 			++s;
 		}
@@ -45,11 +50,13 @@ list<quad> parse_nqline(const wchar_t* s) {
 		pnode object;
 		if (*s == L'<') {
 			while (*++s != L'>') t += *s;
+			trim(t);
 			object = mkiri(t);
 			++s;
 		}
 		else if (*s == L'_') {
 			while (!iswspace(*s)) t += *s++;
+			trim(t);
 			object = mkbnode(t);
 		} else if (*s++ == L'\"') {
 			do {
@@ -72,6 +79,9 @@ list<quad> parse_nqline(const wchar_t* s) {
 				}
 				else throw runtime_error("expected langtag or iri");
 			}
+			trim(t);
+			trim(dt);
+			trim(lang);
 			object = mkliteral(t, pstr(dt), pstr(lang));
 		}
 		else throw runtime_error("expected iri or bnode or literal object");
@@ -81,10 +91,12 @@ list<quad> parse_nqline(const wchar_t* s) {
 		if (*s != L'.' && *s) {
 			if (*s == L'<') {
 				while (*++s != L'>') t += *s;
+				trim(t);
 				graph = t;
 			}
 			else if (*s == L'_') {
 				while (!iswspace(*s)) t += *s++;
+				trim(t);
 				graph = t;
 			}
 			else throw runtime_error("expected iri or bnode graph");
