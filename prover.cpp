@@ -75,18 +75,15 @@ void initmem() {
 	nrules = nproofs = 0;
 }
 
-const term* evaluate(const term& p) {
+bool evaluate(const term& p) {
 	setproc(L"evaluate");
-	if (p.p < 0) return 0;
-	if (!p.s && !p.o) return &p;
-	const term* a = evaluate(*p.s);
-	const term* b = evaluate(*p.o);
-	if (!a || !b) return 0;
-	return term::make(p.p, a ? a : term::make(p.s->p), b ? b : term::make(p.o->p));
+	if (p.p < 0) return false;
+	if (!p.s && !p.o) return true;
+	return evaluate(*p.s) && evaluate(*p.o);
 }
 
 const term* evaluate(const term& p, const subst& s) {
-	if (!s.size()) return evaluate(p);
+//	if (!s.size()) return evaluate(p);
 	setproc(L"evaluate");
 	const term* r;
 	if (p.p < 0) {
@@ -103,17 +100,16 @@ const term* evaluate(const term& p, const subst& s) {
 	return r;
 }
 
-bool unify(const term& s, const subst& ssub, const term& d) {
-	const term* v;
-	if (s.p < 0) return (v = evaluate(s, ssub)) ? unify(*v, ssub, d) : true;
-	if (d.p < 0) return true;//(v = evaluate(d)) ? unify(s, ssub, *v) : true;
+bool unify(const term& s, const term& d) {
+//	const term* v;
+	if (s.p < 0 || d.p < 0) return true;
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
-	return !s.s || (unify(*s.s, ssub, *d.s) && unify(*s.o, ssub, *d.o));
+	return !s.s || (unify(*s.s, *d.s) && unify(*s.o, *d.o));
 }
 
 bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f) {
 	setproc(L"unify");
-	if (!f && dsub.empty()) return unify(s, ssub, d);
+//	if (!f && dsub.empty()) return unify(s, ssub, d);
 	const term* v;
 	bool r, ns = false;
 	if (s.p < 0) 
@@ -154,7 +150,7 @@ bool euler_path(proof* p, bool update = false) {
 		if (!ep->rul->p == !p->rul->p &&
 			unify(*ep->rul->p, ep->s, *p->rul->p, p->s, update))
 			break;
-	if (ep) TRACE(dout<<"Euler path detected\n");
+	if (ep) { TRACE(dout<<"Euler path detected\n"); }
 	return ep;
 }
 
@@ -240,10 +236,11 @@ void prove(session& ss) {
 				printterm(*t);
 				dout << std::endl);
 			if (builtin(*t, ss) != -1) continue;
+			const term& e = *evaluate(*t, p.s);
 
 			for (auto x : cases)
 				for (auto rl : x.second) {
-					if (unify(*t, p.s, *rl->p)) {
+					if (unify(e, *rl->p)) {
 						proof* r = &proofs[nproofs++];
 						r->rul = rl;
 						r->last = r->rul->body().begin();
@@ -259,8 +256,8 @@ void prove(session& ss) {
 		else if (!p.prev) {
 			for (auto r = p.rul->body().begin(); r != p.rul->body().end(); ++r) {
 				const term* t = evaluate(**r, p.s);
-				if (!t) continue;
-				TRACE(dout << "pusing evidence: " << format(*t) << std::endl);
+				if (!t || !evaluate(*t)) continue;
+				TRACE(dout << "pushing evidence: " << format(*t) << std::endl);
 				ss.e[t->p].emplace_back(t, p.g);
 			}
 		//	ss.q.clear();

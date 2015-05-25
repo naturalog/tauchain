@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -ggdb -DDEBUG
+CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O3 #-ggdb -DDEBUG
 LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread
 OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o
 

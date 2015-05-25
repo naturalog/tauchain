@@ -68,9 +68,10 @@ public:
 		if ( args.size() == 2 )
 			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << std::endl;
 		else try {
-//#ifdef IRC
-				prover::initmem();
+#ifdef IRC
 				for(ever) { try {
+#endif					
+				prover::initmem();
 				auto kb = load_quads(L"");
 				if (kb) {
 					dout << "kb input done." << std::endl;
@@ -81,10 +82,12 @@ public:
 						dout << "Ready." << std::endl;
 					}
 				}
+#ifdef IRC
 				} catch (std::exception& ex) { dout<<ex.what()<<std::endl; } 
 				catch (...) { dout<<"generic exception."<<std::endl; } 
 				sleep(1);
 				}
+#endif
 //#else
 //				qdb kb = !quad_in ? convert ( args[2] ) : *load_quads(args[2]);
 //				opts.base = pstr ( string ( L"file://" ) + args[2] + L"#" );
@@ -143,7 +146,7 @@ int main ( int argc, char** argv ) {
 	argc = args.size();
 	if ( argc == 1 ) {
 #ifndef IRC
-		dout << std::endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << std::endl;
+//		dout << std::endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << std::endl;
 #else
 		dout << "IRC mode. Running with debug level " << level << " type 'botau: level <n>' in order to change the verbosity level."<< std::endl;
 #endif
