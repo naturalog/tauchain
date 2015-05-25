@@ -230,6 +230,17 @@ using namespace boost::algorithm;
 namespace jsonld {
 
 qdb readqdb ( std::wistream& is) {
+	string s, c;
+	quad q;
+	qdb r;
+	while (getline(is, s)) {
+		q = parse_nqline(s.c_str());
+		c = q.graph->value;
+		if (r.find(c) == r.end()) r[c] = make_shared<qlist>();
+		r[c]->push_back(make_shared<quad>(q));
+	}
+	return r;
+	/*
 	string s,p,o,c;
 	bool quotes = false;
 	const char quote = '\"';
@@ -287,7 +298,7 @@ qdb readqdb ( std::wistream& is) {
 				}
 		}
 	}
-	return q;
+	return q;*/
 }
 }
 

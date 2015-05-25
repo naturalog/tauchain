@@ -36,7 +36,8 @@ public:
 	quad ( string subj, string pred, string object, string graph );
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph );
 	quad ( pnode subj, pnode pred, pnode object, string graph );
-
+	quad(){}
+	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
 	string tostring ( );
 };
 
@@ -80,5 +81,6 @@ private:
 
 typedef std::shared_ptr<rdf_db> prdf_db;
 }
+jsonld::quad parse_nqline(const wchar_t* s); 
 jsonld::qlist merge ( const jsonld::qdb& q );
 #endif

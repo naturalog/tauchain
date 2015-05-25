@@ -1,12 +1,13 @@
 CC=g++
 CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -ggdb -DDEBUG
 LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread
-OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o
+OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
+nquads.o: nquads.cpp rdf.h
 cli.o: cli.cpp prover.h misc.h rdf.h object.h parsers.h jsonld.h \
  json_spirit.h strings.h cli.h
 jsonld.o: jsonld.cpp jsonld.h json_spirit.h object.h strings.h rdf.h
@@ -46,5 +47,3 @@ clean:
 
 ppjson: ppjson.cpp
 	clang++ -std=c++11 ppjson.cpp -oppjson -Wall -ggdb
-n3: n3.cpp
-	g++ n3.cpp -on3 -Wall -ggdb -rdynamic -std=c++11
