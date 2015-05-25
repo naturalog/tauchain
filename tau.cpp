@@ -75,6 +75,7 @@ public:
 				if (kb) {
 					dout << "kb input done." << std::endl;
 					auto query = load_quads(L"");
+					dout << "query loaded." << std::endl;
 					if (query) {
 						r.prove ( *kb, merge ( *query ) );
 						dout << "Ready." << std::endl;

@@ -33,7 +33,8 @@ void printterm_substs(const term& p, const subst& s);
 string format(const term& p);
 
 //std::set<const term*> term::terms;
-std::map<int, std::map<const term*, std::map<const term*, const term*>>> term::terms;
+//std::map<int, std::map<const term*, std::map<const term*, const term*>>> term::terms;
+std::set<term> term::terms;
 std::list<string> proc;
 string indent() {
 	if (!_indent) return string();
@@ -276,7 +277,7 @@ string format(const term& p) {
 	return ss.str();
 }
 
-bool equals(const term* x, const term* y) { if (!x) return !y; return format(*x) == format(*y); }
+bool equals(const term* x, const term* y) { if (!x) return !y; if (x == y) return true; if (x->p == y->p && x->s == y->s && x->p == x->p) return true; return format(*x) == format(*y); }
 void printterm(const term& p) { dout << format(p); }
 
 void printp(proof* p) {

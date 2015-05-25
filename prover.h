@@ -28,25 +28,34 @@ namespace prover {
 bool equals(const class term* x, const class term* y);
 void printterm(const class term& p);
 class term {
-	static std::map<int, std::map<const term*, std::map<const term*, const term*>>> terms; // pso
-	term(int _p, const term* _s, const term* _o)	: p(_p), s(_s), o(_o) {}
-	pnode node;
+//	static std::map<int, std::map<const term*, std::map<const term*, const term*>>> terms; // pso
+	static std::set<term> terms;
 public:
+	term(int _p, const term* _s, const term* _o, pnode n) : p(_p), s(_s), o(_o), node(n) {}
 	const int p;
 	const term *s, *o;
+	pnode node;
 	static const term* make(string p, const term* s = 0, const term* o = 0, pnode node = 0) { return make(dict.set(p), s, o, node); }
 	static const term* make(int p, const term* s = 0, const term* o = 0, pnode node = 0) {
-		for (auto y : terms[p])
-			for (auto x : y.second)
-				if (x.second->p == p && !s == !x.second->s && !o == !x.second->o
-					&& (!s || equals(s, x.second->s))
-					&& (!o || equals(o, x.second->o)))
-						return x.second;
-		term* t = new term(p,s,o);
-		terms[p][s][o] = t;
-		t->node = node;
+/*		auto& tt = terms[p][s];
+		auto it = tt.find(o);
+		if (it != tt.end()) return it->second;*/
+//		for (auto y : terms[p]) {
+//			auto x = y.second[s];
+//			for (auto x : y.second)
+//				if (x.second->p == p && !s == !x.second->s && !o == !x.second->o
+//					&& (!s || equals(s, x.second->s))
+//					&& (!o || equals(o, x.second->o)))
+//						return x.second;
+//		}
+//		term* t = new term(p,s,o);
+//		terms[p][s][o] = t;
+		auto r = terms.emplace(p, s, o, node);
+//		t->node = node;
 //		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
-		return t;
+		static uint n = 0;
+		if (r.second) if (++n % 10000 == 0) std::cerr << n << std::endl;
+		return &*r.first;
 	}
 	operator bool() const { return p; }
 	bool operator!=(const term& x) const { return !((*this) == x); }
