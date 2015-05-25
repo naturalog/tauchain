@@ -235,6 +235,7 @@ qdb readqdb ( std::wistream& is) {
 	qdb r;
 	while (getline(is, s)) {
 		trim(s);
+		if (s[0] == L'#') continue;
 		for (quad q : parse_nqline(s.c_str())) {
 			c = q.graph->value;
 			if (r.find(c) == r.end()) r[c] = make_shared<qlist>();

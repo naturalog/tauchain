@@ -39,7 +39,7 @@ public:
 	quad(){}
 	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
 	string tostring ( ) const;
-	bool operator<(const quad& q) const { return tostring() < q.tostring(); }
+//	bool operator<(const quad& q) const { return tostring() < q.tostring(); }
 };
 
 typedef std::shared_ptr<quad> pquad;
@@ -82,6 +82,6 @@ private:
 
 typedef std::shared_ptr<rdf_db> prdf_db;
 }
-std::set<jsonld::quad> parse_nqline(const wchar_t* s); 
+std::list<jsonld::quad> parse_nqline(const wchar_t* s); 
 jsonld::qlist merge ( const jsonld::qdb& q );
 #endif

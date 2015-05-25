@@ -68,7 +68,7 @@ public:
 		if ( args.size() == 2 )
 			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << std::endl;
 		else try {
-#ifdef IRC
+//#ifdef IRC
 				prover::initmem();
 				for(ever) { try {
 				auto kb = load_quads(L"");
@@ -84,13 +84,13 @@ public:
 				catch (...) { dout<<"generic exception."<<std::endl; } 
 				sleep(1);
 				}
-#else
-				qdb kb = !quad_in ? convert ( args[2] ) : *load_quads(args[2]);
-				opts.base = pstr ( string ( L"file://" ) + args[2] + L"#" );
-				qdb query = !quad_in ? convert ( load_json(args[3]) ) : *load_quads(args[3]);
-				auto e = r.prove ( kb, merge ( query ) );
-				dout << "evidence: " << std::endl << e << std::endl;
-#endif
+//#else
+//				qdb kb = !quad_in ? convert ( args[2] ) : *load_quads(args[2]);
+//				opts.base = pstr ( string ( L"file://" ) + args[2] + L"#" );
+//				qdb query = !quad_in ? convert ( load_json(args[3]) ) : *load_quads(args[3]);
+//				auto e = r.prove ( kb, merge ( query ) );
+//				dout << "evidence: " << std::endl << e << std::endl;
+//#endif
 				return 0;
 			} catch ( std::exception& ex ) {
 				derr << ex.what() << std::endl;

@@ -9,8 +9,8 @@ typedef wchar_t chr;
 typedef const wchar_t cchr;
 using namespace jsonld;
 
-set<quad> parse_nqline(const wchar_t* s) {
-	set<quad> r;
+list<quad> parse_nqline(const wchar_t* s) {
+	list<quad> r;
 	while(*s) {
 		while (iswspace(*s)) ++s;
 		str t;
@@ -54,7 +54,7 @@ set<quad> parse_nqline(const wchar_t* s) {
 		} else if (*s++ == L'\"') {
 			do {
 				t += *s++;
-			} while (!(*(s-1) != L'\"' && *s == L'\"'));
+			} while (!(*(s-1) != L'\\' && *s == L'\"'));
 			str dt, lang;
 			++s;
 			while (!iswspace(*s) && *s != L'.') {
@@ -65,12 +65,12 @@ set<quad> parse_nqline(const wchar_t* s) {
 						++s;
 						break;
 					}
-					else if (*s == L'@') { 
-						while (!iswspace(*s)) 
-							lang += *s++;
-						break;
-					}
-				} else throw runtime_error("expected langtag or iri");
+				} else if (*s == L'@') { 
+					while (!iswspace(*s)) 
+						lang += *s++;
+					break;
+				}
+				else throw runtime_error("expected langtag or iri");
 			}
 			object = mkliteral(t, pstr(dt), pstr(lang));
 		}
@@ -90,9 +90,9 @@ set<quad> parse_nqline(const wchar_t* s) {
 			else throw runtime_error("expected iri or bnode graph");
 			t = L"";
 			++s;
-			r.emplace(quad(subject, pred, object, graph));
+			r.emplace_front(quad(subject, pred, object, graph));
 		} else
-			r.emplace(quad(subject, pred, object, L"@default"));
+			r.emplace_front(quad(subject, pred, object, L"@default"));
 		while (*s == '.') ++s;
 	}
 	return r;
