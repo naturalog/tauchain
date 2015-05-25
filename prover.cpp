@@ -30,6 +30,7 @@ proof* proofs = 0;
 uint nrules, nproofs;
 
 void printterm_substs(const term& p, const subst& s);
+string format(const term& p);
 
 //std::set<const term*> term::terms;
 std::map<int, std::map<const term*, std::map<const term*, const term*>>> term::terms;
@@ -126,11 +127,11 @@ bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f)
 	return r;
 }
 
-bool euler_path(proof* p) {
+bool euler_path(proof* p, bool update = false) {
 	proof* ep = p;
 	while ((ep = ep->prev))
 		if (!ep->rul->p == !p->rul->p &&
-			unify(*ep->rul->p, ep->s, *p->rul->p, p->s, false))
+			unify(*ep->rul->p, ep->s, *p->rul->p, p->s, update))
 			break;
 	if (ep) TRACE(dout<<"Euler path detected\n");
 	return ep;
@@ -155,25 +156,20 @@ int builtin(const term& t, session& ss) {
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
 		const term* vs = term::make(L"?S");
-		proof* f = &proofs[nproofs++];
+		const term* va = term::make(L"?A");
+		const term* vb = term::make(L"?B");
 		rule* _rl = &rules[nrules++];
-		_rl->body ( term::make ( rdfssubClassOf, t0, t1 ) );
-		_rl->body ( term::make ( A,              vs, t0 ) );
-		_rl->p    = term::make ( A,              vs, t1 ) ;
+		_rl->body ( term::make ( rdfssubClassOf, va, vb ) );
+		_rl->body ( term::make ( A,              vs, va ) );
+		_rl->p    = term::make ( A,              vs, vb ) ;
 		const rule* rl = *ss.kb[_rl->p->p].insert(_rl).first;
-		unify(*rl->p, p.s, t, f->s, true);
-		//TRACE(dout << "Rule: "; printr(*_rl);dout<<std::endl);
-		//TRACE(dout << "Rule: "; printr(*rl);dout<<std::endl);
+		proof* f = &proofs[nproofs++];
 		f->rul = rl;
-		f->prev = &p;//.prev;
+		f->prev = &p;
 		f->last = rl->body().begin();
 		f->g = p.g;
-//		f->s = p.s;
-//		f->g.clear();
-		if (euler_path(f)) 
-			return -1;
-		ss.q.push_front(f);
-		//TRACE(dout << "builtin added rule: "; printr(*rl);dout<<" where t0 = "; printterm(*t0);dout<<" t1 = ";printterm(*t1);dout<<std::endl);
+		if (euler_path(f)) return -1;
+		ss.q.push_back(f);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
 		r = -1;
 	}
@@ -187,10 +183,7 @@ int builtin(const term& t, session& ss) {
 		r->g = p.g;
 		r->g.emplace_back(rl, subst());
 		++r->last;
-		if (!euler_path(r)) {
-			ss.q.push_back(r);
-			TRACE(dout<<"pushing frame:\n";printp(r));
-		} else return -1;
+		ss.q.push_back(r);
 	}
 
 	return r;
@@ -248,6 +241,7 @@ void prove(session& ss) {
 		else if (!p.prev) {
 			for (auto r = p.rul->body().begin(); r != p.rul->body().end(); ++r) {
 				const term* t = evaluate(**r, p.s);
+				TRACE(dout << "pusing evidence: " << format(*t) << std::endl);
 				ss.e[t->p].emplace_back(t, p.g);
 			}
 		//	ss.q.clear();

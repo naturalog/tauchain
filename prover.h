@@ -114,7 +114,7 @@ void printrs(const ruleset& rs);
 void printq(const queue& q);
 void printp(proof* p);
 
-const uint MEM = 1024 * 256;
+const uint MEM = 1024 * 8 * 256;
 const uint max_terms = MEM;
 const uint max_termsets = MEM;
 const uint max_rules = MEM;
