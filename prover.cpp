@@ -32,6 +32,15 @@ uint nrules, nproofs;
 
 void printterm_substs(const term& p, const subst& s);
 string format(const term& p);
+string format(const ruleset& rs);
+void printr(int r, const ruleset& kb);
+void printp(proof* p, const ruleset& kb);
+void printrs(const ruleset& rs);
+void printl(const termset& l);
+string format(const termset& l);
+void printe(const evidence& e, const ruleset& kb);
+void prints(const subst& s);
+string format(int r, const ruleset& kb);
 
 std::list<term*> term::terms;
 
@@ -141,11 +150,11 @@ bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f)
 	return r;
 }
 
-bool euler_path(proof* p, bool update = false) {
+bool euler_path(proof* p, const term* t, const ruleset& kb, bool update = false) {
 	proof* ep = p;
 	while ((ep = ep->prev))
-		if (!ep->rul->p == !p->rul->p &&
-			unify(*ep->rul->p, ep->s, *p->rul->p, p->s, update))
+		if (!kb.head[ep->rul] == !t &&
+			unify(*kb.head[ep->rul], ep->s, *t, p->s, update))
 			break;
 	if (ep) { TRACE(dout<<"Euler path detected\n"); }
 	return ep;
@@ -169,33 +178,40 @@ int builtin(const term& t, session& ss) {
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 		if (!t0) t0 = t.s;
 		if (!t1) t1 = t.o;
-		const term* vs = term::make(L"?S");
-		const term* va = term::make(L"?A");
-		const term* vb = term::make(L"?B");
-		rule* rl = &rules[nrules++];
-		rl->body ( term::make ( rdfssubClassOf, va, vb ) );
-		rl->body ( term::make ( A,              vs, va ) );
-		rl->p    = term::make ( A,              vs, vb ) ;
+		static const term* vs = term::make(L"?S");
+		static const term* va = term::make(L"?A");
+		static const term* vb = term::make(L"?B");
+//		rule* rl = &rules[nrules++];
+		int rl = ss.kb.head.size();
+		static const term* h = term::make ( A,              vs, vb );
 //		const rule* rl = *ss.kb[_rl->p->p].insert(_rl).first;
 		proof* f = &proofs[nproofs++];
 		f->rul = rl;
 		f->prev = &p;
-		f->last = rl->body().begin();
+		f->last = 0;//ss.kb.body[rl].begin();
 		f->g = p.g;
-		if (euler_path(f)) return -1;
+		if (euler_path(f, h, ss.kb))
+			return -1;
+		ss.kb.head.push_back(h);
+		ss.kb.body.push_back(termset());
+		ss.kb.body[rl].push_back ( term::make ( rdfssubClassOf, va, vb ) );
+		ss.kb.body[rl].push_back ( term::make ( A,              vs, va ) );
 		ss.q.push_back(f);
-		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
+		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f, ss.kb));
 		r = -1;
 	}
 	if (r == 1) {
 		proof* r = &proofs[nproofs++];
-		rule* rl = &rules[nrules++];
-		rl->p = evaluate(t, p.s);
+//		rule* rl = &rules[nrules++];
+//		rl->p = evaluate(t, p.s);
+		uint sz = ss.kb.head.size();
+		ss.kb.head.push_back(evaluate(t, p.s));
+		ss.kb.body.push_back(termset());
 		*r = p;
-		TRACE(dout << "builtin added rule: "; printr(*rl);
+		TRACE(dout << "builtin added rule: "; printr(sz, ss.kb);
 			dout << " by evaluating "; printterm_substs(t, p.s); dout << std::endl);
 		r->g = p.g;
-		r->g.emplace_back(rl, subst());
+		r->g.emplace_back(sz, subst());
 		++r->last;
 		ss.q.push_back(r);
 	}
@@ -203,11 +219,14 @@ int builtin(const term& t, session& ss) {
 	return r;
 }
 
-std::list<const rule*> match(const term& e, session& ss) {
-	std::list<const rule*> m;
-	for (auto r : ss.kb)
-		if (r->p && maybe_unify(e, *r->p))
-			m.push_front(r);
+std::set<uint> match(const term& e, session& ss) {
+	std::set<uint> m;
+	uint n = 0;
+	for (auto r : ss.kb.head) {
+		if (r && maybe_unify(e, *r))
+			m.insert(n);
+		++n;
+	}
 	return m;
 }
 
@@ -216,12 +235,15 @@ void prove(session& ss) {
 	setproc(L"prove");
 	termset& goal = ss.goal;
 //	ruleset& cases = ss.kb;
-	rule* rg = &rules[nrules++];
+//	rule* rg = &rules[nrules++];
 	ss.p = &proofs[nproofs++];
-	rg->p = 0;
-	rg->body(goal);
-	ss.p->rul = rg;
-	ss.p->last = rg->body().begin();
+//	rg->p = 0;
+//	rg->body(goal);
+	uint sz = ss.kb.head.size();
+	ss.kb.head.push_back(0);
+	ss.kb.body.push_back(goal);
+	ss.p->rul = sz;
+	ss.p->last = 0;//ss.kb.body[sz].begin();//rg->body().begin();
 	ss.p->prev = 0;
 	ss.q.push_back(ss.p);
 	TRACE(dout << KRED << "Facts:\n";);
@@ -232,10 +254,10 @@ void prove(session& ss) {
 		ss.p = ss.q.back();
 		ss.q.pop_back();
 		proof& p = *ss.p;
-		TRACE(dout<<"popped frame:\n";printp(&p));
+		TRACE(dout<<"popped frame:\n";printp(&p, ss.kb));
 		if (p.callback.target<int(struct session&)>() && !p.callback(ss)) continue;
-		if (p.last != p.rul->body().end() && !euler_path(&p)) {
-			const term* t = *p.last;
+		if (p.last != ss.kb.body[p.rul].size() && !euler_path(&p, ss.kb.head[p.rul], ss.kb)) {
+			const term* t = ss.kb.body[p.rul][p.last];
 			if (!t) throw 0;
 			TRACE(dout<<"Tracking back from ";
 				printterm(*t);
@@ -244,21 +266,22 @@ void prove(session& ss) {
 
 			for (auto rl : match(*evaluate(*t, p.s), ss)) {
 				subst s;
-				if (!unify(*t, p.s, *rl->p, s, true))
+				const term& h = *ss.kb.head[rl];
+				if (!unify(*t, p.s, h, s, true))
 					continue;
 				proof* r = &proofs[nproofs++];
 				r->rul = rl;
-				r->last = r->rul->body().begin();
+				r->last = 0;//ss.kb.body[rl].begin();//r->rul->body().begin();
 				r->prev = &p;
 				r->g = p.g;
 				r->s = s;
-				if (rl->body().empty())
+				if (ss.kb.body[rl].empty())
 					r->g.emplace_back(rl, subst());
 				ss.q.push_front(r);
 			}
 		}
 		else if (!p.prev) {
-			for (auto r = p.rul->body().begin(); r != p.rul->body().end(); ++r) {
+			for (auto r = ss.kb.body[p.rul].begin(); r != ss.kb.body[p.rul].end(); ++r) {
 				const term* t = evaluate(**r, p.s);
 				if (!t || hasvar(*t)) continue;
 				TRACE(dout << "pushing evidence: " << format(*t) << std::endl);
@@ -268,12 +291,12 @@ void prove(session& ss) {
 		} else {
 			ground g = p.g;
 			proof* r = &proofs[nproofs++];
-			if (!p.rul->body().empty())
+			if (!ss.kb.body[p.rul].empty())
 				g.emplace_back(p.rul, p.s);
 			*r = *p.prev;
 			r->g = g;
 			r->s = p.prev->s;
-			unify(*p.rul->p, p.s, **r->last, r->s, true);
+			unify(*ss.kb.head[p.rul], p.s, *ss.kb.body[r->rul][r->last], r->s, true);
 			++r->last;
 			ss.q.push_back(r);
 			continue;
@@ -282,7 +305,7 @@ void prove(session& ss) {
 	--_indent;
 	--_indent;
 	TRACE(dout << KWHT << "Evidence:" << std::endl; 
-		printe(ss.e); dout << KNRM);
+		printe(ss.e, ss.kb); dout << KNRM);
 }
 
 
@@ -298,12 +321,13 @@ string format(const term& p) {
 
 bool equals(const term* x, const term* y) { if (!x) return !y; if (x == y) return true; if (x->p == y->p && x->s == y->s && x->p == x->p) return true; return format(*x) == format(*y); }
 void printterm(const term& p) { dout << format(p); }
+void printg(const ground& g, const ruleset& kb);
 
-void printp(proof* p) {
+void printp(proof* p, const ruleset& kb) {
 	if (!p) return;
 	dout << KCYN;
 	dout << indent() << L"rule:   ";
-	printr(*p->rul);
+	printr(p->rul, kb);
 	dout<<std::endl<<indent();
 	if (p->prev)
 		dout << L"prev:   " << p->prev <<std::endl<<indent()<< L"subst:  ";
@@ -312,24 +336,19 @@ void printp(proof* p) {
 	prints(p->s);
 	dout <<std::endl<<indent()<< L"ground: " << std::endl;
 	++_indent;
-	printg(p->g);
+	printg(p->g, kb);
 	--_indent;
 	dout << L"\n";
 	dout << KNRM;
 }
 
 void printrs(const ruleset& rs) {
-	for (auto y : rs) {
-//		for (auto y : x.second) {
-			dout << indent();
-			printr(*y);
-			dout << std::endl;
-		}
+	dout << format(rs);
 }
 
-void printq(const queue& q) {
+void printq(const queue& q, const ruleset& kb) {
 	for (auto x : q) {
-		printp(x);
+		printp(x, kb);
 		dout << std::endl;
 	}
 }
@@ -342,6 +361,7 @@ void prints(const subst& s) {
 	}
 }
 
+void printl(const termset& l) { dout << format(l); }
 string format(const termset& l) {
 	std::wstringstream ss;
 	auto x = l.begin();
@@ -353,7 +373,6 @@ string format(const termset& l) {
 	return ss.str();
 }
 
-void printl(const termset& l) { dout << format(l); }
 
 void printterm_substs(const term& p, const subst& s) {
 	if (p.s) {
@@ -381,40 +400,54 @@ void printl_substs(const termset& l, const subst& s) {
 	}
 }
 
-void printr_substs(const rule& r, const subst& s) {
-	printl_substs(r.body(), s);
+void printr_substs(int r, const subst& s, const ruleset& kb) {
+	printl_substs(kb.body[r], s);
 	dout << L" => ";
-	printterm_substs(*r.p, s);
+	printterm_substs(*kb.head[r], s);
 }
 
-string format(const rule& r) {
+string format(int r, const ruleset& kb) {
 	std::wstringstream ss;
-	if(!r.body().empty()) 	ss << format(r.body()) << L" => ";
-	if (r.p) 		ss << format(*r.p);
-	if(r.body().empty()) 	ss << L".";
+	if(!kb.body[r].empty()) ss << format(kb.body[r]) << L" => ";
+	if (kb.head[r]) 	ss << format(*kb.head[r]);
+	if(kb.body[r].empty()) 	ss << L".";
 	return ss.str();
 }
 
-void printr(const rule& r) {
-	dout << format(r);
+string format(const ruleset& rs) {
+	std::wstringstream ss;
+	uint n = 0;
+	auto ith = rs.head.begin();
+	auto itb = rs.body.begin();
+	for (auto it = rs.head.begin(); it != rs.head.end(); ++it) {
+		if (!itb->empty()) 	ss << format(*itb) << L" => ";
+		if (*ith) 		ss << format(**ith);
+		if (itb->empty()) 	ss << L".";
+		++n;
+	}
+	return ss.str();
 }
 
-void printg(const ground& g) {
+void printr(int r, const ruleset& kb) {
+	dout << format(r, kb);
+}
+
+void printg(const ground& g, const ruleset& kb) {
 	for (auto x : g) {
 		dout << indent();
-		printr_substs(*x.first, x.second);
+		printr_substs(x.first, x.second, kb);
 		dout << std::endl;
 	}
 }
 
-void printe(const evidence& e) {
+void printe(const evidence& e, const ruleset& kb) {
 	for (auto y : e)
 		for (auto x : y.second) {
 			dout << indent();
 			printterm(*x.first);
 			dout << L":" << std::endl;
 			++_indent;
-			printg(x.second);
+			printg(x.second, kb);
 			--_indent;
 			dout << std::endl;
 		}
@@ -436,18 +469,22 @@ const prover::term* quad2term(const quad& p) {
 }
 
 void addrules(pquad q, prover::session& ss, const qdb& kb) {
-	prover::rule* r = &prover::rules[prover::nrules++];
-	r->p = quad2term(*q);
+//	prover::rule* r = &prover::rules[prover::nrules++];
+//	r->p = quad2term(*q);
 	const string &s = q->subj->value, &p = q->pred->value, &o = q->object->value;
+	uint n = ss.kb.head.size();
+	ss.kb.body.push_back(prover::termset());
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
-		ss.kb/*[r->p->p]*/.insert(r);
+		ss.kb.head.push_back(quad2term(*q));
+//		ss.kb/*[r->p->p]*/.insert(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
-		r = &prover::rules[prover::nrules++];
-		r->p = quad2term( *y );
+//		r = &prover::rules[prover::nrules++];
+//		r->p = quad2term( *y );
+		ss.kb.head.push_back(quad2term(*y));
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
-				r->body( quad2term( *z ) );
-		ss.kb/*[r->p->p]*/.insert(r);
+				ss.kb.body[n].push_back( quad2term( *z ) );
+//		ss.kb/*[r->p->p]*/.insert(r);
 	}
 }
 
@@ -465,7 +502,7 @@ bool reasoner::prove ( qdb kb, qlist query ) {
 //		const string &s = quad->subj->value, &p = quad->pred->value, &o = quad->object->value;
 //			addrules(s, p, o, ss, kb);
 	for ( auto q : query )
-		ss.goal.insert( quad2term( *q ) );
+		ss.goal.push_back( quad2term( *q ) );
 	prover::prove(ss);
 	return ss.e.size();
 }

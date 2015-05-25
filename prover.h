@@ -68,7 +68,7 @@ public:
 		return true;
 	}
 };
-typedef std::set<const term*> termset;
+typedef std::vector<const term*> termset;
 string format(const class rule& r);
 
 class rule {
@@ -77,7 +77,7 @@ public:
 	const term* p = 0;
 	const termset& body() const { return _body; }
 	void body(const termset& b) { _body = b; }
-	void body(const term* t) { _body.insert(t); }
+	void body(const term* t) { _body.push_back(t); }
 	bool operator==(const rule& x) const { return p == x.p && body() == x.body(); }
 	rule(){}
 	rule(const term* _p) : p(_p) {}
@@ -90,14 +90,18 @@ struct cmp { bool operator()(const rule* x, const rule* y) {
 };
 */
 //typedef std::map<int, std::set<const rule* /*, cmp*/>> ruleset;
-typedef std::set<const rule*> ruleset;
+//typedef std::set<const rule*> ruleset;
+struct ruleset {
+	std::vector<const term*> head;
+	std::vector<termset> body;
+};
+
 typedef std::map<int, const term*> subst;
-typedef std::list<std::pair<const rule*, subst>> ground;
+typedef std::list<std::pair<int, subst>> ground;
 typedef std::map<int, std::list<std::pair<const term*, ground>>> evidence;
 
 struct proof {
-	const rule* rul;
-	termset::const_iterator last;
+	uint rul, last;
 	proof *prev;
 	subst s;
 	ground g;
@@ -118,14 +122,6 @@ struct session {
 void initmem();
 void prove(session& ss);
 void printterm(const term& p);
-void prints(const subst& s);
-void printl(const termset& l);
-void printg(const ground& g);
-void printe(const evidence& e);
-void printr(const rule& r);
-void printrs(const ruleset& rs);
-void printq(const queue& q);
-void printp(proof* p);
 
 const uint MEM = 1024 * 8 * 256;
 const uint max_terms = MEM;

@@ -1,12 +1,13 @@
 CC=g++
-CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -ggdb -DDEBUG
-LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread
-OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o
+CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -I/usr/local/include/compute -ggdb -DDEBUG
+LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread -lOpenCL
+OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o match.o
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
+match.o: match.cpp prover.h
 nquads.o: nquads.cpp rdf.h
 cli.o: cli.cpp prover.h misc.h rdf.h object.h parsers.h jsonld.h \
  json_spirit.h strings.h cli.h
