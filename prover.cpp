@@ -15,6 +15,7 @@
 #include "object.h"
 #include "prover.h"
 #include <iterator>
+#include <forward_list>
 #include <boost/algorithm/string.hpp>
 
 using namespace boost::algorithm;
@@ -32,9 +33,8 @@ uint nrules, nproofs;
 void printterm_substs(const term& p, const subst& s);
 string format(const term& p);
 
-//std::set<const term*> term::terms;
-//std::map<int, std::map<const term*, std::map<const term*, const term*>>> term::terms;
 std::list<term*> term::terms;
+
 std::list<string> proc;
 string indent() {
 	if (!_indent) return string();
@@ -203,11 +203,20 @@ int builtin(const term& t, session& ss) {
 	return r;
 }
 
+std::list<const rule*> match(const term& e, session& ss) {
+	std::list<const rule*> m;
+	for (auto x : ss.kb)
+		for (auto r : x.second)
+			if (r->p && maybe_unify(e, *r->p))
+				m.push_front(r);
+	return m;
+}
+
 void prove(session& ss) {
 	++_indent;
 	setproc(L"prove");
 	termset& goal = ss.goal;
-	ruleset& cases = ss.kb;
+//	ruleset& cases = ss.kb;
 	rule* rg = &rules[nrules++];
 	ss.p = &proofs[nproofs++];
 	rg->p = 0;
@@ -217,7 +226,7 @@ void prove(session& ss) {
 	ss.p->prev = 0;
 	ss.q.push_back(ss.p);
 	TRACE(dout << KRED << "Facts:\n";);
-	TRACE(printrs(cases));
+	TRACE(printrs(ss.kb));
 	TRACE(dout << KGRN << "Query: "; printl(goal); dout << KNRM << std::endl);
 	++_indent;
 	do {
@@ -233,25 +242,21 @@ void prove(session& ss) {
 				printterm(*t);
 				dout << std::endl);
 			if (builtin(*t, ss) != -1) continue;
-			const term& e = *evaluate(*t, p.s);
 
-			for (auto x : cases)
-				for (auto rl : x.second) {
-					if (maybe_unify(e, *rl->p)) {
-						subst s;
-						if (!unify(*t, p.s, *rl->p, s, true))
-							continue;
-						proof* r = &proofs[nproofs++];
-						r->rul = rl;
-						r->last = r->rul->body().begin();
-						r->prev = &p;
-						r->g = p.g;
-						r->s = s;
-						if (rl->body().empty())
-							r->g.emplace_back(rl, subst());
-						ss.q.push_front(r);
-					} 
-				}
+			for (auto rl : match(*evaluate(*t, p.s), ss)) {
+				subst s;
+				if (!unify(*t, p.s, *rl->p, s, true))
+					continue;
+				proof* r = &proofs[nproofs++];
+				r->rul = rl;
+				r->last = r->rul->body().begin();
+				r->prev = &p;
+				r->g = p.g;
+				r->s = s;
+				if (rl->body().empty())
+					r->g.emplace_back(rl, subst());
+				ss.q.push_front(r);
+			}
 		}
 		else if (!p.prev) {
 			for (auto r = p.rul->body().begin(); r != p.rul->body().end(); ++r) {
