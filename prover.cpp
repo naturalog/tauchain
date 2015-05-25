@@ -172,11 +172,11 @@ int builtin(const term& t, session& ss) {
 		const term* vs = term::make(L"?S");
 		const term* va = term::make(L"?A");
 		const term* vb = term::make(L"?B");
-		rule* _rl = &rules[nrules++];
-		_rl->body ( term::make ( rdfssubClassOf, va, vb ) );
-		_rl->body ( term::make ( A,              vs, va ) );
-		_rl->p    = term::make ( A,              vs, vb ) ;
-		const rule* rl = *ss.kb[_rl->p->p].insert(_rl).first;
+		rule* rl = &rules[nrules++];
+		rl->body ( term::make ( rdfssubClassOf, va, vb ) );
+		rl->body ( term::make ( A,              vs, va ) );
+		rl->p    = term::make ( A,              vs, vb ) ;
+//		const rule* rl = *ss.kb[_rl->p->p].insert(_rl).first;
 		proof* f = &proofs[nproofs++];
 		f->rul = rl;
 		f->prev = &p;
@@ -205,10 +205,9 @@ int builtin(const term& t, session& ss) {
 
 std::list<const rule*> match(const term& e, session& ss) {
 	std::list<const rule*> m;
-	for (auto x : ss.kb)
-		for (auto r : x.second)
-			if (r->p && maybe_unify(e, *r->p))
-				m.push_front(r);
+	for (auto r : ss.kb)
+		if (r->p && maybe_unify(e, *r->p))
+			m.push_front(r);
 	return m;
 }
 
@@ -320,8 +319,8 @@ void printp(proof* p) {
 }
 
 void printrs(const ruleset& rs) {
-	for (auto x : rs)
-		for (auto y : x.second) {
+	for (auto y : rs) {
+//		for (auto y : x.second) {
 			dout << indent();
 			printr(*y);
 			dout << std::endl;
@@ -441,14 +440,14 @@ void addrules(pquad q, prover::session& ss, const qdb& kb) {
 	r->p = quad2term(*q);
 	const string &s = q->subj->value, &p = q->pred->value, &o = q->object->value;
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
-		ss.kb[r->p->p].insert(r);
+		ss.kb/*[r->p->p]*/.insert(r);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		r = &prover::rules[prover::nrules++];
 		r->p = quad2term( *y );
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
 				r->body( quad2term( *z ) );
-		ss.kb[r->p->p].insert(r);
+		ss.kb/*[r->p->p]*/.insert(r);
 	}
 }
 
