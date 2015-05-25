@@ -75,15 +75,14 @@ void initmem() {
 	nrules = nproofs = 0;
 }
 
-bool evaluate(const term& p) {
+bool hasvar(const term& p) {
 	setproc(L"evaluate");
-	if (p.p < 0) return false;
-	if (!p.s && !p.o) return true;
-	return evaluate(*p.s) && evaluate(*p.o);
+	if (p.p < 0) return true;
+	if (!p.s && !p.o) return false;
+	return hasvar(*p.s) || hasvar(*p.o);
 }
 
 const term* evaluate(const term& p, const subst& s) {
-//	if (!s.size()) return evaluate(p);
 	setproc(L"evaluate");
 	const term* r;
 	if (p.p < 0) {
@@ -100,16 +99,14 @@ const term* evaluate(const term& p, const subst& s) {
 	return r;
 }
 
-bool unify(const term& s, const term& d) {
-//	const term* v;
+bool maybe_unify(const term& s, const term& d) {
 	if (s.p < 0 || d.p < 0) return true;
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
-	return !s.s || (unify(*s.s, *d.s) && unify(*s.o, *d.o));
+	return !s.s || (maybe_unify(*s.s, *d.s) && maybe_unify(*s.o, *d.o));
 }
 
 bool unify(const term& s, const subst& ssub, const term& d, subst& dsub, bool f) {
 	setproc(L"unify");
-//	if (!f && dsub.empty()) return unify(s, ssub, d);
 	const term* v;
 	bool r, ns = false;
 	if (s.p < 0) 
@@ -240,13 +237,16 @@ void prove(session& ss) {
 
 			for (auto x : cases)
 				for (auto rl : x.second) {
-					if (unify(e, *rl->p)) {
+					if (maybe_unify(e, *rl->p)) {
+						subst s;
+						if (!unify(*t, p.s, *rl->p, s, true))
+							continue;
 						proof* r = &proofs[nproofs++];
 						r->rul = rl;
 						r->last = r->rul->body().begin();
 						r->prev = &p;
 						r->g = p.g;
-						unify(*t, p.s, *rl->p, r->s, true);
+						r->s = s;
 						if (rl->body().empty())
 							r->g.emplace_back(rl, subst());
 						ss.q.push_front(r);
@@ -256,7 +256,7 @@ void prove(session& ss) {
 		else if (!p.prev) {
 			for (auto r = p.rul->body().begin(); r != p.rul->body().end(); ++r) {
 				const term* t = evaluate(**r, p.s);
-				if (!t || !evaluate(*t)) continue;
+				if (!t || hasvar(*t)) continue;
 				TRACE(dout << "pushing evidence: " << format(*t) << std::endl);
 				ss.e[t->p].emplace_back(t, p.g);
 			}
