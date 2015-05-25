@@ -15,7 +15,7 @@ namespace compute = boost::compute;
 using namespace prover;
 using compute::int4_;
 
-std::string prog[] = 
+std::string prog = 
 	"#define get(x) terms[(((int)x)-((int)head))/sizeof(int4)]"
 	"bool maybe_unify(local const int4& s, local const int4& d, global const int4* head) {"
 	"	if (s.x < 0 || d.x < 0) return true;"
@@ -31,16 +31,18 @@ std::string prog[] =
 	"		out[gid/8] |= 1 << (gid % 8);"
 	"}";
 
-//compute::device device = compute::system::default_device();
-//compute::context context(device);
-//compute::program p = boost::compute::program::create_with_source(prog, context);
-//compute::kernel kmatch;
+compute::device device = compute::system::default_device();
+compute::context context(device);
+compute::program p = boost::compute::program::create_with_source(prog, context);
+compute::kernel kmatch;
 
 void init_cl() {
-//	p.build();
-//	kmatch = p.create_kernel("match");
 }
 /*
+int4_ t2v(const term& t) {
+	return int4_((int)t.p, (int)t.s, (int)t.o, (int)t.node);
+}
+
 compute::command_queue& get_clq() {
 	std::cout << "default cl device: " << device.name() << std::endl;
 	return compute::command_queue(context, device);

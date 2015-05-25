@@ -13,6 +13,7 @@
 using namespace jsonld;
 
 const uint K1 = 1024, M1 = K1 * K1;
+typedef uint termid;
 
 namespace prover {
 struct session;
@@ -28,59 +29,34 @@ namespace prover {
 bool equals(const class term* x, const class term* y);
 void printterm(const class term& p);
 class term {
-//	static std::map<int, std::map<const term*, std::map<const term*, const term*>>> terms; // pso
-	static std::list<term*> terms;
+//	static std::map<int, std::map<termid, std::map<termid, termid>>> terms; // pso
+	static std::vector<term> terms;
 public:
-	term(int _p, const term* _s, const term* _o, pnode n) : p(_p), s(_s), o(_o), node(n) {}
+	term(int _p, termid _s, termid _o, pnode n) : p(_p), s(_s), o(_o), node(n) {}
 	const int p;
-	const term *s, *o;
+	const termid s, o;
 	pnode node;
-	static const term* make(string p, const term* s = 0, const term* o = 0, pnode node = 0) { return make(dict.set(p), s, o, node); }
-	static const term* make(int p, const term* s = 0, const term* o = 0, pnode node = 0) {
-/*		auto& tt = terms[p][s];
-		auto it = tt.find(o);
-		if (it != tt.end()) return it->second;*/
-//		for (auto y : terms[p]) {
-//			auto x = y.second[s];
-//			for (auto x : y.second)
-//				if (x.second->p == p && !s == !x.second->s && !o == !x.second->o
-//					&& (!s || equals(s, x.second->s))
-//					&& (!o || equals(o, x.second->o)))
-//						return x.second;
-//		}
-		term* t = new term(p,s,o, node);
-		terms.push_front(t);
-		return t;
-//		terms[p][s][o] = t;
-//		auto r = terms.emplace(p, s, o, node);
-//		t->node = node;
-//		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
-//		static uint n = 0;
-//		if (r.second) if (++n % 10000 == 0) std::cerr << n << std::endl;
-//		return &*r.first;
-	}
-	operator bool() const { return p; }
-	bool operator!=(const term& x) const { return !((*this) == x); }
-	bool operator==(const term& x) const {
-		if (p != x.p) return false;
-		if (s) { if (!x.s || *s != *x.s) return false; } else if (x.s) return false;
-		if (o) { if (!x.o || *o != *x.o) return false; } else if (x.o) return false;
-		return true;
+	static const term& get(termid id) { return terms[id - 1]; }
+	static termid make(string p, termid s = 0, termid o = 0, pnode node = 0) { return make(dict.set(p), s, o, node); }
+	static termid make(int p, termid s = 0, termid o = 0, pnode node = 0) {
+		if (!p) throw 0;
+		terms.emplace_back(p,s,o,node);
+		return terms.size();
 	}
 };
-typedef std::vector<const term*> termset;
+typedef std::vector<termid> termset;
 string format(const class rule& r);
 
 class rule {
 	termset _body;
 public:
-	const term* p = 0;
+	termid p = 0;
 	const termset& body() const { return _body; }
 	void body(const termset& b) { _body = b; }
-	void body(const term* t) { _body.push_back(t); }
+	void body(termid t) { _body.push_back(t); }
 	bool operator==(const rule& x) const { return p == x.p && body() == x.body(); }
 	rule(){}
-	rule(const term* _p) : p(_p) {}
+	rule(termid _p) : p(_p) {}
 };
 /*
 struct cmp { bool operator()(const rule* x, const rule* y) {
@@ -92,13 +68,13 @@ struct cmp { bool operator()(const rule* x, const rule* y) {
 //typedef std::map<int, std::set<const rule* /*, cmp*/>> ruleset;
 //typedef std::set<const rule*> ruleset;
 struct ruleset {
-	std::vector<const term*> head;
+	std::vector<termid> head;
 	std::vector<termset> body;
 };
 
-typedef std::map<int, const term*> subst;
+typedef std::map<int, termid> subst;
 typedef std::list<std::pair<int, subst>> ground;
-typedef std::map<int, std::list<std::pair<const term*, ground>>> evidence;
+typedef std::map<int, std::list<std::pair<termid, ground>>> evidence;
 
 struct proof {
 	uint rul, last;
@@ -121,7 +97,7 @@ struct session {
 
 void initmem();
 void prove(session& ss);
-void printterm(const term& p);
+void printterm(termid p);
 
 const uint MEM = 1024 * 8 * 256;
 const uint max_terms = MEM;
