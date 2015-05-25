@@ -106,7 +106,7 @@ const term* evaluate(const term& p, const subst& s) {
 bool unify(const term& s, const subst& ssub, const term& d) {
 	const term* v;
 	if (s.p < 0) return (v = evaluate(s, ssub)) ? unify(*v, ssub, d) : true;
-	if (d.p < 0) return (v = evaluate(d)) ? unify(s, ssub, *v) : true;
+	if (d.p < 0) return true;//(v = evaluate(d)) ? unify(s, ssub, *v) : true;
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
 	return !s.s || (unify(*s.s, ssub, *d.s) && unify(*s.o, ssub, *d.o));
 }
