@@ -34,7 +34,7 @@ string format(const term& p);
 
 //std::set<const term*> term::terms;
 //std::map<int, std::map<const term*, std::map<const term*, const term*>>> term::terms;
-std::set<term> term::terms;
+std::list<term*> term::terms;
 std::list<string> proc;
 string indent() {
 	if (!_indent) return string();

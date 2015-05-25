@@ -29,7 +29,7 @@ bool equals(const class term* x, const class term* y);
 void printterm(const class term& p);
 class term {
 //	static std::map<int, std::map<const term*, std::map<const term*, const term*>>> terms; // pso
-	static std::set<term> terms;
+	static std::list<term*> terms;
 public:
 	term(int _p, const term* _s, const term* _o, pnode n) : p(_p), s(_s), o(_o), node(n) {}
 	const int p;
@@ -48,14 +48,16 @@ public:
 //					&& (!o || equals(o, x.second->o)))
 //						return x.second;
 //		}
-//		term* t = new term(p,s,o);
+		term* t = new term(p,s,o, node);
+		terms.push_front(t);
+		return t;
 //		terms[p][s][o] = t;
-		auto r = terms.emplace(p, s, o, node);
+//		auto r = terms.emplace(p, s, o, node);
 //		t->node = node;
 //		dout << "term::make added new term: "; printterm(*t); dout << std::endl;
-		static uint n = 0;
-		if (r.second) if (++n % 10000 == 0) std::cerr << n << std::endl;
-		return &*r.first;
+//		static uint n = 0;
+//		if (r.second) if (++n % 10000 == 0) std::cerr << n << std::endl;
+//		return &*r.first;
 	}
 	operator bool() const { return p; }
 	bool operator!=(const term& x) const { return !((*this) == x); }
