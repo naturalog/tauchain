@@ -3,7 +3,7 @@
 
 #include "object.h"
 #include <list>
-
+#include <set>
 //using namespace std;
 
 namespace jsonld {
@@ -21,7 +21,7 @@ public:
 	string value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE } _type;
 	node ( const node_type& t ) : _type ( t ) { }
-	string tostring();
+	string tostring() const;
 };
 
 pnode mkliteral ( string value, pstring datatype, pstring language );
@@ -38,7 +38,8 @@ public:
 	quad ( pnode subj, pnode pred, pnode object, string graph );
 	quad(){}
 	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
-	string tostring ( );
+	string tostring ( ) const;
+	bool operator<(const quad& q) const { return tostring() < q.tostring(); }
 };
 
 typedef std::shared_ptr<quad> pquad;
@@ -81,6 +82,6 @@ private:
 
 typedef std::shared_ptr<rdf_db> prdf_db;
 }
-jsonld::quad parse_nqline(const wchar_t* s); 
+std::set<jsonld::quad> parse_nqline(const wchar_t* s); 
 jsonld::qlist merge ( const jsonld::qdb& q );
 #endif

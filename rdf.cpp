@@ -10,7 +10,7 @@ pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
 
-string node::tostring() {
+string node::tostring() const {
 	std::wstringstream ss;
 	if ( _type == IRI ) ss << L'<';
 	if ( _type == LITERAL ) ss << L'\"';
@@ -204,7 +204,7 @@ quad::quad ( string subj, string pred, string value, pstring datatype, pstring l
 quad::quad ( pnode s, pnode p, pnode o, string c ) :
 	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( c ) : mkiri ( c ) ) { }
 
-string quad::tostring ( ) {
+string quad::tostring ( ) const {
 	std::wstringstream ss;
 	bool _shorten = shorten;
 	auto f = [_shorten] ( pnode n ) {
@@ -234,10 +234,12 @@ qdb readqdb ( std::wistream& is) {
 	quad q;
 	qdb r;
 	while (getline(is, s)) {
-		q = parse_nqline(s.c_str());
-		c = q.graph->value;
-		if (r.find(c) == r.end()) r[c] = make_shared<qlist>();
-		r[c]->push_back(make_shared<quad>(q));
+		trim(s);
+		for (quad q : parse_nqline(s.c_str())) {
+			c = q.graph->value;
+			if (r.find(c) == r.end()) r[c] = make_shared<qlist>();
+			r[c]->push_back(make_shared<quad>(q));
+		}
 	}
 	return r;
 	/*
