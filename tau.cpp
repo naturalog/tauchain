@@ -105,7 +105,6 @@ public:
 };
 
 int main ( int argc, char** argv ) {
-	init_cl();
 	cmds_t cmds = { {
 			#ifdef marpa
 			{ string ( L"load_n3" ) , new load_n3_cmd },

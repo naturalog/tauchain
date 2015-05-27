@@ -101,14 +101,14 @@ bool prover::euler_path(proof* p, termid t) {
 	return ep;
 }
 
-int prover::builtin(termid id) {
+int prover::builtin(termid id, proof* p) {
 	setproc(L"builtin");
 	const term& t = get(id);
 	int r = -1;
 	termid i0 = t.s ? evaluate(t.s, p->s) : 0;
 	termid i1 = t.o ? evaluate(t.o, p->s) : 0;
-	const term* t0 = i0 ? &get(evaluate(t.s, p->s)) : 0;
-	const term* t1 = i1 ? &get(evaluate(t.o, p->s)) : 0;
+	const term* t0 = i0 ? &get(i0=evaluate(t.s, p->s)) : 0;
+	const term* t1 = i1 ? &get(i1=evaluate(t.o, p->s)) : 0;
 	if (t.p == GND) r = 1;
 	else if (t.p == logequalTo)
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
@@ -119,15 +119,14 @@ int prover::builtin(termid id) {
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
-		if (!t0) t0 = &get(t.s);
-		if (!t1) t1 = &get(t.o);
-		static termid vs = make(L"?S");
-		static termid va = make(L"?A");
-		static termid vb = make(L"?B");
-		static termid h = make ( A,              vs, vb );
+		if (!t0) t0 = &get(i0=t.s);
+		if (!t1) t1 = &get(i1=t.o);
+//		static termid vs = make(L"?S");
+//		static termid va = make(L"?A");
+		static termid h = make ( A,           i0, i1 );
 		termset ts;
-		ts.push_back ( make ( rdfssubClassOf, va, vb ) );
-		ts.push_back ( make ( A,              vs, va ) );
+		ts.push_back ( make ( rdfssubClassOf, va, i1 ) );
+		ts.push_back ( make ( A,              i0, va ) );
 		proof* f = new proof;
 		f->rul = kb.add(h, ts);
 		f->prev = p;
@@ -135,7 +134,8 @@ int prover::builtin(termid id) {
 		f->g = p->g;
 		if (euler_path(f, h))
 			return -1;
-		q.push_back(f);
+//		q.push_back(f);
+		step(f);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
 		r = -1;
 	}
@@ -147,38 +147,36 @@ int prover::builtin(termid id) {
 		r->g = p->g;
 		r->g.emplace_back(rl, subst());
 		++r->last;
-		q.push_back(r);
+//		q.push_back(r);
+		step(r);
 	}
 
 	return r;
 }
-
-bool prover::maybe_unify(termid _s, termid _d) {
-	if (!_s != !_d) return false;
-	if (!_s) return true;
-	const term& s = get(_s);
-	const term& d = get(_d);
-	if (s.p < 0 || d.p < 0) return true;
-	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
-	return !s.s || (maybe_unify(s.s, d.s) && maybe_unify(s.o, d.o));
+bool prover::maybe_unify(const term& s, const term& d) {
+	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
+		!s.s || (maybe_unify(terms[s.s-1], terms[d.s-1]) && maybe_unify(terms[s.o-1], terms[d.o-1]));
 }
 
-std::set<uint> prover::match(termid e, const termid* t, uint sz) {
+std::set<uint> prover::match(termid _e, const termid* t, uint sz) {
+	if (!_e) return {};
 	std::set<uint> m;
+	termid tn;
+	const term& e = terms[_e-1];
 	for (uint n = 0; n < sz; ++n)
-		if (t[n] && maybe_unify(e, t[n]))
+		if ((tn = t[n]) && maybe_unify(e, terms[tn-1]))
 			m.insert(n);
 	return m;
 }
 
-void prover::step() {
+void prover::step(proof* p) {
 	setproc(L"step");
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size() && !euler_path(p, kb.head()[p->rul])) {
 		termid t = kb.body()[p->rul][p->last];
 		if (!t) throw 0;
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
-		if (builtin(t) != -1) return;
+		if (builtin(t, p) != -1) return;
 		for (auto rl : match(evaluate(t, p->s), &kb.head()[0], kb.size())) {
 			subst s;
 			termid h = kb.head()[rl];
@@ -192,7 +190,8 @@ void prover::step() {
 			r->s = s;
 			if (kb.body()[rl].empty())
 				r->g.emplace_back(rl, subst());
-			q.push_front(r);
+//			q.push_front(r);
+			step(r);
 		}
 	}
 	else if (!p->prev) {
@@ -212,14 +211,15 @@ void prover::step() {
 		r->s = p->prev->s;
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
-		q.push_back(r);
+//		q.push_back(r);
+		step(r);
 	}
 }
 
 prover::termid prover::mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& ) {
-	termid ps = s ? prover::make(dict.set(s), 0, 0/*, q.subj*/) : 0;
-	termid po = o ? prover::make(dict.set(o), 0, 0/*, q.object*/) : 0;
-	return prover::make(dict.set(string(p)), ps, po/*, q.pred*/);
+	termid ps = s ? make(dict.set(s), 0, 0/*, q.subj*/) : 0;
+	termid po = o ? make(dict.set(o), 0, 0/*, q.object*/) : 0;
+	return make(dict.set(string(p)), ps, po/*, q.pred*/);
 }
 
 prover::termid prover::mkterm(string s, string p, string o, const quad& q) {
@@ -249,31 +249,20 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-prover::prover ( qdb qkb, qlist query ) {
+prover::prover ( qdb qkb, qlist query ) : prover() {
 	for ( jsonld::pquad quad : *qkb.at(L"@default")) 
 		addrules(quad, qkb);
 	for ( auto q : query )
 		goal.push_back( quad2term( *q ) );
-	p = new proof;
+	va = make(L"?A");
+	proof* p = new proof;
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
-	q.push_back(p);
 	TRACE(dout << KRED << "Facts:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	++_indent;
-	do {
-		p = q.back();
-		q.pop_back();
-		step();
-	} while (!q.empty());
+	step(p);
 	TRACE(dout << KWHT << "Evidence:" << std::endl; 
 		printe(); dout << KNRM);
-}
-
-uint prover::ruleset::add(termid t, const termset& ts) {
-	_head.push_back(t);
-	_body.push_back(ts);
-	return _head.size()-1;
 }
 
 prover::term::term(int _p, termid _s, termid _o, int props) : p(_p), s(_s), o(_o), properties(props) {}
@@ -291,3 +280,61 @@ prover::termid prover::make(int p, termid s, termid o, int props) {
 	terms.emplace_back(p,s,o,props);
 	return terms.size();
 }
+
+uint prover::ruleset::add(termid t, const termset& ts) {
+	_head.push_back(t);
+	_body.push_back(ts);
+	return _head.size()-1;
+}
+
+#ifdef OPENCL
+#define __CL_ENABLE_EXCEPTIONS
+ 
+#if defined(__APPLE__) || defined(__MACOSX)
+#include <OpenCL/cl.hpp>
+#else
+#include <CL/cl.hpp>
+#endif
+
+std::string clprog = ""
+"bool maybe_unify(termid _s, termid _d, const term* t) {"
+"	local const term s = t[_s-1], d = t[_d-1];"
+"	if (s.p < 0 || d.p < 0) return true;"
+"	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;"
+"	return !s.s || (maybe_unify(s.s, d.s) && maybe_unify(s.o, d.o));"
+"}"
+"kernel void match(termid e, const termid* t, uint sz, global termid* res) {"
+"	uint n = get_global_id(0);"
+"	prefetch(t[n]);"
+"	local "
+"	if (t[n] && maybe_unify(e, t[n]))"
+"		res[pos++] = n;"
+"}";
+#endif
+prover::prover() {
+#ifdef OPENCL
+	initcl();
+#endif
+}
+
+#ifdef OPENCL
+void prover::initcl() {
+	cl_int err = CL_SUCCESS;
+	try {
+		cl::Platform::get(&platforms);
+		if (platforms.size() == 0) {
+			derr << "Platform size: 0" << std::endl;
+			exit(-1);
+		}
+		cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
+		context = cl::Context (CL_DEVICE_TYPE_CPU, properties); 
+		devices = context.getInfo<CL_CONTEXT_DEVICES>();
+		prog = cl::Program(clprog);
+		cl::Kernel kernel(prog, "match", &err);
+		cl::Event event;
+		cq = cl::CommandQueue (context, devices[0], 0, &err);
+		cq.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange(4,4), cl::NullRange, NULL, &event); 
+		event.wait();
+	} catch (cl::Error err) { derr << err.what() << ':' << err.err() << std::endl; }
+}
+#endif 

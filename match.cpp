@@ -1,13 +1,4 @@
 #ifdef OPENCL
-#define BOOST_COMPUTE_DEBUG_KERNEL_COMPILATION
-#define BOOST_COMPUTE_HAVE_THREAD_LOCAL
-#define BOOST_COMPUTE_THREAD_SAFE
-
-#include <boost/compute/core.hpp>
-#include <boost/compute/container/vector.hpp>
-#include <boost/compute/types/builtin.hpp>
-#include <boost/compute/algorithm/copy.hpp>
-#include <boost/compute/program.hpp>
 #include <string>
 #include "prover.h"
 #include "match.h"

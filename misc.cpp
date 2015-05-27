@@ -136,12 +136,12 @@ void prover::printp(proof* p) {
 	dout << KNRM;
 }
 
-void prover::printq(const queue& q) {
-	for (auto x : q) {
-		printp(x);
-		dout << std::endl;
-	}
-}
+//void prover::printq(const queue& q) {
+//	for (auto x : q) {
+//		printp(x);
+//		dout << std::endl;
+//	}
+//}
 
 void prover::prints(const subst& s) {
 	for (auto x : s)

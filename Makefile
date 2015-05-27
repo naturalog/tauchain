@@ -2,13 +2,12 @@ CC=g++
 #CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -ggdb -DDEBUG
 CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O3
 LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread
-OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o match.o
+OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-match.o: match.cpp prover.h
 nquads.o: nquads.cpp rdf.h
 cli.o: cli.cpp prover.h misc.h rdf.h object.h parsers.h jsonld.h \
  json_spirit.h strings.h cli.h
@@ -26,7 +25,8 @@ marpa.o: marpa.cpp cli.h rdf.h object.h parsers.h jsonld.h json_spirit.h \
  strings.h prover.h misc.h
 
 debug: CXXFLAGS += -DDEBUG
-cl: CXXFLAGS += -DOPENCL LDFLADS += -lOpenCL CXXFLAGS += -I/usr/local/include/compute
+release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3
+cl: CXXFLAGS += -DOPENCL
 irc: CXXFLAGS += -DIRC -DDEBUG
 marpa: CXXFLAGS += -Dmarpa OBJECTS += marpa.o
 
@@ -35,15 +35,18 @@ marpa: $(OBJECTS) marpa.o $(EXECUTABLE)
 
 debug: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
+release: $(OBJECTS) $(EXECUTABLE)
+	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
 irc: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
-
-$(EXECUTABLE): $(OBJECTS) 
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+cl: $(OBJECTS) $(EXECUTABLE)
+	$(CC) $(OBJECTS) -o tau $(LDFLAGS) -lOpenCL
 ubi-tau: $(OBJECTS) ubi/client.o
 	$(CC) $(OBJECTS) ubi/client.o -o $@ $(LDFLAGS)
 .cpp.o:
 	$(CC) $(CXXFLAGS) $< -o $@
+$(EXECUTABLE): $(OBJECTS) 
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 clean:
 	rm -rf tau $(OBJECTS) ubi/client.o
