@@ -33,4 +33,10 @@ template<typename T> string print ( T t ) {
 	return ss.str();
 }
 string dstr ( int p );
+string indent();
+struct _setproc {
+	string prev;
+	_setproc(const string& p);
+	~_setproc();
+};
 #endif

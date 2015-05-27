@@ -13,8 +13,10 @@
 #include <ostream>
 #include "strings.h"
 #include <iostream>
+#include <list>
 
 string indent();
+extern std::list<std::wstring> proc;
 
 #ifdef DEBUG
 #define TRACE(x) if (_indent + (int)proc.size() <= level) { dout << indent(); x; }

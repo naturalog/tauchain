@@ -39,7 +39,7 @@ private:
 		uint size() { return _head.size(); }
 	};
 
-	void search ();
+	void step ();
 
 	class term {
 	public:
@@ -73,7 +73,7 @@ private:
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool euler_path(proof* p, termid t, const ruleset& kb, bool update = false);
+	bool euler_path(proof* p, termid t);
 	int builtin(termid id);
 	bool maybe_unify(termid _s, termid _d);
 	std::set<uint> match(termid e, const termid* t, uint sz);
@@ -83,15 +83,14 @@ private:
 
 	string format(termid id);
 	string format(const termset& l);
-	string format(int r, const ruleset& kb);
-	string format(const ruleset& rs);
-	void printp(proof* p, const ruleset& kb);
-	void printq(const queue& q, const ruleset& kb);
+	string formatr(int r);
+	string formatkb();
+	void printp(proof* p);
+	void printq(const queue& q);
 	void prints(const subst& s);
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);
-	void printr_substs(int r, const subst& s, const ruleset& kb);
-	void printr(int r, const ruleset& kb);
-	void printg(const ground& g, const ruleset& kb);
-	void printe(const evidence& e, const ruleset& kb);
+	void printr_substs(int r, const subst& s);
+	void printg(const ground& g);
+	void printe();
 };
