@@ -31,7 +31,7 @@ int _indent = 0;
 #endif
 
 bool prover::hasvar(termid id) {
-	const term& p = get(id);
+	const term p = get(id);
 	setproc(L"hasvar");
 	if (p.p < 0) return true;
 	if (!p.s && !p.o) return false;
@@ -41,7 +41,7 @@ bool prover::hasvar(termid id) {
 prover::termid prover::evaluate(termid id, const subst& s) {
 	setproc(L"evaluate");
 	termid r;
-	const term& p = get(id);
+	const term p = get(id);
 	if (p.p < 0) {
 		auto it = s.find(p.p);
 		r = it == s.end() ? 0 : evaluate(it->second, s);
@@ -52,15 +52,15 @@ prover::termid prover::evaluate(termid id, const subst& s) {
 		termid b = evaluate(p.o, s);
 		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
 	}
-	TRACE(printterm_substs(id, s); dout << " = "; if (!r) dout << "(null)"; dout << format(r); dout << std::endl);
+	TRACE(printterm_substs(id, s); dout << " = "; if (!r) dout << "(null)"; else dout << format(r); dout << std::endl);
 	return r;
 }
 
 bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
 	setproc(L"unify");
 	termid v;
-	const term& s = get(_s);
-	const term& d = get(_d);
+	const term s = get(_s);
+	const term d = get(_d);
 	bool r, ns = false;
 	if (s.p < 0) 
 		r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
@@ -103,11 +103,11 @@ bool prover::euler_path(proof* p, termid t) {
 
 int prover::builtin(termid id, proof* p) {
 	setproc(L"builtin");
-	const term& t = get(id);
+	const term t = get(id);
 	int r = -1;
 	termid i0 = t.s ? evaluate(t.s, p->s) : 0;
 	termid i1 = t.o ? evaluate(t.o, p->s) : 0;
-	const term* t0 = i0 ? &get(i0=evaluate(t.s, p->s)) : 0;
+	const term *t0 = i0 ? &get(i0=evaluate(t.s, p->s)) : 0;
 	const term* t1 = i1 ? &get(i1=evaluate(t.o, p->s)) : 0;
 	if (t.p == GND) r = 1;
 	else if (t.p == logequalTo)
@@ -121,9 +121,7 @@ int prover::builtin(termid id, proof* p) {
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 		if (!t0) t0 = &get(i0=t.s);
 		if (!t1) t1 = &get(i1=t.o);
-//		static termid vs = make(L"?S");
-//		static termid va = make(L"?A");
-		static termid h = make ( A,           i0, i1 );
+		termid h = make ( A,           i0, i1 );
 		termset ts;
 		ts.push_back ( make ( rdfssubClassOf, va, i1 ) );
 		ts.push_back ( make ( A,              i0, va ) );
@@ -135,6 +133,7 @@ int prover::builtin(termid id, proof* p) {
 		if (euler_path(f, h))
 			return -1;
 //		q.push_back(f);
+//		pool.enqueue([this,f]{step(f);});
 		step(f);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
 		r = -1;
@@ -148,11 +147,14 @@ int prover::builtin(termid id, proof* p) {
 		r->g.emplace_back(rl, subst());
 		++r->last;
 //		q.push_back(r);
+//		pool.enqueue([this,r]{step(r);});
 		step(r);
 	}
 
 	return r;
 }
+
+#ifdef OPENCL
 bool prover::maybe_unify(const term& s, const term& d) {
 	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
 		!s.s || (maybe_unify(terms[s.s-1], terms[d.s-1]) && maybe_unify(terms[s.o-1], terms[d.o-1]));
@@ -161,38 +163,58 @@ bool prover::maybe_unify(const term& s, const term& d) {
 std::set<uint> prover::match(termid _e, const termid* t, uint sz) {
 	if (!_e) return {};
 	std::set<uint> m;
+	const term e = terms[_e-1];
+
+	cl::Buffer h(&t[0], &t[sz]);
+	cl::Buffer ts(&terms[0], &terms[terms.size()]);
+	clmatch(e, h, sz, ts, terms.size() * sizeof(term)).wait();
+
 	termid tn;
-	const term& e = terms[_e-1];
 	for (uint n = 0; n < sz; ++n)
 		if ((tn = t[n]) && maybe_unify(e, terms[tn-1]))
 			m.insert(n);
 	return m;
 }
+#else
+bool prover::maybe_unify(const term s, const term d) {
+	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
+		!s.s || (maybe_unify(terms[s.s-1], terms[d.s-1]) && maybe_unify(terms[s.o-1], terms[d.o-1]));
+}
+
+std::set<uint> prover::match(termid _e) { //, const termid* t, uint sz) {
+	if (!_e) return {};
+	std::set<uint> m;
+	termid h;
+	const term e = terms[_e-1];
+	for (uint n = 0; n < kb.size(); ++n) {
+		if (((h=kb.head()[n])) && maybe_unify(e, get(h)))
+			m.insert(n);
+	}
+	return m;
+}
+#endif
 
 void prover::step(proof* p) {
 	setproc(L"step");
 	TRACE(dout<<"popped frame:\n";printp(p));
+//	for (auto w : p->waitlist) { w->join(); }
+//	p->waitlist.clear();
+//	std::vector<std::future<void>> waitlist;
 	if (p->last != kb.body()[p->rul].size() && !euler_path(p, kb.head()[p->rul])) {
 		termid t = kb.body()[p->rul][p->last];
 		if (!t) throw 0;
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		if (builtin(t, p) != -1) return;
-		for (auto rl : match(evaluate(t, p->s), &kb.head()[0], kb.size())) {
+		for (auto rl : match(evaluate(t, p->s))) { //, &kb.head()[0], kb.size())) {
 			subst s;
-			termid h = kb.head()[rl];
-			if (!unify(t, p->s, h, s, true))
-				continue;
-			proof* r = new proof;
-			r->rul = rl;
-			r->last = 0;
-			r->prev = p;
-			r->g = p->g;
-			r->s = s;
-			if (kb.body()[rl].empty())
-				r->g.emplace_back(rl, subst());
-//			q.push_front(r);
+			if (!unify(t, p->s, kb.head()[rl], s, true)) continue;
+			proof* r = new proof(rl, 0, p, s, p->g);
+			if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
+//			waitlist.emplace_back(pool.enqueue([this,r]{step(r);}));
 			step(r);
+//			delete r;
 		}
+//		for (auto &&w : waitlist) w.wait();
 	}
 	else if (!p->prev) {
 		for (auto r = kb.body()[p->rul].begin(); r != kb.body()[p->rul].end(); ++r) {
@@ -213,7 +235,10 @@ void prover::step(proof* p) {
 		++r->last;
 //		q.push_back(r);
 		step(r);
+//		delete r;
+//		pool.enqueue([this,r]{step(r);});
 	}
+//	delete p;
 }
 
 prover::termid prover::mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& ) {
@@ -261,13 +286,15 @@ prover::prover ( qdb qkb, qlist query ) : prover() {
 	p->prev = 0;
 	TRACE(dout << KRED << "Facts:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	step(p);
+//	pool.enqueue([this,p]{step(p);});
 	TRACE(dout << KWHT << "Evidence:" << std::endl; 
 		printe(); dout << KNRM);
 }
 
 prover::term::term(int _p, termid _s, termid _o, int props) : p(_p), s(_s), o(_o), properties(props) {}
 
-const prover::term& prover::get(termid id) { 
+const prover::term& prover::get(termid id) {
+	if (!id) throw 0;
 	return terms[id - 1]; 
 }
 

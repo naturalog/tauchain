@@ -6,8 +6,10 @@
 #include <vector>
 #include <boost/bimap.hpp>
 #include "strings.h"
+#include <boost/interprocess/containers/list.hpp>
 //using namespace std;
 
+extern boost::container::list<string> proc;
 class bidict {
 	//	map<int, string> m1;
 	//	map<string, int> m2;

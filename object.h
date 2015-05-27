@@ -16,10 +16,9 @@
 #include <list>
 
 string indent();
-extern std::list<std::wstring> proc;
 
 #ifdef DEBUG
-#define TRACE(x) if (_indent + (int)proc.size() <= level) { dout << indent(); x; }
+#define TRACE(x) if (_indent + (int)proc.size() < level) { dout << indent(); x; }
 #else
 #define TRACE(X)
 #endif

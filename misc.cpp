@@ -109,7 +109,8 @@ string KCYN = L"\x1B[36m";
 string KWHT = L"\x1B[37m";
 
 string prover::format(termid id) {
-	const term& p = get(id);
+	if (!id) return L"";
+	const term p = get(id);
 	std::wstringstream ss;
 	if (p.s)
 		ss << format (p.s);
@@ -160,7 +161,7 @@ string prover::format(const termset& l) {
 }
 
 void prover::printterm_substs(termid id, const subst& s) {
-	const term& p = get(id);
+	const term p = get(id);
 	if (p.s) {
 		printterm_substs(p.s, s);
 		dout << L' ';
@@ -223,7 +224,7 @@ void prover::printe() {
 		}
 }
 
-std::list<string> proc;
+boost::container::list<string> proc;
 string indent() {
 	if (!_indent) return string();
 	std::wstringstream ss;
