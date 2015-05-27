@@ -1,3 +1,4 @@
+#ifdef OPENCL
 #define BOOST_COMPUTE_DEBUG_KERNEL_COMPILATION
 #define BOOST_COMPUTE_HAVE_THREAD_LOCAL
 #define BOOST_COMPUTE_THREAD_SAFE
@@ -35,7 +36,25 @@ compute::device device = compute::system::default_device();
 compute::context context(device);
 compute::program p = boost::compute::program::create_with_source(prog, context);
 compute::kernel kmatch;
+/*
+bool maybe_unify(termid _s, termid _d) {
+	if (!_s != !_d) return false;
+	if (!_s) return true;
+	const term& s = term::get(_s);
+	const term& d = term::get(_d);
+	if (s.p < 0 || d.p < 0) return true;
+	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
+	return !s.s || (maybe_unify(s.s, d.s) && maybe_unify(s.o, d.o));
+}
 
+std::set<uint> match(termid e, const termid* t, uint sz) {
+	std::set<uint> m;
+	for (uint n = 0; n < sz; ++n)
+		if (t[n] && maybe_unify(e, t[n]))
+			m.insert(n);
+	return m;
+}
+*/
 void init_cl() {
 }
 /*
@@ -63,3 +82,6 @@ match(const term& t, compute::vector<int4_> v, compute::command_queue& q, char* 
 	int4_ tt = { t.p, t.s, t.p, p };
 	kmatch.set_args(v, tt, 
 }*/
+#else
+void init_cl(){}
+#endif

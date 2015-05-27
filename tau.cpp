@@ -51,7 +51,6 @@ class listen_cmd : public cmd_t {
 
 class prove_cmd : public cmd_t {
 public:
-	reasoner r;
 	virtual std::string desc() const {
 		return "Run a query against a knowledgebase.";
 	}
@@ -66,28 +65,28 @@ public:
 			dout << ws(help());
 			return 1;
 		}
-		if ( args.size() == 2 )
-			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << std::endl;
-		else try {
+//		if ( args.size() == 2 )
+//			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << std::endl;
+//		else 
+		try {
 #ifdef IRC
-				for(ever) { try {
+			for(ever) { try {
 #endif					
-				prover::initmem();
-				auto kb = load_quads(L"");
-				if (kb) {
-					dout << "kb input done." << std::endl;
-					auto query = load_quads(L"");
-					dout << "query loaded." << std::endl;
-					if (query) {
-						r.prove ( *kb, merge ( *query ) );
-						dout << "Ready." << std::endl;
-					}
+			auto kb = load_quads(L"");
+			if (kb) {
+				dout << "kb input done." << std::endl;
+				auto query = load_quads(L"");
+				dout << "query loaded." << std::endl;
+				if (query) {
+					delete new prover ( *kb, merge ( *query ) );
+					dout << "Ready." << std::endl;
 				}
+			}
 #ifdef IRC
-				} catch (std::exception& ex) { dout<<ex.what()<<std::endl; } 
-				catch (...) { dout<<"generic exception."<<std::endl; } 
-				sleep(1);
-				}
+			} catch (std::exception& ex) { dout<<ex.what()<<std::endl; } 
+			catch (...) { dout<<"generic exception."<<std::endl; } 
+			sleep(1);
+			}
 #endif
 //#else
 //				qdb kb = !quad_in ? convert ( args[2] ) : *load_quads(args[2]);
@@ -96,17 +95,16 @@ public:
 //				auto e = r.prove ( kb, merge ( query ) );
 //				dout << "evidence: " << std::endl << e << std::endl;
 //#endif
-				return 0;
-			} catch ( std::exception& ex ) {
-				derr << ex.what() << std::endl;
-				return 1;
-			}
+			return 0;
+		} catch ( std::exception& ex ) {
+			derr << ex.what() << std::endl;
+			return 1;
+		}
 		return 0;
 	}
 };
 
 int main ( int argc, char** argv ) {
-	prover::initmem();
 	init_cl();
 	cmds_t cmds = { {
 			#ifdef marpa

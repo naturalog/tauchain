@@ -9,102 +9,89 @@
 #include "misc.h"
 #include "parsers.h"
 #include <functional>
+#ifdef OPENCL
+#define CL(x) x
+#else
+#define CL(x)
+#endif
 
 using namespace jsonld;
 
-const uint K1 = 1024, M1 = K1 * K1;
-typedef uint termid;
-
-namespace prover {
-struct session;
-}
-
-class reasoner {
+class prover {
 public:
-	bool prove ( qdb kb, qlist query );
-	bool test_reasoner();
-};
+	prover ( qdb kb, qlist query );
+private:
+	typedef int termid;
+	typedef uint ruleid;
+	typedef int resid; // resource id
+	typedef std::vector<termid> termset;
+	typedef std::map<resid, termid> subst;
+	typedef std::list<std::pair<ruleid, subst>> ground;
+	typedef std::map<ruleid, std::list<std::pair<termid, ground>>> evidence;
 
-namespace prover {
-bool equals(const class term* x, const class term* y);
-void printterm(const class term& p);
-class term {
-//	static std::map<int, std::map<termid, std::map<termid, termid>>> terms; // pso
-	static std::vector<term> terms;
-public:
-	term(int _p, termid _s, termid _o, pnode n) : p(_p), s(_s), o(_o), node(n) {}
-	const int p;
-	const termid s, o;
-	pnode node;
-	static const term& get(termid id) { return terms[id - 1]; }
-	static termid make(string p, termid s = 0, termid o = 0, pnode node = 0) { return make(dict.set(p), s, o, node); }
-	static termid make(int p, termid s = 0, termid o = 0, pnode node = 0) {
-		if (!p) throw 0;
-		terms.emplace_back(p,s,o,node);
-		return terms.size();
-	}
-};
-typedef std::vector<termid> termset;
-string format(const class rule& r);
+	class ruleset {
+		termset _head;
+		std::vector<termset> _body;
+	public:
+		const termset& head() const { return _head; }
+		const std::vector<termset>& body() const { return _body; }
+		uint add(termid t, const termset& ts);
+		uint size() { return _head.size(); }
+	};
 
-class rule {
-	termset _body;
-public:
-	termid p = 0;
-	const termset& body() const { return _body; }
-	void body(const termset& b) { _body = b; }
-	void body(termid t) { _body.push_back(t); }
-	bool operator==(const rule& x) const { return p == x.p && body() == x.body(); }
-	rule(){}
-	rule(termid _p) : p(_p) {}
-};
-/*
-struct cmp { bool operator()(const rule* x, const rule* y) {
-	if (!x != !y) return !x;
-	if (!x) return false;
-	return format(*x) < format(*y);} 
-};
-*/
-//typedef std::map<int, std::set<const rule* /*, cmp*/>> ruleset;
-//typedef std::set<const rule*> ruleset;
-struct ruleset {
-	std::vector<termid> head;
-	std::vector<termset> body;
-};
+	void search ();
 
-typedef std::map<int, termid> subst;
-typedef std::list<std::pair<int, subst>> ground;
-typedef std::map<int, std::list<std::pair<termid, ground>>> evidence;
+	class term {
+	public:
+		term(int _p, termid _s, termid _o, int props);
+		const resid p;
+		const termid s, o;
+		const int properties = 0; // encode lang nodetype and datatype here
+	};
+	std::vector<term> terms;
+	const term& get(termid id);
+	termid make(string p, termid s = 0, termid o = 0, int props = 0);
+	termid make(int p, termid s = 0, termid o = 0, int props = 0);
 
-struct proof {
-	uint rul, last;
-	proof *prev;
-	subst s;
-	ground g;
-	std::function<int(struct session&)> callback;
-	proof() : rul(0), prev(0) {}
-};
+	struct proof {
+		uint rul, last;
+		proof *prev;
+		subst s;
+		ground g;
+		proof() : rul(0), prev(0) {}
+	};
+	typedef std::deque<prover::proof*> queue;
 
-typedef std::deque<proof*> queue;
-
-struct session {
 	ruleset kb;
 	termset goal;
 	evidence e;
 	queue q;
 	proof* p;
+
+	void addrules(pquad q, const qdb& kb);
+
+	bool hasvar(termid id);
+	termid evaluate(termid id, const subst& s);
+	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	bool euler_path(proof* p, termid t, const ruleset& kb, bool update = false);
+	int builtin(termid id);
+	bool maybe_unify(termid _s, termid _d);
+	std::set<uint> match(termid e, const termid* t, uint sz);
+	termid mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& q);
+	termid mkterm(string s, string p, string o, const quad& q);
+	termid quad2term(const quad& p);
+
+	string format(termid id);
+	string format(const termset& l);
+	string format(int r, const ruleset& kb);
+	string format(const ruleset& rs);
+	void printp(proof* p, const ruleset& kb);
+	void printq(const queue& q, const ruleset& kb);
+	void prints(const subst& s);
+	void printterm_substs(termid id, const subst& s);
+	void printl_substs(const termset& l, const subst& s);
+	void printr_substs(int r, const subst& s, const ruleset& kb);
+	void printr(int r, const ruleset& kb);
+	void printg(const ground& g, const ruleset& kb);
+	void printe(const evidence& e, const ruleset& kb);
 };
-
-void initmem();
-void prove(session& ss);
-void printterm(termid p);
-
-const uint MEM = 1024 * 8 * 256;
-const uint max_terms = MEM;
-const uint max_termsets = MEM;
-const uint max_rules = MEM;
-const uint max_proofs = MEM;
-extern rule* rules;
-extern proof* proofs;
-extern uint nterms, ntermsets, nrules, nproofs;
-}
