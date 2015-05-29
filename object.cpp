@@ -3,7 +3,7 @@
 
 #ifdef DEBUG
 void bt() {
-	void *trace[16];
+/*	void *trace[16];
 	char **messages = 0;
 	int i, trace_size = 0;
 	trace_size = backtrace ( trace, 16 );
@@ -19,15 +19,15 @@ void bt() {
 		char syscom[256];
 		sprintf ( syscom, "addr2line %p -e %.*s", trace[i], ( int ) p, messages[i] );
 		system ( syscom );
-	}
+	}*/
 }
 
 void dopause() {
-	std::clog << "press any key to continue, b for backtrace, or a to always show backtrace, or c to stop pausing...";
+/*	std::clog << "press any key to continue, b for backtrace, or a to always show backtrace, or c to stop pausing...";
 	char ch = getchar();
 	if ( ch == 'b' || ( autobt = ( ch == 'a' ) ) ) bt();
 	else if ( ch == 'c' ) autobt = _pause = false;
-}
+*/}
 
 
 #else

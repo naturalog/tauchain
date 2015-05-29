@@ -28,12 +28,12 @@ public:
 
 extern bidict& dict;
 extern int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf;
-
+/*
 template<typename T> string print ( T t ) {
-	stringstream ss;
+	wstringstream ss;
 	ss << t;
 	return ss.str();
-}
+}*/
 string dstr ( int p );
 string indent();
 struct _setproc {

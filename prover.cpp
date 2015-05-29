@@ -160,7 +160,7 @@ bool prover::maybe_unify(const term s, const term d) {
 }
 
 std::set<uint> prover::match(termid _e) {
-	if (!_e) return {};
+	if (!_e) return std::set<uint>();
 	std::set<uint> m;
 	termid h;
 	const term e = terms[_e-1];
