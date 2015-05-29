@@ -24,6 +24,11 @@ extern std::string clprog;
 
 using namespace jsonld;
 
+typedef uint64_t u64;
+typedef int64_t i64;
+typedef uint8_t u8;
+typedef int8_t i8;
+
 class prover {
 public:
 	prover ( qdb kb, qlist query );
@@ -35,11 +40,12 @@ typedef
 #else
 typedef int prop_t;
 #endif
+	class ruleset;
 	typedef int termid;
 	typedef uint ruleid;
 	typedef int resid; // resource id
-	typedef boost::container::vector<termid> termset;
 	typedef boost::container::map<resid, termid> subst;
+	typedef boost::container::vector<termid> termset;
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
 	typedef boost::container::map<ruleid, boost::container::list<std::pair<termid, ground>>> evidence;
 
@@ -76,16 +82,12 @@ typedef int prop_t;
 		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(p), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
-//		~proof() { for (auto w : p->waitlist) { w->join(); delete w; } }
 	};
-//	typedef std::deque<prover::proof*> queue;
 	void step (proof*);
 
 	ruleset kb;
 	termset goal;
 	evidence e;
-//	queue q;
-//	proof* p;
 
 	void addrules(pquad q, const qdb& kb);
 
@@ -95,8 +97,7 @@ typedef int prop_t;
 	bool euler_path(proof* p, termid t);
 	int builtin(termid id, proof*);
 	bool maybe_unify(const term, const term);
-//	bool maybe_unify(termid _s, termid _d);
-	std::set<uint> match(termid e);//, const termid* t, uint sz);
+	std::set<uint> match(termid e);
 	termid mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& q);
 	termid mkterm(string s, string p, string o, const quad& q);
 	termid quad2term(const quad& p);
@@ -106,7 +107,6 @@ typedef int prop_t;
 	string formatr(int r);
 	string formatkb();
 	void printp(proof* p);
-//	void printq(const queue& q);
 	void prints(const subst& s);
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);

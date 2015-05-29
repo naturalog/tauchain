@@ -154,34 +154,12 @@ int prover::builtin(termid id, proof* p) {
 	return r;
 }
 
-#ifdef OPENCL
-bool prover::maybe_unify(const term& s, const term& d) {
-	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
-		!s.s || (maybe_unify(terms[s.s-1], terms[d.s-1]) && maybe_unify(terms[s.o-1], terms[d.o-1]));
-}
-
-std::set<uint> prover::match(termid _e, const termid* t, uint sz) {
-	if (!_e) return {};
-	std::set<uint> m;
-	const term e = terms[_e-1];
-
-	cl::Buffer h(&t[0], &t[sz]);
-	cl::Buffer ts(&terms[0], &terms[terms.size()]);
-	clmatch(e, h, sz, ts, terms.size() * sizeof(term)).wait();
-
-	termid tn;
-	for (uint n = 0; n < sz; ++n)
-		if ((tn = t[n]) && maybe_unify(e, terms[tn-1]))
-			m.insert(n);
-	return m;
-}
-#else
 bool prover::maybe_unify(const term s, const term d) {
 	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
 		!s.s || (maybe_unify(terms[s.s-1], terms[d.s-1]) && maybe_unify(terms[s.o-1], terms[d.o-1]));
 }
 
-std::set<uint> prover::match(termid _e) { //, const termid* t, uint sz) {
+std::set<uint> prover::match(termid _e) {
 	if (!_e) return {};
 	std::set<uint> m;
 	termid h;
@@ -192,29 +170,22 @@ std::set<uint> prover::match(termid _e) { //, const termid* t, uint sz) {
 	}
 	return m;
 }
-#endif
 
 void prover::step(proof* p) {
 	setproc(L"step");
 	TRACE(dout<<"popped frame:\n";printp(p));
-//	for (auto w : p->waitlist) { w->join(); }
-//	p->waitlist.clear();
-//	std::vector<std::future<void>> waitlist;
 	if (p->last != kb.body()[p->rul].size() && !euler_path(p, kb.head()[p->rul])) {
 		termid t = kb.body()[p->rul][p->last];
 		if (!t) throw 0;
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		if (builtin(t, p) != -1) return;
-		for (auto rl : match(evaluate(t, p->s))) { //, &kb.head()[0], kb.size())) {
+		for (auto rl : match(evaluate(t, p->s))) {
 			subst s;
 			if (!unify(t, p->s, kb.head()[rl], s, true)) continue;
 			proof* r = new proof(rl, 0, p, s, p->g);
 			if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
-//			waitlist.emplace_back(pool.enqueue([this,r]{step(r);}));
 			step(r);
-//			delete r;
 		}
-//		for (auto &&w : waitlist) w.wait();
 	}
 	else if (!p->prev) {
 		for (auto r = kb.body()[p->rul].begin(); r != kb.body()[p->rul].end(); ++r) {
@@ -225,20 +196,15 @@ void prover::step(proof* p) {
 		}
 	} else {
 		ground g = p->g;
-		proof* r = new proof;
 		if (!kb.body()[p->rul].empty())
 			g.emplace_back(p->rul, p->s);
-		*r = *p->prev;
+		proof* r = new proof(*p->prev);
 		r->g = g;
-		r->s = p->prev->s;
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
-//		q.push_back(r);
 		step(r);
-//		delete r;
-//		pool.enqueue([this,r]{step(r);});
 	}
-//	delete p;
+	delete p;
 }
 
 prover::termid prover::mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& ) {
