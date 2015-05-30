@@ -126,7 +126,7 @@ int prover::builtin(termid id, proof* p) {
 		ts.push_back ( make ( rdfssubClassOf, va, i1 ) );
 		ts.push_back ( make ( A,              i0, va ) );
 		proof* f = new proof;
-		f->rul = kb.add(h, ts);
+		f->rul = kb.add(h, ts, this);
 		f->prev = p;
 		f->last = 0;
 		f->g = p->g;
@@ -134,14 +134,14 @@ int prover::builtin(termid id, proof* p) {
 			return -1;
 //		q.push_back(f);
 //		pool.enqueue([this,f]{step(f);});
+		step(f, false);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
-		step(f);
 		r = -1;
 	}
 	if (r == 1) {
 		proof* r = new proof;
 		*r = *p;
-		uint rl = kb.add(evaluate(id, p->s), termset());
+		uint rl = kb.add(evaluate(id, p->s), termset(), this);
 		TRACE(dout << "builtin added rule: " << format(rl) << " by evaluating "; printterm_substs(id, p->s); dout << std::endl);
 		r->g = p->g;
 		r->g.emplace_back(rl, subst());
@@ -171,7 +171,7 @@ std::set<uint> prover::match(termid _e) {
 	return m;
 }
 
-void prover::step(proof* p) {
+void prover::step(proof* p, bool del) {
 	setproc(L"step");
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size() && !euler_path(p, kb.head()[p->rul])) {
@@ -204,7 +204,8 @@ void prover::step(proof* p) {
 		++r->last;
 		step(r);
 	}
-	delete p;
+	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
+	if (del) delete p;
 }
 
 prover::termid prover::mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& ) {
@@ -224,13 +225,13 @@ prover::termid prover::quad2term(const quad& p) {
 void prover::addrules(pquad q, const qdb& kb) {
 	const string &s = q->subj->value, &p = q->pred->value, &o = q->object->value;
 	if ( p != implication || kb.find ( o ) == kb.end() ) 
-		this->kb.add(quad2term(*q), termset());
+		this->kb.add(quad2term(*q), termset(), this);
 	else for ( jsonld::pquad y : *kb.at ( o ) ) {
 		termset ts;
 		if ( kb.find ( s ) != kb.end() )
 			for ( jsonld::pquad z : *kb.at ( s ) )
 				ts.push_back( quad2term( *z ) );
-		this->kb.add(quad2term(*y), ts);
+		this->kb.add(quad2term(*y), ts, this);
 	}
 }
 
@@ -247,7 +248,7 @@ prover::prover ( qdb qkb, qlist query ) : prover() {
 		goal.push_back( quad2term( *q ) );
 	va = make(L"?A");
 	proof* p = new proof;
-	p->rul = kb.add(0, goal);
+	p->rul = kb.add(0, goal, this);
 	p->last = 0;
 	p->prev = 0;
 	TRACE(dout << KRED << "Facts:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
@@ -274,9 +275,10 @@ prover::termid prover::make(int p, termid s, termid o, int props) {
 	return terms.size();
 }
 
-uint prover::ruleset::add(termid t, const termset& ts) {
+uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 	_head.push_back(t);
 	_body.push_back(ts);
+	if (!ts.size() && !p->get(t).s) throw 0;
 	return _head.size()-1;
 }
 

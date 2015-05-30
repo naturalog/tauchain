@@ -123,7 +123,7 @@ string prover::format(termid id) {
 void prover::printp(proof* p) {
 	if (!p) return;
 	dout << KCYN;
-	dout << indent() << L"rule:   " << format(p->rul) <<std::endl<<indent();
+	dout << indent() << L"rule:   " << formatr(p->rul) <<std::endl<<indent();
 	if (p->prev)
 		dout << L"prev:   " << p->prev <<std::endl<<indent()<< L"subst:  ";
 	else
@@ -242,6 +242,7 @@ string indent() {
 _setproc:: _setproc(const string& p) {
 	proc.push_front(p);
 }
+
 _setproc:: ~_setproc() {
 	proc.pop_front();
 }

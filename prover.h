@@ -55,7 +55,7 @@ typedef int prop_t;
 	public:
 		const termset& head() const { return _head; }
 		const boost::container::vector<termset>& body() const { return _body; }
-		uint add(termid t, const termset& ts);
+		uint add(termid t, const termset& ts, prover*);
 		uint size() { return _head.size(); }
 	};
 
@@ -67,6 +67,7 @@ typedef int prop_t;
 		const prop_t properties = 0; // encode lang nodetype and datatype here
 	};
 	boost::container::vector<term> terms;
+	friend ruleset;
 	const term& get(termid id);
 	termid make(string p, termid s = 0, termid o = 0, int props = 0);
 	termid make(int p, termid s = 0, termid o = 0, int props = 0);
@@ -83,7 +84,7 @@ typedef int prop_t;
 			: rul(r), last(l), prev(p), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
-	void step (proof*);
+	void step (proof*, bool del = true);
 
 	ruleset kb;
 	termset goal;
