@@ -225,6 +225,7 @@ void prover::printe() {
 }
 
 boost::container::list<string> proc;
+
 string indent() {
 	if (!_indent) return string();
 	std::wstringstream ss;

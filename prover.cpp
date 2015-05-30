@@ -134,8 +134,8 @@ int prover::builtin(termid id, proof* p) {
 			return -1;
 //		q.push_back(f);
 //		pool.enqueue([this,f]{step(f);});
-		step(f);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
+		step(f);
 		r = -1;
 	}
 	if (r == 1) {
@@ -161,13 +161,13 @@ bool prover::maybe_unify(const term s, const term d) {
 
 std::set<uint> prover::match(termid _e) {
 	if (!_e) return std::set<uint>();
+	setproc(L"match");
 	std::set<uint> m;
 	termid h;
 	const term e = terms[_e-1];
-	for (uint n = 0; n < kb.size(); ++n) {
+	for (uint n = 0; n < kb.size(); ++n)
 		if (((h=kb.head()[n])) && maybe_unify(e, get(h)))
 			m.insert(n);
-	}
 	return m;
 }
 
