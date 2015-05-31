@@ -23,6 +23,8 @@ using namespace boost::algorithm;
 int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf;
 int _indent = 0;
 
+etype littype(string s);
+string littype(etype s);
 
 #ifdef DEBUG
 #define setproc(x) _setproc __setproc(x)
@@ -156,7 +158,7 @@ int prover::builtin(termid id, proof* p) {
 
 bool prover::maybe_unify(const term s, const term d) {
 	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
-		!s.s || (maybe_unify(terms[s.s-1], terms[d.s-1]) && maybe_unify(terms[s.o-1], terms[d.o-1]));
+		!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o)));
 }
 
 std::set<uint> prover::match(termid _e) {
@@ -164,7 +166,7 @@ std::set<uint> prover::match(termid _e) {
 	setproc(L"match");
 	std::set<uint> m;
 	termid h;
-	const term e = terms[_e-1];
+	const term e = get(_e-1);
 	for (uint n = 0; n < kb.size(); ++n)
 		if (((h=kb.head()[n])) && maybe_unify(e, get(h)))
 			m.insert(n);
@@ -184,7 +186,7 @@ void prover::step(proof* p, bool del) {
 			if (!unify(t, p->s, kb.head()[rl], s, true)) continue;
 			proof* r = new proof(rl, 0, p, s, p->g);
 			if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
-			step(r);
+			queue.push_front(r);
 		}
 	}
 	else if (!p->prev) {
@@ -205,21 +207,24 @@ void prover::step(proof* p, bool del) {
 		step(r);
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
-	if (del) delete p;
+//	if (del) delete p;
 }
 
-prover::termid prover::mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& ) {
-	termid ps = s ? make(dict.set(s), 0, 0/*, q.subj*/) : 0;
-	termid po = o ? make(dict.set(o), 0, 0/*, q.object*/) : 0;
-	return make(dict.set(string(p)), ps, po/*, q.pred*/);
-}
+//prover::termid prover::mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, etype t ) {
+//	termid ps = s ? make(dict.set(s), 0, 0, IRI) : 0;
+//	termid po = o ? make(dict.set(o), 0, 0, IRI) : 0;
+//	return make(dict.set(string(p)), ps, po, t);
+//}
 
-prover::termid prover::mkterm(string s, string p, string o, const quad& q) {
-	return mkterm(p.c_str(), s.c_str(), o.c_str(), q);
-}
+//prover::termid prover::mkterm(string s, string p, string o, const quad& q) {
+//	return mkterm(p.c_str(), s.c_str(), o.c_str(), q);
+//}
 
 prover::termid prover::quad2term(const quad& p) {
-	return mkterm(p.subj->value, p.pred->value, p.object->value, p);
+	node ns = *p.subj, np = *p.pred, no = *p.object;
+	termid s = make(ns.value, 0, 0, ns._type == node::IRI ? IRI : ns._type == node::BNODE ? BNODE : littype(ns.datatype));
+	termid o = make(no.value, 0, 0, no._type == node::IRI ? IRI : no._type == node::BNODE ? BNODE : littype(no.datatype));
+	return make(np.value, s, o, np._type == node::IRI ? IRI : np._type == node::BNODE ? BNODE : littype(np.datatype));
 }
 
 void prover::addrules(pquad q, const qdb& kb) {
@@ -252,34 +257,64 @@ prover::prover ( qdb qkb, qlist query ) : prover() {
 	p->last = 0;
 	p->prev = 0;
 	TRACE(dout << KRED << "Facts:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	step(p);
+	queue.push_front(p);
+	do {
+		proof* q = queue.back();
+		queue.pop_back();
+		step(q);
+	} while (!queue.empty());
 //	pool.enqueue([this,p]{step(p);});
 	TRACE(dout << KWHT << "Evidence:" << std::endl; 
 		printe(); dout << KNRM);
 }
 
-prover::term::term(int _p, termid _s, termid _o, int props) : p(_p), s(_s), o(_o), properties(props) {}
+prover::term::term(resid _p, termid _s, termid _o, etype t) : p(_p), s(_s), o(_o), type(t) {}
 
 const prover::term& prover::get(termid id) {
 	if (!id) throw 0;
-	return terms[id - 1]; 
+	return _terms[id - 1]; 
 }
 
-prover::termid prover::make(string p, termid s, termid o, int props) { 
-	return make(dict.set(p), s, o, props); 
+prover::termid prover::make(string p, termid s, termid o, etype t) { 
+	return make(dict.set(p), s, o, t); 
 }
 
-prover::termid prover::make(int p, termid s, termid o, int props) {
+prover::termid prover::make(resid p, termid s, termid o, etype t) {
+#ifdef DEBUG
 	if (!p) throw 0;
-	terms.emplace_back(p,s,o,props);
-	return terms.size();
+#endif
+	_terms.emplace_back(p, s, o, t);
+	return _terms.size();
 }
 
 uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 	_head.push_back(t);
 	_body.push_back(ts);
+#ifdef DEBUG
 	if (!ts.size() && !p->get(t).s) throw 0;
+#endif	
 	return _head.size()-1;
+}
+
+etype littype(string s) {
+	if (s == XSD_BOOLEAN) return BOOLEAN;
+	if (s == XSD_DOUBLE) return DOUBLE;
+	if (s == XSD_INTEGER) return INT;
+	if (s == XSD_FLOAT) return FLOAT;
+	if (s == XSD_DECIMAL) return DECIMAL;
+	if (s == XSD_ANYURI) return URISTR;
+	if (s == XSD_STRING) return STR;
+	throw wruntime_error(L"Unidentified literal type" + s);
+}
+
+string littype(etype s) {
+	if (s == BOOLEAN) return XSD_BOOLEAN;
+	if (s == DOUBLE) return XSD_DOUBLE;
+	if (s == INT) return XSD_INTEGER;
+	if (s == FLOAT) return XSD_FLOAT;
+	if (s == DECIMAL) return XSD_DECIMAL;
+	if (s == URISTR) return XSD_ANYURI;
+	if (s == STR) return XSD_STRING;
 }
 
 #ifdef OPENCL

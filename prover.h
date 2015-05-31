@@ -28,6 +28,7 @@ typedef uint64_t u64;
 typedef int64_t i64;
 typedef uint8_t u8;
 typedef int8_t i8;
+enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
 
 class prover {
 public:
@@ -41,9 +42,9 @@ typedef
 typedef int prop_t;
 #endif
 	class ruleset;
-	typedef int termid;
-	typedef uint ruleid;
-	typedef int resid; // resource id
+	typedef i64 termid;
+	typedef u64 ruleid;
+	typedef i64 resid; // resource id
 	typedef boost::container::map<resid, termid> subst;
 	typedef boost::container::vector<termid> termset;
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
@@ -61,16 +62,16 @@ typedef int prop_t;
 
 	class term {
 	public:
-		term(int _p, termid _s, termid _o, int props);
+		term(resid _p, termid _s, termid _o, etype t);
 		const resid p;
 		const termid s, o;
-		const prop_t properties = 0; // encode lang nodetype and datatype here
+		u8 type; // enum etype
 	};
-	boost::container::vector<term> terms;
+	boost::container::vector<term> _terms;
 	friend ruleset;
 	const term& get(termid id);
-	termid make(string p, termid s = 0, termid o = 0, int props = 0);
-	termid make(int p, termid s = 0, termid o = 0, int props = 0);
+	termid make(string p, termid s = 0, termid o = 0, etype t = IRI);
+	termid make(resid p, termid s = 0, termid o = 0, etype t = IRI);
 
 	struct proof {
 		ruleid rul;
@@ -84,6 +85,7 @@ typedef int prop_t;
 			: rul(r), last(l), prev(p), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
+	std::deque<proof*> queue;
 	void step (proof*, bool del = true);
 
 	ruleset kb;
@@ -99,8 +101,8 @@ typedef int prop_t;
 	int builtin(termid id, proof*);
 	bool maybe_unify(const term, const term);
 	std::set<uint> match(termid e);
-	termid mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& q);
-	termid mkterm(string s, string p, string o, const quad& q);
+//	termid mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& q);
+//	termid mkterm(string s, string p, string o, const quad& q);
 	termid quad2term(const quad& p);
 
 	string format(termid id);

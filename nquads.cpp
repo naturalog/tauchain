@@ -106,9 +106,9 @@ list<quad> parse_nqline(const wchar_t* s) {
 			}
 			else throw runtime_error("expected iri or bnode graph");
 			++s;
-			r.emplace_front(quad(subject, pred, object, graph));
+			r.emplace_back(subject, pred, object, graph);
 		} else
-			r.emplace_front(quad(subject, pred, object, L"@default"));
+			r.emplace_back(subject, pred, object, L"@default");
 		while (*s == '.') ++s;
 	}
 	return r;
