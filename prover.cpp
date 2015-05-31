@@ -17,10 +17,11 @@
 #include <iterator>
 #include <forward_list>
 #include <boost/algorithm/string.hpp>
+#include <dlfcn.h>
 
 using namespace boost::algorithm;
 
-int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf;
+int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror;
 int _indent = 0;
 
 etype littype(string s);
@@ -109,8 +110,9 @@ int prover::builtin(termid id, proof* p) {
 	int r = -1;
 	termid i0 = t.s ? evaluate(t.s, p->s) : 0;
 	termid i1 = t.o ? evaluate(t.o, p->s) : 0;
-	const term *t0 = i0 ? &get(i0=evaluate(t.s, p->s)) : 0;
-	const term* t1 = i1 ? &get(i1=evaluate(t.o, p->s)) : 0;
+	term r1, r2;
+	const term *t0 = i0 ? &(r1=get(i0=evaluate(t.s, p->s))) : 0;
+	const term* t1 = i1 ? &(r2=get(i1=evaluate(t.o, p->s))) : 0;
 	if (t.p == GND) r = 1;
 	else if (t.p == logequalTo)
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
@@ -120,6 +122,16 @@ int prover::builtin(termid id, proof* p) {
 		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
+	else if (t.p == _dlopen && t0 && t1) {
+		if (t0->isstr()) throw std::runtime_error("dlopen must be called with string subject.");
+		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
+		u64 handle = (u64)dlopen(ws(dict[t0->p].value).c_str(), RTLD_LAZY | RTLD_GLOBAL);
+		r = unify(i1, p->s, make(mkliteral(tostr(handle),pstr(XSD_INTEGER),0),0,0), p->s, true) ? 1 : 0;
+	}
+//void *dlopen(const char *filename, int flag);
+//char *dlerror(void);
+//void *dlsym(void *handle, const char *symbol);
+//int dlclose(void *handle);
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 		if (!t0) t0 = &get(i0=t.s);
 		if (!t1) t1 = &get(i1=t.o);
@@ -221,10 +233,7 @@ void prover::step(proof* p, bool del) {
 //}
 
 prover::termid prover::quad2term(const quad& p) {
-	node ns = *p.subj, np = *p.pred, no = *p.object;
-	termid s = make(ns.value, 0, 0, ns._type == node::IRI ? IRI : ns._type == node::BNODE ? BNODE : littype(ns.datatype));
-	termid o = make(no.value, 0, 0, no._type == node::IRI ? IRI : no._type == node::BNODE ? BNODE : littype(no.datatype));
-	return make(np.value, s, o, np._type == node::IRI ? IRI : np._type == node::BNODE ? BNODE : littype(np.datatype));
+	return make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
 }
 
 void prover::addrules(pquad q, const qdb& kb) {
@@ -251,7 +260,7 @@ prover::prover ( qdb qkb, qlist query ) : prover() {
 		addrules(quad, qkb);
 	for ( auto q : query )
 		goal.push_back( quad2term( *q ) );
-	va = make(L"?A");
+	va = make(mkiri(L"?A"));
 	proof* p = new proof;
 	p->rul = kb.add(0, goal, this);
 	p->last = 0;
@@ -268,22 +277,22 @@ prover::prover ( qdb qkb, qlist query ) : prover() {
 		printe(); dout << KNRM);
 }
 
-prover::term::term(resid _p, termid _s, termid _o, etype t) : p(_p), s(_s), o(_o), type(t) {}
+prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) {
 	if (!id) throw 0;
 	return _terms[id - 1]; 
 }
 
-prover::termid prover::make(string p, termid s, termid o, etype t) { 
-	return make(dict.set(p), s, o, t); 
+prover::termid prover::make(pnode p, termid s, termid o) { 
+	return make(dict.set(*p), s, o); 
 }
 
-prover::termid prover::make(resid p, termid s, termid o, etype t) {
+prover::termid prover::make(resid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif
-	_terms.emplace_back(p, s, o, t);
+	_terms.emplace_back(p, s, o);
 	return _terms.size();
 }
 

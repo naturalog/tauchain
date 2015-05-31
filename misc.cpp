@@ -9,58 +9,63 @@ int level = 1;
 extern int _indent;
 
 bidict::bidict() {
-	GND = set ( L"GND" );
-	logequalTo = set ( L"log:equalTo");
-	lognotEqualTo = set (L"log:notEqualTo");
-	rdffirst = set(L"rdf:first"); 
-	rdfrest = set(L"rdf:rest");
-	A = set(L"a");
-	rdfsResource = set(L"rdfs:Resource"); 
-	rdfList = set(L"rdf:List");
-	Dot = set(L".");
-	rdfsType = set(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-	rdfssubClassOf = set(L"rdfs:subClassOf");
+	GND = set (mkiri( L"GND" ));
+	logequalTo = set (mkiri( L"log:equalTo"));
+	lognotEqualTo = set (mkiri(L"log:notEqualTo"));
+	rdffirst = set(mkiri(L"rdf:first"));
+	rdfrest = set(mkiri(L"rdf:rest"));
+	A = set(mkiri(L"a"));
+	rdfsResource = set(mkiri(L"rdfs:Resource"));
+	rdfList = set(mkiri(L"rdf:List"));
+	Dot = set(mkiri(L"."));
+	rdfsType = set(mkiri(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
+	rdfssubClassOf = set(mkiri(L"rdfs:subClassOf"));
+	_dlopen = set(mkiri(L"dlfcn:dlopen"));
+	_dlerror = set(mkiri(L"dlfcn:dlerror"));
+	_dlsym = set(mkiri(L"dlfcn:dlsym"));
+	_dlclose = set(mkiri(L"dlfcn:dlclose"));
 }
 
-void bidict::set ( const std::vector<string>& v ) {
+void bidict::set ( const std::vector<node>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
-int bidict::set ( const string& v ) {
-	auto it = m.right.find ( v );
-	if ( it != m.right.end() ) return it->second;
-	int k = m.size() + 1;
-	if ( v[0] == L'?'/* || v[0] == '_'*/ ) k = -k;
-	m.insert ( bm::value_type ( k, v ) );
+int bidict::set ( node v ) {
+	auto it = pi.find ( v );
+	if ( it != pi.end() ) return it->second;
+	int k = pi.size() + 1;
+	if ( v._type == node::IRI && v.value[0] == L'?' ) k = -k;
+	pi[v] = k;
+	ip[k] = v;
 	return k;
 }
 
-const string bidict::operator[] ( int k ) {
-	if (!has(k)) set(::tostr(k));
-	return m.left.find ( k )->second;
+node bidict::operator[] ( int k ) {
+//	if (!has(k)) set(::tostr(k));
+	return ip[k];
 }
 
-int bidict::operator[] ( const string& v ) {
-	return m.right.find ( v )->second;
+int bidict::operator[] ( node v ) {
+	return pi[v];
 }
 
 bool bidict::has ( int k ) const {
-	return m.left.find ( k ) != m.left.end();
+	return ip.find ( k ) != ip.end();
 }
 
-bool bidict::has ( const string& v ) const {
-	return m.right.find ( v ) != m.right.end();
+bool bidict::has ( node v ) const {
+	return pi.find ( v ) != pi.end();
 }
 
 string bidict::tostr() {
 	std::wstringstream s;
-	for ( auto x : m.right ) s << x.first << L" := " << x.second << std::endl;
+	for ( auto x : pi ) s << x.first.tostring() << L" := " << x.second << std::endl;
 	return s.str();
 }
 
 string dstr ( int p ) {
 	if ( !deref ) return tostr ( p );
-	string s = dict[p];
+	string s = dict[p].tostring();
 	if (s == L"GND") throw 0;
 	if ( !shorten ) return s;
 	if ( s.find ( L"#" ) == string::npos ) return s;

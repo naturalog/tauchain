@@ -15,8 +15,11 @@ string node::tostring() const {
 	if ( _type == IRI ) ss << L'<';
 	if ( _type == LITERAL ) ss << L'\"';
 	ss << value;
-	if ( _type == LITERAL ) ss << L'\"';
-	if ( _type == LITERAL && lang.size() ) ss << L'@' << lang;
+	if ( _type == LITERAL ) {
+		ss << L'\"';
+		if ( datatype.size() ) ss << "^^" << datatype;
+		if ( lang.size() ) ss << L'@' << lang;
+	}
 	if ( _type == IRI ) ss << L'>';
 	return ss.str();
 }

@@ -62,16 +62,19 @@ typedef int prop_t;
 
 	class term {
 	public:
-		term(resid _p, termid _s, termid _o, etype t);
-		const resid p;
-		const termid s, o;
-		u8 type; // enum etype
+		term() : p(0), s(0), o(0) {}
+		term(resid _p, termid _s, termid _o);
+		term(const term& t) : p(t.p), s(t.s), o(t.o) {}
+		term& operator=(const term& t) { p = t.p; s = t.s; o = t.o; return *this; }
+		resid p;
+		termid s, o;
+		bool isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
 	};
 	boost::container::vector<term> _terms;
 	friend ruleset;
 	const term& get(termid id);
-	termid make(string p, termid s = 0, termid o = 0, etype t = IRI);
-	termid make(resid p, termid s = 0, termid o = 0, etype t = IRI);
+	termid make(pnode p, termid s = 0, termid o = 0);
+	termid make(resid p, termid s = 0, termid o = 0);
 
 	struct proof {
 		ruleid rul;
@@ -130,5 +133,5 @@ typedef int prop_t;
 	cl::Buffer clterms, clrule, clresult;
 #endif
 	termid va;
-	ThreadPool pool;
+//	ThreadPool pool;
 };
