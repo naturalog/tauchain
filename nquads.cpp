@@ -3,8 +3,7 @@
 #include <set>
 #include <stdexcept>
 #include "rdf.h"
-using namespace std;
-typedef wstring str;
+typedef std::wstring str;
 typedef wchar_t chr;
 typedef const wchar_t cchr;
 using namespace jsonld;
@@ -12,8 +11,8 @@ using namespace jsonld;
 using namespace boost::algorithm;
 
 wchar_t t[4096];
-list<quad> parse_nqline(const wchar_t* s) {
-	list<quad> r;
+std::list<quad> parse_nqline(const wchar_t* s) {
+	std::list<quad> r;
 	uint pos = 0;
 	str graph;
 	pnode subject;
@@ -32,7 +31,7 @@ list<quad> parse_nqline(const wchar_t* s) {
 			t[pos] = 0; pos = 0;
 			subject = mkbnode(wstrim(t));
 		}
-		else throw runtime_error("expected iri or bnode subject");
+		else throw wruntime_error(string(L"expected iri or bnode subject:") + string(s,0,48));
 
 		do {
 			while (iswspace(*s)) ++s;
@@ -46,7 +45,7 @@ list<quad> parse_nqline(const wchar_t* s) {
 				preds.emplace_back(mkiri(implication), plist());
 				++s;
 			}
-			else throw runtime_error("expected iri predicate");
+			else throw wruntime_error(string(L"expected iri predicate:") + string(s,0,48));
 
 			do {
 				while (iswspace(*s)) ++s;
@@ -79,12 +78,12 @@ list<quad> parse_nqline(const wchar_t* s) {
 								lang += *s++;
 							break;
 						}
-						else throw runtime_error("expected langtag or iri");
+						else throw wruntime_error(string(L"expected langtag or iri:") + string(s,0,48));
 					}
 					t[pos] = 0; pos = 0;
 					preds.back().second.push_back(mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang)));
 				}
-				else throw runtime_error("expected iri or bnode or literal object");
+				else throw wruntime_error(string(L"expected iri or bnode or literal object:") + string(s,0,48));
 				while (iswspace(*s)) ++s;
 			} while (*s++ == L',');
 			--s;
@@ -96,7 +95,7 @@ list<quad> parse_nqline(const wchar_t* s) {
 				while (*++s != L'>') t[pos++] = *s;
 			else if (*s == L'_')
 				while (!iswspace(*s)) t[pos++] = *s++;
-			else throw runtime_error("expected iri or bnode graph");
+			else throw wruntime_error(string(L"expected iri or bnode graph:") + string(s,0,48));
 			t[pos] = 0; pos = 0;
 			trim(graph = t);
 			++s;
