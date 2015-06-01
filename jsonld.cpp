@@ -2,8 +2,6 @@
 #include "rdf.h"
 #include "json_spirit.h"
 
-namespace jsonld {
-
 pcontext context_t::parse ( pobj localContext, std::vector<string> remoteContexts ) {
 	pdefined_t defined = make_shared<defined_t>();
 	context_t result ( options );
@@ -677,7 +675,7 @@ prdf_db jsonld_api::toRDF() {
 }
 
 prdf_db jsonld_api::toRDF ( pobj input, jsonld_options options ) {
-	pobj expandedInput = jsonld::expand ( input, options );
+	pobj expandedInput = ::expand ( input, options );
 	jsonld_api api ( expandedInput, options );
 	prdf_db dataset = api.toRDF();
 
@@ -1017,14 +1015,11 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 	gen_node_map ( element, nodeMap, activeGraph, pobj(), pstring(), psomap() );
 }
 
-typedef std::shared_ptr<context_t> pcontext;
 size_t jsonld_api::blankNodeCounter = 0;
 map<string, string> jsonld_api::bnode_id_map;
 void* curl = curl_easy_init();
 
-}
-
 string obj::toString() {
-	return json_spirit::write_string ( jsonld::convert ( *this ), json_spirit::pretty_print );
+	return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print );
 }
 

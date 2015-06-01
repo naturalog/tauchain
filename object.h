@@ -150,8 +150,6 @@ bool has ( psomap c, pstring k );
 bool has ( pobj o, string s );
 bool has ( pobj o, pstring s );
 
-namespace jsonld {
-// http://www.w3.org/TR/json-ld-api/#the-jsonldoptions-type
 struct jsonld_options {
 	jsonld_options() {
 	}
@@ -175,5 +173,4 @@ struct jsonld_options {
 	pbool useNamespaces = std::make_shared<bool> ( true );
 	pstring outputForm = 0;
 };
-}
 #endif

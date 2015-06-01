@@ -9,19 +9,19 @@ tau: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 nquads.o: nquads.cpp rdf.h
-cli.o: cli.cpp prover.h misc.h rdf.h object.h parsers.h jsonld.h \
+cli.o: cli.cpp prover.h misc.h rdf.h object.h jsonld.h \
  json_spirit.h strings.h cli.h
 jsonld.o: jsonld.cpp jsonld.h json_spirit.h object.h strings.h rdf.h
-misc.o: misc.cpp prover.h misc.h rdf.h object.h parsers.h jsonld.h \
+misc.o: misc.cpp prover.h misc.h rdf.h object.h jsonld.h \
  json_spirit.h strings.h
 object.o: object.cpp object.h
-prover.o: prover.cpp misc.h object.h prover.h rdf.h parsers.h jsonld.h \
+prover.o: prover.cpp misc.h object.h prover.h rdf.h jsonld.h \
  json_spirit.h strings.h
-rdf.o: rdf.cpp cli.h rdf.h object.h parsers.h jsonld.h json_spirit.h \
+rdf.o: rdf.cpp cli.h rdf.h object.h jsonld.h json_spirit.h \
  strings.h prover.h misc.h
-tau.o: tau.cpp cli.h rdf.h object.h parsers.h jsonld.h json_spirit.h \
+tau.o: tau.cpp cli.h rdf.h object.h jsonld.h json_spirit.h \
  strings.h prover.h misc.h
-marpa.o: marpa.cpp cli.h rdf.h object.h parsers.h jsonld.h json_spirit.h \
+marpa.o: marpa.cpp cli.h rdf.h object.h jsonld.h json_spirit.h \
  strings.h prover.h misc.h
 
 debug: CXXFLAGS += -DDEBUG

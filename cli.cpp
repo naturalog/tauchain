@@ -3,7 +3,6 @@
 #endif
 #include "prover.h"
 #include "jsonld.h"
-#include "parsers.h"
 #include "cli.h"
 #include <boost/algorithm/string.hpp>
 
@@ -85,7 +84,7 @@ pobj cmd_t::load_json ( string fname, bool print ) {
 		if (!json_spirit::read_stream ( is, v ))
 			throw std::runtime_error("couldnt load json");
 	}
-	pobj r =  jsonld::convert ( v );
+	pobj r =  ::convert ( v );
 	if ( !r ) throw wruntime_error ( L"Couldn't read input." );
 	if ( print ) dout << r->toString() << std::endl;
 	return r;
@@ -102,7 +101,7 @@ pobj cmd_t::nodemap ( const strings& args ) {
 pobj cmd_t::nodemap ( pobj o ) {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
-	jsonld::jsonld_api a ( opts );
+	jsonld_api a ( opts );
 	a.gen_node_map ( o, nodeMap );
 	return mk_somap_obj ( nodeMap );
 }
@@ -112,11 +111,11 @@ qdb cmd_t::toquads ( const strings& args ) {
 }
 
 qdb cmd_t::toquads ( pobj o ) {
-	jsonld::jsonld_api a ( opts );
+	jsonld_api a ( opts );
 	rdf_db r ( a );
 	auto nodeMap = o;
 	for ( auto g : *nodeMap->MAP() ) {
-		if ( jsonld::is_rel_iri ( g.first ) ) continue;
+		if ( is_rel_iri ( g.first ) ) continue;
 		if ( !g.second || !g.second->MAP() ) throw wruntime_error ( L"Expected map in nodemap." );
 		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
@@ -126,7 +125,7 @@ qdb cmd_t::toquads ( pobj o ) {
 }
 
 qdb cmd_t::convert ( pobj o ) {
-	return toquads ( nodemap ( jsonld::expand ( o, opts ) ) );
+	return toquads ( nodemap ( expand ( o, opts ) ) );
 }
 
 qdb cmd_t::convert ( const string& s, bool debugprint ) {

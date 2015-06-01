@@ -1,10 +1,8 @@
 #include "cli.h"
 #include <boost/filesystem.hpp>
-#include "parsers.h"
 #include "prover.h"
+#include "jsonld.h"
 #include <iomanip>
-
-namespace jsonld {
 
 pqlist mk_qlist() {
 	return make_shared<qlist>();
@@ -190,8 +188,6 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 	}
 }
 
-}
-
 quad::quad ( string subj, string pred, pnode object, string graph ) :
 	quad ( startsWith ( subj, L"_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {
 }
@@ -230,8 +226,6 @@ string quad::tostring ( ) const {
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 
-namespace jsonld {
-
 qdb readqdb ( std::wistream& is) {
 	string s, c;
 	quad q;
@@ -246,66 +240,6 @@ qdb readqdb ( std::wistream& is) {
 		}
 	}
 	return r;
-	/*
-	string s,p,o,c;
-	bool quotes = false;
-	const char quote = '\"';
-	int pos = -1;
-	wchar_t ch;
-	pquad pq;
-	qdb q;
-	auto tr = [](string s){
-		trim_if(s, is_any_of(L" <>"));
-//		trim(s);
-		return s;
-	};
-	while (is.get(ch)) {
-		if (ch == quote) {
-			quotes = !quotes;
-			continue;
-		}
-		if (!quotes) {
-			if (isspace(ch) || ch == L'\r' || ch == L'\n') {
-				if (pos != -1)
-					++pos;
-				continue;
-			}
-			if (pos == -1)
-				pos = 0;
-			if (ch == '.') {
-				if (p == L"=>")
-					p = implication;
-				if (pos == 0 && s == L"fin")
-					return q;
-				if (pos == 2)
-					pq = make_shared<quad>(tr(s), tr(p), tr(o), c = L"@default");
-				else if (pos == 3) {
-					c = tr(c);
-					if (!c.size())
-						c = L"@default";
-					pq = make_shared<quad>(tr(s), tr(p), tr(o), tr(c));
-				}
-				dout << pq->tostring() << std::endl;
-#ifdef IRC				
-				sleep(0.1);
-#endif				
-				if (q.find(c) == q.end())
-					q[c] = make_shared<qlist>();
-				q[c]->push_back(pq);
-				pos = -1;
-				s = p = o = c = L"";
-			} else
-				switch (pos) {
-				case 0: s += ch; break;
-				case 1: p += ch; break;
-				case 2: o += ch; break;
-				case 3: c += ch; break;
-				default: break;
-				}
-		}
-	}
-	return q;*/
-}
 }
 
 std::string expand_cmd::desc() const {
@@ -326,7 +260,7 @@ int expand_cmd::operator() ( const strings& args ) {
 		return 1;
 	}
 	pobj e;
-	dout << ( e = jsonld::expand ( load_json ( args ) ) )->toString() << std::endl;
+	dout << ( e = expand ( load_json ( args ) ) )->toString() << std::endl;
 	if ( args.size() == 3 ) return 0;
 	boost::filesystem::path tmpdir = boost::filesystem::temp_directory_path();
 	const std::string tmpfile_template =  tmpdir.string() + "/XXXXXX";
@@ -336,8 +270,8 @@ int expand_cmd::operator() ( const strings& args ) {
 	int fd2 = mkstemp ( fn2.get() );
 
 	std::wofstream os1 ( fn1.get() ), os2 ( fn2.get() );
-	os1 << json_spirit::write_string ( jsonld::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
-	os2 << json_spirit::write_string ( jsonld::convert ( load_json ( args[3] ) ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
+	os1 << json_spirit::write_string ( ::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
+	os2 << json_spirit::write_string ( ::convert ( load_json ( args[3] ) ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
 	os1.close();
 	os2.close();
 	string c = string ( L"diff " ) + ws(fn1.get()) + string ( L" " ) + ws(fn2.get());

@@ -6,7 +6,6 @@
 #include <memory>
 #include <list>
 #include <set>
-//#include <boost/variant.hpp>
 #include "json_spirit.h"
 #include <curl/curl.h>
 #include <curl/easy.h>
@@ -19,13 +18,10 @@
 #include "object.h"
 #include "strings.h"
 #include "rdf.h"
-//using namespace std;
 
 inline string resolve ( pstring base_, const string& ref ) {
 	return base_ ? *base_ + ref : ref;
 }
-
-namespace jsonld {
 
 template<typename M, typename K, typename E> inline bool throw_if_contains (
     const M& m, const K& k, const E& err ) {
@@ -47,8 +43,8 @@ bool equals ( const pobj& a, const pobj& b );
 bool equals ( const pobj& a, const obj& b );
 bool equals ( const obj& a, const pobj& b );
 pobj get ( psomap p, string k );
-
-
+json_spirit::wmValue convert ( obj& v );
+json_spirit::wmValue convert ( pobj v );
 bool keyword ( const string& key );
 bool keyword ( pstring key );
 
@@ -168,18 +164,16 @@ public:
 	}
 private:
 	void initialize ( pobj input, pobj context_ );
-public:
-	// http://json-ld.org/spec/latest/json-ld-api/#compaction-algorithm
-	pobj compact ( pcontext act_ctx, string act_prop, pobj element, bool compactArrays );
-	pobj compact ( pcontext act_ctx, string act_prop, pobj element );
-	// http://json-ld.org/spec/latest/json-ld-api/#expansion-algorithm
-	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element );
-	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false );
-	static bool deepContains ( polist values, pobj value );
 	static void mergeValue ( psomap obj, pstring key, pobj value );
 	static void mergeValue ( psomap obj, string key, pobj value );
 	static void mergeValue ( somap& obj, pstring key, pobj value );
 	static void mergeValue ( somap& obj, string key, pobj value );
+public:
+	pobj compact ( pcontext act_ctx, string act_prop, pobj element, bool compactArrays );
+	pobj compact ( pcontext act_ctx, string act_prop, pobj element );
+	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element );
+	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false );
+	static bool deepContains ( polist values, pobj value );
 	string gen_bnode_id ( string id = L"" );
 	void gen_node_map ( pobj element, psomap nodeMap );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph );
@@ -190,15 +184,5 @@ public:
 };
 
 pobj expand ( pobj input, jsonld_options opts = jsonld_options() );
-}
-
-typedef jsonld::rdf_db rdf_db;
-typedef jsonld::quad quad;
-typedef jsonld::qdb qdb;
-typedef jsonld::pquad pquad;
-typedef jsonld::node node;
-typedef jsonld::pnode pnode;
-typedef jsonld::qlist qlist;
-typedef jsonld::prdf_db prdf_db;
 
 #endif

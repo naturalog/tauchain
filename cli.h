@@ -3,12 +3,10 @@
 
 #include "rdf.h"
 
-using namespace jsonld;
-
 typedef std::vector<string> strings;
 
 extern bool fnamebase, quad_in, nocolor;
-extern jsonld::jsonld_options opts;
+extern jsonld_options opts;
 extern string chan;
 
 class cmd_t {
@@ -32,15 +30,6 @@ typedef std::pair<std::map<string, cmd_t*>, std::map<std::pair<string, string>, 
 
 void print_usage ( const cmds_t& cmds );
 void process_flags ( const cmds_t& cmds, strings& args );
-
-#ifdef marpa
-class load_n3_cmd : public cmd_t {
-public:
-	virtual std::string desc() const;
-	virtual std::string help() const;
-	virtual int operator() ( const strings& args );
-};
-#endif
 
 class expand_cmd : public cmd_t {
 public:

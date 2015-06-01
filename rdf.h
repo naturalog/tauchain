@@ -4,9 +4,6 @@
 #include "object.h"
 #include <list>
 #include <set>
-//using namespace std;
-
-namespace jsonld {
 
 typedef std::map<string, string> ssmap;
 typedef std::shared_ptr<ssmap> pssmap;
@@ -88,7 +85,6 @@ private:
 };
 
 typedef std::shared_ptr<rdf_db> prdf_db;
-}
-std::list<jsonld::quad> parse_nqline(const wchar_t* s); 
-jsonld::qlist merge ( const jsonld::qdb& q );
+std::list<quad> parse_nqline(const wchar_t* s); 
+qlist merge ( const qdb& q );
 #endif

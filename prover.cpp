@@ -104,6 +104,10 @@ bool prover::euler_path(proof* p, termid t) {
 	return ep;
 }
 
+prover::termid prover::list_next(prover::termid t) {
+	
+}
+
 int prover::builtin(termid id, proof* p) {
 	setproc(L"builtin");
 	const term t = get(id);
@@ -236,16 +240,16 @@ prover::termid prover::quad2term(const quad& p) {
 	return make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
 }
 
-void prover::addrules(pquad q, const qdb& kb) {
+void prover::addrules(pquad q) {
 	const string &s = q->subj->value, &p = q->pred->value, &o = q->object->value;
-	if ( p != implication || kb.find ( o ) == kb.end() ) 
-		this->kb.add(quad2term(*q), termset(), this);
-	else for ( jsonld::pquad y : *kb.at ( o ) ) {
+	if ( p != implication || quads.find ( o ) == quads.end() ) 
+		kb.add(quad2term(*q), termset(), this);
+	else for ( pquad y : *quads.at ( o ) ) {
 		termset ts;
-		if ( kb.find ( s ) != kb.end() )
-			for ( jsonld::pquad z : *kb.at ( s ) )
+		if ( quads.find ( s ) != quads.end() )
+			for ( pquad z : *quads.at ( s ) )
 				ts.push_back( quad2term( *z ) );
-		this->kb.add(quad2term(*y), ts, this);
+		kb.add(quad2term(*y), ts, this);
 	}
 }
 
@@ -256,8 +260,9 @@ qlist merge ( const qdb& q ) {
 }
 
 prover::prover ( qdb qkb, qlist query ) : prover() {
-	for ( jsonld::pquad quad : *qkb.at(L"@default")) 
-		addrules(quad, qkb);
+	quads = qkb;
+	for ( pquad quad : *quads.at(L"@default")) 
+		addrules(quad);
 	for ( auto q : query )
 		goal.push_back( quad2term( *q ) );
 	va = make(mkiri(L"?A"));

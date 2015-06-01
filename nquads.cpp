@@ -3,10 +3,6 @@
 #include <set>
 #include <stdexcept>
 #include "rdf.h"
-typedef std::wstring str;
-typedef wchar_t chr;
-typedef const wchar_t cchr;
-using namespace jsonld;
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 
@@ -14,7 +10,7 @@ wchar_t t[4096];
 std::list<quad> parse_nqline(const wchar_t* s) {
 	std::list<quad> r;
 	uint pos = 0;
-	str graph;
+	string graph;
 	pnode subject;
 	typedef std::list<pnode> plist;
 	std::list<std::pair<pnode, plist>> preds;
@@ -63,7 +59,7 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 					do {
 						t[pos++] = *s++;
 					} while (!(*(s-1) != L'\\' && *s == L'\"'));
-					str dt, lang;
+					string dt, lang;
 					++s;
 					while (!iswspace(*s) && *s != L'.') {
 						if (*s == L'^' && *++s == L'^') {

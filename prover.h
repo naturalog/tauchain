@@ -8,7 +8,6 @@
 #include <climits>
 #include "rdf.h"
 #include "misc.h"
-#include "parsers.h"
 #include <functional>
 #include "ThreadPool.h"
 #include <boost/interprocess/containers/map.hpp>
@@ -21,8 +20,6 @@ extern std::string clprog;
 #else
 #define CL(x)
 #endif
-
-using namespace jsonld;
 
 typedef uint64_t u64;
 typedef int64_t i64;
@@ -95,7 +92,7 @@ typedef int prop_t;
 	termset goal;
 	evidence e;
 
-	void addrules(pquad q, const qdb& kb);
+	void addrules(pquad q);
 
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);
@@ -133,5 +130,7 @@ typedef int prop_t;
 	cl::Buffer clterms, clrule, clresult;
 #endif
 	termid va;
+	qdb quads;
+	termid list_next(termid t);
 //	ThreadPool pool;
 };

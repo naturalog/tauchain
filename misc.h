@@ -9,8 +9,7 @@
 #include <boost/interprocess/containers/list.hpp>
 #include <boost/interprocess/containers/map.hpp>
 #include "rdf.h"
-//using namespace std;
-using namespace jsonld;
+
 extern boost::container::list<string> proc;
 class bidict {
 	boost::container::map<int, node> ip;
@@ -29,14 +28,9 @@ public:
 
 extern bidict& dict;
 extern int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror;
-/*
-template<typename T> string print ( T t ) {
-	wstringstream ss;
-	ss << t;
-	return ss.str();
-}*/
 string dstr ( int p );
 string indent();
+
 struct _setproc {
 	string prev;
 	_setproc(const string& p);

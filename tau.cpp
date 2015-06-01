@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "cli.h"
 #include <sstream>
-#include "parsers.h"
 #include "prover.h"
 #include "match.h"
 
@@ -11,7 +10,7 @@ auto dummy = []() {
 }();
 #endif
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
-jsonld::jsonld_options opts;
+jsonld_options opts;
 
 void menu();
 #include <boost/asio.hpp>
