@@ -16,8 +16,9 @@ list<quad> parse_nqline(const wchar_t* s) {
 	list<quad> r;
 	uint pos = 0;
 	str graph;
-	pnode subject, pred;
-	std::list<pnode> objects;
+	pnode subject;
+	typedef std::list<pnode> plist;
+	std::list<std::pair<pnode, plist>> preds;
 	while(*s) {
 		while (iswspace(*s)) ++s;
 		if (*s == L'<') {
@@ -32,60 +33,63 @@ list<quad> parse_nqline(const wchar_t* s) {
 			subject = mkbnode(wstrim(t));
 		}
 		else throw runtime_error("expected iri or bnode subject");
-		while (iswspace(*s)) ++s;
-	
-		if (*s == L'<') {
-			while (*++s != L'>') t[pos++] = *s;
-			t[pos] = 0; pos = 0;
-			pred = mkiri(wstrim(t));
-			++s;
-		}
-		else if (*s == L'=' && *++s == L'>') {
-			pred = mkiri(implication);
-			++s;
-		}
-		else throw runtime_error("expected iri predicate");
-		while (iswspace(*++s));
 
 		do {
 			while (iswspace(*s)) ++s;
 			if (*s == L'<') {
 				while (*++s != L'>') t[pos++] = *s;
 				t[pos] = 0; pos = 0;
-				objects.push_back(mkiri(wstrim(t)));
+				preds.emplace_back(mkiri(wstrim(t)), plist());
 				++s;
 			}
-			else if (*s == L'_') {
-				while (!iswspace(*s)) t[pos++] = *s++;
-				t[pos] = 0; pos = 0;
-				objects.push_back(mkbnode(wstrim(t)));
-			} else if (*s++ == L'\"') {
-				do {
-					t[pos++] = *s++;
-				} while (!(*(s-1) != L'\\' && *s == L'\"'));
-				str dt, lang;
+			else if (*s == L'=' && *++s == L'>') {
+				preds.emplace_back(mkiri(implication), plist());
 				++s;
-				while (!iswspace(*s) && *s != L'.') {
-					if (*s == L'^' && *++s == L'^') {
-						if (*++s == L'<')  {
-							while (*s != L'>') 
-								dt += *s++;
-							++s;
+			}
+			else throw runtime_error("expected iri predicate");
+
+			do {
+				while (iswspace(*s)) ++s;
+				if (*s == L'<') {
+					while (*++s != L'>') t[pos++] = *s;
+					t[pos] = 0; pos = 0;
+					preds.back().second.push_back(mkiri(wstrim(t)));
+					++s;
+				}
+				else if (*s == L'_') {
+					while (!iswspace(*s)) t[pos++] = *s++;
+					t[pos] = 0; pos = 0;
+					preds.back().second.push_back(mkbnode(wstrim(t)));
+				} else if (*s++ == L'\"') {
+					do {
+						t[pos++] = *s++;
+					} while (!(*(s-1) != L'\\' && *s == L'\"'));
+					str dt, lang;
+					++s;
+					while (!iswspace(*s) && *s != L'.') {
+						if (*s == L'^' && *++s == L'^') {
+							if (*++s == L'<')  {
+								while (*s != L'>') 
+									dt += *s++;
+								++s;
+								break;
+							}
+						} else if (*s == L'@') { 
+							while (!iswspace(*s)) 
+								lang += *s++;
 							break;
 						}
-					} else if (*s == L'@') { 
-						while (!iswspace(*s)) 
-							lang += *s++;
-						break;
+						else throw runtime_error("expected langtag or iri");
 					}
-					else throw runtime_error("expected langtag or iri");
+					t[pos] = 0; pos = 0;
+					preds.back().second.push_back(mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang)));
 				}
-				t[pos] = 0; pos = 0;
-				objects.push_back(mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang)));
-			}
-			else throw runtime_error("expected iri or bnode or literal object");
+				else throw runtime_error("expected iri or bnode or literal object");
+				while (iswspace(*s)) ++s;
+			} while (*s++ == L',');
+			--s;
 			while (iswspace(*s)) ++s;
-		} while (*s++ == L',');
+		} while (*s++ == L';');
 		--s;
 		if (*s != L'.' && *s) {
 			if (*s == L'<')
@@ -96,10 +100,10 @@ list<quad> parse_nqline(const wchar_t* s) {
 			t[pos] = 0; pos = 0;
 			trim(graph = t);
 			++s;
-			for (pnode object : objects) r.emplace_back(subject, pred, object, graph);
 		} else
-			for (pnode object : objects) r.emplace_back(subject, pred, object, L"@default");
-		objects.clear();
+			graph = L"@default";
+		for (auto x : preds) for (pnode object : x.second) r.emplace_back(subject, x.first, object, graph);
+		preds.clear();
 		while (*s == '.') ++s;
 	}
 	return r;
