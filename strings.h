@@ -161,8 +161,16 @@ template<typename T> string tostr ( T t ) {
 	return s.str();
 }
 
-inline string ws(const std::string& s) { return string(s.begin(), s.end()); }
-inline std::string ws(const string& s) { return std::string(s.begin(), s.end()); }
+string ws(const std::string& s);
+std::string ws(const string& s);
+string wstrim(const wchar_t* w);
+string wstrim(const std::string&);
+string wstrim(string);
+typedef std::shared_ptr<string> pstring;
+pstring pstr ( const string& s );
+pstring pstr ( const wchar_t* s );
+pstring pstrtrim ( const string& s );
+pstring pstrtrim ( const wchar_t* s );
 
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
 

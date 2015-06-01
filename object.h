@@ -38,15 +38,7 @@ void bt();
 #endif
 
 typedef std::nullptr_t null;
-//typedef std::string string;
-typedef std::shared_ptr<string> pstring;
-//typedef std::shared_ptr<wstring> pwstring;
 typedef std::shared_ptr<bool> pbool;
-
-//pwstring pwstr ( const wstring& s );
-pstring pstr ( const string& s );
-pstring pstr ( const wchar_t* s );
-//pstring pstr ( const unsigned char* s );
 
 extern std::wostream& dout;
 extern std::wostream& derr;

@@ -15,32 +15,29 @@ wchar_t t[4096];
 list<quad> parse_nqline(const wchar_t* s) {
 	list<quad> r;
 	uint pos = 0;
-	str wt;
+	str graph;
+	pnode subject, pred;
+	std::list<pnode> objects;
 	while(*s) {
 		while (iswspace(*s)) ++s;
-		pnode subject;
 		if (*s == L'<') {
 			while (*++s != L'>') t[pos++] = *s;
 			t[pos] = 0; pos = 0;
-			trim(wt = t);
-			subject = mkiri(wt);
+			subject = mkiri(wstrim(t));
 			++s;
 		}
 		else if (*s == L'_') {
 			while (!iswspace(*s)) t[pos++] = *s++;
 			t[pos] = 0; pos = 0;
-			trim(wt = t);
-			subject = mkbnode(wt);
+			subject = mkbnode(wstrim(t));
 		}
 		else throw runtime_error("expected iri or bnode subject");
 		while (iswspace(*s)) ++s;
 	
-		pnode pred;
 		if (*s == L'<') {
 			while (*++s != L'>') t[pos++] = *s;
 			t[pos] = 0; pos = 0;
-			trim(wt = t);
-			pred = mkiri(wt);
+			pred = mkiri(wstrim(t));
 			++s;
 		}
 		else if (*s == L'=' && *++s == L'>') {
@@ -49,66 +46,60 @@ list<quad> parse_nqline(const wchar_t* s) {
 		}
 		else throw runtime_error("expected iri predicate");
 		while (iswspace(*++s));
-	
-		pnode object;
-		if (*s == L'<') {
-			while (*++s != L'>') t[pos++] = *s;
-			t[pos] = 0; pos = 0;
-			trim(wt = t);
-			object = mkiri(wt);
-			++s;
-		}
-		else if (*s == L'_') {
-			while (!iswspace(*s)) t[pos++] = *s++;
-			t[pos] = 0; pos = 0;
-			trim(wt = t);
-			object = mkbnode(wt);
-		} else if (*s++ == L'\"') {
-			do {
-				t[pos++] = *s++;
-			} while (!(*(s-1) != L'\\' && *s == L'\"'));
-			str dt, lang;
-			++s;
-			while (!iswspace(*s) && *s != L'.') {
-				if (*s == L'^' && *++s == L'^') {
-					if (*++s == L'<')  {
-						while (*s != L'>') 
-							dt += *s++;
-						++s;
-						break;
-					}
-				} else if (*s == L'@') { 
-					while (!iswspace(*s)) 
-						lang += *s++;
-					break;
-				}
-				else throw runtime_error("expected langtag or iri");
-			}
-			t[pos] = 0; pos = 0;
-			trim(wt = t);
-			trim(dt);
-			trim(lang);
-			object = mkliteral(wt, pstr(dt), pstr(lang));
-		}
-		else throw runtime_error("expected iri or bnode or literal object");
-		str graph;
-		while (iswspace(*s)) ++s;
-		if (*s != L'.' && *s) {
+
+		do {
+			while (iswspace(*s)) ++s;
 			if (*s == L'<') {
 				while (*++s != L'>') t[pos++] = *s;
 				t[pos] = 0; pos = 0;
-				trim(graph = t);
+				objects.push_back(mkiri(wstrim(t)));
+				++s;
 			}
 			else if (*s == L'_') {
 				while (!iswspace(*s)) t[pos++] = *s++;
 				t[pos] = 0; pos = 0;
-				trim(graph = t);
+				objects.push_back(mkbnode(wstrim(t)));
+			} else if (*s++ == L'\"') {
+				do {
+					t[pos++] = *s++;
+				} while (!(*(s-1) != L'\\' && *s == L'\"'));
+				str dt, lang;
+				++s;
+				while (!iswspace(*s) && *s != L'.') {
+					if (*s == L'^' && *++s == L'^') {
+						if (*++s == L'<')  {
+							while (*s != L'>') 
+								dt += *s++;
+							++s;
+							break;
+						}
+					} else if (*s == L'@') { 
+						while (!iswspace(*s)) 
+							lang += *s++;
+						break;
+					}
+					else throw runtime_error("expected langtag or iri");
+				}
+				t[pos] = 0; pos = 0;
+				objects.push_back(mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang)));
 			}
+			else throw runtime_error("expected iri or bnode or literal object");
+			while (iswspace(*s)) ++s;
+		} while (*s++ == L',');
+		--s;
+		if (*s != L'.' && *s) {
+			if (*s == L'<')
+				while (*++s != L'>') t[pos++] = *s;
+			else if (*s == L'_')
+				while (!iswspace(*s)) t[pos++] = *s++;
 			else throw runtime_error("expected iri or bnode graph");
+			t[pos] = 0; pos = 0;
+			trim(graph = t);
 			++s;
-			r.emplace_back(subject, pred, object, graph);
+			for (pnode object : objects) r.emplace_back(subject, pred, object, graph);
 		} else
-			r.emplace_back(subject, pred, object, L"@default");
+			for (pnode object : objects) r.emplace_back(subject, pred, object, L"@default");
+		objects.clear();
 		while (*s == '.') ++s;
 	}
 	return r;

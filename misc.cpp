@@ -1,6 +1,8 @@
 #include "prover.h"
 #include "parsers.h"
 #include "misc.h"
+#include <boost/algorithm/string.hpp>
+using namespace boost::algorithm;
 
 bidict& dict = *new bidict;
 bool deref = true, shorten = false;
@@ -251,3 +253,13 @@ _setproc:: _setproc(const string& p) {
 _setproc:: ~_setproc() {
 	proc.pop_front();
 }
+
+string wstrim(string s) {
+	trim(s);
+	return s;
+}
+pstring pstrtrim ( const string& s ) { string ss = s; trim(ss);return std::make_shared<string> ( ss ); } 
+pstring pstrtrim ( const wchar_t* s ) { if (!s) return 0; return pstrtrim ( string(s) ); }
+string ws(const std::string& s) { return string(s.begin(), s.end()); }
+std::string ws(const string& s) { return std::string(s.begin(), s.end()); }
+string wstrim(const wchar_t* w) { string s = w; return wstrim(s); }

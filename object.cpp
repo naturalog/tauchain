@@ -36,17 +36,8 @@ void dopause() {}
 #define trace(x)
 #endif
 
-pstring pstr ( const string& s ) {
-	return std::make_shared<string> ( s );
-}
-
-pstring pstr ( const wchar_t* s ) {
-	return s ? pstr ( string ( s ) ) : 0;
-}
-
-//pstring pstr ( const unsigned char* s ) {
-//	return pstr ( ( const char* ) s );
-//}
+pstring pstr ( const string& s ) { return std::make_shared<string> ( s ); } 
+pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }
 
 size_t obj::size() {
 	if ( LIST() ) return LIST()->size();
