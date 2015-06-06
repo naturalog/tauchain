@@ -104,11 +104,32 @@ bool prover::euler_path(proof* p, termid t) {
 	return ep;
 }
 
-prover::termid prover::list_next(prover::termid t) {
-	
+prover::termid prover::list_next(prover::termid cons, proof& p) {
+	//typedef boost::container::map<resid, boost::container::list<std::pair<termid, ground>>> evidence;
+//	typedef boost::container::list<std::pair<ruleid, subst>> ground;
+// ?R rdf:rest t. ?A rdf:rest ?R
+//	return get(*prover(kb, { make(rdfrest, va, get(t).s) })(&p.s).result.begin()).s;
+	if (!cons) return 0;
+	setproc(L"list_next");
+	termset ts;
+	ts.push_back(make(rdfrest, get(cons).s, va));
+	(*this)( ts , &p.s);
+	if (e.find(rdfrest) == e.end()) return 0;
+	termid r = 0;
+	for (auto x : e[rdfrest])
+		if (get(x.first).s == cons) {
+			r = get(x.first).o;
+			break;
+		}
+	TRACE(dout<<"current cons: " << format(cons) << " next cons: " << format(r) << std::endl);
+	return r;
+//	auto s = find(rdfrest, cons, p.s, false);
+//	termid r = s.empty() ? 0 : *s.begin();
+	TRACE(dout<<"current cons: " << format(cons) << " next cons: " << format(r) << std::endl);
+//	return r;
 }
 
-int prover::builtin(termid id, proof* p) {
+int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	setproc(L"builtin");
 	const term t = get(id);
 	int r = -1;
@@ -122,15 +143,34 @@ int prover::builtin(termid id, proof* p) {
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
+	else if (t.p == rdffirst) {
+		termid n = list_next(id, *p);
+		while ((n = list_next(n, *p)));
+	}
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == _dlopen && t0 && t1) {
-		if (t0->isstr()) throw std::runtime_error("dlopen must be called with string subject.");
 		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
-		u64 handle = (u64)dlopen(ws(dict[t0->p].value).c_str(), RTLD_LAZY | RTLD_GLOBAL);
-		r = unify(i1, p->s, make(mkliteral(tostr(handle),pstr(XSD_INTEGER),0),0,0), p->s, true) ? 1 : 0;
+//		termid fname = 
+
+/*
+	_args first ?fname;
+	_args rest ?args1;
+	?args1 first ?flag;
+	?args1 rest nil;
+	_args=t.s dlopen ?handle
+*/		
+//		u64 handle = (u64)dlopen(ws(dict[t0->p].value).c_str(), RTLD_LAZY | RTLD_GLOBAL);
+//		prover pr(&kb, { 
+//			quad( dict.get(*t0), dict.get(rdffirst), mkbnode("?fname")  ),
+//			quad( dict.get(*t0), dict.get(rdfrest), mkbnode("?argsnext")  ),
+//			quad( mkbnode("?argsnext"), dict.get(rdffirst), mkbnode("?flag")  )
+//			})(p.s /* init subprover with current's frame substition */);
+//		termset q;
+//		
+//		r = unify(i1, p->s, make(mkliteral(tostr(handle),pstr(XSD_INTEGER),0),0,0), p->s, true) ? 1 : 0;
 	}
 //void *dlopen(const char *filename, int flag);
 //char *dlerror(void);
@@ -150,9 +190,7 @@ int prover::builtin(termid id, proof* p) {
 		f->g = p->g;
 		if (euler_path(f, h))
 			return -1;
-//		q.push_back(f);
-//		pool.enqueue([this,f]{step(f);});
-		step(f, false);
+		step(f, queue, false);
 		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
 		r = -1;
 	}
@@ -164,9 +202,7 @@ int prover::builtin(termid id, proof* p) {
 		r->g = p->g;
 		r->g.emplace_back(rl, subst());
 		++r->last;
-//		q.push_back(r);
-//		pool.enqueue([this,r]{step(r);});
-		step(r);
+		step(r, queue);
 	}
 
 	return r;
@@ -189,14 +225,14 @@ std::set<uint> prover::match(termid _e) {
 	return m;
 }
 
-void prover::step(proof* p, bool del) {
+void prover::step(proof* p, std::deque<proof*>& queue, bool del) {
 	setproc(L"step");
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size() && !euler_path(p, kb.head()[p->rul])) {
 		termid t = kb.body()[p->rul][p->last];
 		if (!t) throw 0;
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
-		if (builtin(t, p) != -1) return;
+		if (builtin(t, p, queue) != -1) return;
 		for (auto rl : match(evaluate(t, p->s))) {
 			subst s;
 			if (!unify(t, p->s, kb.head()[rl], s, true)) continue;
@@ -210,7 +246,7 @@ void prover::step(proof* p, bool del) {
 			termid t = evaluate(*r, p->s);
 			if (!t || hasvar(t)) continue;
 			TRACE(dout << "pushing evidence: " << format(t) << std::endl);
-			e[get(t).p].emplace_back(t, p->g);
+			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
 		ground g = p->g;
@@ -220,21 +256,11 @@ void prover::step(proof* p, bool del) {
 		r->g = g;
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
-		step(r);
+		step(r, queue);
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
 //	if (del) delete p;
 }
-
-//prover::termid prover::mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, etype t ) {
-//	termid ps = s ? make(dict.set(s), 0, 0, IRI) : 0;
-//	termid po = o ? make(dict.set(o), 0, 0, IRI) : 0;
-//	return make(dict.set(string(p)), ps, po, t);
-//}
-
-//prover::termid prover::mkterm(string s, string p, string o, const quad& q) {
-//	return mkterm(p.c_str(), s.c_str(), o.c_str(), q);
-//}
 
 prover::termid prover::quad2term(const quad& p) {
 	return make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
@@ -259,27 +285,49 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-prover::prover ( qdb qkb, qlist query ) : prover() {
-	quads = qkb;
-	for ( pquad quad : *quads.at(L"@default")) 
-		addrules(quad);
-	for ( auto q : query )
-		goal.push_back( quad2term( *q ) );
+//prover::prover ( ruleset* _kb/*, const qlist query*/ ) : prover(_kb) {
+//	for ( auto q : query ) goal.push_back( quad2term( *q ) );
+//}
+void prover::operator()(qlist query, const subst* s) {
+	termset goal;
+	for ( auto q : query ) goal.push_back( quad2term( *q ) );
+	return (*this)(goal, s);
+}
+
+prover::prover(prover::ruleset* _kb/*, prover::termset* query*/) : kb(_kb ? *_kb : *new ruleset) {//, goal(query ? *query : *new termset) {
+	kbowner = !_kb;
+//	goalowner = !query;
 	va = make(mkiri(L"?A"));
+	CL(initcl());
+}
+
+prover::~prover() { 
+	//if (kbowner) delete &kb; if (goalowner) delete &goal; 
+}
+
+prover::prover ( qdb qkb/*, qlist query*/ ) : prover() {
+	quads = qkb;
+	for ( pquad quad : *quads.at(L"@default")) addrules(quad);
+//	for ( auto q : query ) goal.push_back( quad2term( *q ) );
+}
+
+void prover::operator()(termset& goal, const subst* s) {
 	proof* p = new proof;
+	std::deque<proof*> queue;
 	p->rul = kb.add(0, goal, this);
 	p->last = 0;
 	p->prev = 0;
+	if (s) p->s = *s;
 	TRACE(dout << KRED << "Facts:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
 	do {
 		proof* q = queue.back();
 		queue.pop_back();
-		step(q);
+		step(q, queue);
 	} while (!queue.empty());
-//	pool.enqueue([this,p]{step(p);});
 	TRACE(dout << KWHT << "Evidence:" << std::endl; 
 		printe(); dout << KNRM);
+//	return results();
 }
 
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
@@ -331,6 +379,11 @@ string littype(etype s) {
 	if (s == STR) return XSD_STRING;
 }
 
+bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
+prover::term::term() : p(0), s(0), o(0) {}
+prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
+prover::term& prover::term::operator=(const prover::term& t) { p = t.p; s = t.s; o = t.o; return *this; }
+
 #ifdef OPENCL
 #define __CL_ENABLE_EXCEPTIONS
  
@@ -355,12 +408,6 @@ std::string clprog = ""
 "		res[pos++] = n;"
 "}";
 #endif
-prover::prover() {
-#ifdef OPENCL
-	initcl();
-#endif
-}
-
 #ifdef OPENCL
 void prover::initcl() {
 	cl_int err = CL_SUCCESS;

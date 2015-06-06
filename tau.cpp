@@ -77,7 +77,8 @@ public:
 				auto query = load_quads(L"");
 				dout << "query loaded." << std::endl;
 				if (query) {
-					delete new prover ( *kb, merge ( *query ) );
+					prover pr( *kb );
+					pr ( merge ( *query ) );
 					dout << "Ready." << std::endl;
 				}
 			}

@@ -223,7 +223,7 @@ void prover::printg(const ground& g) {
 void prover::printe() {
 	for (auto y : e)
 		for (auto x : y.second) {
-			dout << indent() << format(x.first) << L":" << std::endl;
+			dout << indent() << format(x.first) << L" <= " << std::endl;
 			++_indent;
 			printg(x.second);
 			--_indent;
@@ -248,10 +248,12 @@ string indent() {
 
 _setproc:: _setproc(const string& p) {
 	proc.push_front(p);
+	++_indent;
 }
 
 _setproc:: ~_setproc() {
 	proc.pop_front();
+	--_indent;
 }
 
 string wstrim(string s) {

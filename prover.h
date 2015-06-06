@@ -11,6 +11,7 @@
 #include <functional>
 #include "ThreadPool.h"
 #include <boost/interprocess/containers/map.hpp>
+#include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/containers/list.hpp>
 #ifdef OPENCL
@@ -29,24 +30,20 @@ enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
 
 class prover {
 public:
-	prover ( qdb kb, qlist query );
-private:
-	prover();
-#ifdef OPENCL
-typedef cl_short prop_t;
-typedef 
-#else
-typedef int prop_t;
-#endif
-	class ruleset;
 	typedef i64 termid;
-	typedef u64 ruleid;
-	typedef i64 resid; // resource id
-	typedef boost::container::map<resid, termid> subst;
+	typedef i64 resid;
+	class term {
+	public:
+		term();
+		term(resid _p, termid _s, termid _o);
+		term(const term& t);
+		term& operator=(const term& t);
+		resid p;
+		termid s, o;
+		bool isstr() const;
+	};
 	typedef boost::container::vector<termid> termset;
-	typedef boost::container::list<std::pair<ruleid, subst>> ground;
-	typedef boost::container::map<ruleid, boost::container::list<std::pair<termid, ground>>> evidence;
-
+	typedef boost::container::map<resid, termid> subst;
 	class ruleset {
 		termset _head;
 		boost::container::vector<termset> _body;
@@ -56,20 +53,47 @@ typedef int prop_t;
 		uint add(termid t, const termset& ts, prover*);
 		uint size() { return _head.size(); }
 	};
+	std::list<termid> find(resid pred, termid v, const subst& s, bool get_subject) {
+		auto h = kb.head().begin();
+		auto b = kb.body().begin();
+		std::list<termid> r;
+		termid t;
+		while (h != kb.head().end()) {
+			if (b->empty()) {
+//				if ((t = evaluate(*h, s))) {
+				if (t = *h) {
+					const term& tt = get(t);
+					if (tt.p == pred && get_subject ? tt.o == v : tt.s == v) 
+						r.push_back(get_subject ? tt.s : tt.o);
+				}
+			}
+			++h;
+			++b;
+		}
+		return r;
+	}
 
-	class term {
-	public:
-		term() : p(0), s(0), o(0) {}
-		term(resid _p, termid _s, termid _o);
-		term(const term& t) : p(t.p), s(t.s), o(t.o) {}
-		term& operator=(const term& t) { p = t.p; s = t.s; o = t.o; return *this; }
-		resid p;
-		termid s, o;
-		bool isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
-	};
+	prover ( qdb/*, qlist*/ );
+	prover ( ruleset* kb = 0/*, termset* query = 0*/ );
+//	prover ( ruleset* kb/*, const qlist query*/ );
+	void operator()(termset& goal, const subst* s = 0);
+	void operator()(qlist goal, const subst* s = 0);
+//	std::list<std::pair<quad,subst>> results() { std::list<std::pair<quad,subst>> r; for (auto x : e) for(auto y:x.second) if(get(y.first).s)r.emplace(t2q(y.first), y.second.second ); return r; }
+	const term& get(termid id);
+	~prover();
+private:
+#ifdef OPENCL
+typedef cl_short prop_t;
+typedef 
+#else
+typedef int prop_t;
+#endif
+	typedef u64 ruleid;
+	typedef boost::container::list<std::pair<ruleid, subst>> ground;
+	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+
 	boost::container::vector<term> _terms;
 	friend ruleset;
-	const term& get(termid id);
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(resid p, termid s = 0, termid o = 0);
 
@@ -85,12 +109,11 @@ typedef int prop_t;
 			: rul(r), last(l), prev(p), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
-	std::deque<proof*> queue;
-	void step (proof*, bool del = true);
+	void step (proof*, std::deque<proof*>&, bool del = true);
+	
 
 	ruleset kb;
-	termset goal;
-	evidence e;
+//	termset goal;
 
 	void addrules(pquad q);
 
@@ -98,11 +121,9 @@ typedef int prop_t;
 	termid evaluate(termid id, const subst& s);
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	bool euler_path(proof* p, termid t);
-	int builtin(termid id, proof*);
+	int builtin(termid id, proof* p, std::deque<proof*>& queue);
 	bool maybe_unify(const term, const term);
 	std::set<uint> match(termid e);
-//	termid mkterm(const wchar_t* p, const wchar_t* s, const wchar_t* o, const quad& q);
-//	termid mkterm(string s, string p, string o, const quad& q);
 	termid quad2term(const quad& p);
 
 	string format(termid id);
@@ -131,6 +152,12 @@ typedef int prop_t;
 #endif
 	termid va;
 	qdb quads;
-	termid list_next(termid t);
+	termid list_next(termid t, proof&);
+	evidence e;
+	bool kbowner, goalowner;
+//	quad t2q(termid _t) {
+//		const term t = get(_t);
+//		return quad(dict.get(get(t.s).p), dict.get(t.p), dict.get(get(t.o).p));
+//	}
 //	ThreadPool pool;
 };

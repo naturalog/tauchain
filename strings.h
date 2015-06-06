@@ -15,6 +15,12 @@ using std::shared_ptr;
 using std::make_shared;
 using std::istream;
 
+#ifdef OPENCL
+#define CL(x) x
+#else
+#define CL(x)
+#endif
+
 class wruntime_error : public std::exception {
 	string msg;
 public:
