@@ -39,8 +39,6 @@ pnode mkiri ( string iri ) {
 	r.value = iri;
 	auto it =  nodes.find(r.tostring());
 	if (it != nodes.end()) return it->second;
-	if ( iri == L"rdf:first")
-		dout << iri << std::endl;
 	return nodes[r.tostring()] = make_shared<node>(r);
 }
 

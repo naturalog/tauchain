@@ -44,6 +44,7 @@ bool prover::hasvar(termid id) {
 }
 
 prover::termid prover::evaluate(termid id, const subst& s) {
+	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
 	const term p = get(id);
@@ -110,7 +111,7 @@ prover::termid prover::list_next(prover::termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
-	ts.push_back(make(rdfrest, get(cons).s, va));
+	ts.push_back(make(rdfrest, cons, va));
 	(*this)( ts , &p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
@@ -127,9 +128,9 @@ prover::termid prover::list_first(prover::termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_first");
 	termset ts;
-	ts.push_back(make(rdffirst, get(cons).s, va));
+	ts.push_back(make(rdffirst, cons, va));
 	(*this)( ts , &p.s);
-	if (e.find(rdfrest) == e.end()) return 0;
+	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
 		if (get(x.first).s == cons) {
