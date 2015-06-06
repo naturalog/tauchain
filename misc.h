@@ -21,6 +21,7 @@ public:
 	void set ( const std::vector<node>& v );
 	node operator[] ( int k );
 	int operator[] ( node v );
+	int operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
 	bool has ( int k ) const;
 	bool has ( node v ) const;
 	string tostr();

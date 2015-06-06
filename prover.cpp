@@ -141,6 +141,19 @@ prover::termid prover::list_first(prover::termid cons, proof& p) {
 	return r;
 }
 
+std::list<node> prover::get_list(prover::termid head, proof& p) {
+	setproc(L"get_list");
+	termid t = list_first(head, p);
+	std::list<node> r;
+	while (t) {
+		r.push_back(dict[get(t).p]);
+		head = list_next(head, p);
+		t = list_first(head, p);
+	}
+	TRACE(dout<<"get_list with "<<format(head)<<" returned "; for (auto n : r) dout<<n<<' '; dout << std::endl);
+	return r;
+}
+
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	setproc(L"builtin");
 	const term t = get(id);
@@ -161,8 +174,9 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == _dlopen/* && t0 && t1*/) {
 //		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
-		termid n = evaluate(list_first(i0, *p), p->s);
-		TRACE(dout<<"dlopen strs: " << format(n) << std::endl);
+		get_list(i0, *p);
+//		termid n = evaluate(list_first(i0, *p), p->s);
+//		TRACE(dout<<"dlopen strs: " << format(n) << std::endl);
 //		termid fname = 
 
 /*

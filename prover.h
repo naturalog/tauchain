@@ -53,7 +53,7 @@ public:
 		uint add(termid t, const termset& ts, prover*);
 		uint size() { return _head.size(); }
 	};
-	std::list<termid> find(resid pred, termid v, const subst& s, bool get_subject) {
+/*	std::list<termid> find(resid pred, termid v, const subst& s, bool get_subject) {
 		auto h = kb.head().begin();
 		auto b = kb.body().begin();
 		std::list<termid> r;
@@ -72,13 +72,11 @@ public:
 		}
 		return r;
 	}
-
-	prover ( qdb/*, qlist*/ );
-	prover ( ruleset* kb = 0/*, termset* query = 0*/ );
-//	prover ( ruleset* kb/*, const qlist query*/ );
+*/
+	prover ( qdb );
+	prover ( ruleset* kb = 0 );
 	void operator()(termset& goal, const subst* s = 0);
 	void operator()(qlist goal, const subst* s = 0);
-//	std::list<std::pair<quad,subst>> results() { std::list<std::pair<quad,subst>> r; for (auto x : e) for(auto y:x.second) if(get(y.first).s)r.emplace(t2q(y.first), y.second.second ); return r; }
 	const term& get(termid id);
 	~prover();
 private:
@@ -113,7 +111,6 @@ typedef int prop_t;
 	
 
 	ruleset kb;
-//	termset goal;
 
 	void addrules(pquad q);
 
@@ -154,11 +151,7 @@ typedef int prop_t;
 	qdb quads;
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
+	std::list<node> get_list(prover::termid head, proof& p);
 	evidence e;
 	bool kbowner, goalowner;
-//	quad t2q(termid _t) {
-//		const term t = get(_t);
-//		return quad(dict.get(get(t.s).p), dict.get(t.p), dict.get(get(t.o).p));
-//	}
-//	ThreadPool pool;
 };
