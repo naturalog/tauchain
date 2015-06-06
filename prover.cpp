@@ -27,6 +27,8 @@ int _indent = 0;
 etype littype(string s);
 string littype(etype s);
 
+const uint max_terms = 1024 * 1024;
+
 #ifdef DEBUG
 #define setproc(x) _setproc __setproc(x)
 #else
@@ -105,10 +107,6 @@ bool prover::euler_path(proof* p, termid t) {
 }
 
 prover::termid prover::list_next(prover::termid cons, proof& p) {
-	//typedef boost::container::map<resid, boost::container::list<std::pair<termid, ground>>> evidence;
-//	typedef boost::container::list<std::pair<ruleid, subst>> ground;
-// ?R rdf:rest t. ?A rdf:rest ?R
-//	return get(*prover(kb, { make(rdfrest, va, get(t).s) })(&p.s).result.begin()).s;
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
@@ -123,10 +121,23 @@ prover::termid prover::list_next(prover::termid cons, proof& p) {
 		}
 	TRACE(dout<<"current cons: " << format(cons) << " next cons: " << format(r) << std::endl);
 	return r;
-//	auto s = find(rdfrest, cons, p.s, false);
-//	termid r = s.empty() ? 0 : *s.begin();
+}
+
+prover::termid prover::list_first(prover::termid cons, proof& p) {
+	if (!cons) return 0;
+	setproc(L"list_first");
+	termset ts;
+	ts.push_back(make(rdffirst, get(cons).s, va));
+	(*this)( ts , &p.s);
+	if (e.find(rdfrest) == e.end()) return 0;
+	termid r = 0;
+	for (auto x : e[rdffirst])
+		if (get(x.first).s == cons) {
+			r = get(x.first).o;
+			break;
+		}
 	TRACE(dout<<"current cons: " << format(cons) << " next cons: " << format(r) << std::endl);
-//	return r;
+	return r;
 }
 
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
@@ -143,16 +154,14 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
-	else if (t.p == rdffirst) {
-		termid n = list_next(id, *p);
-		while ((n = list_next(n, *p)));
-	}
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
-	else if (t.p == _dlopen && t0 && t1) {
-		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
+	else if (t.p == _dlopen/* && t0 && t1*/) {
+//		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
+		termid n = evaluate(list_first(i0, *p), p->s);
+		TRACE(dout<<"dlopen strs: " << format(n) << std::endl);
 //		termid fname = 
 
 /*
@@ -296,6 +305,7 @@ void prover::operator()(qlist query, const subst* s) {
 
 prover::prover(prover::ruleset* _kb/*, prover::termset* query*/) : kb(_kb ? *_kb : *new ruleset) {//, goal(query ? *query : *new termset) {
 	kbowner = !_kb;
+	_terms.reserve(max_terms);
 //	goalowner = !query;
 	va = make(mkiri(L"?A"));
 	CL(initcl());

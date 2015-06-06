@@ -153,6 +153,7 @@ typedef int prop_t;
 	termid va;
 	qdb quads;
 	termid list_next(termid t, proof&);
+	termid list_first(termid t, proof&);
 	evidence e;
 	bool kbowner, goalowner;
 //	quad t2q(termid _t) {

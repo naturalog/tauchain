@@ -8,6 +8,8 @@ pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
 
+boost::container::map<string, pnode> nodes;
+
 string node::tostring() const {
 	std::wstringstream ss;
 	if ( _type == IRI ) ss << L'<';
@@ -23,23 +25,31 @@ string node::tostring() const {
 }
 
 pnode mkliteral ( string value, pstring datatype, pstring language ) {
-	pnode r = make_shared <node> ( node::LITERAL );
-	r->value = value;
-	r->datatype = datatype ? *datatype : XSD_STRING;
-	if ( language ) r->lang = *language;
-	return r;
+	node r ( node::LITERAL );
+	r.value = value;
+	r.datatype = datatype ? *datatype : XSD_STRING;
+	if ( language ) r.lang = *language;
+	auto it =  nodes.find(r.tostring());
+	if (it != nodes.end()) return it->second;
+	return nodes[r.tostring()] = make_shared<node>(r);
 }
 
 pnode mkiri ( string iri ) {
-	pnode r = make_shared <node> ( node::IRI );
-	r->value = iri;
-	return r;
+	node r ( node::IRI );
+	r.value = iri;
+	auto it =  nodes.find(r.tostring());
+	if (it != nodes.end()) return it->second;
+	if ( iri == L"rdf:first")
+		dout << iri << std::endl;
+	return nodes[r.tostring()] = make_shared<node>(r);
 }
 
 pnode mkbnode ( string attribute ) {
-	pnode r = make_shared <node> ( node::BNODE );
-	r->value = attribute;
-	return r;
+	node r ( node::BNODE );
+	r.value = attribute;
+	auto it =  nodes.find(r.tostring());
+	if (it != nodes.end()) return it->second;
+	return nodes[r.tostring()] = make_shared<node>(r);
 }
 
 const pnode first = mkiri ( RDF_FIRST );
