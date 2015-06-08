@@ -14,6 +14,10 @@ using std::stringstream;
 using std::shared_ptr;
 using std::make_shared;
 using std::istream;
+typedef std::shared_ptr<string> pstring;
+inline pstring pstr ( const string& s ) { return std::make_shared<string> ( s ); } 
+inline pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }
+
 
 #ifdef OPENCL
 #define CL(x) x
@@ -55,14 +59,14 @@ const string tab = L"\t";
 const string RDF_SYNTAX_NS = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const string RDF_SCHEMA_NS = L"http://www.w3.org/2000/01/rdf-schema#";
 const string XSD_NS = L"http://www.w3.org/2001/XMLSchema#";
-const string XSD_ANYTYPE = XSD_NS + L"anyType";
-const string XSD_BOOLEAN = XSD_NS + L"boolean";
-const string XSD_DOUBLE = XSD_NS + L"double";
-const string XSD_INTEGER = XSD_NS + L"integer";
-const string XSD_FLOAT = XSD_NS + L"float";
-const string XSD_DECIMAL = XSD_NS + L"decimal";
-const string XSD_ANYURI = XSD_NS + L"anyURIstring";
-const string XSD_STRING = XSD_NS + L"string";
+const pstring XSD_ANYTYPE = pstr(XSD_NS + L"anyType");
+const pstring XSD_BOOLEAN = pstr(XSD_NS + L"boolean");
+const pstring XSD_DOUBLE = pstr(XSD_NS + L"double");
+const pstring XSD_INTEGER = pstr(XSD_NS + L"integer");
+const pstring XSD_FLOAT = pstr(XSD_NS + L"float");
+const pstring XSD_DECIMAL = pstr(XSD_NS + L"decimal");
+const pstring XSD_ANYURI = pstr(XSD_NS + L"anyURIstring");
+const pstring XSD_STRING = pstr(XSD_NS + L"string");
 const string RDF_TYPE = RDF_SYNTAX_NS + L"type";
 const string RDF_FIRST = RDF_SYNTAX_NS + L"first";
 const string RDF_REST = RDF_SYNTAX_NS + L"rest";
@@ -172,7 +176,6 @@ std::string ws(const string& s);
 string wstrim(const wchar_t* w);
 string wstrim(const std::string&);
 string wstrim(string);
-typedef std::shared_ptr<string> pstring;
 pstring pstr ( const string& s );
 pstring pstr ( const wchar_t* s );
 pstring pstrtrim ( const string& s );

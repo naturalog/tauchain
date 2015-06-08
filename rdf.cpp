@@ -27,7 +27,7 @@ string node::tostring() const {
 pnode mkliteral ( string value, pstring datatype, pstring language ) {
 	node r ( node::LITERAL );
 	r.value = value;
-	r.datatype = datatype ? *datatype : XSD_STRING;
+	r.datatype = datatype ? *datatype : *XSD_STRING;
 	if ( language ) r.lang = *language;
 	auto it =  nodes.find(r.tostring());
 	if (it != nodes.end()) return it->second;
@@ -173,17 +173,17 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 			return 0;
 		if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 			if ( value->BOOL() ) 
-				return mkliteral ( *value->BOOL() ? L"true" : L"false", pstr ( datatype ? *datatype->STR() : XSD_BOOLEAN ), 0 );
-			else if ( value->DOUBLE() || ( datatype && XSD_DOUBLE == *datatype->STR() ) )
-				return mkliteral ( tostr ( *value->DOUBLE() ), pstr ( datatype ? *datatype->STR() : XSD_DOUBLE ), 0 );
+				return mkliteral ( *value->BOOL() ? L"true" : L"false", datatype ? pstr(*datatype->STR()) : XSD_BOOLEAN, 0 );
+			else if ( value->DOUBLE() || ( datatype && *XSD_DOUBLE == *datatype->STR() ) )
+				return mkliteral ( tostr ( *value->DOUBLE() ), datatype ? pstr( *datatype->STR() ) : XSD_DOUBLE, 0 );
 			else 
 				return mkliteral ( 
 					value->INT() ?  tostr ( *value->INT() ) : tostr ( *value->UINT() ), 
-					pstr ( datatype ? *datatype->STR() : XSD_INTEGER ), 0 );
+					datatype ? pstr(*datatype->STR()) : XSD_INTEGER, 0 );
 		} else if ( haslang ( item->MAP() ) )
 			return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
 		else 
-			return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : XSD_STRING ), 0 );
+			return mkliteral ( *value->STR(), datatype ? pstr(*datatype->STR()) : XSD_STRING, 0 );
 	}
 	// convert string/node object to RDF
 	else {

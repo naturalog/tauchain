@@ -151,7 +151,7 @@ typedef int prop_t;
 	qdb quads;
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
-	std::list<node> get_list(prover::termid head, proof& p);
+	std::vector<node> get_list(prover::termid head, proof& p);
 	evidence e;
 	bool kbowner, goalowner;
 };

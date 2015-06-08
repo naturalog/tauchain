@@ -141,10 +141,10 @@ prover::termid prover::list_first(prover::termid cons, proof& p) {
 	return r;
 }
 
-std::list<node> prover::get_list(prover::termid head, proof& p) {
+std::vector<node> prover::get_list(prover::termid head, proof& p) {
 	setproc(L"get_list");
 	termid t = list_first(head, p);
-	std::list<node> r;
+	std::vector<node> r;
 	while (t) {
 		r.push_back(dict[get(t).p]);
 		head = list_next(head, p);
@@ -172,34 +172,42 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
-	else if (t.p == _dlopen/* && t0 && t1*/) {
-//		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
-		get_list(i0, *p);
-//		termid n = evaluate(list_first(i0, *p), p->s);
-//		TRACE(dout<<"dlopen strs: " << format(n) << std::endl);
-//		termid fname = 
-
-/*
-	_args first ?fname;
-	_args rest ?args1;
-	?args1 first ?flag;
-	?args1 rest nil;
-	_args=t.s dlopen ?handle
-*/		
-//		u64 handle = (u64)dlopen(ws(dict[t0->p].value).c_str(), RTLD_LAZY | RTLD_GLOBAL);
-//		prover pr(&kb, { 
-//			quad( dict.get(*t0), dict.get(rdffirst), mkbnode("?fname")  ),
-//			quad( dict.get(*t0), dict.get(rdfrest), mkbnode("?argsnext")  ),
-//			quad( mkbnode("?argsnext"), dict.get(rdffirst), mkbnode("?flag")  )
-//			})(p.s /* init subprover with current's frame substition */);
-//		termset q;
-//		
-//		r = unify(i1, p->s, make(mkliteral(tostr(handle),pstr(XSD_INTEGER),0),0,0), p->s, true) ? 1 : 0;
+	else if (t.p == _dlopen) {
+		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
+		std::vector<node> params = get_list(i0, *p);
+		void* handle;
+		try {
+			handle = dlopen(ws(params[0].value).c_str(), std::stoi(params[1].value));
+		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
+		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
+		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
+		p->s[t1->p] = make(dict.set(n), 0, 0);
+		r = 1;
 	}
-//void *dlopen(const char *filename, int flag);
-//char *dlerror(void);
-//void *dlsym(void *handle, const char *symbol);
-//int dlclose(void *handle);
+	else if (t.p == _dlerror) {
+		if (t1->p > 0) throw std::runtime_error("dlerror must be called with variable object.");
+		pnode n = mkliteral(ws(dlerror()), 0, 0);
+		p->s[t1->p] = make(dict.set(n), 0, 0);
+		r = 1;
+	}
+	else if (t.p == _dlsym) {
+		if (t1->p > 0) throw std::runtime_error("dlsym must be called with variable object.");
+		std::vector<node> params = get_list(i0, *p);
+		void* handle;
+		try {
+			handle = dlsym((void*)std::stol(params[0].value), ws(params[1].value).c_str());
+		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
+		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
+		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
+		p->s[t1->p] = make(dict.set(n), 0, 0);
+		r = 1;
+	}
+	else if (t.p == _dlclose) {
+		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
+		pnode n = mkliteral(tostr(ws(dlerror())), 0, 0);
+		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(dict[t.p].value))), XSD_INTEGER, 0)), 0, 0);
+		r = 1;
+	}
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 		if (!t0) t0 = &get(i0=t.s);
 		if (!t1) t1 = &get(i1=t.o);
@@ -382,19 +390,19 @@ uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 #endif	
 	return _head.size()-1;
 }
-
+/*
 etype littype(string s) {
-	if (s == XSD_BOOLEAN) return BOOLEAN;
-	if (s == XSD_DOUBLE) return DOUBLE;
-	if (s == XSD_INTEGER) return INT;
-	if (s == XSD_FLOAT) return FLOAT;
-	if (s == XSD_DECIMAL) return DECIMAL;
-	if (s == XSD_ANYURI) return URISTR;
-	if (s == XSD_STRING) return STR;
+	if (s == *XSD_BOOLEAN) return BOOLEAN;
+	if (s == *XSD_DOUBLE) return DOUBLE;
+	if (s == *XSD_INTEGER) return INT;
+	if (s == *XSD_FLOAT) return FLOAT;
+	if (s == *XSD_DECIMAL) return DECIMAL;
+	if (s == *XSD_ANYURI) return URISTR;
+	if (s == *XSD_STRING) return STR;
 	throw wruntime_error(L"Unidentified literal type" + s);
 }
 
-string littype(etype s) {
+pstring littype(etype s) {
 	if (s == BOOLEAN) return XSD_BOOLEAN;
 	if (s == DOUBLE) return XSD_DOUBLE;
 	if (s == INT) return XSD_INTEGER;
@@ -403,8 +411,8 @@ string littype(etype s) {
 	if (s == URISTR) return XSD_ANYURI;
 	if (s == STR) return XSD_STRING;
 }
-
-bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
+*/
+bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == *XSD_STRING; }
 prover::term::term() : p(0), s(0), o(0) {}
 prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
 prover::term& prover::term::operator=(const prover::term& t) { p = t.p; s = t.s; o = t.o; return *this; }
