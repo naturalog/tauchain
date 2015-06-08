@@ -17,8 +17,8 @@ string node::tostring() const {
 	ss << *value;
 	if ( _type == LITERAL ) {
 		ss << L'\"';
-		if ( datatype ) ss << "^^" << *datatype;
-		if ( lang ) ss << L'@' << *lang;
+		if ( datatype && datatype->size() ) ss << "^^" << *datatype;
+		if ( lang && lang->size() ) ss << L'@' << *lang;
 	}
 	if ( _type == IRI ) ss << L'>';
 	return ss.str();
