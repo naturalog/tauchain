@@ -64,7 +64,8 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 					while (!iswspace(*s) && *s != L'.') {
 						if (*s == L'^' && *++s == L'^') {
 							if (*++s == L'<')  {
-								while (*s != L'>') dt += *++s;
+								++s;
+								while (*s != L'>') dt += *s++;
 								++s;
 								break;
 							}
