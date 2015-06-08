@@ -21,7 +21,7 @@
 
 using namespace boost::algorithm;
 
-int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror;
+int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke;
 int _indent = 0;
 
 etype littype(string s);
@@ -154,6 +154,10 @@ std::vector<node> prover::get_list(prover::termid head, proof& p) {
 	return r;
 }
 
+void* testfunc(void*) {
+	derr << "Test func called" << std::endl;
+}
+
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	setproc(L"builtin");
 	const term t = get(id);
@@ -206,6 +210,15 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
 		pnode n = mkliteral(tostr(ws(dlerror())), 0, 0);
 		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(dict[t.p].value))), XSD_INTEGER, 0)), 0, 0);
+		r = 1;
+	}
+	else if (t.p == _invoke) {
+		if (dict[t0->p].datatype != *XSD_INTEGER) throw std::runtime_error("invoke must be called with integer subject as func ptr.");
+		if (dict[t1->p].datatype != *XSD_INTEGER) throw std::runtime_error("invoke must be called with integer object as params ptr.");
+		typedef void*(*fptr)(void*);
+		fptr func = (fptr)std::stol(dict[t0->p].value);
+		void* params = (void*)std::stol(dict[t1->p].value);
+		(*func)(params);
 		r = 1;
 	}
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {

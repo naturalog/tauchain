@@ -52,4 +52,4 @@ clean:
 	rm -rf tau $(OBJECTS) ubi/client.o
 
 ppjson: ppjson.cpp
-	clang++ -std=c++11 ppjson.cpp -oppjson -Wall -ggdb
+	$(CC) -std=c++11 ppjson.cpp -oppjson -Wall -ggdb

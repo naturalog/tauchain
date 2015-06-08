@@ -26,6 +26,7 @@ bidict::bidict() {
 	_dlerror = set(mkiri(L"dlfcn:dlerror"));
 	_dlsym = set(mkiri(L"dlfcn:dlsym"));
 	_dlclose = set(mkiri(L"dlfcn:dlclose"));
+	_invoke = set(mkiri(L"dlfcn:invoke"));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
