@@ -83,6 +83,7 @@ pobj& getlang ( somap p );
 bool keyword ( pobj p );
 bool is_abs_iri ( const string& s );
 bool is_rel_iri ( const string& s );
+inline bool is_rel_iri ( pstring s ) { return is_rel_iri(*s); }
 pobj newMap ( const string& k, pobj v );
 bool isvalue ( pobj v );
 polist vec2vec ( const std::vector<string>& x );
@@ -174,7 +175,7 @@ public:
 	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element );
 	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false );
 	static bool deepContains ( polist values, pobj value );
-	string gen_bnode_id ( string id = L"" );
+	pstring gen_bnode_id ( string id = L"" );
 	void gen_node_map ( pobj element, psomap nodeMap );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring act_prop, psomap list );

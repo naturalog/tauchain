@@ -16,7 +16,7 @@ typedef std::shared_ptr<snmap> psnmap;
 class node {
 public:
 	node() {}
-	string value, datatype, lang;
+	pstring value, datatype, lang;
 	enum node_type { LITERAL, IRI, BNODE } _type;
 	node ( const node_type& t ) : _type ( t ) { }
 	string tostring() const;
@@ -28,9 +28,9 @@ public:
 };
 inline std::wostream& operator<<(std::wostream& o, const node& n) { return o << n.tostring(); }
 
-pnode mkliteral ( string value, pstring datatype, pstring language );
-pnode mkiri ( string iri );
-pnode mkbnode ( string attribute );
+pnode mkliteral ( pstring value, pstring datatype, pstring language );
+pnode mkiri ( pstring iri );
+pnode mkbnode ( pstring attribute );
 
 class quad {
 	quad ( string subj, string pred, pnode object, string graph );

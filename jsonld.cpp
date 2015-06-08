@@ -587,7 +587,7 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 			oldTypes.push_back ( *elem->at ( str_type )->STR() );
 		}
 		for ( string item : oldTypes ) {
-			if ( startsWith ( item, L"_:" ) ) newTypes.push_back ( gen_bnode_id ( item ) );
+			if ( startsWith ( item, L"_:" ) ) newTypes.push_back ( *gen_bnode_id ( item ) );
 			else newTypes.push_back ( item );
 		}
 		( *elem ) [str_type] = gettype ( elem )->LIST() ? ( pobj ) mk_olist_obj ( vec2vec ( newTypes ) ) : make_shared <string_obj> ( newTypes[0] );
@@ -605,8 +605,8 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 		if ( hasid ( elem ) && elem->at ( str_id ) && elem->at ( str_id )->STR() ) {
 			id = *elem->at ( str_id )->STR();
 			elem->erase ( str_id );
-			if ( startsWith ( id, L"_:" ) ) id = gen_bnode_id ( id );
-		} else id = gen_bnode_id();
+			if ( startsWith ( id, L"_:" ) ) id = *gen_bnode_id ( id );
+		} else id = *gen_bnode_id();
 		if ( !has ( graph, id ) ) {
 			somap tmp;
 			tmp[str_id] = make_shared <string_obj> ( id );
@@ -655,7 +655,7 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 			for ( auto z : *elem ) {
 				string property = z.first;
 				pobj value = z.second;
-				if ( startsWith ( property, L"_:" ) ) property = gen_bnode_id ( property );
+				if ( startsWith ( property, L"_:" ) ) property = *gen_bnode_id ( property );
 				if ( !has ( node, property ) ) ( *node ) [property] = mk_olist_obj();
 				gen_node_map ( value, nodeMap, activeGraph, make_shared <string_obj> ( id ), make_shared <string> ( property ), 0 );
 			}
@@ -1000,11 +1000,11 @@ void jsonld_api::mergeValue ( somap& obj, string key, pobj value ) {
 	if ( key == str_list || ( has ( value->MAP(), str_list ) ) || !deepContains ( values, value ) ) values->push_back ( value );
 }
 
-string jsonld_api::gen_bnode_id ( string id ) {
-	if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) return bnode_id_map[id];
+pstring jsonld_api::gen_bnode_id ( string id ) {
+	if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) return pstr(bnode_id_map[id]);
 	std::wstringstream ss;
 	ss << L"_:b" << ( blankNodeCounter++ );
-	return bnode_id_map[id] = ss.str();
+	return pstr(bnode_id_map[id] = ss.str());
 }
 
 void jsonld_api::gen_node_map ( pobj element, psomap nodeMap ) {

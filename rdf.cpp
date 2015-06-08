@@ -14,27 +14,39 @@ string node::tostring() const {
 	std::wstringstream ss;
 	if ( _type == IRI ) ss << L'<';
 	if ( _type == LITERAL ) ss << L'\"';
-	ss << value;
+	ss << *value;
 	if ( _type == LITERAL ) {
 		ss << L'\"';
-		if ( datatype.size() ) ss << "^^" << datatype;
-		if ( lang.size() ) ss << L'@' << lang;
+		if ( datatype ) ss << "^^" << *datatype;
+		if ( lang ) ss << L'@' << *lang;
 	}
 	if ( _type == IRI ) ss << L'>';
 	return ss.str();
 }
 
-pnode mkliteral ( string value, pstring datatype, pstring language ) {
+pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	node r ( node::LITERAL );
 	r.value = value;
-	r.datatype = datatype ? *datatype : *XSD_STRING;
-	if ( language ) r.lang = *language;
+	if (!datatype) r.datatype = XSD_STRING;
+	else {
+		const string& dt = *datatype;
+		if (dt == L"XSD_STRING") r.datatype = XSD_STRING;
+		else if (dt == L"XSD_INTEGER") r.datatype = XSD_INTEGER;
+		else if (dt == L"XSD_DOUBLE") r.datatype = XSD_DOUBLE;
+		else if (dt == L"XSD_BOOLEAN") r.datatype = XSD_BOOLEAN;
+		else if (dt == L"XSD_FLOAT") r.datatype = XSD_FLOAT;
+		else if (dt == L"XSD_DECIMAL") r.datatype = XSD_DECIMAL;
+		else if (dt == L"XSD_ANYTYPE") r.datatype = XSD_ANYTYPE;
+		else if (dt == L"XSD_ANYURI") r.datatype = XSD_ANYURI;
+		else r.datatype = datatype;
+	}
+	if ( language ) r.lang = language;
 	auto it =  nodes.find(r.tostring());
 	if (it != nodes.end()) return it->second;
 	return nodes[r.tostring()] = make_shared<node>(r);
 }
 
-pnode mkiri ( string iri ) {
+pnode mkiri ( pstring iri ) {
 	node r ( node::IRI );
 	r.value = iri;
 	auto it =  nodes.find(r.tostring());
@@ -42,7 +54,7 @@ pnode mkiri ( string iri ) {
 	return nodes[r.tostring()] = make_shared<node>(r);
 }
 
-pnode mkbnode ( string attribute ) {
+pnode mkbnode ( pstring attribute ) {
 	node r ( node::BNODE );
 	r.value = attribute;
 	auto it =  nodes.find(r.tostring());
@@ -119,21 +131,21 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	qlist triples;
 	for ( auto y : graph ) { // 4.3
-		string id = y.first;
+		pstring id = pstr(y.first);
 		if ( is_rel_iri ( id ) ) continue;
 		psomap node = y.second->MAP();
 		for ( auto x : *node ) {
-			string property = x.first;
+			pstring property = pstr(x.first);
 			polist values;
-			if ( property == str_type ) { // 4.3.2.1
+			if ( *property == str_type ) { // 4.3.2.1
 				values = gettype ( node )->LIST(); // ??
 				property = RDF_TYPE; // ??
 			} else if ( keyword ( property ) ) continue;
 			else if ( startsWith ( property, L"_:" ) && !api.opts.produceGeneralizedRdf ) continue;
 			else if ( is_rel_iri ( property ) ) continue;
-			else values = node->at ( property )->LIST();
+			else values = node->at ( *property )->LIST();
 
-			pnode subj = id.find ( L"_:" ) ? mkiri ( id ) : mkbnode ( id );
+			pnode subj = id->find ( L"_:" ) ? mkiri ( id ) : mkbnode ( id );
 			pnode pred = startsWith ( property, L"_:" ) ?  mkbnode ( property ) : mkiri ( property );
 
 			for ( auto item : *values ) {
@@ -173,7 +185,7 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 			return 0;
 		if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 			if ( value->BOOL() ) 
-				return mkliteral ( *value->BOOL() ? L"true" : L"false", datatype ? pstr(*datatype->STR()) : XSD_BOOLEAN, 0 );
+				return mkliteral ( pstr(*value->BOOL() ? L"true" : L"false"), datatype ? pstr(*datatype->STR()) : XSD_BOOLEAN, 0 );
 			else if ( value->DOUBLE() || ( datatype && *XSD_DOUBLE == *datatype->STR() ) )
 				return mkliteral ( tostr ( *value->DOUBLE() ), datatype ? pstr( *datatype->STR() ) : XSD_DOUBLE, 0 );
 			else 
@@ -181,9 +193,9 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 					value->INT() ?  tostr ( *value->INT() ) : tostr ( *value->UINT() ), 
 					datatype ? pstr(*datatype->STR()) : XSD_INTEGER, 0 );
 		} else if ( haslang ( item->MAP() ) )
-			return mkliteral ( *value->STR(), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
+			return mkliteral ( pstr(*value->STR()), pstr ( datatype ? *datatype->STR() : RDF_LANGSTRING ), getlang ( item )->STR() );
 		else 
-			return mkliteral ( *value->STR(), datatype ? pstr(*datatype->STR()) : XSD_STRING, 0 );
+			return mkliteral ( pstr(*value->STR()), datatype ? pstr(*datatype->STR()) : XSD_STRING, 0 );
 	}
 	// convert string/node object to RDF
 	else {
@@ -192,24 +204,24 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 			id = *getid ( item )->STR();
 			if ( is_rel_iri ( id ) ) return 0;
 		} else id = *item->STR();
-		return id.find ( L"_:" ) ? mkiri ( id ) : mkbnode ( id );
+		return id.find ( L"_:" ) ? mkiri ( pstr(id) ) : mkbnode ( pstr(id) );
 	}
 }
 
 quad::quad ( string subj, string pred, pnode object, string graph ) :
-	quad ( startsWith ( subj, L"_:" ) ? mkbnode ( subj ) : mkiri ( subj ), mkiri ( pred ), object, graph ) {
+	quad ( startsWith ( subj, L"_:" ) ? mkbnode ( pstr(subj) ) : mkiri ( pstr(subj) ), mkiri ( pstr(pred) ), object, graph ) {
 }
 
 quad::quad ( string subj, string pred, string object, string graph ) :
 	quad ( subj, pred,
-	       startsWith ( object, L"_:" ) ? mkbnode ( object ) : mkiri ( object ),
+	       startsWith ( object, L"_:" ) ? mkbnode ( pstr(object) ) : mkiri ( pstr(object) ),
 	       graph ) {}
 
 quad::quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph ) :
-	quad ( subj, pred, mkliteral ( value, datatype, language ), graph ) { }
+	quad ( subj, pred, mkliteral ( pstr(value), datatype, language ), graph ) { }
 
 quad::quad ( pnode s, pnode p, pnode o, string c ) :
-	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( c ) : mkiri ( c ) ) { }
+	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ) { }
 
 string quad::tostring ( ) const {
 	std::wstringstream ss;
@@ -224,7 +236,7 @@ string quad::tostring ( ) const {
 		return string ( L"<>" );
 	};
 	ss << f ( subj ) << L' ' << f ( pred ) << L' ' << f ( object );
-	if ( graph->value != str_default ) ss << L' ' << f ( graph );
+	if ( *graph->value != str_default ) ss << L' ' << f ( graph );
 //	ss <<setw(10)<< f ( subj ) << setw(10)<<' ' << f ( pred ) <<setw(10)<<' ' << f ( object );
 //	if ( graph->value != str_default ) ss <<setw(10)<<' ' << f ( graph );
 	ss << L" .";
@@ -242,7 +254,7 @@ qdb readqdb ( std::wistream& is) {
 		trim(s);
 		if (s[0] == L'#') continue;
 		for (quad q : parse_nqline(s.c_str())) {
-			c = q.graph->value;
+			c = *q.graph->value;
 			if (r.find(c) == r.end()) r[c] = make_shared<qlist>();
 			r[c]->push_back(make_shared<quad>(q));
 		}

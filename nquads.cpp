@@ -38,7 +38,7 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 				++s;
 			}
 			else if (*s == L'=' && *++s == L'>') {
-				preds.emplace_back(mkiri(implication), plist());
+				preds.emplace_back(mkiri(pimplication), plist());
 				++s;
 			}
 			else throw wruntime_error(string(L"expected iri predicate:") + string(s,0,48));
@@ -64,8 +64,7 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 					while (!iswspace(*s) && *s != L'.') {
 						if (*s == L'^' && *++s == L'^') {
 							if (*++s == L'<')  {
-								while (*s != L'>') 
-									dt += *s++;
+								while (*s != L'>') dt += *++s;
 								++s;
 								break;
 							}
@@ -82,7 +81,7 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 				else throw wruntime_error(string(L"expected iri or bnode or literal object:") + string(s,0,48));
 				while (iswspace(*s)) ++s;
 			} while (*s++ == L',');
-			--s;
+			if (*s != L'.') --s;
 			while (iswspace(*s)) ++s;
 		} while (*s++ == L';');
 		--s;

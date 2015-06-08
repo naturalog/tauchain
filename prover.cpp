@@ -155,7 +155,7 @@ std::vector<node> prover::get_list(prover::termid head, proof& p) {
 }
 
 void* testfunc(void*) {
-	derr << "Test func called" << std::endl;
+	derr <<std::endl<< "***** Test func called ******" << std::endl;
 }
 
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
@@ -181,7 +181,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		std::vector<node> params = get_list(i0, *p);
 		void* handle;
 		try {
-			handle = dlopen(ws(params[0].value).c_str(), std::stoi(params[1].value));
+			handle = dlopen(ws(params[0].value).c_str(), std::stoi(*params[1].value));
 		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
@@ -190,7 +190,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	else if (t.p == _dlerror) {
 		if (t1->p > 0) throw std::runtime_error("dlerror must be called with variable object.");
-		pnode n = mkliteral(ws(dlerror()), 0, 0);
+		pnode n = mkliteral(pstr(dlerror()), 0, 0);
 		p->s[t1->p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
@@ -199,7 +199,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		std::vector<node> params = get_list(i0, *p);
 		void* handle;
 		try {
-			handle = dlsym((void*)std::stol(params[0].value), ws(params[1].value).c_str());
+			handle = dlsym((void*)std::stol(*params[0].value), ws(params[1].value).c_str());
 		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
@@ -209,15 +209,15 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == _dlclose) {
 		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
 		pnode n = mkliteral(tostr(ws(dlerror())), 0, 0);
-		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(dict[t.p].value))), XSD_INTEGER, 0)), 0, 0);
+		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(*dict[t.p].value))), XSD_INTEGER, 0)), 0, 0);
 		r = 1;
 	}
 	else if (t.p == _invoke) {
-		if (dict[t0->p].datatype != *XSD_INTEGER) throw std::runtime_error("invoke must be called with integer subject as func ptr.");
-		if (dict[t1->p].datatype != *XSD_INTEGER) throw std::runtime_error("invoke must be called with integer object as params ptr.");
+		if (dict[t0->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer subject as func ptr.");
+		if (dict[t1->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer object as params ptr.");
 		typedef void*(*fptr)(void*);
-		fptr func = (fptr)std::stol(dict[t0->p].value);
-		void* params = (void*)std::stol(dict[t1->p].value);
+		fptr func = (fptr)std::stol(*dict[t0->p].value);
+		void* params = (void*)std::stol(*dict[t1->p].value);
 		(*func)(params);
 		r = 1;
 	}
@@ -312,7 +312,7 @@ prover::termid prover::quad2term(const quad& p) {
 }
 
 void prover::addrules(pquad q) {
-	const string &s = q->subj->value, &p = q->pred->value, &o = q->object->value;
+	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
 	if ( p != implication || quads.find ( o ) == quads.end() ) 
 		kb.add(quad2term(*q), termset(), this);
 	else for ( pquad y : *quads.at ( o ) ) {
@@ -343,7 +343,7 @@ prover::prover(prover::ruleset* _kb/*, prover::termset* query*/) : kb(_kb ? *_kb
 	kbowner = !_kb;
 	_terms.reserve(max_terms);
 //	goalowner = !query;
-	va = make(mkiri(L"?A"));
+	va = make(mkiri(pstr(L"?A")));
 	CL(initcl());
 }
 
@@ -425,7 +425,7 @@ pstring littype(etype s) {
 	if (s == STR) return XSD_STRING;
 }
 */
-bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == *XSD_STRING; }
+bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
 prover::term::term() : p(0), s(0), o(0) {}
 prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
 prover::term& prover::term::operator=(const prover::term& t) { p = t.p; s = t.s; o = t.o; return *this; }

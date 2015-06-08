@@ -15,9 +15,8 @@ using std::shared_ptr;
 using std::make_shared;
 using std::istream;
 typedef std::shared_ptr<string> pstring;
-inline pstring pstr ( const string& s ) { return std::make_shared<string> ( s ); } 
+pstring pstr ( const string& s );
 inline pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }
-
 
 #ifdef OPENCL
 #define CL(x) x
@@ -67,10 +66,10 @@ const pstring XSD_FLOAT = pstr(XSD_NS + L"float");
 const pstring XSD_DECIMAL = pstr(XSD_NS + L"decimal");
 const pstring XSD_ANYURI = pstr(XSD_NS + L"anyURIstring");
 const pstring XSD_STRING = pstr(XSD_NS + L"string");
-const string RDF_TYPE = RDF_SYNTAX_NS + L"type";
-const string RDF_FIRST = RDF_SYNTAX_NS + L"first";
-const string RDF_REST = RDF_SYNTAX_NS + L"rest";
-const string RDF_NIL = RDF_SYNTAX_NS + L"nil";
+const pstring RDF_TYPE = pstr(RDF_SYNTAX_NS + L"type");
+const pstring RDF_FIRST = pstr(RDF_SYNTAX_NS + L"first");
+const pstring RDF_REST = pstr(RDF_SYNTAX_NS + L"rest");
+const pstring RDF_NIL = pstr(RDF_SYNTAX_NS + L"nil");
 const string RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + L"PlainLiteral";
 const string RDF_XML_LITERAL = RDF_SYNTAX_NS + L"XMLLiteral";
 const string RDF_OBJECT = RDF_SYNTAX_NS + L"object";
@@ -140,6 +139,7 @@ const auto Ex18 = wruntime_error ( INVALID_REVERSE_VALUE + tab + string ( L"@rev
 const auto Ex19 = wruntime_error ( LIST_OF_LISTS + tab + string ( L"lists of lists are not permitted." ) );
 
 const string implication = L"http://www.w3.org/2000/10/swap/log#implies";
+const pstring pimplication = pstr(implication);
 
 template<typename T> inline bool is ( const T& s, const std::vector<T>& v, const string& exception = string() ) {
 	bool rc = std::find ( v.begin(), v.end(), s ) != v.end();
@@ -153,6 +153,7 @@ template<typename T> inline bool is ( const std::shared_ptr<T>& s, const std::ve
 
 bool endsWith ( const string& x, const string& y );
 bool startsWith ( const string& x, const string& y );
+inline bool startsWith ( pstring x, const string& y ) { return startsWith(*x, y); }
 string lower ( const string& s_ );
 
 template<typename charT> inline std::vector<string> split ( const string& s, charT c ) {
@@ -165,21 +166,24 @@ template<typename charT> inline std::vector<string> split ( const string& s, cha
 	return v;
 }
 
-template<typename T> string tostr ( T t ) {
-	std::wstringstream s;
-	s << t;
-	return s.str();
-}
-
 string ws(const std::string& s);
 std::string ws(const string& s);
-string wstrim(const wchar_t* w);
-string wstrim(const std::string&);
-string wstrim(string);
+std::string ws(pstring s);
+pstring wstrim(const wchar_t* w);
+pstring wstrim(const std::string&);
+pstring wstrim(string);
 pstring pstr ( const string& s );
 pstring pstr ( const wchar_t* s );
 pstring pstrtrim ( const string& s );
 pstring pstrtrim ( const wchar_t* s );
+inline pstring pstr(const std::string& s) { return pstr(ws(s)); }
+inline pstring pstr(const char* s) { return pstr(std::string(s)); }
+template<typename T> pstring tostr ( T t ) {
+	std::wstringstream s;
+	s << t;
+	return pstr(s.str());
+}
+
 
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
 

@@ -11,22 +11,22 @@ int level = 1;
 extern int _indent;
 
 bidict::bidict() {
-	GND = set (mkiri( L"GND" ));
-	logequalTo = set (mkiri( L"log:equalTo"));
-	lognotEqualTo = set (mkiri(L"log:notEqualTo"));
-	rdffirst = set(mkiri(L"rdf:first"));
-	rdfrest = set(mkiri(L"rdf:rest"));
-	A = set(mkiri(L"a"));
-	rdfsResource = set(mkiri(L"rdfs:Resource"));
-	rdfList = set(mkiri(L"rdf:List"));
-	Dot = set(mkiri(L"."));
-	rdfsType = set(mkiri(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type"));
-	rdfssubClassOf = set(mkiri(L"rdfs:subClassOf"));
-	_dlopen = set(mkiri(L"dlfcn:dlopen"));
-	_dlerror = set(mkiri(L"dlfcn:dlerror"));
-	_dlsym = set(mkiri(L"dlfcn:dlsym"));
-	_dlclose = set(mkiri(L"dlfcn:dlclose"));
-	_invoke = set(mkiri(L"dlfcn:invoke"));
+	GND = set (mkiri(pstr( L"GND" )));
+	logequalTo = set (mkiri(pstr( L"log:equalTo")));
+	lognotEqualTo = set (mkiri(pstr(L"log:notEqualTo")));
+	rdffirst = set(mkiri(pstr(L"rdf:first")));
+	rdfrest = set(mkiri(pstr(L"rdf:rest")));
+	A = set(mkiri(pstr(L"a")));
+	rdfsResource = set(mkiri(pstr(L"rdfs:Resource")));
+	rdfList = set(mkiri(pstr(L"rdf:List")));
+	Dot = set(mkiri(pstr(L".")));
+	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfssubClassOf = set(mkiri(pstr(L"rdfs:subClassOf")));
+	_dlopen = set(mkiri(pstr(L"dlfcn:dlopen")));
+	_dlerror = set(mkiri(pstr(L"dlfcn:dlerror")));
+	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
+	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
+	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
@@ -37,7 +37,7 @@ int bidict::set ( node v ) {
 	auto it = pi.find ( v );
 	if ( it != pi.end() ) return it->second;
 	int k = pi.size() + 1;
-	if ( v._type == node::IRI && v.value[0] == L'?' ) k = -k;
+	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;
@@ -67,7 +67,7 @@ string bidict::tostr() {
 }
 
 string dstr ( int p ) {
-	if ( !deref ) return tostr ( p );
+	if ( !deref ) return *tostr ( p );
 	string s = dict[p].tostring();
 	if (s == L"GND") throw 0;
 	if ( !shorten ) return s;
@@ -257,12 +257,31 @@ _setproc:: ~_setproc() {
 	--_indent;
 }
 
-string wstrim(string s) {
+pstring wstrim(string s) {
 	trim(s);
-	return s;
+	return pstr(s);
 }
 pstring pstrtrim ( const string& s ) { string ss = s; trim(ss);return std::make_shared<string> ( ss ); } 
 pstring pstrtrim ( const wchar_t* s ) { if (!s) return 0; return pstrtrim ( string(s) ); }
 string ws(const std::string& s) { return string(s.begin(), s.end()); }
 std::string ws(const string& s) { return std::string(s.begin(), s.end()); }
-string wstrim(const wchar_t* w) { string s = w; return wstrim(s); }
+std::string ws(pstring s) { return ws(*s); }
+pstring wstrim(const wchar_t* w) { string s = w; return wstrim(s); }
+
+struct cmpstr { 
+	bool operator()(const pstring& x, const pstring& y) const {
+		if (!x && !y) return false;
+		if (!x && y) return true;
+		if (x && !y) return false;
+		return *x < *y;
+	}
+};
+
+pstring pstr ( const string& s ) {
+	static boost::container::set<pstring, cmpstr> strings;
+	auto ps = std::make_shared<string> ( s );
+	auto it = strings.find(ps);
+	if (it != strings.end()) return *it;
+	strings.insert(ps);
+	return ps;
+} 
