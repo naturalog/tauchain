@@ -9,7 +9,6 @@ using namespace boost::algorithm;
 wchar_t t[4096];
 std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 	std::list<quad> r;
-	uint pos = 0;
 	string graph;
 	pnode subject, pn;
 	typedef std::list<pnode> plist;
@@ -18,6 +17,7 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 	std::function<pnode()> readiri;
 	std::function<pnode()> readbnode;
 	std::function<pnode()> readvar;
+	std::function<pnode()> readlit;
 	static pnode rdffst = mkiri(pstr(L"rdf:first"));
 	static pnode rdfrst = mkiri(pstr(L"rdf:rest"));
 
@@ -28,21 +28,22 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 		auto id = [&]() { std::wstringstream ss; ss << L"_:list" << lastid << '.' << pos; return ss.str(); };
 		const string head = id();
 		pnode pn;
-		while (*++s != L')')
-			if (iswspace(*s)) {
-				do {++s;} while (iswspace(*s));
-				if (!(pn = readiri()) && !(pn = readbnode()) && !(pn = readvar()))
-					throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
-				pnode cons = mkbnode(pstr(id()));
-				lists.emplace_back(cons, rdffst, pn);
-				++pos;
-				lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
-			}
+		while (*s != L')') {
+			do {++s;} while (iswspace(*s));
+			if (*s == L')') break;
+			if (!(pn = readiri()) && !(pn = readbnode()) && !(pn = readvar()) && !(pn = readlit()))
+				throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
+			pnode cons = mkbnode(pstr(id()));
+			lists.emplace_back(cons, rdffst, pn);
+			++pos;
+			lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
+		}
 		++s;
 		++lastid;
 		while (iswspace(*s)) ++s;
-		return mkiri(pstr(head));
+		return mkbnode(pstr(head));
 	};
+	uint pos = 0;
 
 	auto _readiri = [&]() {
 		while (iswspace(*s)) ++s;
@@ -57,25 +58,43 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 
 	auto _readbnode = [&]() {
 		while (iswspace(*s)) ++s;
-		if (*s == L'_') {
-			while (!iswspace(*s)) t[pos++] = *s++;
-			t[pos] = 0; pos = 0;
-			return mkbnode(wstrim(t));
-		}
-		return (pnode)0;
+		if (*s == L'_') return pnode(0);
+		while (!iswspace(*s)) t[pos++] = *s++;
+		t[pos] = 0; pos = 0;
+		return mkbnode(wstrim(t));
 	};
 	readbnode = _readbnode;
 	auto _readvar = [&]() {
 		while (iswspace(*s)) ++s;
-		if (*s == L'?') {
-			while (!iswspace(*s)) t[pos++] = *s++;
-			t[pos] = 0; pos = 0;
-			return mkbnode(wstrim(t));
-		}
-		return (pnode)0;
+		if (*s == L'?') return pnode(0);
+		while (!iswspace(*s)) t[pos++] = *s++;
+		t[pos] = 0; pos = 0;
+		return mkbnode(wstrim(t));
 	};
 	readvar = _readvar;
-
+	auto _readlit = [&]() {
+		if (*s == L'\"') return pnode(0);
+		do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
+		string dt, lang;
+		++s;
+		while (!iswspace(*s) && *s != L'.') {
+			if (*s == L'^' && *++s == L'^') {
+				if (*++s == L'<')  {
+					++s;
+					while (*s != L'>') dt += *s++;
+					++s;
+					break;
+				}
+			} else if (*s == L'@') { 
+				while (!iswspace(*s)) lang += *s++;
+				break;
+			}
+			else throw wruntime_error(string(L"expected langtag or iri:") + string(s,0,48));
+		}
+		t[pos] = 0; pos = 0;
+		return mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang));
+	};
+	readlit = _readlit;
 
 	while(*s) {
 		if (!(subject = readiri()) && !(subject = readbnode()) && !(subject = readvar()))
@@ -94,29 +113,8 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 			do {
 				while (iswspace(*s) || *s == L',') ++s;
 				if (*s == L'.') break;
-				if ((pn = readiri()) || (pn = readbnode()) || (pn = readvar()))
+				if ((pn = readiri()) || (pn = readbnode()) || (pn = readvar()) || (pn = readlit()))
 					preds.back().second.push_back(pn);
-				else if (*s++ == L'\"') {
-					do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
-					string dt, lang;
-					++s;
-					while (!iswspace(*s) && *s != L'.') {
-						if (*s == L'^' && *++s == L'^') {
-							if (*++s == L'<')  {
-								++s;
-								while (*s != L'>') dt += *s++;
-								++s;
-								break;
-							}
-						} else if (*s == L'@') { 
-							while (!iswspace(*s)) lang += *s++;
-							break;
-						}
-						else throw wruntime_error(string(L"expected langtag or iri:") + string(s,0,48));
-					}
-					t[pos] = 0; pos = 0;
-					preds.back().second.push_back(mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang)));
-				}
 				else throw wruntime_error(string(L"expected iri or bnode or literal object:") + string(s,0,48));
 				while (iswspace(*s)) ++s;
 			} while (*s == L',');

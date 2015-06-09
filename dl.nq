@@ -1,10 +1,5 @@
-<A> <a> <B> .
+("0"^^XSD_INTEGER "0"^^XSD_INTEGER ) <dlfcn:dlopen> ?handle.
 fin.
-_:p1 <rdf:first> "0"^^<XSD_INTEGER>; <rdf:rest> _:p2 .
-_:p2 <rdf:first> "0"^^<XSD_INTEGER>; <rdf:rest> <rdf:nil> .
-<?handle> <dlfcn:dlopen> _:p1 .
-_:p3 <rdf:first> <?handle>; <rdf:rest> _:p4 .
-_:p4 <rdf:first> "testfunc"^^<XSD_STRING>; <rdf:rest> <rdf:nil> .
-<?handle> <dlfcn:dlsym> _:p3 .
-<?handle> <dlfcn:invoke> "0"^^<XSD_STRING> .
+( ?handle  "testfunc"^^XSD_STRING ) <dlfcn:dlsym> ?sym.
 fin.
+(?sym (1 "hello" 99 "world" ) ) dlfcn:invoke ?returnval.
