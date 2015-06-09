@@ -24,8 +24,8 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 	auto readlist = [&]() {
 		if (*s != L'(') return (pnode)0;
 		static int lastid = 0;
-		int pos = 0;
-		auto id = [&]() { std::wstringstream ss; ss << L"_:list" << lastid << '.' << pos; return ss.str(); };
+		int lpos = 0;
+		auto id = [&]() { std::wstringstream ss; ss << L"_:list" << lastid << '.' << lpos; return ss.str(); };
 		const string head = id();
 		pnode pn;
 		while (*s != L')') {
@@ -35,7 +35,7 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 				throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
 			pnode cons = mkbnode(pstr(id()));
 			lists.emplace_back(cons, rdffst, pn);
-			++pos;
+			++lpos;
 			lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
 		}
 		++s;
@@ -47,18 +47,17 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 
 	auto _readiri = [&]() {
 		while (iswspace(*s)) ++s;
-		if (*s == L'<') {
-			while (*++s != L'>') t[pos++] = *s;
-			t[pos] = 0; pos = 0;
-			++s;
-			return mkiri(wstrim(t));
-		} else return readlist();
+		if (*s != L'<') return readlist();
+		while (*++s != L'>') t[pos++] = *s;
+		t[pos] = 0; pos = 0;
+		++s;
+		return mkiri(wstrim(t));
 	};
 	readiri = _readiri;
 
 	auto _readbnode = [&]() {
 		while (iswspace(*s)) ++s;
-		if (*s == L'_') return pnode(0);
+		if (*s != L'_') return pnode(0);
 		while (!iswspace(*s)) t[pos++] = *s++;
 		t[pos] = 0; pos = 0;
 		return mkbnode(wstrim(t));
@@ -66,14 +65,15 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 	readbnode = _readbnode;
 	auto _readvar = [&]() {
 		while (iswspace(*s)) ++s;
-		if (*s == L'?') return pnode(0);
+		if (*s != L'?') return pnode(0);
 		while (!iswspace(*s)) t[pos++] = *s++;
 		t[pos] = 0; pos = 0;
 		return mkbnode(wstrim(t));
 	};
 	readvar = _readvar;
 	auto _readlit = [&]() {
-		if (*s == L'\"') return pnode(0);
+		while (iswspace(*s)) ++s;
+		if (*s != L'\"') return pnode(0);
 		do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
 		string dt, lang;
 		++s;
