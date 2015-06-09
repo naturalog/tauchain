@@ -12,7 +12,7 @@ boost::container::map<string, pnode> nodes;
 
 string node::tostring() const {
 	std::wstringstream ss;
-	if ( _type == IRI ) ss << L'<';
+	if ( _type == IRI && (*value)[0] != L'?' ) ss << L'<';
 	if ( _type == LITERAL ) ss << L'\"';
 	ss << *value;
 	if ( _type == LITERAL ) {
@@ -20,7 +20,7 @@ string node::tostring() const {
 		if ( datatype && datatype->size() ) ss << "^^" << *datatype;
 		if ( lang && lang->size() ) ss << L'@' << *lang;
 	}
-	if ( _type == IRI ) ss << L'>';
+	if ( _type == IRI && (*value)[0] != L'?' ) ss << L'>';
 	return ss.str();
 }
 

@@ -85,6 +85,6 @@ private:
 };
 
 typedef std::shared_ptr<rdf_db> prdf_db;
-std::list<quad> parse_nqline(const wchar_t* s); 
+std::list<quad> parse_nqline(const wchar_t* s, string ctx = L"@default");
 qlist merge ( const qdb& q );
 #endif

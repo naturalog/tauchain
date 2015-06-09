@@ -7,24 +7,56 @@
 using namespace boost::algorithm;
 
 wchar_t t[4096];
-std::list<quad> parse_nqline(const wchar_t* s) {
+std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 	std::list<quad> r;
 	uint pos = 0;
 	string graph;
 	pnode subject, pn;
 	typedef std::list<pnode> plist;
 	std::list<std::pair<pnode, plist>> preds;
+	std::list<std::tuple<pnode, pnode, pnode>> lists;
+	std::function<pnode()> readiri;
+	std::function<pnode()> readbnode;
+	std::function<pnode()> readvar;
+	static pnode rdffst = mkiri(pstr(L"rdf:first"));
+	static pnode rdfrst = mkiri(pstr(L"rdf:rest"));
 
-	auto readiri = [&]() {
+	auto readlist = [&]() {
+		if (*s != L'(') return (pnode)0;
+		static int lastid = 0;
+		int pos = 0;
+		auto id = [&]() { std::wstringstream ss; ss << L"_:list" << lastid << '.' << pos; return ss.str(); };
+		const string head = id();
+		pnode pn;
+		while (*++s != L')')
+			if (iswspace(*s)) {
+				do {++s;} while (iswspace(*s));
+				if (!(pn = readiri()) && !(pn = readbnode()) && !(pn = readvar()))
+					throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
+				pnode cons = mkbnode(pstr(id()));
+				lists.emplace_back(cons, rdffst, pn);
+				++pos;
+				lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
+			}
+		++s;
+		++lastid;
+		while (iswspace(*s)) ++s;
+		return mkiri(pstr(head));
+	};
+
+	auto _readiri = [&]() {
+		while (iswspace(*s)) ++s;
 		if (*s == L'<') {
 			while (*++s != L'>') t[pos++] = *s;
 			t[pos] = 0; pos = 0;
 			++s;
 			return mkiri(wstrim(t));
-		}
-		return (pnode)0;
+		} else return readlist();
 	};
-	auto readbnode = [&]() {
+	readiri = _readiri;
+
+	auto _readbnode = [&]() {
+		while (iswspace(*s)) ++s;
 		if (*s == L'_') {
 			while (!iswspace(*s)) t[pos++] = *s++;
 			t[pos] = 0; pos = 0;
@@ -32,12 +64,22 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 		}
 		return (pnode)0;
 	};
+	readbnode = _readbnode;
+	auto _readvar = [&]() {
+		while (iswspace(*s)) ++s;
+		if (*s == L'?') {
+			while (!iswspace(*s)) t[pos++] = *s++;
+			t[pos] = 0; pos = 0;
+			return mkbnode(wstrim(t));
+		}
+		return (pnode)0;
+	};
+	readvar = _readvar;
+
 
 	while(*s) {
-		while (iswspace(*s)) ++s;
-		if (!(subject = readiri()) && !(subject = readbnode()))
-		throw wruntime_error(string(L"expected iri or bnode subject:") + string(s,0,48));
-
+		if (!(subject = readiri()) && !(subject = readbnode()) && !(subject = readvar()))
+			throw wruntime_error(string(L"expected iri or bnode subject:") + string(s,0,48));
 		do {
 			while (iswspace(*s) || *s == L';') ++s;
 			if (*s == L'.') break;
@@ -52,7 +94,7 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 			do {
 				while (iswspace(*s) || *s == L',') ++s;
 				if (*s == L'.') break;
-				if ((pn = readiri()) || (pn = readbnode()))
+				if ((pn = readiri()) || (pn = readbnode()) || (pn = readvar()))
 					preds.back().second.push_back(pn);
 				else if (*s++ == L'\"') {
 					do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
@@ -90,8 +132,18 @@ std::list<quad> parse_nqline(const wchar_t* s) {
 			trim(graph = t);
 			++s;
 		} else
-			graph = L"@default";
-		for (auto x : preds) for (pnode object : x.second) r.emplace_back(subject, x.first, object, graph);
+			graph = ctx;
+		for (auto d : lists) {
+			quad q(std::get<0>(d), std::get<1>(d), std::get<2>(d), graph);
+			dout << q.tostring() << std::endl;
+			r.emplace_back(q);
+		}
+		for (auto x : preds) for (pnode object : x.second) {
+			quad q(subject, x.first, object, graph);
+			dout << q.tostring() << std::endl;
+			r.emplace_back(q);
+		}
+		lists.clear();
 		preds.clear();
 		while (*s == '.') ++s;
 	}
