@@ -6,8 +6,9 @@
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 
-wchar_t t[4096];
-std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
+parse_nqline::parse_nqline() { t = new wchar_t[4096]; }
+parse_nqline::~parse_nqline() { delete[] t; }
+std::list<quad> parse_nqline::operator()(const wchar_t* s, string ctx/* = L"@default"*/) {
 	std::list<quad> r;
 	string graph;
 	pnode subject, pn;
@@ -18,18 +19,19 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 	std::function<pnode()> readbnode;
 	std::function<pnode()> readvar;
 	std::function<pnode()> readlit;
-	static pnode rdffst = mkiri(pstr(L"rdf:first"));
-	static pnode rdfrst = mkiri(pstr(L"rdf:rest"));
+	pnode rdffst = mkiri(pstr(L"rdf:first"));
+	pnode rdfrst = mkiri(pstr(L"rdf:rest"));
 
 	auto readlist = [&]() {
 		if (*s != L'(') return (pnode)0;
 		static int lastid = 0;
-		int lpos = 0;
-		auto id = [&]() { std::wstringstream ss; ss << L"_:list" << lastid << '.' << lpos; return ss.str(); };
+		int lpos = 0, curid = lastid++;
+		auto id = [&]() { std::wstringstream ss; ss << L"_:list" << curid << '.' << lpos; return ss.str(); };
 		const string head = id();
 		pnode pn;
+		++s;
 		while (*s != L')') {
-			do {++s;} while (iswspace(*s));
+			while (iswspace(*s)) ++s;
 			if (*s == L')') break;
 			if (!(pn = readiri()) && !(pn = readbnode()) && !(pn = readvar()) && !(pn = readlit()))
 				throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
@@ -38,9 +40,7 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 			++lpos;
 			lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
 		}
-		++s;
-		++lastid;
-		while (iswspace(*s)) ++s;
+		do { ++s; } while (iswspace(*s));
 		return mkbnode(pstr(head));
 	};
 	uint pos = 0;
@@ -66,9 +66,10 @@ std::list<quad> parse_nqline(const wchar_t* s, string ctx/* = L"@default"*/) {
 	auto _readvar = [&]() {
 		while (iswspace(*s)) ++s;
 		if (*s != L'?') return pnode(0);
-		while (!iswspace(*s)) t[pos++] = *s++;
+		while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.') t[pos++] = *s++;
 		t[pos] = 0; pos = 0;
-		return mkbnode(wstrim(t));
+		++s;
+		return mkiri(wstrim(t));
 	};
 	readvar = _readvar;
 	auto _readlit = [&]() {

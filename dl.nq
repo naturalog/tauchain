@@ -2,5 +2,5 @@
 ( ?handle  "testfunc"^^<XSD_STRING> ) <dlfcn:dlsym> ?sym . 
 ( ?sym ( "1"^^<XSD_INTEGER> "hello"^^<XSD_STRING> "99"^^<XSD_INTEGER> "world"^^<XSD_STRING>  ) ) <dlfcn:invoke> ?returnval . 
 fin.
-?x <a> ?y .
+?x <rdf:rest> ?y.
 fin.
