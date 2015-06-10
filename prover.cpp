@@ -234,17 +234,11 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		(*func)(params);
 		r = 1;
 	}
-	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
-		if (!t0) t0 = &get(i0=t.s);
-		if (!t1) t1 = &get(i1=t.o);
-		termid h = make ( A, i0, i1 );
-		termset ts;
-		ts.push_back ( make ( rdfssubClassOf, va, i1 ) );
-		ts.push_back ( make ( A, i0, va ) );
-		step(new proof(kb.add(h, ts, this), 0, p, subst(), p->g), queue, false);
-//		if (euler_path(f, h)) { delete f; return -1; }
-//		step(f, queue, false);
-//		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
+	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
+		termset ts(2);
+		ts[0] = make ( rdfssubClassOf, va, t.o );
+		ts[1] = make ( A, t.s, va );
+		step(new proof( kb.add(make ( A, t.s, t.o ), ts, this), 0, p, subst(), p->g), queue, false);
 		r = -1;
 	}
 	if (r == 1) {
