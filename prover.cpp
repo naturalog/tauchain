@@ -157,7 +157,20 @@ std::vector<node> prover::get_list(prover::termid head, proof& p) {
 void* testfunc(void*) {
 	derr <<std::endl<< "***** Test func called ******" << std::endl;
 }
+/*
+typedef std::function<int(termid, proof&, std::deque<proof*>&, prover)> builtin;
 
+class builtin {
+public:
+	virtual int operator()(termid id, proof& p, std::deque<proof*>& queue, prover& pr) = 0;
+};
+
+class LogEqualTo {
+public:
+};
+
+std::list<builtin*> builtins = { new bdlopen, new bdlclose, new bdlsym, new bdlerror };
+*/
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	setproc(L"builtin");
 	const term t = get(id);
@@ -224,19 +237,14 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) {
 		if (!t0) t0 = &get(i0=t.s);
 		if (!t1) t1 = &get(i1=t.o);
-		termid h = make ( A,           i0, i1 );
+		termid h = make ( A, i0, i1 );
 		termset ts;
 		ts.push_back ( make ( rdfssubClassOf, va, i1 ) );
-		ts.push_back ( make ( A,              i0, va ) );
-		proof* f = new proof;
-		f->rul = kb.add(h, ts, this);
-		f->prev = p;
-		f->last = 0;
-		f->g = p->g;
-		if (euler_path(f, h))
-			return -1;
-		step(f, queue, false);
-		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
+		ts.push_back ( make ( A, i0, va ) );
+		step(new proof(kb.add(h, ts, this), 0, p, subst(), p->g), queue, false);
+//		if (euler_path(f, h)) { delete f; return -1; }
+//		step(f, queue, false);
+//		TRACE(dout<<"builtin created frame:"<<std::endl;printp(f));
 		r = -1;
 	}
 	if (r == 1) {
@@ -273,7 +281,8 @@ std::set<uint> prover::match(termid _e) {
 void prover::step(proof* p, std::deque<proof*>& queue, bool del) {
 	setproc(L"step");
 	TRACE(dout<<"popped frame:\n";printp(p));
-	if (p->last != kb.body()[p->rul].size() && !euler_path(p, kb.head()[p->rul])) {
+	if (p->last != kb.body()[p->rul].size()) {
+		if (euler_path(p, kb.head()[p->rul])) return;
 		termid t = kb.body()[p->rul][p->last];
 		if (!t) throw 0;
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
