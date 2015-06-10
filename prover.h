@@ -124,8 +124,8 @@ typedef int prop_t;
 	termid quad2term(const quad& p);
 
 	string format(termid id);
-	string format(const termset& l);
-	string formatr(int r);
+	string format(const termset& l, bool lf = false);
+	string formatr(int r, bool lf = false);
 	string formatkb();
 	void printp(proof* p);
 	void prints(const subst& s);

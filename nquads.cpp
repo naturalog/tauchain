@@ -133,7 +133,7 @@ std::list<quad> parse_nqline::operator()(const wchar_t* s, string ctx/* = L"@def
 		} else
 			graph = ctx;
 		for (auto d : lists) {
-			quad q(std::get<0>(d), std::get<1>(d), std::get<2>(d), graph);
+			quad q(std::get<0>(d), std::get<1>(d), std::get<2>(d), L"@default"/*graph*/);
 			dout << q.tostring() << std::endl;
 			r.emplace_back(q);
 		}

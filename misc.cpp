@@ -157,13 +157,13 @@ void prover::prints(const subst& s) {
 		dout << dstr(x.first) << L" / " << format(x.second) << ' ';
 }
 
-string prover::format(const termset& l) {
+string prover::format(const termset& l, bool lf) {
 	std::wstringstream ss;
 	auto x = l.begin();
 	while (x != l.end()) {
 		ss << format (*x);
 		if (++x != l.end())
-			ss << L',';
+			lf ? ss << std::endl : ss << L',';
 	}
 	return ss.str();
 }
@@ -199,17 +199,21 @@ void prover::printr_substs(int r, const subst& s) {
 	printterm_substs(kb.head()[r], s);
 }
 
-string prover::formatr(int r) {
+string prover::formatr(int r, bool lf) {
 	std::wstringstream ss;
-	if (!kb.body()[r].empty()) ss << format(kb.body()[r]) << L" => ";
+	ss << L"{ ";
+	if (!kb.body()[r].empty()) ss << format(kb.body()[r]);
+	ss  << L"} => ";
 	if (kb.head()[r]) 	ss << format(kb.head()[r]);
-	if (kb.body()[r].empty()) 	ss << L".";
+	//if (kb.body()[r].empty())
+ 	ss << L".";
+//	if (lf) ss << std::endl;
 	return ss.str();
 }
 
 string prover::formatkb() {
 	std::wstringstream ss;
-	for (uint n = 0; n < kb.size(); ++n) ss << formatr(n) << std::endl;
+	for (uint n = 0; n < kb.size(); ++n) ss << formatr(n, true) << std::endl;
 	return ss.str();
 }
 

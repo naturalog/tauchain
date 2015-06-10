@@ -190,7 +190,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == _dlopen) {
-		if (t1->p > 0) throw std::runtime_error("dlopen must be called with variable object.");
+		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<node> params = get_list(i0, *p);
 		void* handle;
 		try {
@@ -198,7 +198,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-		p->s[t1->p] = make(dict.set(n), 0, 0);
+		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == _dlerror) {
@@ -238,16 +238,13 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		termset ts(2);
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		step(new proof( kb.add(make ( A, t.s, t.o ), ts, this), 0, p, subst(), p->g), queue, false);
-		r = -1;
+		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts, this), 0, p, subst(), p->g)/*, queue, false*/);
 	}
 	if (r == 1) {
 		proof* r = new proof;
 		*r = *p;
-		uint rl = kb.add(evaluate(id, p->s), termset(), this);
-		TRACE(dout << "builtin added rule: " << format(rl) << " by evaluating "; printterm_substs(id, p->s); dout << std::endl);
 		r->g = p->g;
-		r->g.emplace_back(rl, subst());
+		r->g.emplace_back(kb.add(evaluate(id, p->s), termset(), this), subst());
 		++r->last;
 		step(r, queue);
 	}
