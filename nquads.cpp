@@ -58,7 +58,8 @@ std::list<quad> parse_nqline::operator()(const wchar_t* s, string ctx/* = L"@def
 	auto _readbnode = [&]() {
 		while (iswspace(*s)) ++s;
 		if (*s != L'_') return pnode(0);
-		while (!iswspace(*s)) t[pos++] = *s++;
+//		while (!iswspace(*s)) t[pos++] = *s++;
+		while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.') t[pos++] = *s++;
 		t[pos] = 0; pos = 0;
 		return mkbnode(wstrim(t));
 	};
@@ -75,10 +76,11 @@ std::list<quad> parse_nqline::operator()(const wchar_t* s, string ctx/* = L"@def
 	auto _readlit = [&]() {
 		while (iswspace(*s)) ++s;
 		if (*s != L'\"') return pnode(0);
+		++s;
 		do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
 		string dt, lang;
 		++s;
-		while (!iswspace(*s) && *s != L'.') {
+		while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.') {
 			if (*s == L'^' && *++s == L'^') {
 				if (*++s == L'<')  {
 					++s;

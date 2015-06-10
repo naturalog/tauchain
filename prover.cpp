@@ -192,19 +192,23 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<node> params = get_list(i0, *p);
-		void* handle;
-		try {
-			handle = dlopen(ws(params[0].value).c_str(), std::stoi(*params[1].value));
-		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
-		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
-		r = 1;
+		if (params.size() >= 2) {
+			void* handle;
+			try {
+				handle = dlopen(ws(params[0].value).c_str(), std::stol(*params[1].value));
+			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
+			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
+			pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
+			termid s;
+			p->s[get(t.o).p] = s = make(dict.set(n), 0, 0);
+			TRACE(dout<<"subst for " << format(get(t.o).p) << " is " << format(s)<<std::endl);
+			r = 1;
+		}
 	}
 	else if (t.p == _dlerror) {
-		if (t1->p > 0) throw std::runtime_error("dlerror must be called with variable object.");
+		if (get(t.o).p > 0) throw std::runtime_error("dlerror must be called with variable object.");
 		pnode n = mkliteral(pstr(dlerror()), 0, 0);
-		p->s[t1->p] = make(dict.set(n), 0, 0);
+		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == _dlsym) {
