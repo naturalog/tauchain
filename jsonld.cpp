@@ -1001,7 +1001,9 @@ void jsonld_api::mergeValue ( somap& obj, string key, pobj value ) {
 }
 
 pstring jsonld_api::gen_bnode_id ( string id ) {
-	if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) return pstr(bnode_id_map[id]);
+	if (id.size())
+		if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) 
+			return pstr(bnode_id_map[id]);
 	std::wstringstream ss;
 	ss << L"_:b" << ( blankNodeCounter++ );
 	return pstr(bnode_id_map[id] = ss.str());

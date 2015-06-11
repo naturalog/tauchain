@@ -1,2 +1,8 @@
-<?x> <eq> <?y> <A>.  <?y> <eq> <?x> <B>.  <?x> <eq> <?y> <C>.  <?y> <eq> <?z> <C>.  <?x> <eq> <?z> <D>.  <C> => <D>.  <A> => <B>.  <X> <eq> <Y>.  <Y> <eq> <Z>.  <Z> <eq> <T>.  fin.
-<?xx> <eq> <Z>.  fin.
+{ ?x <eq> ?y } => { ?y <eq> ?x }.
+{ ?x <eq> ?y . ?y <eq> ?z. } => { ?x <eq> ?z }.  
+<X> <eq> <Y>.  
+<Y> <eq> <Z>.  
+<Z> <eq> <T>.  
+fin.
+<?xx> <eq> <Z>. 
+fin.

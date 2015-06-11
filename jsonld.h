@@ -175,7 +175,7 @@ public:
 	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element );
 	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false );
 	static bool deepContains ( polist values, pobj value );
-	pstring gen_bnode_id ( string id = L"" );
+	static pstring gen_bnode_id ( string id = L"" );
 	void gen_node_map ( pobj element, psomap nodeMap );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring act_prop, psomap list );
