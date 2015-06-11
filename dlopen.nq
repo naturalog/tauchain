@@ -1,9 +1,5 @@
-( "0"^^<XSD_INTEGER> "1"^^<XSD_INTEGER> ) <dlfcn:dlopen> ?h _A.
-?h <b> <x> _B.
-<t> <dlfcn:dlerror> ?e _E.
-?e <b> <x> _C.
-_A => _B.
-_E => _C.
+{ ( "0"^^<XSD_INTEGER> "1"^^<XSD_INTEGER> ) <dlfcn:dlopen> ?h } => { ?h <b> <x> }.
+{ <t> <dlfcn:dlerror> ?e } => { ?e <b> <x> }.
 fin.
 ?y <b> <x>.
 fin.
