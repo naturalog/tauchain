@@ -1,4 +1,4 @@
-CC=g++
+CC=clang++-3.6
 CXXFLAGS=-c -std=c++11 -Wextra -g -DDEBUG -I/usr/local/include
 #CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O2 -I/usr/local/include
 LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread -L/usr/local/lib -ldl

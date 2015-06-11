@@ -207,7 +207,8 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	else if (t.p == _dlerror) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlerror must be called with variable object.");
-		pnode n = mkliteral(pstr(dlerror()), 0, 0);
+		auto err = dlerror();
+		pnode n = mkliteral(err ? pstr(err) : pstr(L"NULL"), 0, 0);
 		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
