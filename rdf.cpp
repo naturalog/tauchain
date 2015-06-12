@@ -3,12 +3,11 @@
 #include "prover.h"
 #include "jsonld.h"
 #include <iomanip>
+#include "misc.h"
 
 pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
-
-boost::container::map<string, pnode> nodes;
 
 string node::tostring() const {
 	std::wstringstream ss;
@@ -41,30 +40,33 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		else r.datatype = datatype;
 	}
 	if ( language ) r.lang = language;
-	auto it =  nodes.find(r.tostring());
-	if (it != nodes.end()) return it->second;
-	return nodes[r.tostring()] = make_shared<node>(r);
+	auto it =  dict.nodes.find(*r.value);
+	if (it != dict.nodes.end()) return it->second;
+	pnode pr = make_shared<node>(r); 
+	dict.set(pr);
+	return dict.nodes[*r.value] = pr;
 }
 
 pnode mkiri ( pstring iri ) {
 	node r ( node::IRI );
 	r.value = iri;
-	auto it =  nodes.find(r.tostring());
-	if (it != nodes.end()) return it->second;
-	return nodes[r.tostring()] = make_shared<node>(r);
+	auto it =  dict.nodes.find(*r.value);
+	if (it != dict.nodes.end()) return it->second;
+	pnode pr = make_shared<node>(r); 
+	dict.set(pr);
+	return dict.nodes[*r.value] = pr;
 }
 
 pnode mkbnode ( pstring attribute ) {
 	node r ( node::BNODE );
+	(dout << *attribute << std::endl).flush();
 	r.value = attribute;
-	auto it =  nodes.find(r.tostring());
-	if (it != nodes.end()) return it->second;
-	return nodes[r.tostring()] = make_shared<node>(r);
+	auto it =  dict.nodes.find(*r.value);
+	if (it != dict.nodes.end()) return it->second;
+	pnode pr = make_shared<node>(r); 
+	dict.set(pr);
+	return dict.nodes[*r.value] = pr;
 }
-
-const pnode first = mkiri ( RDF_FIRST );
-const pnode rest = mkiri ( RDF_REST );
-const pnode nil = mkiri ( RDF_NIL );
 
 rdf_db::rdf_db ( jsonld_api& api_ ) :
 	qdb(), api ( api_ ) {
@@ -130,6 +132,9 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 
 void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	qlist triples;
+	pnode first = mkiri ( RDF_FIRST );
+	pnode rest = mkiri ( RDF_REST );
+	pnode nil = mkiri ( RDF_NIL );
 	for ( auto y : graph ) { // 4.3
 		pstring id = pstr(y.first);
 		if ( is_rel_iri ( id ) ) continue;

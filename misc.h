@@ -15,7 +15,7 @@ class bidict {
 	boost::container::map<int, node> ip;
 	boost::container::map<node, int> pi;
 public:
-	bidict();
+	void init();
 	int set ( node v );
 	int set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
@@ -25,6 +25,7 @@ public:
 	bool has ( int k ) const;
 	bool has ( node v ) const;
 	string tostr();
+	boost::container::map<string, pnode> nodes;
 };
 
 extern bidict& dict;

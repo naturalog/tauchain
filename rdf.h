@@ -22,7 +22,7 @@ public:
 	string tostring() const;
 	bool operator<(const node& x) const { return value < x.value || datatype < x.datatype || lang < x.lang || _type < x._type; }
 	bool operator==(const node& x) const { 
-		bool r = value == x.value && datatype == x.datatype && lang == x.lang && _type == x._type;
+		bool r = *value == *x.value && *datatype == *x.datatype && *lang == *x.lang && _type == x._type;
 		return r;
 	}
 };

@@ -84,11 +84,12 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 		r = false;
 	else
 		r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
-	TRACE(dout << "Trying to unify ";
+	TRACE(
+		dout << "Trying to unify ";
 		printterm_substs(_s, ssub);
 		dout<<" with ";
 		printterm_substs(_d, dsub);
-		dout<<"... ";
+		dout<<" : ";
 		if (r) {
 			dout << "passed";
 			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
@@ -157,20 +158,7 @@ std::vector<node> prover::get_list(prover::termid head, proof& p) {
 void* testfunc(void*) {
 	derr <<std::endl<< "***** Test func called ******" << std::endl;
 }
-/*
-typedef std::function<int(termid, proof&, std::deque<proof*>&, prover)> builtin;
 
-class builtin {
-public:
-	virtual int operator()(termid id, proof& p, std::deque<proof*>& queue, prover& pr) = 0;
-};
-
-class LogEqualTo {
-public:
-};
-
-std::list<builtin*> builtins = { new bdlopen, new bdlclose, new bdlsym, new bdlerror };
-*/
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	setproc(L"builtin");
 	const term t = get(id);

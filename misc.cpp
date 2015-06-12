@@ -10,7 +10,7 @@ int level = 1;
 
 extern int _indent;
 
-bidict::bidict() {
+void bidict::init() {
 	GND = set (mkiri(pstr( L"GND" )));
 	logequalTo = set (mkiri(pstr( L"log:equalTo")));
 	lognotEqualTo = set (mkiri(pstr(L"log:notEqualTo")));
@@ -37,7 +37,7 @@ int bidict::set ( node v ) {
 	auto it = pi.find ( v );
 	if ( it != pi.end() ) return it->second;
 	int k = pi.size() + 1;
-	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
+	if ( /*v._type == node::IRI &&*/ (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;
