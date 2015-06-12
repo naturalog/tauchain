@@ -189,7 +189,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 			pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 			termid s;
 			p->s[get(t.o).p] = s = make(dict.set(n), 0, 0);
-			TRACE(dout<<"subst for " << format(get(t.o).p) << " is " << format(s)<<std::endl);
+			TRACE(dout<<"subst for " << format(t.o) << " is " << format(s)<<std::endl);
 			r = 1;
 		}
 	}
@@ -372,7 +372,7 @@ void prover::operator()(termset& goal, const subst* s) {
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) {
-	if (!id) throw 0;
+	if (!id || id > _terms.size()) throw std::runtime_error("invalid term id passed to prover::get");
 	return _terms[id - 1]; 
 }
 

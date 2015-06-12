@@ -20,7 +20,7 @@ public:
 	enum node_type { LITERAL, IRI, BNODE } _type;
 	node ( const node_type& t ) : _type ( t ) { }
 	string tostring() const;
-	bool operator<(const node& x) const { return value < x.value || datatype < x.datatype || lang < x.lang || _type < x._type; }
+	bool operator<(const node& x) const { return tostring() < x.tostring(); }
 	bool operator==(const node& x) const { 
 		bool r = *value == *x.value && *datatype == *x.datatype && *lang == *x.lang && _type == x._type;
 		return r;
