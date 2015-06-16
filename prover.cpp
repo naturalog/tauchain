@@ -157,6 +157,7 @@ std::vector<node> prover::get_list(prover::termid head, proof& p) {
 
 void* testfunc(void*) {
 	derr <<std::endl<< "***** Test func called ******" << std::endl;
+	return 0;
 }
 
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
@@ -219,11 +220,12 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = 1;
 	}
 	else if (t.p == _invoke) {
-		if (dict[t0->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer subject as func ptr.");
-		if (dict[t1->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer object as params ptr.");
+//		if (dict[t0->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer subject as func ptr.");
+//		if (dict[t1->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer object as params ptr.");
 		typedef void*(*fptr)(void*);
-		fptr func = (fptr)std::stol(*dict[t0->p].value);
-		void* params = (void*)std::stol(*dict[t1->p].value);
+		fptr func = &testfunc;//(fptr)std::stol(*dict[t0->p].value);
+		void* params = 0;
+		try { if (t1 && dict[t1->p].value) params = (void*)std::stol(*dict[t1->p].value); }catch(...){}
 		(*func)(params);
 		r = 1;
 	}
