@@ -153,9 +153,10 @@ std::vector<node> prover::get_list(prover::termid head, proof& p) {
 	return r;
 }
 
-void* testfunc(void*) {
+pnode testfunc(void*) {
 	derr <<std::endl<< "***** Test func called ******" << std::endl;
-	return 0;
+	return mkiri(pstr("testfunc_result"));
+//	return 0;
 }
 
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
@@ -220,11 +221,14 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == _invoke) {
 //		if (dict[t0->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer subject as func ptr.");
 //		if (dict[t1->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer object as params ptr.");
-		typedef void*(*fptr)(void*);
+		typedef pnode(*fptr)(void*);
 		fptr func = &testfunc;//(fptr)std::stol(*dict[t0->p].value);
 		void* params = 0;
 		try { if (t1 && dict[t1->p].value) params = (void*)std::stol(*dict[t1->p].value); }catch(...){}
-		(*func)(params);
+		pnode res = (*func)(params);
+		TRACE(dout << "func returned " << res->tostring() << endl);
+		termid tres = make(res);
+		p->s[get(t.o).p] = tres;
 		r = 1;
 	}
 	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {

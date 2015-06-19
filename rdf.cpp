@@ -50,6 +50,7 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 pnode mkiri ( pstring iri ) {
 	node r ( node::IRI );
 	r.value = iri;
+	(derr << *iri << endl).flush();
 	auto it =  dict.nodes.find(*r.value);
 	if (it != dict.nodes.end()) return it->second;
 	pnode pr = make_shared<node>(r); 
