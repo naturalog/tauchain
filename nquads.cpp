@@ -7,9 +7,10 @@
 #include "jsonld.h"
 using namespace boost::algorithm;
 
-parse_nqline::parse_nqline(const wchar_t* _s) : t(new wchar_t[4096]), s(_s), rdffst(mkiri(pstr(L"rdf:first"))), rdfrst(mkiri(pstr(L"rdf:rest"))) {}
+parse_nqline::parse_nqline(const wchar_t* _s) : 
+	t(new wchar_t[4096]), s(_s), rdffst(mkiri(pstr(L"rdf:first"))), 
+	rdfrst(mkiri(pstr(L"rdf:rest"))), rnil(mkiri(pstr(L"rdf:nil"))) {}
 parse_nqline::~parse_nqline() { delete[] t; }
-
 
 pnode parse_nqline::readcurly() {
 	while (iswspace(*s)) ++s;
@@ -37,7 +38,9 @@ pnode parse_nqline::readlist() {
 		pnode cons = mkbnode(pstr(id()));
 		lists.emplace_back(cons, rdffst, pn);
 		++lpos;
-		lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
+		while (iswspace(*s)) ++s;
+		if (*s == L')') lists.emplace_back(cons, rdfrst, rnil);
+		else lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
 	}
 	do { ++s; } while (iswspace(*s));
 	return mkbnode(pstr(head));

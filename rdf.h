@@ -100,7 +100,7 @@ private:
 	pnode readlit();
 	pnode readvar();
 	pnode readbnode();
-	pnode rdfrst, rdffst;
+	pnode rdfrst, rdffst, rnil;
 public:
 	parse_nqline(const wchar_t *s);
 	~parse_nqline();

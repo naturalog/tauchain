@@ -20,8 +20,6 @@
 #include <dlfcn.h>
 
 using namespace boost::algorithm;
-
-int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke;
 int _indent = 0;
 
 etype littype(string s);
@@ -126,7 +124,7 @@ prover::termid prover::list_next(prover::termid cons, proof& p) {
 }
 
 prover::termid prover::list_first(prover::termid cons, proof& p) {
-	if (!cons) return 0;
+	if (!cons || get(cons).p == rdfnil) return 0;
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, va));

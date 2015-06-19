@@ -16,7 +16,7 @@
 #include <list>
 
 string indent();
-
+using std::endl;
 #ifdef DEBUG
 #define TRACE(x) if (_indent + (int)proc.size() < level) { dout << indent(); x; }
 #else

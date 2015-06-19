@@ -9,6 +9,7 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
+int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil;
 
 void bidict::init() {
 	GND = set (mkiri(pstr( L"GND" )));
@@ -16,6 +17,7 @@ void bidict::init() {
 	lognotEqualTo = set (mkiri(pstr(L"log:notEqualTo")));
 	rdffirst = set(mkiri(pstr(L"rdf:first")));
 	rdfrest = set(mkiri(pstr(L"rdf:rest")));
+	rdfnil = set(mkiri(pstr(L"rdf:nil")));
 	A = set(mkiri(pstr(L"a")));
 	rdfsResource = set(mkiri(pstr(L"rdfs:Resource")));
 	rdfList = set(mkiri(pstr(L"rdf:List")));
