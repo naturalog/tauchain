@@ -119,7 +119,7 @@ prover::termid prover::list_next(prover::termid cons, proof& p) {
 			r = get(x.first).o;
 			break;
 		}
-	TRACE(dout<<"current cons: " << format(cons) << " next cons: " << format(r) << std::endl);
+	TRACE(dout <<"current cons: " << format(cons)<< " next cons: " << format(r) << std::endl);
 	return r;
 }
 
@@ -160,17 +160,18 @@ uint64_t dlparam(const node& n) {
 
 std::vector<prover::termid> prover::get_list(prover::termid head, proof& p) {
 	setproc(L"get_list");
-	evidence e1 = e;
-	e.clear();
+//	evidence e1 = e;
+//	e.clear();
 	termid t = list_first(head, p);
 	std::vector<termid> r;
+	TRACE(dout<<"get_list with "<<format(head));
 	while (t) {
 		r.push_back(t);
 		head = list_next(head, p);
 		t = list_first(head, p);
 	}
-	e = e1;
-	TRACE(dout<<"get_list with "<<format(head)<<" returned "; for (auto n : r) dout<<n<<' '; dout << std::endl);
+//	e = e1;
+	TRACE(dout<<" returned " << r.size() << " items: "; for (auto n : r) dout<<format(n)<<' '; dout << std::endl);
 	return r;
 }
 
@@ -246,7 +247,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	else if (t.p == _invoke) {
 		typedef void*(*fptr)(void*);
-		auto params = get_list(t.o, *p);
+		auto params = get_list(t.s, *p);
 		if (params.size() != 2) return -1;
 		if (preddt(params[0]) != *XSD_PTR) return -1;
 		fptr func = (fptr)std::stol(predstr(params[0]));

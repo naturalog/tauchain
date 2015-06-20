@@ -37,6 +37,7 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		else if (dt == L"XSD_DECIMAL") r.datatype = XSD_DECIMAL;
 		else if (dt == L"XSD_ANYTYPE") r.datatype = XSD_ANYTYPE;
 		else if (dt == L"XSD_ANYURI") r.datatype = XSD_ANYURI;
+		else if (dt == L"XSD_PTR") r.datatype = XSD_PTR;
 		else r.datatype = datatype;
 	}
 	if ( language ) r.lang = language;
