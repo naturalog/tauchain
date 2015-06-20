@@ -160,6 +160,8 @@ uint64_t dlparam(const node& n) {
 
 std::vector<prover::termid> prover::get_list(prover::termid head, proof& p) {
 	setproc(L"get_list");
+	evidence e1 = e;
+	e.clear();
 	termid t = list_first(head, p);
 	std::vector<termid> r;
 	while (t) {
@@ -167,6 +169,7 @@ std::vector<prover::termid> prover::get_list(prover::termid head, proof& p) {
 		head = list_next(head, p);
 		t = list_first(head, p);
 	}
+	e = e1;
 	TRACE(dout<<"get_list with "<<format(head)<<" returned "; for (auto n : r) dout<<n<<' '; dout << std::endl);
 	return r;
 }
@@ -204,7 +207,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
-		std::vector<termid> params = get_list(i0, *p);
+		std::vector<termid> params = get_list(t.s, *p);
 		if (params.size() >= 2) {
 			void* handle;
 			try {
@@ -225,7 +228,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	else if (t.p == _dlsym) {
 		if (t1->p > 0) throw std::runtime_error("dlsym must be called with variable object.");
-		std::vector<termid> params = get_list(i0, *p);
+		std::vector<termid> params = get_list(t.s, *p);
 		void* handle;
 		try {
 			handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
@@ -243,7 +246,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	else if (t.p == _invoke) {
 		typedef void*(*fptr)(void*);
-		auto params = get_list(i1, *p);
+		auto params = get_list(t.o, *p);
 		if (params.size() != 2) return -1;
 		if (preddt(params[0]) != *XSD_PTR) return -1;
 		fptr func = (fptr)std::stol(predstr(params[0]));
