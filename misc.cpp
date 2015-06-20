@@ -105,7 +105,7 @@ bool startsWith ( const string& x, const string& y ) {
 
 string lower ( const string& s_ ) {
 	string s = s_;
-	std::transform ( s.begin(), s.end(), s.begin(), ::tolower );
+	std::transform ( s.begin(), s.end(), s.begin(), ::towlower );
 	return s;
 }
 
@@ -201,7 +201,7 @@ void prover::printr_substs(int r, const subst& s) {
 	printterm_substs(kb.head()[r], s);
 }
 
-string prover::formatr(int r, bool lf) {
+string prover::formatr(int r, bool) {
 	std::wstringstream ss;
 	ss << L"{ ";
 	if (!kb.body()[r].empty()) ss << format(kb.body()[r]);

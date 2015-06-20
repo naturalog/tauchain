@@ -140,12 +140,30 @@ prover::termid prover::list_first(prover::termid cons, proof& p) {
 	return r;
 }
 
-std::vector<node> prover::get_list(prover::termid head, proof& p) {
+uint64_t dlparam(const node& n) {
+	uint64_t p;
+	if (!n.datatype || !n.datatype->size() || *n.datatype == *XSD_STRING) {
+		p = (uint64_t)n.value->c_str();
+	} else {
+		uint64_t p;
+		const string &dt = *n.datatype, &v = *n.value;
+		if (dt == *XSD_BOOLEAN) p = (lower(v) == L"true");
+		else if (dt == *XSD_DOUBLE) {
+			double d;
+			d = std::stod(v);
+			memcpy(&p, &d, 8);
+		} else if (dt == *XSD_INTEGER || dt == *XSD_PTR)
+			p = std::stol(v);
+	}
+	return p;
+}
+
+std::vector<prover::termid> prover::get_list(prover::termid head, proof& p) {
 	setproc(L"get_list");
 	termid t = list_first(head, p);
-	std::vector<node> r;
+	std::vector<termid> r;
 	while (t) {
-		r.push_back(dict[get(t).p]);
+		r.push_back(t);
 		head = list_next(head, p);
 		t = list_first(head, p);
 	}
@@ -153,11 +171,14 @@ std::vector<node> prover::get_list(prover::termid head, proof& p) {
 	return r;
 }
 
-void* testfunc(void*) {
-	derr <<std::endl<< "***** Test func called ******" << std::endl;
+void* testfunc(void* p) {
+	derr <<std::endl<< "***** Test func called ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());
 //	return 0;
 }
+
+string prover::predstr(prover::termid t) { return *dict[get(t).p].value; }
+string prover::preddt(prover::termid t) { return *dict[get(t).p].datatype; }
 
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	setproc(L"builtin");
@@ -168,6 +189,10 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	term r1, r2;
 	const term *t0 = i0 ? &(r1=get(i0=evaluate(t.s, p->s))) : 0;
 	const term* t1 = i1 ? &(r2=get(i1=evaluate(t.o, p->s))) : 0;
+	TRACE(	dout<<"called with term " << format(id); 
+		if (t0) dout << " subject = " << format(i0);
+		if (t1) dout << " object = " << format(i0);
+		dout << endl);
 	if (t.p == GND) r = 1;
 	else if (t.p == logequalTo)
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
@@ -179,17 +204,15 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
-		std::vector<node> params = get_list(i0, *p);
+		std::vector<termid> params = get_list(i0, *p);
 		if (params.size() >= 2) {
 			void* handle;
 			try {
-				handle = dlopen(ws(params[0].value).c_str(), std::stol(*params[1].value));
+				handle = dlopen(ws(predstr(params[0])).c_str(), std::stol(predstr(params[1])));
 			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-			pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-			termid s;
-			p->s[get(t.o).p] = s = make(dict.set(n), 0, 0);
-			TRACE(dout<<"subst for " << format(t.o) << " is " << format(s)<<std::endl);
+			pnode n = mkliteral(tostr((uint64_t)handle), XSD_PTR, 0);
+			p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 			r = 1;
 		}
 	}
@@ -202,30 +225,30 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	else if (t.p == _dlsym) {
 		if (t1->p > 0) throw std::runtime_error("dlsym must be called with variable object.");
-		std::vector<node> params = get_list(i0, *p);
+		std::vector<termid> params = get_list(i0, *p);
 		void* handle;
 		try {
-			handle = dlsym((void*)std::stol(*params[0].value), ws(params[1].value).c_str());
+			handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
 		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
+		pnode n = mkliteral(tostr((uint64_t)handle), XSD_PTR, 0);
 		p->s[t1->p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == _dlclose) {
 		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
 		pnode n = mkliteral(tostr(ws(dlerror())), 0, 0);
-		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(*dict[t.p].value))), XSD_INTEGER, 0)), 0, 0);
+		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(*dict[t.p].value))), XSD_PTR, 0)), 0, 0);
 		r = 1;
 	}
 	else if (t.p == _invoke) {
-//		if (dict[t0->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer subject as func ptr.");
-//		if (dict[t1->p].datatype != XSD_INTEGER) throw std::runtime_error("invoke must be called with integer object as params ptr.");
 		typedef void*(*fptr)(void*);
-		fptr func = &testfunc;//(fptr)std::stol(*dict[t0->p].value);
-		void* params = 0;
-		try { if (t1 && dict[t1->p].value) params = (void*)std::stol(*dict[t1->p].value); }catch(...){}
-		void* res = (*func)(params);
+		auto params = get_list(i1, *p);
+		if (params.size() != 2) return -1;
+		if (preddt(params[0]) != *XSD_PTR) return -1;
+		fptr func = (fptr)std::stol(predstr(params[0]));
+		void* res;
+		if (params.size() == 1) res = (*func)((void*)dlparam(dict[*get_list(params[1],*p).begin()]));
 		pnode n = mkliteral(tostr((uint64_t)res), XSD_INTEGER, 0);
 		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
@@ -265,7 +288,7 @@ std::set<uint> prover::match(termid _e) {
 	return m;
 }
 
-void prover::step(proof* p, std::deque<proof*>& queue, bool del) {
+void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	setproc(L"step");
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size()) {
@@ -375,7 +398,7 @@ void prover::operator()(termset& goal, const subst* s) {
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) {
-	if (!id || id > _terms.size()) throw std::runtime_error("invalid term id passed to prover::get");
+	if (!id || id > (termid)_terms.size()) throw std::runtime_error("invalid term id passed to prover::get");
 	return _terms[id - 1]; 
 }
 
@@ -400,17 +423,25 @@ uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 	return _head.size()-1;
 }
 /*
-etype littype(string s) {
-	if (s == *XSD_BOOLEAN) return BOOLEAN;
-	if (s == *XSD_DOUBLE) return DOUBLE;
-	if (s == *XSD_INTEGER) return INT;
-	if (s == *XSD_FLOAT) return FLOAT;
-	if (s == *XSD_DECIMAL) return DECIMAL;
-	if (s == *XSD_ANYURI) return URISTR;
-	if (s == *XSD_STRING) return STR;
-	throw wruntime_error(L"Unidentified literal type" + s);
-}
+void* node::toptr() const {
+	if (!datatype || *datatype == *XSD_STRING) return (void*)value->c_str();
+	string s = *datatype;
+	int* r = new int;
+	if (s == *XSD_BOOLEAN) return ? L"true" : L"false";
+	if (s == *XSD_DOUBLE) return &(*r = (int)std::stod(*value));
+	if (s == *XSD_INTEGER) return &(*r = (int)std::stol(*value));
+	if (s == *XSD_FLOAT) return &(*r = (int)std::stof(*value));
+	delete r;
+	return (void*)value->c_str();
+*/
+//	return 0;
+//if (s == *XSD_DECIMAL) 
+//if (s == *XSD_ANYURI) 
+//	if (s == *XSD_STRING)
+//	throw wruntime_error(L"Unidentified literal type" + s);
+//
 
+/*
 pstring littype(etype s) {
 	if (s == BOOLEAN) return XSD_BOOLEAN;
 	if (s == DOUBLE) return XSD_DOUBLE;
