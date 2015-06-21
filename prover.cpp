@@ -106,11 +106,16 @@ bool prover::euler_path(proof* p, termid t) {
 	return ep;
 }
 
+prover::termid prover::tmpvar() {
+	static int last = 1;
+	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
+}
+
 prover::termid prover::list_next(prover::termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
-	ts.push_back(make(rdfrest, cons, va));
+	ts.push_back(make(rdfrest, cons, tmpvar()));
 	(*this)( ts , &p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
@@ -127,7 +132,7 @@ prover::termid prover::list_first(prover::termid cons, proof& p) {
 	if (!cons || get(cons).p == rdfnil) return 0;
 	setproc(L"list_first");
 	termset ts;
-	ts.push_back(make(rdffirst, cons, va));
+	ts.push_back(make(rdffirst, cons, tmpvar()));
 	(*this)( ts , &p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
@@ -212,7 +217,9 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		if (params.size() >= 2) {
 			void* handle;
 			try {
-				handle = dlopen(ws(predstr(params[0])).c_str(), std::stol(predstr(params[1])));
+				string f = predstr(params[0]);
+				if (f == L"0") handle = dlopen(0, std::stol(predstr(params[1])));
+				else handle = dlopen(ws(f).c_str(), std::stol(predstr(params[1])));
 			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
 			pnode n = mkliteral(tostr((uint64_t)handle), XSD_PTR, 0);
@@ -263,6 +270,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		termset ts(2);
+		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
 		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts, this), 0, p, subst(), p->g)/*, queue, false*/);
@@ -370,7 +378,6 @@ prover::prover(prover::ruleset* _kb/*, prover::termset* query*/) : kb(_kb ? *_kb
 	kbowner = !_kb;
 	_terms.reserve(max_terms);
 //	goalowner = !query;
-	va = make(mkiri(pstr(L"?A")));
 	CL(initcl());
 }
 

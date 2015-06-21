@@ -184,6 +184,11 @@ template<typename T> pstring tostr ( T t ) {
 	s << t;
 	return pstr(s.str());
 }
+template<typename T> string _tostr ( T t ) {
+	std::wstringstream s;
+	s << t;
+	return s.str();
+}
 
 
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;

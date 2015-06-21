@@ -147,7 +147,7 @@ typedef int prop_t;
 	uint last_rule, last_term;
 	cl::Buffer clterms, clrule, clresult;
 #endif
-	termid va;
+//	termid va;
 	qdb quads;
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
@@ -156,4 +156,5 @@ typedef int prop_t;
 	bool kbowner, goalowner;
 	string predstr(prover::termid t);
 	string preddt(prover::termid t);
+	prover::termid tmpvar();
 };
