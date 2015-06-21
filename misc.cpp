@@ -124,7 +124,7 @@ string prover::format(termid id) {
 	std::wstringstream ss;
 	if (p.s)
 		ss << format (p.s);
-	ss << L' ' << p.p << ':' << dstr(p.p) << L' ';
+	ss << L" [" << id << ':' << p.p << ']' << dstr(p.p) << L' ';
 	if (p.o)
 		ss << format (p.o);
 	return ss.str();

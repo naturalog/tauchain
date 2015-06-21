@@ -228,19 +228,23 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = 1;
 	}
 	else if (t.p == _dlsym) {
-		if (t1->p > 0) throw std::runtime_error("dlsym must be called with variable object.");
-		std::vector<termid> params = get_list(t.s, *p);
-		void* handle;
-		try {
-			handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
-		} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
-		catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-		pnode n = mkliteral(tostr((uint64_t)handle), XSD_PTR, 0);
-		p->s[t1->p] = make(dict.set(n), 0, 0);
-		r = 1;
+//		if (t1) throw std::runtime_error("dlsym must be called with variable object.");
+		if (!t1) {
+			std::vector<termid> params = get_list(t.s, *p);
+			void* handle;
+			if (params.size() {
+				try {
+					handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
+				} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
+				catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
+				pnode n = mkliteral(tostr((uint64_t)handle), XSD_PTR, 0);
+				p->s[t1->p] = make(dict.set(n), 0, 0);
+				r = 1;
+			}
+		}
 	}
 	else if (t.p == _dlclose) {
-		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
+//		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
 		pnode n = mkliteral(tostr(ws(dlerror())), 0, 0);
 		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(*dict[t.p].value))), XSD_PTR, 0)), 0, 0);
 		r = 1;

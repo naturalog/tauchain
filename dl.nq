@@ -1,6 +1,9 @@
-( "0"^^<XSD_PTR> "0"^^<XSD_PTR> ) <dlfcn:dlopen> ?handle . 
-( ?handle  "testfunc"^^<XSD_STRING> ) <dlfcn:dlsym> ?sym . 
-{( ?sym ( "1"^^<XSD_INTEGER> "hello"^^<XSD_STRING> "99"^^<XSD_INTEGER> "world"^^<XSD_STRING>  ) ) <dlfcn:invoke> ?returnval } => { ?returnval <a> <y> } .
+( "0"^^<XSD_PTR> "1"^^<XSD_PTR> ) <dlfcn:dlopen> ?handle _A . 
+( ?handle  "testfunc"^^<XSD_STRING> ) <dlfcn:dlsym> ?sym _B . 
+( ?sym ( "1"^^<XSD_INTEGER> "hello"^^<XSD_STRING> "99"^^<XSD_INTEGER> "world"^^<XSD_STRING>  ) ) <dlfcn:invoke> ?returnval _C .
+_A => _B . 
+_B => _C . 
+_C => { ?returnval <a> <y> } . 
 fin.
 ?x <a> <y>.
 fin.
