@@ -232,7 +232,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		if (!t1) {
 			std::vector<termid> params = get_list(t.s, *p);
 			void* handle;
-			if (params.size() {
+			if (params.size()) {
 				try {
 					handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
 				} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
