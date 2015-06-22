@@ -4,6 +4,10 @@
 #include "prover.h"
 #include "match.h"
 
+#ifdef marpa
+#include "marpa.cpp"
+#endif
+
 #ifdef DEBUG
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );

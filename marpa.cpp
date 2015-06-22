@@ -1,19 +1,19 @@
 #include "prover.h"
-//#include "marpa.h"
+//#include "marpa.h"//not yet
 #include <boost/regex.hpp>
+#include <boost/fusion/include/at_key.hpp>
 #include "object.h"
 #include "cli.h"
+#include "rdf.h"
 
-using namespace std;
-using namespace prover;
-
-const string pmatches = "http://www.w3.org/2000/10/swap/grammar/bnf#matches";
-const string pmbos = "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence";
+const pnode pmatches = mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
+const pnode pmustbos = mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
 
 /*typedef Marpa_Symbol_ID sym;
 typedef Marpa_Rule_ID rule;*/
 typedef size_t pos;
 typedef int sym;
+typedef std::vector<sym> syms;
 typedef int rule;
 struct Marpa{
 	uint num_syms = 0;
@@ -21,9 +21,9 @@ struct Marpa{
 	map<sym,boost::regex> regexes;
 	map<sym,string> names;
 	map<pos,size_t> lengths;
-	reasoner &grmr;
+	prover grmr;
 
-	void load_grammar(reasoner _grmr, string root)
+	void load_grammar(prover _grmr, pnode root)
 	{
 		grmr = _grmr;
 		sym start = add(root);
@@ -32,13 +32,16 @@ struct Marpa{
 	}
 
 	//create marpa symbols and rules from grammar description in rdf
-	sym add(string x)
+	sym add(pnode thing)
 	{
 		sym s = symbol_new();
-		term var("?X");
-		term bind;
-		if ((bind = grmr.query(term(pmbos, term(x), var))[var]))
-			//mbos is supposed to be a list of lists
+		auto var = mkiri(pstr(L"?X"));
+		std::list<pquad> q;
+		q.insert(q.begin(), make_shared<quad>(quad(thing, pmustbos, var)));
+		grmr(q);
+		auto evid = grmr.e.at(dict[var]);
+		auto lol = boost::fusion::at_key<std::pair<prover::termid, prover::ground>>(s).first();
+		//mbos is supposed to be a list of lists
 		/*for i in x[pmbos]
 		rule_new(x, add_list(i))
 		elif x.has(pmatches)
@@ -77,15 +80,15 @@ sym symbol_new()
 	return 5;//check_int(marpa_g_symbol_new(g));
 }
 
-rule_id rule_new(sym lhs, syms rhs) {
+rule rule_new(sym lhs, syms rhs) {
 		return 5;//check_int(marpa_g_rule_new(g, lhs, rhs, rds.size()));
 	}
 
-rule_id sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=false){
+rule sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=false){
 	return 5;//check_int(marpa_g_sequence_new(g, lhs, rhs, separator, min, proper ? MARPA_PROPER_SEPARATION : 0));
 }
 
-void precompute(s):
+void precompute(){
 	//check_int(marpa_g_precompute(g));
 	print_events();
 }
@@ -141,8 +144,8 @@ int load_n3_cmd::operator() ( const strings& args )
 
 	Marpa m;
 	m.load_grammar(
-		reasoner("n3-grammar.jsonld"), 
-		"http://www.w3.org/2000/10/swap/grammar/n3#document"));
+		prover(convert(load_json("n3-grammar.jsonld"))), 
+		mkiri(L"http://www.w3.org/2000/10/swap/grammar/n3#document"));
 	//m.parse(args[2]);
 	return 0;
 }
@@ -152,6 +155,11 @@ int load_n3_cmd::operator() ( const strings& args )
 
 
 /*
+---------------------
+
+
+
+
 
 	Grammar()
 	{

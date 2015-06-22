@@ -28,7 +28,8 @@ debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3
 cl: CXXFLAGS += -DOPENCL
 irc: CXXFLAGS += -DIRC -DDEBUG
-marpa: CXXFLAGS += -Dmarpa OBJECTS += marpa.o
+marpa: CXXFLAGS += -Dmarpa 
+marpa: OBJECTS += marpa.o
 
 marpa: $(OBJECTS) marpa.o $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o tau $(LDFLAGS)

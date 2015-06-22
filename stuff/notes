@@ -9,3 +9,8 @@ the nodes talk, as long as it is some valid encoding of quads?
 
 intro:
 http://sourceforge.net/p/eulersharp/code/HEAD/tree/trunk/2006/02swap/classes/Euler4.js
+
+
+
+
+env CC="clang++-3.6 -Xclang -fcolor-diagnostics" make -e  marpa 2>&1 | less -R

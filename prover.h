@@ -32,6 +32,7 @@ class prover {
 public:
 	typedef i64 termid;
 	typedef i64 resid;
+
 	class term {
 	public:
 		term();
@@ -75,10 +76,17 @@ public:
 */
 	prover ( qdb );
 	prover ( ruleset* kb = 0 );
+	prover ( string filename );
 	void operator()(termset& goal, const subst* s = 0);
 	void operator()(qlist goal, const subst* s = 0);
 	const term& get(termid id);
 	~prover();
+
+	typedef u64 ruleid;
+	typedef boost::container::list<std::pair<ruleid, subst>> ground;
+	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+	evidence e;
+
 private:
 #ifdef OPENCL
 typedef cl_short prop_t;
@@ -86,9 +94,6 @@ typedef
 #else
 typedef int prop_t;
 #endif
-	typedef u64 ruleid;
-	typedef boost::container::list<std::pair<ruleid, subst>> ground;
-	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 
 	boost::container::vector<term> _terms;
 	friend ruleset;
@@ -152,7 +157,6 @@ typedef int prop_t;
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
 	std::vector<termid> get_list(termid head, proof& p);
-	evidence e;
 	bool kbowner, goalowner;
 	string predstr(prover::termid t);
 	string preddt(prover::termid t);
