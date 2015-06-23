@@ -405,7 +405,7 @@ void prover::operator()(termset& goal, const subst* s) {
 		queue.pop_back();
 		step(q, queue);
 	} while (!queue.empty());
-	/*TRACE*/dout << KWHT << "Evidence:" << endl << ejson()->toString() << KNRM;
+	TRACE(dout << KWHT << "Evidence:" << endl << ejson()->toString() << KNRM);
 //	return results();
 }
 
