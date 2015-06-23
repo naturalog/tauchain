@@ -268,7 +268,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
-	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
+	else if ((/*t.p == A || */t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		termset ts(2);
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
@@ -405,7 +405,7 @@ void prover::operator()(termset& goal, const subst* s) {
 		queue.pop_back();
 		step(q, queue);
 	} while (!queue.empty());
-	TRACE(dout << KWHT << "Evidence:" << endl << ejson()->toString() << KNRM);
+	TRACE(dout << KWHT << "Evidence:" << endl << ejson()->toString() << KNRM);//printe();
 //	return results();
 }
 
@@ -539,12 +539,14 @@ pobj prover::json(ruleid t) const {
 	return m;
 };
 pobj prover::json(const ground& g) const {
-	psomap_obj o = mk_somap_obj();
+	pobj l = mk_olist_obj();
 	for (auto x : g) {
+		psomap_obj o = mk_somap_obj();
 		(*o->MAP())[L"src"] = json(x.first);
 		(*o->MAP())[L"env"] = json(x.second);
+		l->LIST()->push_back(o);
 	}
-	return o;
+	return l;
 }
 pobj prover::ejson() const {
 //	typedef map<resid, set<std::pair<termid, ground>>> evidence;
@@ -557,7 +559,6 @@ pobj prover::ejson() const {
 			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
 			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
 			(*t1->MAP())[L"args"] = json(y.second);
-						
 			l->LIST()->push_back(t);
 		}
 		(*o->MAP())[dstr(x.first)] = l;
