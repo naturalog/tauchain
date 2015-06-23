@@ -1022,6 +1022,6 @@ map<string, string> jsonld_api::bnode_id_map;
 void* curl = curl_easy_init();
 
 string obj::toString() {
-	return json_spirit::write_string ( convert ( *this ), json_spirit::pretty_print );
+	return json_spirit::write_string ( convert ( *this ), json_spirit::/*pretty_print*/single_line_arrays  );
 }
 
