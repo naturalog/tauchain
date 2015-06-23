@@ -412,7 +412,7 @@ void prover::operator()(termset& goal, const subst* s) {
 
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
-const prover::term& prover::get(termid id) {
+const prover::term& prover::get(termid id) const {
 	if (!id || id > (termid)_terms.size()) throw std::runtime_error("invalid term id passed to prover::get");
 	return _terms[id - 1]; 
 }

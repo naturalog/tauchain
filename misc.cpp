@@ -118,15 +118,23 @@ string KMAG = L"\x1B[35m";
 string KCYN = L"\x1B[36m";
 string KWHT = L"\x1B[37m";
 
-string prover::format(termid id) {
-	if (!id) return L"";
+string prover::format(termid id, bool json) {
+	if (!json) {
+		if (!id) return L"";
+		const term p = get(id);
+		std::wstringstream ss;
+		if (p.s) ss << format (p.s);
+		ss << L" [" << id << ':' << p.p << ']' << dstr(p.p) << L' ';
+		if (p.o) ss << format (p.o);
+		return ss.str();
+	}
+	if (!id) return L"{}";
 	const term p = get(id);
 	std::wstringstream ss;
-	if (p.s)
-		ss << format (p.s);
-	ss << L" [" << id << ':' << p.p << ']' << dstr(p.p) << L' ';
-	if (p.o)
-		ss << format (p.o);
+	ss << L"{\"pred\":\"" << dstr(p.p) << L"\",\"args:\":[";
+	if (p.s) ss << format (p.s, true);
+	if (p.o) ss << format (p.o, true);
+	ss << L"]}";
 	return ss.str();
 }
 
@@ -154,18 +162,24 @@ void prover::printp(proof* p) {
 //	}
 //}
 
+string prover::formats(const subst& s, bool json) {
+	std::wstringstream ss;
+	for (auto x : s)
+		ss << L"\"" << dstr(x.first) << L"\":" << format(x.second, json) << L',';
+	return ss.str();
+}
+
 void prover::prints(const subst& s) {
 	for (auto x : s)
 		dout << dstr(x.first) << L" / " << format(x.second) << ' ';
 }
 
-string prover::format(const termset& l, bool lf) {
+string prover::format(const termset& l, bool json) {
 	std::wstringstream ss;
 	auto x = l.begin();
 	while (x != l.end()) {
 		ss << format (*x);
-		if (++x != l.end())
-			lf ? ss << std::endl : ss << L',';
+		if (++x != l.end()) ss << L',';
 	}
 	return ss.str();
 }
@@ -201,21 +215,34 @@ void prover::printr_substs(int r, const subst& s) {
 	printterm_substs(kb.head()[r], s);
 }
 
-string prover::formatr(int r, bool) {
+string prover::formatr(int r, bool json) {
 	std::wstringstream ss;
-	ss << L"{ ";
-	if (!kb.body()[r].empty()) ss << format(kb.body()[r]);
-	ss  << L"} => ";
-	if (kb.head()[r]) 	ss << format(kb.head()[r]);
-	//if (kb.body()[r].empty())
- 	ss << L".";
-//	if (lf) ss << std::endl;
+	if (!json) {
+		ss << L"{ ";
+		if (!kb.body()[r].empty()) ss << format(kb.body()[r]);
+		ss  << L"} => ";
+		if (kb.head()[r]) 	ss << format(kb.head()[r]);
+	 	ss << L".";
+		return ss.str();
+	}
+	ss << L"{\"head\":"<<format(kb.head()[r],true)<<L",\"body\":[";
+	for (const termset& ts : kb.body()) ss << format(ts, true) << L',';
+ 	ss << L"]},";
 	return ss.str();
 }
 
 string prover::formatkb() {
 	std::wstringstream ss;
-	for (uint n = 0; n < kb.size(); ++n) ss << formatr(n, true) << std::endl;
+	for (uint n = 0; n < kb.size(); ++n) ss << formatr(n) << std::endl;
+	return ss.str();
+}
+
+string prover::formatg(const ground& g, bool json) {
+	std::wstringstream ss;
+	for (auto x : g) {
+		ss << format(x.first), printr_substs(x.first, x.second);
+		ss << std::endl;
+	}
 	return ss.str();
 }
 
@@ -227,6 +254,33 @@ void prover::printg(const ground& g) {
 	}
 }
 
+pobj prover::term::json(const prover& pr) const {
+	pobj r = mk_somap_obj(), l;
+	(*r->MAP())[L"pred"] = mk_str_obj(dict[p].tostring());
+	(*r->MAP())[L"args"] = l = mk_olist_obj();
+	if (s) l->LIST()->push_back(pr.get(s).json(pr));
+	if (p) l->LIST()->push_back(pr.get(o).json(pr));
+	return r;
+}
+/*
+void prover::jprinte() {
+//	typedef boost::container::list<std::pair<ruleid, subst>> ground;
+//	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+	pobj a = mk_somap_obj(), l, m, g;
+	for (auto y : e) {
+		(*a->MAP())[dict[y.first].tostring()] = l = mk_olist_obj();
+          evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
+
+		for (auto x : y.second) {
+			l->LIST()->push_back(m = mk_somap_obj());
+			(*m->MAP())[x.first] = g = mk_somap_obj();
+			for (auto z : x.second) (*g->MAP())[
+//			dout << indent() << format(x.first) << L" <= " << std::endl;
+//			printg(x.second);
+		}
+	}
+}
+*/
 void prover::printe() {
 	for (auto y : e)
 		for (auto x : y.second) {

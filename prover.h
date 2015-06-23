@@ -42,6 +42,7 @@ public:
 		resid p;
 		termid s, o;
 		bool isstr() const;
+		pobj json(const prover&) const;
 	};
 	typedef boost::container::vector<termid> termset;
 	typedef boost::container::map<resid, termid> subst;
@@ -79,7 +80,7 @@ public:
 	prover ( string filename );
 	void operator()(termset& goal, const subst* s = 0);
 	void operator()(qlist goal, const subst* s = 0);
-	const term& get(termid id);
+	const term& get(termid id) const;
 	~prover();
 
 	typedef u64 ruleid;
@@ -128,17 +129,19 @@ typedef int prop_t;
 	std::set<uint> match(termid e);
 	termid quad2term(const quad& p);
 
-	string format(termid id);
-	string format(const termset& l, bool lf = false);
-	string formatr(int r, bool lf = false);
+	string format(termid id, bool json = false);
+	string format(const termset& l, bool json = false);
+	string formatr(int r, bool json = false);
 	string formatkb();
 	void printp(proof* p);
 	void prints(const subst& s);
+	string formats(const subst& s, bool json = false);
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);
 	void printr_substs(int r, const subst& s);
 	void printg(const ground& g);
 	void printe();
+	void jprinte();
 
 #ifdef OPENCL
 	void initcl();
@@ -160,5 +163,6 @@ typedef int prop_t;
 	bool kbowner, goalowner;
 	string predstr(prover::termid t);
 	string preddt(prover::termid t);
-	prover::termid tmpvar();
+	termid tmpvar();
+	string formatg(const ground& g, bool json = false);
 };
