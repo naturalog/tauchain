@@ -60,7 +60,6 @@ pnode mkiri ( pstring iri ) {
 
 pnode mkbnode ( pstring attribute ) {
 	node r ( node::BNODE );
-	(dout << *attribute << std::endl).flush();
 	r.value = attribute;
 	auto it =  dict.nodes.find(*r.value);
 	if (it != dict.nodes.end()) return it->second;

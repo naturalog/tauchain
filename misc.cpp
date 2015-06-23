@@ -259,13 +259,14 @@ pobj prover::term::json(const prover& pr) const {
 	(*r->MAP())[L"pred"] = mk_str_obj(dict[p].tostring());
 	(*r->MAP())[L"args"] = l = mk_olist_obj();
 	if (s) l->LIST()->push_back(pr.get(s).json(pr));
-	if (p) l->LIST()->push_back(pr.get(o).json(pr));
+	if (o) l->LIST()->push_back(pr.get(o).json(pr));
 	return r;
 }
 /*
 void prover::jprinte() {
 //	typedef boost::container::list<std::pair<ruleid, subst>> ground;
 //	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+
 	pobj a = mk_somap_obj(), l, m, g;
 	for (auto y : e) {
 		(*a->MAP())[dict[y.first].tostring()] = l = mk_olist_obj();

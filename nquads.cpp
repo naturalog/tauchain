@@ -146,16 +146,8 @@ std::list<quad> parse_nqline::operator()(string ctx/* = L"@default"*/) {
 			++s;
 		} else
 			graph = ctx;
-		for (auto d : lists) {
-			quad q(std::get<0>(d), std::get<1>(d), std::get<2>(d), L"@default"/*graph*/);
-			dout << q.tostring() << std::endl;
-			r.emplace_back(q);
-		}
-		for (auto x : preds) for (pnode object : x.second) {
-			quad q(subject, x.first, object, graph);
-			dout << q.tostring() << std::endl;
-			r.emplace_back(q);
-		}
+		for (auto d : lists) r.emplace_back(std::get<0>(d), std::get<1>(d), std::get<2>(d), L"@default"/*graph*/);
+		for (auto x : preds) for (pnode object : x.second) r.emplace_back(subject, x.first, object, graph);
 		lists.clear();
 		preds.clear();
 		while (iswspace(*s)) ++s;

@@ -405,8 +405,7 @@ void prover::operator()(termset& goal, const subst* s) {
 		queue.pop_back();
 		step(q, queue);
 	} while (!queue.empty());
-	TRACE(dout << KWHT << "Evidence:" << std::endl; 
-		printe(); dout << KNRM);
+	/*TRACE*/dout << KWHT << "Evidence:" << endl << ejson()->toString() << KNRM;
 //	return results();
 }
 
@@ -517,3 +516,53 @@ void prover::initcl() {
 	} catch (cl::Error err) { derr << err.what() << ':' << err.err() << std::endl; }
 }
 #endif 
+
+pobj prover::json(const termset& ts) const {
+	polist_obj l = mk_olist_obj(); 
+	for (termid t : ts) l->LIST()->push_back(get(t).json(*this));
+	return l;
+}
+pobj prover::json(const subst& s) const {
+	psomap_obj o = mk_somap_obj();
+	for (auto x : s) (*o->MAP())[dstr(x.first)] = get(x.second).json(*this);
+	return o;
+}
+pobj prover::ruleset::json(prover& p) const {
+	pobj o = mk_olist_obj();
+	for (ruleid t = 0; t < (ruleid)_head.size(); ++t) o->LIST()->push_back(p.json(t));
+	return o;
+};
+pobj prover::json(ruleid t) const {
+	pobj m = mk_somap_obj();
+	(*m->MAP())[L"head"] = get(kb.head()[t]).json(*this);
+	(*m->MAP())[L"body"] = json(kb.body()[t]);
+	return m;
+};
+pobj prover::json(const ground& g) const {
+	psomap_obj o = mk_somap_obj();
+	for (auto x : g) {
+		(*o->MAP())[L"src"] = json(x.first);
+		(*o->MAP())[L"env"] = json(x.second);
+	}
+	return o;
+}
+pobj prover::ejson() const {
+//	typedef map<resid, set<std::pair<termid, ground>>> evidence;
+	pobj o = mk_somap_obj(), q;
+	for (auto x : e) {
+		polist_obj l = mk_olist_obj();
+		for (auto y : x.second) {
+			psomap_obj t = mk_somap_obj();
+			(*t->MAP())[L"head"] = get(y.first).json(*this);
+			(*t->MAP())[L"body"] = q = mk_olist_obj();
+			
+			l->LIST()->push_back(t);
+		}
+		(*o->MAP())[dstr(x.first)] = l;
+	}
+	return o;
+}
+//evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
+//g.push({src:rl, env:{}})
+//e[node]: [ { (rule) "head":term, "body": { "pred":"GND", args: [ {"src":(rule), "env":(subst)  ] }, {...}  ]
+//	typedef boost::container::list<std::pair<ruleid, subst>> ground;

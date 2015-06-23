@@ -44,6 +44,7 @@ public:
 		bool isstr() const;
 		pobj json(const prover&) const;
 	};
+	typedef u64 ruleid;
 	typedef boost::container::vector<termid> termset;
 	typedef boost::container::map<resid, termid> subst;
 	class ruleset {
@@ -54,6 +55,7 @@ public:
 		const boost::container::vector<termset>& body() const { return _body; }
 		uint add(termid t, const termset& ts, prover*);
 		uint size() { return _head.size(); }
+		pobj json(prover&) const;
 	};
 /*	std::list<termid> find(resid pred, termid v, const subst& s, bool get_subject) {
 		auto h = kb.head().begin();
@@ -83,7 +85,6 @@ public:
 	const term& get(termid id) const;
 	~prover();
 
-	typedef u64 ruleid;
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 	evidence e;
@@ -165,4 +166,9 @@ typedef int prop_t;
 	string preddt(prover::termid t);
 	termid tmpvar();
 	string formatg(const ground& g, bool json = false);
+	pobj json(const termset& ts) const;
+	pobj json(const subst& ts) const;
+	pobj json(const ground& g) const;
+	pobj json(ruleid rl) const;
+	pobj ejson() const;
 };
