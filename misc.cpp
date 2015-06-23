@@ -76,25 +76,6 @@ string dstr ( int p ) {
 	if ( s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 }
-/*
-std::wostream& operator<< ( std::wostream& o, const predicate& p ) {
-	if ( p.args.size() == 2 ) 
-	return o << dstr ( p.args[0]->pred ) << ' ' << dstr ( p.pred ) << ' ' << dstr ( p.args[1]->pred ) << " .";
-	o << dstr ( p.pred );
-	return p.args.empty() ? o : o << p.args;
-}
-
-std::wostream& operator<< ( std::wostream& o, const predlist& l ) {
-	if ( l.empty() ) return o << L"[]";
-	o << L'[';
-	for ( predlist::const_iterator it = l.cbegin();; ) {
-		o << **it;
-		if ( ++it == l.end() ) break;
-		else o << ',';
-	}
-	return o << L']';
-}
-*/
 bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
 }
@@ -154,13 +135,6 @@ void prover::printp(proof* p) {
 	dout << L"\n";
 	dout << KNRM;
 }
-
-//void prover::printq(const queue& q) {
-//	for (auto x : q) {
-//		printp(x);
-//		dout << std::endl;
-//	}
-//}
 
 string prover::formats(const subst& s, bool json) {
 	std::wstringstream ss;
@@ -262,26 +236,7 @@ pobj prover::term::json(const prover& pr) const {
 	if (o) l->LIST()->push_back(pr.get(o).json(pr));
 	return r;
 }
-/*
-void prover::jprinte() {
-//	typedef boost::container::list<std::pair<ruleid, subst>> ground;
-//	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 
-	pobj a = mk_somap_obj(), l, m, g;
-	for (auto y : e) {
-		(*a->MAP())[dict[y.first].tostring()] = l = mk_olist_obj();
-          evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
-
-		for (auto x : y.second) {
-			l->LIST()->push_back(m = mk_somap_obj());
-			(*m->MAP())[x.first] = g = mk_somap_obj();
-			for (auto z : x.second) (*g->MAP())[
-//			dout << indent() << format(x.first) << L" <= " << std::endl;
-//			printg(x.second);
-		}
-	}
-}
-*/
 void prover::printe() {
 	for (auto y : e)
 		for (auto x : y.second) {

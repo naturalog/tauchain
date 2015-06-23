@@ -548,14 +548,16 @@ pobj prover::json(const ground& g) const {
 }
 pobj prover::ejson() const {
 //	typedef map<resid, set<std::pair<termid, ground>>> evidence;
-	pobj o = mk_somap_obj(), q;
+	pobj o = mk_somap_obj();
 	for (auto x : e) {
 		polist_obj l = mk_olist_obj();
 		for (auto y : x.second) {
-			psomap_obj t = mk_somap_obj();
+			psomap_obj t = mk_somap_obj(), t1;
 			(*t->MAP())[L"head"] = get(y.first).json(*this);
-			(*t->MAP())[L"body"] = q = mk_olist_obj();
-			
+			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
+			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
+			(*t1->MAP())[L"args"] = json(y.second);
+						
 			l->LIST()->push_back(t);
 		}
 		(*o->MAP())[dstr(x.first)] = l;
