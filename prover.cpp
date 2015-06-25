@@ -27,12 +27,6 @@ string littype(etype s);
 
 const uint max_terms = 1024 * 1024;
 
-#ifdef DEBUG
-#define setproc(x) _setproc __setproc(x)
-#else
-#define setproc(x)
-#endif
-
 bool prover::hasvar(termid id) {
 	const term p = get(id);
 	setproc(L"hasvar");
@@ -157,7 +151,7 @@ uint64_t dlparam(const node& n) {
 			double d;
 			d = std::stod(v);
 			memcpy(&p, &d, 8);
-		} else if (dt == *XSD_INTEGER || dt == *XSD_PTR)
+		} else if (dt == *XSD_INTEGER /*|| dt == *XSD_PTR*/)
 			p = std::stol(v);
 	}
 	return p;
@@ -222,7 +216,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 				else handle = dlopen(ws(f).c_str(), std::stol(predstr(params[1])));
 			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-			pnode n = mkliteral(tostr((uint64_t)handle), XSD_PTR, 0);
+			pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 			p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 			r = 1;
 		}
@@ -244,7 +238,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 					handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
 				} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 				catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-				pnode n = mkliteral(tostr((uint64_t)handle), XSD_PTR, 0);
+				pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 				p->s[t1->p] = make(dict.set(n), 0, 0);
 				r = 1;
 			}
@@ -253,14 +247,14 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == _dlclose) {
 //		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
 		pnode n = mkliteral(tostr(ws(dlerror())), 0, 0);
-		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(*dict[t.p].value))), XSD_PTR, 0)), 0, 0);
+		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(*dict[t.p].value))), XSD_INTEGER, 0)), 0, 0);
 		r = 1;
 	}
 	else if (t.p == _invoke) {
 		typedef void*(*fptr)(void*);
 		auto params = get_list(t.s, *p);
 		if (params.size() != 2) return -1;
-		if (preddt(params[0]) != *XSD_PTR) return -1;
+		if (preddt(params[0]) != *XSD_INTEGER) return -1;
 		fptr func = (fptr)std::stol(predstr(params[0]));
 		void* res;
 		if (params.size() == 1) res = (*func)((void*)dlparam(dict[*get_list(params[1],*p).begin()]));

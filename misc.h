@@ -38,4 +38,11 @@ struct _setproc {
 	_setproc(const string& p);
 	~_setproc();
 };
+#ifdef DEBUG
+#define setproc(x) _setproc __setproc(x)
+#else
+#define setproc(x)
+#endif
+
+extern int _indent;
 #endif

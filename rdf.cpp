@@ -24,6 +24,8 @@ string node::tostring() const {
 }
 
 pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
+	setproc(L"mkliteral");
+	TRACE(dout << *value << endl);
 	node r ( node::LITERAL );
 	r.value = value;
 	if (!datatype) r.datatype = XSD_STRING;
@@ -37,7 +39,7 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		else if (dt == L"XSD_DECIMAL") r.datatype = XSD_DECIMAL;
 		else if (dt == L"XSD_ANYTYPE") r.datatype = XSD_ANYTYPE;
 		else if (dt == L"XSD_ANYURI") r.datatype = XSD_ANYURI;
-		else if (dt == L"XSD_PTR") r.datatype = XSD_PTR;
+//		else if (dt == L"XSD_PTR") r.datatype = XSD_PTR;
 		else r.datatype = datatype;
 	}
 	if ( language ) r.lang = language;
@@ -49,6 +51,8 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 }
 
 pnode mkiri ( pstring iri ) {
+	setproc(L"mkiri");
+	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
 	r.value = iri;
 	auto it =  dict.nodes.find(*r.value);
@@ -59,10 +63,15 @@ pnode mkiri ( pstring iri ) {
 }
 
 pnode mkbnode ( pstring attribute ) {
+	setproc(L"mkbnode");
+	TRACE(dout << *attribute << endl);
 	node r ( node::BNODE );
 	r.value = attribute;
 	auto it =  dict.nodes.find(*r.value);
-	if (it != dict.nodes.end()) return it->second;
+	if (it != dict.nodes.end()) {
+		TRACE(dout<<" returned existing node" << endl);
+		return it->second;
+	}
 	pnode pr = make_shared<node>(r); 
 	dict.set(pr);
 	return dict.nodes[*r.value] = pr;
@@ -226,7 +235,10 @@ quad::quad ( string subj, string pred, string value, pstring datatype, pstring l
 	quad ( subj, pred, mkliteral ( pstr(value), datatype, language ), graph ) { }
 
 quad::quad ( pnode s, pnode p, pnode o, string c ) :
-	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ) { }
+	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ) {
+		setproc(L"quad::ctor");
+		TRACE(dout<<tostring()<<endl);
+	}
 
 string quad::tostring ( ) const {
 	std::wstringstream ss;

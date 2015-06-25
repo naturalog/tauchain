@@ -100,9 +100,10 @@ private:
 	pnode readlit();
 	pnode readvar();
 	pnode readbnode();
-	pnode rdfrst, rdffst, rnil;
+	static pnode rdfrst, rdffst, rnil;
 	void readprefix();
 	std::list<std::pair<pnode, plist>> preds;
+	std::map<string, pnode> prefixes;
 public:
 	parse_nqline(const wchar_t *s);
 	~parse_nqline();
