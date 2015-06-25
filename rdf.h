@@ -85,7 +85,7 @@ private:
 };
 
 typedef std::shared_ptr<rdf_db> prdf_db;
-class parse_nqline {
+class nqparser {
 private:
 	wchar_t *t;
 	const wchar_t *s;
@@ -105,9 +105,9 @@ private:
 	std::list<std::pair<pnode, plist>> preds;
 	std::map<string, pnode> prefixes;
 public:
-	parse_nqline(const wchar_t *s);
-	~parse_nqline();
-	std::list<quad> operator()(string ctx = L"@default");
+	nqparser();
+	~nqparser();
+	std::list<quad> operator()(const wchar_t *s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );
 #endif

@@ -8,29 +8,29 @@
 #include "misc.h"
 using namespace boost::algorithm;
 
-parse_nqline::parse_nqline(const wchar_t* _s) : t(new wchar_t[4096]), s(_s) {
+nqparser::nqparser() : t(new wchar_t[4096]) {
 	if (rnil) return;
 	rdffst = mkiri(pstr(L"rdf:first")); 
 	rdfrst = mkiri(pstr(L"rdf:rest"));
 	rnil = mkiri(pstr(L"rdf:nil"));
 }
-parse_nqline::~parse_nqline() { delete[] t; }
-pnode parse_nqline::rdfrst = 0;
-pnode parse_nqline::rdffst = 0;
-pnode parse_nqline::rnil = 0;
+nqparser::~nqparser() { delete[] t; }
+pnode nqparser::rdfrst = 0;
+pnode nqparser::rdffst = 0;
+pnode nqparser::rnil = 0;
 
-pnode parse_nqline::readcurly() {
+pnode nqparser::readcurly() {
 	setproc(L"readcurly");
 	while (iswspace(*s)) ++s;
 	if (*s != L'{') return (pnode)0;
 	++s;
 	while (iswspace(*s)) ++s;
 	auto r = jsonld_api::gen_bnode_id();
-	auto t = (*this)(*r);
+	auto t = (*this)(s, *r);
 	return mkbnode(r);
 };
 
-pnode parse_nqline::readlist() {
+pnode nqparser::readlist() {
 	setproc(L"readlist");
 	if (*s != L'(') return (pnode)0;
 	static int lastid = 0;
@@ -56,7 +56,7 @@ pnode parse_nqline::readlist() {
 	return mkbnode(pstr(head));
 };
 
-pnode parse_nqline::readiri() {
+pnode nqparser::readiri() {
 	setproc(L"readiri");
 	while (iswspace(*s)) ++s;
 	if (*s == L'<') {
@@ -72,6 +72,7 @@ pnode parse_nqline::readiri() {
 	auto i = iri->find(L':');
 	if (i == string::npos) throw wruntime_error(string(L"expected ':' in iri: ") + string(s,0,48));
 	string p = iri->substr(0, ++i);
+	TRACE(dout<<"extracted prefix \"" << p <<L'\"'<< endl);
 	auto it = prefixes.find(p);
 	if (it != prefixes.end()) {
 		TRACE(dout<<"prefix: " << p << " subst: " << *it->second->value<<endl);
@@ -80,7 +81,7 @@ pnode parse_nqline::readiri() {
 	return mkiri(iri);
 };
 
-pnode parse_nqline::readbnode() {
+pnode nqparser::readbnode() {
 	setproc(L"readbnode");
 	while (iswspace(*s)) ++s;
 	if (*s != L'_') return pnode(0);
@@ -89,7 +90,7 @@ pnode parse_nqline::readbnode() {
 	return mkbnode(wstrim(t));
 };
 
-void parse_nqline::readprefix() {
+void nqparser::readprefix() {
 	setproc(L"readprefix");
 	while (iswspace(*s)) ++s;
 	if (*s != L'@') return;
@@ -99,13 +100,14 @@ void parse_nqline::readprefix() {
 	while (*s != L':') t[pos++] = *s++;
 	t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
-	TRACE(dout<<"reading prefix: " << t << endl);
-	prefixes[*wstrim(t)] = readiri();
+	pstring tt = wstrim(t);
+	TRACE(dout<<"reading prefix: \"" << *tt<<L'\"' << endl);
+	prefixes[*tt] = readiri();
 	while (*s != '.') ++s;
 	++s;
 };
 
-pnode parse_nqline::readvar() {
+pnode nqparser::readvar() {
 	setproc(L"readvar");
 	while (iswspace(*s)) ++s;
 	if (*s != L'?') return pnode(0);
@@ -115,7 +117,7 @@ pnode parse_nqline::readvar() {
 	return mkiri(wstrim(t));
 };
 
-pnode parse_nqline::readlit() {
+pnode nqparser::readlit() {
 	setproc(L"readlit");
 	while (iswspace(*s)) ++s;
 	if (*s != L'\"') return pnode(0);
@@ -141,7 +143,7 @@ pnode parse_nqline::readlit() {
 	return mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang));
 };
 
-pnode parse_nqline::readany(bool lit){
+pnode nqparser::readany(bool lit){
 	pnode pn;
 	readprefix();
 	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !(pn = readcurly()) && !(pn = readiri()) )
@@ -150,7 +152,8 @@ pnode parse_nqline::readany(bool lit){
 };
 
 
-std::list<quad> parse_nqline::operator()(string ctx/* = L"@default"*/) {
+std::list<quad> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
+	s = _s;
 	string graph;
 	pnode subject, pn;
 	pos = 0;
