@@ -41,6 +41,7 @@ pnode parse_nqline::readlist() {
 		while (iswspace(*s)) ++s;
 		if (*s == L')') lists.emplace_back(cons, rdfrst, rnil);
 		else lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
+		if (*s == L'.') while (iswspace(*s++));
 	}
 	do { ++s; } while (iswspace(*s));
 	return mkbnode(pstr(head));
@@ -61,6 +62,20 @@ pnode parse_nqline::readbnode() {
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	return mkbnode(wstrim(t));
+};
+
+void parse_nqline::readprefix() {
+	while (iswspace(*s)) ++s;
+	if (*s != L'@') return;
+	if (memcmp(s, L"@prefix ", 8*sizeof(*s)))
+			throw wruntime_error(string(L"@prefix expected: ") + string(s,0,48));
+	while (*s != L':') t[pos++] = *s++;
+	t[pos++] = *s++;
+	t[pos] = 0; pos = 0;
+	pstring p = wstrim(t);
+	pnode i = readiri();
+	r.emplace_back(mkiri(pstr(L"GND")), mkiri(p), i);
+	while (*s != '.') ++s;
 };
 
 pnode parse_nqline::readvar() {
@@ -99,7 +114,8 @@ pnode parse_nqline::readlit() {
 
 pnode parse_nqline::readany(bool lit){
 	pnode pn;
-	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readiri()) && !(pn = readlist()) && !(pn = readcurly())   )
+	readprefix();
+	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !(pn = readcurly()) && !(pn = readiri()) )
 		return (pnode)0;
 	return pn;
 };
@@ -108,7 +124,6 @@ pnode parse_nqline::readany(bool lit){
 std::list<quad> parse_nqline::operator()(string ctx/* = L"@default"*/) {
 	string graph;
 	pnode subject, pn;
-	std::list<std::pair<pnode, plist>> preds;
 	pos = 0;
 
 	while(*s) {

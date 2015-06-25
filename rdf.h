@@ -101,6 +101,8 @@ private:
 	pnode readvar();
 	pnode readbnode();
 	pnode rdfrst, rdffst, rnil;
+	void readprefix();
+	std::list<std::pair<pnode, plist>> preds;
 public:
 	parse_nqline(const wchar_t *s);
 	~parse_nqline();
