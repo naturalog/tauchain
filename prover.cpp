@@ -399,7 +399,7 @@ void prover::operator()(termset& goal, const subst* s) {
 		queue.pop_back();
 		step(q, queue);
 	} while (!queue.empty());
-	TRACE(dout << KWHT << "Evidence:" << endl << ejson()->toString() << KNRM);//printe();
+	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/dout << KNRM);
 //	return results();
 }
 
