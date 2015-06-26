@@ -78,7 +78,7 @@ pnode nqparser::readiri() {
 	if (it != prefixes.end()) {
 		TRACE(dout<<"prefix: " << p << " subst: " << *it->second->value<<endl);
 		iri = pstr(*it->second->value + iri->substr(i));
-	} else if (p == L":") iri = pstr(L"");
+	} //else if (p == L":") iri = pstr(L"");
 	return mkiri(iri);
 };
 
