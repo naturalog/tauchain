@@ -71,14 +71,14 @@ pnode nqparser::readiri() {
 	pstring iri = wstrim(t);
 	if (*iri == L"=>") return mkiri(pimplication);
 	auto i = iri->find(L':');
-	if (i == string::npos) throw wruntime_error(string(L"expected ':' in iri: ") + string(s,0,48));
+	if (i == string::npos) return mkiri(iri);//throw wruntime_error(string(L"expected ':' in iri: ") + string(s,0,48));
 	string p = iri->substr(0, ++i);
 	TRACE(dout<<"extracted prefix \"" << p <<L'\"'<< endl);
 	auto it = prefixes.find(p);
 	if (it != prefixes.end()) {
 		TRACE(dout<<"prefix: " << p << " subst: " << *it->second->value<<endl);
 		iri = pstr(*it->second->value + iri->substr(i));
-	}
+	} else if (p == L":") iri = pstr(L"");
 	return mkiri(iri);
 };
 

@@ -54,32 +54,11 @@ public:
 		termset _head;
 		boost::container::vector<termset> _body;
 	public:
-		const termset& head() const { return _head; }
-		const boost::container::vector<termset>& body() const { return _body; }
 		uint add(termid t, const termset& ts, prover*);
-		uint size() { return _head.size(); }
-		pobj json(prover&) const;
-	};
-/*	std::list<termid> find(resid pred, termid v, const subst& s, bool get_subject) {
-		auto h = kb.head().begin();
-		auto b = kb.body().begin();
-		std::list<termid> r;
-		termid t;
-		while (h != kb.head().end()) {
-			if (b->empty()) {
-//				if ((t = evaluate(*h, s))) {
-				if (t = *h) {
-					const term& tt = get(t);
-					if (tt.p == pred && get_subject ? tt.o == v : tt.s == v) 
-						r.push_back(get_subject ? tt.s : tt.o);
-				}
-			}
-			++h;
-			++b;
-		}
-		return r;
-	}
-*/
+		const termset& head() const				{ return _head; }
+		const boost::container::vector<termset>& body() const	{ return _body; }
+		uint size()						{ return _head.size(); }
+	} kb;
 	prover ( qdb );
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
@@ -118,9 +97,6 @@ typedef int prop_t;
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
 	void step (proof*, std::deque<proof*>&, bool del = true);
-	
-
-	ruleset kb;
 
 	void addrules(pquad q);
 

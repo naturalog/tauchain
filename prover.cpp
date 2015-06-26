@@ -262,7 +262,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
-	else if ((/*t.p == A || */t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
+	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		termset ts(2);
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
@@ -282,6 +282,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 }
 
 bool prover::maybe_unify(const term s, const term d) {
+//	std::deque<const term*> 
 	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
 		!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o)));
 }
@@ -291,7 +292,7 @@ std::set<uint> prover::match(termid _e) {
 	setproc(L"match");
 	std::set<uint> m;
 	termid h;
-	const term e = get(_e-1);
+	const term e = get(_e/*-1*/);
 	for (uint n = 0; n < kb.size(); ++n)
 		if (((h=kb.head()[n])) && maybe_unify(e, get(h)))
 			m.insert(n);
@@ -359,30 +360,25 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-//prover::prover ( ruleset* _kb/*, const qlist query*/ ) : prover(_kb) {
-//	for ( auto q : query ) goal.push_back( quad2term( *q ) );
-//}
 void prover::operator()(qlist query, const subst* s) {
 	termset goal;
 	for ( auto q : query ) goal.push_back( quad2term( *q ) );
 	return (*this)(goal, s);
 }
 
-prover::prover(prover::ruleset* _kb/*, prover::termset* query*/) : kb(_kb ? *_kb : *new ruleset) {//, goal(query ? *query : *new termset) {
+prover::prover(prover::ruleset* _kb) : kb(_kb ? *_kb : *new ruleset) {
 	kbowner = !_kb;
 	_terms.reserve(max_terms);
-//	goalowner = !query;
 	CL(initcl());
 }
 
 prover::~prover() { 
-	//if (kbowner) delete &kb; if (goalowner) delete &goal; 
 }
 
-prover::prover ( qdb qkb/*, qlist query*/ ) : prover() {
+prover::prover ( qdb qkb) : prover() {
 	quads = qkb;
-	for ( pquad quad : *quads.at(L"@default")) addrules(quad);
-//	for ( auto q : query ) goal.push_back( quad2term( *q ) );
+	for ( pquad quad : *quads.at(L"@default"))
+		addrules(quad);
 }
 
 void prover::operator()(termset& goal, const subst* s) {
@@ -425,9 +421,7 @@ prover::termid prover::make(resid p, termid s, termid o) {
 uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 	_head.push_back(t);
 	_body.push_back(ts);
-#ifdef DEBUG
-	if (!ts.size() && !p->get(t).s) throw 0;
-#endif	
+	TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 	return _head.size()-1;
 }
 /*
@@ -521,11 +515,6 @@ pobj prover::json(const subst& s) const {
 	for (auto x : s) (*o->MAP())[dstr(x.first)] = get(x.second).json(*this);
 	return o;
 }
-pobj prover::ruleset::json(prover& p) const {
-	pobj o = mk_olist_obj();
-	for (ruleid t = 0; t < (ruleid)_head.size(); ++t) o->LIST()->push_back(p.json(t));
-	return o;
-};
 pobj prover::json(ruleid t) const {
 	pobj m = mk_somap_obj();
 	(*m->MAP())[L"head"] = get(kb.head()[t]).json(*this);
