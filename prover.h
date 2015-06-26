@@ -70,6 +70,7 @@ public:
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 	evidence e;
+	termid tmpvar();
 
 private:
 #ifdef OPENCL
@@ -143,7 +144,6 @@ typedef int prop_t;
 	bool kbowner, goalowner;
 	string predstr(prover::termid t);
 	string preddt(prover::termid t);
-	termid tmpvar();
 	string formatg(const ground& g, bool json = false);
 	pobj json(const termset& ts) const;
 	pobj json(const subst& ts) const;
