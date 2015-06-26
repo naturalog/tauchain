@@ -9,7 +9,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#objecttail",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -30,7 +30,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statements_optional",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -63,7 +63,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statementlist",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -93,7 +93,7 @@
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#document",
       "@type": "rul:Used",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -110,7 +110,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#symbol",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -131,7 +131,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -153,7 +153,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#subject",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -167,7 +167,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathlist",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -187,7 +187,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#dtlang",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -213,7 +213,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#boolean",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               "@true"
@@ -230,7 +230,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#simpleStatement",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -247,7 +247,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#existential",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               "@forSome",
@@ -262,7 +262,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#declaration",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               "@base",
@@ -301,7 +301,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#numericliteral",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -345,7 +345,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#propertylist",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -381,7 +381,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#rational",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -405,7 +405,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statement",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -440,7 +440,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathtail",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -471,7 +471,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#formulacontent",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -485,7 +485,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#universal",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               "@forAll",
@@ -500,7 +500,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statementtail",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -518,7 +518,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathitem",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -596,7 +596,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#propertylisttail",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": []
           },
@@ -622,7 +622,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#object",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -667,7 +667,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#predicate",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
@@ -723,7 +723,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#literal",
       "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
-        "@list": [
+        "@set": [
           {
             "@list": [
               {
