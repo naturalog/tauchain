@@ -126,19 +126,14 @@ void error()
 
 
 class load_n3_cmd : public cmd_t {
-std::string desc()
+public:
+virtual std::string desc() const {return "load n3";}
+virtual std::string help() const 
 {
-	return "load n3";
-}
-std::string help()
-{
-	stringstream ss("Usage:");
-	ss << endl << "\ttau expand [JSON-LD input filename]";
-	ss << endl << "\ttau expand [JSON-LD input filename] [JSON-LD output to compare to]";
-	ss << endl << "If input filename is unspecified, reads from stdin." << endl;
+	stringstream ss("Hilfe! Hilfe!:");
 	return ss.str();
 }
-int operator() ( const strings& args )
+virtual int operator() ( const strings& args )
 {
 	Marpa m;
 	m.load_grammar(
