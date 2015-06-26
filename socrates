@@ -1,6 +1,6 @@
-<socrates> <a> <man> .
-{ ?x <a> <man> } => { ?x <a> <mortal> } .
+:socrates :a :man .
+{ ?x :a :man } => { ?x :a :mortal } .
 fin.
-?y <a> <mortal> .
+?y :a :mortal .
 fin.
 

@@ -102,7 +102,6 @@ private:
 	pnode readbnode();
 	static pnode rdfrst, rdffst, rnil;
 	void readprefix();
-	std::list<std::pair<pnode, plist>> preds;
 	std::map<string, pnode> prefixes;
 public:
 	nqparser();
