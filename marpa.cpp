@@ -1,10 +1,10 @@
-#include "prover.h"
+//#include "prover.h"
 //#include "marpa.h"//not yet
 #include <boost/regex.hpp>
 #include <boost/fusion/include/at_key.hpp>
-#include "object.h"
-#include "cli.h"
-#include "rdf.h"
+//#include "object.h"
+//#include "cli.h"
+//#include "rdf.h"
 
 const pnode pmatches = mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
 const pnode pmustbos = mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
@@ -40,7 +40,7 @@ struct Marpa{
 		q.insert(q.begin(), make_shared<quad>(quad(thing, pmustbos, var)));
 		grmr(q);
 		auto evid = grmr.e.at(dict[var]);
-		auto lol = boost::fusion::at_key<std::pair<prover::termid, prover::ground>>(s).first();
+		//auto lol = boost::fusion::at_key<std::pair<prover::termid, prover::ground>>(evid).first();
 		//mbos is supposed to be a list of lists
 		/*for i in x[pmbos]
 		rule_new(x, add_list(i))
@@ -54,20 +54,19 @@ struct Marpa{
 		s = symbol_new();
 		r = rule_new(s, [add(i) for i in x])
 		return s
-	}*/
+	}
+	*/
 
 
 
 void check_int(int result){
 	if (result < 0)//== -2)
 		error();
-	return result;
 }
 
-void check_null(int result){
+void check_null(void* result){
 	if (result == NULL)
 		error();
-	return result;
 }
 
 void error_clear(){
@@ -94,7 +93,8 @@ void precompute(){
 }
 
 void print_events()
-{/*
+{	
+	/*
 	int count = check_int(marpa_g_event_count(g));
 	dout << '%s events'%count
 	if (count > 0)
@@ -105,7 +105,8 @@ void print_events()
 			int etype = check_int(marpa_g_event(g, &e, i));
 			dout << etype << ", " << e.t_value;
 		}
-	}*/
+	}
+	*/
 }
 
 void start_symbol_set(sym s){
@@ -113,21 +114,23 @@ void start_symbol_set(sym s){
 }
 
 void error()
-{/*
+{
+	/*
 	int e = marpa_g_error(g, NULL);
-	throw(new exception(e + ": " + errors[e]));*/
+	throw(new exception(e + ": " + errors[e]));
+	*/
 }
 
 
 };
 
 
-
-string load_n3_cmd::desc() const
+class load_n3_cmd : public cmd_t {
+std::string desc()
 {
 	return "load n3";
 }
-string load_n3_cmd::help() const
+std::string help()
 {
 	stringstream ss("Usage:");
 	ss << endl << "\ttau expand [JSON-LD input filename]";
@@ -135,22 +138,17 @@ string load_n3_cmd::help() const
 	ss << endl << "If input filename is unspecified, reads from stdin." << endl;
 	return ss.str();
 }
-int load_n3_cmd::operator() ( const strings& args )
+int operator() ( const strings& args )
 {
-	if ((args.size() == 3 && args[1] == "help") || args.size() > 4) {
-		dout << help();
-		return 1;
-	}
-
 	Marpa m;
 	m.load_grammar(
-		prover(convert(load_json("n3-grammar.jsonld"))), 
-		mkiri(L"http://www.w3.org/2000/10/swap/grammar/n3#document"));
+		prover(convert(load_json(L"n3-grammar.jsonld"))), 
+		mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
 	//m.parse(args[2]);
 	return 0;
 }
 
-
+};
 
 
 
@@ -272,7 +270,7 @@ void parse (string inp)
 
 
 
- */
+*/
 
 
 /*
@@ -283,15 +281,3 @@ https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
 */
 
 
-/*
-trashbin
-/*psomap m1 = grammar->MAP();
-olist m2 = *(*m1)["@graph"]->LIST();
-for (pobj x: m2)
-	//cout << x.first << " : " << x.second << endl;
-	cout << x << endl;*/
-	
-	//qdb query = !quad_in ? convert ( load_json(args[3]) ) : load_quads(args[3]);
-	//auto e = r.prove ( kb, merge ( query ) );
-	//dout << "evidence: " << endl << e << endl;
-*/
