@@ -1,3 +1,6 @@
+#ifndef __PROVER_H__
+#define __PROVER_H__
+
 /*
     Created on: Apr 28, 2015
         Author: Ohad Asor
@@ -172,3 +175,4 @@ typedef int prop_t;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
 };
+#endif

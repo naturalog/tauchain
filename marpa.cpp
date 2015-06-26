@@ -1,13 +1,14 @@
-//#include "prover.h"
+#include "marpa.h"
+#include "prover.h"
 //#include "marpa.h"//not yet
 #include <boost/regex.hpp>
 #include <boost/fusion/include/at_key.hpp>
-//#include "object.h"
-//#include "cli.h"
-//#include "rdf.h"
+#include "object.h"
+#include "cli.h"
+#include "rdf.h"
 
-const pnode pmatches = mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
-const pnode pmustbos = mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
+const pnode pmatches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
+const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
 
 /*typedef Marpa_Symbol_ID sym;
 typedef Marpa_Rule_ID rule;*/
@@ -125,25 +126,22 @@ void error()
 };
 
 
-class load_n3_cmd : public cmd_t {
-public:
-virtual std::string desc() const {return "load n3";}
-virtual std::string help() const 
+std::string load_n3_cmd::desc() const {return "load n3";}
+std::string load_n3_cmd::help() const 
 {
 	stringstream ss("Hilfe! Hilfe!:");
 	return ss.str();
 }
-virtual int operator() ( const strings& args )
+int load_n3_cmd::operator() ( const strings& args )
 {
 	Marpa m;
 	m.load_grammar(
 		prover(convert(load_json(L"n3-grammar.jsonld"))), 
-		mkiri(pstring(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
+		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
 	//m.parse(args[2]);
 	return 0;
 }
 
-};
 
 
 

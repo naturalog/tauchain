@@ -3,9 +3,8 @@
 #include <sstream>
 #include "prover.h"
 #include "match.h"
-
 #ifdef marpa
-#include "marpa.cpp"
+#include "marpa.h"
 #endif
 
 #ifdef DEBUG
