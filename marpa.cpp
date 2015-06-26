@@ -6,6 +6,7 @@
 #include "object.h"
 #include "cli.h"
 #include "rdf.h"
+#include "misc.h"
 
 const pnode pmatches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
 const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
@@ -36,12 +37,17 @@ struct Marpa{
 	sym add(pnode thing)
 	{
 		sym s = symbol_new();
-		auto var = mkiri(pstr(L"?X"));
-		std::list<pquad> q;
-		q.insert(q.begin(), make_shared<quad>(quad(thing, pmustbos, var)));
-		grmr(q);
-		auto evid = grmr.e.at(dict[var]);
-		//auto lol = boost::fusion::at_key<std::pair<prover::termid, prover::ground>>(evid).first();
+		prover::termset query;
+		query.push_back(grmr.make(pmustbos, thing, grmr.tmpvar()));
+		grmr(query);
+		if (grmr.e.find(pmustbos) != grmr.e.end())
+		{
+			auto x = grmr.e[pmustbos].first;
+		
+		}
+		else
+		{cout <<"nope";
+		}
 		//mbos is supposed to be a list of lists
 		/*for i in x[pmbos]
 		rule_new(x, add_list(i))
