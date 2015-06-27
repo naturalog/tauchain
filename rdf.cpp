@@ -268,15 +268,17 @@ qdb readqdb ( std::wistream& is) {
 	quad q;
 	qdb r;
 	nqparser p;
+	std::wstringstream ss;
 	while (getline(is, s)) {
-		trim(s);
+//		trim(s);
 		if (s[0] == L'#') continue;
-		for (quad q : p(s.c_str())) {
-			c = *q.graph->value;
-			if (r.find(c) == r.end()) r[c] = make_shared<qlist>();
-			r[c]->push_back(make_shared<quad>(q));
-		}
+		ss << s << ' ';
 	}
+	for (quad q : p(ss.str().c_str())) {
+		c = *q.graph->value;
+		if (r.find(c) == r.end()) r[c] = make_shared<qlist>();
+		r[c]->push_back(make_shared<quad>(q));
+		}
 	return r;
 }
 

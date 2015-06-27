@@ -67,9 +67,10 @@ pnode nqparser::readiri() {
 		return mkiri(wstrim(t));
 	}
 	if (*s == L'=' && *(s+1) == L'>') { ++++s; return mkiri(pimplication); }
-	while (!iswspace(*s) && *s != L'.') t[pos++] = *s++;
+//	while (!iswspace(*s) && *s != L'.') t[pos++] = *s++;
+	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
-	++s;
+//	++s;
 	pstring iri = wstrim(t);
 	auto i = iri->find(L':');
 	if (i == string::npos) return mkiri(iri);//throw wruntime_error(string(L"expected ':' in iri: ") + string(s,0,48));
@@ -87,7 +88,7 @@ pnode nqparser::readbnode() {
 	setproc(L"readbnode");
 	while (iswspace(*s)) ++s;
 	if (*s != L'_') return pnode(0);
-	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}') t[pos++] = *s++;
+	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	return mkbnode(wstrim(t));
 };
@@ -113,9 +114,9 @@ pnode nqparser::readvar() {
 	setproc(L"readvar");
 	while (iswspace(*s)) ++s;
 	if (*s != L'?') return pnode(0);
-	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}') t[pos++] = *s++;
+	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
-	++s;
+//	++s;
 	return mkiri(wstrim(t));
 };
 
@@ -127,7 +128,7 @@ pnode nqparser::readlit() {
 	do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
 	string dt, lang;
 	++s;
-	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}') {
+	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{') {
 		if (*s == L'^' && *++s == L'^') {
 			if (*++s == L'<')  {
 				++s;
