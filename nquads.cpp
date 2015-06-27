@@ -26,7 +26,7 @@ pnode nqparser::readcurly() {
 	++s;
 	while (iswspace(*s)) ++s;
 	auto r = jsonld_api::gen_bnode_id();
-	if (*s == L'}') return mkbnode(r);
+	if (*s == L'}') { ++s; return mkbnode(r); }
 	auto t = (*this)(s, *r);
 	return mkbnode(r);
 };
@@ -66,11 +66,11 @@ pnode nqparser::readiri() {
 		++s;
 		return mkiri(wstrim(t));
 	}
+	if (*s == L'=' && *(s+1) == L'>') { ++++s; return mkiri(pimplication); }
 	while (!iswspace(*s) && *s != L'.') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	++s;
 	pstring iri = wstrim(t);
-	if (*iri == L"=>") return mkiri(pimplication);
 	auto i = iri->find(L':');
 	if (i == string::npos) return mkiri(iri);//throw wruntime_error(string(L"expected ':' in iri: ") + string(s,0,48));
 	string p = iri->substr(0, ++i);
