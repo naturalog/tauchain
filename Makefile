@@ -39,7 +39,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 clean:
-	rm -rf tau $(OBJECTS) ubi/client.o marpa/marpa.o
+	rm -rf tau $(OBJECTS) ubi/client.o marpa.o
 
 ppjson: ppjson.cpp
 	$(CC) -std=c++11 ppjson.cpp -oppjson -Wall -ggdb

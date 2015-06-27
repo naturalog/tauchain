@@ -71,6 +71,8 @@ public:
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 	evidence e;
 	termid tmpvar();
+	void printg(const ground& g);
+	void printe();
 
 private:
 #ifdef OPENCL
@@ -120,8 +122,6 @@ typedef int prop_t;
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);
 	void printr_substs(int r, const subst& s);
-	void printg(const ground& g);
-	void printe();
 	void jprinte();
 
 #ifdef OPENCL

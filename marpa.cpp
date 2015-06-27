@@ -41,13 +41,17 @@ struct Marpa{
 		prover::termid var = grmr.tmpvar();
 		query.push_back(make_shared<quad>(thing, pmustbos, var));
 		grmr(query);
-		if (grmr.e.find(pmustbos) != grmr.e.end())
+		if (grmr.e.find(dict[pmustbos]) != grmr.e.end())
 		{
-			auto x = grmr.e[pmustbos].first;
+			grmr.printe();
+			auto x = grmr.e[dict[pmustbos]];
+			//grmr.printg(x);
+			dout << std::endl;
+
 		
 		}
 		else
-		{cout <<"nope";
+		{dout <<"nope\n";
 		}
 		//mbos is supposed to be a list of lists
 		/*for i in x[pmbos]
