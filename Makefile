@@ -2,18 +2,9 @@ CC=g++
 CXXFLAGS=-c -std=c++11 -Wextra -g -DDEBUG -I/usr/local/include
 #CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O2 -I/usr/local/include
 LDFLAGS=-lcurl -lboost_system -lboost_filesystem -pthread -L/usr/local/lib -ldl
-OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
+#OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
+OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o
 
-#OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o
-
-
-#.PHONY: marpa
-#marpa: marpa/marpa.o
-#marpa: OBJECTS += marpa/marpa.o
-#marpa: debug
-#marpa/marpa.o: marpa/marpa.cpp $(`g++ -std=c++11 -M marpa/marpa.cpp`)
-#	$(CC) $(CXXFLAGS)  -I . marpa/marpa.cpp -o marpa/marpa.o 
-#	$(CC) $(OBJECTS) -o tau $(LDFLAGS) 
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
@@ -21,6 +12,10 @@ tau: $(OBJECTS) $(EXECUTABLE)
 
 %.o: %.cpp `g++ -std=c++11 -M %.cpp`
 
+marpa: marpa.o
+marpa:
+	OBJECTS += marpa.o
+marpa: debug
 
 debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3

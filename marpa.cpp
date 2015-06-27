@@ -37,12 +37,9 @@ struct Marpa{
 	sym add(pnode thing)
 	{
 		sym s = symbol_new();
-		//prover::termset query;
-		//prover::termid var = grmr.tmpvar();
-		std::list<pquad> query;
-		query.push_back(make_shared<quad>(
-			quad(thing, pmustbos, mkiri(pstr(L"?X")))));
-
+		qlist query;
+		prover::termid var = grmr.tmpvar();
+		query.push_back(make_shared<quad>(thing, pmustbos, var));
 		grmr(query);
 		if (grmr.e.find(pmustbos) != grmr.e.end())
 		{
