@@ -26,6 +26,7 @@ pnode nqparser::readcurly() {
 	++s;
 	while (iswspace(*s)) ++s;
 	auto r = jsonld_api::gen_bnode_id();
+	if (*s == L'}') return mkbnode(r);
 	auto t = (*this)(s, *r);
 	return mkbnode(r);
 };
@@ -167,7 +168,7 @@ std::list<quad> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@defaul
 		do {
 			while (iswspace(*s) || *s == L';') ++s;
 			if (*s == L'.' || *s == L'}') break;
-			if ((pn = readiri())) {
+			if ((pn = readiri()) || (pn = readcurly())) {
 				preds.emplace_back(pn, plist());
 				pos1 = preds.rbegin();
 			}
