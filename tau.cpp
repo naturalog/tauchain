@@ -4,7 +4,7 @@
 #include "prover.h"
 #include "match.h"
 #ifdef marpa
-#include "marpa/marpa.h"
+#include "marpa.h"
 #endif
 
 #ifdef DEBUG

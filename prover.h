@@ -83,6 +83,7 @@ public:
 	termid tmpvar();
 	void printg(const ground& g);
 	void printe();
+	termid make(pnode p, termid s = 0, termid o = 0);
 
 private:
 #ifdef OPENCL
@@ -94,7 +95,6 @@ typedef int prop_t;
 
 	boost::container::vector<term> _terms;
 	friend ruleset;
-	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(resid p, termid s = 0, termid o = 0);
 
 	struct proof {

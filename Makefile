@@ -13,16 +13,16 @@ tau: $(OBJECTS) $(EXECUTABLE)
 %.o: %.cpp `g++ -std=c++11 -M %.cpp`
 
 marpa: marpa.o
-marpa:
-	OBJECTS += marpa.o
-marpa: debug
 
+marpa: OBJECTS += marpa.o
+marpa: CXXFLAGS += -Dmarpa
 debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3
 cl: CXXFLAGS += -DOPENCL
 irc: CXXFLAGS += -DIRC -DDEBUG
 
-
+marpa: $(OBJECTS) $(EXECUTABLE)
+	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
 debug: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
 release: $(OBJECTS) $(EXECUTABLE)

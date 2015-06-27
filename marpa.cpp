@@ -37,22 +37,19 @@ struct Marpa{
 	sym add(pnode thing)
 	{
 		sym s = symbol_new();
-		qlist query;
+		prover::termset query;
 		prover::termid var = grmr.tmpvar();
-		query.push_back(make_shared<quad>(thing, pmustbos, var));
+		query.emplace_back(grmr.make(pmustbos, grmr.make(thing), var));
 		grmr(query);
 		if (grmr.e.find(dict[pmustbos]) != grmr.e.end())
 		{
-			grmr.printe();
-			auto x = grmr.e[dict[pmustbos]];
-			//grmr.printg(x);
-			dout << std::endl;
-
-		
+			for (auto subst: grmr.find_subst(grmr.get(var).p))
+				dout << subst << std::endl;
 		}
 		else
 		{dout <<"nope\n";
 		}
+		
 		//mbos is supposed to be a list of lists
 		/*for i in x[pmbos]
 		rule_new(x, add_list(i))
