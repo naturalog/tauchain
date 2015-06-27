@@ -69,6 +69,16 @@ public:
 
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+	std::set<termid> find_subst(resid t) {
+		subst::iterator it;
+		std::set<termid> r;
+		for (auto x : e) 
+			for (auto y : x.second) 
+				for (auto z : y.second)
+					if ((it = z.second.find(t)) != z.second.end())
+						r.insert(it->second);
+		return r;
+	}
 	evidence e;
 	termid tmpvar();
 	void printg(const ground& g);
