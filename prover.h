@@ -80,7 +80,7 @@ public:
 		return r;
 	}
 	evidence e;
-	subst substs;
+	std::vector<subst> substs;
 	termid tmpvar();
 	void printg(const ground& g);
 	void printe();

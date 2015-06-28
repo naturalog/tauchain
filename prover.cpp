@@ -318,7 +318,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	}
 	else if (!p->prev) {
 		for (auto r = kb.body()[p->rul].begin(); r != kb.body()[p->rul].end(); ++r) {
-			substs = p->s;
+			substs.push_back(p->s);
 			termid t = evaluate(*r, p->s);
 			if (!t || hasvar(t)) continue;
 			TRACE(dout << "pushing evidence: " << format(t) << std::endl);

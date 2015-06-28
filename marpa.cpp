@@ -8,6 +8,31 @@
 #include "rdf.h"
 #include "misc.h"
 
+prover::termset ask(prover *prover, prover::termid s, const pnode p, prover::termid o_var)
+{
+	prover::termset r = prover::termset();
+	prover::termset query;
+	prover::termid iii = prover->make(p, s, o_var);
+	query.emplace_back(iii);
+	(*prover)(query);
+	for (auto x : prover->substs) 
+	{
+		prover->prints(x);
+
+		prover::subst::iterator binding_it = x.find(prover->get(o_var).p);
+		if (binding_it != x.end())
+		{
+			dout << std::endl;
+			r.push_back( (*binding_it).second);
+		}
+	}
+	return r;
+}
+
+
+const pnode rdfs_first=mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
+const pnode rdfs_rest= mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
+const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
 const pnode pmatches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
 const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
 
@@ -23,40 +48,37 @@ struct Marpa{
 	map<sym,boost::regex> regexes;
 	map<sym,string> names;
 	map<pos,size_t> lengths;
-	prover grmr;
+	prover* grmr;
 
-	void load_grammar(prover _grmr, pnode root)
+	void load_grammar(prover *_grmr, pnode root)
 	{
 		grmr = _grmr;
-		sym start = add(root);
+		sym start = symbol_new();
 		start_symbol_set(start);
+		add(grmr, grmr->make(root), start);
 		precompute();
 	}
 
+
 	//create marpa symbols and rules from grammar description in rdf
-	sym add(pnode thing)
+	sym add(prover *grmr, prover::termid thing, sym symbol)
 	{
-		sym s = symbol_new();
-		prover::termset query;
-		prover::termid var = grmr.tmpvar();
-		query.emplace_back(grmr.make(pmustbos, grmr.make(thing), var));
-		grmr(query);
-		if (grmr.e.find(dict[pmustbos]) != grmr.e.end())
+		prover::termid var = grmr->tmpvar();
+		prover::termset lol = ask(grmr, thing, pmustbos, var);
+		for (auto l : lol)
 		{
-			grmr.prints(grmr.substs);
-			dout << var;
-			dout << grmr.substs[grmr.get(var).p];
-		}
-		else
-		{dout <<"nope\n";
-		}
+			//mustbos is supposed to be a list of lists
+			dout << l << std::endl;
+			
+			//while(l.p !=  
+			
+			/*for i in x[pmbos]
+			rule_new(x, add_list(i))
+			elif x.has(pmatches)
+			regexes[s] = x[pmatches];*/
 		
-		//mbos is supposed to be a list of lists
-		/*for i in x[pmbos]
-		rule_new(x, add_list(i))
-		elif x.has(pmatches)
-		regexes[s] = x[pmatches];*/
-		return s;
+		}
+		//else{dout <<"nope\n";}
 	}
 	/*
 	add_list(list x)
@@ -143,11 +165,13 @@ std::string load_n3_cmd::help() const
 	return ss.str();
 }
 int load_n3_cmd::operator() ( const strings& args )
-{
+{	
+	prover prover(convert(load_json(L"n3-grammar.jsonld")));
 	Marpa m;
 	m.load_grammar(
-		prover(convert(load_json(L"n3-grammar.jsonld"))), 
-		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
+		&prover, 
+		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#objecttail")));
+		//mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
 	//m.parse(args[2]);
 	return 0;
 }
