@@ -18,6 +18,7 @@ prover::termset ask(prover *prover, prover::termid s, const pnode p, prover::ter
 	for (auto x : prover->substs) 
 	{
 		prover->prints(x);
+		dout << std::endl;
 
 		prover::subst::iterator binding_it = x.find(prover->get(o_var).p);
 		if (binding_it != x.end())
@@ -65,13 +66,29 @@ struct Marpa{
 	{
 		prover::termid var = grmr->tmpvar();
 		prover::termset lol = ask(grmr, thing, pmustbos, var);
+		
+		dout << std::endl;
 		for (auto l : lol)
 		{
 			//mustbos is supposed to be a list of lists
-			dout << l << std::endl;
+//			dout << l << std::endl;
 			
-			//while(l.p !=  
-			
+//			dout << l;
+//			dout << " ";
+//			dout << l.p;
+			syms rhs;
+			while(1)
+			{
+				dout << l << "..." << std::endl;
+				prover::termid first = grmr->tmpvar();
+				prover::termset xx = ask(grmr, l, rdfs_first, first);
+				if (!xx.size()) break;
+				prover::termid next = grmr->tmpvar();
+				xx = ask(grmr, l, rdfs_rest, next);
+				if (!xx.size()) break;//err
+				l = xx[0];
+			}
+			dout << std::endl;
 			/*for i in x[pmbos]
 			rule_new(x, add_list(i))
 			elif x.has(pmatches)
