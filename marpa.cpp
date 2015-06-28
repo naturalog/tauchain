@@ -52,24 +52,34 @@ typedef int rule;
 struct Marpa{
 	uint num_syms = 0;
 	//Marpa_Grammar g;
-	map<sym,boost::regex> regexes;
-	map<sym,string> names;
+	std::vector<sym> terminals;
+	string regex;
+	boost::wregex lexer;
+	map<prover::termid,sym> done;
 	map<pos,size_t> lengths;
 	prover* grmr;
 
 	void load_grammar(prover *_grmr, pnode root)
 	{
 		grmr = _grmr;
-		sym start = symbol_new();
+		sym start = add(grmr, grmr->make(root));
 		start_symbol_set(start);
-		add(grmr, grmr->make(root), start);
-		precompute();
 	}
 
 
-	//create marpa symbols and rules from grammar description in rdf
-	void add(prover *grmr, prover::termid thing, sym symbol)
+	sym sym4thing(prover::termid thing)
 	{
+	}
+		
+
+	//create marpa symbols and rules from grammar description in rdf
+	sym add(prover *grmr, prover::termid thing)
+	{
+		if (done.find(thing) != done.end())
+			return done[thing];
+		
+		sym symbol = symbol_new(thing);
+		
 		dout << "is it a mustBeOneSequence?" << std::endl;
 		
 		prover::termset bind;
@@ -91,12 +101,8 @@ struct Marpa{
 			
 					prover::termset xx = ask(grmr, l, rdfs_first);
 					if (!xx.size()) break;
-					prover::termid rhi = xx[0];
-
-					dout << rhi << " ";
-					sym rhis = symbol_new();
-					rhs.push_back(rhis);
-					add(grmr, rhi, rhis);
+					
+					rhs.push_back(add(grmr, xx[0]));
 				
 					xx = ask(grmr, l, rdfs_rest);
 					if (!xx.size()) break;//err
@@ -109,6 +115,8 @@ struct Marpa{
 		}
 		else if((bind = ask(grmr, thing, pmatches)).size())
 		{
+			terminals.emplace_back(symbol);
+			regex.append(L"(" + dstr(grmr->get(bind[0]).p) + L")");
 		}
 		else
 			dout << "nope\n";
@@ -130,10 +138,11 @@ void error_clear(){
 	//marpa_g_error_clear(g);
 }
 
-sym symbol_new()
+sym symbol_new(prover::termid thing)
 {
 	num_syms++;
-	return 5;//check_int(marpa_g_symbol_new(g));
+	done[thing] = 5;//check_int(marpa_g_symbol_new(g));
+	return done[thing];
 }
 
 rule rule_new(sym lhs, syms rhs) {
@@ -147,6 +156,7 @@ rule sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=fal
 void precompute(){
 	//check_int(marpa_g_precompute(g));
 	print_events();
+	lexer = boost::wregex(regex);
 }
 
 void print_events()
@@ -179,66 +189,14 @@ void error()
 }
 
 
-};
-
-
-std::string load_n3_cmd::desc() const {return "load n3";}
-std::string load_n3_cmd::help() const 
-{
-	stringstream ss("Hilfe! Hilfe!:");
-	return ss.str();
-}
-int load_n3_cmd::operator() ( const strings& args )
-{	
-	prover prover(convert(load_json(L"n3-grammar.jsonld")));
-	Marpa m;
-	m.load_grammar(
-		&prover, 
-		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#objecttail")));
-		//mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
-	//m.parse(args[2]);
-	return 0;
-}
-
-
-
-
-/*
----------------------
-
-
-
-
-
-	Grammar()
-	{
-		if (marpa_check_version (MARPA_MAJOR_VERSION ,MARPA_MINOR_VERSION, MARPA_MICRO_VERSION ) != MARPA_ERR_NONE)
-			throw runtime_error ("marpa version...");
-		Marpa_Config marpa_config;
-		marpa_c_init(&marpa_config);
-		g = marpa_g_new(marpa_config);
-		if (!g)
-			throw runtime_error ("marpa_g_new: error %d" % marpa_c_error (&marpa_config, NULL));
-		if(lib.marpa_g_force_valued(s.g) < 0)
-			throw runtime_error ("marpa_g_force_valued failed?!?!?");
-	}
-	~Grammar()
-	{
-		marpa_g_unref(g);
-	}
-
-
-
-
-
 void parse (string inp)
 {
-
+	/*
 	Marpa_Recognizer r = marpa_r_new(g);
 	check_null(r);
 	marpa_r_start_input(r);
-
-
+	*/
+	/*
 	//this loop tokenizes(/lexes/scans) the input stream and feeds the tokens to marpa
 
 
@@ -275,6 +233,83 @@ void parse (string inp)
 		check_int(marpa_r_earleme_complete(r));
 		lengths[pos] = m.lenght();
 	}
+	*/
+
+
+}
+
+
+
+};
+
+
+std::string load_n3_cmd::desc() const {return "load n3";}
+std::string load_n3_cmd::help() const 
+{
+	stringstream ss("Hilfe! Hilfe!:");
+	return ss.str();
+}
+int load_n3_cmd::operator() ( const strings& args )
+{	
+	prover prover(convert(load_json(L"n3-grammar.jsonld")));
+	Marpa m;
+	m.load_grammar(
+		&prover, 
+		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#objecttail")));
+		//mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
+	m.precompute();
+	m.parse(args[2]);
+	return 0;
+}
+
+
+
+
+/*
+---------------------
+
+
+
+
+
+	Grammar()
+	{
+		if (marpa_check_version (MARPA_MAJOR_VERSION ,MARPA_MINOR_VERSION, MARPA_MICRO_VERSION ) != MARPA_ERR_NONE)
+			throw runtime_error ("marpa version...");
+		Marpa_Config marpa_config;
+		marpa_c_init(&marpa_config);
+		g = marpa_g_new(marpa_config);
+		if (!g)
+			throw runtime_error ("marpa_g_new: error %d" % marpa_c_error (&marpa_config, NULL));
+		if(lib.marpa_g_force_valued(s.g) < 0)
+			throw runtime_error ("marpa_g_force_valued failed?!?!?");
+	}
+	~Grammar()
+	{
+		marpa_g_unref(g);
+	}
+
+
+
+
+
+
+
+*/
+
+
+/*
+resources
+https://github.com/jeffreykegler/libmarpa/blob/master/test/simple/rule1.c#L18
+https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900
+https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
+*/
+
+
+
+
+/*
+
 
 
 	//marpa allows variously ordered lists of ambiguous parses,
@@ -314,21 +349,4 @@ void parse (string inp)
 				break;
 			case MARPA_STEP_RULE:
 
-
-
-
-}
-
-
-
 */
-
-
-/*
-resources
-https://github.com/jeffreykegler/libmarpa/blob/master/test/simple/rule1.c#L18
-https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900
-https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
-*/
-
-
