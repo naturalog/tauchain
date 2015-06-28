@@ -85,6 +85,7 @@ public:
 	void printg(const ground& g);
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
+	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
 
 private:
@@ -125,7 +126,6 @@ typedef int prop_t;
 	termid quad2term(const quad& p);
 
 	string format(termid id, bool json = false);
-	string format(const termset& l, bool json = false);
 	string formatr(int r, bool json = false);
 	string formatkb();
 	void printp(proof* p);

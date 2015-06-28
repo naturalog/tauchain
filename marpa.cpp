@@ -8,25 +8,31 @@
 #include "rdf.h"
 #include "misc.h"
 
-prover::termset ask(prover *prover, prover::termid s, const pnode p, prover::termid o_var)
+prover::termset ask(prover *prover, prover::termid s, const pnode p)
 {
 	prover::termset r = prover::termset();
 	prover::termset query;
+	prover::termid o_var = prover->tmpvar();
 	prover::termid iii = prover->make(p, s, o_var);
 	query.emplace_back(iii);
 	(*prover)(query);
+	
+	dout << "query: "<< prover->format(query) << endl;;
+	dout << "substs: "<< std::endl;
+
 	for (auto x : prover->substs) 
 	{
-		prover->prints(x);
-		dout << std::endl;
+		//prover->prints(x);
+		//dout << std::endl;
 
 		prover::subst::iterator binding_it = x.find(prover->get(o_var).p);
 		if (binding_it != x.end())
 		{
-			dout << std::endl;
 			r.push_back( (*binding_it).second);
 		}
 	}
+
+	prover->substs.clear();
 	return r;
 }
 
@@ -62,50 +68,51 @@ struct Marpa{
 
 
 	//create marpa symbols and rules from grammar description in rdf
-	sym add(prover *grmr, prover::termid thing, sym symbol)
+	void add(prover *grmr, prover::termid thing, sym symbol)
 	{
-		prover::termid var = grmr->tmpvar();
-		prover::termset lol = ask(grmr, thing, pmustbos, var);
+		dout << "is it a mustBeOneSequence?" << std::endl;
 		
-		dout << std::endl;
-		for (auto l : lol)
-		{
-			//mustbos is supposed to be a list of lists
-//			dout << l << std::endl;
-			
-//			dout << l;
-//			dout << " ";
-//			dout << l.p;
-			syms rhs;
-			while(1)
-			{
-				dout << l << "..." << std::endl;
-				prover::termid first = grmr->tmpvar();
-				prover::termset xx = ask(grmr, l, rdfs_first, first);
-				if (!xx.size()) break;
-				prover::termid next = grmr->tmpvar();
-				xx = ask(grmr, l, rdfs_rest, next);
-				if (!xx.size()) break;//err
-				l = xx[0];
-			}
-			dout << std::endl;
-			/*for i in x[pmbos]
-			rule_new(x, add_list(i))
-			elif x.has(pmatches)
-			regexes[s] = x[pmatches];*/
-		
-		}
-		//else{dout <<"nope\n";}
-	}
-	/*
-	add_list(list x)
-	{
-		s = symbol_new();
-		r = rule_new(s, [add(i) for i in x])
-		return s
-	}
-	*/
+		prover::termset bind;
 
+		// note that in the grammar file things and terminology are switched,
+		// mustBeOneSequence is a sequence of lists
+		
+		if ((bind = ask(grmr, thing, pmustbos)).size())
+		{
+			for (auto l : bind) // thing must be one of these lists
+			{
+				dout << "[";
+				syms rhs;
+				while(1)
+				{
+					dout << "l: ";
+					dout << l;
+					dout << "..." << std::endl;
+			
+					prover::termset xx = ask(grmr, l, rdfs_first);
+					if (!xx.size()) break;
+					prover::termid rhi = xx[0];
+
+					dout << rhi << " ";
+					sym rhis = symbol_new();
+					rhs.push_back(rhis);
+					add(grmr, rhi, rhis);
+				
+					xx = ask(grmr, l, rdfs_rest);
+					if (!xx.size()) break;//err
+					l = xx[0];
+				}
+				dout << "]" << std::endl;
+				
+				rule_new(symbol, rhs);
+			}
+		}
+		else if((bind = ask(grmr, thing, pmatches)).size())
+		{
+		}
+		else
+			dout << "nope\n";
+	}
 
 
 int check_int(int result){
