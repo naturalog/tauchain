@@ -80,10 +80,12 @@ public:
 		return r;
 	}
 	evidence e;
+	subst substs;
 	termid tmpvar();
 	void printg(const ground& g);
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
+	void prints(const subst& s);
 
 private:
 #ifdef OPENCL
@@ -127,7 +129,6 @@ typedef int prop_t;
 	string formatr(int r, bool json = false);
 	string formatkb();
 	void printp(proof* p);
-	void prints(const subst& s);
 	string formats(const subst& s, bool json = false);
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);

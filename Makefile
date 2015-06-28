@@ -10,7 +10,7 @@ all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-%.o: %.cpp `g++ -std=c++11 -M %.cpp`
+%.o: %.cpp `g++ -std=c++11 $(CXXFLAGS) -M %.cpp`
 
 marpa: marpa.o
 

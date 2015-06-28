@@ -43,8 +43,9 @@ struct Marpa{
 		grmr(query);
 		if (grmr.e.find(dict[pmustbos]) != grmr.e.end())
 		{
-			for (auto subst: grmr.find_subst(grmr.get(var).p))
-				dout << subst << std::endl;
+			grmr.prints(grmr.substs);
+			dout << var;
+			dout << grmr.substs[grmr.get(var).p];
 		}
 		else
 		{dout <<"nope\n";
