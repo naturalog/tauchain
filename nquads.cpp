@@ -206,7 +206,7 @@ std::list<quad> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@defaul
 //		auto p1 = preds;
 		for (auto d : lists) {
 //			if (std::get<0>(d) &&std::get<1>(d) && std::get<2>(d))
-				r.emplace_back(std::get<0>(d), std::get<1>(d), std::get<2>(d), L"@default"/*graph*/);
+				r.emplace_back(std::get<0>(d), std::get<1>(d), std::get<2>(d), /*L"@default"*/graph);
 //			else l1.push_back(d);
 		}
 		for (auto x : preds)
