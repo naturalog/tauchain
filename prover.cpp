@@ -282,9 +282,12 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 }
 
 bool prover::maybe_unify(const term s, const term d) {
-//	std::deque<const term*> 
-	return (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
+//	std::deque<const term*>
+	setproc(L"maybe_unify");
+	bool r = (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
 		!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o)));
+	TRACE(dout<<format(s) << L' ' << format(d) << (r ? L"match" : L"mismatch") << endl);
+	return r; 
 }
 
 std::set<uint> prover::match(termid _e) {

@@ -126,6 +126,7 @@ typedef int prop_t;
 	termid quad2term(const quad& p);
 
 	string format(termid id, bool json = false);
+	string format(term t, bool json = false);
 	string formatr(int r, bool json = false);
 	string formatkb();
 	void printp(proof* p);
