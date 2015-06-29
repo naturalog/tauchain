@@ -40,7 +40,9 @@ pnode nqparser::readlist() {
 	const string head = id();
 	pnode pn;
 	++s;
-	while (*s != L')') {
+	while (iswspace(*s)) ++s;
+	if (*s == L')') { ++s; return rnil; }
+	do {
 		while (iswspace(*s)) ++s;
 		if (*s == L')') break;
 		if (!(pn = readany(true)))
@@ -53,6 +55,7 @@ pnode nqparser::readlist() {
 		else lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
 		if (*s == L'.') while (iswspace(*s++));
 	}
+	while (*s != L')');
 	do { ++s; } while (iswspace(*s));
 	return mkbnode(pstr(head));
 };
