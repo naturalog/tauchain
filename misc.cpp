@@ -99,7 +99,13 @@ string KMAG = L"\x1B[35m";
 string KCYN = L"\x1B[36m";
 string KWHT = L"\x1B[37m";
 
-string prover::format(termid id, bool json) { if (!id) return L"{}"; return format(get(id), json); }
+string prover::format(termid id, bool json) { 
+	if (!id) return L"{}";
+	if (json) return format(get(id),json);
+	std::wstringstream ss; 
+	ss <<L'['<< id << L']' <<  format(get(id), json);
+	return ss.str();
+}
 string prover::format(term p, bool json) {
 	if (!json) {
 //		if (!id) return L"";

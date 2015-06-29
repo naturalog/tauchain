@@ -201,10 +201,10 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
-	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
-	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
+	else if (t.p == rdffirst && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
+		r = ((!t0->s && !t0->o) || unify(t0->s, p->s, t.o, p->s, true)) ? 1 : 0;
+	else if (t.p == rdfrest && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
+		r = ((!t0->s && !t0->o) || unify(t0->o, p->s, t.o, p->s, true)) ? 1 : 0;
 	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -282,10 +282,11 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 }
 
 bool prover::maybe_unify(const term s, const term d) {
+//	return true;
 //	std::deque<const term*>
 	setproc(L"maybe_unify");
 	bool r = (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
-		!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o)));
+		(!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o))));
 	TRACE(dout<<format(s) << ' ' <<format(d) << (r?L"match":L"mismatch") << endl);
 	return r; 
 }
@@ -295,11 +296,11 @@ std::set<uint> prover::match(termid _e) {
 	setproc(L"match");
 	std::set<uint> m;
 	termid h;
-	const term e = get(_e/*-1*/);
+	const term e = get(_e);
 	for (uint n = 0; n < kb.size(); ++n)
-		if (((h=kb.head()[n])) && maybe_unify(e, get(h)))
+		if (((h=kb.head()[n]))&&(h!=_e)/*&& maybe_unify(e, get(h))*/)
 			m.insert(n);
-	TRACE(dout<<format(_e) << L" matches: "; for (auto x : m) dout << format(kb.head()[x]) << L' '; dout << endl);
+//	TRACE(dout<<format(_e) << L" matches: "; for (auto x : m) dout << format(kb.head()[x]) << L' '; dout << endl);
 	return m;
 }
 
