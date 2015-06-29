@@ -52,10 +52,8 @@ typedef int rule;
 struct Marpa{
 	uint num_syms = 0;
 	//Marpa_Grammar g;
-	std::vector<sym> terminals;
-	string regex;
-	boost::wregex lexer;
-	map<prover::termid,sym> done;
+	map<boost::regex, sym> regexes;
+	map<prover::termid, sym> done;
 	map<pos,size_t> lengths;
 	prover* grmr;
 
@@ -115,8 +113,9 @@ struct Marpa{
 		}
 		else if((bind = ask(grmr, thing, pmatches)).size())
 		{
-			terminals.emplace_back(symbol);
-			regex.append(L"(" + dstr(grmr->get(bind[0]).p) + L")");
+			// pretend the world is ascii
+			string ws = dstr(grmr->get(bind[0]).p);
+			regexes[boost::regex(std::string(ws.begin(), ws.end()))] = symbol;
 		}
 		else
 			dout << "nope\n";
@@ -156,7 +155,6 @@ rule sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=fal
 void precompute(){
 	//check_int(marpa_g_precompute(g));
 	print_events();
-	lexer = boost::wregex(regex);
 }
 
 void print_events()
@@ -196,25 +194,28 @@ void parse (string inp)
 	check_null(r);
 	marpa_r_start_input(r);
 	*/
-	/*
+	
 	//this loop tokenizes(/lexes/scans) the input stream and feeds the tokens to marpa
-
-
-	for(pos p = 0; p != inp.size();)
+	for(auto pos : inp)
 	{
 
 		//lexing:just find the longest match?
-		regex::match m;
+		boost::smatch m,m2;
 		sym s;
-		for (auto r = regexes.begin(); r != regexes.end(); r++) {
-			m2 = r.second.match(inp);
+		for (auto r : regexes) {
+//			boost::regex_search (pos, inp.end(), m2, r.first);
+			boost::regex_search (inp, m2, r.first);
 			if (!m.valid or m.length > m2.length) {
 				m = m2;
-				s = r.first;
+				s = r.second;
 			}
 		}
 		if (!m.valid) throw std::runtime_error("no match");
+		
+		p += m.length();
+		
 
+		/*
 		//#Return value: On success, MARPA_ERR_NONE. On failure, some other error code.
 		int err = marpa_r_alternative(r, s, pos, 1);
 
@@ -232,9 +233,9 @@ void parse (string inp)
 
 		check_int(marpa_r_earleme_complete(r));
 		lengths[pos] = m.lenght();
+		*/
 	}
-	*/
-
+	
 
 }
 
