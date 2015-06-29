@@ -162,5 +162,6 @@ typedef int prop_t;
 	pobj json(const ground& g) const;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
+	bool islist(termid);
 };
 #endif

@@ -72,7 +72,12 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 			}
 			r = true;
 		}
-	} else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o))
+	} else if (islist(_s)) {
+		TRACE( dout << "List unification "; printterm_substs(_s, ssub); dout<<" with "; printterm_substs(_d, dsub); dout <<endl);
+		if (s.p != d.p || !islist(_d)) r = false;
+		else r = unify(s.o, ssub, d.o, dsub, f);
+	}
+	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o))
 		r = false;
 	else
 		r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
@@ -553,6 +558,10 @@ pobj prover::ejson() const {
 		(*o->MAP())[dstr(x.first)] = l;
 	}
 	return o;
+}
+bool prover::islist(prover::termid p) {
+	const term t = get(p);
+	return t.s && startsWith(*dict[get(t.s).p].value, L"_:list");
 }
 //evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
 //g.push({src:rl, env:{}})
