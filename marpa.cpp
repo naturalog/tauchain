@@ -1,12 +1,19 @@
+#include <codecvt>
+
 #include "marpa.h"
 #include "prover.h"
 //#include "marpa.h"//not yet
-#include <boost/regex.hpp>
-#include <boost/fusion/include/at_key.hpp>
+
+#include <unicode/utypes.h>
+#include <unicode/regex.h>
 #include "object.h"
 #include "cli.h"
 #include "rdf.h"
 #include "misc.h"
+
+UErrorCode        status    = U_ZERO_ERROR;
+UnicodeString    stringToTest = "Find the abc in this string";
+RegexMatcher *matcher = new RegexMatcher("abc+", 0, status);
 
 prover::termset ask(prover *prover, prover::termid s, const pnode p)
 {
@@ -52,7 +59,7 @@ typedef int rule;
 struct Marpa{
 	uint num_syms = 0;
 	//Marpa_Grammar g;
-	map<boost::regex, sym> regexes;
+	map<string, sym> regexes;
 	map<prover::termid, sym> done;
 	map<pos,size_t> lengths;
 	prover* grmr;
@@ -113,9 +120,7 @@ struct Marpa{
 		}
 		else if((bind = ask(grmr, thing, pmatches)).size())
 		{
-			// pretend the world is ascii
-			string ws = dstr(grmr->get(bind[0]).p);
-			regexes[boost::regex(std::string(ws.begin(), ws.end()))] = symbol;
+			regexes[dstr(grmr->get(bind[0]).p)] = symbol;
 		}
 		else
 			dout << "nope\n";
@@ -187,6 +192,13 @@ void error()
 }
 
 
+// convert wstring to UTF-8 string
+std::string wstring_to_utf8 (const std::wstring& str)
+{
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+    return myconv.to_bytes(str);
+}
+
 void parse (string inp)
 {
 	/*
@@ -196,23 +208,28 @@ void parse (string inp)
 	*/
 	
 	//this loop tokenizes(/lexes/scans) the input stream and feeds the tokens to marpa
+	//just find the longest match?
 	for(auto pos : inp)
 	{
-
-		//lexing:just find the longest match?
-		boost::smatch m,m2;
+		
+		//icu::RegexMatcher m,m2;
 		sym s;
 		for (auto r : regexes) {
+		
+		
+			std::string ss = wstring_to_utf8(r.first);
+			icu::UnicodeString sss (ss);
+
 //			boost::regex_search (pos, inp.end(), m2, r.first);
-			boost::regex_search (inp, m2, r.first);
-			if (!m.valid or m.length > m2.length) {
+//			boost::regex_search (inp, m2, r.first);
+/*			if (!m.valid or m.length > m2.length) {
 				m = m2;
 				s = r.second;
-			}
+			}*/
 		}
-		if (!m.valid) throw std::runtime_error("no match");
+		//if (!m.valid) throw std::runtime_error("no match");
 		
-		p += m.length();
+		//p += m.length();
 		
 
 		/*

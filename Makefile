@@ -15,8 +15,8 @@ tau: $(OBJECTS) $(EXECUTABLE)
 marpa: marpa.o
 
 marpa: OBJECTS += marpa.o
-marpa: CXXFLAGS += -Dmarpa 
-marpa: LDFLAGS += -lboost_regex 
+marpa: CXXFLAGS += -Dmarpa `pkg-config --cflags icu-uc icu-io`
+marpa: LDFLAGS += `pkg-config --libs icu-uc icu-io`
 debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3
 cl: CXXFLAGS += -DOPENCL
