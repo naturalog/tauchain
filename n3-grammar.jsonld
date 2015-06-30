@@ -718,7 +718,7 @@
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#string",
       "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "\"",
-      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "(\"\"\"[^\"\\\\]*(?:(?:\\\\.|\"(?!\"\"))[^\"\\\\]*)*\"\"\")|(\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")"
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "(\\\"\\\"\\\"[^\\\"\\\\]*(?:(?:\\\\.)[^\\\"\\\\]*)*\\\"\\\"\\\")|(\\\"[^\\\"\\\\]*(?:\\\\.[^\\\"\\\\]*)*\\\")"
     },
     {
       "@id": "http://www.w3.org/2000/10/swap/grammar/n3#literal",

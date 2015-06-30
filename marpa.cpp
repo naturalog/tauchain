@@ -1,12 +1,17 @@
 #include "marpa.h"
 #include "prover.h"
 //#include "marpa.h"//not yet
-#include <boost/regex.hpp>
-#include <boost/fusion/include/at_key.hpp>
 #include "object.h"
 #include "cli.h"
 #include "rdf.h"
 #include "misc.h"
+
+
+#include "lexertl/generator.hpp"
+#include <iostream>
+#include "lexertl/iterator.hpp"
+#include "lexertl/lookup.hpp"
+
 
 prover::termset ask(prover *prover, prover::termid s, const pnode p)
 {
@@ -43,16 +48,28 @@ const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#n
 const pnode pmatches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
 const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
 
+
+
 /*typedef Marpa_Symbol_ID sym;
 typedef Marpa_Rule_ID rule;*/
 typedef size_t pos;
 typedef int sym;
 typedef std::vector<sym> syms;
 typedef int rule;
+
+class terminal
+{
+public:
+	string name, regex;
+	sym symbol;
+	terminal(string name_, string regex_, sym symbol_){name = name_; regex = regex_; symbol = symbol_;}
+};
+
+
 struct Marpa{
 	uint num_syms = 0;
 	//Marpa_Grammar g;
-	map<boost::regex, sym> regexes;
+	std::vector<terminal> terminals;
 	map<prover::termid, sym> done;
 	map<pos,size_t> lengths;
 	prover* grmr;
@@ -63,12 +80,6 @@ struct Marpa{
 		sym start = add(grmr, grmr->make(root));
 		start_symbol_set(start);
 	}
-
-
-	sym sym4thing(prover::termid thing)
-	{
-	}
-		
 
 	//create marpa symbols and rules from grammar description in rdf
 	sym add(prover *grmr, prover::termid thing)
@@ -113,9 +124,9 @@ struct Marpa{
 		}
 		else if((bind = ask(grmr, thing, pmatches)).size())
 		{
-			// pretend the world is ascii
-			string ws = dstr(grmr->get(bind[0]).p);
-			regexes[boost::regex(std::string(ws.begin(), ws.end()))] = symbol;
+			string regex = *dict[grmr->get(bind[0]).p].value;
+			string thing_s = *dict[grmr->get(thing).p].value;
+			terminals.push_back(terminal(thing_s, regex, symbol));
 		}
 		else
 			dout << "nope\n";
@@ -140,7 +151,7 @@ void error_clear(){
 sym symbol_new(prover::termid thing)
 {
 	num_syms++;
-	done[thing] = 5;//check_int(marpa_g_symbol_new(g));
+	done[thing] = num_syms;//check_int(marpa_g_symbol_new(g));
 	return done[thing];
 }
 
@@ -152,10 +163,6 @@ rule sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=fal
 	return 5;//check_int(marpa_g_sequence_new(g, lhs, rhs, separator, min, proper ? MARPA_PROPER_SEPARATION : 0));
 }
 
-void precompute(){
-	//check_int(marpa_g_precompute(g));
-	print_events();
-}
 
 void print_events()
 {	
@@ -187,35 +194,63 @@ void error()
 }
 
 
-void parse (string inp)
+void parse (const string inp)
 {
 	/*
 	Marpa_Recognizer r = marpa_r_new(g);
 	check_null(r);
 	marpa_r_start_input(r);
 	*/
-	
-	//this loop tokenizes(/lexes/scans) the input stream and feeds the tokens to marpa
-	for(auto pos : inp)
-	{
 
-		//lexing:just find the longest match?
-		boost::smatch m,m2;
+	//const std::string inp = ws(inp_);
+	
+	
+	lexertl::wrules rules;
+	lexertl::wstate_machine sm;
+
+	dout << "terminals:\n";
+	for (auto t:terminals)
+	{
+		dout << "(" << t.symbol << ")" << t.name << ": " << t.regex << std::endl;
+		rules.push(t.regex, t.symbol);
+	}
+	dout << "build..\n";
+	lexertl::wgenerator::build(rules, sm);
+
+	//std::string input("abc012Ad3e4");
+	
+	lexertl::wsiterator iter(inp.begin(), inp.end(), sm);
+	
+	
+	lexertl::wsiterator end;
+
+    for (; iter != end; ++iter)
+    {
+        dout << "Id: " << iter->id << ", Token: '" <<
+            iter->str() << "'\n";
+    }
+	/*
+	for(auto pos = inp.begin(); pos != inp.end();)
+	{
+		//boost::smatch m,m2;
 		sym s;
-		for (auto r : regexes) {
-//			boost::regex_search (pos, inp.end(), m2, r.first);
-			boost::regex_search (inp, m2, r.first);
+		for (auto r : regexes) 
+		{
+		
+			boost::regex_search (pos, inp.end(), m2, boost::regex(ws(r.first)));
 			if (!m.valid or m.length > m2.length) {
 				m = m2;
 				s = r.second;
 			}
+		
 		}
-		if (!m.valid) throw std::runtime_error("no match");
 		
-		p += m.length();
+		//if (!m.valid) throw std::runtime_error("no match");
 		
-
-		/*
+		//p += m.length();
+		
+	*/
+	/*
 		//#Return value: On success, MARPA_ERR_NONE. On failure, some other error code.
 		int err = marpa_r_alternative(r, s, pos, 1);
 
@@ -233,12 +268,17 @@ void parse (string inp)
 
 		check_int(marpa_r_earleme_complete(r));
 		lengths[pos] = m.lenght();
-		*/
 	}
+	*/
+	
 	
 
 }
 
+void precompute(){
+	//check_int(marpa_g_precompute(g));
+	print_events();
+}
 
 
 };
@@ -250,16 +290,35 @@ std::string load_n3_cmd::help() const
 	stringstream ss("Hilfe! Hilfe!:");
 	return ss.str();
 }
+
+
+#include <iostream>
+#include <fstream>
+
+
+string load(string fname)
+{
+	std::ifstream t(ws(fname));
+ 	if (!t.is_open())
+		throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
+
+	std::string str((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+	return ws(str);
+}
+
 int load_n3_cmd::operator() ( const strings& args )
 {	
+ 	string input = load(args[2]);
+
 	prover prover(convert(load_json(L"n3-grammar.jsonld")));
 	Marpa m;
 	m.load_grammar(
 		&prover, 
-		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#objecttail")));
-		//mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
+		//mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#objecttail")));
+		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
 	m.precompute();
-	m.parse(args[2]);
+
+	m.parse(input);
 	return 0;
 }
 

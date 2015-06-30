@@ -15,8 +15,8 @@ tau: $(OBJECTS) $(EXECUTABLE)
 marpa: marpa.o
 
 marpa: OBJECTS += marpa.o
-marpa: CXXFLAGS += -Dmarpa 
-marpa: LDFLAGS += -lboost_regex 
+marpa: CXXFLAGS += -Dmarpa  -Ilexertl
+#marpa: LDFLAGS += -lboost_regex 
 debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3
 cl: CXXFLAGS += -DOPENCL
