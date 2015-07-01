@@ -1,11 +1,14 @@
-#include "marpa.h"
+#include "marpa_tau.h"
 #include "prover.h"
-//#include "marpa.h"//not yet
 #include "object.h"
 #include "cli.h"
 #include "rdf.h"
 #include "misc.h"
 
+extern "C" {
+#include "marpa.h"
+#include "marpa_codes.c"
+}
 
 #include "lexertl/generator.hpp"
 #include <iostream>
@@ -50,12 +53,9 @@ const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#m
 
 
 
-/*typedef Marpa_Symbol_ID sym;
-typedef Marpa_Rule_ID rule;*/
-typedef size_t pos;
-typedef long long sym;
+typedef Marpa_Symbol_ID sym;
+typedef Marpa_Rule_ID rule;
 typedef std::vector<sym> syms;
-typedef int rule;
 
 class terminal
 {
@@ -69,11 +69,34 @@ public:
 
 
 struct Marpa{
-	uint num_syms = 0;
-	//Marpa_Grammar g;
+	sym num_syms = 0;
+	Marpa_Grammar g;
 	std::vector<terminal> terminals;
 	map<prover::termid, sym> done;
 	prover* grmr;
+
+
+	Marpa()
+	{
+		if (marpa_check_version (MARPA_MAJOR_VERSION ,MARPA_MINOR_VERSION, MARPA_MICRO_VERSION ) != MARPA_ERR_NONE)
+			throw std::runtime_error ("marpa version...");
+		Marpa_Config marpa_config;
+		marpa_c_init(&marpa_config);
+		g = marpa_g_new(&marpa_config);
+		if (!g)
+		{
+			stringstream ssss("marpa_g_new: error ");
+			ssss  << marpa_c_error (&marpa_config, NULL);
+			throw std::runtime_error (ssss.str());
+		}
+		if(marpa_g_force_valued(g) < 0)
+			throw std::runtime_error ("marpa_g_force_valued failed?!?!?");//bah
+	}
+	~Marpa()
+	{
+		marpa_g_unref(g);
+	}
+
 
 	void load_grammar(prover *_grmr, pnode root)
 	{
@@ -95,7 +118,8 @@ struct Marpa{
 	{
 		string thingv = value(thing);
 		
-		dout << "adding " << thing << std::endl;
+		if (done.find(thing) != done.end())
+			return done[thing];	
 
 		if (grmr->get(thing).isstr())
 		{
@@ -104,15 +128,15 @@ struct Marpa{
 			for (auto t :terminals)
 				if (t.regex == thingv)
 					return t.symbol;		
-			sym symbol = ++num_syms;//check_int(marpa_g_symbol_new(g));
+			sym symbol = symbol_new();
+			dout << "adding " << thingv << std::endl;
 			terminals.push_back(terminal(thingv, thingv, symbol));
 			return symbol;
 		}
-	
-		if (done.find(thing) != done.end())
-			return done[thing];	
 
-		sym symbol = symbol_new(thing);
+		dout << "adding " << thing << std::endl;
+	
+		sym symbol = symbol_new_termid(thing);
 		prover::termset bind;
 	
 		if((bind = ask(grmr, thing, pmatches)).size())
@@ -150,11 +174,12 @@ struct Marpa{
 		}
 		else
 			dout << "nope\n";
+		return symbol;
 	}
 
 
 int check_int(int result){
-	if (result < 0)//== -2)
+	if (result == -2)
 		error();
 	return result;
 }
@@ -165,61 +190,70 @@ void check_null(void* result){
 }
 
 void error_clear(){
-	//marpa_g_error_clear(g);
+	marpa_g_error_clear(g);
 }
 
-sym symbol_new(prover::termid thing)
+sym symbol_new()
 {
-	return done[thing] = ++num_syms;//check_int(marpa_g_symbol_new(g));
+	num_syms++;
+	return check_int(marpa_g_symbol_new(g));
+
+}
+
+sym symbol_new_termid(prover::termid thing)
+{
+	return done[thing] = symbol_new();
 
 }
 
 rule rule_new(sym lhs, syms rhs) {
-		return 5;//check_int(marpa_g_rule_new(g, lhs, rhs, rds.size()));
+		return check_int(marpa_g_rule_new(g, lhs, &rhs[0], rhs.size()));
 	}
 
 rule sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=false){
-	return 5;//check_int(marpa_g_sequence_new(g, lhs, rhs, separator, min, proper ? MARPA_PROPER_SEPARATION : 0));
+	return check_int(marpa_g_sequence_new(g, lhs, rhs, separator, min, proper ? MARPA_PROPER_SEPARATION : 0));
 }
 
 
 void print_events()
 {	
-	/*
+	
 	int count = check_int(marpa_g_event_count(g));
-	dout << '%s events'%count
+	dout << count << "events" << std::endl;
 	if (count > 0)
 	{
 		Marpa_Event e;
 		for (int i = 0; i < count; i++)
 		{
 			int etype = check_int(marpa_g_event(g, &e, i));
-			dout << etype << ", " << e.t_value;
+			dout << etype << ", " << e.t_value << std::endl;
 		}
 	}
-	*/
+	
 }
 
 void start_symbol_set(sym s){
-	//check_int( marpa_g_start_symbol_set(g, s) );
+	check_int( marpa_g_start_symbol_set(g, s) );
 }
 
 void error()
 {
-	/*
+	
 	int e = marpa_g_error(g, NULL);
-	throw(new exception(e + ": " + errors[e]));
-	*/
+	stringstream s;
+	s << e << ":" << marpa_error_description[e].name << " - " << marpa_error_description[e].suggested ;
+	throw(std::runtime_error(s.str()));// + ": " + errors[e]));
+	
 }
 
 
 void parse (const string inp)
 {
-	/*
+	
 	Marpa_Recognizer r = marpa_r_new(g);
 	check_null(r);
 	marpa_r_start_input(r);
-	*/
+	
 
 	//const std::string inp = ws(inp_);
 	
@@ -244,62 +278,59 @@ void parse (const string inp)
 	lexertl::wsiterator end;
 
 	dout << "go..\n";
+	int tok_id = -1;
 
-    for (; iter != end; ++iter)
-    {
-    	if(iter->id != 18446744073709551615)
-	        dout << "Id: " << iter->id << ", Token: '" << iter->str() << "'\n";
-    }
-    	dout << "\ndone\n";
-
-	/*
-	for(auto pos = inp.begin(); pos != inp.end();)
+	for (; iter != end; ++iter)
 	{
-		//boost::smatch m,m2;
-		sym s;
-		for (auto r : regexes) 
-		{
+		tok_id++;
+		if(iter->id == 18446744073709551615)
+			continue;
 		
-			boost::regex_search (pos, inp.end(), m2, boost::regex(ws(r.first)));
-			if (!m.valid or m.length > m2.length) {
-				m = m2;
-				s = r.second;
-			}
-		
-		}
-		
-		//if (!m.valid) throw std::runtime_error("no match");
-		
-		//p += m.length();
-		
-	*/
-	/*
+		sym s = iter->id;
+
+		print_terminal(iter->id);
+		dout << ", Text: '" << iter->str() << "'\n";
+	
 		//#Return value: On success, MARPA_ERR_NONE. On failure, some other error code.
-		int err = marpa_r_alternative(r, s, pos, 1);
+		int err = marpa_r_alternative(r, s, tok_id+1, 1);
 
 		if (err == MARPA_ERR_UNEXPECTED_TOKEN_ID)
 		{
-			sym[sym_names.size()] expected;
-			num_expected = check_int(marpa_r_terminals_expected(r, sym));
-			dout << "expecting:";
-			//for (int i = 0; i < num_expected; i++)
-			dout << endl;
-			error();
+			std::vector<sym> expected;
+			expected.resize(num_syms);
+			int num_expected = check_int(marpa_r_terminals_expected(r, &expected[0]));
+			dout << "expecting:" << std::endl;
+			for (int i = 0; i < num_expected; i++) 
+			{
+				dout << " ";
+				print_terminal(expected[i]);
+				dout << std::endl;
+			}
 		}
-		else if (r != MARPA_ERR_NONE)
-			error();
+		else if (err != MARPA_ERR_NONE)
+			dout << err << ":" << marpa_error_description[err].name << " - " << marpa_error_description[err].suggested ;
 
 		check_int(marpa_r_earleme_complete(r));
-		lengths[pos] = m.lenght();
 	}
-	*/
 	
 	
-
+    	dout << "\ndone\n";
 }
 
+void print_terminal(sym s)
+{
+	for (auto t:terminals)
+		if (t.symbol == s)
+		{
+			dout << "(" << t.symbol << ")" << t.name;
+			if (t.name != t.regex)
+				dout << ": " << t.regex;
+		}
+}
+
+
 void precompute(){
-	//check_int(marpa_g_precompute(g));
+	check_int(marpa_g_precompute(g));
 	print_events();
 }
 
@@ -355,28 +386,6 @@ int load_n3_cmd::operator() ( const strings& args )
 
 
 
-	Grammar()
-	{
-		if (marpa_check_version (MARPA_MAJOR_VERSION ,MARPA_MINOR_VERSION, MARPA_MICRO_VERSION ) != MARPA_ERR_NONE)
-			throw runtime_error ("marpa version...");
-		Marpa_Config marpa_config;
-		marpa_c_init(&marpa_config);
-		g = marpa_g_new(marpa_config);
-		if (!g)
-			throw runtime_error ("marpa_g_new: error %d" % marpa_c_error (&marpa_config, NULL));
-		if(lib.marpa_g_force_valued(s.g) < 0)
-			throw runtime_error ("marpa_g_force_valued failed?!?!?");
-	}
-	~Grammar()
-	{
-		marpa_g_unref(g);
-	}
-
-
-
-
-
-
 
 */
 
@@ -392,9 +401,6 @@ https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
 
 
 /*
-
-
-
 	//marpa allows variously ordered lists of ambiguous parses,
 	we just grab the default
 
