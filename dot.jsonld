@@ -1,0 +1,32 @@
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "rul": "http://www.w3.org/2000/10/swap/grammar/bnf-rules#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@graph": [
+    
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#document",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@set": [
+          {
+            "@list": []
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statement"
+              },
+              ".",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statements_optional"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

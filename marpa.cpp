@@ -53,7 +53,7 @@ const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#m
 /*typedef Marpa_Symbol_ID sym;
 typedef Marpa_Rule_ID rule;*/
 typedef size_t pos;
-typedef int sym;
+typedef long long sym;
 typedef std::vector<sym> syms;
 typedef int rule;
 
@@ -66,12 +66,13 @@ public:
 };
 
 
+
+
 struct Marpa{
 	uint num_syms = 0;
 	//Marpa_Grammar g;
 	std::vector<terminal> terminals;
 	map<prover::termid, sym> done;
-	map<pos,size_t> lengths;
 	prover* grmr;
 
 	void load_grammar(prover *_grmr, pnode root)
@@ -79,24 +80,50 @@ struct Marpa{
 		grmr = _grmr;
 		sym start = add(grmr, grmr->make(root));
 		start_symbol_set(start);
+		terminals.push_back(terminal(L"comment", L"#.*", -2));
 	}
+
+	string value(prover::termid val)
+	{
+		return *dict[grmr->get(val).p].value;
+	}
+
+	string lexertl_literal(string s){return L"\"" + s + L"\"";}
 
 	//create marpa symbols and rules from grammar description in rdf
 	sym add(prover *grmr, prover::termid thing)
 	{
+		string thingv = value(thing);
+		
+		dout << "adding " << thing << std::endl;
+
+		if (grmr->get(thing).isstr())
+		{
+			dout << "itsa str"<<std::endl;
+			thingv = lexertl_literal(thingv);
+			for (auto t :terminals)
+				if (t.regex == thingv)
+					return t.symbol;		
+			sym symbol = ++num_syms;//check_int(marpa_g_symbol_new(g));
+			terminals.push_back(terminal(thingv, thingv, symbol));
+			return symbol;
+		}
+	
 		if (done.find(thing) != done.end())
-			return done[thing];
-		
+			return done[thing];	
+
 		sym symbol = symbol_new(thing);
-		
-		dout << "is it a mustBeOneSequence?" << std::endl;
-		
 		prover::termset bind;
+	
+		if((bind = ask(grmr, thing, pmatches)).size())
+		{
+			terminals.push_back(terminal(thingv, value(bind[0]), symbol));
+		}
 
 		// note that in the grammar file things and terminology are switched,
 		// mustBeOneSequence is a sequence of lists
 		
-		if ((bind = ask(grmr, thing, pmustbos)).size())
+		else if ((bind = ask(grmr, thing, pmustbos)).size())
 		{
 			for (auto l : bind) // thing must be one of these lists
 			{
@@ -108,25 +135,18 @@ struct Marpa{
 					dout << l;
 					dout << "..." << std::endl;
 			
-					prover::termset xx = ask(grmr, l, rdfs_first);
-					if (!xx.size()) break;
-					
-					rhs.push_back(add(grmr, xx[0]));
+					prover::termset first = ask(grmr, l, rdfs_first);
+					if (!first.size()) break;
+					rhs.push_back(add(grmr, first[0]));
 				
-					xx = ask(grmr, l, rdfs_rest);
-					if (!xx.size()) break;//err
-					l = xx[0];
+					prover::termset rest = ask(grmr, l, rdfs_rest);
+					if (!rest.size()) {dout << "wut" << std::endl; break;}//err
+					l = rest[0];
 				}
 				dout << "]" << std::endl;
 				
 				rule_new(symbol, rhs);
 			}
-		}
-		else if((bind = ask(grmr, thing, pmatches)).size())
-		{
-			string regex = *dict[grmr->get(bind[0]).p].value;
-			string thing_s = *dict[grmr->get(thing).p].value;
-			terminals.push_back(terminal(thing_s, regex, symbol));
 		}
 		else
 			dout << "nope\n";
@@ -150,9 +170,8 @@ void error_clear(){
 
 sym symbol_new(prover::termid thing)
 {
-	num_syms++;
-	done[thing] = num_syms;//check_int(marpa_g_symbol_new(g));
-	return done[thing];
+	return done[thing] = ++num_syms;//check_int(marpa_g_symbol_new(g));
+
 }
 
 rule rule_new(sym lhs, syms rhs) {
@@ -224,11 +243,15 @@ void parse (const string inp)
 	
 	lexertl::wsiterator end;
 
+	dout << "go..\n";
+
     for (; iter != end; ++iter)
     {
         dout << "Id: " << iter->id << ", Token: '" <<
             iter->str() << "'\n";
     }
+    	dout << "\ndone\n";
+
 	/*
 	for(auto pos = inp.begin(); pos != inp.end();)
 	{
@@ -310,14 +333,15 @@ int load_n3_cmd::operator() ( const strings& args )
 {	
  	string input = load(args[2]);
 
-	prover prover(convert(load_json(L"n3-grammar.jsonld")));
+	prover prover(convert(load_json(L"dot.jsonld")));
+//	prover prover(convert(load_json(L"n3-grammar.jsonld")));
 	Marpa m;
 	m.load_grammar(
 		&prover, 
 		//mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#objecttail")));
 		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
 	m.precompute();
-
+	
 	m.parse(input);
 	return 0;
 }
