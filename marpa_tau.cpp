@@ -26,21 +26,24 @@ prover::termset ask(prover *prover, prover::termid s, const pnode p)
 	(*prover)(query);
 	
 	dout << "query: "<< prover->format(query) << endl;;
-	dout << "substs: "<< std::endl;
+	//dout << "substs: "<< std::endl;
 
 	for (auto x : prover->substs) 
 	{
-		//prover->prints(x);
-		//dout << std::endl;
 
 		prover::subst::iterator binding_it = x.find(prover->get(o_var).p);
 		if (binding_it != x.end())
 		{
 			r.push_back( (*binding_it).second);
+			
+			//prover->prints(x);
+			//dout << std::endl;
+
 		}
 	}
 
 	prover->substs.clear();
+	dout << r.size() << "." << std::endl;
 	return r;
 }
 
@@ -134,13 +137,14 @@ struct Marpa{
 			return symbol;
 		}
 
-		dout << "adding " << thing << std::endl;
+		dout << "adding " << thingv << ",termid:" << thing << std::endl;
 	
 		sym symbol = symbol_new_termid(thing);
 		prover::termset bind;
 	
 		if((bind = ask(grmr, thing, pmatches)).size())
 		{
+			dout << "push_back " << thingv << std::endl;
 			terminals.push_back(terminal(thingv, value(bind[0]), symbol));
 		}
 
@@ -174,6 +178,8 @@ struct Marpa{
 		}
 		else
 			dout << "nope\n";
+
+		dout << "added "<<symbol << std::endl;
 		return symbol;
 	}
 
