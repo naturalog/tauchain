@@ -35,14 +35,13 @@ prover::termset ask(prover *prover, prover::termid s, const pnode p)
 		if (binding_it != x.end())
 		{
 			r.push_back( (*binding_it).second);
-			
 			//prover->prints(x);
 			//dout << std::endl;
-
 		}
 	}
 
 	prover->substs.clear();
+	prover->e.clear();
 	dout << r.size() << "." << std::endl;
 	return r;
 }
@@ -318,9 +317,46 @@ void parse (const string inp)
 
 		check_int(marpa_r_earleme_complete(r));
 	}
-	
-	
-    	dout << "\ndone\n";
+
+    	dout << "parsing.." << std::endl;
+
+/*
+	//marpa allows variously ordered lists of ambiguous parses, we just grab the default
+
+
+	Marpa_Bocage b = marpa_b_new(r, -1);
+	check_null(b);
+	Marpa_Order o = marpa_o_new(b);
+	check_null(o);
+	Marpa_Tree t = marpa_t_new(o);
+	check_null(t);
+	check_int(marpa_t_next(t));
+	Marpa_Value marpa_v_new(t);
+	check_null(v);
+
+
+	//"valuator" loop. marpa tells us what rules with what child nodes or tokens were matched, we build the "value" of our ast
+
+
+
+
+	while(1)
+	{
+		Marpa_Step_Type st = check_int(marpa_v_step_type(v));
+		if (st == MARPA_STEP_INACTIVE) break;
+		switch(st)
+		{
+			case MARPA_STEP_TOKEN:
+				sym id = marpa_v_symbol(v);
+				pos p = marpa_v_token_value(v) - 1;
+				stack[marpa_v_result(v)] = iter[pos];
+				break;
+			case MARPA_STEP_RULE:
+				rule r = marpa_v_rule(v);
+				
+
+*/
+
 }
 
 void print_terminal(sym s)
@@ -404,44 +440,3 @@ https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
 */
 
 
-
-
-/*
-	//marpa allows variously ordered lists of ambiguous parses,
-	we just grab the default
-
-
-	Marpa_Bocage b = marpa_b_new(r, -1);
-	check_null(b);
-	Marpa_Order o = marpa_o_new(b);
-	check_null(o);
-	Marpa_Tree t = marpa_t_new(o);
-	check_null(t);
-	check_int(marpa_t_next(t));
-	Marpa_Value marpa_v_new(t);
-	check_null(v);
-
-
-
-	//"valuator" loop. marpa tells us what rules with what child nodes or tokens were matched, we build the ast with our "values"
-
-
-	while(1)
-	{
-		Marpa_Step_Type st = check_int(marpa_v_step(v));
-		if (st == MARPA_STEP_INACTIVE) break;
-		switch(st)
-		{
-			case MARPA_STEP_TOKEN:
-				sym id = marpa_v_symbol(v);
-
-				obj x;
-				x["name"] = names[id];
-
-				pos p = marpa_v_token_value(v);
-				stack[marpa_v_result(v)] = input[p:lengths[p]]
-
-				break;
-			case MARPA_STEP_RULE:
-
-*/
