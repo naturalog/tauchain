@@ -247,8 +247,8 @@ void parse (const string inp)
 
     for (; iter != end; ++iter)
     {
-        dout << "Id: " << iter->id << ", Token: '" <<
-            iter->str() << "'\n";
+    	if(iter->id != 18446744073709551615)
+	        dout << "Id: " << iter->id << ", Token: '" << iter->str() << "'\n";
     }
     	dout << "\ndone\n";
 
@@ -333,8 +333,7 @@ int load_n3_cmd::operator() ( const strings& args )
 {	
  	string input = load(args[2]);
 
-	prover prover(convert(load_json(L"dot.jsonld")));
-//	prover prover(convert(load_json(L"n3-grammar.jsonld")));
+	prover prover(convert(load_json(L"n3-grammar.jsonld")));
 	Marpa m;
 	m.load_grammar(
 		&prover, 
