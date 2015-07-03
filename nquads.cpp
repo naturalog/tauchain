@@ -71,27 +71,25 @@ pnode nqparser::readiri() {
 		return mkiri(wstrim(t));
 	}
 	if (*s == L'=' && *(s+1) == L'>') { ++++s; return mkiri(pimplication); }
-//	while (!iswspace(*s) && *s != L'.') t[pos++] = *s++;
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
-//	++s;
 	pstring iri = wstrim(t);
 	auto i = iri->find(L':');
-	if (i == string::npos) return mkiri(iri);//throw wruntime_error(string(L"expected ':' in iri: ") + string(s,0,48));
+	if (i == string::npos) return mkiri(iri);
 	string p = iri->substr(0, ++i);
 	TRACE(dout<<"extracted prefix \"" << p <<L'\"'<< endl);
 	auto it = prefixes.find(p);
 	if (it != prefixes.end()) {
 		TRACE(dout<<"prefix: " << p << " subst: " << *it->second->value<<endl);
 		iri = pstr(*it->second->value + iri->substr(i));
-	} //else if (p == L":") iri = pstr(L"");
+	}
 	return mkiri(iri);
 };
 
 pnode nqparser::readbnode() {
 	setproc(L"readbnode");
 	while (iswspace(*s)) ++s;
-	if (*s != L'_') return pnode(0);
+	if (*s != L'_' || *(s+1) != L':') return pnode(0);
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	return mkbnode(wstrim(t));
@@ -120,7 +118,6 @@ pnode nqparser::readvar() {
 	if (*s != L'?') return pnode(0);
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
-//	++s;
 	return mkiri(wstrim(t));
 };
 
@@ -177,18 +174,12 @@ std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operato
 				preds.emplace_back(pn, plist());
 				pos1 = preds.rbegin();
 			}
-//			else if (*s == L'=' && *++s == L'>') {
-//				preds.emplace_back(mkiri(pimplication), plist());
-//				++s;
-//			}
 			else throw wruntime_error(string(L"expected iri predicate:") + string(s,0,48));
-//			auto pos2 = pos1->second.rbegin();
 			do {
 				while (iswspace(*s) || *s == L',') ++s;
 				if (*s == L'.' || *s == L'}') break;
 				if ((pn = readany(true))) {
-					pos1->/*preds.back().*/second.push_back(pn);
-//					pos2 = pos1->second.rbegin();
+					pos1->second.push_back(pn);
 				}
 				else throw wruntime_error(string(L"expected iri or bnode or literal object:") + string(s,0,48));
 				while (iswspace(*s)) ++s;
@@ -196,28 +187,16 @@ std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operato
 			while (iswspace(*s)) ++s;
 		} while (*s == L';');
 		if (*s != L'.' && *s != L'}' && *s) {
-			if (*s == L'<')
-				while (*++s != L'>') t[pos++] = *s;
-			else if (*s == L'_')
-				while (!iswspace(*s)) t[pos++] = *s++;
-			else throw wruntime_error(string(L"expected iri or bnode graph:") + string(s,0,48));
-			t[pos] = 0; pos = 0;
-			trim(graph = t);
-			++s;
+			if (!(pn = readbnode()) && !(pn = readiri()))
+				throw wruntime_error(string(L"expected iri or bnode graph:") + string(s,0,48));
+			graph = *pn->value;
 		} else
 			graph = ctx;
-//		auto l1 = lists;
-//		auto p1 = preds;
-		for (auto d : lists) {
-//			if (std::get<0>(d) &&std::get<1>(d) && std::get<2>(d))
-				r.emplace_back(std::get<0>(d), std::get<1>(d), std::get<2>(d), /*L"@default"*/graph);
-//			else l1.push_back(d);
-		}
+		for (auto d : lists)
+				r.emplace_back(std::get<0>(d), std::get<1>(d), std::get<2>(d), graph);
 		for (auto x : preds)
 			for (pnode object : x.second)
-//				if (object) 
 				r.emplace_back(subject, x.first, object, graph);
-//				else p1.push_back(x);
 		lists.clear();
 		preds.clear();
 		while (iswspace(*s)) ++s;
