@@ -416,8 +416,9 @@ qdb lists(const qdb& kb) {
 }
 */
 prover::prover ( qdb qkb ) : quads(qkb) {
-	for ( pquad quad : *qkb.first[L"@default"] )
-		addrules(quad);
+	auto it = qkb.first.find(L"@default");
+	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
+	for ( pquad quad : *it->second ) addrules(quad);
 	for (auto x : qkb.second) {
 		
 	}
