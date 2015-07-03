@@ -72,10 +72,10 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 			}
 			r = true;
 		}
-	} else if (islist(_s)) {
-		TRACE( dout << "List unification "; printterm_substs(_s, ssub); dout<<" with "; printterm_substs(_d, dsub); dout <<endl);
-		if (s.p != d.p || !islist(_d)) r = false;
-		else r = unify(s.o, ssub, d.o, dsub, f);
+//	} else if (islist(_s)) {
+//		TRACE( dout << "List unification "; printterm_substs(_s, ssub); dout<<" with "; printterm_substs(_d, dsub); dout <<endl);
+//		if (s.p != d.p || !islist(_d)) r = false;
+//		else r = unify(s.o, ssub, d.o, dsub, f);
 	}
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o))
 		r = false;
@@ -349,25 +349,15 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 }
 
 prover::termid prover::quad2term(const quad& p) {
-	return make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
-}
-
-void prover::addrules(pquad q) {
-	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
-	if ( p != implication || quads.find ( o ) == quads.end() ) 
-		kb.add(quad2term(*q), termset(), this);
-	else for ( pquad y : *quads.at ( o ) ) {
-		termset ts;
-		if ( quads.find ( s ) != quads.end() )
-			for ( pquad z : *quads.at ( s ) )
-				ts.push_back( quad2term( *z ) );
-		kb.add(quad2term(*y), ts, this);
-	}
+	setproc(L"quad2term");
+	termid t = make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
+	TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
+	return t;
 }
 
 qlist merge ( const qdb& q ) {
 	qlist r;
-	for ( auto x : q ) for ( auto y : *x.second ) r.push_back ( y );
+	for ( auto x : q.first ) for ( auto y : *x.second ) r.push_back ( y );
 	return r;
 }
 
@@ -383,12 +373,47 @@ prover::prover(prover::ruleset* _kb) : kb(_kb ? *_kb : *new ruleset) {
 	CL(initcl());
 }
 
-prover::~prover() { 
-}
+prover::~prover() { }
 
-prover::prover ( qdb qkb) : prover() {
-	quads = qkb;
-	for ( pquad quad : *quads.at(L"@default") )
+//bool prover::islist(pquad q) { return startsWith(*dict[get(t).p].value,L"_:list"); }
+
+void prover::addrules(pquad q) {
+	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
+	if ( p != implication || quads.first.find ( o ) == quads.first.end() ) 
+		kb.add(quad2term(*q), termset(), this);
+	else for ( pquad y : *quads.first.at ( o ) ) {
+			termset ts;
+			if ( quads.first.find ( s ) != quads.first.end() )
+				for ( pquad z : *quads.first.at(s) )
+					ts.push_back( quad2term( *z ) );
+			kb.add(quad2term(*y), ts, this);
+		}
+}
+/*
+qdb lists(const qdb& kb) {
+	std::map<string, std::map<node, std::map<node, pquad>>> qs;
+	std::map<string, std::list<pnode>> ls;
+	auto isls = [](pnode n){ return n->_type == node::BNODE && startsWith(*n->value,L"_:list"); };
+	auto first = [&](node n, string g){ return qs[g][dict[rdffirst]][n]->object; };
+	auto rest = [&](node n, string g){ return qs[g][dict[rdfrest]][n]->object; };
+	for (auto x : kb)
+		for (auto q : *x.second)
+			qs[x.first][*q->pred][*q->subj] = q;
+	for (auto x : kb)
+		for (auto q : *x.second)
+			if (isls(q->subj)) {
+				ls[x.first].push_back(q->subj);
+				pquad _q;
+				for (_q != rdfnil) {
+					ls[x.first].push_back(first(*q->subj, x.first));
+					_q = rest(*q->subj, x.first);
+					
+				}
+			}
+}
+*/
+prover::prover ( qdb qkb ) : quads(qkb) {
+	for ( pquad quad : *qkb.first[L"@default"] )
 		addrules(quad);
 }
 
@@ -558,10 +583,6 @@ pobj prover::ejson() const {
 		(*o->MAP())[dstr(x.first)] = l;
 	}
 	return o;
-}
-bool prover::islist(prover::termid p) {
-	const term t = get(p);
-	return t.s && startsWith(*dict[get(t.s).p].value, L"_:list");
 }
 //evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
 //g.push({src:rl, env:{}})

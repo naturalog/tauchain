@@ -9,7 +9,7 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil;
+resid logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil;
 
 void bidict::init() {
 	GND = set (mkiri(pstr( L"GND" )));
@@ -35,26 +35,26 @@ void bidict::set ( const std::vector<node>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
-int bidict::set ( node v ) {
+resid bidict::set ( node v ) {
 	auto it = pi.find ( v );
 	if ( it != pi.end() ) return it->second;
-	int k = pi.size() + 1;
+	resid k = pi.size() + 1;
 	if ( /*v._type == node::IRI &&*/ (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;
 }
 
-node bidict::operator[] ( int k ) {
+node bidict::operator[] ( resid k ) {
 //	if (!has(k)) set(::tostr(k));
 	return ip[k];
 }
 
-int bidict::operator[] ( node v ) {
+resid bidict::operator[] ( node v ) {
 	return pi[v];
 }
 
-bool bidict::has ( int k ) const {
+bool bidict::has ( resid k ) const {
 	return ip.find ( k ) != ip.end();
 }
 
@@ -68,7 +68,7 @@ string bidict::tostr() {
 	return s.str();
 }
 
-string dstr ( int p ) {
+string dstr ( resid p ) {
 	if ( !deref ) return *tostr ( p );
 	string s = dict[p].tostring();
 	if (s == L"GND") throw 0;

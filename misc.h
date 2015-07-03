@@ -10,27 +10,29 @@
 #include <boost/interprocess/containers/map.hpp>
 #include "rdf.h"
 
+typedef i64 resid;
+
 extern boost::container::list<string> proc;
 class bidict {
-	boost::container::map<int, node> ip;
-	boost::container::map<node, int> pi;
+	boost::container::map<resid, node> ip;
+	boost::container::map<node, resid> pi;
 public:
 	void init();
-	int set ( node v );
-	int set ( pnode v ) { return set (*v); }
+	resid set ( node v );
+	resid set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
-	node operator[] ( int k );
-	int operator[] ( node v );
-	int operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
-	bool has ( int k ) const;
+	node operator[] ( resid k );
+	resid operator[] ( node v );
+	resid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
+	bool has ( resid k ) const;
 	bool has ( node v ) const;
 	string tostr();
 	boost::container::map<string, pnode> nodes;
 };
 
 extern bidict& dict;
-extern int logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil;
-string dstr ( int p );
+extern resid logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil;
+string dstr ( resid p );
 string indent();
 
 struct _setproc {

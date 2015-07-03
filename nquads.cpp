@@ -49,6 +49,7 @@ pnode nqparser::readlist() {
 			throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
 		pnode cons = mkbnode(pstr(id()));
 		lists.emplace_back(cons, rdffst, pn);
+		qlists[head].push_back(pn);
 		++lpos;
 		while (iswspace(*s)) ++s;
 		if (*s == L')') lists.emplace_back(cons, rdfrst, rnil);
@@ -158,7 +159,7 @@ pnode nqparser::readany(bool lit){
 };
 
 
-std::list<quad> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
+std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
 	std::list<std::pair<pnode, plist>> preds;
 	s = _s;
 	string graph;
@@ -222,7 +223,7 @@ std::list<quad> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@defaul
 		while (iswspace(*s)) ++s;
 		while (*s == '.') ++s;
 		while (iswspace(*s)) ++s;
-		if (*s == L'}') { ++s; return r; }
+		if (*s == L'}') { ++s; return { r, qlists }; }
 	}
-	return r;
+	return { r, qlists };
 }

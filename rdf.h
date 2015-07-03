@@ -22,9 +22,9 @@ public:
 	string tostring() const;
 	bool operator<(const node& x) const { return tostring() < x.tostring(); }
 	bool operator==(const node& x) const { 
-		bool r = *value == *x.value && *datatype == *x.datatype && *lang == *x.lang && _type == x._type;
-		return r;
+		return *value == *x.value && *datatype == *x.datatype && *lang == *x.lang && _type == x._type;
 	}
+	pnode next = 0;
 };
 inline std::wostream& operator<<(std::wostream& o, const node& n) { return o << n.tostring(); }
 
@@ -49,7 +49,7 @@ public:
 typedef std::shared_ptr<quad> pquad;
 typedef std::list<pquad> qlist;
 typedef std::shared_ptr<qlist> pqlist;
-typedef std::map<string, pqlist> qdb;
+typedef std::pair<std::map<string, pqlist>, std::map<string, std::list<pnode>>> qdb;
 
 extern const pnode first;
 extern const pnode rest;
@@ -66,6 +66,8 @@ class rdf_db: public qdb {
 	ssmap context;
 	jsonld_api& api;
 public:
+	using qdb::first;
+	using qdb::second;
 	rdf_db ( jsonld_api& );
 
 	string tostring();
@@ -103,10 +105,11 @@ private:
 	static pnode rdfrst, rdffst, rnil;
 	void readprefix();
 	std::map<string, pnode> prefixes;
+	std::map<string, std::list<pnode>> qlists;
 public:
 	nqparser();
 	~nqparser();
-	std::list<quad> operator()(const wchar_t *s, string ctx = L"@default");
+	std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );
 #endif

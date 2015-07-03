@@ -79,7 +79,7 @@ pnode mkbnode ( pstring attribute ) {
 
 rdf_db::rdf_db ( jsonld_api& api_ ) :
 	qdb(), api ( api_ ) {
-	( *this ) [str_default] = mk_qlist();
+	first[str_default] = mk_qlist();
 }
 
 std::wostream& operator<< ( std::wostream& o, const qlist& x ) {
@@ -89,7 +89,7 @@ std::wostream& operator<< ( std::wostream& o, const qlist& x ) {
 }
 
 std::wostream& operator<< ( std::wostream& o, const qdb& q ) {
-	for ( auto x : q )
+	for ( auto x : q.first )
 		o /*<< x.first*/ << *x.second;
 	return o;
 }
@@ -141,7 +141,7 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 
 void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	qlist triples;
-	pnode first = mkiri ( RDF_FIRST );
+	{pnode first = mkiri ( RDF_FIRST );
 	pnode rest = mkiri ( RDF_REST );
 	pnode nil = mkiri ( RDF_NIL );
 	for ( auto y : graph ) { // 4.3
@@ -175,6 +175,7 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 					for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
 						pnode object = obj_to_rdf ( list->at ( i ) );
 						triples.push_back ( make_shared <quad> ( firstBnode, first, object, graph_name ) );
+						second[*firstBnode->value].push_back(firstBnode);
 						pnode restBnode = mkbnode ( api.gen_bnode_id() );
 						triples.push_back ( make_shared <quad> ( firstBnode, rest, restBnode, graph_name ) );
 						firstBnode = restBnode;
@@ -187,9 +188,9 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 					triples.push_back ( make_shared <quad> ( subj, pred, object, graph_name ) );
 			}
 		}
-	}
-	if ( find ( graph_name ) == end() ) ( *this ) [graph_name] = make_shared <qlist> ( triples );
-	else at ( graph_name )->insert ( at ( graph_name )->end() , triples.begin(), triples.end() );
+	}}
+	if ( first.find ( graph_name ) == first.end() ) first[graph_name] = make_shared <qlist> ( triples );
+	else first[graph_name]->insert ( first[graph_name]->end() , triples.begin(), triples.end() );
 }
 
 pnode rdf_db::obj_to_rdf ( pobj item ) {
@@ -274,11 +275,11 @@ qdb readqdb ( std::wistream& is) {
 		if (s[0] == L'#') continue;
 		ss << s << ' ';
 	}
-	for (quad q : p(ss.str().c_str())) {
+	for (quad q : p(ss.str().c_str()).first) {
 		c = *q.graph->value;
-		if (r.find(c) == r.end()) r[c] = make_shared<qlist>();
-		r[c]->push_back(make_shared<quad>(q));
-		}
+		if (r.first.find(c) == r.first.end()) r.first[c] = make_shared<qlist>();
+		r.first[c]->push_back(make_shared<quad>(q));
+	}
 	return r;
 }
 

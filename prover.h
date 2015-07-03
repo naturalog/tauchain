@@ -25,16 +25,11 @@ extern std::string clprog;
 #define CL(x)
 #endif
 
-typedef uint64_t u64;
-typedef int64_t i64;
-typedef uint8_t u8;
-typedef int8_t i8;
 enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
 
 class prover {
 public:
 	typedef i64 termid;
-	typedef i64 resid;
 
 	class term {
 	public:

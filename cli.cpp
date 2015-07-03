@@ -114,6 +114,7 @@ qdb cmd_t::toquads ( pobj o ) {
 	jsonld_api a ( opts );
 	rdf_db r ( a );
 	auto nodeMap = o;
+	std::map<string, pnode> lists;
 	for ( auto g : *nodeMap->MAP() ) {
 		if ( is_rel_iri ( g.first ) ) continue;
 		if ( !g.second || !g.second->MAP() ) throw wruntime_error ( L"Expected map in nodemap." );
