@@ -1,15 +1,15 @@
 # Notation3 in Notation3
 # Context Free Grammar without tokenization
 #
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ...
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>...
-@prefix cfg: <http://www.w3.org/2000/10/swap/grammar/bnf#>...
-@prefix rul: <http://www.w3.org/2000/10/swap/grammar/bnf-rules#>...
-@prefix : <http://www.w3.org/2000/10/swap/grammar/n3#>...
-@prefix n3: <http://www.w3.org/2000/10/swap/grammar/n3#>...
-@prefix list: <http://www.w3.org/2000/10/swap/list#>...
-@prefix string: <http://www.w3.org/2000/10/swap/string#>...
-@keywords a, is, of...
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix cfg: <http://www.w3.org/2000/10/swap/grammar/bnf#>.
+@prefix rul: <http://www.w3.org/2000/10/swap/grammar/bnf-rules#>.
+@prefix : <http://www.w3.org/2000/10/swap/grammar/n3#>.
+@prefix n3: <http://www.w3.org/2000/10/swap/grammar/n3#>.
+@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+@prefix string: <http://www.w3.org/2000/10/swap/string#>.
+@keywords a, is, of.
 
 
 # Issues:
@@ -41,28 +41,26 @@
 
 language a cfg:Language;
 	cfg:document	document;
-	cfg:whiteSpace	"@@@@@"...
+	cfg:whiteSpace	"".
 
 
-document a rul:Used;
-	cfg:mustBeOneSequence(
-	
+document a marpa:Sequence
 		(
-#			[ cfg:zeroOrMore declaration ]
-#			[ cfg:zeroOrMore universal ]
-#			[ cfg:zeroOrMore existential ]
-			statements_optional
+			[ cfg:zeroOrMore declaration ]
+			[ cfg:zeroOrMore universal ]
+			[ cfg:zeroOrMore existential ]
+			[ cfg:Sequence statement; cfg:separatedBy "..."; ]
 			cfg:eof
 		)
-	)...
-
-statements_optional cfg:mustBeOneSequence (() ( statement "." statements_optional ) )...
+	.
 
 # Formula does NOT need period on last statement
 
-formulacontent cfg:mustBeOneSequence (
-		( statementlist )
-	)...
+formulacontent 
+	cfg:Sequence statement; 
+	cfg:separatedBy "...";
+	cfg:allowTrailing true.
+	
 
 
 statementlist cfg:mustBeOneSequence (
@@ -135,27 +133,24 @@ subject cfg:mustBeOneSequence ((expression))...
 
 object cfg:mustBeOneSequence ((expression))...
 
-expression cfg:mustBeOneSequence(
-		( pathitem pathtail )
-	)...
+expression ma:sequence ( pathitem [ pathtail ).
 
 pathtail cfg:mustBeOneSequence(
-		(  )
 		( "!" expression )
 		( "^" expression )
-	)...
+	).
 
 
-pathitem cfg:mustBeOneSequence (
-		( symbol )
+pathitem oneOf (
+		symbol
 		( "{" formulacontent "}" )
-		( quickvariable )
-		( numericliteral )
-		( literal )
+		quickvariable
+		numericliteral
+		literal
 		( "[" propertylist "]"  )
 		(  "("  pathlist ")"  )
-                ( boolean )
-#		( "@this" )	  #  Deprecated...  Was allowed for this log:forAll x
+                boolean
+#		"@this"	  #  Deprecated...  Was allowed for this log:forAll x
 )...
 
 

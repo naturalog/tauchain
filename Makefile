@@ -12,11 +12,20 @@ tau: $(OBJECTS) $(EXECUTABLE)
 
 %.o: %.cpp `g++ -std=c++11 $(CXXFLAGS) -M %.cpp`
 
-marpa: marpa.o
+marpa: marpa_tau.o libmarpa/dist/.libs/libmarpa.so
 
-marpa: OBJECTS += marpa.o
-marpa: CXXFLAGS += -Dmarpa  -Ilexertl
-#marpa: LDFLAGS += -lboost_regex 
+libmarpa/dist/.libs/libmarpa.so:
+	git submodule init
+	git submodule update
+	cd libmarpa
+	make dist
+	cd dist
+	./configure
+	make
+
+marpa: OBJECTS += marpa_tau.o
+marpa: CXXFLAGS += -Dmarpa  -Ilexertl -I libmarpa/dist
+marpa: LDFLAGS += -Llibmarpa/dist/.libs -lmarpa
 debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3
 cl: CXXFLAGS += -DOPENCL
