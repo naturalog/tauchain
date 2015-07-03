@@ -350,6 +350,9 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 
 prover::termid prover::quad2term(const quad& p) {
 	setproc(L"quad2term");
+//	if (quads.second.find(*p.s->value) != quads.second.end()) {
+//		
+//	}
 	termid t = make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
 	TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
 	return t;
@@ -415,6 +418,9 @@ qdb lists(const qdb& kb) {
 prover::prover ( qdb qkb ) : quads(qkb) {
 	for ( pquad quad : *qkb.first[L"@default"] )
 		addrules(quad);
+	for (auto x : qkb.second) {
+		
+	}
 }
 
 void prover::operator()(termset& goal, const subst* s) {
