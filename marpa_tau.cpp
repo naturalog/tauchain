@@ -433,7 +433,17 @@ int load_n3_cmd::operator() ( const strings& args )
 ---------------------
 
 
+?M :marpa_for_grammar http://www.w3.org/2000/10/swap/grammar/n3#language; ?X :parsed (?M ?FN).
 
+
+->
+
+
+?X a n3:document
+?X n3:declarations [ ("@base" "xxx")  ("@prefix" "xxx" "yyy")  ("@keywords" ("aaa" "bbb" "ccc")) ]
+?X n3:universals
+
+?X n3:statements [ 
 
 
 
