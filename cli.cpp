@@ -13,17 +13,10 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	bool empty = true;
 	try {
 		qdb r;
-//#ifndef IRC
 		std::wistream* pis = &std::wcin;
 		if (fname != L"")
 			pis = new std::wifstream(ws(fname));
 		std::wistream& is = *pis;
-//#else		
-//		string pp = string("tail -n 0 -f /tmp/irc.freenode.net/#")+chan+"/out";
-//		static istream* pis = new redi::ipstream(pp/*, redi::pstreams::pstdout | redi::pstreams::newpg*/);
-//		cerr<<pp<<endl;
-//#endif			
-//		istream& is = *pis;
 		string line;
 		std::wstringstream ss;
 		while (!is.eof()) {
@@ -32,13 +25,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 			empty = false;
 			if (!line.size() || line == L"\n")
 				continue;
-			static string magic = L"botau: ", lvl = L"level ", fin = L"fin.";
-#ifdef IRC
-			auto pos = line.find(magic);
-			if (pos == string::npos)
-				continue;
-			line = line.substr(pos + magic.size());
-#endif
+			static string lvl = L"level ", fin = L"fin.";
 			trim(line);
 			if (startsWith(line, lvl)) {
 				try {
@@ -51,20 +38,14 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 				catch (...) {}
 				continue;
 			}
-//			cout << line;
 			if (endsWith(line, fin)) {
 				string x = line.substr(0, line.size() - fin.size());
 				trim(x);
 				ss << x;
 				break;
-//				return empty ? 0 : std::make_shared<qdb>(readqdb(ss));
 			}
 			ss << line;
 		}
-#ifndef IRC		
-		if (fname != L"")
-			delete pis;
-#endif			
 		return empty ? 0 : std::make_shared<qdb>(readqdb(ss));
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
@@ -79,10 +60,8 @@ pobj cmd_t::load_json ( string fname, bool print ) {
 	if ( fname == L"" ) json_spirit::read_stream ( std::wcin, v );
 	else {
 		std::wifstream is ( ws(fname) );
-		if (!is.is_open())
-			throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
-		if (!json_spirit::read_stream ( is, v ))
-			throw std::runtime_error("couldnt load json");
+		if (!is.is_open()) throw std::runtime_error("couldnt open file");
+		if (!json_spirit::read_stream ( is, v )) throw std::runtime_error("couldnt load json");
 	}
 	pobj r =  ::convert ( v );
 	if ( !r ) throw wruntime_error ( L"Couldn't read input." );
@@ -120,8 +99,6 @@ qdb cmd_t::toquads ( pobj o ) {
 		if ( !g.second || !g.second->MAP() ) throw wruntime_error ( L"Expected map in nodemap." );
 		r.graph_to_rdf ( g.first, *g.second->MAP() );
 	}
-	//	dout << "Converting: " << std::endl << o->toString() << std::endl;
-	//	dout << "Converted: " << std::endl << r << std::endl;
 	return r;
 }
 

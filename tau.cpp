@@ -67,9 +67,6 @@ public:
 			dout << ws(help());
 			return 1;
 		}
-//		if ( args.size() == 2 )
-//			dout << ( r.test_reasoner() ? "QED! \npass" : "fail" ) << std::endl;
-//		else 
 		try {
 #ifdef IRC
 			for(ever) { try {
@@ -91,13 +88,6 @@ public:
 			sleep(1);
 			}
 #endif
-//#else
-//				qdb kb = !quad_in ? convert ( args[2] ) : *load_quads(args[2]);
-//				opts.base = pstr ( string ( L"file://" ) + args[2] + L"#" );
-//				qdb query = !quad_in ? convert ( load_json(args[3]) ) : *load_quads(args[3]);
-//				auto e = r.prove ( kb, merge ( query ) );
-//				dout << "evidence: " << std::endl << e << std::endl;
-//#endif
 			return 0;
 		} catch ( std::exception& ex ) {
 			derr << ex.what() << std::endl;
@@ -148,18 +138,9 @@ int main ( int argc, char** argv ) {
 		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 	argc = args.size();
 	if ( argc == 1 ) {
-#ifndef IRC
-//		dout << std::endl << "Input kb as quads, then query. After finished inserting kb, write a line \"fin.\" in order to move to query. Then after query is inputted type aother \"fin.\" or Ctrl+D in order to start reasoning."<<"Syntax is \"s p o c.\" or \"s p o.\" for triples in @default graph." << std::endl;
-#else
-		dout << "IRC mode. Running with debug level " << level << " type 'botau: level <n>' in order to change the verbosity level."<< std::endl;
-#endif
 		prove_cmd p;
 		quad_in = true;
 		return p({L"",L"",L"",L""});
-/*		qdb kb = p.load_quads("");
-		qdb query = p.load_quads("");
-		auto e = p.r.prove ( kb, merge ( query ) );
-		dout << "evidence: " << std::endl << e << endl;*/
 	}
 	if (( cmds.first.find ( args[1] ) == cmds.first.end() && args[1] != L"help" ) ) {
 		print_usage ( cmds );
@@ -176,17 +157,5 @@ int main ( int argc, char** argv ) {
 
 	int rval = ( *cmds.first[args[1]] ) ( args );
 
-//	for (auto x : threads) { x->join(); delete x; } 
-/*
-	ofstream o("proof.dot");
-	o<<"digraph Proof {"<<endl;
-	for (auto x : proofs) o<<x->dot()<<endl;
-	o<<"}";
-	ofstream o1("rules.dot");
-	o1<<"digraph Predicates {"<<endl;
-	for (size_t n = 0; n < npredicates; ++n) o1<<predicates[n].dot()<<endl;
-	o1<<"}";
-	dout << "Written proof.dot and rules.dot. Use 'dot -Tpng proof.dot > proof.png' etc to visualize." << endl;
-*/
 	return rval;
 }
