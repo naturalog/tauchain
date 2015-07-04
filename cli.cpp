@@ -17,7 +17,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 		if (fname != L"")
 			pis = new std::wifstream(ws(fname));
 		std::wistream& is = *pis;
-		string line;
+/*		string line;
 		std::wstringstream ss;
 		while (!is.eof()) {
 			getline(is, line);
@@ -45,8 +45,8 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 				break;
 			}
 			ss << line;
-		}
-		return empty ? 0 : std::make_shared<qdb>(readqdb(ss));
+		}*/
+		return /*empty ? 0 : */std::make_shared<qdb>(readqdb(is));
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
 	}

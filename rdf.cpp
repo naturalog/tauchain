@@ -265,17 +265,20 @@ string quad::tostring ( ) const {
 using namespace boost::algorithm;
 
 qdb readqdb ( std::wistream& is) {
-	string s, c;
+	string s;
+	string c;
 	quad q;
 	qdb r;
 	nqparser p;
 	std::wstringstream ss;
 	while (getline(is, s)) {
-//		trim(s);
-		if (s[0] == L'#') continue;
-		ss << s << ' ';
+		trim(s);
+		if (s[0] == '#') continue;
+		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".") break;
+//		dout << s << endl;
+		ss << ' ' << s << ' ';
 	}
-	auto rr = p(ss.str().c_str());
+	auto rr = p((wchar_t*)ss.str().c_str());
 	r.second = rr.second;
 	for (quad q : rr.first) {
 		c = *q.graph->value;
