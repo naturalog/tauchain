@@ -360,13 +360,16 @@ prover::termid prover::list2term(std::list<pnode>& l) {
 		pnode x = l.front();
 		l.pop_front();
 //		TRACE(dout << x->tostring() << endl);
-		t = make(Dot, make(dict.set(x), 0, 0), list2term(l));
+		auto it = quads.second.find(*x->value);
+		if (it == quads.second.end()) t = make(Dot, make(dict.set(x), 0, 0), list2term(l));
+		else {
+			auto ll = it->second;
+			t = make(Dot, list2term(ll), list2term(l));
+		}
 	}
 	TRACE(dout << format(t) << endl);
 	return t;
 }
-
-template<typename T> T clone(const T& t) { return t; }
 
 prover::termid prover::quad2term(const quad& p) {
 	setproc(L"quad2term");
