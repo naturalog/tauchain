@@ -357,8 +357,8 @@ prover::termid prover::list2term(std::list<pnode>& l) {
 	termid t;
 	if (l.empty()) t = make(Dot, 0, 0);
 	else {
-		pnode x = l.back();
-		l.pop_back();
+		pnode x = l.front();
+		l.pop_front();
 //		TRACE(dout << x->tostring() << endl);
 		t = make(Dot, make(dict.set(x), 0, 0), list2term(l));
 	}
