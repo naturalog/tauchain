@@ -366,22 +366,27 @@ prover::termid prover::list2term(std::list<pnode>& l) {
 	return t;
 }
 
+template<typename T> T clone(const T& t) { return t; }
+
 prover::termid prover::quad2term(const quad& p) {
 	setproc(L"quad2term");
-	termid t;
+	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
+	termid t, s, o;
 	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
-		t = make(p.pred, list2term(it->second), make(p.object, 0, 0));
-		TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
-		return t;
+		auto l = it->second;
+		s = list2term(l);
 	}
-	else if ((it = quads.second.find(*p.object->value)) != quads.second.end()) {
-		t = make(p.pred, make(p.subj, 0, 0), list2term(it->second));
-		TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
-		return t;
+	else
+		s = make(p.subj, 0, 0);
+	if ((it = quads.second.find(*p.object->value)) != quads.second.end()) {
+		auto l = it->second;
+		o = list2term(l);
 	}
-	t = make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
+	else
+		o = make(p.object, 0, 0);
+	t = make(p.pred, s, o);
 	TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
 	return t;
 }
@@ -412,13 +417,16 @@ prover::~prover() { }
 //bool prover::islist(pquad q) { return startsWith(*dict[get(t).p].value,L"_:list"); }
 
 void prover::addrules(pquad q) {
+	setproc(L"addrules");
+	TRACE(dout<<q->tostring()<<endl);
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
 	if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
-	if ( p != implication || quads.first.find ( o ) == quads.first.end() )
+	if ( p != implication/* || quads.first.find ( o ) == quads.first.end()*/ )
 		if ((t = quad2term(*q))) 
 			kb.add(t, termset(), this);
-	if (p == implication) for ( pquad y : *quads.first.at ( o ) ) {
+	if (p == implication)
+		for ( pquad y : *quads.first.at ( o ) ) {
 			termset ts;
 			if ( quads.first.find ( s ) != quads.first.end() )
 				for ( pquad z : *quads.first.at(s) )
