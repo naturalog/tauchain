@@ -369,7 +369,7 @@ prover::termid prover::list2term(std::list<pnode>& l) {
 prover::termid prover::quad2term(const quad& p) {
 	setproc(L"quad2term");
 	termid t;
-	if (dict[p.pred] != rdffirst && dict[p.pred] != rdfrest) {
+//	if (dict[p.pred] == rdffirst && dict[p.pred] == rdfrest) {
 		auto it = quads.second.find(*p.subj->value);
 		if (it != quads.second.end()) {
 			t = make(p.pred, list2term(it->second), make(p.object, 0, 0));
@@ -381,7 +381,7 @@ prover::termid prover::quad2term(const quad& p) {
 			TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
 			return t;
 		}
-	}
+//	}
 	t = make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
 	TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
 	return t;
@@ -395,7 +395,9 @@ qlist merge ( const qdb& q ) {
 
 void prover::operator()(qlist query, const subst* s) {
 	termset goal;
-	for ( auto q : query ) goal.push_back( quad2term( *q ) );
+	for ( auto q : query ) 
+		if (dict[q->pred] != rdffirst && dict[q->pred] != rdfrest)
+			goal.push_back( quad2term( *q ) );
 	return (*this)(goal, s);
 }
 
@@ -411,13 +413,15 @@ prover::~prover() { }
 
 void prover::addrules(pquad q) {
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
+	if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	if ( p != implication || quads.first.find ( o ) == quads.first.end() ) 
 		kb.add(quad2term(*q), termset(), this);
 	else for ( pquad y : *quads.first.at ( o ) ) {
 			termset ts;
 			if ( quads.first.find ( s ) != quads.first.end() )
 				for ( pquad z : *quads.first.at(s) )
-					ts.push_back( quad2term( *z ) );
+					if (dict[z->pred] != rdffirst && dict[z->pred] != rdfrest)
+						ts.push_back( quad2term( *z ) );
 			kb.add(quad2term(*y), ts, this);
 		}
 }
