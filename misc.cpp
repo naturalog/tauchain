@@ -170,18 +170,19 @@ string prover::format(const termset& l, bool json) {
 
 void prover::printterm_substs(termid id, const subst& s) {
 	const term p = get(id);
+	dout << dstr(p.p) << L'(';
 	if (p.s) {
 		printterm_substs(p.s, s);
 		dout << L' ';
 	}
-	dout << dstr(p.p);
 	if(s.find(p.p) != s.end()) {
 		dout << L" (" << format(s.at(p.p)) << L" )";
 	}
 	if (p.o) {
-		dout << L' ';
+		dout << L',';
 		printterm_substs(p.o, s);
 	}
+	dout << L')';
 }
 
 void prover::printl_substs(const termset& l, const subst& s) {
