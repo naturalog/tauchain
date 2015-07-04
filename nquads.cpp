@@ -77,10 +77,10 @@ pnode nqparser::readiri() {
 	auto i = iri->find(L':');
 	if (i == string::npos) return mkiri(iri);
 	string p = iri->substr(0, ++i);
-	TRACE(dout<<"extracted prefix \"" << p <<L'\"'<< endl);
+//	TRACE(dout<<"extracted prefix \"" << p <<L'\"'<< endl);
 	auto it = prefixes.find(p);
 	if (it != prefixes.end()) {
-		TRACE(dout<<"prefix: " << p << " subst: " << *it->second->value<<endl);
+//		TRACE(dout<<"prefix: " << p << " subst: " << *it->second->value<<endl);
 		iri = pstr(*it->second->value + iri->substr(i));
 	}
 	return mkiri(iri);

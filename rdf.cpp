@@ -25,7 +25,7 @@ string node::tostring() const {
 
 pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	setproc(L"mkliteral");
-	TRACE(dout << *value << endl);
+//	TRACE(dout << *value << endl);
 	node r ( node::LITERAL );
 	r.value = value;
 	if (!datatype) r.datatype = XSD_STRING;
@@ -52,7 +52,7 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 
 pnode mkiri ( pstring iri ) {
 	setproc(L"mkiri");
-	TRACE(dout << *iri << endl);
+//	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
 	r.value = iri;
 	auto it =  dict.nodes.find(*r.value);
@@ -64,12 +64,12 @@ pnode mkiri ( pstring iri ) {
 
 pnode mkbnode ( pstring attribute ) {
 	setproc(L"mkbnode");
-	TRACE(dout << *attribute << endl);
+//	TRACE(dout << *attribute << endl);
 	node r ( node::BNODE );
 	r.value = attribute;
 	auto it =  dict.nodes.find(*r.value);
 	if (it != dict.nodes.end()) {
-		TRACE(dout<<" returned existing node" << endl);
+//		TRACE(dout<<" returned existing node" << endl);
 		return it->second;
 	}
 	pnode pr = make_shared<node>(r); 

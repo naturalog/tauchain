@@ -359,7 +359,7 @@ prover::termid prover::list2term(std::list<pnode>& l) {
 	else {
 		pnode x = l.back();
 		l.pop_back();
-		TRACE(dout << x->tostring() << endl);
+//		TRACE(dout << x->tostring() << endl);
 		t = make(Dot, make(dict.set(x), 0, 0), list2term(l));
 	}
 	TRACE(dout << format(t) << endl);
