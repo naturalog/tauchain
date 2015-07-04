@@ -112,9 +112,9 @@ string prover::format(term p, bool json) {
 //		if (!id) return L"";
 //		const term p = get(id);
 		std::wstringstream ss;
-		if (p.s) ss << format (p.s);
 		if (level > 1) ss << L" [" <</* id << ':' <<*/ p.p << ']';
 		ss << dstr(p.p) << L' ';
+		if (p.s) ss << format (p.s);
 		if (p.o) ss << format (p.o);
 		return ss.str();
 	}
