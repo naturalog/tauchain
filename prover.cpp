@@ -315,6 +315,7 @@ std::set<uint> prover::match(termid _e) {
 
 void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	setproc(L"step");
+	++steps;
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size()) {
 		if (euler_path(p, kb.head()[p->rul])) return;
@@ -467,7 +468,7 @@ prover::prover ( qdb qkb ) : quads(qkb) {
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	for ( pquad quad : *it->second ) addrules(quad);
 }
-
+#include <chrono>
 void prover::operator()(termset& goal, const subst* s) {
 	proof* p = new proof;
 	std::deque<proof*> queue;
@@ -477,12 +478,18 @@ void prover::operator()(termset& goal, const subst* s) {
 	if (s) p->s = *s;
 	TRACE(dout << KRED << "Rules:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
+	using namespace std;
+	using namespace std::chrono;
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	do {
 		proof* q = queue.back();
 		queue.pop_back();
 		step(q, queue);
 	} while (!queue.empty());
-	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/dout << KNRM);
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
+	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
+	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
 //	return results();
 }
 

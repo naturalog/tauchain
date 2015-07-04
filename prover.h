@@ -159,5 +159,6 @@ typedef int prop_t;
 	pobj ejson() const;
 	bool islist(termid);
 	termid list2term(std::list<pnode>& l);
+	int steps = 0;
 };
 #endif
