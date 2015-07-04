@@ -418,7 +418,7 @@ void prover::addrules(pquad q) {
 	if ( p != implication || quads.first.find ( o ) == quads.first.end() )
 		if ((t = quad2term(*q))) 
 			kb.add(t, termset(), this);
-	else for ( pquad y : *quads.first.at ( o ) ) {
+	if (p == implication) for ( pquad y : *quads.first.at ( o ) ) {
 			termset ts;
 			if ( quads.first.find ( s ) != quads.first.end() )
 				for ( pquad z : *quads.first.at(s) )
