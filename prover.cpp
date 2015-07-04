@@ -307,7 +307,7 @@ std::set<uint> prover::match(termid _e) {
 	termid h;
 	const term e = get(_e);
 	for (uint n = 0; n < kb.size(); ++n)
-		if (((h=kb.head()[n]))&&(h!=_e)/*&& maybe_unify(e, get(h))*/)
+		if (((h=kb.head()[n]))&&(h!=_e)&& maybe_unify(e, get(h)))
 			m.insert(n);
 //	TRACE(dout<<format(_e) << L" matches: "; for (auto x : m) dout << format(kb.head()[x]) << L' '; dout << endl);
 	return m;
