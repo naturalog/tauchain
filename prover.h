@@ -158,5 +158,6 @@ typedef int prop_t;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
 	bool islist(termid);
+	termid list2term(std::list<pnode>& l);
 };
 #endif

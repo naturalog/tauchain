@@ -206,10 +206,14 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
-	else if (t.p == rdffirst && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
-		r = ((!t0->s && !t0->o) || unify(t0->s, p->s, t.o, p->s, true)) ? 1 : 0;
-	else if (t.p == rdfrest && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
-		r = ((!t0->s && !t0->o) || unify(t0->o, p->s, t.o, p->s, true)) ? 1 : 0;
+//	else if (t.p == rdffirst && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
+//		r = ((!t0->s && !t0->o) || unify(t0->s, p->s, t.o, p->s, true)) ? 1 : 0;
+//	else if (t.p == rdfrest && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
+//		r = ((!t0->s && !t0->o) || unify(t0->o, p->s, t.o, p->s, true)) ? 1 : 0;
+	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
+		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
+	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
+		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -348,12 +352,36 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 //	if (del) delete p;
 }
 
+prover::termid prover::list2term(std::list<pnode>& l) {
+	setproc(L"list2term");
+	termid t;
+	if (l.empty()) t = make(Dot, 0, 0);
+	else {
+		pnode x = l.back();
+		l.pop_back();
+		t = make(Dot, make(dict.set(x), 0, 0), list2term(l));
+	}
+	TRACE(dout<< format(t) << endl);
+	return t;
+}
+
 prover::termid prover::quad2term(const quad& p) {
 	setproc(L"quad2term");
-//	if (quads.second.find(*p.s->value) != quads.second.end()) {
-//		
-//	}
-	termid t = make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
+	termid t;
+	if (dict[p.pred] != rdffirst && dict[p.pred] != rdfrest) {
+		auto it = quads.second.find(*p.subj->value);
+		if (it != quads.second.end()) {
+			t = make(p.pred, list2term(it->second), make(p.object, 0, 0));
+			TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
+			return t;
+		}
+		else if ((it = quads.second.find(*p.object->value)) != quads.second.end()) {
+			t = make(p.pred, make(p.subj, 0, 0), list2term(it->second));
+			TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
+			return t;
+		}
+	}
+	t = make(p.pred, make(p.subj, 0, 0), make(p.object, 0, 0));
 	TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
 	return t;
 }
@@ -419,9 +447,6 @@ prover::prover ( qdb qkb ) : quads(qkb) {
 	auto it = qkb.first.find(L"@default");
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	for ( pquad quad : *it->second ) addrules(quad);
-	for (auto x : qkb.second) {
-		
-	}
 }
 
 void prover::operator()(termset& goal, const subst* s) {

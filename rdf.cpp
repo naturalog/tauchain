@@ -275,7 +275,9 @@ qdb readqdb ( std::wistream& is) {
 		if (s[0] == L'#') continue;
 		ss << s << ' ';
 	}
-	for (quad q : p(ss.str().c_str()).first) {
+	auto rr = p(ss.str().c_str());
+	r.second = rr.second;
+	for (quad q : rr.first) {
 		c = *q.graph->value;
 		if (r.first.find(c) == r.first.end()) r.first[c] = make_shared<qlist>();
 		r.first[c]->push_back(make_shared<quad>(q));
