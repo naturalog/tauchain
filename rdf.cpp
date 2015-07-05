@@ -166,16 +166,16 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 				if ( item->MAP() && haslist ( item->MAP() ) ) {
 					polist list = getlist ( item )->LIST();
 					pnode last = 0;
-					pnode firstBnode = nil;
+					pnode firstBnode = nil, head;
 					if ( list && list->size() ) {
 						last = obj_to_rdf ( *list->rbegin() );
-						firstBnode = mkbnode ( api.gen_bnode_id() );
+						head = mkbnode ( api.gen_bnode_id() );
 					}
 					triples.push_back ( make_shared <quad> ( subj, pred, firstBnode, graph_name ) );
 					for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
 						pnode object = obj_to_rdf ( list->at ( i ) );
 						triples.push_back ( make_shared <quad> ( firstBnode, first, object, graph_name ) );
-						second[*firstBnode->value].push_back(firstBnode);
+						second[*head->value].push_back(object);
 						pnode restBnode = mkbnode ( api.gen_bnode_id() );
 						triples.push_back ( make_shared <quad> ( firstBnode, rest, restBnode, graph_name ) );
 						firstBnode = restBnode;
