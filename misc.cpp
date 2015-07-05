@@ -15,9 +15,9 @@ void bidict::init() {
 	GND = set (mkiri(pstr( L"GND" )));
 	logequalTo = set (mkiri(pstr( L"log:equalTo")));
 	lognotEqualTo = set (mkiri(pstr(L"log:notEqualTo")));
-	rdffirst = set(mkiri(pstr(L"rdf:first")));
-	rdfrest = set(mkiri(pstr(L"rdf:rest")));
-	rdfnil = set(mkiri(pstr(L"rdf:nil")));
+	rdffirst = set(mkiri(RDF_FIRST/*Tpstr(L"rdf:first")*/));
+	rdfrest = set(mkiri(RDF_REST/*pstr(L"rdf:rest")*/));
+	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	A = set(mkiri(pstr(L"a")));
 	rdfsResource = set(mkiri(pstr(L"rdfs:Resource")));
 	rdfList = set(mkiri(pstr(L"rdf:List")));
