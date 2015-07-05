@@ -80,10 +80,12 @@ public:
 	void printg(const ground& g);
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
+	termid make(resid p, termid s = 0, termid o = 0);
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
 
 private:
+
 #ifdef OPENCL
 typedef cl_short prop_t;
 typedef 
@@ -93,7 +95,6 @@ typedef int prop_t;
 
 	boost::container::vector<term> _terms;
 	friend ruleset;
-	termid make(resid p, termid s = 0, termid o = 0);
 
 	struct proof {
 		ruleid rul;
