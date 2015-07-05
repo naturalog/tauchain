@@ -415,13 +415,13 @@ string load(string fname)
 
 int load_n3_cmd::operator() ( const strings& args )
 {	
- 	string input = load(args[2]);
-	prover prover(convert(load_json(L"n3-grammar.jsonld")));
 	Marpa m;
+	prover prover(convert(load_json(L"n3-grammar.jsonld")));
 	m.load_grammar(
 		&prover, 
 //		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language")));
 		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
+ 	string input = load(args[2]);
 	m.parse(input);
 	return 0;
 }
