@@ -149,7 +149,6 @@ uint64_t dlparam(const node& n) {
 	if (!n.datatype || !n.datatype->size() || *n.datatype == *XSD_STRING) {
 		p = (uint64_t)n.value->c_str();
 	} else {
-		uint64_t p;
 		const string &dt = *n.datatype, &v = *n.value;
 		if (dt == *XSD_BOOLEAN) p = (lower(v) == L"true");
 		else if (dt == *XSD_DOUBLE) {
@@ -266,9 +265,11 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		if (preddt(params[0]) != *XSD_INTEGER) return -1;
 		fptr func = (fptr)std::stol(predstr(params[0]));
 		void* res;
-		if (params.size() == 1) res = (*func)((void*)dlparam(dict[*get_list(params[1],*p).begin()]));
-		pnode n = mkliteral(tostr((uint64_t)res), XSD_INTEGER, 0);
-		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+		if (params.size() == 1) {
+			res = (*func)((void*)dlparam(dict[*get_list(params[1],*p).begin()]));
+			pnode n = mkliteral(tostr((uint64_t)res), XSD_INTEGER, 0);
+			p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+		}
 		r = 1;
 	}
 	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
