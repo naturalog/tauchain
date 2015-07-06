@@ -8,7 +8,7 @@
 #include "misc.h"
 using namespace boost::algorithm;
 
-nqparser::nqparser() : t(new wchar_t[4096]) {
+nqparser::nqparser() : t(new wchar_t[4096*4096]) {
 	if (rnil) return;
 	rdffst = mkiri(pstr(L"rdf:first")); 
 	rdfrst = mkiri(pstr(L"rdf:rest"));
