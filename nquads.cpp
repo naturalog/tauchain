@@ -128,7 +128,7 @@ pnode nqparser::readlit() {
 	++s;
 	do { t[pos++] = *s++; } while (!(*(s-1) == L'\\' || *s != L'\"'));
 	string dt, lang;
-//	++s;
+	++s;
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') {
 		if (*s == L'^' && *++s == L'^') {
 			if (*++s == L'<')  {
