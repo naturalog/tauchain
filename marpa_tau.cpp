@@ -20,16 +20,20 @@ extern "C" {
 #include "lexertl/lookup.hpp"
 
 
-prover::termset ask(prover *prover, prover::termid s, const pnode p)
-{	/*s and p in, o's out*/
-	prover::termset r = prover::termset();
+typedef std::vector<resid> resids;
+
+resids ask(prover *prover, resid s, const pnode p)
+{	/* s and p in, a list of o's out */
+	resids r = resids();
 	prover::termset query;
 	prover::termid o_var = prover->tmpvar();
-	prover::termid iii = prover->make(p, s, o_var);
+	prover::termid iii = prover->make(p, prover->make(s), o_var);
 	query.emplace_back(iii);
+
+	dout << "query: "<< prover->format(query) << endl;;
+
 	(*prover)(query);
 	
-	dout << "query: "<< prover->format(query) << endl;;
 	//dout << "substs: "<< std::endl;
 
 	for (auto x : prover->substs) 
@@ -37,13 +41,13 @@ prover::termset ask(prover *prover, prover::termid s, const pnode p)
 		prover::subst::iterator binding_it = x.find(prover->get(o_var).p);
 		if (binding_it != x.end())
 		{
-			r.push_back( (*binding_it).second);
+			r.push_back( prover->get((*binding_it).second).p);
 			//prover->prints(x);
 			//dout << std::endl;
 		}
 	}
 
-	//dout << r.size() << "." << std::endl;
+	dout << r.size() << ":" << std::endl;
 
 	prover->substs.clear();
 	prover->e.clear();
@@ -78,7 +82,7 @@ public:
 struct Marpa{
 	Marpa_Grammar g;
 	std::vector<terminal> terminals;
-	map<prover::termid, sym> done; // rules
+	map<resid, sym> done; // rules
 	bool precomputed = false;
 	prover* grmr;
 
@@ -107,28 +111,30 @@ struct Marpa{
 	void load_grammar(prover *_grmr, pnode root)
 	{
 		grmr = _grmr;
-		sym start = add(grmr, grmr->make(root));
+		dout << "starting with " << *root->value << " " <<  dict[root] << std::endl;
+		sym start = add(grmr, dict[root]);
+//		sym start = add(grmr, grmr->get(grmr->make(root)).p);
 		start_symbol_set(start);
 		terminals.push_back(terminal(L"comment", L"#.*", -2));
 	}
 
-	string value(prover::termid val)
+	string value(resid val)
 	{
-		return *dict[grmr->get(val).p].value;
+		return *dict[val].value;
 	}
 
 	string lexertl_literal(string s){return L"\"" + s + L"\"";}//todo escape escapes. the goal is that lexertl should match s literally, not as a regex
 
 
 	//create marpa symbols and rules from grammar description in rdf
-	sym add(prover *grmr, prover::termid thing)
+	sym add(prover *grmr, resid thing)
 	{
 		string thingv = value(thing);
-		
+		dout << "thingv:" << thingv  << std::endl;
 		if (done.find(thing) != done.end())
 			return done[thing];	
 
-		if (grmr->get(thing).isstr())
+		if (dict[thing]._type == node::LITERAL)
 		{
 			dout << "itsa str"<<std::endl;
 			thingv = lexertl_literal(thingv);
@@ -143,8 +149,8 @@ struct Marpa{
 
 		dout << "adding " << thingv << ",termid:" << thing << std::endl;
 	
-		sym symbol = symbol_new_termid(thing);
-		prover::termset bind;
+		sym symbol = symbol_new_resid(thing);
+		resids bind;
 	
 		if((bind = ask(grmr, thing, pmatches)).size())
 		{
@@ -167,11 +173,11 @@ struct Marpa{
 					//dout << l;
 					//dout << "..." << std::endl;
 			
-					prover::termset first = ask(grmr, l, rdfs_first);
+					resids first = ask(grmr, l, rdfs_first);
 					if (!first.size()) break;
 					rhs.push_back(add(grmr, first[0]));
 				
-					prover::termset rest = ask(grmr, l, rdfs_rest);
+					resids rest = ask(grmr, l, rdfs_rest);
 					if (!rest.size()) {dout << "wut" << std::endl; break;}//err
 					l = rest[0];
 				}
@@ -209,7 +215,7 @@ sym symbol_new()
 
 }
 
-sym symbol_new_termid(prover::termid thing)
+sym symbol_new_resid(resid thing)
 {
 	return done[thing] = symbol_new();
 
