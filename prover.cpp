@@ -222,11 +222,11 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 				string f = predstr(params[0]);
 				if (f == L"0") handle = dlopen(0, std::stol(predstr(params[1])));
 				else handle = dlopen(ws(f).c_str(), std::stol(predstr(params[1])));
+				pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
+				p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+				r = 1;
 			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-			pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-			p->s[get(t.o).p] = make(dict.set(n), 0, 0);
-			r = 1;
 		}
 	}
 	else if (t.p == _dlerror) {
@@ -244,11 +244,11 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 			if (params.size()) {
 				try {
 					handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
+					pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
+					p->s[t1->p] = make(dict.set(n), 0, 0);
+					r = 1;
 				} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 				catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-				pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-				p->s[t1->p] = make(dict.set(n), 0, 0);
-				r = 1;
 			}
 		}
 	}

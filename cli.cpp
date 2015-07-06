@@ -10,7 +10,6 @@ using namespace boost::algorithm;
 
 std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
-	bool empty = true;
 	try {
 		qdb r;
 		std::wistream* pis = &std::wcin;
