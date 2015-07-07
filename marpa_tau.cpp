@@ -30,7 +30,7 @@ resids ask(prover *prover, resid s, const pnode p)
 	prover::termid iii = prover->make(p, prover->make(s), o_var);
 	query.emplace_back(iii);
 
-	dout << "query: "<< prover->format(query) << endl;;
+	//dout << "query: "<< prover->format(query) << endl;;
 
 	(*prover)(query);
 	
@@ -42,25 +42,35 @@ resids ask(prover *prover, resid s, const pnode p)
 		if (binding_it != x.end())
 		{
 			r.push_back( prover->get((*binding_it).second).p);
-			//prover->prints(x);
-			//dout << std::endl;
+			//prover->prints(x); dout << std::endl;
 		}
 	}
 
-	dout << r.size() << ":" << std::endl;
+	//dout << r.size() << ":" << std::endl;
 
 	prover->substs.clear();
 	prover->e.clear();
 	return r;
 }
 
+resid ask1(prover *prover, resid s, const pnode p)
+{
+	auto r = ask(prover, s, p);
+	if (r.size() > 1)
+		throw wruntime_error(L"well, this is weird");
+	if (r.size() == 1)
+		return r[0];
+	else
+		return 0;
+}
 
 const pnode rdfs_first=mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
 const pnode rdfs_rest= mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
 const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
 const pnode pmatches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
 const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
-
+const pnode pcslo    = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
+const resid pcomma   = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en"))];
 
 
 typedef Marpa_Symbol_ID sym;
@@ -85,6 +95,24 @@ struct Marpa{
 	map<resid, sym> done; // rules
 	bool precomputed = false;
 	prover* grmr;
+
+	string sym2str_(sym s)
+	{
+		for (auto it = done.begin(); it != done.end(); it++)
+			if (it->second == s)
+				return *dict[it->first].value;
+		for (auto it = terminals.begin(); it != terminals.end(); it++)
+			if (it->symbol == s)
+				return it->name;
+		return L"(? ? ?dunno? ? ?)";
+	}
+
+	string sym2str(sym s)
+	{
+		std::wstringstream sss;
+		sss << L"(" << s << L")" << sym2str_(s);
+		return sss.str();
+	}
 
 
 	Marpa()
@@ -131,65 +159,70 @@ struct Marpa{
 	{
 		string thingv = value(thing);
 		dout << "thingv:" << thingv  << std::endl;
+
 		if (done.find(thing) != done.end())
 			return done[thing];	
 
 		if (dict[thing]._type == node::LITERAL)
 		{
-			dout << "itsa str"<<std::endl;
+			//dout << "itsa str"<<std::endl;
 			thingv = lexertl_literal(thingv);
 			for (auto t :terminals)
 				if (t.regex == thingv)
 					return t.symbol;		
 			sym symbol = symbol_new();
-			dout << "adding " << thingv << std::endl;
+			//dout << "adding " << thingv << std::endl;
 			terminals.push_back(terminal(thingv, thingv, symbol));
 			return symbol;
 		}
 
-		dout << "adding " << thingv << ",termid:" << thing << std::endl;
-	
+		//dout << "adding " << thingv << ",termid:" << thing << std::endl;
 		sym symbol = symbol_new_resid(thing);
-		resids bind;
-	
-		if((bind = ask(grmr, thing, pmatches)).size())
+
+		resid bind;
+		if((bind = ask1(grmr, thing, pmatches)))
 		{
-			dout << "push_back " << thingv << std::endl;
-			terminals.push_back(terminal(thingv, value(bind[0]), symbol));
+			//dout << "terminal: " << thingv << std::endl;
+			terminals.push_back(terminal(thingv, value(bind), symbol));
+			return symbol;
 		}
 
-		// note that in the grammar file things and terminology are switched,
-		// mustBeOneSequence is a sequence of lists
+		// mustBeOneSequence is a list of lists
 		
-		else if ((bind = ask(grmr, thing, pmustbos)).size())
+		resid ll;
+		if ((ll = ask1(grmr, thing, pmustbos)))
 		{
-			for (auto l : bind) // thing must be one of these lists
+			//if (ll == rdfs_nil)
+			//	throw wruntime_error(L"mustBeOneSequence empty");
+
+			while(ll)
 			{
-				dout << "{";
+				resid seq_iterator = ask1(grmr, ll, rdfs_first);;
+				if (!seq_iterator) break;
 				syms rhs;
-				while(1)
+				while(seq_iterator)
 				{
-					//dout << "l: ";
-					//dout << l;
-					//dout << "..." << std::endl;
-			
-					resids first = ask(grmr, l, rdfs_first);
-					if (!first.size()) break;
-					rhs.push_back(add(grmr, first[0]));
-				
-					resids rest = ask(grmr, l, rdfs_rest);
-					if (!rest.size()) {dout << "wut" << std::endl; break;}//err
-					l = rest[0];
+					resid item = ask1(grmr, seq_iterator, rdfs_first);
+					if (!item) break;
+					rhs.push_back(add(grmr, item));
+					
+					seq_iterator = ask1(grmr, seq_iterator, rdfs_rest);
 				}
-				dout << "}" << std::endl;
-				
 				rule_new(symbol, rhs);
+				
+				ll = ask1(grmr, ll, rdfs_rest);
 			}
 		}
+		else if ((ll = ask1(grmr, thing, pcslo)))
+		{
+			seq_new(symbol, add(grmr, ll), add(grmr, pcomma), 0, MARPA_PROPER_SEPARATION);
+		}
+		else if (thingv == L"http://www.w3.org/2000/10/swap/grammar/bnf#eof")
+			{}//so what?
 		else
-			dout << "nope\n";
+			throw wruntime_error(L"whats " + thingv + L"?");
 
-		dout << "added "<< symbol << std::endl;
+		dout << "added sym "<< symbol << std::endl;
 		return symbol;
 	}
 
@@ -221,12 +254,31 @@ sym symbol_new_resid(resid thing)
 
 }
 
-rule rule_new(sym lhs, syms rhs) {
-		return check_int(marpa_g_rule_new(g, lhs, &rhs[0], rhs.size()));
-	}
+rule rule_new(sym lhs, syms rhs)
+{
+	dout << sym2str(lhs) << L" ::= "; 
+	for (sym s: rhs)
+		dout << sym2str(s);
+	dout << std::endl;
+	return check_int(marpa_g_rule_new(g, lhs, &rhs[0], rhs.size()));
+	/*if (r == -2)
+	{
+		int e = marpa_g_error(g, NULL);
+		if (e == MARPA_ERR_DUPLICATE_RULE)
+		{
+	*/
+}
 
-rule sequence_new(sym lhs, sym rhs, sym separator=-1, int min=1, bool proper=false){
-	return check_int(marpa_g_sequence_new(g, lhs, rhs, separator, min, proper ? MARPA_PROPER_SEPARATION : 0));
+rule seq_new(sym lhs, sym rhs, sym separator, int min, int flags)
+{
+	int r = marpa_g_sequence_new(g, lhs, rhs, separator, min, flags);
+	if (r == -2)
+	{
+		int e = marpa_g_error(g, NULL);
+		if (e == MARPA_ERR_DUPLICATE_RULE)
+			dout << sym2str(lhs) << L" ::= sequence of " << sym2str(rhs) << std::endl;
+	}
+	return check_int(r);
 }
 
 
@@ -273,6 +325,11 @@ void parse (const string inp)
 	lexertl::wrules rules;
 	lexertl::wstate_machine sm;
 
+	sort( terminals.begin( ), terminals.end( ), [ ]( const terminal& a, const terminal& b )
+	{
+		return a.regex.size() > b.regex.size();
+	});
+	
 	dout << "terminals:\n";
 	for (auto t:terminals)
 	{
@@ -297,6 +354,8 @@ void parse (const string inp)
 	{
 		if(iter->id == 18446744073709551615)
 			continue;
+
+		//Like flex, end of input returns an id of 0,  (you can set this to another value if you like using the eoi() method on the rules class) 
 		
 		sym s = iter->id;
 
@@ -459,6 +518,9 @@ int load_n3_cmd::operator() ( const strings& args )
 
 /*
 resources
+http://www.w3.org/2000/10/swap/grammar/bnf
+http://www.w3.org/2000/10/swap/grammar/n3.n3
+
 https://github.com/jeffreykegler/libmarpa/blob/master/test/simple/rule1.c#L18
 https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900
 https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp

@@ -377,7 +377,7 @@ prover::termid prover::quad2term(const quad& p) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
-	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
+	//if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;
@@ -425,7 +425,7 @@ void prover::addrules(pquad q) {
 	setproc(L"addrules");
 	TRACE(dout<<q->tostring()<<endl);
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
-	if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
+	//if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
 	if ( p != implication/* || quads.first.find ( o ) == quads.first.end()*/ )
 		if ((t = quad2term(*q))) 
@@ -477,7 +477,9 @@ void prover::operator()(termset& goal, const subst* s) {
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = *s;
-	TRACE(dout << KRED << "Rules:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	{setproc(L"facts");{setproc(L"facts");{setproc(L"facts");{setproc(L"facts");
+		TRACE(dout << KRED << "Rules:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	}}}}
 	queue.push_front(p);
 	using namespace std;
 	using namespace std::chrono;
@@ -490,7 +492,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
+	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 //	return results();
 }
 
