@@ -102,7 +102,6 @@ private:
 	pnode readlit();
 	pnode readvar();
 	pnode readbnode();
-	static pnode rdfrst, rdffst, rnil;
 	void readprefix();
 	std::map<string, pnode> prefixes;
 	std::map<string, std::list<pnode>> qlists;
