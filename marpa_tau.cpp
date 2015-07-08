@@ -102,7 +102,7 @@ struct Marpa{
 	string sym2str_(sym s)
 	{
 		if (terminals.find(s) != terminals.end())
-			return terminals[s]->name + L"(" + terminals[s]->regex_string + L")";
+			return terminals[s]->name + L" - " + terminals[s]->regex_string;
 		if (literals.find(s) != literals.end())
 			return L": \"" + literals[s] + L"\"";
 		for (auto it = done.begin(); it != done.end(); it++)
@@ -285,14 +285,14 @@ void print_events()
 {	
 	
 	int count = check_int(marpa_g_event_count(g));
-	dout << count << "events" << std::endl;
 	if (count > 0)
 	{
+		dout << count << " events" << std::endl;
 		Marpa_Event e;
 		for (int i = 0; i < count; i++)
 		{
 			int etype = check_int(marpa_g_event(g, &e, i));
-			dout << etype << ", " << e.t_value << std::endl;
+			dout << L" " << etype << ", " << e.t_value << std::endl;
 		}
 	}
 	
@@ -310,6 +310,17 @@ void error()
 	s << e << ":" << marpa_error_description[e].name << " - " << marpa_error_description[e].suggested ;
 	throw(std::runtime_error(s.str()));// + ": " + errors[e]));
 	
+}
+
+
+bool is_ws(wchar_t x)
+{
+	string wss = L"\n\r \t";
+
+	for (auto ws: wss)
+		if (x == ws)
+			return true;
+	return false;
 }
 
 
@@ -338,22 +349,20 @@ void parse (const string inp)
 	std::vector<sym> expected;
 	expected.resize(check_int(marpa_g_highest_symbol_id(g)));
 
-	boost::wregex comment (L"#[^$]*");
+	boost::wregex comment (L"(?m)#(.)*?$");
 
 	while (pos < inp.end())
 	{
-		string wss = L"\n\r \t";
-		for (auto ws: wss)
-			if ((*pos) == ws)
-			{
-				pos++;
-				continue;
-			}
+		if (is_ws(*pos))
+		{
+			pos ++;
+			continue;
+		}
 		
 		boost::wsmatch what;
 		if (regex_search(pos, inp.end(), what, comment, boost::match_continuous))
 		{
-			if(!what.empty())
+			if(what.size())
 			{
 				int llll = what[0].length();
 				dout << L"skipping " << llll << L" comment chars" << std::endl;
@@ -385,9 +394,12 @@ void parse (const string inp)
 			}
 			else
 			{
-				for (auto t: terminals)
+				if (terminals.find(e) != terminals.end())
+
 				{
-					if (!regex_search(pos, inp.end(), what, t.second->regex, boost::match_continuous)) continue;
+					auto t= terminals[e];
+
+					if (!regex_search(pos, inp.end(), what, t->regex, boost::match_continuous)) continue;
 					if (what.empty()) continue;
 					size_t l = what.length();
 					if (l > best_len)
@@ -413,19 +425,38 @@ void parse (const string inp)
 			assert (best_syms.size());
 			toks.push_back(tokt(pos, pos + best_len));
 			dout << std::distance(inp.begin(), pos) << L"-" << std::distance(inp.begin(), pos + best_len) << 
-				L"\"" <<  string(pos, pos + best_len) << L"\" - " << sym2str(best_syms[0]) << std::endl;
+				L" \"" <<  string(pos, pos + best_len) << L"\" - " << sym2str(best_syms[0]) << std::endl;
 			check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1));
 			check_int(marpa_r_earleme_complete(r));
 			pos += best_len;
 		}
 		else
 		{
+                        auto pre (pos);
+                        size_t charnum=0;
+                       	while(pre != inp.begin() && *pre != '\n')
+                       	{
+                       		pre -= 1;
+                       		charnum++;
+                       	}
+        		//pre -= 10;
+                        auto post (pos);
+                       	while(post != inp.end() && *post != '\n')
+                       		post += 1;
+                       	//post += 10;
+                        dout << L"at line " << std::count(inp.begin(), pos, '\n') << L", char " << charnum << L":" << std::endl;
+                        dout << string(pre, pos-1) << L"<HERE>" << string(pos, post) << std::endl;
+//                        dout << L"..\"" << string(pre, pos-1) << L"<HERE>" << string(pos, post) << L"\"..." << std::endl;
+
+
 			dout << "expecting:" << std::endl;
 			for (int i = 0; i < num_expected; i++) 
 			{
 				sym e = expected[i];
 				dout << sym2str(e) << std::endl;
                         }
+
+                        
 			throw(std::runtime_error("no parse"));
 		}
 	}
@@ -452,7 +483,8 @@ void parse (const string inp)
 
 	while(1)
 	{
-		Marpa_Step_Type st = check_int(marpa_v_step_type(v));
+		Marpa_Step_Type st = check_int(marpa_v_step(v));
+		print_events();
 		if (st == MARPA_STEP_INACTIVE) break;
 		switch(st)
 		{
@@ -465,17 +497,22 @@ void parse (const string inp)
 			}
 			case MARPA_STEP_RULE:
 			{
-				rule r = marpa_v_rule(v);
+				//rule r = marpa_v_rule(v);
 				std::vector<prover::termid> args;
-				stack[marpa_v_arg_0(v)] = L"( ";
+				string r = L"( ";
 				for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++)
 					//args.push_back(stack[i]);
-					stack[marpa_v_arg_0(v)] += stack[i] + L" ";
-				stack[marpa_v_arg_0(v)] += L") ";				
+					r += stack[i] + L" ";
+				stack[marpa_v_result(v)] = r +  L") ";				
 				break;
 			}
-			//case MARPA_STEP_NULLING_SYMBOL:
-                                //stack2[v.v.t_result] = "nulled"
+			case MARPA_STEP_NULLING_SYMBOL:
+                                stack[marpa_v_result(v)] = L"nulled";
+                        	break;
+                        default:
+                        	dout << marpa_step_type_description[st].name << std::endl;
+
+                                
                                 
 		}
 	}

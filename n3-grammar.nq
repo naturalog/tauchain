@@ -331,7 +331,7 @@ _:li133 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:li83 .
 <http://www.w3.org/2000/10/swap/grammar/n3#statements_optional> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li8 .
 <http://www.w3.org/2000/10/swap/grammar/n3#statementtail> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li17 .
 <http://www.w3.org/2000/10/swap/grammar/n3#string> <http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith> "\"" .
-<http://www.w3.org/2000/10/swap/grammar/n3#string> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "(\"\"\"[^\"\\\\]*(?:(?:\\\\.)[^\"\\\\]*)*\"\"\")|(\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")" .
+<http://www.w3.org/2000/10/swap/grammar/n3#string> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "(\"\"\"[^\"\\\\]*(?:(?:\\\\.)[^\"\\\\]*)*\"\"\")|(\"[^\"\\]*(?:\\.[^\"\\]*)*\")" .
 <http://www.w3.org/2000/10/swap/grammar/n3#subject> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li74 .
 <http://www.w3.org/2000/10/swap/grammar/n3#symbol> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li115 .
 <http://www.w3.org/2000/10/swap/grammar/n3#universal> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li28 .
