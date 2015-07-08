@@ -24,7 +24,7 @@ libmarpa/dist/.libs/libmarpa.so:
 	make
 
 marpa: OBJECTS += marpa_tau.o
-marpa: CXXFLAGS += -Dmarpa  -Ilexertl -I libmarpa/dist  -ggdb
+marpa: CXXFLAGS += -Dmarpa  -I libmarpa/dist -ggdb -lboost_regex  #-Ilexertl
 marpa: LDFLAGS += -Llibmarpa/dist/.libs -lmarpa  -ggdb
 debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3

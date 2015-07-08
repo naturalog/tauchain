@@ -15,10 +15,8 @@ extern "C" {
 #include "marpa_codes.c"
 }
 
-#include "lexertl/generator.hpp"
-#include "lexertl/iterator.hpp"
-#include "lexertl/lookup.hpp"
-
+#include <boost/regex.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 typedef std::vector<resid> resids;
 
@@ -76,34 +74,38 @@ const resid pcomma   = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en
 typedef Marpa_Symbol_ID sym;
 typedef Marpa_Rule_ID rule;
 typedef std::vector<sym> syms;
+typedef std::pair<string::const_iterator,string::const_iterator> tokt;
 
 
 class terminal
 {
 public:
-	string name, regex;
-	sym symbol;
-	terminal(string name_, string regex_, sym symbol_){name = name_; regex = regex_; symbol = symbol_;}
+	string name;
+	boost::wregex regex;
+	terminal(string name_, string regex_)
+	{
+		name = name_; 
+		regex = boost::wregex(regex_);
+	}
 };
-
-
-
 
 struct Marpa{
 	Marpa_Grammar g;
-	std::vector<terminal> terminals;
-	map<resid, sym> done; // rules
 	bool precomputed = false;
+	map<sym, terminal> terminals;
+	map<sym, string> literals;
+	map<resid, sym> done;
 	prover* grmr;
 
 	string sym2str_(sym s)
 	{
+		if (terminals.find(s) != terminals.end())
+			return terminals[s].name;
+		if (literals.find(s) != literals.end())
+			return literals[s];
 		for (auto it = done.begin(); it != done.end(); it++)
 			if (it->second == s)
 				return *dict[it->first].value;
-		for (auto it = terminals.begin(); it != terminals.end(); it++)
-			if (it->symbol == s)
-				return it->name;
 		return L"(? ? ?dunno? ? ?)";
 	}
 
@@ -139,20 +141,15 @@ struct Marpa{
 	void load_grammar(prover *_grmr, pnode root)
 	{
 		grmr = _grmr;
-		dout << "starting with " << *root->value << " " <<  dict[root] << std::endl;
 		sym start = add(grmr, dict[root]);
-//		sym start = add(grmr, grmr->get(grmr->make(root)).p);
 		start_symbol_set(start);
-		terminals.push_back(terminal(L"comment", L"#.*", -2));
+		terminals[-2] = terminal(L"comment", L"#.*");
 	}
 
 	string value(resid val)
 	{
 		return *dict[val].value;
 	}
-
-	string lexertl_literal(string s){return L"\"" + s + L"\"";}//todo escape escapes. the goal is that lexertl should match s literally, not as a regex
-
 
 	//create marpa symbols and rules from grammar description in rdf
 	sym add(prover *grmr, resid thing)
@@ -166,24 +163,25 @@ struct Marpa{
 		if (dict[thing]._type == node::LITERAL)
 		{
 			//dout << "itsa str"<<std::endl;
-			thingv = lexertl_literal(thingv);
-			for (auto t :terminals)
-				if (t.regex == thingv)
-					return t.symbol;		
+			for (auto t: literals)
+				if (t.second == thingv)
+					return t.first;
+					
 			sym symbol = symbol_new();
 			//dout << "adding " << thingv << std::endl;
-			terminals.push_back(terminal(thingv, thingv, symbol));
+			
+			literals[symbol] = thingv;
 			return symbol;
 		}
 
-		//dout << "adding " << thingv << ",termid:" << thing << std::endl;
+		//dout << "adding " << thingv << std::endl;
 		sym symbol = symbol_new_resid(thing);
 
 		resid bind;
 		if((bind = ask1(grmr, thing, pmatches)))
 		{
 			//dout << "terminal: " << thingv << std::endl;
-			terminals.push_back(terminal(thingv, value(bind), symbol));
+			terminals[symbol] = terminal(thingv, value(bind));
 			return symbol;
 		}
 
@@ -317,72 +315,107 @@ void error()
 void parse (const string inp)
 {
 	if (!precomputed)
-	{
 		check_int(marpa_g_precompute(g));
-		print_events();
-	}
 
-	lexertl::wrules rules;
-	lexertl::wstate_machine sm;
+	print_events();
 
-	sort( terminals.begin( ), terminals.end( ), [ ]( const terminal& a, const terminal& b )
-	{
-		return a.regex.size() > b.regex.size();
-	});
-	
 	dout << "terminals:\n";
 	for (auto t:terminals)
-	{
-		dout << "(" << t.symbol << ")" << t.name << ": " << t.regex << std::endl;
-		rules.push(t.regex, t.symbol);
-	}
+		dout << "(" << t.first << ")" << t.second.name << ": " << t.second.regex << std::endl;
 
-	dout << "building tokenizer..\n";
-	lexertl::wgenerator::build(rules, sm);
-	lexertl::wsiterator iter(inp.begin(), inp.end(), sm);
-	lexertl::wsiterator end;
 	dout << "tokenizing..\n";
 	
-	std::vector<string> toks; // token strings
-	toks.push_back(L"dummy coz of marpa unvalued shit");
+	std::vector<tokt> toks; // ranges of individual tokens within the input string
+	toks.push_back(tokt(inp.end(), inp.end()));
 
 	Marpa_Recognizer r = marpa_r_new(g);
 	check_null(r);
 	marpa_r_start_input(r);
 
-	for (; iter != end; ++iter)
+	auto pos = inp.begin();
+
+	std::vector<sym> expected;
+	expected.resize(check_int(marpa_g_highest_symbol_id(g)));
+
+	while (pos < inp.end())
 	{
-		if(iter->id == 18446744073709551615)
-			continue;
+		string wss = L"\n \t";
+		for (auto ws: wss)
+			if ((*pos) == ws)
+			{
+				pos++;
+				continue;
+			}
 
-		//Like flex, end of input returns an id of 0,  (you can set this to another value if you like using the eoi() method on the rules class) 
-		
-		sym s = iter->id;
-
-		print_terminal(iter->id);
-		dout << ", Text: '" << iter->str() << "'\n";
-	
-		//#Return value: On success, MARPA_ERR_NONE. On failure, some other error code.
-		int err = marpa_r_alternative(r, s, toks.size(), 1);
-
-		if (err == MARPA_ERR_UNEXPECTED_TOKEN_ID)
+		std::vector<sym>best_syms;
+		size_t best_len = 0;
+		expected.clear();
+		int num_expected = check_int(marpa_r_terminals_expected(r, &expected[0]));
+		dout << "expecting:" << std::endl;
+		for (int i = 0; i < num_expected; i++) 
 		{
-			std::vector<sym> expected;
-			expected.resize(check_int(marpa_g_highest_symbol_id(g)));
-			int num_expected = check_int(marpa_r_terminals_expected(r, &expected[0]));
+			sym e = expected[i];
+			if (literals.find(e) != literals.end())
+			{
+				if (boost::starts_with(*pos, literals[e]))
+				{
+					if (literals[e].size() > best_len)
+					{
+						best_syms.clear();
+						best_syms.push_back(e);
+						best_len = literals[e].size();
+					}
+					else if (literals[e].size() == best_len)
+						best_syms.push_back(e);
+				}
+			}
+			else
+			{
+				for (auto t: terminals)
+				{
+					boost::wsmatch what;
+					regex_search(pos, inp.end(), what, t.second.regex, boost::match_continuous);
+					size_t l = what.length();
+					if (l > best_len)
+					{
+						best_len = l;
+						best_syms.clear();
+						best_syms.push_back(e);
+					}
+					else if (l == best_len)
+						best_syms.push_back(e);
+				}
+			}
+		}
+
+		if (best_len)
+		{
+			if(best_syms.size() > 1)
+			{
+				std::wstringstream ss;
+				ss << L"cant decide.";
+				throw(wruntime_error(ss.str()));
+			}
+			assert (best_syms.size());
+			toks.push_back(tokt(pos, pos + best_len));
+			check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1));
+			check_int(marpa_r_earleme_complete(r));
+		}
+		else
+		{
 			dout << "expecting:" << std::endl;
 			for (int i = 0; i < num_expected; i++) 
 			{
-				dout << " ";
-				print_terminal(expected[i]);
-				dout << std::endl;
-			}
+				sym e = expected[i];
+				dout << " (" << e << ")";
+				if (terminals.find(e) != terminals.end())
+					dout << ": " << terminals[e].regex;
+				else if (literals.find(e) != literals.end())
+					dout << L": \"" << literals[e] + L"\"";
+                               dout << std::endl;
+                        }
+			throw(std::runtime_error("no parse"));
 		}
-		else if (err != MARPA_ERR_NONE)
-			dout << err << ":" << marpa_error_description[err].name << " - " << marpa_error_description[err].suggested ;
-
-		check_int(marpa_r_earleme_complete(r));
-		toks.push_back(iter->str());
 	}
 
     	dout << "evaluating.." << std::endl;
@@ -415,7 +448,7 @@ void parse (const string inp)
 			{
 				sym symbol = marpa_v_symbol(v);
 				size_t token = marpa_v_token_value(v) - 1;
-				stack[marpa_v_result(v)] = toks[token];
+				stack[marpa_v_result(v)] = string(toks[token].first, toks[token].second);
 				break;
 			}
 			case MARPA_STEP_RULE:
@@ -444,16 +477,6 @@ void parse (const string inp)
 	
 }
 
-void print_terminal(sym s)
-{
-	for (auto t:terminals)
-		if (t.symbol == s)
-		{
-			dout << "(" << t.symbol << ")" << t.name;
-			if (t.name != t.regex)
-				dout << ": " << t.regex;
-		}
-}
 
 
 
