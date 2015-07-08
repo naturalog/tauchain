@@ -1,5 +1,5 @@
 { ( ((:x :y)) (:z) ) :b :unit . } => { (((:x :y)) (:z)) :b :zeropoint } .
  ( ((:x :y)) (:z) ) :b :unit .
 fin.
-?x :b ?b.
+?x <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> ?b.
 fin.

@@ -33,19 +33,19 @@ pnode nqparser::readlist() {
 	pnode pn;
 	++s;
 	while (iswspace(*s)) ++s;
-	if (*s == L')') { ++s; return mkbnode(RDF_NIL); }
+	if (*s == L')') { ++s; return mkiri(RDF_NIL); }
 	do {
 		while (iswspace(*s)) ++s;
 		if (*s == L')') break;
 		if (!(pn = readany(true)))
 			throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
 		pnode cons = mkbnode(pstr(id()));
-		lists.emplace_back(cons, mkbnode(RDF_FIRST), pn);
+		lists.emplace_back(cons, mkiri(RDF_FIRST), pn);
 		qlists[head].push_back(pn);
 		++lpos;
 		while (iswspace(*s)) ++s;
-		if (*s == L')') lists.emplace_back(cons, mkbnode(RDF_REST), mkbnode(RDF_NIL));
-		else lists.emplace_back(cons, mkbnode(RDF_REST), mkbnode(pstr(id())));
+		if (*s == L')') lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));
+		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(id())));
 		if (*s == L'.') while (iswspace(*s++));
 	}
 	while (*s != L')');

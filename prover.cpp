@@ -516,7 +516,7 @@ prover::termid prover::make(resid p, termid s, termid o) {
 uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 	_head.push_back(t);
 	_body.push_back(ts);
-	TRACE(if (!ts.size() && !p->get(t).s) throw 0);
+	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 	return _head.size()-1;
 }
 /*
