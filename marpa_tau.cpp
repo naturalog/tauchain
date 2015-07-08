@@ -80,19 +80,21 @@ typedef std::pair<string::const_iterator,string::const_iterator> tokt;
 class terminal
 {
 public:
-	string name;
+	string name, regex_string;
 	boost::wregex regex;
 	terminal(string name_, string regex_)
 	{
 		name = name_; 
+		regex_string = regex_;
 		regex = boost::wregex(regex_);
 	}
 };
+typedef std::shared_ptr<terminal> pterminal;
 
 struct Marpa{
 	Marpa_Grammar g;
 	bool precomputed = false;
-	map<sym, terminal> terminals;
+	map<sym, pterminal> terminals;
 	map<sym, string> literals;
 	map<resid, sym> done;
 	prover* grmr;
@@ -100,9 +102,9 @@ struct Marpa{
 	string sym2str_(sym s)
 	{
 		if (terminals.find(s) != terminals.end())
-			return terminals[s].name;
+			return terminals[s]->name + L"(" + terminals[s]->regex_string + L")";
 		if (literals.find(s) != literals.end())
-			return literals[s];
+			return L": \"" + literals[s] + L"\"";
 		for (auto it = done.begin(); it != done.end(); it++)
 			if (it->second == s)
 				return *dict[it->first].value;
@@ -143,7 +145,6 @@ struct Marpa{
 		grmr = _grmr;
 		sym start = add(grmr, dict[root]);
 		start_symbol_set(start);
-		terminals[-2] = terminal(L"comment", L"#.*");
 	}
 
 	string value(resid val)
@@ -181,7 +182,7 @@ struct Marpa{
 		if((bind = ask1(grmr, thing, pmatches)))
 		{
 			//dout << "terminal: " << thingv << std::endl;
-			terminals[symbol] = terminal(thingv, value(bind));
+			terminals[symbol] = pterminal(new terminal(thingv, value(bind)));
 			return symbol;
 		}
 
@@ -321,7 +322,7 @@ void parse (const string inp)
 
 	dout << "terminals:\n";
 	for (auto t:terminals)
-		dout << "(" << t.first << ")" << t.second.name << ": " << t.second.regex << std::endl;
+		dout << "(" << t.first << ")" << t.second->name << ": " << t.second->regex << std::endl;
 
 	dout << "tokenizing..\n";
 	
@@ -337,27 +338,40 @@ void parse (const string inp)
 	std::vector<sym> expected;
 	expected.resize(check_int(marpa_g_highest_symbol_id(g)));
 
+	boost::wregex comment (L"#[^$]*");
+
 	while (pos < inp.end())
 	{
-		string wss = L"\n \t";
+		string wss = L"\n\r \t";
 		for (auto ws: wss)
 			if ((*pos) == ws)
 			{
 				pos++;
 				continue;
 			}
-
+		
+		boost::wsmatch what;
+		if (regex_search(pos, inp.end(), what, comment, boost::match_continuous))
+		{
+			if(!what.empty())
+			{
+				int llll = what[0].length();
+				dout << L"skipping " << llll << L" comment chars" << std::endl;
+				pos += llll;
+				continue;
+			}
+		}			
+		
 		std::vector<sym>best_syms;
 		size_t best_len = 0;
 		expected.clear();
 		int num_expected = check_int(marpa_r_terminals_expected(r, &expected[0]));
-		dout << "expecting:" << std::endl;
 		for (int i = 0; i < num_expected; i++) 
 		{
 			sym e = expected[i];
 			if (literals.find(e) != literals.end())
 			{
-				if (boost::starts_with(*pos, literals[e]))
+				if (boost::starts_with(string(pos, inp.end()), literals[e]))
 				{
 					if (literals[e].size() > best_len)
 					{
@@ -373,8 +387,8 @@ void parse (const string inp)
 			{
 				for (auto t: terminals)
 				{
-					boost::wsmatch what;
-					regex_search(pos, inp.end(), what, t.second.regex, boost::match_continuous);
+					if (!regex_search(pos, inp.end(), what, t.second->regex, boost::match_continuous)) continue;
+					if (what.empty()) continue;
 					size_t l = what.length();
 					if (l > best_len)
 					{
@@ -392,14 +406,17 @@ void parse (const string inp)
 		{
 			if(best_syms.size() > 1)
 			{
-				std::wstringstream ss;
-				ss << L"cant decide.";
-				throw(wruntime_error(ss.str()));
+				dout << L"cant decide between:" << std::endl;
+				for (auto ccc: best_syms)
+					dout << L" " << sym2str(ccc) << std::endl;
 			}
 			assert (best_syms.size());
 			toks.push_back(tokt(pos, pos + best_len));
+			dout << std::distance(inp.begin(), pos) << L"-" << std::distance(inp.begin(), pos + best_len) << 
+				L"\"" <<  string(pos, pos + best_len) << L"\" - " << sym2str(best_syms[0]) << std::endl;
 			check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1));
 			check_int(marpa_r_earleme_complete(r));
+			pos += best_len;
 		}
 		else
 		{
@@ -407,12 +424,7 @@ void parse (const string inp)
 			for (int i = 0; i < num_expected; i++) 
 			{
 				sym e = expected[i];
-				dout << " (" << e << ")";
-				if (terminals.find(e) != terminals.end())
-					dout << ": " << terminals[e].regex;
-				else if (literals.find(e) != literals.end())
-					dout << L": \"" << literals[e] + L"\"";
-                               dout << std::endl;
+				dout << sym2str(e) << std::endl;
                         }
 			throw(std::runtime_error("no parse"));
 		}
