@@ -29,7 +29,7 @@ enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
 
 class prover {
 public:
-	typedef i64 termid;
+	typedef u64 termid;
 
 	class term {
 	public:
@@ -48,32 +48,26 @@ public:
 	class ruleset {
 		termset _head;
 		boost::container::vector<termset> _body;
+		size_t m;
 	public:
 		uint add(termid t, const termset& ts, prover*);
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
 		uint size()						{ return _head.size(); }
+		void mark() { m = size(); }
+		void revert() {if(size()<=m)return; _head.erase(_head.begin() + (m-1), _head.end());_body.erase(_body.begin() + (m-1), _body.end());}
 	} kb;
-	prover ( qdb );
+	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
 	void operator()(termset& goal, const subst* s = 0);
 	void operator()(qlist goal, const subst* s = 0);
 	const term& get(termid id) const;
+	const term& get(resid id) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
-	std::set<termid> find_subst(resid t) {
-		subst::iterator it;
-		std::set<termid> r;
-		for (auto x : e) 
-			for (auto y : x.second) 
-				for (auto z : y.second)
-					if ((it = z.second.find(t)) != z.second.end())
-						r.insert(it->second);
-		return r;
-	}
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
@@ -81,6 +75,7 @@ public:
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(resid p, termid s = 0, termid o = 0);
+	termid make(termid p, termid s = 0, termid o = 0) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
 
@@ -122,6 +117,7 @@ typedef int prop_t;
 	termid quad2term(const quad& p);
 
 	string format(termid id, bool json = false);
+	string format(resid id, bool json = false) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);
 	string formatr(int r, bool json = false);
 	string formatkb();
@@ -161,5 +157,6 @@ typedef int prop_t;
 	bool islist(termid);
 	termid list2term(std::list<pnode>& l);
 	int steps = 0;
+	bool consistency();
 };
 #endif

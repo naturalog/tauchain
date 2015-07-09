@@ -66,6 +66,15 @@ pnode nqparser::readiri() {
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	pstring iri = wstrim(t);
+	if (lower(*iri) == L"true")
+		return mkliteral(pstr(L"true"), XSD_BOOLEAN, 0);
+	if (lower(*iri) == L"false")
+		return mkliteral(pstr(L"false"), XSD_BOOLEAN, 0);
+	if (std::atoi(ws(*iri).c_str()))
+		return mkliteral(iri, XSD_INTEGER, 0);
+	if (std::atof(ws(*iri).c_str()))
+		return mkliteral(iri, XSD_DOUBLE, 0);
+	if (*iri == L"0") return mkliteral(iri, XSD_INTEGER, 0);
 	auto i = iri->find(L':');
 	if (i == string::npos) return mkiri(iri);
 	string p = iri->substr(0, ++i);
@@ -136,7 +145,9 @@ pnode nqparser::readlit() {
 		else throw wruntime_error(string(L"expected langtag or iri:") + string(s,0,48));
 	}
 	t[pos] = 0; pos = 0;
-	return mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang));
+	string t1 = t;
+	boost::replace_all(t1, L"\\\\", L"\\");
+	return mkliteral(wstrim(t1), pstrtrim(dt), pstrtrim(lang));
 };
 
 pnode nqparser::readany(bool lit){

@@ -43,7 +43,7 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		else r.datatype = datatype;
 	}
 	if ( language ) r.lang = language;
-	auto it =  dict.nodes.find(*r.value);
+	auto it = dict.nodes.find(*r.value);
 	if (it != dict.nodes.end()) return it->second;
 	pnode pr = make_shared<node>(r); 
 	dict.set(pr);

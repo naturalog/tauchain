@@ -163,8 +163,6 @@ uint64_t dlparam(const node& n) {
 
 std::vector<prover::termid> prover::get_list(prover::termid head, proof& p) {
 	setproc(L"get_list");
-//	evidence e1 = e;
-//	e.clear();
 	termid t = list_first(head, p);
 	std::vector<termid> r;
 	TRACE(dout<<"get_list with "<<format(head));
@@ -292,8 +290,6 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 }
 
 bool prover::maybe_unify(const term s, const term d) {
-//	return true;
-//	std::deque<const term*>
 	setproc(L"maybe_unify");
 	bool r = (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
 		(!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o))));
@@ -427,7 +423,7 @@ void prover::addrules(pquad q) {
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
 	if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
-	if ( p != implication/* || quads.first.find ( o ) == quads.first.end()*/ )
+//	if ( p != implication/* || quads.first.find ( o ) == quads.first.end()*/ )
 		if ((t = quad2term(*q))) 
 			kb.add(t, termset(), this);
 	if (p == implication)
@@ -441,38 +437,42 @@ void prover::addrules(pquad q) {
 			if ((t = quad2term(*y))) kb.add(t, ts, this);
 		}
 }
-/*
-qdb lists(const qdb& kb) {
-	std::map<string, std::map<node, std::map<node, pquad>>> qs;
-	std::map<string, std::list<pnode>> ls;
-	auto isls = [](pnode n){ return n->_type == node::BNODE && startsWith(*n->value,L"_:list"); };
-	auto first = [&](node n, string g){ return qs[g][dict[rdffirst]][n]->object; };
-	auto rest = [&](node n, string g){ return qs[g][dict[rdfrest]][n]->object; };
-	for (auto x : kb)
-		for (auto q : *x.second)
-			qs[x.first][*q->pred][*q->subj] = q;
-	for (auto x : kb)
-		for (auto q : *x.second)
-			if (isls(q->subj)) {
-				ls[x.first].push_back(q->subj);
-				pquad _q;
-				for (_q != rdfnil) {
-					ls[x.first].push_back(first(*q->subj, x.first));
-					_q = rest(*q->subj, x.first);
-					
-				}
-			}
-}
-*/
-prover::prover ( qdb qkb ) : quads(qkb) {
+
+prover::prover ( qdb qkb, bool check_consistency ) : quads(qkb) {
 	auto it = qkb.first.find(L"@default");
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
+	if (quads.first.find(L"false") == quads.first.end()) quads.first[L"false"] = make_shared<qlist>();
 	for ( pquad quad : *it->second ) addrules(quad);
+	if (check_consistency && !consistency()) throw std::runtime_error("Error: inconsistent kb");
 }
+
+bool prover::consistency() {
+	setproc(L"consistency");
+	bool c = true;
+	prover p(quads, false);
+	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
+	termset g;
+	g.push_back(t);
+	p(g);
+	auto ee = p.e;
+	for (auto x : ee) for (auto y : x.second) {
+		g.clear();
+		g.push_back(p.get(y.first).s);
+		p.e.clear();
+		p(g);
+		if (p.e.size()) {
+			derr << L"Inconsistency found: " << p.format(y.first) << L" is provable as true and false."<<endl;
+			c = false;
+		}
+	}
+	return c;
+}
+
 #include <chrono>
 void prover::operator()(termset& goal, const subst* s) {
 	proof* p = new proof;
 	std::deque<proof*> queue;
+	kb.mark();
 	p->rul = kb.add(0, goal, this);
 	p->last = 0;
 	p->prev = 0;
@@ -491,6 +491,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
+	kb.revert();
 //	return results();
 }
 
@@ -519,36 +520,6 @@ uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 	return _head.size()-1;
 }
-/*
-void* node::toptr() const {
-	if (!datatype || *datatype == *XSD_STRING) return (void*)value->c_str();
-	string s = *datatype;
-	int* r = new int;
-	if (s == *XSD_BOOLEAN) return ? L"true" : L"false";
-	if (s == *XSD_DOUBLE) return &(*r = (int)std::stod(*value));
-	if (s == *XSD_INTEGER) return &(*r = (int)std::stol(*value));
-	if (s == *XSD_FLOAT) return &(*r = (int)std::stof(*value));
-	delete r;
-	return (void*)value->c_str();
-*/
-//	return 0;
-//if (s == *XSD_DECIMAL) 
-//if (s == *XSD_ANYURI) 
-//	if (s == *XSD_STRING)
-//	throw wruntime_error(L"Unidentified literal type" + s);
-//
-
-/*
-pstring littype(etype s) {
-	if (s == BOOLEAN) return XSD_BOOLEAN;
-	if (s == DOUBLE) return XSD_DOUBLE;
-	if (s == INT) return XSD_INTEGER;
-	if (s == FLOAT) return XSD_FLOAT;
-	if (s == DECIMAL) return XSD_DECIMAL;
-	if (s == URISTR) return XSD_ANYURI;
-	if (s == STR) return XSD_STRING;
-}
-*/
 bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
 prover::term::term() : p(0), s(0), o(0) {}
 prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
@@ -627,7 +598,6 @@ pobj prover::json(const ground& g) const {
 	return l;
 }
 pobj prover::ejson() const {
-//	typedef map<resid, set<std::pair<termid, ground>>> evidence;
 	pobj o = mk_somap_obj();
 	for (auto x : e) {
 		polist_obj l = mk_olist_obj();
@@ -643,7 +613,3 @@ pobj prover::ejson() const {
 	}
 	return o;
 }
-//evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
-//g.push({src:rl, env:{}})
-//e[node]: [ { (rule) "head":term, "body": { "pred":"GND", args: [ {"src":(rule), "env":(subst)  ] }, {...}  ]
-//	typedef boost::container::list<std::pair<ruleid, subst>> ground;

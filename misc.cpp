@@ -9,7 +9,7 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-resid logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil;
+resid logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
 	GND = set (mkiri(pstr( L"GND" )));
@@ -29,6 +29,8 @@ void bidict::init() {
 	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
 	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
 	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
+	//False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
+	False = set(mkiri(pstr(L"false")));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
