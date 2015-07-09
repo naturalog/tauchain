@@ -48,14 +48,14 @@ public:
 	class ruleset {
 		termset _head;
 		boost::container::vector<termset> _body;
-		size_t m;
+		size_t m = 0;
 	public:
 		uint add(termid t, const termset& ts, prover*);
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
-		uint size()						{ return _head.size(); }
-		void mark() { m = size(); }
-		void revert() {if(size()<=m)return; _head.erase(_head.begin() + (m-1), _head.end());_body.erase(_body.begin() + (m-1), _body.end());}
+		size_t size()						{ return _head.size(); }
+		void mark() { if (!m) m = size(); else m = std::min(size(), m); }
+		void revert() {if(size()<=m) { m = 0; return; } _head.erase(_head.begin() + (m-1), _head.end());_body.erase(_body.begin() + (m-1), _body.end()); m = 0;}
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );

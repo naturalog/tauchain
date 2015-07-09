@@ -423,6 +423,7 @@ void prover::addrules(pquad q) {
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
 	if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
+	TRACE(dout<<"called with " << q->tostring()<<endl);
 //	if ( p != implication/* || quads.first.find ( o ) == quads.first.end()*/ )
 		if ((t = quad2term(*q))) 
 			kb.add(t, termset(), this);
@@ -430,7 +431,7 @@ void prover::addrules(pquad q) {
 		for ( pquad y : *quads.first.at ( o ) ) {
 			termset ts;
 			if ( quads.first.find ( s ) != quads.first.end() )
-				for ( pquad z : *quads.first.at(s) )
+				for ( pquad z : *quads.first.at( s ) )
 					if (dict[z->pred] != rdffirst && dict[z->pred] != rdfrest)
 						if ((t = quad2term(*z))) 
 							ts.push_back( t );
@@ -457,9 +458,13 @@ bool prover::consistency() {
 	auto ee = p.e;
 	for (auto x : ee) for (auto y : x.second) {
 		g.clear();
-		g.push_back(p.get(y.first).s);
+//		g.push_back(p.get(y.first).s);
 		p.e.clear();
-		p(g);
+//		p(g);
+		string s = *dict[p.get(p.get(y.first).s).p].value;
+		if (s == L"GND") continue;
+		TRACE(dout<<L"Trying to prove false context: " << s << endl);
+		p(*quads.first[s]);
 		if (p.e.size()) {
 			derr << L"Inconsistency found: " << p.format(y.first) << L" is provable as true and false."<<endl;
 			c = false;
