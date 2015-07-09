@@ -144,7 +144,9 @@ pnode nqparser::readlit() {
 		else throw wruntime_error(string(L"expected langtag or iri:") + string(s,0,48));
 	}
 	t[pos] = 0; pos = 0;
-	return mkliteral(wstrim(t), pstrtrim(dt), pstrtrim(lang));
+	string t1 = t;
+	boost::replace_all(t1, L"\\\\", L"\\");
+	return mkliteral(wstrim(t1), pstrtrim(dt), pstrtrim(lang));
 };
 
 pnode nqparser::readany(bool lit){

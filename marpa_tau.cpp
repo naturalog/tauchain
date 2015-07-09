@@ -98,6 +98,7 @@ struct Marpa{
 	map<sym, string> literals;
 	map<resid, sym> done;
 	prover* grmr;
+	map<rule, sym> rules;
 
 	string sym2str_(sym s)
 	{
@@ -253,13 +254,13 @@ sym symbol_new_resid(resid thing)
 
 }
 
-rule rule_new(sym lhs, syms rhs)
+void rule_new(sym lhs, syms rhs)
 {
 	dout << sym2str(lhs) << L" ::= "; 
 	for (sym s: rhs)
 		dout << sym2str(s);
 	dout << std::endl;
-	return check_int(marpa_g_rule_new(g, lhs, &rhs[0], rhs.size()));
+	rules[check_int(marpa_g_rule_new(g, lhs, &rhs[0], rhs.size()))] = lhs;
 	/*if (r == -2)
 	{
 		int e = marpa_g_error(g, NULL);
@@ -268,7 +269,7 @@ rule rule_new(sym lhs, syms rhs)
 	*/
 }
 
-rule seq_new(sym lhs, sym rhs, sym separator, int min, int flags)
+void seq_new(sym lhs, sym rhs, sym separator, int min, int flags)
 {
 	int r = marpa_g_sequence_new(g, lhs, rhs, separator, min, flags);
 	if (r == -2)
@@ -277,7 +278,7 @@ rule seq_new(sym lhs, sym rhs, sym separator, int min, int flags)
 		if (e == MARPA_ERR_DUPLICATE_RULE)
 			dout << sym2str(lhs) << L" ::= sequence of " << sym2str(rhs) << std::endl;
 	}
-	return check_int(r);
+	rules[check_int(r)] = lhs;
 }
 
 
@@ -497,9 +498,14 @@ void parse (const string inp)
 			}
 			case MARPA_STEP_RULE:
 			{
-				//rule r = marpa_v_rule(v);
-				std::vector<prover::termid> args;
 				string r = L"( ";
+				for (auto rule : done)
+					if (rule.second == rules[marpa_v_rule(v)])
+					{
+						r += value(rule.first) + L" ";
+						break;
+					}
+				std::vector<prover::termid> args;			
 				for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++)
 					//args.push_back(stack[i]);
 					r += stack[i] + L" ";
@@ -507,7 +513,7 @@ void parse (const string inp)
 				break;
 			}
 			case MARPA_STEP_NULLING_SYMBOL:
-                                stack[marpa_v_result(v)] = L"nulled";
+                                stack[marpa_v_result(v)] = L"";
                         	break;
                         default:
                         	dout << marpa_step_type_description[st].name << std::endl;
