@@ -1,6 +1,6 @@
 { ?x a :b. ?x a :a } => false.
 :y a :a.
-:y a :g.
+:y a :b.
 fin.
 ?z a :b.
 fin.
