@@ -15,9 +15,9 @@ auto dummy = []() {
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 jsonld_options opts;
 
-void menu();
-#include <boost/asio.hpp>
-#include <boost/asio/ip/tcp.hpp>
+//void menu();
+//#include <boost/asio.hpp>
+//#include <boost/asio/ip/tcp.hpp>
 
 std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;

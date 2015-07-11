@@ -7,10 +7,10 @@
 #include <list>
 #include <set>
 #include "json_spirit.h"
-#include <curl/curl.h>
-#include <curl/easy.h>
-#include <curl/easy.h>
-#include <curl/curlbuild.h>
+//#include <curl/curl.h>
+//#include <curl/easy.h>
+//#include <curl/easy.h>
+//#include <curl/curlbuild.h>
 #include <sstream>
 #include <iostream>
 #include <fstream>
@@ -99,7 +99,7 @@ struct remote_doc_t {
 	}
 };
 
-extern void* curl;
+//extern void* curl;
 
 size_t write_data ( void *ptr, size_t size, size_t n, void *stream );
 string download ( const string& url );

@@ -12,20 +12,21 @@ pcontext context_t::parse ( pobj localContext, std::vector<string> remoteContext
 			continue;
 		}
 		if ( context->STR() ) {
-			pstring s = context->STR();
-			somap& t1 = *result.MAP();
-			pobj p1 = sgetbase ( t1 );
-			pstring s1 = p1 ? p1->STR() : 0;
-			string uri = resolve ( s1, *s );
-			if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() )
-				throw wruntime_error ( RECURSIVE_CONTEXT_INCLUSION + tab + uri );
-			remoteContexts.push_back ( uri );
-			pobj remoteContext = fromURL ( uri );
-			if ( remoteContext && !remoteContext->map_and_has ( str_context ) )
-				throw wruntime_error ( INVALID_REMOTE_CONTEXT + tab + context->toString() );
-			context = remoteContext ? ( *remoteContext->MAP() ) [str_context] : 0;
-			result = *result.parse ( context, remoteContexts );
-			continue;
+			throw std::runtime_error("Remote context currently unsupported.");
+//			pstring s = context->STR();
+//			somap& t1 = *result.MAP();
+//			pobj p1 = sgetbase ( t1 );
+//			pstring s1 = p1 ? p1->STR() : 0;
+//			string uri = resolve ( s1, *s );
+//			if ( std::find ( remoteContexts.begin(), remoteContexts.end(), uri ) != remoteContexts.end() )
+//				throw wruntime_error ( RECURSIVE_CONTEXT_INCLUSION + tab + uri );
+//			remoteContexts.push_back ( uri );
+//			pobj remoteContext = fromURL ( uri );
+//			if ( remoteContext && !remoteContext->map_and_has ( str_context ) )
+//				throw wruntime_error ( INVALID_REMOTE_CONTEXT + tab + context->toString() );
+//			context = remoteContext ? ( *remoteContext->MAP() ) [str_context] : 0;
+//			result = *result.parse ( context, remoteContexts );
+//			continue;
 		}
 		if ( !context->MAP() ) throw wruntime_error ( INVALID_LOCAL_CONTEXT + string ( L"\r\n" ) + context->toString() );
 		somap& cm = *context->MAP();
@@ -698,11 +699,11 @@ prdf_db jsonld_api::toRDF ( pobj input, jsonld_options options ) {
 
 pobj expand ( pobj input, jsonld_options opts ) {
 	if ( !input ) return 0;
-	if ( input->STR() && input->STR()->find ( L":" ) != string::npos ) {
-		input = load ( *input->STR() ).document;
-		if ( !opts.base )
-			opts.base = pstr ( *input->STR() );
-	}
+//	if ( input->STR() && input->STR()->find ( L":" ) != string::npos ) {
+//		input = load ( *input->STR() ).document;
+//		if ( !opts.base )
+//			opts.base = pstr ( *input->STR() );
+//	}
 	std::shared_ptr<context_t> act_ctx = make_shared <context_t> ( opts );
 	if ( opts.expandContext ) {
 		if ( opts.expandContext->MAP()
@@ -726,45 +727,45 @@ size_t write_data ( void *ptr, size_t size, size_t n, void *stream ) {
 	return size * n;
 }
 
-string download ( const string& url ) {
-	static const string ACCEPT_HEADER =
-	    L"application/ld+json, application/json;q=0.9, application/javascript;q=0.5, text/javascript;q=0.5, text/plain;q=0.2, */*;q=0.1";
-	struct curl_slist *headers = 0;
-	headers = curl_slist_append ( headers, "Content-Type: text/xml" );
-	curl_easy_setopt ( curl, CURLOPT_HTTPHEADER, headers );
-	curl_easy_setopt ( curl, CURLOPT_URL, url.c_str() );
-	curl_easy_setopt ( curl, CURLOPT_FOLLOWLOCATION, 1L );
-	curl_easy_setopt ( curl, CURLOPT_NOSIGNAL, 1 );
-	curl_easy_setopt ( curl, CURLOPT_ACCEPT_ENCODING, "deflate" );
-	std::wstringstream out;
-	curl_easy_setopt ( curl, CURLOPT_WRITEFUNCTION, write_data );
-	curl_easy_setopt ( curl, CURLOPT_WRITEDATA, &out );
-	CURLcode res = curl_easy_perform ( curl );
-	if ( res != CURLE_OK )
-		throw std::runtime_error (
-		    std::string ( "curl_easy_perform() failed: " )
-		    + curl_easy_strerror ( res ) );
-	string r = out.str();
-	dout << L"downloaded file: " << r << std::endl;
-	return r;
-}
-
-pobj fromURL ( const string& url ) {
-	json_spirit::wmValue r;
-	json_spirit::read_string ( download ( url ), r );
-	return convert ( r );
-}
-
-remote_doc_t load ( const string& url ) {
-	pobj p;
-	remote_doc_t doc ( url, p );
-	try {
-		doc.document = fromURL ( url );
-	} catch ( ... ) {
-		throw wruntime_error ( LOADING_REMOTE_CONTEXT_FAILED + tab + url );
-	}
-	return doc;
-}
+//string download ( const string& url ) {
+//	static const string ACCEPT_HEADER =
+//	    L"application/ld+json, application/json;q=0.9, application/javascript;q=0.5, text/javascript;q=0.5, text/plain;q=0.2, */*;q=0.1";
+//	struct curl_slist *headers = 0;
+//	headers = curl_slist_append ( headers, "Content-Type: text/xml" );
+//	curl_easy_setopt ( curl, CURLOPT_HTTPHEADER, headers );
+//	curl_easy_setopt ( curl, CURLOPT_URL, url.c_str() );
+//	curl_easy_setopt ( curl, CURLOPT_FOLLOWLOCATION, 1L );
+//	curl_easy_setopt ( curl, CURLOPT_NOSIGNAL, 1 );
+//	curl_easy_setopt ( curl, CURLOPT_ACCEPT_ENCODING, "deflate" );
+//	std::wstringstream out;
+//	curl_easy_setopt ( curl, CURLOPT_WRITEFUNCTION, write_data );
+//	curl_easy_setopt ( curl, CURLOPT_WRITEDATA, &out );
+//	CURLcode res = curl_easy_perform ( curl );
+//	if ( res != CURLE_OK )
+//		throw std::runtime_error (
+//		    std::string ( "curl_easy_perform() failed: " )
+//		    + curl_easy_strerror ( res ) );
+//	string r = out.str();
+//	dout << L"downloaded file: " << r << std::endl;
+//	return r;
+//}
+//
+//pobj fromURL ( const string& url ) {
+//	json_spirit::wmValue r;
+//	json_spirit::read_string ( download ( url ), r );
+//	return convert ( r );
+//}
+//
+//remote_doc_t load ( const string& url ) {
+//	pobj p;
+//	remote_doc_t doc ( url, p );
+//	try {
+//		doc.document = fromURL ( url );
+//	} catch ( ... ) {
+//		throw wruntime_error ( LOADING_REMOTE_CONTEXT_FAILED + tab + url );
+//	}
+//	return doc;
+//}
 
 json_spirit::wmValue convert ( obj& v ) {
 	typedef json_spirit::wmValue val;
@@ -1019,7 +1020,7 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 
 size_t jsonld_api::blankNodeCounter = 0;
 map<string, string> jsonld_api::bnode_id_map;
-void* curl = curl_easy_init();
+//void* curl = curl_easy_init();
 
 string obj::toString() {
 	return json_spirit::write_string ( convert ( *this ), json_spirit::/*pretty_print*/single_line_arrays  );
