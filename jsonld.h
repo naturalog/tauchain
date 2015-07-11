@@ -6,7 +6,6 @@
 #include <memory>
 #include <list>
 #include <set>
-#include "json_spirit.h"
 //#include <curl/curl.h>
 //#include <curl/easy.h>
 //#include <curl/easy.h>
@@ -43,8 +42,6 @@ bool equals ( const pobj& a, const pobj& b );
 bool equals ( const pobj& a, const obj& b );
 bool equals ( const obj& a, const pobj& b );
 pobj get ( psomap p, string k );
-json_spirit::wmValue convert ( obj& v );
-json_spirit::wmValue convert ( pobj v );
 bool keyword ( const string& key );
 bool keyword ( pstring key );
 
@@ -105,7 +102,6 @@ size_t write_data ( void *ptr, size_t size, size_t n, void *stream );
 string download ( const string& url );
 pobj fromURL ( const string& url );
 remote_doc_t load ( const string& url );
-pobj convert ( const json_spirit::wmValue& v );
 
 class context_t: public somap_obj {
 private:

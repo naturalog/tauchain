@@ -2,6 +2,9 @@
 #include "rdf.h"
 #include "json_spirit.h"
 
+pobj convert ( const json_spirit::wmValue& v );
+json_spirit::wmValue convert ( obj& v );
+json_spirit::wmValue convert ( pobj v );
 pcontext context_t::parse ( pobj localContext, std::vector<string> remoteContexts ) {
 	pdefined_t defined = make_shared<defined_t>();
 	context_t result ( options );

@@ -62,8 +62,8 @@ public:
 	prover ( const prover& p );
 	void operator()(termset& goal, const subst* s = 0);
 	void operator()(qlist goal, const subst* s = 0);
-	const term& get(termid id) const;
-	const term& get(resid id) const { throw std::runtime_error("called get(termid) with resid"); }
+	const term& get(termid) const;
+	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
@@ -75,7 +75,8 @@ public:
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(resid p, termid s = 0, termid o = 0);
-	termid make(termid p, termid s = 0, termid o = 0) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
 
@@ -116,7 +117,8 @@ typedef int prop_t;
 	termid quad2term(const quad& p);
 
 	string format(termid id, bool json = false);
-	string format(resid id, bool json = false) { throw std::runtime_error("called format(termid) with resid"); }
+	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
+	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);
 	string formatr(int r, bool json = false);
 	string formatkb();

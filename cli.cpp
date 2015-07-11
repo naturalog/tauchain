@@ -4,9 +4,11 @@
 #include "prover.h"
 #include "jsonld.h"
 #include "cli.h"
-#include <boost/algorithm/string.hpp>
+#include "json_spirit.h"
 
-using namespace boost::algorithm;
+pobj convert ( const json_spirit::wmValue& v );
+json_spirit::wmValue convert ( obj& v );
+json_spirit::wmValue convert ( pobj v );
 
 std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
@@ -76,11 +78,9 @@ qdb cmd_t::convert ( pobj o ) {
 	return toquads ( nodemap ( expand ( o, opts ) ) );
 }
 
-qdb cmd_t::convert ( const string& s, bool debugprint ) {
+qdb cmd_t::convert ( const string& s ) {
 	if ( fnamebase ) opts.base = pstr ( string ( L"file://" ) + s + L"#" );
-	if ( debugprint ) dout << L" Converting: " << s;
 	qdb r = convert ( load_json ( s ) );
-	if ( debugprint ) dout << L" Converted: " << r << std::endl;
 	return r;
 }
 
