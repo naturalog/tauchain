@@ -293,7 +293,7 @@ bool prover::maybe_unify(const term s, const term d) {
 	setproc(L"maybe_unify");
 	bool r = (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
 		(!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o))));
-	TRACE(dout<<format(s) << ' ' <<format(d) << (r?L"match":L"mismatch") << endl);
+//	TRACE(dout<<format(s) << ' ' <<format(d) << (r?L"match":L"mismatch") << endl);
 	return r; 
 }
 
@@ -406,11 +406,14 @@ void prover::operator()(qlist query, const subst* s) {
 			if ((t = quad2term( *q ))) goal.push_back( t );
 	return (*this)(goal, s);
 }
-
+/*
 prover::prover(prover::ruleset* _kb) : kb(_kb ? *_kb : *new ruleset) {
 	kbowner = !_kb;
 	_terms.reserve(max_terms);
 	CL(initcl());
+}
+*/
+prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) {
 }
 
 prover::~prover() { }
@@ -450,23 +453,23 @@ prover::prover ( qdb qkb, bool check_consistency ) : quads(qkb) {
 bool prover::consistency() {
 	setproc(L"consistency");
 	bool c = true;
-	prover p(quads, false);
+//	prover p(quads, false);
+	prover p(*this);
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
 	termset g;
 	g.push_back(t);
 	p(g);
 	auto ee = p.e;
 	for (auto x : ee) for (auto y : x.second) {
+		prover q(*this);
 		g.clear();
-//		g.push_back(p.get(y.first).s);
-		p.e.clear();
-//		p(g);
+//		p.e.clear();
 		string s = *dict[p.get(p.get(y.first).s).p].value;
 		if (s == L"GND") continue;
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
-		p(*quads.first[s]);
-		if (p.e.size()) {
-			derr << L"Inconsistency found: " << p.format(y.first) << L" is provable as true and false."<<endl;
+		q(*quads.first[s]);
+		if (q.e.size()) {
+			derr << L"Inconsistency found: " << q.format(y.first) << L" is provable as true and false."<<endl;
 			c = false;
 		}
 	}
@@ -618,3 +621,5 @@ pobj prover::ejson() const {
 	}
 	return o;
 }
+void prover::ruleset::mark() { if (!m) m = size(); else m = std::min(size(), m); }
+void prover::ruleset::revert() {if(size()<=m) { m = 0; return; } _head.erase(_head.begin() + (m-1), _head.end());_body.erase(_body.begin() + (m-1), _body.end()); m = 0;}

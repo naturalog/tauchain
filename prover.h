@@ -54,12 +54,15 @@ public:
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
 		size_t size()						{ return _head.size(); }
-		void mark() { if (!m) m = size(); else m = std::min(size(), m); }
-		void revert() {if(size()<=m) { m = 0; return; } _head.erase(_head.begin() + (m-1), _head.end());_body.erase(_body.begin() + (m-1), _body.end()); m = 0;}
+		void mark();
+		void revert();
+	//	ruleset(){}
+	//	ruleset(const ruleset& r) : _head(r._head), _body(r._body) {}
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
+	prover ( const prover& p );
 	void operator()(termset& goal, const subst* s = 0);
 	void operator()(qlist goal, const subst* s = 0);
 	const term& get(termid id) const;
