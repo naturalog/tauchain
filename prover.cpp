@@ -1,13 +1,8 @@
-//#define READLINE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#ifdef READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
-#endif
 #include <iostream>
 #include <ostream>
 #include "misc.h"
@@ -21,9 +16,6 @@
 
 using namespace boost::algorithm;
 int _indent = 0;
-
-etype littype(string s);
-string littype(etype s);
 
 const uint max_terms = 1024 * 1024;
 

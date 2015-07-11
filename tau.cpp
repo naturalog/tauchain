@@ -103,12 +103,8 @@ int main ( int argc, char** argv ) {
 			#ifdef marpa
 			{ string ( L"load_n3" ) , new load_n3_cmd },
 			#endif
-			{ string ( L"expand" ) , new expand_cmd },
-			{ string ( L"toquads" ) , new toquads_cmd },
-			{ string ( L"nodemap" ) , new nodemap_cmd },
 			{ string ( L"convert" ) , new convert_cmd },
 			{ string ( L"prove" ) , new prove_cmd }
-//			{ string ( "listen" ) , new listen_cmd }
 		}, {
 			{ { L"--no-deref", L"show integers only instead of strings" }, &deref },
 			{ { L"--pause", L"pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },

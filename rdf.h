@@ -43,7 +43,6 @@ public:
 	quad(){}
 	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
 	string tostring ( ) const;
-//	bool operator<(const quad& q) const { return tostring() < q.tostring(); }
 };
 
 typedef std::shared_ptr<quad> pquad;

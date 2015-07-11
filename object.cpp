@@ -113,3 +113,4 @@ bool has ( pobj o, pstring s ) {
 	return s && has ( o, *s );
 }
 
+pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }

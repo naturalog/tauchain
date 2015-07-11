@@ -16,36 +16,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 		if (fname != L"")
 			pis = new std::wifstream(ws(fname));
 		std::wistream& is = *pis;
-/*		string line;
-		std::wstringstream ss;
-		while (!is.eof()) {
-			getline(is, line);
-			trim(line);
-			empty = false;
-			if (!line.size() || line == L"\n")
-				continue;
-			static string lvl = L"level ", fin = L"fin.";
-			trim(line);
-			if (startsWith(line, lvl)) {
-				try {
-				line = line.substr(lvl.size());
-				int n = 0;
-				while (std::iswdigit(line[++n]));
-				level = std::stoi(line.substr(0, n));
-				dout << "level changed to " << level << std::endl;
-				} catch (std::exception& ex) { derr<<ex.what()<<std::endl; }
-				catch (...) {}
-				continue;
-			}
-			if (endsWith(line, fin)) {
-				string x = line.substr(0, line.size() - fin.size());
-				trim(x);
-				ss << x;
-				break;
-			}
-			ss << line;
-		}*/
-		return /*empty ? 0 : */std::make_shared<qdb>(readqdb(is));
+		return std::make_shared<qdb>(readqdb(is));
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
 	}
@@ -131,5 +102,6 @@ void print_usage ( const cmds_t& cmds ) {
 	for ( auto c : cmds.first ) dout << tab << c.first << tab << ws(c.second->desc()) << std::endl;
 	dout << std::endl << L"Available flags:" << std::endl << std::endl;
 	for ( auto c : cmds.second ) dout << tab << c.first.first << tab << c.first.second << std::endl;
+	for ( auto c : cmds.second ) dout << tab << L"--level <depth>" << tab << L"Verbosity level" << std::endl;
 	dout << std::endl;
 }

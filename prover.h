@@ -25,7 +25,7 @@ extern std::string clprog;
 #define CL(x)
 #endif
 
-enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
+//enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
 
 class prover {
 public:
@@ -56,8 +56,6 @@ public:
 		size_t size()						{ return _head.size(); }
 		void mark();
 		void revert();
-	//	ruleset(){}
-	//	ruleset(const ruleset& r) : _head(r._head), _body(r._body) {}
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
