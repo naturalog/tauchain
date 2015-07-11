@@ -102,6 +102,6 @@ void print_usage ( const cmds_t& cmds ) {
 	for ( auto c : cmds.first ) dout << tab << c.first << tab << ws(c.second->desc()) << std::endl;
 	dout << std::endl << L"Available flags:" << std::endl << std::endl;
 	for ( auto c : cmds.second ) dout << tab << c.first.first << tab << c.first.second << std::endl;
-	for ( auto c : cmds.second ) dout << tab << L"--level <depth>" << tab << L"Verbosity level" << std::endl;
+	dout << tab << L"--level <depth>" << tab << L"Verbosity level" << std::endl;
 	dout << std::endl;
 }
