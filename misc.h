@@ -21,9 +21,9 @@ public:
 	resid set ( node v );
 	resid set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
-	node operator[] ( resid k );
-	node operator[] ( u64 k ) { throw std::runtime_error("called dict[] with wrong type"); }
-	resid operator[] ( node v );
+	node operator[] ( resid );
+	node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
+	resid operator[] ( node );
 	resid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
 	bool has ( resid k ) const;
 	bool has ( node v ) const;

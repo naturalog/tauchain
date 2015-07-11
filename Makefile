@@ -1,6 +1,6 @@
 CC=g++
 CXXFLAGS=-c -std=c++11 -Wextra -g -DDEBUG -I/usr/local/include
-#CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O2 -I/usr/local/include
+#CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O3 -I/usr/local/include
 LDFLAGS=-ldl
 #OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o

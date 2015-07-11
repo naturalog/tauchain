@@ -12,7 +12,6 @@
 #include "rdf.h"
 #include "misc.h"
 #include <functional>
-#include "ThreadPool.h"
 #include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
@@ -98,7 +97,6 @@ typedef int prop_t;
 		proof *prev;
 		subst s;
 		ground g;
-		std::list<std::thread*> waitlist;
 		proof() : rul(0), prev(0) {}
 		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(p), s(_s), g(_g) {}
