@@ -281,29 +281,29 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	return r;
 }
 
-std::set<uint> prover::match(termid _e) {
-	if (!_e) return std::set<uint>();
+std::set<uint> prover::match(termid e) {
+	if (!e) return std::set<uint>();
 	setproc(L"match");
-	std::deque<std::pair<const term, const term>> q;
+	std::deque<std::pair<termid, termid>> q;
 	std::set<uint> m;
 	termid h;
-	const term e = get(_e);
+//	const term e = get(_e);
 	for (uint n = 0; n < kb.size(); ++n) {
 		h = kb.head()[n];
-		if (!h || h == _e) continue;
-		q.emplace_back(e, get(h));
+		if (!h || h == e) continue;
+		q.emplace_back(e, h);
 		bool r;
 		do {
 			r = false;
 			auto& p = q.front();
 			q.pop_front();
-			const term s = p.first, d = p.second;
+			const term s = get(p.first), d = get(p.second);
 			if (s.p < 0 || d.p < 0) r = true;
 			else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 			else if (!s.s) r = true;
 			else {
-				q.emplace_back(get(s.s), get(d.s));
-				q.emplace_back(get(s.o), get(d.o));
+				q.emplace_back(s.s, d.s);
+				q.emplace_back(s.o, d.o);
 				r = true;
 			}		
 		} while (r && !q.empty());
