@@ -281,23 +281,37 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	return r;
 }
 
-bool prover::maybe_unify(const term s, const term d) {
-	setproc(L"maybe_unify");
-	bool r = (s.p < 0 || d.p < 0) ? true : (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) ? false :
-		(!s.s || (maybe_unify(get(s.s), get(d.s)) && maybe_unify(get(s.o), get(d.o))));
-//	TRACE(dout<<format(s) << ' ' <<format(d) << (r?L"match":L"mismatch") << endl);
-	return r; 
-}
-
 std::set<uint> prover::match(termid _e) {
 	if (!_e) return std::set<uint>();
 	setproc(L"match");
+	std::deque<std::pair<const term, const term>> q;
 	std::set<uint> m;
 	termid h;
 	const term e = get(_e);
-	for (uint n = 0; n < kb.size(); ++n)
-		if (((h=kb.head()[n]))&&(h!=_e)&& maybe_unify(e, get(h)))
-			m.insert(n);
+	for (uint n = 0; n < kb.size(); ++n) {
+		h = kb.head()[n];
+		if (!h || h == _e) continue;
+		q.emplace_back(e, get(h));
+		bool r;
+		do {
+			r = false;
+			auto& p = q.front();
+			q.pop_front();
+			const term s = p.first, d = p.second;
+			if (s.p < 0 || d.p < 0) r = true;
+			else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+			else if (!s.s) r = true;
+			else {
+				q.emplace_back(get(s.s), get(d.s));
+				q.emplace_back(get(s.o), get(d.o));
+				r = true;
+			}		
+		} while (r && !q.empty());
+		r &= q.empty();
+		q.clear();
+		if (r) m.insert(n);
+	}
+//	TRACE(dout<<format(s) << ' ' <<format(d) << (r?L"match":L"mismatch") << endl);
 //	TRACE(dout<<format(_e) << L" matches: "; for (auto x : m) dout << format(kb.head()[x]) << L' '; dout << endl);
 	return m;
 }

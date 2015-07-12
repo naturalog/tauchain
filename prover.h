@@ -112,7 +112,7 @@ typedef int prop_t;
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	bool euler_path(proof* p, termid t);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
-	bool maybe_unify(const term, const term);
+//	bool maybe_unify(const term, const term);
 	std::set<uint> match(termid e);
 	termid quad2term(const quad& p);
 
