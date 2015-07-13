@@ -9,6 +9,7 @@
 #include "cli.h"
 #include "rdf.h"
 #include "misc.h"
+#include "jsonld.h"
 
 extern "C" {
 #include "marpa.h"
@@ -62,6 +63,8 @@ resid ask1(prover *prover, resid s, const pnode p)
 		return 0;
 }
 
+const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
+
 const pnode rdfs_first=mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
 const pnode rdfs_rest= mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
 const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
@@ -98,6 +101,7 @@ struct Marpa{
 	map<sym, string> literals;
 	map<resid, sym> done;
 	prover* grmr;
+	prover* dest;
 	map<rule, sym> rules;
 
 	string sym2str_(sym s)
@@ -143,7 +147,7 @@ struct Marpa{
 
 	void load_grammar(prover *_grmr, pnode root)
 	{
-		grmr = _grmr;
+		grmr = dest = _grmr;
 		sym start = add(grmr, dict[root]);
 		start_symbol_set(start);
 	}
@@ -475,12 +479,11 @@ void parse (const string inp)
 	Marpa_Value v = marpa_v_new(t);
 	check_null(v);
 
-
 	//"valuator" loop. marpa tells us what rules with what child nodes or tokens were matched, 
-	//we bottom-up build the "value" that is the ast
+	//we build the value/parse/ast in the stack, bottom-up
 
-	//map<int, prover::termid> stack; // intermediate values
-	map<int, string> stack; // intermediate values
+	map<int, prover::termid> stack;
+	map<int, string> sexp; 
 
 	while(1)
 	{
@@ -493,27 +496,38 @@ void parse (const string inp)
 			{
 				sym symbol = marpa_v_symbol(v);
 				size_t token = marpa_v_token_value(v) - 1;
-				stack[marpa_v_result(v)] = string(toks[token].first, toks[token].second);
+				sexp[marpa_v_result(v)] = string(toks[token].first, toks[token].second);
 				break;
 			}
 			case MARPA_STEP_RULE:
 			{
-				string r = L"( ";
-				for (auto rule : done)
-					if (rule.second == rules[marpa_v_rule(v)])
+				string sexp_str = L"( ";
+				
+				resid rule;
+				for (auto r : done)
+					if (r.second == rules[marpa_v_rule(v)])
 					{
-						r += value(rule.first) + L" ";
+						rule = r.first;
+						sexp_str += value(rule) + L" ";
 						break;
 					}
+				assert(rule);
+				
 				std::vector<prover::termid> args;			
 				for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++)
-					//args.push_back(stack[i]);
-					r += stack[i] + L" ";
-				stack[marpa_v_result(v)] = r +  L") ";				
+					//args.push_back(sexp[i]);
+					sexp_str += sexp[i] + L" ";
+				sexp[marpa_v_result(v)] = sexp_str +  L") ";
+				
+								
+				pnode xx = mkbnode(jsonld_api::gen_bnode_id());
+				prover::termid n = dest->make(is_parse_of, dest->make(xx), dest->make(rule));
+				
+					
 				break;
 			}
 			case MARPA_STEP_NULLING_SYMBOL:
-                                stack[marpa_v_result(v)] = L"";
+                                sexp[marpa_v_result(v)] = L"";
                         	break;
                         default:
                         	dout << marpa_step_type_description[st].name << std::endl;
@@ -527,8 +541,8 @@ void parse (const string inp)
 	marpa_o_unref(o);
 	marpa_b_unref(b);
 	
-	//bind(?X, stack[0])
-	dout << stack[0] << std::endl;
+	//bind(?X, [0])
+	dout << sexp[0] << std::endl;
 	
 }
 
@@ -546,7 +560,7 @@ std::string load_n3_cmd::help() const
 }
 
 
-string load(string fname)
+string load_file(string fname)
 {
 	std::ifstream t(ws(fname));
  	if (!t.is_open())
@@ -565,7 +579,7 @@ int load_n3_cmd::operator() ( const strings& args )
 		&prover, 
 //		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language")));
 		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
- 	string input = load(args[2]);
+ 	string input = load_file(args[2]);
 	m.parse(input);
 	return 0;
 }
