@@ -68,9 +68,9 @@ const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
 const pnode rdfs_first=mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
 const pnode rdfs_rest= mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
 const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
-const pnode pmatches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
-const pnode pmustbos = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
-const pnode pcslo    = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
+const pnode bnf_matches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
+const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
+const pnode bnf_commaSeparatedListOf    = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
 const resid pcomma   = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en"))];
 
 
@@ -100,9 +100,9 @@ struct Marpa{
 	map<sym, pterminal> terminals;
 	map<sym, string> literals;
 	map<resid, sym> done;
+	map<rule, sym> rules;
 	prover* grmr;
 	prover* dest;
-	map<rule, sym> rules;
 
 	string sym2str_(sym s)
 	{
@@ -184,7 +184,7 @@ struct Marpa{
 		sym symbol = symbol_new_resid(thing);
 
 		resid bind;
-		if((bind = ask1(grmr, thing, pmatches)))
+		if((bind = ask1(grmr, thing, bnf_matches)))
 		{
 			//dout << "terminal: " << thingv << std::endl;
 			terminals[symbol] = pterminal(new terminal(thingv, value(bind)));
@@ -194,7 +194,7 @@ struct Marpa{
 		// mustBeOneSequence is a list of lists
 		
 		resid ll;
-		if ((ll = ask1(grmr, thing, pmustbos)))
+		if ((ll = ask1(grmr, thing, bnf_mustBeOneSequence)))
 		{
 			//if (ll == rdfs_nil)
 			//	throw wruntime_error(L"mustBeOneSequence empty");
@@ -206,6 +206,7 @@ struct Marpa{
 				syms rhs;
 				while(seq_iterator)
 				{
+					// std::vector<resid> seq = grmr->get_list(, ll, rdfs_first);;
 					resid item = ask1(grmr, seq_iterator, rdfs_first);
 					if (!item) break;
 					rhs.push_back(add(grmr, item));
@@ -217,7 +218,7 @@ struct Marpa{
 				ll = ask1(grmr, ll, rdfs_rest);
 			}
 		}
-		else if ((ll = ask1(grmr, thing, pcslo)))
+		else if ((ll = ask1(grmr, thing, bnf_commaSeparatedListOf)))
 		{
 			seq_new(symbol, add(grmr, ll), add(grmr, pcomma), 0, MARPA_PROPER_SEPARATION);
 		}
@@ -229,6 +230,8 @@ struct Marpa{
 		dout << "added sym "<< symbol << std::endl;
 		return symbol;
 	}
+
+
 
 
 int check_int(int result){
@@ -521,7 +524,7 @@ void parse (const string inp)
 				
 								
 				pnode xx = mkbnode(jsonld_api::gen_bnode_id());
-				prover::termid n = dest->make(is_parse_of, dest->make(xx), dest->make(rule));
+				prover::termid n1 = dest->make(is_parse_of, dest->make(xx), dest->make(rule));
 				
 					
 				break;
