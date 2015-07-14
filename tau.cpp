@@ -58,8 +58,7 @@ public:
 	}
 	virtual std::string help() const {
 		std::stringstream ss ( "Usage:" );
-		ss << std::endl << "\ttau prove\tRun socrates unit test";
-		ss << std::endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << "\tResolves the query." << std::endl;
+		ss << std::endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << "\tAnswers the query." << std::endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {

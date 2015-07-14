@@ -121,7 +121,7 @@ typedef int prop_t;
 	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);
 	string formatr(int r, bool json = false);
-	string formatkb();
+	string formatkb(bool json = false);
 	void printp(proof* p);
 	string formats(const subst& s, bool json = false);
 	void printterm_substs(termid id, const subst& s);

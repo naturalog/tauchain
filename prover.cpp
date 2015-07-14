@@ -491,7 +491,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = *s;
-	TRACE(dout << KRED << "Rules:\n" << formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	TRACE(dout << KRED << "Rules:\n" << formatkb(/*true*/) << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
 	using namespace std;
 	using namespace std::chrono;

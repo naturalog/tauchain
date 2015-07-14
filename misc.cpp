@@ -66,7 +66,7 @@ bool bidict::has ( node v ) const {
 
 string bidict::tostr() {
 	std::wstringstream s;
-	for ( auto x : pi ) s << x.first.tostring() << L" := " << x.second << std::endl;
+	for ( auto x : pi ) s << x.first.tostring() << L" := " << x.second << endl;
 	return s.str();
 }
 
@@ -111,8 +111,6 @@ string prover::format(termid id, bool json) {
 }
 string prover::format(term p, bool json) {
 	if (!json) {
-//		if (!id) return L"";
-//		const term p = get(id);
 		std::wstringstream ss;
 		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
 		ss << dstr(p.p) << L'(';
@@ -121,11 +119,9 @@ string prover::format(term p, bool json) {
 		ss << L')';
 		return ss.str();
 	}
-//	if (!id) return L"{}";
-//	const term p = get(id);
 	std::wstringstream ss;
 	ss << L"{\"pred\":\"" << dstr(p.p) << L"\",\"args:\":[";
-	if (p.s) ss << format (p.s, true);
+	if (p.s) ss << format (p.s, true) << L',';
 	if (p.o) ss << format (p.o, true);
 	ss << L"]}";
 	return ss.str();
@@ -133,14 +129,11 @@ string prover::format(term p, bool json) {
 
 void prover::printp(proof* p) {
 	if (!p) return;
-	dout << KCYN;
-	dout << indent() << L"rule:   " << formatr(p->rul) <<std::endl<<indent();
-	if (p->prev)
-		dout << L"prev:   " << p->prev <<std::endl<<indent()<< L"subst:  ";
-	else
-		dout << L"prev:   (null)"<<std::endl<<indent()<<"subst:  ";
+	dout << KCYN << indent() << L"rule:   " << formatr(p->rul) <<endl<<indent();
+	if (p->prev) dout << L"prev:   " << p->prev <<endl<<indent()<< L"subst:  ";
+	else dout << L"prev:   (null)"<<endl<<indent()<<"subst:  ";
 	prints(p->s);
-	dout <<std::endl<<indent()<< L"ground: " << std::endl;
+	dout <<endl<<indent()<< L"ground: " << endl;
 	++_indent;
 	printg(p->g);
 	--_indent;
@@ -163,10 +156,12 @@ void prover::prints(const subst& s) {
 string prover::format(const termset& l, bool json) {
 	std::wstringstream ss;
 	auto x = l.begin();
+	if (json) ss << L'[';
 	while (x != l.end()) {
-		ss << format (*x);
+		ss << format (*x, json);
 		if (++x != l.end()) ss << L',';
 	}
+	if (json) ss << L']';
 	return ss.str();
 }
 
@@ -212,15 +207,24 @@ string prover::formatr(int r, bool json) {
 	 	ss << L".";
 		return ss.str();
 	}
-	ss << L"{\"head\":"<<format(kb.head()[r],true)<<L",\"body\":[";
-	for (const termset& ts : kb.body()) ss << format(ts, true) << L',';
- 	ss << L"]},";
+	ss << L"{\"head\":" << format(kb.head()[r],true) << L",\"body\":[";
+	for (size_t n = 0; n < kb.body().size(); ++n) { //const termset& ts : kb.body()) { 
+		ss << format(kb.body()[n], true);
+		if (n != (kb.body().size()-1)) ss << L',';
+	}
+ 	ss << L"]}";
 	return ss.str();
 }
 
-string prover::formatkb() {
+string prover::formatkb(bool json) {
 	std::wstringstream ss;
-	for (uint n = 0; n < kb.size(); ++n) ss << formatr(n) << std::endl;
+	if (json) ss << L'[';
+	for (uint n = 0; n < kb.size(); ++n) {
+		ss << formatr(n, json);
+		if (json && n != (kb.size()-1)) ss << L',';
+		ss << endl;
+	}
+	if (json) ss << L']';
 	return ss.str();
 }
 
@@ -228,7 +232,7 @@ string prover::formatg(const ground& g, bool json) {
 	std::wstringstream ss;
 	for (auto x : g) {
 		ss << format(x.first), printr_substs(x.first, x.second);
-		ss << std::endl;
+		ss << endl;
 	}
 	return ss.str();
 }
@@ -237,7 +241,7 @@ void prover::printg(const ground& g) {
 	for (auto x : g) {
 		dout << indent();
 		printr_substs(x.first, x.second);
-		dout << std::endl;
+		dout << endl;
 	}
 }
 
@@ -253,11 +257,11 @@ pobj prover::term::json(const prover& pr) const {
 void prover::printe() {
 	for (auto y : e)
 		for (auto x : y.second) {
-			dout << indent() << format(x.first) << L" <= " << std::endl;
+			dout << indent() << format(x.first) << L" <= " << endl;
 			++_indent;
 			printg(x.second);
 			--_indent;
-			dout << std::endl;
+			dout << endl;
 		}
 }
 
