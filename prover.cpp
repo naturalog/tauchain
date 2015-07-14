@@ -436,7 +436,8 @@ void prover::addrules(pquad q) {
 //	if ( p != implication/* || quads.first.find ( o ) == quads.first.end()*/ )
 		if ((t = quad2term(*q))) 
 			kb.add(t, termset(), this);
-	if (p == implication)
+	if (p == implication) {
+		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
 		for ( pquad y : *quads.first.at ( o ) ) {
 			termset ts;
 			if ( quads.first.find ( s ) != quads.first.end() )
@@ -446,6 +447,7 @@ void prover::addrules(pquad q) {
 							ts.push_back( t );
 			if ((t = quad2term(*y))) kb.add(t, ts, this);
 		}
+	}
 }
 
 prover::prover ( qdb qkb, bool check_consistency ) : quads(qkb) {
