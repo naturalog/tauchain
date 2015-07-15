@@ -196,26 +196,17 @@ struct Marpa{
 		resid ll;
 		if ((ll = ask1(grmr, thing, bnf_mustBeOneSequence)))
 		{
-			//if (ll == rdfs_nil)
-			//	throw wruntime_error(L"mustBeOneSequence empty");
+			std::vector<resid> lll = grmr->get_list(ll, prf);
+			if (ll.empty())
+				throw wruntime_error(L"mustBeOneSequence empty");
 
-			while(ll)
+			for (auto l:lll)
 			{
-				resid seq_iterator = ask1(grmr, ll, rdfs_first);;
-				if (!seq_iterator) break;
 				syms rhs;
-				while(seq_iterator)
-				{
-					// std::vector<resid> seq = grmr->get_list(, ll, rdfs_first);;
-					resid item = ask1(grmr, seq_iterator, rdfs_first);
-					if (!item) break;
-					rhs.push_back(add(grmr, item));
-					
-					seq_iterator = ask1(grmr, seq_iterator, rdfs_rest);
-				}
+				std::vector<resid> seq = grmr->get_list(ll, prf);
+				for (auto rhs_item: seq)
+					rhs.push_back(add(grmr, rhs_item));
 				rule_new(symbol, rhs);
-				
-				ll = ask1(grmr, ll, rdfs_rest);
 			}
 		}
 		else if ((ll = ask1(grmr, thing, bnf_commaSeparatedListOf)))
@@ -499,33 +490,50 @@ void parse (const string inp)
 			{
 				sym symbol = marpa_v_symbol(v);
 				size_t token = marpa_v_token_value(v) - 1;
-				sexp[marpa_v_result(v)] = string(toks[token].first, toks[token].second);
+				string token_value = string(toks[token].first, toks[token].second);
+				sexp[marpa_v_result(v)] = token_value;
+				stack[marpa_v_result(v)] = dest->make(dict[token_value]);//??
+				
 				break;
 			}
 			case MARPA_STEP_RULE:
 			{
 				string sexp_str = L"( ";
 				
-				resid rule;
+				resid res;
 				for (auto r : done)
 					if (r.second == rules[marpa_v_rule(v)])
 					{
-						rule = r.first;
-						sexp_str += value(rule) + L" ";
+						res = r.first;
+						sexp_str += value(res) + L" ";
 						break;
 					}
-				assert(rule);
+				assert(res);
 				
 				std::vector<prover::termid> args;			
+				
 				for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++)
-					//args.push_back(sexp[i]);
-					sexp_str += sexp[i] + L" ";
-				sexp[marpa_v_result(v)] = sexp_str +  L") ";
+				{
+					args.push_back(stack[i]);
+					sexp_str += sexp_str[i] + L" ";
+				}
+				sexp_str[marpa_v_result(v)] = sexp_str +  L") ";
 				
-								
-				pnode xx = mkbnode(jsonld_api::gen_bnode_id());
-				prover::termid n1 = dest->make(is_parse_of, dest->make(xx), dest->make(rule));
 				
+				
+				if(check_int(marpa_g_sequence_min(g, marpa_v_rule(v))) != -1) // its a sequence
+					pnode xx = list_to_term(args);
+				else
+				{
+					pnode xx = mkbnode(jsonld_api::gen_bnode_id());
+					
+					
+					
+				}
+					
+				prover::termid n1 = dest->make(is_parse_of, dest->make(xx), dest->make(res));
+				
+				stack[marpa_v_result(v)] = xx;
 					
 				break;
 			}
