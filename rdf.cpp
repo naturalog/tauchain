@@ -1,5 +1,5 @@
 #include "cli.h"
-#include <boost/filesystem.hpp>
+//#include <boost/filesystem.hpp>
 #include "prover.h"
 #include "jsonld.h"
 #include <iomanip>
@@ -39,11 +39,10 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		else if (dt == L"XSD_DECIMAL") r.datatype = XSD_DECIMAL;
 		else if (dt == L"XSD_ANYTYPE") r.datatype = XSD_ANYTYPE;
 		else if (dt == L"XSD_ANYURI") r.datatype = XSD_ANYURI;
-//		else if (dt == L"XSD_PTR") r.datatype = XSD_PTR;
 		else r.datatype = datatype;
 	}
 	if ( language ) r.lang = language;
-	auto it =  dict.nodes.find(*r.value);
+	auto it = dict.nodes.find(*r.value);
 	if (it != dict.nodes.end()) return it->second;
 	pnode pr = make_shared<node>(r); 
 	dict.set(pr);
@@ -212,7 +211,6 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 		else 
 			return mkliteral ( pstr(*value->STR()), datatype ? pstr(*datatype->STR()) : XSD_STRING, 0 );
 	}
-	// convert string/node object to RDF
 	else {
 		string id;
 		if ( item->MAP() ) {
@@ -255,8 +253,6 @@ string quad::tostring ( ) const {
 	};
 	ss << f ( subj ) << L' ' << f ( pred ) << L' ' << f ( object );
 	if ( *graph->value != str_default ) ss << L' ' << f ( graph );
-//	ss <<setw(10)<< f ( subj ) << setw(10)<<' ' << f ( pred ) <<setw(10)<<' ' << f ( object );
-//	if ( graph->value != str_default ) ss <<setw(10)<<' ' << f ( graph );
 	ss << L" .";
 	return ss.str();
 }
@@ -288,47 +284,6 @@ qdb readqdb ( std::wistream& is) {
 	return r;
 }
 
-std::string expand_cmd::desc() const {
-	return "Run expansion algorithm http://www.w3.org/TR/json-ld-api/#expansion-algorithms including all dependant algorithms.";
-}
-
-std::string expand_cmd::help() const {
-	std::stringstream ss ( "Usage:" );
-	ss << std::endl << "\ttau expand [JSON-LD input filename]";
-	ss << std::endl << "\ttau expand [JSON-LD input filename] [JSON-LD output to compare to]";
-	ss << std::endl << "If input filename is unspecified, reads from stdin." << std::endl;
-	return ss.str();
-}
-
-int expand_cmd::operator() ( const strings& args ) {
-	if ( ( args.size() == 3 && args[1] == L"help" ) || args.size() > 4 ) {
-		dout << ws(help());
-		return 1;
-	}
-	pobj e;
-	dout << ( e = expand ( load_json ( args ) ) )->toString() << std::endl;
-	if ( args.size() == 3 ) return 0;
-	boost::filesystem::path tmpdir = boost::filesystem::temp_directory_path();
-	const std::string tmpfile_template =  tmpdir.string() + "/XXXXXX";
-	std::unique_ptr<char> fn1 ( strdup ( tmpfile_template.c_str() ) );
-	std::unique_ptr<char> fn2 ( strdup ( tmpfile_template.c_str() ) );
-	int fd1 = mkstemp ( fn1.get() );
-	int fd2 = mkstemp ( fn2.get() );
-
-	std::wofstream os1 ( fn1.get() ), os2 ( fn2.get() );
-	os1 << json_spirit::write_string ( ::convert ( e ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
-	os2 << json_spirit::write_string ( ::convert ( load_json ( args[3] ) ), json_spirit::pretty_print | json_spirit::single_line_arrays ) << std::endl;
-	os1.close();
-	os2.close();
-	string c = string ( L"diff " ) + ws(fn1.get()) + string ( L" " ) + ws(fn2.get());
-	if ( system ( ws(c).c_str() ) ) derr << L"command " << c << L" failed." << std::endl;
-	close ( fd1 );
-	close ( fd2 );
-
-	return 0;
-}
-
-
 std::string convert_cmd::desc() const {
 	return "Convert JSON-LD to quads including all dependent algorithms.";
 }
@@ -351,53 +306,4 @@ int convert_cmd::operator() ( const strings& args ) {
 		derr << ex.what() << std::endl;
 		return 1;
 	}
-}
-
-std::string toquads_cmd::desc() const {
-	return "Run JSON-LD->RDF algorithm http://www.w3.org/TR/json-ld-api/#deserialize-json-ld-to-rdf-algorithm of already-expanded input.";
-}
-
-std::string toquads_cmd::help() const {
-	std::stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
-	ss << std::endl << "If input filename is unspecified, reads from stdin." << std::endl;
-	ss << "Note that input has to be expanded first, so you might want to pipe it with 'tau expand' command." << std::endl;
-	return ss.str();
-}
-
-int toquads_cmd::operator() ( const strings& args ) {
-	if ( ( args.size() == 3 && args[1] == L"help" ) || args.size() > 3 ) {
-		dout << ws(help());
-		return 1;
-	}
-	try {
-		dout << toquads ( args ) << std::endl;
-	} catch ( std::exception& ex ) {
-		derr << ex.what() << std::endl;
-		return 1;
-	}
-	return 0;
-}
-
-std::string nodemap_cmd::desc() const {
-	return "Run JSON-LD node map generation algorithm.";
-}
-
-std::string nodemap_cmd::help() const {
-	std::stringstream ss ( "Usage: tau toquads [JSON-LD input filename]" );
-	ss << std::endl << "If input filename is unspecified, reads from stdin." << std::endl;
-	return ss.str();
-}
-
-int nodemap_cmd::operator() ( const strings& args ) {
-	if ( ( args.size() == 3 && args[1] == L"help" ) || args.size() > 3 ) {
-		dout << ws(help());
-		return 1;
-	}
-	try {
-		dout << nodemap ( args )->toString() << std::endl;
-	} catch ( std::exception& ex ) {
-		derr << ex.what() << std::endl;
-		return 1;
-	}
-	return 0;
 }

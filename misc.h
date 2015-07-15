@@ -21,8 +21,9 @@ public:
 	resid set ( node v );
 	resid set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
-	node operator[] ( resid k );
-	resid operator[] ( node v );
+	node operator[] ( resid );
+	node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
+	resid operator[] ( node );
 	resid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
 	bool has ( resid k ) const;
 	bool has ( node v ) const;
@@ -31,7 +32,7 @@ public:
 };
 
 extern bidict& dict;
-extern resid logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil;
+extern resid logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 string dstr ( resid p );
 string indent();
 

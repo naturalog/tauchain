@@ -12,7 +12,6 @@
 #include "rdf.h"
 #include "misc.h"
 #include <functional>
-#include "ThreadPool.h"
 #include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
@@ -25,11 +24,11 @@ extern std::string clprog;
 #define CL(x)
 #endif
 
-enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
+//enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
 
 class prover {
 public:
-	typedef i64 termid;
+	typedef u64 termid;
 
 	class term {
 	public:
@@ -48,32 +47,27 @@ public:
 	class ruleset {
 		termset _head;
 		boost::container::vector<termset> _body;
+		size_t m = 0;
 	public:
 		uint add(termid t, const termset& ts, prover*);
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
-		uint size()						{ return _head.size(); }
+		size_t size()						{ return _head.size(); }
+		void mark();
+		void revert();
 	} kb;
-	prover ( qdb );
+	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
+	prover ( const prover& p );
 	void operator()(termset& goal, const subst* s = 0);
 	void operator()(qlist goal, const subst* s = 0);
-	const term& get(termid id) const;
+	const term& get(termid) const;
+	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
 	typedef boost::container::list<std::pair<ruleid, subst>> ground;
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
-	std::set<termid> find_subst(resid t) {
-		subst::iterator it;
-		std::set<termid> r;
-		for (auto x : e) 
-			for (auto y : x.second) 
-				for (auto z : y.second)
-					if ((it = z.second.find(t)) != z.second.end())
-						r.insert(it->second);
-		return r;
-	}
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
@@ -81,6 +75,8 @@ public:
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(resid p, termid s = 0, termid o = 0);
+	termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
 
@@ -102,7 +98,6 @@ typedef int prop_t;
 		proof *prev;
 		subst s;
 		ground g;
-		std::list<std::thread*> waitlist;
 		proof() : rul(0), prev(0) {}
 		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(p), s(_s), g(_g) {}
@@ -117,14 +112,16 @@ typedef int prop_t;
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	bool euler_path(proof* p, termid t);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
-	bool maybe_unify(const term, const term);
+//	bool maybe_unify(const term, const term);
 	std::set<uint> match(termid e);
 	termid quad2term(const quad& p);
 
 	string format(termid id, bool json = false);
+	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
+	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);
 	string formatr(int r, bool json = false);
-	string formatkb();
+	string formatkb(bool json = false);
 	void printp(proof* p);
 	string formats(const subst& s, bool json = false);
 	void printterm_substs(termid id, const subst& s);
@@ -161,5 +158,6 @@ typedef int prop_t;
 	bool islist(termid);
 	termid list2term(std::list<pnode>& l);
 	int steps = 0;
+	bool consistency();
 };
 #endif

@@ -43,7 +43,6 @@ public:
 	quad(){}
 	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
 	string tostring ( ) const;
-//	bool operator<(const quad& q) const { return tostring() < q.tostring(); }
 };
 
 typedef std::shared_ptr<quad> pquad;
@@ -102,7 +101,6 @@ private:
 	pnode readlit();
 	pnode readvar();
 	pnode readbnode();
-	static pnode rdfrst, rdffst, rnil;
 	void readprefix();
 	std::map<string, pnode> prefixes;
 	std::map<string, std::list<pnode>> qlists;

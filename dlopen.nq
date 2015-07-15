@@ -1,4 +1,0 @@
-{ ( "0"^^<XSD_INTEGER> "1"^^<XSD_INTEGER> ) <dlfcn:dlopen> ?h } => { ?h <b> <x> }.
-fin.
-?y <b> <x>.
-fin.

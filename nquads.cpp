@@ -8,16 +8,8 @@
 #include "misc.h"
 using namespace boost::algorithm;
 
-nqparser::nqparser() : t(new wchar_t[4096*4096]) {
-	if (rnil) return;
-	rdffst = mkiri(pstr(L"rdf:first")); 
-	rdfrst = mkiri(pstr(L"rdf:rest"));
-	rnil = mkiri(pstr(L"rdf:nil"));
-}
+nqparser::nqparser() : t(new wchar_t[4096*4096]) { }
 nqparser::~nqparser() { delete[] t; }
-pnode nqparser::rdfrst = 0;
-pnode nqparser::rdffst = 0;
-pnode nqparser::rnil = 0;
 
 pnode nqparser::readcurly() {
 	setproc(L"readcurly");
@@ -41,19 +33,19 @@ pnode nqparser::readlist() {
 	pnode pn;
 	++s;
 	while (iswspace(*s)) ++s;
-	if (*s == L')') { ++s; return rnil; }
+	if (*s == L')') { ++s; return mkiri(RDF_NIL); }
 	do {
 		while (iswspace(*s)) ++s;
 		if (*s == L')') break;
 		if (!(pn = readany(true)))
 			throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
 		pnode cons = mkbnode(pstr(id()));
-		lists.emplace_back(cons, rdffst, pn);
+		lists.emplace_back(cons, mkiri(RDF_FIRST), pn);
 		qlists[head].push_back(pn);
 		++lpos;
 		while (iswspace(*s)) ++s;
-		if (*s == L')') lists.emplace_back(cons, rdfrst, rnil);
-		else lists.emplace_back(cons, rdfrst, mkbnode(pstr(id())));
+		if (*s == L')') lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));
+		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(id())));
 		if (*s == L'.') while (iswspace(*s++));
 	}
 	while (*s != L')');
@@ -74,6 +66,15 @@ pnode nqparser::readiri() {
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	pstring iri = wstrim(t);
+	if (lower(*iri) == L"true")
+		return mkliteral(pstr(L"true"), XSD_BOOLEAN, 0);
+	if (lower(*iri) == L"false")
+		return mkliteral(pstr(L"false"), XSD_BOOLEAN, 0);
+	if (std::atoi(ws(*iri).c_str()))
+		return mkliteral(iri, XSD_INTEGER, 0);
+	if (std::atof(ws(*iri).c_str()))
+		return mkliteral(iri, XSD_DOUBLE, 0);
+	if (*iri == L"0") return mkliteral(iri, XSD_INTEGER, 0);
 	auto i = iri->find(L':');
 	if (i == string::npos) return mkiri(iri);
 	string p = iri->substr(0, ++i);

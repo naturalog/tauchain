@@ -15,9 +15,9 @@ auto dummy = []() {
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 jsonld_options opts;
 
-void menu();
-#include <boost/asio.hpp>
-#include <boost/asio/ip/tcp.hpp>
+//void menu();
+//#include <boost/asio.hpp>
+//#include <boost/asio/ip/tcp.hpp>
 
 std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
@@ -58,8 +58,7 @@ public:
 	}
 	virtual std::string help() const {
 		std::stringstream ss ( "Usage:" );
-		ss << std::endl << "\ttau prove\tRun socrates unit test";
-		ss << std::endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << "\tResolves the query." << std::endl;
+		ss << std::endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << "\tAnswers the query." << std::endl;
 		return ss.str();
 	}
 	virtual int operator() ( const strings& args ) {
@@ -103,12 +102,8 @@ int main ( int argc, char** argv ) {
 			#ifdef marpa
 			{ string ( L"load_n3" ) , new load_n3_cmd },
 			#endif
-			{ string ( L"expand" ) , new expand_cmd },
-			{ string ( L"toquads" ) , new toquads_cmd },
-			{ string ( L"nodemap" ) , new nodemap_cmd },
 			{ string ( L"convert" ) , new convert_cmd },
 			{ string ( L"prove" ) , new prove_cmd }
-//			{ string ( "listen" ) , new listen_cmd }
 		}, {
 			{ { L"--no-deref", L"show integers only instead of strings" }, &deref },
 			{ { L"--pause", L"pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },

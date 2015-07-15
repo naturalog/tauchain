@@ -6,21 +6,20 @@
 #include <stdexcept>
 #include <algorithm>
 #include <memory>
-//using namespace std;
-typedef uint64_t u64;
-typedef int64_t i64;
-typedef uint8_t u8;
-typedef int8_t i8;
-
-typedef std::wstring string;
 using std::map;
 using std::stringstream;
 using std::shared_ptr;
 using std::make_shared;
 using std::istream;
+
+typedef uint64_t u64;
+typedef int64_t i64;
+typedef uint8_t u8;
+typedef int8_t i8;
+typedef std::wstring string;
 typedef std::shared_ptr<string> pstring;
 pstring pstr ( const string& s );
-inline pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }
+pstring pstr ( const wchar_t* s );
 
 #ifdef OPENCL
 #define CL(x) x

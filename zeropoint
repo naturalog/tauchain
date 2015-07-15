@@ -1,5 +1,0 @@
-{ ( ((:x :y)) (:z) ) :b :unit . } => { (((:x :y)) (:z)) :b :zeropoint } .
- ( ((:x :y)) (:z) ) :b :unit .
-fin.
-?x :b ?b.
-fin.

@@ -18,7 +18,7 @@ protected:
 	qdb toquads ( const strings& args );
 	qdb toquads ( pobj o );
 	qdb convert ( pobj o );
-	qdb convert ( const string& s, bool bdebugprint = false );
+	qdb convert ( const string& s );
 	std::shared_ptr<qdb> load_quads ( string fname, bool print = true );
 public:
 	virtual std::string desc() const = 0;
@@ -30,33 +30,10 @@ typedef std::pair<std::map<string, cmd_t*>, std::map<std::pair<string, string>, 
 
 void print_usage ( const cmds_t& cmds );
 void process_flags ( const cmds_t& cmds, strings& args );
-
-class expand_cmd : public cmd_t {
-public:
-	virtual std::string desc() const;
-	virtual std::string help() const;
-	virtual int operator() ( const strings& args );
-};
-
 class convert_cmd : public cmd_t {
 public:
 	virtual std::string desc() const;
 	virtual std::string help() const;
 	virtual int operator() ( const strings& args );
 };
-
-class toquads_cmd : public cmd_t {
-public:
-	virtual std::string desc() const;
-	virtual std::string help() const;
-	virtual int operator() ( const strings& args );
-};
-
-class nodemap_cmd : public cmd_t {
-public:
-	virtual std::string desc() const;
-	virtual std::string help() const;
-	virtual int operator() ( const strings& args );
-};
-
 #endif
