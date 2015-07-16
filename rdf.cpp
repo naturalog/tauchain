@@ -239,7 +239,7 @@ quad::quad ( pnode s, pnode p, pnode o, string c ) :
 		TRACE(dout<<tostring()<<endl);
 	}
 
-quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o c.value){};
+quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){};
 
 string quad::tostring ( ) const {
 	std::wstringstream ss;

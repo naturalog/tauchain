@@ -10,3 +10,4 @@ public:
 	virtual int operator() ( const strings& args );
 };
 
+struct Marpa;

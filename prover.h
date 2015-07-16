@@ -80,6 +80,20 @@ public:
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
 
+	struct proof {
+		ruleid rul;
+		uint last;
+		proof *prev;
+		subst s;
+		ground g;
+		proof() : rul(0), prev(0) {}
+		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
+			: rul(r), last(l), prev(p), s(_s), g(_g) {}
+		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
+	};
+	void addrules(pquad q);
+
+
 private:
 
 #ifdef OPENCL
@@ -92,20 +106,7 @@ typedef int prop_t;
 	boost::container::vector<term> _terms;
 	friend ruleset;
 
-	struct proof {
-		ruleid rul;
-		uint last;
-		proof *prev;
-		subst s;
-		ground g;
-		proof() : rul(0), prev(0) {}
-		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
-			: rul(r), last(l), prev(p), s(_s), g(_g) {}
-		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
-	};
 	void step (proof*, std::deque<proof*>&, bool del = true);
-
-	void addrules(pquad q);
 
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);

@@ -152,24 +152,26 @@ struct Marpa{
 	map<rule, sym> rules;
 	prover* grmr;
 	prover* dest;
-	string whitespace = "";
+	string whitespace = L"";
 
 	resid sym2resid(sym s)
 	{
 		for (auto it = done.begin(); it != done.end(); it++)
 			if (it->second == s)
 				return it->first;
-		throw std::runtime_error (r);
+		throw std::runtime_error ("this sym isnt for a rule..this shouldnt happen");
 	}
 
 	resid rule2resid(rule r)
 	{
-		for (auto r : done)
-			if (r.second == rule)
+		for (auto rr : rules)
+			if (rr.first == r)
 			{
-				return r.first;
+				for (auto rrr: done)
+					if(rr.second == rrr.second)
+						return rrr.first;
 			}
-		throw std::runtime_error (r);
+		throw std::runtime_error ("and this shouldnt happen either");
 	}
 
 	string sym2str_(sym s)
@@ -193,7 +195,7 @@ struct Marpa{
 		marpa_g_unref(g);
 	}
 
-	Marpa(prover *_grmr, pnode language, proof *prf)
+	Marpa(prover *_grmr, pnode language, prover::proof *prf)
 	{
 		if (marpa_check_version (MARPA_MAJOR_VERSION ,MARPA_MINOR_VERSION, MARPA_MICRO_VERSION ) != MARPA_ERR_NONE)
 			throw std::runtime_error ("marpa version...");
@@ -213,11 +215,11 @@ struct Marpa{
 		
 		resid whitespace_ = ask1(grmr, dict[language], bnf_whitespace);
 		if (whitespace_)
-			whitespace = value(whitespace);
+			whitespace = value(whitespace_);
 
 		resid root = ask1(grmr, dict[language], bnf_document);
 		
-		sym start = add(grmr, dict[root]);
+		sym start = add(grmr, root, prf);
 		
 		start_symbol_set(start);
 	}
@@ -228,7 +230,7 @@ struct Marpa{
 	}
 
 	//create marpa symbols and rules from grammar description in rdf
-	sym add(prover *grmr, resid thing, proof *prf)
+	sym add(prover *grmr, resid thing, prover::proof *prf)
 	{
 		string thingv = value(thing);
 		dout << "thingv:" << thingv  << std::endl;
