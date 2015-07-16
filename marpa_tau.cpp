@@ -1,15 +1,20 @@
 
+/*
+http://www.w3.org/2000/10/swap/grammar/bnf
+http://www.w3.org/2000/10/swap/grammar/n3.n3
+*/
 
 #include <iostream>
 #include <fstream>
 
-#include "marpa_tau.h"
 #include "prover.h"
 #include "object.h"
 #include "cli.h"
 #include "rdf.h"
 #include "misc.h"
 #include "jsonld.h"
+
+#include "marpa_tau.h"
 
 extern "C" {
 #include "marpa.h"
@@ -52,6 +57,37 @@ resids ask(prover *prover, resid s, const pnode p)
 	return r;
 }
 
+resids ask(prover *prover, const pnode p, resid o)
+{
+	resids r = resids();
+	prover::termset query;
+	prover::termid s_var = prover->tmpvar();
+	prover::termid iii = prover->make(p, s_var, prover->make(o));
+	query.emplace_back(iii);
+
+	//dout << "query: "<< prover->format(query) << endl;;
+
+	(*prover)(query);
+	
+	//dout << "substs: "<< std::endl;
+
+	for (auto x : prover->substs) 
+	{
+		prover::subst::iterator binding_it = x.find(prover->get(s_var).p);
+		if (binding_it != x.end())
+		{
+			r.push_back( prover->get((*binding_it).second).p);
+			//prover->prints(x); dout << std::endl;
+		}
+	}
+
+	//dout << r.size() << ":" << std::endl;
+
+	prover->substs.clear();
+	prover->e.clear();
+	return r;
+}
+
 resid ask1(prover *prover, resid s, const pnode p)
 {
 	auto r = ask(prover, s, p);
@@ -63,16 +99,28 @@ resid ask1(prover *prover, resid s, const pnode p)
 		return 0;
 }
 
-const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
-const pnode has_value   = mkiri(pstr(L"http://idni.org/marpa#has_value"));
+resid ask1(prover *prover, const pnode p, resid o)
+{
+	auto r = ask(prover, p, o);
+	if (r.size() > 1)
+		throw wruntime_error(L"well, this is weird, more than one match");
+	if (r.size() == 1)
+		return r[0];
+	else
+		return 0;
+}
 
-const pnode rdfs_first=mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
-const pnode rdfs_rest= mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
+const pnode has_value   = mkiri(pstr(L"http://idni.org/marpa#has_value"));
+const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
+const resid pcomma   = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en"))];
 const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
+const pnode rdfs_rest= mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
+const pnode rdfs_first=mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
 const pnode bnf_matches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
+const pnode bnf_document = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#document"));
+const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whitespace"));
 const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
 const pnode bnf_commaSeparatedListOf    = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
-const resid pcomma   = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en"))];
 
 
 typedef Marpa_Symbol_ID sym;
@@ -104,7 +152,7 @@ struct Marpa{
 	map<rule, sym> rules;
 	prover* grmr;
 	prover* dest;
-
+	string whitespace = "";
 
 	resid sym2resid(sym s)
 	{
@@ -140,8 +188,12 @@ struct Marpa{
 		return sss.str();
 	}
 
+	~Marpa()
+	{
+		marpa_g_unref(g);
+	}
 
-	Marpa()
+	Marpa(prover *_grmr, pnode language, proof *prf)
 	{
 		if (marpa_check_version (MARPA_MAJOR_VERSION ,MARPA_MINOR_VERSION, MARPA_MICRO_VERSION ) != MARPA_ERR_NONE)
 			throw std::runtime_error ("marpa version...");
@@ -155,17 +207,18 @@ struct Marpa{
 			throw std::runtime_error (ssss.str());
 		}
 		if(marpa_g_force_valued(g) < 0)
-			throw std::runtime_error ("marpa_g_force_valued failed?!?!?");//bah
-	}
-	~Marpa()
-	{
-		marpa_g_unref(g);
-	}
+			throw std::runtime_error ("marpa_g_force_valued failed?!?!?");
 
-	void load_grammar(prover *_grmr, pnode root)
-	{
 		grmr = dest = _grmr;
+		
+		resid whitespace_ = ask1(grmr, dict[language], bnf_whitespace);
+		if (whitespace_)
+			whitespace = value(whitespace);
+
+		resid root = ask1(grmr, dict[language], bnf_document);
+		
 		sym start = add(grmr, dict[root]);
+		
 		start_symbol_set(start);
 	}
 
@@ -340,7 +393,7 @@ bool is_ws(wchar_t x)
 }
 
 
-void parse (const string inp)
+pnode parse (const string inp)
 {
 	if (!precomputed)
 		check_int(marpa_g_precompute(g));
@@ -365,7 +418,7 @@ void parse (const string inp)
 	std::vector<sym> expected;
 	expected.resize(check_int(marpa_g_highest_symbol_id(g)));
 
-	boost::wregex comment (L"(?m)#(.)*?$");
+	//boost::wregex comment (L"(?m)#(.)*?$");
 
 	while (pos < inp.end())
 	{
@@ -376,7 +429,8 @@ void parse (const string inp)
 		}
 		
 		boost::wsmatch what;
-		if (regex_search(pos, inp.end(), what, comment, boost::match_continuous))
+		
+		if ((whitespace != "") && (regex_search(pos, inp.end(), what, whitespace, boost::match_continuous)))
 		{
 			if(what.size())
 			{
@@ -599,9 +653,8 @@ void parse (const string inp)
 	marpa_o_unref(o);
 	marpa_b_unref(b);
 	
-	//bind(?X, [0])
 	dout << sexp[0] << std::endl;
-	
+	return stack[0];
 }
 
 
@@ -630,15 +683,16 @@ string load_file(string fname)
 
 int load_n3_cmd::operator() ( const strings& args )
 {	
-	Marpa m;
-//	prover prover(convert(load_json(L"n3-grammar.jsonld")));
 	prover prover(*load_quads(L"n3-grammar.nq"));
-	m.load_grammar(
-		&prover, 
-//		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language")));
-		mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#document")));
- 	string input = load_file(args[2]);
-	m.parse(input);
+	pnode parser = ask1(prover, marpa_parser, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language")));
+ 	pnode input = mkliteral(pstr(load_file(args[2])), pstr(L"XSD_STRING"), pstr(L"en"));
+ 	std::list l;
+ 	l.push_back(parser);
+ 	l.push_back(input);
+	resid raw = ask1(prover, marpa_parse, prover->get(prover->list_term(l)));
+ 	if (!raw)
+		throw std::runtime_error("oopsie, something went wrong with your tau.");
+	//...
 	return 0;
 }
 
@@ -668,8 +722,6 @@ int load_n3_cmd::operator() ( const strings& args )
 
 /*
 resources
-http://www.w3.org/2000/10/swap/grammar/bnf
-http://www.w3.org/2000/10/swap/grammar/n3.n3
 
 https://github.com/jeffreykegler/libmarpa/blob/master/test/simple/rule1.c#L18
 https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900

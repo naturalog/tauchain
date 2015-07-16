@@ -41,7 +41,7 @@
 
 language a cfg:Language;
 	cfg:document	document;
-	cfg:whiteSpace	"@@@@@".
+	cfg:whiteSpace	"(?m)#(.)*?$". #comment. misuse?
 
 
 document a rul:Used;
