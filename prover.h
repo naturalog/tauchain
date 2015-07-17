@@ -60,21 +60,7 @@ public:
 		typedef boost::container::list<ruleid> rulelist;
 		typedef boost::container::map<resid, rulelist> r2id_t;
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
-		string format() const {
-			std::wstringstream ss;
-			for (auto it = r2id.begin(); it != r2id.end();) {
-				ss << L'[';
-//				for (uint n = 0; n < it->second.size(); ++n) {
-				for (auto iit = it->second.begin(); iit != it->second.end();) {
-					ss << p.formatr(*iit, true);
-					if (++iit != it->second.end()) ss << L',';
-					ss << endl;
-				}
-				ss << L']';
-				if (++it != r2id.end()) ss << L',';
-			}
-			return ss.str();
-		}
+		string format() const;
 	private:
 		r2id_t r2id;
 	} kb;

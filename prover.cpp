@@ -449,7 +449,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = *s;
-	TRACE(dout << KRED << L"Rules:\n" << /*kb.format()*/ formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
 	using namespace std;
 	using namespace std::chrono;
@@ -589,3 +589,20 @@ pobj prover::ejson() const {
 }
 void prover::ruleset::mark() { if (!m) m = size(); else m = std::min(size(), m); }
 void prover::ruleset::revert() {if(size()<=m) { m = 0; return; } _head.erase(_head.begin() + (m-1), _head.end());_body.erase(_body.begin() + (m-1), _body.end()); m = 0;}
+
+string prover::ruleset::format() const {
+	std::wstringstream ss;
+	ss << L'['<<endl;
+	for (auto it = r2id.begin(); it != r2id.end();) {
+		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":";
+		for (auto iit = it->second.begin(); iit != it->second.end();) {
+			ss << p.formatr(*iit, true);
+			if (++iit != it->second.end()) ss << L',';
+			ss << endl;
+		}
+		ss << L'}';
+		if (++it != r2id.end()) ss << L',';
+	}
+	ss << L']';
+	return ss.str();
+}
