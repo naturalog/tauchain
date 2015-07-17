@@ -92,6 +92,7 @@ public:
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
 	void addrules(pquad q);
+	std::vector<termid> get_list(termid head, proof& p);
 
 
 private:
@@ -146,7 +147,6 @@ typedef int prop_t;
 	qdb quads;
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
-	std::vector<termid> get_list(termid head, proof& p);
 	bool kbowner, goalowner;
 	string predstr(prover::termid t);
 	string preddt(prover::termid t);

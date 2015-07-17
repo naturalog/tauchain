@@ -101,6 +101,16 @@ resid ask1(prover *prover, const pnode p, resid o) {
         return 0;
 }
 
+std::vector<resid> get_list(prover *prover, resid head, prover::proof& p)
+{
+    auto r = prover->get_list(prover->make(head), p);
+    std::vector<resid> rr;
+    for (auto rrr: r)
+        rr.push_back(prover->get(rrr).p);
+    return rr;
+}
+
+
 const pnode has_value = mkiri(pstr(L"http://idni.org/marpa#has_value"));
 const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
 const resid pcomma = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en"))];
@@ -122,11 +132,13 @@ typedef std::pair <string::const_iterator, string::const_iterator> tokt;
 
 class terminal {
 public:
+    resid thing;
     string name, regex_string;
     boost::wregex regex;
 
-    terminal(string name_, string regex_) {
+    terminal(resid thing_, string name_, string regex_) {
         name = name_;
+        thing = thing_;
         regex_string = regex_;
         regex = boost::wregex(regex_);
     }
@@ -238,7 +250,7 @@ struct Marpa {
         resid bind;
         if ((bind = ask1(grmr, thing, bnf_matches))) {
             //dout << "terminal: " << thingv << std::endl;
-            terminals[symbol] = pterminal(new terminal(thingv, value(bind)));
+            terminals[symbol] = pterminal(new terminal(thing, thingv, value(bind)));
             return symbol;
         }
 
@@ -246,13 +258,13 @@ struct Marpa {
 
         resid ll;
         if ((ll = ask1(grmr, thing, bnf_mustBeOneSequence))) {
-            std::vector <resid> lll = grmr->get_list(ll, prf);
+            std::vector <resid> lll = get_list(grmr, ll, prf);
             if (!ll)
                 throw wruntime_error(L"mustBeOneSequence empty");
 
             for (auto l:lll) {
                 syms rhs;
-                std::vector <resid> seq = grmr->get_list(ll, prf);
+                std::vector <resid> seq = get_list(grmr, ll, prf);
                 for (auto rhs_item: seq)
                     rhs.push_back(add(grmr, rhs_item, prf));
                 rule_new(symbol, rhs);
@@ -382,7 +394,7 @@ struct Marpa {
         std::vector <sym> expected;
         expected.resize(check_int(marpa_g_highest_symbol_id(g)));
 
-        //boost::wregex comment (L"(?m)#(.)*?$");
+        boost::wregex whitespace_regex = boost::wregex(whitespace);
 
         while (pos < inp.end()) {
             if (is_ws(*pos)) {
@@ -392,7 +404,7 @@ struct Marpa {
 
             boost::wsmatch what;
 
-            if ((whitespace != "") && (regex_search(pos, inp.end(), what, whitespace, boost::match_continuous))) {
+            if ((whitespace.size()) && (regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous))) {
                 if (what.size()) {
                     int llll = what[0].length();
                     dout << L"skipping " << llll << L" comment chars" << std::endl;
@@ -510,7 +522,7 @@ struct Marpa {
                     pnode xx;
                     if (terminals.find(symbol) != terminals.end()) {
                         xx = mkbnode(jsonld_api::gen_bnode_id());
-                        dest->addrules(bnf_matches, xx, terminals[symbol]->name);
+                        dest->addrules(quad(xx, bnf_matches, dict[terminals[symbol]->thing]));
                         dest->addrules(has_value, xx, mkliteral(pstr(token_value), pstr(L"XSD_STRING"), pstr(L"en"))););
                     }
                     else // it must be a literal
