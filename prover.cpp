@@ -406,7 +406,7 @@ void prover::addrules(pquad q) {
 	}
 }
 
-prover::prover ( qdb qkb, bool check_consistency ) : quads(qkb) {
+prover::prover ( qdb qkb, bool check_consistency ) : quads(qkb), kb(this) {
 	auto it = qkb.first.find(L"@default");
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (quads.first.find(L"false") == quads.first.end()) quads.first[L"false"] = make_shared<qlist>();
@@ -449,7 +449,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = *s;
-	TRACE(dout << KRED << "Rules:\n" << formatkb(/*true*/) << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	TRACE(dout << KRED << L"Rules:\n" << /*kb.format()*/ formatkb() << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
 	using namespace std;
 	using namespace std::chrono;
