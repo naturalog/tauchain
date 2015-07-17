@@ -526,8 +526,8 @@ prover::termid prover::make(resid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif
-	_terms.emplace_back(p, s, o);
-	return _terms.size();
+	return _terms.add(p, s, o);
+//	return _terms.size();
 }
 
 uint prover::ruleset::add(termid t, const termset& ts, prover* p) {

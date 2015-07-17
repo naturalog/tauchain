@@ -89,7 +89,18 @@ typedef
 typedef int prop_t;
 #endif
 
-	boost::container::vector<term> _terms;
+	class termdb {
+	public:
+		typedef boost::container::list<termid> termlist;
+		typedef boost::container::map<resid, termlist> p2id_t;
+		size_t size() const { return terms.size(); }
+		inline const term& operator[](termid id) const { return terms.at(id); }
+		inline const termlist& operator[](resid id) const { return p2id.at(id); }
+		inline termid add(resid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
+	private:
+		boost::container::vector<term> terms;
+		p2id_t p2id;
+	} _terms;
 	friend ruleset;
 
 	struct proof {
