@@ -594,13 +594,13 @@ string prover::ruleset::format() const {
 	std::wstringstream ss;
 	ss << L'['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
-		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":";
+		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
 			ss << p.formatr(*iit, true);
 			if (++iit != it->second.end()) ss << L',';
 			ss << endl;
 		}
-		ss << L'}';
+		ss << L"]}";
 		if (++it != r2id.end()) ss << L',';
 	}
 	ss << L']';

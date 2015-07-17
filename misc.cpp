@@ -120,10 +120,10 @@ string prover::format(term p, bool json) {
 		return ss.str();
 	}
 	std::wstringstream ss;
-	ss << L"{\"pred\":\"" << dstr(p.p) << L"\",\"args:\":[";
-	if (p.s) ss << format (p.s, true) << L',';
+	ss << L"{ \"pred\":\"" << dstr(p.p) << L"\", \"args\":[ ";
+	if (p.s) ss << format (p.s, true) << L", ";
 	if (p.o) ss << format (p.o, true);
-	ss << L"]}";
+	ss << L" ] }";
 	return ss.str();
 }
 
@@ -203,16 +203,16 @@ string prover::formatr(int r, bool json) {
 		ss << L"{ ";
 		if (!kb.body()[r].empty()) ss << format(kb.body()[r]);
 		ss  << L"} => ";
-		if (kb.head()[r]) 	ss << format(kb.head()[r]);
+		if (kb.head()[r]) ss << format(kb.head()[r]);
 	 	ss << L".";
 		return ss.str();
 	}
-	ss << L"{\"head\":" << format(kb.head()[r],true) << L",\"body\":[";
-	for (size_t n = 0; n < kb.body().size(); ++n) { //const termset& ts : kb.body()) { 
-		ss << format(kb.body()[n], true);
-		if (n != (kb.body().size()-1)) ss << L',';
-	}
- 	ss << L"]}";
+	ss << L"{\"head\":" << format(kb.head()[r],true) << L",\"body\":";
+//	for (size_t n = 0; n < kb.body().size(); ++n) {
+		ss << format(kb.body()[r], true);
+//		if (n != (kb.body().size()-1)) ss << L',';
+//	}
+ 	ss << L"}";
 	return ss.str();
 }
 
