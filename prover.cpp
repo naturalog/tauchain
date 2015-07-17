@@ -49,14 +49,11 @@ prover::termid prover::evaluate(termid id, const subst& s) {
 bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
 	setproc(L"unify");
 	termid v;
-	const term s = get(_s);
-	const term d = get(_d);
+	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
-	if (s.p < 0) 
-		r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
+	if (s.p < 0) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
 	else if (d.p < 0) {
-		if ((v = evaluate(_d, dsub)))
-			r = unify(_s, ssub, v, dsub, f);
+		if ((v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f);
 		else {
 			if (f) {
 				dsub[d.p] = evaluate(_s, ssub);
@@ -64,15 +61,9 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 			}
 			r = true;
 		}
-//	} else if (islist(_s)) {
-//		TRACE( dout << "List unification "; printterm_substs(_s, ssub); dout<<" with "; printterm_substs(_d, dsub); dout <<endl);
-//		if (s.p != d.p || !islist(_d)) r = false;
-//		else r = unify(s.o, ssub, d.o, dsub, f);
 	}
-	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o))
-		r = false;
-	else
-		r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
+	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
 	TRACE(
 		dout << "Trying to unify ";
 		printterm_substs(_s, ssub);
@@ -281,41 +272,6 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	return r;
 }
 
-std::set<uint> prover::match(termid e) {
-	if (!e) return std::set<uint>();
-	setproc(L"match");
-	std::deque<std::pair<termid, termid>> q;
-	std::set<uint> m;
-	termid h;
-//	const term e = get(_e);
-	for (uint n = 0; n < kb.size(); ++n) {
-		h = kb.head()[n];
-		if (!h || h == e) continue;
-		q.emplace_back(e, h);
-		bool r;
-		do {
-			r = false;
-			auto& p = q.front();
-			q.pop_front();
-			const term s = get(p.first), d = get(p.second);
-			if (s.p < 0 || d.p < 0) r = true;
-			else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-			else if (!s.s) r = true;
-			else {
-				q.emplace_back(s.s, d.s);
-				q.emplace_back(s.o, d.o);
-				r = true;
-			}		
-		} while (r && !q.empty());
-		r &= q.empty();
-		q.clear();
-		if (r) m.insert(n);
-	}
-//	TRACE(dout<<format(s) << ' ' <<format(d) << (r?L"match":L"mismatch") << endl);
-//	TRACE(dout<<format(_e) << L" matches: "; for (auto x : m) dout << format(kb.head()[x]) << L' '; dout << endl);
-	return m;
-}
-
 void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	setproc(L"step");
 	++steps;
@@ -323,15 +279,15 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	if (p->last != kb.body()[p->rul].size()) {
 		if (euler_path(p, kb.head()[p->rul])) return;
 		termid t = kb.body()[p->rul][p->last];
-		if (!t) throw 0;
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		if (builtin(t, p, queue) != -1) return;
-		for (auto rl : match(evaluate(t, p->s))) {
+		for (auto rl : kb[get(t).p]) {
 			subst s;
-			if (!unify(t, p->s, kb.head()[rl], s, true)) continue;
-			proof* r = new proof(rl, 0, p, s, p->g);
-			if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
-			queue.push_front(r);
+			if (unify(t, p->s, kb.head()[rl], s, true)) {
+				proof* r = new proof(rl, 0, p, s, p->g);
+				if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
+				queue.push_front(r);
+			}
 		}
 	}
 	else if (!p->prev) {
@@ -533,8 +489,10 @@ prover::termid prover::make(resid p, termid s, termid o) {
 uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
 	_head.push_back(t);
 	_body.push_back(ts);
+	uint r =  _head.size()-1;
+	r2id[t ? p->get(t).p : 0].push_back(r);
+	return r;
 	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
-	return _head.size()-1;
 }
 bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
 prover::term::term() : p(0), s(0), o(0) {}

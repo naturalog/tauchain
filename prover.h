@@ -55,6 +55,11 @@ public:
 		size_t size()						{ return _head.size(); }
 		void mark();
 		void revert();
+		typedef boost::container::list<ruleid> rulelist;
+		typedef boost::container::map<resid, rulelist> r2id_t;
+		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
+	private:
+		r2id_t r2id;
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
@@ -124,7 +129,8 @@ typedef int prop_t;
 	bool euler_path(proof* p, termid t);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
 //	bool maybe_unify(const term, const term);
-	std::set<uint> match(termid e);
+//	std::set<uint>
+	bool match(termid e, termid h);
 	termid quad2term(const quad& p);
 
 	string format(termid id, bool json = false);
