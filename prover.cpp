@@ -273,20 +273,19 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts, this), 0, p, subst(), p->g)/*, queue, false*/);
 	}
 	#ifdef marpa
-	else if (t.p == dict[marpa_parser] && !t.s && t.o)
+	else if (t.p == dict[marpa_parser_iri] && !t.s && t.o)
 	{
-		void* handle = new Marpa(this, dict[get(t.o).p], p);
+		void* handle = marpa_parser(this, get(t.o).p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
-	else if (t.p == dict[marpa_parse]) {
+	else if (t.p == dict[marpa_parse_iri]) {
 		if (get(t.o).p > 0) throw std::runtime_error("marpa_parse must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
 		if (params.size() == 2) {
-			Marpa* marpa = (Marpa*)std::stol(predstr(params[0]));
-			pnode result = marpa.parse(dict[get(params[1])].value);
-			p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+			pnode result = marpa_parse((void*)std::stol(predstr(params[0])), *dict[get(params[1]).p].value);
+			p->s[get(t.o).p] = make(dict.set(result), 0, 0);
 			r = 1;
 		}
 	}
