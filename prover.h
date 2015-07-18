@@ -59,7 +59,11 @@ public:
 		void revert();
 		typedef boost::container::list<ruleid> rulelist;
 		typedef boost::container::map<resid, rulelist> r2id_t;
-		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
+		inline const rulelist& operator[](resid id) const {
+			static rulelist empty;
+			auto x = r2id.find(id); 
+			return (x==r2id.end())?empty:x->second;
+		}
 		string format() const;
 	private:
 		r2id_t r2id;
