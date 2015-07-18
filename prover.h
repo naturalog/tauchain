@@ -51,7 +51,7 @@ public:
 		prover& p;
 	public:
 		ruleset(prover* _p) : p(*_p) {}
-		uint add(termid t, const termset& ts, prover*);
+		uint add(termid t, const termset& ts);
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
 		size_t size()						{ return _head.size(); }
@@ -66,7 +66,7 @@ public:
 		}
 		string format() const;
 	private:
-		r2id_t r2id;
+		r2id_t r2id, _r2id;
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
@@ -144,13 +144,13 @@ typedef int prop_t;
 	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);
-	string formatr(int r, bool json = false);
+	string formatr(ruleid r, bool json = false);
 	string formatkb(bool json = false);
 	void printp(proof* p);
 	string formats(const subst& s, bool json = false);
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);
-	void printr_substs(int r, const subst& s);
+	void printr_substs(ruleid r, const subst& s);
 	void jprinte();
 
 #ifdef OPENCL
