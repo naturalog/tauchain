@@ -65,6 +65,13 @@ public:
 			return (x==r2id.end())?empty:x->second;
 		}
 		string format() const;
+		void dump() const {
+			for (auto x : r2id) {
+				dout << x.first << endl;
+				for (auto y : x.second)
+					dout << tab << y << tab << p.formatr(y, false) << tab << p.formatr(y, true)<<endl;
+			}
+		}
 	private:
 		r2id_t r2id, _r2id;
 	} kb;
@@ -135,8 +142,6 @@ typedef int prop_t;
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	bool euler_path(proof* p, termid t);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
-//	bool maybe_unify(const term, const term);
-//	std::set<uint>
 	bool match(termid e, termid h);
 	termid quad2term(const quad& p);
 

@@ -372,7 +372,7 @@ void prover::operator()(qlist query, const subst* s) {
 }
 
 prover::~prover() { }
-prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) { } 
+prover::prover(const prover& q) : kb(q.kb), _terms(q._terms), quads(q.quads) { } 
 
 void prover::addrules(pquad q) {
 	setproc(L"addrules");
@@ -583,14 +583,14 @@ pobj prover::ejson() const {
 }
 
 void prover::ruleset::mark() {
-	return;
+//	return;
 	_r2id = r2id;
 	if (!m) m = size(); 
 	else m = std::min(size(), m);
 }
 
 void prover::ruleset::revert() {
-	return;
+//	return;
 	r2id = _r2id;
 	if(size()<=m) { 
 		m = 0; 
@@ -602,6 +602,7 @@ void prover::ruleset::revert() {
 }
 
 string prover::ruleset::format() const {
+	dump();
 	std::wstringstream ss;
 	ss << L'['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
