@@ -48,13 +48,21 @@ public:
 		termset _head;
 		boost::container::vector<termset> _body;
 		size_t m = 0;
+		prover& p;
 	public:
+		ruleset(prover* _p) : p(*_p) {}
 		uint add(termid t, const termset& ts, prover*);
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
 		size_t size()						{ return _head.size(); }
 		void mark();
 		void revert();
+		typedef boost::container::list<ruleid> rulelist;
+		typedef boost::container::map<resid, rulelist> r2id_t;
+		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
+		string format() const;
+	private:
+		r2id_t r2id;
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
@@ -107,7 +115,18 @@ typedef
 typedef int prop_t;
 #endif
 
-	boost::container::vector<term> _terms;
+	class termdb {
+	public:
+		typedef boost::container::list<termid> termlist;
+		typedef boost::container::map<resid, termlist> p2id_t;
+		size_t size() const { return terms.size(); }
+		inline const term& operator[](termid id) const { return terms.at(id); }
+		inline const termlist& operator[](resid id) const { return p2id.at(id); }
+		inline termid add(resid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
+	private:
+		boost::container::vector<term> terms;
+		p2id_t p2id;
+	} _terms;
 	friend ruleset;
 
 	void step (proof*, std::deque<proof*>&, bool del = true);
@@ -118,7 +137,8 @@ typedef int prop_t;
 	bool euler_path(proof* p, termid t);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
 //	bool maybe_unify(const term, const term);
-	std::set<uint> match(termid e);
+//	std::set<uint>
+	bool match(termid e, termid h);
 	termid quad2term(const quad& p);
 
 	string format(termid id, bool json = false);
