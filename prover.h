@@ -93,6 +93,9 @@ public:
 	};
 	void addrules(pquad q);
 	std::vector<termid> get_list(termid head, proof& p);
+	termid list2term(std::list<pnode>& l);
+
+
 
 
 private:
@@ -157,7 +160,6 @@ typedef int prop_t;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
 	bool islist(termid);
-	termid list2term(std::list<pnode>& l);
 	int steps = 0;
 	bool consistency();
 };

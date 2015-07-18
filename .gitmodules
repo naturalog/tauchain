@@ -1,6 +1,3 @@
-[submodule "lexertl"]
-	path = lexertl
-	url = https://github.com/BenHanson/lexertl.git
 [submodule "libmarpa"]
 	path = libmarpa
 	url = https://github.com/jeffreykegler/libmarpa.git

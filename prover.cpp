@@ -13,7 +13,7 @@
 #include <forward_list>
 #include <boost/algorithm/string.hpp>
 #include <dlfcn.h>
-#ifdef marpa
+#ifdef with_marpa
 #include "marpa_tau.h"
 #endif
 
@@ -272,15 +272,15 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		ts[1] = make ( A, t.s, va );
 		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts, this), 0, p, subst(), p->g)/*, queue, false*/);
 	}
-	#ifdef marpa
-	else if (t.p == dict[marpa_parser_iri] && !t.s && t.o)
+	#ifdef with_marpa
+	else if (t.p == marpa_parser_iri && !t.s && t.o)
 	{
 		void* handle = marpa_parser(this, get(t.o).p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
-	else if (t.p == dict[marpa_parse_iri]) {
+	else if (t.p == marpa_parse_iri) {
 		if (get(t.o).p > 0) throw std::runtime_error("marpa_parse must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
 		if (params.size() == 2) {
