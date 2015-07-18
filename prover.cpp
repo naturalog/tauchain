@@ -261,7 +261,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts, this), 0, p, subst(), p->g)/*, queue, false*/);
+		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g)/*, queue, false*/);
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri && !t.s && t.o)
@@ -285,7 +285,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		proof* r = new proof;
 		*r = *p;
 		r->g = p->g;
-		r->g.emplace_back(kb.add(evaluate(id, p->s), termset(), this), subst());
+		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), subst());
 		++r->last;
 		step(r, queue);
 	}
@@ -385,23 +385,15 @@ void prover::operator()(qlist query, const subst* s) {
 	termset goal;
 	termid t;
 	for ( auto q : query ) 
-		if (dict[q->pred] != rdffirst && dict[q->pred] != rdfrest)
-			if ((t = quad2term( *q ))) goal.push_back( t );
+		if (	dict[q->pred] != rdffirst && 
+			dict[q->pred] != rdfrest &&
+			(t = quad2term( *q )) )
+			goal.push_back( t );
 	return (*this)(goal, s);
-}
-/*
-prover::prover(prover::ruleset* _kb) : kb(_kb ? *_kb : *new ruleset) {
-	kbowner = !_kb;
-	_terms.reserve(max_terms);
-	CL(initcl());
-}
-*/
-prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) {
 }
 
 prover::~prover() { }
-
-//bool prover::islist(pquad q) { return startsWith(*dict[get(t).p].value,L"_:list"); }
+prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) { } 
 
 void prover::addrules(pquad q) {
 	setproc(L"addrules");
@@ -410,19 +402,19 @@ void prover::addrules(pquad q) {
 	//if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
 	TRACE(dout<<"called with " << q->tostring()<<endl);
-//	if ( p != implication/* || quads.first.find ( o ) == quads.first.end()*/ )
-		if ((t = quad2term(*q))) 
-			kb.add(t, termset(), this);
+	if ((t = quad2term(*q))) 
+		kb.add(t, termset());
 	if (p == implication) {
 		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
 		for ( pquad y : *quads.first.at ( o ) ) {
+			if ( quads.first.find ( s ) == quads.first.end() ) continue;
 			termset ts;
-			if ( quads.first.find ( s ) != quads.first.end() )
-				for ( pquad z : *quads.first.at( s ) )
-					if (dict[z->pred] != rdffirst && dict[z->pred] != rdfrest)
-						if ((t = quad2term(*z))) 
-							ts.push_back( t );
-			if ((t = quad2term(*y))) kb.add(t, ts, this);
+			for ( pquad z : *quads.first.at( s ) )
+				if ((dict[z->pred] != rdffirst && 
+					dict[z->pred] != rdfrest) &&
+					(t = quad2term(*z)))
+					ts.push_back( t );
+			if ((t = quad2term(*y))) kb.add(t, ts);
 		}
 	}
 }
@@ -466,13 +458,14 @@ void prover::operator()(termset& goal, const subst* s) {
 	proof* p = new proof;
 	std::deque<proof*> queue;
 	kb.mark();
-	p->rul = kb.add(0, goal, this);
+	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = *s;
-	{setproc(L"facts");
-		TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	}
+	//{setproc(L"facts");
+	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	//}
 	queue.push_front(p);
 	using namespace std;
 	using namespace std::chrono;
@@ -509,11 +502,11 @@ prover::termid prover::make(resid p, termid s, termid o) {
 //	return _terms.size();
 }
 
-uint prover::ruleset::add(termid t, const termset& ts, prover* p) {
+uint prover::ruleset::add(termid t, const termset& ts) {
+	uint r =  _head.size();
 	_head.push_back(t);
 	_body.push_back(ts);
-	uint r =  _head.size()-1;
-	r2id[t ? p->get(t).p : 0].push_back(r);
+	r2id[t ? p.get(t).p : 0].push_back(r);
 	return r;
 	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 }
@@ -594,6 +587,7 @@ pobj prover::json(const ground& g) const {
 	}
 	return l;
 }
+
 pobj prover::ejson() const {
 	pobj o = mk_somap_obj();
 	for (auto x : e) {
@@ -610,8 +604,25 @@ pobj prover::ejson() const {
 	}
 	return o;
 }
-void prover::ruleset::mark() { if (!m) m = size(); else m = std::min(size(), m); }
-void prover::ruleset::revert() {if(size()<=m) { m = 0; return; } _head.erase(_head.begin() + (m-1), _head.end());_body.erase(_body.begin() + (m-1), _body.end()); m = 0;}
+
+void prover::ruleset::mark() {
+	return;
+	_r2id = r2id;
+	if (!m) m = size(); 
+	else m = std::min(size(), m);
+}
+
+void prover::ruleset::revert() {
+	return;
+	r2id = _r2id;
+	if(size()<=m) { 
+		m = 0; 
+		return; 
+	}
+	_head.erase(_head.begin() + (m-1), _head.end());
+	_body.erase(_body.begin() + (m-1), _body.end());
+	m = 0;
+}
 
 string prover::ruleset::format() const {
 	std::wstringstream ss;
@@ -620,6 +631,7 @@ string prover::ruleset::format() const {
 		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
 			ss << p.formatr(*iit, true);
+			TRACE(p.formatr(*iit,true));
 			if (++iit != it->second.end()) ss << L',';
 			ss << endl;
 		}

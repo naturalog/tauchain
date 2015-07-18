@@ -195,13 +195,13 @@ void prover::printl_substs(const termset& l, const subst& s) {
 	}
 }
 
-void prover::printr_substs(int r, const subst& s) {
+void prover::printr_substs(ruleid r, const subst& s) {
 	printl_substs(kb.body()[r], s);
 	dout << L" => ";
 	printterm_substs(kb.head()[r], s);
 }
 
-string prover::formatr(int r, bool json) {
+string prover::formatr(ruleid r, bool json) {
 	std::wstringstream ss;
 	if (!json) {
 		ss << L"{ ";
