@@ -372,7 +372,7 @@ void prover::operator()(qlist query, const subst* s) {
 }
 
 prover::~prover() { }
-prover::prover(const prover& q) : kb(q.kb), _terms(q._terms), quads(q.quads) { } 
+prover::prover(const prover& q) : kb(q.kb), _terms(q._terms), quads(q.quads) { kb.p = this; } 
 
 void prover::addrules(pquad q) {
 	setproc(L"addrules");
@@ -479,81 +479,41 @@ prover::termid prover::make(resid p, termid s, termid o) {
 //	return _terms.size();
 }
 
-uint prover::ruleset::add(termid t, const termset& ts) {
-	uint r =  _head.size();
+prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
+	setproc(L"ruleset::add");
+	ruleid r =  _head.size();
 	_head.push_back(t);
 	_body.push_back(ts);
-	r2id[t ? p.get(t).p : 0].push_back(r);
+	r2id[t ? p->get(t).p : 0].push_back(r);
+	TRACE(dout<<r<<tab<<p->formatr(r)<<endl);
 	return r;
 	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 }
-bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
+
+//bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
 prover::term::term() : p(0), s(0), o(0) {}
-prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
-prover::term& prover::term::operator=(const prover::term& t) { p = t.p; s = t.s; o = t.o; return *this; }
-
-#ifdef OPENCL
-#define __CL_ENABLE_EXCEPTIONS
- 
-#if defined(__APPLE__) || defined(__MACOSX)
-#include <OpenCL/cl.hpp>
-#else
-#include <CL/cl.hpp>
-#endif
-
-std::string clprog = ""
-"bool maybe_unify(termid _s, termid _d, const term* t) {"
-"	local const term s = t[_s-1], d = t[_d-1];"
-"	if (s.p < 0 || d.p < 0) return true;"
-"	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;"
-"	return !s.s || (maybe_unify(s.s, d.s) && maybe_unify(s.o, d.o));"
-"}"
-"kernel void match(termid e, const termid* t, uint sz, global termid* res) {"
-"	uint n = get_global_id(0);"
-"	prefetch(t[n]);"
-"	local "
-"	if (t[n] && maybe_unify(e, t[n]))"
-"		res[pos++] = n;"
-"}";
-#endif
-#ifdef OPENCL
-void prover::initcl() {
-	cl_int err = CL_SUCCESS;
-	try {
-		cl::Platform::get(&platforms);
-		if (platforms.size() == 0) {
-			derr << "Platform size: 0" << std::endl;
-			exit(-1);
-		}
-		cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(platforms[0])(), 0};
-		context = cl::Context (CL_DEVICE_TYPE_CPU, properties); 
-		devices = context.getInfo<CL_CONTEXT_DEVICES>();
-		prog = cl::Program(clprog);
-		cl::Kernel kernel(prog, "match", &err);
-		cl::Event event;
-		cq = cl::CommandQueue (context, devices[0], 0, &err);
-		cq.enqueueNDRangeKernel( kernel, cl::NullRange, cl::NDRange(4,4), cl::NullRange, NULL, &event); 
-		event.wait();
-	} catch (cl::Error err) { derr << err.what() << ':' << err.err() << std::endl; }
-}
-#endif 
+//prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
+//prover::term& prover::term::operator=(const prover::term& t) { p = t.p; s = t.s; o = t.o; return *this; }
 
 pobj prover::json(const termset& ts) const {
 	polist_obj l = mk_olist_obj(); 
 	for (termid t : ts) l->LIST()->push_back(get(t).json(*this));
 	return l;
 }
+
 pobj prover::json(const subst& s) const {
 	psomap_obj o = mk_somap_obj();
 	for (auto x : s) (*o->MAP())[dstr(x.first)] = get(x.second).json(*this);
 	return o;
 }
+
 pobj prover::json(ruleid t) const {
 	pobj m = mk_somap_obj();
 	(*m->MAP())[L"head"] = get(kb.head()[t]).json(*this);
 	(*m->MAP())[L"body"] = json(kb.body()[t]);
 	return m;
 };
+
 pobj prover::json(const ground& g) const {
 	pobj l = mk_olist_obj();
 	for (auto x : g) {
@@ -583,16 +543,14 @@ pobj prover::ejson() const {
 }
 
 void prover::ruleset::mark() {
-//	return;
 	_r2id = r2id;
 	if (!m) m = size(); 
 	else m = std::min(size(), m);
 }
 
 void prover::ruleset::revert() {
-//	return;
 	r2id = _r2id;
-	if(size()<=m) { 
+	if ( size() <= m ) { 
 		m = 0; 
 		return; 
 	}
@@ -602,14 +560,17 @@ void prover::ruleset::revert() {
 }
 
 string prover::ruleset::format() const {
+	setproc(L"ruleset::format");
 	dump();
 	std::wstringstream ss;
 	ss << L'['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
+		TRACE(dout<<it->first<<endl);
 		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
-			ss << p.formatr(*iit, true);
-			TRACE(p.formatr(*iit,true));
+			string s = p->formatr(*iit, true);
+			ss << s;
+			TRACE(dout<<s<<endl);
 			if (++iit != it->second.end()) ss << L',';
 			ss << endl;
 		}
