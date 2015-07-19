@@ -101,6 +101,11 @@ public:
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
 
+	void addrules(pquad q);
+	std::vector<termid> get_list(termid head, proof& p);
+	termid list2term(std::list<pnode>& l);
+
+
 private:
 
 	class termdb {
@@ -120,7 +125,6 @@ private:
 	int steps = 0;
 
 	void step (proof*, std::deque<proof*>&, bool del = true);
-	void addrules(pquad q);
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
@@ -130,13 +134,11 @@ private:
 	termid quad2term(const quad& p);
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
-	std::vector<termid> get_list(termid head, proof& p);
 	bool kbowner, goalowner;
 	string predstr(prover::termid t);
 	string preddt(prover::termid t);
 	string formatg(const ground& g, bool json = false);
 	bool islist(termid);
-	termid list2term(std::list<pnode>& l);
 	bool consistency();
 
 	// formatters
