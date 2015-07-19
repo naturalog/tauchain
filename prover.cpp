@@ -52,6 +52,7 @@ prover::termid prover::evaluate(termid id, const subst& s) {
 bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
 	setproc(L"unify");
 	termid v;
+	if (!_d != !_s) return false;
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
 	if (s.p < 0) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
