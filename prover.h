@@ -55,13 +55,13 @@ public:
 			auto x = r2id.find(id);
 			return x == r2id.end() ? empty : x->second;
 		}
-		void dump() const {
+/*		void dump() const {
 			for (auto x : r2id) {
 				dout << x.first << endl;
 				for (auto y : x.second)
 					dout << tab << y << tab << p->formatr(y, false) << tab << p->formatr(y, true)<<endl;
 			}
-		}
+		}*/
 	private:
 		r2id_t r2id, _r2id;
 	} kb;

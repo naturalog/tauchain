@@ -455,6 +455,7 @@ bool prover::consistency() {
 
 #include <chrono>
 void prover::operator()(termset& goal, const subst* s) {
+//	setproc(L"prover()");
 	proof* p = new proof;
 	std::deque<proof*> queue;
 	kb.mark();
@@ -463,7 +464,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	p->prev = 0;
 	if (s) p->s = *s;
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
+//	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
 	using namespace std;
 	using namespace std::chrono;
@@ -582,16 +583,15 @@ void prover::ruleset::revert() {
 
 string prover::ruleset::format() const {
 	setproc(L"ruleset::format");
-	dump();
+//	dump();
 	std::wstringstream ss;
 	ss << L'['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
-		TRACE(dout<<it->first<<endl);
+//		TRACE(dout<<it->first<<endl);
 		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
-			string s = p->formatr(*iit, true);
-			ss << s;
-			TRACE(dout<<s<<endl);
+			ss << p->formatr(*iit, true);
+//			TRACE(dout<<s<<endl);
 			if (++iit != it->second.end()) ss << L',';
 			ss << endl;
 		}
