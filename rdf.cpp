@@ -26,6 +26,7 @@ string node::tostring() const {
 pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	setproc(L"mkliteral");
 //	TRACE(dout << *value << endl);
+	if (!value) throw std::runtime_error("mkliteral: null value given");
 	node r ( node::LITERAL );
 	r.value = value;
 	if (!datatype) r.datatype = XSD_STRING;
@@ -51,6 +52,7 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 
 pnode mkiri ( pstring iri ) {
 	setproc(L"mkiri");
+	if (!iri) throw std::runtime_error("mkiri: null iri given");
 //	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
 	r.value = iri;
@@ -63,6 +65,7 @@ pnode mkiri ( pstring iri ) {
 
 pnode mkbnode ( pstring attribute ) {
 	setproc(L"mkbnode");
+	if (!attribute) throw std::runtime_error("mkbnode: null value given");
 //	TRACE(dout << *attribute << endl);
 	node r ( node::BNODE );
 	r.value = attribute;
