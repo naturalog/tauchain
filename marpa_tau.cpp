@@ -29,7 +29,12 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
     resids r = resids();
     prover::termset query;
     prover::termid o_var = prover->tmpvar();
-    prover::termid iii = prover->make(p, prover->make(s), o_var);
+    assert(o_var);
+    assert(s);
+    auto xxs = prover->make(s);
+    assert (xxs);
+    prover::termid iii = prover->make(p, xxs, o_var);
+    assert (iii);
     query.emplace_back(iii);
 
     //dout << "query: "<< prover->format(query) << endl;;
@@ -57,7 +62,12 @@ resids ask(prover *prover, const pnode p, resid o) {
     resids r = resids();
     prover::termset query;
     prover::termid s_var = prover->tmpvar();
-    prover::termid iii = prover->make(p, s_var, prover->make(o));
+    assert (o);
+    auto oo = prover->make(o);
+    assert (oo);
+    assert(p);
+    assert(s_var);
+    prover::termid iii = prover->make(p, s_var, oo);
     query.emplace_back(iii);
 
     //dout << "query: "<< prover->format(query) << endl;;
@@ -632,9 +642,20 @@ string load_file(string fname) {
 
 int load_n3_cmd::operator()(const strings &args) {
     prover prover(*load_quads(L"n3-grammar.nq"));
-    pnode parser = make_shared<node>(dict[ask1(&prover, make_shared<node>(dict[marpa_parser_iri]), dict[mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"))])]);
+    assert (marpa_parser_iri);
+    auto xxxxxxx = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"));
+    assert (xxxxxxx);
+    auto xxxxxx = dict[xxxxxxx];
+    assert (xxxxxx);
+    auto xxxxx = make_shared<node>(dict[marpa_parser_iri]);
+    assert (xxxxx);
+    auto xxxx = ask1(&prover, xxxxx, xxxxxx);
+    assert (xxxx);
+    pnode parser = make_shared<node>(dict[xxxx]);
     pnode input = mkliteral(pstr(load_file(args[2])), pstr(L"XSD_STRING"), pstr(L"en"));
-    std::list<pnode> query{parser, input};
+    assert(parser);
+    assert(input);
+    std::list<pnode> query {parser, input};
     resid raw = ask1(&prover, make_shared<node>(dict[marpa_parse_iri]), prover.get(prover.get(prover.list2term(query)).s).p);
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");

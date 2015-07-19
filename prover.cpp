@@ -264,7 +264,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g)/*, queue, false*/);
 	}
 	#ifdef with_marpa
-	else if (t.p == marpa_parser_iri && !t.s && t.o)
+	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
 	{
 		void* handle = marpa_parser(this, get(t.o).p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
