@@ -40,6 +40,7 @@ public:
 	quad ( string subj, string pred, string object, string graph );
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph );
 	quad ( pnode subj, pnode pred, pnode object, string graph = L"@default" );
+	quad ( pnode subj, pnode pred, pnode object, pnode graph);
 	quad(){}
 	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
 	string tostring ( ) const;

@@ -13,6 +13,9 @@
 #include <forward_list>
 #include <boost/algorithm/string.hpp>
 #include <dlfcn.h>
+#ifdef with_marpa
+#include "marpa_tau.h"
+#endif
 
 using namespace boost::algorithm;
 int _indent = 0;
@@ -260,6 +263,24 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		ts[1] = make ( A, t.s, va );
 		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g)/*, queue, false*/);
 	}
+	#ifdef with_marpa
+	else if (t.p == marpa_parser_iri && !t.s && t.o)
+	{
+		void* handle = marpa_parser(this, get(t.o).p, p);
+		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
+		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+		r = 1;
+	}
+	else if (t.p == marpa_parse_iri) {
+		if (get(t.o).p > 0) throw std::runtime_error("marpa_parse must be called with variable object.");
+		std::vector<termid> params = get_list(t.s, *p);
+		if (params.size() == 2) {
+			pnode result = marpa_parse((void*)std::stol(predstr(params[0])), *dict[get(params[1]).p].value);
+			p->s[get(t.o).p] = make(dict.set(result), 0, 0);
+			r = 1;
+		}
+	}
+	#endif
 	if (r == 1) {
 		proof* r = new proof;
 		*r = *p;
@@ -335,7 +356,7 @@ prover::termid prover::quad2term(const quad& p) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
-	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
+	//if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;
@@ -378,7 +399,7 @@ void prover::addrules(pquad q) {
 	setproc(L"addrules");
 	TRACE(dout<<q->tostring()<<endl);
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
-	if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
+	//if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
 	TRACE(dout<<"called with " << q->tostring()<<endl);
 	if ((t = quad2term(*q))) 
@@ -455,7 +476,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
+	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 	kb.revert();
 //	return results();
 }
