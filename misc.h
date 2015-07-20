@@ -33,7 +33,7 @@ public:
 
 extern bidict& dict;
 extern resid marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
-string dstr ( resid p );
+string dstr ( resid p, bool json = false );
 string indent();
 
 struct _setproc {

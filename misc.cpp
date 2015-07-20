@@ -75,9 +75,14 @@ string bidict::tostr() {
 	return s.str();
 }
 
-string dstr ( resid p ) {
+string dstr ( resid p, bool escape ) {
 	if ( !deref ) return *tostr ( p );
 	string s = dict[p].tostring();
+	if (escape) {
+		replace_all(s, L"\\", L"\\\\");
+		replace_all(s, L"\"", L"\\\"");
+		replace_all(s, L"'", L"\\'");
+	}
 	if (s == L"GND") throw 0;
 	if ( !shorten ) return s;
 	if ( s.find ( L"#" ) == string::npos ) return s;
@@ -118,14 +123,14 @@ string prover::format(term p, bool json) {
 	if (!json) {
 		std::wstringstream ss;
 		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
-		ss << dstr(p.p) << L'(';
+		ss << dstr(p.p, false) << L'(';
 		if (p.s) ss << format (p.s);
 		if (p.o) ss << L',' << format (p.o);
 		ss << L')';
 		return ss.str();
 	}
 	std::wstringstream ss;
-	ss << L"{ \"pred\":\"" << dstr(p.p) << L"\", \"args\":[ ";
+	ss << L"{ \"pred\":\"" << dstr(p.p, true) << L"\", \"args\":[ ";
 	if (p.s) ss << format (p.s, true) << L", ";
 	if (p.o) ss << format (p.o, true);
 	ss << L" ] }";

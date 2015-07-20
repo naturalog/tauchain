@@ -1,4 +1,4 @@
-:socrates :a :man .
+"\\"\"socrates" :a :man .
 { ?x :a :man } => { ?x :a :mortal } .
 fin.
 ?y :a :mortal .
