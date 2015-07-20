@@ -183,7 +183,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	const term* t1 = i1 ? &(r2=get(i1=evaluate(t.o, p->s))) : 0;
 	TRACE(	dout<<"called with term " << format(id); 
 		if (t0) dout << " subject = " << format(i0);
-		if (t1) dout << " object = " << format(i0);
+		if (t1) dout << " object = " << format(i1);
 		dout << endl);
 	if (t.p == GND) r = 1;
 	else if (t.p == logequalTo)
@@ -276,7 +276,8 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		std::vector<termid> params = get_list(t.s, *p);
+		std::vector<termid> params = get_list(t.o, *p);
+		dout << params.size() << std::endl;
 		if (params.size() == 2) {
 			pnode result = marpa_parse((void*)std::stol(predstr(params[1])), *dict[get(params[0]).p].value);
 			p->s[get(t.s).p] = make(dict.set(result), 0, 0);
