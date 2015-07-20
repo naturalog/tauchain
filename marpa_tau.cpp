@@ -272,7 +272,7 @@ struct Marpa {
 
             for (auto l:lll) {
                 syms rhs;
-                std::vector <resid> seq = get_list(prvr, ll, *prf);
+                std::vector <resid> seq = get_list(prvr, l, *prf);
                 for (auto rhs_item: seq)
                     rhs.push_back(add(prvr, rhs_item, prf));
                 rule_new(symbol, rhs);
