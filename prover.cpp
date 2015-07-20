@@ -459,7 +459,7 @@ void prover::operator()(termset& goal, const subst* s) {
 //	setproc(L"prover()");
 	proof* p = new proof;
 	std::deque<proof*> queue;
-	kb.mark();
+//	kb.mark();
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
@@ -479,7 +479,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
-	kb.revert();
+//	kb.revert();
 //	return results();
 }
 
