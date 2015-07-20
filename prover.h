@@ -70,7 +70,7 @@ public:
 	prover ( string filename );
 	prover ( const prover& p );
 	void operator()(termset& goal, const subst* s = 0);
-	void operator()(qlist goal, const subst* s = 0);
+	void operator()(const qdb& goal, const subst* s = 0);
 	const term& get(termid) const;
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
@@ -101,10 +101,9 @@ public:
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
 
-	void addrules(pquad q);
+	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
-	termid list2term(std::list<pnode>& l);
-
+	termid list2term(std::list<pnode>& l, const qdb& quads);
 
 private:
 
@@ -121,7 +120,7 @@ private:
 		p2id_t p2id;
 	} _terms;
 	friend ruleset;
-	qdb quads;
+//	qdb quads;
 	int steps = 0;
 
 	void step (proof*, std::deque<proof*>&, bool del = true);
@@ -131,7 +130,7 @@ private:
 	bool euler_path(proof* p, termid t);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
 	bool match(termid e, termid h);
-	termid quad2term(const quad& p);
+	termid quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
 	bool kbowner, goalowner;
@@ -139,7 +138,7 @@ private:
 	string preddt(prover::termid t);
 	string formatg(const ground& g, bool json = false);
 	bool islist(termid);
-	bool consistency();
+	bool consistency(const qdb& quads);
 
 	// formatters
 	string format(termid id, bool json = false);

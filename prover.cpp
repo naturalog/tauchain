@@ -336,7 +336,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 //	if (del) delete p;
 }
 
-prover::termid prover::list2term(std::list<pnode>& l) {
+prover::termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 	setproc(L"list2term");
 	termid t;
 	if (l.empty()) t = make(Dot, 0, 0);
@@ -345,17 +345,17 @@ prover::termid prover::list2term(std::list<pnode>& l) {
 		l.pop_front();
 //		TRACE(dout << x->tostring() << endl);
 		auto it = quads.second.find(*x->value);
-		if (it == quads.second.end()) t = make(Dot, make(dict.set(x), 0, 0), list2term(l));
+		if (it == quads.second.end()) t = make(Dot, make(dict.set(x), 0, 0), list2term(l, quads));
 		else {
 			auto ll = it->second;
-			t = make(Dot, list2term(ll), list2term(l));
+			t = make(Dot, list2term(ll, quads), list2term(l, quads));
 		}
 	}
 	TRACE(dout << format(t) << endl);
 	return t;
 }
 
-prover::termid prover::quad2term(const quad& p) {
+prover::termid prover::quad2term(const quad& p, const qdb& quads) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
@@ -363,13 +363,13 @@ prover::termid prover::quad2term(const quad& p) {
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;
-		s = list2term(l);
+		s = list2term(l, quads);
 	}
 	else
 		s = make(p.subj, 0, 0);
 	if ((it = quads.second.find(*p.object->value)) != quads.second.end()) {
 		auto l = it->second;
-		o = list2term(l);
+		o = list2term(l, quads);
 	}
 	else
 		o = make(p.object, 0, 0);
@@ -384,28 +384,28 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-void prover::operator()(qlist query, const subst* s) {
+void prover::operator()(const qdb& query, const subst* s) {
 	termset goal;
 	termid t;
-	for ( auto q : query ) 
+	for ( auto q : merge(query) ) 
 		if (	dict[q->pred] != rdffirst && 
 			dict[q->pred] != rdfrest &&
-			(t = quad2term( *q )) )
+			(t = quad2term( *q, query )) )
 			goal.push_back( t );
 	return (*this)(goal, s);
 }
 
 prover::~prover() { }
-prover::prover(const prover& q) : kb(q.kb), _terms(q._terms), quads(q.quads) { kb.p = this; } 
+prover::prover(const prover& q) : kb(q.kb), _terms(q._terms)/*, quads(q.quads)*/ { kb.p = this; } 
 
-void prover::addrules(pquad q) {
+void prover::addrules(pquad q, qdb& quads) {
 	setproc(L"addrules");
 	TRACE(dout<<q->tostring()<<endl);
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
 	//if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
 	TRACE(dout<<"called with " << q->tostring()<<endl);
-	if ((t = quad2term(*q))) 
+	if ((t = quad2term(*q, quads))) 
 		kb.add(t, termset());
 	if (p == implication) {
 		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
@@ -415,22 +415,22 @@ void prover::addrules(pquad q) {
 			for ( pquad z : *quads.first.at( s ) )
 				if ((dict[z->pred] != rdffirst && 
 					dict[z->pred] != rdfrest) &&
-					(t = quad2term(*z)))
+					(t = quad2term(*z, quads)))
 					ts.push_back( t );
-			if ((t = quad2term(*y))) kb.add(t, ts);
+			if ((t = quad2term(*y, quads))) kb.add(t, ts);
 		}
 	}
 }
 
-prover::prover ( qdb qkb, bool check_consistency ) : quads(qkb), kb(this) {
+prover::prover ( qdb qkb, bool check_consistency ) : /*quads(qkb),*/ kb(this) {
 	auto it = qkb.first.find(L"@default");
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
-	if (quads.first.find(L"false") == quads.first.end()) quads.first[L"false"] = make_shared<qlist>();
-	for ( pquad quad : *it->second ) addrules(quad);
-	if (check_consistency && !consistency()) throw std::runtime_error("Error: inconsistent kb");
+	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
+	for ( pquad quad : *it->second ) addrules(quad, qkb);
+	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
-bool prover::consistency() {
+bool prover::consistency(const qdb& quads) {
 	setproc(L"consistency");
 	bool c = true;
 //	prover p(quads, false);
@@ -447,7 +447,9 @@ bool prover::consistency() {
 		string s = *dict[p.get(p.get(y.first).s).p].value;
 		if (s == L"GND") continue;
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
-		q(*quads.first[s]);
+		qdb qq;
+		qq.first[L""] = quads.first.at(s);
+		q(qq);
 		if (q.e.size()) {
 			derr << L"Inconsistency found: " << q.format(y.first) << L" is provable as true and false."<<endl;
 			c = false;

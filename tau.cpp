@@ -77,7 +77,7 @@ public:
 				dout << "query loaded." << std::endl;
 				if (query) {
 					prover pr( *kb );
-					pr ( merge ( *query ) );
+					pr ( *query );
 					dout << "Ready." << std::endl;
 				}
 			}
