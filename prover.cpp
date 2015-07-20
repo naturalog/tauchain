@@ -266,18 +266,20 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
+	/* ?X is a parser created from grammar */
 	{
 		void* handle = marpa_parser(this, get(t.o).p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+		p->s[get(t.s).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == marpa_parse_iri) {
-		if (get(t.o).p > 0) throw std::runtime_error("marpa_parse must be called with variable object.");
+	/* ?X is a parse of (input with parser) */
+		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
 		std::vector<termid> params = get_list(t.s, *p);
 		if (params.size() == 2) {
-			pnode result = marpa_parse((void*)std::stol(predstr(params[0])), *dict[get(params[1]).p].value);
-			p->s[get(t.o).p] = make(dict.set(result), 0, 0);
+			pnode result = marpa_parse((void*)std::stol(predstr(params[1])), *dict[get(params[0]).p].value);
+			p->s[get(t.s).p] = make(dict.set(result), 0, 0);
 			r = 1;
 		}
 	}

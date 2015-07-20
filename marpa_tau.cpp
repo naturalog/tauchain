@@ -104,7 +104,14 @@ resid ask1(prover *prover, resid s, const pnode p) {
 resid ask1(prover *prover, const pnode p, resid o) {
     auto r = ask(prover, p, o);
     if (r.size() > 1)
-        throw wruntime_error(L"well, this is weird, more than one match");
+    {
+        std::wstringstream ss;
+        ss << L"well, this is weird, more than one match:";
+        for (auto xx: r)
+            ss << xx << " ";
+        throw wruntime_error(ss.str());
+    }
+
     if (r.size() == 1)
         return r[0];
     else
@@ -641,7 +648,7 @@ string load_file(string fname) {
 }
 
 int load_n3_cmd::operator()(const strings &args) {
-    prover prover(*load_quads(L"n3-grammar.nq"));
+    prover prover1(*load_quads(L"n3-grammar.nq"));
     assert (marpa_parser_iri);
     auto xxxxxxx = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"));
     assert (xxxxxxx);
@@ -649,14 +656,15 @@ int load_n3_cmd::operator()(const strings &args) {
     assert (xxxxxx);
     auto xxxxx = make_shared<node>(dict[marpa_parser_iri]);
     assert (xxxxx);
-    auto xxxx = ask1(&prover, xxxxx, xxxxxx);
+    auto xxxx = ask1(&prover1, xxxxx, xxxxxx);
     assert (xxxx);
-    pnode parser = make_shared<node>(dict[xxxx]);
     pnode input = mkliteral(pstr(load_file(args[2])), pstr(L"XSD_STRING"), pstr(L"en"));
-    assert(parser);
+    pnode parser = make_shared<node>(dict[xxxx]);
     assert(input);
-    std::list<pnode> query {parser, input};
-    resid raw = ask1(&prover, make_shared<node>(dict[marpa_parse_iri]), prover.get(prover.get(prover.list2term(query)).s).p);
+    assert(parser);
+    std::list<pnode> query {input, parser};
+    prover prover2(prover1);
+    resid raw = ask1(&prover2, make_shared<node>(dict[marpa_parse_iri]), prover2.get(prover2.get(prover2.list2term(query)).s).p);
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
     //...
@@ -665,7 +673,8 @@ int load_n3_cmd::operator()(const strings &args) {
 
 
 void *marpa_parser(prover *p, resid language, prover::proof *prf) {
-    return (void*)new Marpa(p, language, prf);
+    prover *pp = new prover(*p);
+    return (void*)new Marpa(pp, language, prf);
 }
 
 pnode marpa_parse(void* marpa, string input) {
