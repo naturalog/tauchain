@@ -276,13 +276,15 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		std::vector<termid> params = get_list(t.o, *p);
-		dout << params.size() << std::endl;
-		if (params.size() == 2) {
-			pnode result = marpa_parse((void*)std::stol(predstr(params[1])), *dict[get(params[0]).p].value);
-			p->s[get(t.s).p] = make(dict.set(result), 0, 0);
-			r = 1;
-		}
+		//auto parser = dict[get(get(i1).s).p].value;
+		//if (t1->p != Dot) { TRACE(dout<<std::endl<<"p == " << *dict[t1->p].value<<std::endl);  return -1;}
+		TRACE(dout<<std::endl<<format(i1)<<std::endl);
+		auto parser = *dict[get(t1->s).p].value;
+
+		//auto text = dict[get(get(get(t.o).o).s).p].value;
+		//pnode result = marpa_parse((void*)std::stol(parser), L"SSS");//*text);
+		//p->s[get(t.s).p] = make(dict.set(result), 0, 0);
+		r = 1;
 	}
 	#endif
 	if (r == 1) {
@@ -346,7 +348,10 @@ prover::termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 		l.pop_front();
 //		TRACE(dout << x->tostring() << endl);
 		auto it = quads.second.find(*x->value);
-		if (it == quads.second.end()) t = make(Dot, make(dict.set(x), 0, 0), list2term(l, quads));
+		//its not a list
+		if (it == quads.second.end())
+			t = make(Dot, make(dict.set(x), 0, 0), list2term(l, quads));
+		//its a list
 		else {
 			auto ll = it->second;
 			t = make(Dot, list2term(ll, quads), list2term(l, quads));
@@ -517,6 +522,12 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 	return r;
 	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 }
+
+prover::ruleid prover::ruleset::add(termid t) {
+	termset ts;
+	return add(t, ts);
+}
+
 
 //bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
 prover::term::term() : p(0), s(0), o(0) {}

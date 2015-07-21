@@ -42,6 +42,7 @@ public:
 		prover* p;
 		ruleset(prover* _p) : p(_p) {}
 		ruleid add(termid t, const termset& ts);
+		ruleid add(termid t);
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
 		size_t size()						{ return _head.size(); }

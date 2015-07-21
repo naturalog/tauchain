@@ -158,7 +158,7 @@ struct Marpa {
     map <rule, sym> rules;
     prover *prvr;
     string whitespace = L"";
-    const resid pcomma = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en"))];
+    const resid pcomma = dict[mkliteral(pstr(L","), 0, 0)];
     const pnode has_value = mkiri(pstr(L"http://idni.org/marpa#has_value"));
     const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
     const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
@@ -385,15 +385,7 @@ struct Marpa {
     }
 
 
-    pnode list2pnode(std::vector<pnode> pl)
-    {
-        std::list<pnode> l;
-        for (auto i:pl)
-            l.push_back(i);
-        return make_shared<node>(dict[prvr->get(prvr->list2term(l)).p]);
-    }
-
-    pnode parse(const string inp) {
+    prover::termid parse(const string inp) {
         if (!precomputed)
             check_int(marpa_g_precompute(g));
 
@@ -529,7 +521,7 @@ struct Marpa {
         //"valuator" loop. marpa tells us what rules with what child nodes or tokens were matched,
         //we build the value/parse/ast in the stack, bottom-up
 
-        map <int, pnode> stack;
+        map <int, prover::termid> stack;
         map <int, string> sexp;
 
         while (1) {
@@ -542,14 +534,14 @@ struct Marpa {
                     size_t token = marpa_v_token_value(v) - 1;
                     string token_value = string(toks[token].first, toks[token].second);
                     sexp[marpa_v_result(v)] = token_value;
-                    pnode xx;
+                    prover::termid xx;
                     if (terminals.find(symbol) != terminals.end()) {
-                        xx = mkbnode(jsonld_api::gen_bnode_id());
-                        prvr->addrules(make_shared<quad>(quad(xx, bnf_matches, make_shared<node>(dict[terminals[symbol]->thing]))));
-                        prvr->addrules(make_shared<quad>(quad(has_value, xx, mkliteral(pstr(token_value), pstr(L"XSD_STRING"), pstr(L"en")))));
+                        xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
+                        prvr->kb.add(prvr->make(bnf_matches, xx,  prvr->make(terminals[symbol]->thing)));
+                        prvr->kb.add(prvr->make(has_value, xx, prvr->make(mkliteral(pstr(token_value), 0, 0))));
                     }
                     else // it must be a literal
-                        xx = mkliteral(pstr(token_value), pstr(L"XSD_STRING"), pstr(L"en"));
+                        xx = prvr->make(mkliteral(pstr(token_value), 0, 0));
                     stack[marpa_v_result(v)] = xx;
                     break;
                 }
@@ -559,7 +551,7 @@ struct Marpa {
                     resid res = rule2resid(marpa_v_rule(v));
                     sexp_str += value(res) + L" ";
 
-                    std::vector <pnode> args;
+                    std::vector <prover::termid> args;
 
                     for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++) {
                         if (stack[i]) {
@@ -570,38 +562,32 @@ struct Marpa {
                     sexp[marpa_v_result(v)] = sexp_str + L") ";
 
 
-                    pnode xx;
+                    prover::termid xx;
                     // if its a sequence
                     if (check_int(marpa_g_sequence_min(g, marpa_v_rule(v))) != -1)
-                        xx = list2pnode(args);
+                        xx = prvr->list2term(args);
                     else {
-                        xx = mkbnode(jsonld_api::gen_bnode_id());
+                        xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
                         int rhs_item_index = 0;
                         for (auto arg: args) {
                             sym arg_sym = check_int(marpa_g_rule_rhs(g, marpa_v_rule(v), rhs_item_index));
-                            pnode arg_node;
 
-                            pnode pred = 0;
-
-                            if (literals.find(arg_sym) != literals.end()) { }
-                            else if (terminals.find(arg_sym) != terminals.end()) { }
-                            else {
-                                pred = make_shared<node>(dict[sym2resid(arg_sym)]);
+                            if (literals.find(arg_sym) == literals.end() &&
+                                (terminals.find(arg_sym) == terminals.end()))
+                            {
+                                prvr->kb.add(prvr->make(sym2resid(arg_sym), xx,  arg));
                             }
-
-                            if (pred)
-                                prvr->addrules(make_shared<quad>(quad(pred, xx, arg)));
 
 
                             std::wstringstream arg_pred;
                             arg_pred << L"arg" << rhs_item_index;
-                            pnode pred2 = mkliteral(pstr(arg_pred.str()), pstr(L"XSD_STRING"), pstr(L"en"));
 
-                            prvr->addrules(make_shared<quad>(quad(pred2, xx, arg)));
+                            prvr->kb.add(prvr->make(mkliteral(pstr(arg_pred.str()), 0, 0), xx, arg));
+                            rhs_item_index++;
                         }
                     }
 
-                    prvr->addrules(make_shared<quad>(quad(is_parse_of, xx, make_shared<node>(dict[res]))));
+                    prvr->kb.add(prvr->make(is_parse_of, xx, prvr->make(res)));
 
                     stack[marpa_v_result(v)] = xx;
 
@@ -658,13 +644,18 @@ int load_n3_cmd::operator()(const strings &args) {
     assert (xxxxx);
     auto xxxx = ask1(&prover1, xxxxx, xxxxxx);
     assert (xxxx);
-    pnode input = mkliteral(pstr(load_file(args[2])), pstr(L"XSD_STRING"), pstr(L"en"));
+    pnode input = mkliteral(pstr(load_file(args[2])), 0, 0);
     pnode parser = make_shared<node>(dict[xxxx]);
     assert(input);
     assert(parser);
     std::list<pnode> query {input, parser};
     prover prover2(prover1);
-    resid raw = ask1(&prover2, make_shared<node>(dict[marpa_parse_iri]), prover2.get(prover2.get(prover2.list2term(query)).s).p);
+
+    auto query_list = prover2.list2term(query);
+    auto list_resid = prover2.get(prover2.get(query_list).s).p;
+
+    resid raw = ask1(&prover2, make_shared<node>(dict[marpa_parse_iri]), list_resid);
+
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
     //...
