@@ -4,7 +4,7 @@
 { ?StepX :state ?S.  (?StepX ?CellY) :symbol ?D.  ?StepX :cursor ?CellY.  ?StepX :prime ?StepXP.  } => {?StepXP :state ?SP}.  
 { ?StepX :state ?S.  (?StepX ?CellY) :symbol ?D.  ?StepX :cursor ?CellY.  ?StateX :prime ?StateXP.  ?CellY :prime ?CellYP.  } => {?StepXP :cursor ?CellYP}.  
 { ?StepX :state ?S.  (?StepX ?CellY) :symbol ?D.  ?StepX :cursor ?CellY.  ?StepX :prime ?StepXP.  } => {(?StepXP ?CellY) :symbol ?DP}.
-#() a :accept.
+() a :accept.
 { (?Step ?Cell) :symbol ?Sym. ?Step :state ?State.  ?Step :cursor ?Cell. } => { (?Step ?Cell ?Sym ?State) a :accept.  } 
 { ?StepX :state :state0.  (?StepX ?CellY) :symbol :sym0.  ?StepX :cursor ?CellY.  } => { ?Step1 :prime ?Step2.  }.  
 { ?StepX :state :state0.  (?StepX ?CellY) :symbol :sym0.  ?StepX :cursor ?CellY.  } => { ?StateX :prime :state1.  }.  
