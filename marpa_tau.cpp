@@ -573,6 +573,7 @@ struct Marpa {
                     }
                     else {
                         xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
+                        //dout << L".xx: " << prvr->format(xx) << std::endl;
                         int rhs_item_index = 0;
                         for (auto arg: args) {
                             sym arg_sym = check_int(marpa_g_rule_rhs(g, marpa_v_rule(v), rhs_item_index));
@@ -593,7 +594,7 @@ struct Marpa {
                     }
 
                     prvr->kb.add(prvr->make(is_parse_of, xx, prvr->make(res)));
-
+                    //dout << L"xx: " << prvr->format(xx) << std::endl;
                     stack[marpa_v_result(v)] = xx;
 
                     break;
@@ -613,8 +614,11 @@ struct Marpa {
         marpa_o_unref(o);
         marpa_b_unref(b);
 
-        dout << sexp[0] << std::endl;
-        return stack[0];
+        dout << sexp[0] << std::endl<< std::endl;
+
+        prover::termid result = stack[0];
+        dout << L"result0: " << prvr->format(result) << std::endl;
+        return result;
     }
 
 
@@ -691,7 +695,10 @@ void *marpa_parser(prover *p, resid language, prover::proof *prf) {
 }
 
 prover::termid marpa_parse(void* marpa, string input) {
-    return ((Marpa *) marpa)->parse(input);
+    Marpa *m = (Marpa *)marpa;
+    prover::termid result = m->parse(input);
+    dout << L"result1: " << m->prvr->format(result) << std::endl;
+    return result;
 }
 
 

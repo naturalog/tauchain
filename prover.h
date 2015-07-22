@@ -106,6 +106,7 @@ public:
 	std::vector<termid> get_list(termid head, proof& p);
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
+	string format(termid id, bool json = false);
 private:
 
 	class termdb {
@@ -142,7 +143,7 @@ private:
 	bool consistency(const qdb& quads);
 
 	// formatters
-	string format(termid id, bool json = false);
+
 	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);

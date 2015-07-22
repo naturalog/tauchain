@@ -283,6 +283,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		string input = *dict[get(get(i1).s).p].value;
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
+		dout << L"result2: " << format(result) << std::endl;
 		p->s[get(t.s).p] = result;
 		r = 1;
 	}
