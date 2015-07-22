@@ -128,7 +128,7 @@ private:
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool euler_path(proof* p, termid t);
+	bool euler_path(proof* p, termid t, const std::deque<proof*>&);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
 	bool match(termid e, termid h);
 	termid quad2term(const quad& p, const qdb& quads);

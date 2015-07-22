@@ -82,14 +82,16 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	return r;
 }
 
-bool prover::euler_path(proof* p, termid t) {
-	proof* ep = p;
+bool prover::euler_path(proof* p, termid t, const std::deque<proof*>& queue) {
+	{proof* ep = p;
 	while ((ep = ep->prev))
-		if (!kb.head()[ep->rul] == !t &&
-			unify(kb.head()[ep->rul], ep->s, t, p->s, false))
-			break;
-	if (ep) { TRACE(dout<<"Euler path detected\n"); }
-	return ep;
+		if (unify(kb.head()[ep->rul], ep->s, t, p->s, false))
+			{ TRACE(dout<<"Euler path detected\n"); return true; }
+	}
+	for (auto ep : queue)
+		if (unify(kb.head()[ep->rul], ep->s, t, p->s, false))
+			{ TRACE(dout<<"Euler path detected\n"); return true; }
+	return false;
 }
 
 prover::termid prover::tmpvar() {
@@ -304,7 +306,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	++steps;
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size()) {
-		if (euler_path(p, kb.head()[p->rul])) return;
+		if (euler_path(p, kb.head()[p->rul], queue)) return;
 		termid t = kb.body()[p->rul][p->last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		if (builtin(t, p, queue) != -1) return;
