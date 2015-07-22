@@ -166,7 +166,7 @@ struct Marpa {
     const pnode rdfs_first = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
     const pnode bnf_matches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
     const pnode bnf_document = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#document"));
-    const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whitespace"));
+    const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace"));
     const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
     const pnode bnf_commaSeparatedListOf = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
 
@@ -224,8 +224,11 @@ struct Marpa {
         prvr = prvr_;
 
         resid whitespace_ = ask1(prvr, language, bnf_whitespace);
-        if (whitespace_)
+        if (whitespace_) {
             whitespace = value(whitespace_);
+            dout << L"whitespace:" << whitespace <<std::endl;
+
+        }
 
         resid root = ask1(prvr, language, bnf_document);
 
@@ -419,7 +422,7 @@ struct Marpa {
 
             boost::wsmatch what;
 
-            if ((whitespace.size()) && (regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous))) {
+            if (whitespace.size() && regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous)) {
                 if (what.size()) {
                     int llll = what[0].length();
                     dout << L"skipping " << llll << L" comment chars" << std::endl;
@@ -490,7 +493,9 @@ struct Marpa {
                     post += 1;
                 //post += 10;
                 dout << L"at line " << std::count(inp.begin(), pos, '\n') << L", char " << charnum << L":" << std::endl;
-                dout << string(pre, pos - 1) << L"<HERE>" << string(pos, post) << std::endl;
+                auto poss(pos);
+                if (poss != inp.begin()) poss--;
+                dout << string(pre, poss) << L"<HERE>" << string(pos, post) << std::endl;
 //                        dout << L"..\"" << string(pre, pos-1) << L"<HERE>" << string(pos, post) << L"\"..." << std::endl;
 
 
@@ -551,7 +556,7 @@ struct Marpa {
                     resid res = rule2resid(marpa_v_rule(v));
                     sexp_str += value(res) + L" ";
 
-                    std::vector <prover::termid> args;
+                    std::list <prover::termid> args;
 
                     for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++) {
                         if (stack[i]) {
@@ -561,11 +566,11 @@ struct Marpa {
                     }
                     sexp[marpa_v_result(v)] = sexp_str + L") ";
 
-
                     prover::termid xx;
                     // if its a sequence
-                    if (check_int(marpa_g_sequence_min(g, marpa_v_rule(v))) != -1)
-                        xx = prvr->list2term(args);
+                    if (check_int(marpa_g_sequence_min(g, marpa_v_rule(v))) != -1) {
+                        xx = prvr->list2term_simple(args);
+                    }
                     else {
                         xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
                         int rhs_item_index = 0;
@@ -642,22 +647,39 @@ int load_n3_cmd::operator()(const strings &args) {
     assert (xxxxxx);
     auto xxxxx = make_shared<node>(dict[marpa_parser_iri]);
     assert (xxxxx);
-    auto xxxx = ask1(&prover1, xxxxx, xxxxxx);
-    assert (xxxx);
-    pnode input = mkliteral(pstr(load_file(args[2])), 0, 0);
-    pnode parser = make_shared<node>(dict[xxxx]);
-    assert(input);
-    assert(parser);
-    std::list<pnode> query {input, parser};
+    auto marpa = ask1(&prover1, xxxxx, xxxxxx);
+    assert (marpa);
+
     prover prover2(prover1);
 
-    auto query_list = prover2.list2term(query);
-    auto list_resid = prover2.get(prover2.get(query_list).s).p;
+    pnode input = mkliteral(pstr(load_file(args[2])), 0, 0);
+    assert(input);
 
-    resid raw = ask1(&prover2, make_shared<node>(dict[marpa_parse_iri]), list_resid);
+    std::list<prover::termid> ql {prover2.make(input), prover2.make(marpa)};
+    auto query_list = prover2.list2term_simple(ql);
+    prover::termid s_var = prover2.tmpvar();
+
+    prover::termset query;
+    query.emplace_back(prover2.make(marpa_parse_iri, s_var, query_list));
+
+    prover2(query);
+
+    prover::termid raw = 0;
+
+    for (auto x : prover2.substs) {
+        prover::subst::iterator binding_it = x.find(prover2.get(s_var).p);
+        if (binding_it != x.end()) {
+            raw = (*binding_it).second;
+            break;
+        }
+    }
 
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
+
+    //prover->prints(x); dout << std::endl;
+
+
     //...
     return 0;
 }
@@ -668,7 +690,7 @@ void *marpa_parser(prover *p, resid language, prover::proof *prf) {
     return (void*)new Marpa(pp, language, prf);
 }
 
-pnode marpa_parse(void* marpa, string input) {
+prover::termid marpa_parse(void* marpa, string input) {
     return ((Marpa *) marpa)->parse(input);
 }
 

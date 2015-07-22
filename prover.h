@@ -105,7 +105,7 @@ public:
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
 	termid list2term(std::list<pnode>& l, const qdb& quads);
-
+	termid list2term_simple(std::list<termid>& l);
 private:
 
 	class termdb {

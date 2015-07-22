@@ -280,12 +280,10 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
 		//auto parser = dict[get(get(i1).s).p].value;
 		//if (t1->p != Dot) { TRACE(dout<<std::endl<<"p == " << *dict[t1->p].value<<std::endl);  return -1;}
-		TRACE(dout<<std::endl<<format(i1)<<std::endl);
-		auto parser = *dict[get(t1->s).p].value;
-
-		//auto text = dict[get(get(get(t.o).o).s).p].value;
-		//pnode result = marpa_parse((void*)std::stol(parser), L"SSS");//*text);
-		//p->s[get(t.s).p] = make(dict.set(result), 0, 0);
+		string input = *dict[get(get(i1).s).p].value;
+		string marpa = *dict[get(get(get(i1).o).s).p].value;
+		termid result = marpa_parse((void*)std::stol(marpa), input);
+		p->s[get(t.s).p] = result;
 		r = 1;
 	}
 	#endif
@@ -341,6 +339,20 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 //	if (del) delete p;
 }
 
+prover::termid prover::list2term_simple(std::list<termid>& l) {
+	setproc(L"list2term_simple");
+	termid t;
+	if (l.empty())
+		t = make(Dot, 0, 0);
+	else {
+		termid x = l.front();
+		l.pop_front();
+		t = make(Dot, x, list2term_simple(l));
+	}
+	TRACE(dout << format(t) << endl);
+	return t;
+}
+
 prover::termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 	setproc(L"list2term");
 	termid t;
@@ -350,10 +362,10 @@ prover::termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 		l.pop_front();
 //		TRACE(dout << x->tostring() << endl);
 		auto it = quads.second.find(*x->value);
-		//its not a list
+		//item is not a list
 		if (it == quads.second.end())
 			t = make(Dot, make(dict.set(x), 0, 0), list2term(l, quads));
-		//its a list
+		//item is a list
 		else {
 			auto ll = it->second;
 			t = make(Dot, list2term(ll, quads), list2term(l, quads));

@@ -299,7 +299,7 @@ _:li131 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:li81 .
 <http://www.w3.org/2000/10/swap/grammar/n3#langcode> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "[a-z]+(-[a-z0-9]+)*" .
 <http://www.w3.org/2000/10/swap/grammar/n3#language> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/10/swap/grammar/bnf#Language> .
 <http://www.w3.org/2000/10/swap/grammar/n3#language> <http://www.w3.org/2000/10/swap/grammar/bnf#document> <http://www.w3.org/2000/10/swap/grammar/n3#document> .
-<http://www.w3.org/2000/10/swap/grammar/n3#language> <http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace> "@@@@@" .
+<http://www.w3.org/2000/10/swap/grammar/n3#language> <http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace> "(?m)#(.)*?$" .
 <http://www.w3.org/2000/10/swap/grammar/n3#literal> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li128 .
 <http://www.w3.org/2000/10/swap/grammar/n3#numericliteral> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li121 .
 <http://www.w3.org/2000/10/swap/grammar/n3#object> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:li72 .

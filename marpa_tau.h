@@ -8,5 +8,5 @@ public:
 };
 
 void* marpa_parser(prover*, resid, prover::proof*);
-pnode marpa_parse(void*, string);
+prover::termid marpa_parse(void*, string);
 

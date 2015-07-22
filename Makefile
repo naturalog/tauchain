@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-c -std=c++11 -Wextra -ggdb -DDEBUG -I/usr/local/include
+CXXFLAGS=-c -std=c++11 -Wextra -g -ggdb -DDEBUG -I/usr/local/include
 #CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O2 -I/usr/local/include
 LDFLAGS= -L/usr/local/lib -ldl
 #OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
