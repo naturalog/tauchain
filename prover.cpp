@@ -281,8 +281,8 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		string fn = *dict[get(t.o).p].value;
 		std::string fnn = ws(fn);
 	    std::ifstream f(fnn);
-    	if (f.is_open())
-    	{
+	    if (f.is_open())
+		{
 			p->s[get(t.s).p] = make(mkliteral(pstr(load_file(f)), 0, 0));
 			r = 1;
 		}
@@ -292,7 +292,10 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
 		//auto parser = dict[get(get(i1).s).p].value;
 		//if (t1->p != Dot) { TRACE(dout<<std::endl<<"p == " << *dict[t1->p].value<<std::endl);  return -1;}
-		string input = *dict[get(get(i1).s).p].value;
+		term xx = get(i1);
+		term xxx = get(xx.s);
+		//string input = *dict[get(get(i1).s).p].value;
+		string input = *dict[xxx.p].value;
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
 		dout << L"result2: " << format(result) << std::endl;
@@ -523,7 +526,8 @@ void prover::operator()(termset& goal, const subst* s) {
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) const {
-	if (!id || id > (termid)_terms.size()) throw std::runtime_error("invalid term id passed to prover::get");
+	if (!id || id > (termid)_terms.size())
+		throw std::runtime_error("invalid term id passed to prover::get");
 	return _terms[id - 1]; 
 }
 

@@ -152,12 +152,13 @@ typedef std::shared_ptr <terminal> pterminal;
 struct Marpa {
     Marpa_Grammar g;
     bool precomputed = false;
+    // everything in the grammar is either a terminal, defined by a regex, a "literal" - a simple string, or a rule
     map <sym, pterminal> terminals;
     map <sym, string> literals;
-    map <resid, sym> done;
+    map <resid, sym> done;//tracks rules and terminals..i might rework this
     map <rule, sym> rules;
-    prover *prvr;
-    string whitespace = L"";
+    prover *prvr, *prvr2;/*prvr is the one we are called from. we will use prvr2 for querying the grammar, so that prvr doesnt get messed up*/
+    string whitespace = L""; // i use this for comment regex, comments are processed kinda specially so they dont have to pollute the grammar
     const resid pcomma = dict[mkliteral(pstr(L","), 0, 0)];
     const pnode has_value = mkiri(pstr(L"http://idni.org/marpa#has_value"));
     const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
@@ -203,11 +204,16 @@ struct Marpa {
         return sss.str();
     }
 
+    string value(resid val) {
+        return *dict[val].value;
+    }
+
     ~Marpa() {
         marpa_g_unref(g);
     }
 
     Marpa(prover *prvr_, resid language, prover::proof *prf) {
+        /*init marpa*/
         if (marpa_check_version(MARPA_MAJOR_VERSION, MARPA_MINOR_VERSION, MARPA_MICRO_VERSION) != MARPA_ERR_NONE)
             throw std::runtime_error("marpa version...");
         Marpa_Config marpa_config;
@@ -222,42 +228,42 @@ struct Marpa {
             throw std::runtime_error("marpa_g_force_valued failed?!?!?");
 
         prvr = prvr_;
-
-        resid whitespace_ = ask1(prvr, language, bnf_whitespace);
+        prvr2 = new prover(*prvr);
+        /*bnf:whitespace is a property of bnf:language*/
+        resid whitespace_ = ask1(prvr2, language, bnf_whitespace);
         if (whitespace_) {
             whitespace = value(whitespace_);
             dout << L"whitespace:" << whitespace <<std::endl;
-
         }
-
-        resid root = ask1(prvr, language, bnf_document);
-
-        sym start = add(prvr, root, prf);
-
+        /*so is bnf:document, the root rule*/
+        resid root = ask1(prvr2, language, bnf_document);
+        sym start = add(root, prf);
         start_symbol_set(start);
-    }
-
-    string value(resid val) {
-        return *dict[val].value;
+        delete prvr2;
     }
 
     //create marpa symbols and rules from grammar description in rdf
-    sym add(prover *prvr, resid thing, prover::proof *prf) {
+    sym add(resid thing, prover::proof *prf) {
+
+		//what we are adding
         string thingv = value(thing);
         dout << "thingv:" << thingv << std::endl;
 
+		//is it a rule or terminal thats been added or we started adding it already?
         if (done.find(thing) != done.end())
             return done[thing];
 
+		//is it a literal?
         if (dict[thing]._type == node::LITERAL) {
             //dout << "itsa str"<<std::endl;
             for (auto t: literals)
-                if (t.second == thingv)
+                if (t.second == thingv) // is it a done literal?
                     return t.first;
 
             sym symbol = symbol_new();
             //dout << "adding " << thingv << std::endl;
 
+			//we add it to the literals table and are done with it.
             literals[symbol] = thingv;
             return symbol;
         }
@@ -265,31 +271,31 @@ struct Marpa {
         //dout << "adding " << thingv << std::endl;
         sym symbol = symbol_new_resid(thing);
 
+		// is it a...
         resid bind;
-        if ((bind = ask1(prvr, thing, bnf_matches))) {
+        if ((bind = ask1(prvr2, thing, bnf_matches))) {
             //dout << "terminal: " << thingv << std::endl;
             terminals[symbol] = pterminal(new terminal(thing, thingv, value(bind)));
             return symbol;
         }
 
-        // mustBeOneSequence is a list of lists
-
         resid ll;
-        if ((ll = ask1(prvr, thing, bnf_mustBeOneSequence))) {
-            std::vector <resid> lll = get_list(prvr, ll, *prf);
+        if ((ll = ask1(prvr2, thing, bnf_mustBeOneSequence))) {
+			// mustBeOneSequence is a list of lists
+            std::vector <resid> lll = get_list(prvr2, ll, *prf);
             if (!ll)
                 throw wruntime_error(L"mustBeOneSequence empty");
 
             for (auto l:lll) {
                 syms rhs;
-                std::vector <resid> seq = get_list(prvr, l, *prf);
+                std::vector <resid> seq = get_list(prvr2, l, *prf);
                 for (auto rhs_item: seq)
-                    rhs.push_back(add(prvr, rhs_item, prf));
+                    rhs.push_back(add(rhs_item, prf));
                 rule_new(symbol, rhs);
             }
         }
-        else if ((ll = ask1(prvr, thing, bnf_commaSeparatedListOf))) {
-            seq_new(symbol, add(prvr, ll, prf), add(prvr, pcomma, prf), 0, MARPA_PROPER_SEPARATION);
+        else if ((ll = ask1(prvr2, thing, bnf_commaSeparatedListOf))) {
+            seq_new(symbol, add(ll, prf), add(pcomma, prf), 0, MARPA_PROPER_SEPARATION);
         }
         else if (thingv == L"http://www.w3.org/2000/10/swap/grammar/bnf#eof") { }//so what?
         else
@@ -586,7 +592,7 @@ struct Marpa {
 
 
                             std::wstringstream arg_pred;
-                            arg_pred << L"arg" << rhs_item_index;
+                            arg_pred << L"http://idni.org/marpa#arg" << rhs_item_index;
 
                             prvr->kb.add(prvr->make(mkliteral(pstr(arg_pred.str()), 0, 0), xx, arg));
                             rhs_item_index++;
@@ -625,17 +631,13 @@ struct Marpa {
 };
 
 
+
+
 std::string load_n3_cmd::desc() const { return "load n3"; }
 
 std::string load_n3_cmd::help() const {
     stringstream ss("Hilfe! Hilfe!:");
     return ss.str();
-}
-
-
-string load_file(std::ifstream &f) {
-    std::string str((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-    return ws(str);
 }
 
 int load_n3_cmd::operator()(const strings &args) {
@@ -699,27 +701,13 @@ prover::termid marpa_parse(void* marpa, string input) {
     return result;
 }
 
-
-
-/*
----------------------
-
-
-?M :marpa_for_grammar http://www.w3.org/2000/10/swap/grammar/n3#language; ?X :parsed (?M ?FN).
-
-
-->
-
-
-?X a n3:document
-?X n3:declarations [ ("@base" "xxx")  ("@prefix" "xxx" "yyy")  ("@keywords" ("aaa" "bbb" "ccc")) ]
-?X n3:universals
-
-?X n3:statements [ 
+string load_file(std::ifstream &f) {
+    std::string str((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    return ws(str);
+}
 
 
 
-*/
 
 
 /*
