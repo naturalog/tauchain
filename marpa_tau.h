@@ -9,4 +9,4 @@ public:
 
 void* marpa_parser(prover*, resid, prover::proof*);
 prover::termid marpa_parse(void*, string);
-
+string load_file(std::ifstream &);

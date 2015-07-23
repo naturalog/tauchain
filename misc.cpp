@@ -9,10 +9,11 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-resid marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
 #ifdef with_marpa
+	file_contents_iri = set(mkiri(pstr(L"http://idni.org/marpa#file_contents")));
 	marpa_parser_iri = set(mkiri(pstr(L"http://idni.org/marpa#parser")));
 	marpa_parse_iri = set(mkiri(pstr(L"http://idni.org/marpa#parse")));
 #endif

@@ -633,17 +633,14 @@ std::string load_n3_cmd::help() const {
 }
 
 
-string load_file(string fname) {
-    std::ifstream t(ws(fname));
-    if (!t.is_open())
-        throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
-
-    std::string str((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+string load_file(std::ifstream &f) {
+    std::string str((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     return ws(str);
 }
 
 int load_n3_cmd::operator()(const strings &args) {
     prover prover1(*load_quads(L"n3-grammar.nq"));
+
     assert (marpa_parser_iri);
     auto xxxxxxx = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"));
     assert (xxxxxxx);
@@ -654,24 +651,26 @@ int load_n3_cmd::operator()(const strings &args) {
     auto marpa = ask1(&prover1, xxxxx, xxxxxx);
     assert (marpa);
 
-    prover prover2(prover1);
+    std::ifstream f(ws(args[2]));
+    if (!f.is_open())
+        throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
 
-    pnode input = mkliteral(pstr(load_file(args[2])), 0, 0);
+    pnode input = mkliteral(pstr(load_file(f)), 0, 0);
     assert(input);
 
-    std::list<prover::termid> ql {prover2.make(input), prover2.make(marpa)};
-    auto query_list = prover2.list2term_simple(ql);
-    prover::termid s_var = prover2.tmpvar();
+    std::list<prover::termid> ql {prover1.make(input), prover1.make(marpa)};
+    auto query_list = prover1.list2term_simple(ql);
+    prover::termid s_var = prover1.tmpvar();
 
     prover::termset query;
-    query.emplace_back(prover2.make(marpa_parse_iri, s_var, query_list));
+    query.emplace_back(prover1.make(marpa_parse_iri, s_var, query_list));
 
-    prover2(query);
+    prover1(query);
 
     prover::termid raw = 0;
 
-    for (auto x : prover2.substs) {
-        prover::subst::iterator binding_it = x.find(prover2.get(s_var).p);
+    for (auto x : prover1.substs) {
+        prover::subst::iterator binding_it = x.find(prover1.get(s_var).p);
         if (binding_it != x.end()) {
             raw = (*binding_it).second;
             break;
@@ -690,8 +689,7 @@ int load_n3_cmd::operator()(const strings &args) {
 
 
 void *marpa_parser(prover *p, resid language, prover::proof *prf) {
-    prover *pp = new prover(*p);
-    return (void*)new Marpa(pp, language, prf);
+    return (void*)new Marpa(p, language, prf);
 }
 
 prover::termid marpa_parse(void* marpa, string input) {
