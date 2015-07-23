@@ -89,9 +89,9 @@ bool prover::euler_path(proof* p, termid t, const std::deque<proof*>& queue) {
 		if (ep->rul == t || unify(kb.head()[ep->rul], ep->s, t, p->s, false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	}
-	for (auto ep : queue)
-		if (ep != p && (ep->rul == t || unify(kb.head()[ep->rul], ep->s, t, p->s, false)))
-			{ TRACE(dout<<"Euler path detected\n"); return true; }
+//	for (auto ep : queue)
+//		if (ep != p && (ep->rul == t || unify(kb.head()[ep->rul], ep->s, t, p->s, false)))
+//			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return false;
 }
 
