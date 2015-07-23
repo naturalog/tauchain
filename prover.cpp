@@ -15,6 +15,7 @@
 #include <dlfcn.h>
 #ifdef with_marpa
 #include "marpa_tau.h"
+#include <fstream>
 #endif
 
 using namespace boost::algorithm;
@@ -274,6 +275,17 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 		p->s[get(t.s).p] = make(dict.set(n), 0, 0);
 		r = 1;
+	}
+	else if (t.p == file_contents_iri) {
+		if (get(t.s).p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
+		string fn = *dict[get(t.o).p].value;
+		std::string fnn = ws(fn);
+	    std::ifstream f(fnn);
+    	if (f.is_open())
+    	{
+			p->s[get(t.s).p] = make(mkliteral(pstr(load_file(f)), 0, 0));
+			r = 1;
+		}
 	}
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */

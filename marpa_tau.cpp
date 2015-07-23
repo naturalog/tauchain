@@ -633,12 +633,8 @@ std::string load_n3_cmd::help() const {
 }
 
 
-string load_file(string fname) {
-    std::ifstream t(ws(fname));
-    if (!t.is_open())
-        throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
-
-    std::string str((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+string load_file(std::ifstream &f) {
+    std::string str((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     return ws(str);
 }
 
@@ -655,7 +651,11 @@ int load_n3_cmd::operator()(const strings &args) {
     auto marpa = ask1(&prover1, xxxxx, xxxxxx);
     assert (marpa);
 
-    pnode input = mkliteral(pstr(load_file(args[2])), 0, 0);
+    std::ifstream f(ws(args[2]));
+    if (!f.is_open())
+        throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
+
+    pnode input = mkliteral(pstr(load_file(f)), 0, 0);
     assert(input);
 
     std::list<prover::termid> ql {prover1.make(input), prover1.make(marpa)};
