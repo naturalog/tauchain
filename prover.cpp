@@ -342,14 +342,12 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
-		ground g = p->g;
-		if (!kb.body()[p->rul].empty())
-			g.emplace_back(p->rul, p->s);
 		proof* r = new proof(*p->prev);
-		r->g = g;
+		r->g = p->g;
+		if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
-		step(r, queue);
+		queue.push_back(r);
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
 //	if (del) delete p;

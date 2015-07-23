@@ -341,9 +341,9 @@ _:L100C17 <http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf> <htt
 
 fin.
 
-?I <http://idni.org/marpa#file_contents> "short.natural3" .
+#?I <http://idni.org/marpa#file_contents> "short.natural3" .
 ?M <http://idni.org/marpa#parser> <http://www.w3.org/2000/10/swap/grammar/n3#language> .
-?O <http://idni.org/marpa#parse> (?I ?M) .
-?O <http://idni.org/marpa#arg0> ?A0 .
+#?O <http://idni.org/marpa#parse> (?I ?M) .
+#?O <http://idni.org/marpa#arg0> ?A0 .
 
 fin.

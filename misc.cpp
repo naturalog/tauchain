@@ -244,18 +244,15 @@ string prover::formatkb(bool json) {
 string prover::formatg(const ground& g, bool json) {
 	std::wstringstream ss;
 	for (auto x : g) {
-		ss << format(x.first), printr_substs(x.first, x.second);
+		ss << formatr(x.first) << tab << formats(x.second);
 		ss << endl;
 	}
 	return ss.str();
 }
 
 void prover::printg(const ground& g) {
-	for (auto x : g) {
-		dout << indent();
-		printr_substs(x.first, x.second);
-		dout << endl;
-	}
+	for (auto x : g) 
+		dout << indent() << formatr(x.first) << tab << formats(x.second) << endl;
 }
 
 pobj prover::term::json(const prover& pr) const {
