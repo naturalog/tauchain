@@ -33,8 +33,8 @@ void bidict::init() {
 	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
 	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
 	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
-	//False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
-	False = set(mkiri(pstr(L"false")));
+	False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
+	//False = set(mkiri(pstr(L"false")));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
