@@ -25,7 +25,8 @@ int _indent = 0;
 boost::container::map<subid, subst> prover::subs;
 
 subid sub(const subst& s) {
-	subid r = prover::subs.size() + 1;
+	static subid id = 1;
+	subid r = id++;
 	prover::subs[r] = s;
 	return r;
 }
@@ -328,6 +329,20 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	++steps;
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size()) {
+//		var src = 0
+//		for (var k = 0; k < cases[t.pred].length; k++) {
+//			var rl = cases[t.pred][k]
+//			src++
+//			var g = aCopy(c.ground)
+//			if (rl.body.length == 0) g.push({src:rl, env:{}})
+//			var r = {rule:rl, src:src, ind:0, parent:c, env:{}, ground:g}
+//			if (unify(t, c.env, rl.head, r.env, true)) {
+//				var ep = c
+//				while (ep = ep.parent) 
+//					if (ep.src == c.src && unify(ep.rule.head, ep.env, c.rule.head, c.env, false)) break
+//				if (ep == null) queue.unshift(r)
+//			}
+//		}
 		if (euler_path(p, kb.head()[p->rul], queue)) return;
 		termid t = kb.body()[p->rul][p->last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
@@ -338,11 +353,16 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 				proof* r = new proof(rl, 0, p, s, p->g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, sub());
 				queue.push_front(r);
-			} else subs.erase(s);
+			}// else subs.erase(s);
 		}
 	}
 	else if (!p->prev) {
 		for (auto r : kb.body()[p->rul]) {
+//			for (var i = 0; i < c.rule.body.length; i++) {
+//				var t = evaluate(c.rule.body[i], c.env)
+//				if (typeof(evidence[t.pred]) == 'undefined') evidence[t.pred] = []
+//				evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
+//			}
 			substs.push_back(subs[p->s]); // marpa hack
 			termid t = evaluate(r, p->s);
 			if (!t || hasvar(t)) continue;
@@ -350,6 +370,11 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
+//		if (c.rule.body.length != 0) g.push({src:c.rule, env:c.env})
+//		var r = {rule:{head:c.parent.rule.head, body:c.parent.rule.body}, src:c.parent.src, ind:c.parent.ind, parent:c.parent.parent != null ? new copy(c.parent.parent) : null, env:new copy(c.parent.env), ground:g}
+//		unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true)
+//		r.ind++
+//		queue.push(r)
 		proof* r = new proof(*p->prev);
 		r->g = p->g;
 		r->s = sub(p->prev->s);
