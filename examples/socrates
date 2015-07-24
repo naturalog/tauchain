@@ -1,7 +1,7 @@
-:socrates :a :man .
-{ ?x :a :man } => { ?x :a :mortal } .
+:socrates a :man .
+{ ?x a :man } => { ?x a :mortal } .
 fin.
-?y :a :mortal .
-?z :a :man.
+?Y a :mortal .
+?z a :man.
 fin.
 

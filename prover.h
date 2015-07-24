@@ -100,7 +100,7 @@ public:
 		ground g;
 		proof() : rul(0), prev(0) {}
 		proof(ruleid r, uint l = 0, proof* p = 0, const subid& _s = sub(), const ground& _g = ground() ) 
-			: rul(r), last(l), prev(p), s(_s), g(_g) {}
+			: rul(r), last(l), prev(make_shared<proof>(*p)), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev ? make_shared<proof>(*p.prev) : 0), s(p.s), g(p.g) {}
 	};
 
