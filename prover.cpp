@@ -108,13 +108,13 @@ termid prover::tmpvar() {
 	static int last = 1;
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
-/*
+
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
-	(*this)( ts , &p.s);
+	(*this)( ts, p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
@@ -131,7 +131,7 @@ termid prover::list_first(termid cons, proof& p) {
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
-	(*this)( ts , &p.s);
+	(*this)( ts , p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
@@ -174,7 +174,7 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 	TRACE(dout<<" returned " << r.size() << " items: "; for (auto n : r) dout<<format(n)<<' '; dout << std::endl);
 	return r;
 }
-*/
+
 void* testfunc(void* p) {
 	derr <<std::endl<< "***** Test func called ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());
@@ -451,7 +451,7 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-void prover::operator()(const qdb& query){//, const subst* s) {
+void prover::operator()(const qdb& query, subid s) {
 	termset goal;
 	termid t;
 	for ( auto q : merge(query) ) 
@@ -459,7 +459,7 @@ void prover::operator()(const qdb& query){//, const subst* s) {
 			dict[q->pred] != rdfrest &&
 			(t = quad2term( *q, query )) )
 			goal.push_back( t );
-	return (*this)(goal);//, s);
+	return (*this)(goal, s);
 }
 
 prover::~prover() { }
@@ -526,7 +526,7 @@ bool prover::consistency(const qdb& quads) {
 }
 
 #include <chrono>
-void prover::operator()(termset& goal){//, const subst* s) {
+void prover::operator()(termset& goal, subid s) {
 //	setproc(L"prover()");
 	proof* p = new proof;
 	std::deque<proof*> queue;
@@ -534,7 +534,7 @@ void prover::operator()(termset& goal){//, const subst* s) {
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
-//	if (s) p->s = *s;
+	if (s) p->s = s;
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
