@@ -92,12 +92,13 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	return r;
 }
 
-bool prover::euler_path(proof* p, termid t, const std::deque<proof*>& queue) {
-	{proof* ep = p;
+bool prover::euler_path(proof* p, const std::deque<proof*>& queue) {
+	proof* ep = p;
+	termid t = kb.head()[p->rul];
 	while ((ep = &*ep->prev))
-		if (ep->rul == t || unify(kb.head()[ep->rul], subs[ep->s], t, subs[p->s], false))
+		if (ep->rul == p->rul && unify(kb.head()[ep->rul], subs[ep->s], t, subs[p->s], false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
-	}
+	
 //	for (auto ep : queue)
 //		if (ep != p && (ep->rul == t || unify(kb.head()[ep->rul], ep->s, t, p->s, false)))
 //			{ TRACE(dout<<"Euler path detected\n"); return true; }
@@ -343,7 +344,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 //				if (ep == null) queue.unshift(r)
 //			}
 //		}
-		if (euler_path(p, kb.head()[p->rul], queue)) return;
+		if (euler_path(p, queue)) return;
 		termid t = kb.body()[p->rul][p->last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		if (builtin(t, p, queue) != -1) return;
@@ -352,6 +353,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
 				proof* r = new proof(rl, 0, p, s, p->g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, sub());
+//				if (!euler_path(p, kb.head()[p->rul], queue))
 				queue.push_front(r);
 			}// else subs.erase(s);
 		}
@@ -472,8 +474,6 @@ void prover::addrules(pquad q, qdb& quads) {
 	//if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
 	TRACE(dout<<"called with " << q->tostring()<<endl);
-	if ((t = quad2term(*q, quads))) 
-		kb.add(t, termset());
 	if (p == implication) {
 		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
 		for ( pquad y : *quads.first.at ( o ) ) {
@@ -486,7 +486,7 @@ void prover::addrules(pquad q, qdb& quads) {
 					ts.push_back( t );
 			if ((t = quad2term(*y, quads))) kb.add(t, ts);
 		}
-	}
+	} else if ((t = quad2term(*q, quads))) kb.add(t, termset());
 }
 
 prover::prover ( qdb qkb, bool check_consistency ) : /*quads(qkb),*/ kb(this) {
@@ -545,7 +545,8 @@ void prover::operator()(termset& goal, subid s) {
 		proof* q = queue.back();
 		queue.pop_back();
 		step(q, queue);
-	} while (!queue.empty());
+		if (steps % 1000 == 0) TRACE(dout << "step: " << steps << endl);
+	} while (!queue.empty() && steps < 1e+6);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);

@@ -135,7 +135,7 @@ private:
 	inline bool unify(termid _s, subid ssub, termid _d, subid dsub, bool f) {
 		return unify(_s, subs[ssub], _d, subs[dsub], f);
 	}
-	bool euler_path(proof* p, termid t, const std::deque<proof*>&);
+	bool euler_path(proof* p, const std::deque<proof*>&);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
 	bool match(termid e, termid h);
 	termid quad2term(const quad& p, const qdb& quads);
