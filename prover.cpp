@@ -458,8 +458,8 @@ void prover::operator()(const qdb& query){//, const subst* s) {
 		if (	dict[q->pred] != rdffirst && 
 			dict[q->pred] != rdfrest &&
 			(t = quad2term( *q, query )) )
-	//		goal.push_back( t );
-			(*this)(t/*goal*/);//, s);
+			goal.push_back( t );
+	return (*this)(goal);//, s);
 }
 
 prover::~prover() { }
@@ -503,13 +503,13 @@ bool prover::consistency(const qdb& quads) {
 //	prover p(quads, false);
 	prover p(*this);
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
-//	termset g;
-//	g.push_back(t);
-	p(t/*g*/);
+	termset g;
+	g.push_back(t);
+	p(g);
 	auto ee = p.e;
 	for (auto x : ee) for (auto y : x.second) {
 		prover q(*this);
-//		g.clear();
+		g.clear();
 //		p.e.clear();
 		string s = *dict[p.get(p.get(y.first).s).p].value;
 		if (s == L"GND") continue;
@@ -526,13 +526,12 @@ bool prover::consistency(const qdb& quads) {
 }
 
 #include <chrono>
-void prover::operator()(termid& goal){//, const subst* s) {
+void prover::operator()(termset& goal){//, const subst* s) {
 //	setproc(L"prover()");
 	proof* p = new proof;
 	std::deque<proof*> queue;
 //	kb.mark();
-	termset ts; ts.push_back(goal);
-	p->rul = kb.add(0, ts);
+	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
 //	if (s) p->s = *s;
@@ -550,7 +549,7 @@ void prover::operator()(termid& goal){//, const subst* s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
+	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 //	kb.revert();
 //	return results();
 }
