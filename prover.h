@@ -16,24 +16,25 @@
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/containers/list.hpp>
 
+typedef u64 subid;
+typedef u64 termid;
+typedef boost::container::map<resid, termid> subst;
+subid sub(const subst& s = subst());
+
 class prover {
 public:
-	typedef u64 termid;
 
 	class term {
 	public:
 		term();
 		term(resid _p, termid _s, termid _o);
-//		term(const term& t);
-//		term& operator=(const term& t);
 		resid p;
 		termid s, o;
-//		bool isstr() const;
 		pobj json(const prover&) const;
 	};
 	typedef u64 ruleid;
 	typedef boost::container::vector<termid> termset;
-	typedef boost::container::map<resid, termid> subst;
+	static boost::container::map<subid, subst> subs;
 	class ruleset {
 		termset _head;
 		boost::container::vector<termset> _body;
@@ -70,13 +71,13 @@ public:
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
 	prover ( const prover& p );
-	void operator()(termset& goal, const subst* s = 0);
-	void operator()(const qdb& goal, const subst* s = 0);
+	void operator()(termset& goal/*, const subst* s = 0*/);
+	void operator()(const qdb& goal/*, const subst* s = 0*/);
 	const term& get(termid) const;
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
-	typedef boost::container::list<std::pair<ruleid, subst>> ground;
+	typedef boost::container::list<std::pair<ruleid, subid>> ground;
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
@@ -89,15 +90,16 @@ public:
 	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
+	void prints(subid s) { prints(subs[s]); }
 
 	struct proof {
 		ruleid rul;
 		uint last;
 		proof *prev;
-		subst s;
+		subid s;
 		ground g;
 		proof() : rul(0), prev(0) {}
-		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
+		proof(ruleid r, uint l = 0, proof* p = 0, const subid& _s = sub(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(p), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
 	};
@@ -128,7 +130,11 @@ private:
 	void step (proof*, std::deque<proof*>&, bool del = true);
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);
+	inline termid evaluate(termid id, subid s) { return evaluate(id, subs[s]); }
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	inline bool unify(termid _s, subid ssub, termid _d, subid dsub, bool f) {
+		return unify(_s, subs[ssub], _d, subs[dsub], f);
+	}
 	bool euler_path(proof* p, termid t, const std::deque<proof*>&);
 	int builtin(termid id, proof* p, std::deque<proof*>& queue);
 	bool match(termid e, termid h);
@@ -136,8 +142,8 @@ private:
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
 	bool kbowner, goalowner;
-	string predstr(prover::termid t);
-	string preddt(prover::termid t);
+	string predstr(termid t);
+	string preddt(termid t);
 	string formatg(const ground& g, bool json = false);
 	bool islist(termid);
 	bool consistency(const qdb& quads);
@@ -151,6 +157,7 @@ private:
 	string formatkb(bool json = false);
 	void printp(proof* p);
 	string formats(const subst& s, bool json = false);
+	string formats(subid& s, bool json = false) { return formats(subs[s], json); }
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);
 	void printr_substs(ruleid r, const subst& s);

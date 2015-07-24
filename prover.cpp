@@ -21,7 +21,15 @@
 using namespace boost::algorithm;
 int _indent = 0;
 
-const uint max_terms = 1024 * 1024;
+//const uint max_terms = 1024 * 1024;
+boost::container::map<subid, subst> prover::subs;
+
+subid sub(const subst& s) {
+	subid r = prover::subs.size();
+	prover::subs[r] = s;
+	return r;
+}
+subid sub(subid s) { return sub(prover::subs[s]); }
 
 bool prover::hasvar(termid id) {
 	const term p = get(id);
@@ -31,7 +39,7 @@ bool prover::hasvar(termid id) {
 	return hasvar(p.s) || hasvar(p.o);
 }
 
-prover::termid prover::evaluate(termid id, const subst& s) {
+termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
@@ -86,7 +94,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 bool prover::euler_path(proof* p, termid t, const std::deque<proof*>& queue) {
 	{proof* ep = p;
 	while ((ep = ep->prev))
-		if (ep->rul == t || unify(kb.head()[ep->rul], ep->s, t, p->s, false))
+		if (ep->rul == t || unify(kb.head()[ep->rul], subs[ep->s], t, subs[p->s], false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	}
 //	for (auto ep : queue)
@@ -95,12 +103,12 @@ bool prover::euler_path(proof* p, termid t, const std::deque<proof*>& queue) {
 	return false;
 }
 
-prover::termid prover::tmpvar() {
+termid prover::tmpvar() {
 	static int last = 1;
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
-
-prover::termid prover::list_next(prover::termid cons, proof& p) {
+/*
+termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
@@ -117,7 +125,7 @@ prover::termid prover::list_next(prover::termid cons, proof& p) {
 	return r;
 }
 
-prover::termid prover::list_first(prover::termid cons, proof& p) {
+termid prover::list_first(termid cons, proof& p) {
 	if (!cons || get(cons).p == rdfnil) return 0;
 	setproc(L"list_first");
 	termset ts;
@@ -145,13 +153,13 @@ uint64_t dlparam(const node& n) {
 			double d;
 			d = std::stod(v);
 			memcpy(&p, &d, 8);
-		} else if (dt == *XSD_INTEGER /*|| dt == *XSD_PTR*/)
+		} else if (dt == *XSD_INTEGER)//|| dt == *XSD_PTR)
 			p = std::stol(v);
 	}
 	return p;
 }
 
-std::vector<prover::termid> prover::get_list(prover::termid head, proof& p) {
+std::vector<termid> prover::get_list(termid head, proof& p) {
 	setproc(L"get_list");
 	termid t = list_first(head, p);
 	std::vector<termid> r;
@@ -165,15 +173,15 @@ std::vector<prover::termid> prover::get_list(prover::termid head, proof& p) {
 	TRACE(dout<<" returned " << r.size() << " items: "; for (auto n : r) dout<<format(n)<<' '; dout << std::endl);
 	return r;
 }
-
+*/
 void* testfunc(void* p) {
 	derr <<std::endl<< "***** Test func called ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());
 //	return 0;
 }
 
-string prover::predstr(prover::termid t) { return *dict[get(t).p].value; }
-string prover::preddt(prover::termid t) { return *dict[get(t).p].datatype; }
+string prover::predstr(termid t) { return *dict[get(t).p].value; }
+string prover::preddt(termid t) { return *dict[get(t).p].datatype; }
 
 int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	setproc(L"builtin");
@@ -201,7 +209,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
-	else if (t.p == _dlopen) {
+/*	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
 		if (params.size() >= 2) {
@@ -211,7 +219,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 				if (f == L"0") handle = dlopen(0, std::stol(predstr(params[1])));
 				else handle = dlopen(ws(f).c_str(), std::stol(predstr(params[1])));
 				pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-				p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+				subs[p->s][get(t.o).p] = make(dict.set(n), 0, 0);
 				r = 1;
 			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
 			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
@@ -221,7 +229,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlerror must be called with variable object.");
 		auto err = dlerror();
 		pnode n = mkliteral(err ? pstr(err) : pstr(L"NULL"), 0, 0);
-		p->s[get(t.o).p] = make(dict.set(n), 0, 0);
+		subs[p->s][get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == _dlsym) {
@@ -259,13 +267,13 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 			p->s[get(t.o).p] = make(dict.set(n), 0, 0);
 		}
 		r = 1;
-	}
+	}*/
 	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		termset ts(2);
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g)/*, queue, false*/);
+		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts), 0, p, sub(), p->g)/*, queue, false*/);
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
@@ -307,7 +315,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		proof* r = new proof;
 		*r = *p;
 		r->g = p->g;
-		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), subst());
+		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), sub());
 		++r->last;
 		step(r, queue);
 	}
@@ -325,18 +333,18 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		if (builtin(t, p, queue) != -1) return;
 		for (auto rl : kb[get(t).p]) {
-			subst s;
+			subid s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
 				proof* r = new proof(rl, 0, p, s, p->g);
-				if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
+				if (kb.body()[rl].empty()) r->g.emplace_back(rl, sub());
 				queue.push_front(r);
-			}
+			} else subs.erase(s);
 		}
 	}
 	else if (!p->prev) {
-		for (auto r = kb.body()[p->rul].begin(); r != kb.body()[p->rul].end(); ++r) {
-			substs.push_back(p->s);
-			termid t = evaluate(*r, p->s);
+		for (auto r : kb.body()[p->rul]) {
+			substs.push_back(subs[p->s]); // marpa hack
+			termid t = evaluate(r, p->s);
 			if (!t || hasvar(t)) continue;
 			TRACE(dout << "pushing evidence: " << format(t) << std::endl);
 			e[get(t).p].emplace(t, p->g);
@@ -344,16 +352,16 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	} else {
 		proof* r = new proof(*p->prev);
 		r->g = p->g;
+		r->s = sub(p->s);
 		if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
 		queue.push_back(r);
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
-//	if (del) delete p;
 }
 
-prover::termid prover::list2term_simple(std::list<termid>& l) {
+termid prover::list2term_simple(std::list<termid>& l) {
 	setproc(L"list2term_simple");
 	termid t;
 	if (l.empty())
@@ -367,7 +375,7 @@ prover::termid prover::list2term_simple(std::list<termid>& l) {
 	return t;
 }
 
-prover::termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
+termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 	setproc(L"list2term");
 	termid t;
 	if (l.empty()) t = make(Dot, 0, 0);
@@ -389,7 +397,7 @@ prover::termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 	return t;
 }
 
-prover::termid prover::quad2term(const quad& p, const qdb& quads) {
+termid prover::quad2term(const quad& p, const qdb& quads) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
@@ -418,7 +426,7 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-void prover::operator()(const qdb& query, const subst* s) {
+void prover::operator()(const qdb& query){//, const subst* s) {
 	termset goal;
 	termid t;
 	for ( auto q : merge(query) ) 
@@ -426,7 +434,7 @@ void prover::operator()(const qdb& query, const subst* s) {
 			dict[q->pred] != rdfrest &&
 			(t = quad2term( *q, query )) )
 			goal.push_back( t );
-	return (*this)(goal, s);
+	return (*this)(goal);//, s);
 }
 
 prover::~prover() { }
@@ -493,7 +501,7 @@ bool prover::consistency(const qdb& quads) {
 }
 
 #include <chrono>
-void prover::operator()(termset& goal, const subst* s) {
+void prover::operator()(termset& goal){//, const subst* s) {
 //	setproc(L"prover()");
 	proof* p = new proof;
 	std::deque<proof*> queue;
@@ -501,7 +509,7 @@ void prover::operator()(termset& goal, const subst* s) {
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
-	if (s) p->s = *s;
+//	if (s) p->s = *s;
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
@@ -529,11 +537,11 @@ const prover::term& prover::get(termid id) const {
 	return _terms[id - 1]; 
 }
 
-prover::termid prover::make(pnode p, termid s, termid o) { 
+termid prover::make(pnode p, termid s, termid o) { 
 	return make(dict.set(*p), s, o); 
 }
 
-prover::termid prover::make(resid p, termid s, termid o) {
+termid prover::make(resid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif
