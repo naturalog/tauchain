@@ -2,5 +2,6 @@
 { ?x :a :man } => { ?x :a :mortal } .
 fin.
 ?y :a :mortal .
+?z :a :man.
 fin.
 

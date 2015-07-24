@@ -352,7 +352,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 	} else {
 		proof* r = new proof(*p->prev);
 		r->g = p->g;
-		r->s = sub(p->s);
+		r->s = sub(p->prev->s);
 		if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
