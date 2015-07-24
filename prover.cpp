@@ -25,7 +25,7 @@ int _indent = 0;
 boost::container::map<subid, subst> prover::subs;
 
 subid sub(const subst& s) {
-	subid r = prover::subs.size();
+	subid r = prover::subs.size() + 1;
 	prover::subs[r] = s;
 	return r;
 }
@@ -317,7 +317,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		r->g = p->g;
 		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), sub());
 		++r->last;
-		step(r, queue);
+		queue.push_back(r);
 	}
 
 	return r;
