@@ -129,7 +129,7 @@ string prover::format(term p, bool json) {
 		return ss.str();
 	}
 	std::wstringstream ss;
-	ss << L"{ \"pred\":\"" << dstr(p.p, true) << L"\", \"args\":[ ";
+	ss << L"{pred:\"" << dstr(p.p, true) << L"\",args:[ ";
 	if (p.s) ss << format (p.s, true) << L", ";
 	if (p.o) ss << format (p.o, true);
 	ss << L" ] }";
@@ -216,7 +216,7 @@ string prover::formatr(ruleid r, bool json) {
 	 	ss << L".";
 		return ss.str();
 	}
-	ss << L"{\"head\":" << format(kb.head()[r],true) << L",\"body\":";
+	ss << L"{head:" << format(kb.head()[r],true) << L",body:";
 //	for (size_t n = 0; n < kb.body().size(); ++n) {
 		ss << format(kb.body()[r], true);
 //		if (n != (kb.body().size()-1)) ss << L',';
