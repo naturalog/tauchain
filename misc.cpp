@@ -124,12 +124,12 @@ string prover::format(term p, bool json) {
 	if (!json) {
 		std::wstringstream ss;
 		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
-		//ss << dstr(p.p, false) << L'(';
-		if (p.s) ss << format (p.s) << L' ';
-		ss << dstr(p.p, false) << L' ';
+		ss << dstr(p.p, false) << L'(';
+		if (p.s) ss << format (p.s) << L',';
+//		ss << dstr(p.p, false) << L' ';
 		if (p.o) ss << format (p.o);
-		//ss << L')';
-//		ss << L'.';
+		ss << L')';
+		ss << L'.';
 		return ss.str();
 	}
 	std::wstringstream ss;
