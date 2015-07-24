@@ -28,12 +28,12 @@ typedef std::vector <resid> resids;
 resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of o's out */
     resids r = resids();
     prover::termset query;
-    prover::termid o_var = prover->tmpvar();
+    termid o_var = prover->tmpvar();
     assert(o_var);
     assert(s);
     auto xxs = prover->make(s);
     assert (xxs);
-    prover::termid iii = prover->make(p, xxs, o_var);
+    termid iii = prover->make(p, xxs, o_var);
     assert (iii);
     query.emplace_back(iii);
 
@@ -44,7 +44,7 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
     //dout << "substs: "<< std::endl;
 
     for (auto x : prover->substs) {
-        prover::subst::iterator binding_it = x.find(prover->get(o_var).p);
+        subst::iterator binding_it = x.find(prover->get(o_var).p);
         if (binding_it != x.end()) {
             r.push_back(prover->get((*binding_it).second).p);
             //prover->prints(x); dout << std::endl;
@@ -61,13 +61,13 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
 resids ask(prover *prover, const pnode p, resid o) {
     resids r = resids();
     prover::termset query;
-    prover::termid s_var = prover->tmpvar();
+    termid s_var = prover->tmpvar();
     assert (o);
     auto oo = prover->make(o);
     assert (oo);
     assert(p);
     assert(s_var);
-    prover::termid iii = prover->make(p, s_var, oo);
+    termid iii = prover->make(p, s_var, oo);
     query.emplace_back(iii);
 
     //dout << "query: "<< prover->format(query) << endl;;
@@ -77,7 +77,7 @@ resids ask(prover *prover, const pnode p, resid o) {
     //dout << "substs: "<< std::endl;
 
     for (auto x : prover->substs) {
-        prover::subst::iterator binding_it = x.find(prover->get(s_var).p);
+        subst::iterator binding_it = x.find(prover->get(s_var).p);
         if (binding_it != x.end()) {
             r.push_back(prover->get((*binding_it).second).p);
             //prover->prints(x); dout << std::endl;
@@ -170,7 +170,8 @@ struct Marpa {
     const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace"));
     const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
     const pnode bnf_commaSeparatedListOf = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
-
+    const pnode marpa_listOf = mkiri(pstr(L"http://idni.org/marpa#listOf"));
+    const pnode marpa_separator = mkiri(pstr(L"http://idni.org/marpa#separator"));
 
 
     resid sym2resid(sym s) {
@@ -279,11 +280,10 @@ struct Marpa {
             return symbol;
         }
 
-        resid ll;
-        if ((ll = ask1(prvr2, thing, bnf_mustBeOneSequence))) {
+        if ((bind = ask1(prvr2, thing, bnf_mustBeOneSequence))) {
 			// mustBeOneSequence is a list of lists
-            std::vector <resid> lll = get_list(prvr2, ll, *prf);
-            if (!ll)
+            std::vector <resid> lll = get_list(prvr2, bind, *prf);
+            if (!bind)
                 throw wruntime_error(L"mustBeOneSequence empty");
 
             for (auto l:lll) {
@@ -294,8 +294,13 @@ struct Marpa {
                 rule_new(symbol, rhs);
             }
         }
-        else if ((ll = ask1(prvr2, thing, bnf_commaSeparatedListOf))) {
-            seq_new(symbol, add(ll, prf), add(pcomma, prf), 0, MARPA_PROPER_SEPARATION);
+        else if ((bind = ask1(prvr2, thing, bnf_commaSeparatedListOf))) {
+            seq_new(symbol, add(bind, prf), add(pcomma, prf), 0, MARPA_PROPER_SEPARATION);
+        }
+        else if ((bind = ask1(prvr2, thing, marpa_listOf))) {
+            auto sep = ask1(prvr2, thing, marpa_separator);
+            assert(sep);
+            seq_new(symbol, add(bind, prf), add(sep, prf), 0, 0);
         }
         else if (thingv == L"http://www.w3.org/2000/10/swap/grammar/bnf#eof") { }//so what?
         else
@@ -394,7 +399,7 @@ struct Marpa {
     }
 
 
-    prover::termid parse(const string inp) {
+    termid parse(const string inp) {
         if (!precomputed)
             check_int(marpa_g_precompute(g));
 
@@ -532,7 +537,7 @@ struct Marpa {
         //"valuator" loop. marpa tells us what rules with what child nodes or tokens were matched,
         //we build the value/parse/ast in the stack, bottom-up
 
-        map <int, prover::termid> stack;
+        map <int, termid> stack;
         map <int, string> sexp;
 
         while (1) {
@@ -545,7 +550,7 @@ struct Marpa {
                     size_t token = marpa_v_token_value(v) - 1;
                     string token_value = string(toks[token].first, toks[token].second);
                     sexp[marpa_v_result(v)] = token_value;
-                    prover::termid xx;
+                    termid xx;
                     if (terminals.find(symbol) != terminals.end()) {
                         xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
                         prvr->kb.add(prvr->make(bnf_matches, xx,  prvr->make(terminals[symbol]->thing)));
@@ -562,7 +567,7 @@ struct Marpa {
                     resid res = rule2resid(marpa_v_rule(v));
                     sexp_str += value(res) + L" ";
 
-                    std::list <prover::termid> args;
+                    std::list <termid> args;
 
                     for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++) {
                         if (stack[i]) {
@@ -572,7 +577,7 @@ struct Marpa {
                     }
                     sexp[marpa_v_result(v)] = sexp_str + L") ";
 
-                    prover::termid xx;
+                    termid xx;
                     // if its a sequence
                     if (check_int(marpa_g_sequence_min(g, marpa_v_rule(v))) != -1) {
                         xx = prvr->list2term_simple(args);
@@ -622,7 +627,7 @@ struct Marpa {
 
         dout << sexp[0] << std::endl<< std::endl;
 
-        prover::termid result = stack[0];
+        termid result = stack[0];
         dout << L"result0: " << prvr->format(result) << std::endl;
         return result;
     }
@@ -641,48 +646,48 @@ std::string load_n3_cmd::help() const {
 }
 
 int load_n3_cmd::operator()(const strings &args) {
-    prover prover1(*load_quads(L"n3-grammar.nq"));
+    if (args.size() != 3)
+        throw std::runtime_error("gimme a filename");
 
-    assert (marpa_parser_iri);
-    auto xxxxxxx = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"));
-    assert (xxxxxxx);
-    auto xxxxxx = dict[xxxxxxx];
-    assert (xxxxxx);
-    auto xxxxx = make_shared<node>(dict[marpa_parser_iri]);
-    assert (xxxxx);
-    auto marpa = ask1(&prover1, xxxxx, xxxxxx);
-    assert (marpa);
-
-    std::ifstream f(ws(args[2]));
+    std::string fname = ws(args[2]);
+    std::ifstream f(fname);
     if (!f.is_open())
-        throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
+        throw std::runtime_error("couldnt open file \"" + fname + "\"");
+
+    prover prvr(*load_quads(L"n3-grammar.nq"));
 
     pnode input = mkliteral(pstr(load_file(f)), 0, 0);
     assert(input);
 
-    std::list<prover::termid> ql {prover1.make(input), prover1.make(marpa)};
-    auto query_list = prover1.list2term_simple(ql);
-    prover::termid s_var = prover1.tmpvar();
+    prvr.kb.add(
+            prvr.make(
+                    mkliteral(pstr(L":contents"), 0, 0),
+                    prvr.make(mkliteral(pstr(L":input"), 0, 0)),
+                    prvr.make(input)));
 
-    prover::termset query;
-    query.emplace_back(prover1.make(marpa_parse_iri, s_var, query_list));
+    auto query = load_quads(L""
+                    "?M <http://idni.org/marpa#parser> <http://www.w3.org/2000/10/swap/grammar/n3#language> ."
+                    ":input :contents ?I ."
+                    "?O <http://idni.org/marpa#parse> (?I ?M) .");
 
-    prover1(query);
+    prvr(*query);
 
-    prover::termid raw = 0;
-
-    for (auto x : prover1.substs) {
-        prover::subst::iterator binding_it = x.find(prover1.get(s_var).p);
-        if (binding_it != x.end()) {
-            raw = (*binding_it).second;
-            break;
-        }
+    termid raw = 0;
+    dout << "______" << std::endl;
+    for (auto x : prvr.substs) {
+        prvr.prints(x); dout << std::endl;
+        dout << "______" << std::endl;
+        for (auto it: x)
+            if (*dict[it.first].value == L"?O") {
+                raw = it.second;
+                break;
+            }
     }
 
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
 
-    //prover->prints(x); dout << std::endl;
+
 
 
     //...
@@ -694,9 +699,9 @@ void *marpa_parser(prover *p, resid language, prover::proof *prf) {
     return (void*)new Marpa(p, language, prf);
 }
 
-prover::termid marpa_parse(void* marpa, string input) {
+termid marpa_parse(void* marpa, string input) {
     Marpa *m = (Marpa *)marpa;
-    prover::termid result = m->parse(input);
+    termid result = m->parse(input);
     dout << L"result1: " << m->prvr->format(result) << std::endl;
     return result;
 }

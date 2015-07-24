@@ -282,7 +282,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	{
 		void* handle = marpa_parser(this, get(t.o).p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-		p->s[get(t.s).p] = make(dict.set(n), 0, 0);
+		subs[p->s][get(t.s).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == file_contents_iri) {
@@ -292,7 +292,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	    std::ifstream f(fnn);
 	    if (f.is_open())
 		{
-			p->s[get(t.s).p] = make(mkliteral(pstr(load_file(f)), 0, 0));
+			subs[p->s][get(t.s).p] = make(mkliteral(pstr(load_file(f)), 0, 0));
 			r = 1;
 		}
 	}
@@ -308,7 +308,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
 		dout << L"result2: " << format(result) << std::endl;
-		p->s[get(t.s).p] = result;
+		subs[p->s][get(t.s).p] = result;
 		r = 1;
 	}
 	#endif

@@ -1,6 +1,7 @@
 # Notation3 in Notation3
 # Context Free Grammar without tokenization
 #
+@prefix marpa: <http://idni.org/marpa#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix cfg: <http://www.w3.org/2000/10/swap/grammar/bnf#>.
@@ -44,37 +45,12 @@ language a cfg:Language;
 	cfg:whiteSpace	"(?m)#(.)*?$". #comment. misuse?
 
 
-document a rul:Used;
-	cfg:mustBeOneSequence(
-	
-		(
-#			[ cfg:zeroOrMore declaration ]
-#			[ cfg:zeroOrMore universal ]
-#			[ cfg:zeroOrMore existential ]
-			statements_optional
-#			cfg:eof
-		)
-	).
-
-statements_optional cfg:mustBeOneSequence (() ( statement "..." statements_optional ) ).
+document cfg:zeroOrMore (statement "...").
 
 # Formula does NOT need period on last statement
 
-formulacontent cfg:mustBeOneSequence (
-		( statementlist )
-	).
-
-
-statementlist cfg:mustBeOneSequence (
-		( )
-		( statement statementtail )
-	).
-
-statementtail cfg:mustBeOneSequence (
-		( )
-		( "..." statementlist )
-	).
-
+formulacontent marpa:listOf statement;
+	marpa:separator "...".
 
 statement  cfg:mustBeOneSequence (
 		(declaration)
