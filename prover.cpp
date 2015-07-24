@@ -93,7 +93,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 
 bool prover::euler_path(proof* p, termid t, const std::deque<proof*>& queue) {
 	{proof* ep = p;
-	while ((ep = ep->prev))
+	while ((ep = &*ep->prev))
 		if (ep->rul == t || unify(kb.head()[ep->rul], subs[ep->s], t, subs[p->s], false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	}
