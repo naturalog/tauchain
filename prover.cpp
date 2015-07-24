@@ -471,7 +471,6 @@ void prover::addrules(pquad q, qdb& quads) {
 	setproc(L"addrules");
 	TRACE(dout<<q->tostring()<<endl);
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
-	//if (dict[q->pred] == rdffirst || dict[q->pred] == rdfrest) return;
 	termid t;
 	TRACE(dout<<"called with " << q->tostring()<<endl);
 	if (p == implication) {
@@ -489,7 +488,7 @@ void prover::addrules(pquad q, qdb& quads) {
 	} else if ((t = quad2term(*q, quads))) kb.add(t, termset());
 }
 
-prover::prover ( qdb qkb, bool check_consistency ) : /*quads(qkb),*/ kb(this) {
+prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	auto it = qkb.first.find(L"@default");
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
