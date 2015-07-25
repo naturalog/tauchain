@@ -22,15 +22,12 @@ using namespace boost::algorithm;
 int _indent = 0;
 
 //const uint max_terms = 1024 * 1024;
-boost::container::map<subid, subst> prover::subs;
 
-subid sub(const subst& s) {
-	static subid id = 1;
-	subid r = id++;
-	prover::subs[r] = s;
+std::shared_ptr<subst> sub(const subst& s) {
+	std::shared_ptr<subst> r = std::make_shared<subst>(s);
 	return r;
 }
-subid sub(subid s) { return sub(prover::subs[s]); }
+//std::shared_ptr<subst> sub(std::shared_ptr<subst> s) { return sub(prover::subs[s]); }
 
 bool prover::hasvar(termid id) {
 	const term p = get(id);
@@ -97,7 +94,7 @@ bool prover::euler_path(shared_ptr<proof> p, const std::deque<shared_ptr<proof>>
 	termid t = kb.head()[p->rul];
 	uint l = 0;
 	while ((ep = ep->prev))
-		if (ep->rul == p->rul && unify(kb.head()[ep->rul], subs[ep->s], t, subs[p->s], false))
+		if (ep->rul == p->rul && unify(kb.head()[ep->rul], *ep->s, t, *p->s, false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; } else ++l;
 	TRACE(dout<<"depth: " << l << endl)
 	
@@ -351,7 +348,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 //		if (builtin(t, p, queue) != -1) return;
 		for (auto rl : kb[get(t).p]) {
-			subid s = sub();
+			std::shared_ptr<subst> s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
 				auto r = make_shared<proof>(rl, 0, p, s, p->g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, sub());
@@ -367,7 +364,9 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 //				if (typeof(evidence[t.pred]) == 'undefined') evidence[t.pred] = []
 //				evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
 //			}
-			substs.push_back(subs[p->s]); // marpa hack
+	#ifdef with_marpa
+			substs.push_back(*p->s); // marpa hack
+	#endif
 			termid t = evaluate(r, p->s);
 			if (!t || hasvar(t)) continue;
 			TRACE(dout << "pushing evidence: " << format(t) << std::endl);
@@ -381,7 +380,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 //		queue.push(r)
 		auto r = make_shared<proof>(*p->prev);
 		r->g = p->g;
-		r->s = sub(p->prev->s);
+		r->s = sub(*p->prev->s);
 		if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
@@ -455,7 +454,7 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-void prover::operator()(const qdb& query, subid s) {
+void prover::operator()(const qdb& query, std::shared_ptr<subst> s) {
 	termset goal;
 	termid t;
 	for ( auto q : merge(query) ) 
@@ -527,7 +526,7 @@ bool prover::consistency(const qdb& quads) {
 }
 
 #include <chrono>
-void prover::operator()(termset& goal, subid s) {
+void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 //	setproc(L"prover()");
 	shared_ptr<proof> p = make_shared<proof>();
 	std::deque<shared_ptr<proof>> queue;
@@ -548,7 +547,7 @@ void prover::operator()(termset& goal, subid s) {
 		queue.pop_back();
 		step(q, queue);
 		if (steps % 1000 == 0) (dout << "step: " << steps << endl);
-	} while (!queue.empty() && steps < 1e+6);
+	} while (!queue.empty()/* && steps < 1e+6*/);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
@@ -623,7 +622,7 @@ pobj prover::json(const ground& g) const {
 	for (auto x : g) {
 		psomap_obj o = mk_somap_obj();
 		(*o->MAP())[L"src"] = json(x.first);
-		(*o->MAP())[L"env"] = json(x.second);
+		(*o->MAP())[L"env"] = json(*x.second);
 		l->LIST()->push_back(o);
 	}
 	return l;
