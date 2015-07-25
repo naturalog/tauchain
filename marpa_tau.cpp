@@ -709,8 +709,12 @@ int load_n3_cmd::operator()(const strings &args) {
     prover prvr2(prvr);
     prvr2(*query);
 
+    dout << "------" << std::endl;
+    dout << "------" << std::endl;
+    dout << "------" << std::endl;
+
     prover::proof dummy;
-    auto x = prvr2.get_list(raw, dummy);
+    auto x = prvr.get_list(raw, dummy);
     dout << std::endl << x.size() << std::endl;
 
     //...
