@@ -36,12 +36,14 @@ add_executable(tau ${SOURCE_FILES})
 add_executable(m-tau ${MARPA_FILES})
 
 target_link_libraries(m-tau PRIVATE "-L${CMAKE_SOURCE_DIR}/libmarpa/dist/.libs -lmarpa")
+SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -DDEBUG -Dwith_marpa")
 
-target_link_libraries(m-tau PRIVATE ${Boost_LIBARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(m-tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS})
 
-target_link_libraries(tau PRIVATE ${Boost_LIBARIES} ${CMAKE_DL_LIBS})
+target_link_libraries(tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_include_directories(tau PRIVATE ${Boost_INCLUDE_DIRS})
+
 
 
 #<ngladitz> http://pastebin.com/Tm5AYHEg ... I added boost and dl and redid the source file listing to make it build (I didn't have a marpa.cpp) ... I don't really know what belongs where source file wise but it produces a binary :)
