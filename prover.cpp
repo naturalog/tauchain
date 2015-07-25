@@ -92,11 +92,11 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	return r;
 }
 
-bool prover::euler_path(proof* p, const std::deque<proof*>& queue) {
-	proof* ep = p;
+bool prover::euler_path(shared_ptr<proof> p, const std::deque<shared_ptr<proof>>& queue) {
+	auto ep = p;
 	termid t = kb.head()[p->rul];
 	uint l = 0;
-	while ((ep = &*ep->prev))
+	while ((ep = ep->prev))
 		if (ep->rul == p->rul && unify(kb.head()[ep->rul], subs[ep->s], t, subs[p->s], false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; } else ++l;
 	TRACE(dout<<"depth: " << l << endl)
@@ -187,7 +187,7 @@ void* testfunc(void* p) {
 string prover::predstr(termid t) { return *dict[get(t).p].value; }
 string prover::preddt(termid t) { return *dict[get(t).p].datatype; }
 
-int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
+int prover::builtin(termid id, shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue) {
 	setproc(L"builtin");
 	const term t = get(id);
 	int r = -1;
@@ -277,7 +277,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push_front(new proof( kb.add(make ( A, t.s, t.o ), ts), 0, p, sub(), p->g)/*, queue, false*/);
+		queue.push_front(make_shared<proof>( kb.add(make ( A, t.s, t.o ), ts), 0, p, sub(), p->g)/*, queue, false*/);
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
@@ -316,7 +316,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	}
 	#endif
 	if (r == 1) {
-		proof* r = new proof;
+		auto r = make_shared<proof>();
 		*r = *p;
 		r->g = p->g;
 		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), sub());
@@ -327,7 +327,7 @@ int prover::builtin(termid id, proof* p, std::deque<proof*>& queue) {
 	return r;
 }
 
-void prover::step(proof* p, std::deque<proof*>& queue, bool) {
+void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue, bool) {
 	setproc(L"step");
 	++steps;
 	TRACE(dout<<"popped frame:\n";printp(p));
@@ -353,7 +353,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 		for (auto rl : kb[get(t).p]) {
 			subid s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
-				proof* r = new proof(rl, 0, p, s, p->g);
+				auto r = make_shared<proof>(rl, 0, p, s, p->g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, sub());
 //				if (!euler_path(p, kb.head()[p->rul], queue))
 				queue.push_front(r);
@@ -379,7 +379,7 @@ void prover::step(proof* p, std::deque<proof*>& queue, bool) {
 //		unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true)
 //		r.ind++
 //		queue.push(r)
-		proof* r = new proof(*p->prev);
+		auto r = make_shared<proof>(*p->prev);
 		r->g = p->g;
 		r->s = sub(p->prev->s);
 		if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
@@ -529,8 +529,8 @@ bool prover::consistency(const qdb& quads) {
 #include <chrono>
 void prover::operator()(termset& goal, subid s) {
 //	setproc(L"prover()");
-	proof* p = new proof;
-	std::deque<proof*> queue;
+	shared_ptr<proof> p = make_shared<proof>();
+	std::deque<shared_ptr<proof>> queue;
 //	kb.mark();
 	p->rul = kb.add(0, goal);
 	p->last = 0;
@@ -539,14 +539,15 @@ void prover::operator()(termset& goal, subid s) {
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	queue.push_front(p);
+	std::shared_ptr<proof> q;
 	using namespace std;
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	do {
-		proof* q = queue.back();
+		q = queue.back();
 		queue.pop_back();
 		step(q, queue);
-		if (steps % 1000 == 0) TRACE(dout << "step: " << steps << endl);
+		if (steps % 1000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 1e+6);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();

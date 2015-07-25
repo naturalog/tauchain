@@ -99,7 +99,7 @@ public:
 		subid s;
 		ground g;
 		proof() : rul(0), prev(0) {}
-		proof(ruleid r, uint l = 0, proof* p = 0, const subid& _s = sub(), const ground& _g = ground() ) 
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subid& _s = sub(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(make_shared<proof>(*p)), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev ? make_shared<proof>(*p.prev) : 0), s(p.s), g(p.g) {}
 	};
@@ -127,7 +127,7 @@ private:
 //	qdb quads;
 	int steps = 0;
 
-	void step (proof*, std::deque<proof*>&, bool del = true);
+	void step (std::shared_ptr<proof>, std::deque<shared_ptr<proof>>&, bool del = true);
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);
 	inline termid evaluate(termid id, subid s) { return evaluate(id, subs[s]); }
@@ -135,8 +135,8 @@ private:
 	inline bool unify(termid _s, subid ssub, termid _d, subid dsub, bool f) {
 		return unify(_s, subs[ssub], _d, subs[dsub], f);
 	}
-	bool euler_path(proof* p, const std::deque<proof*>&);
-	int builtin(termid id, proof* p, std::deque<proof*>& queue);
+	bool euler_path(shared_ptr<proof>, const std::deque<shared_ptr<proof>>&);
+	int builtin(termid id, shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue);
 	bool match(termid e, termid h);
 	termid quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
@@ -156,6 +156,7 @@ private:
 	string formatr(ruleid r, bool json = false);
 	string formatkb(bool json = false);
 	void printp(proof* p);
+	void printp(std::shared_ptr<proof> p) { printp(&*p); }
 	string formats(const subst& s, bool json = false);
 	string formats(subid& s, bool json = false) { return formats(subs[s], json); }
 	void printterm_substs(termid id, const subst& s);
