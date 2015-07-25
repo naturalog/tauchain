@@ -76,11 +76,12 @@ public:
 	~prover();
 
 	typedef boost::container::list<std::pair<ruleid, std::shared_ptr<subst>>> ground;
-	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+	typedef boost::container::map<resid, boost::container::set<std::pair<termid, std::shared_ptr<ground>>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
 	void printg(const ground& g);
+	void printg(std::shared_ptr<ground> g) { printg(*g); }
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(resid p, termid s = 0, termid o = 0);
@@ -95,9 +96,9 @@ public:
 		uint last;
 		std::shared_ptr<proof> prev;
 		std::shared_ptr<subst> s;
-		ground g;
-		proof() : rul(0), prev(0), s(sub()) {}
-		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, std::shared_ptr<subst> _s = sub(), const ground& _g = ground() ) 
+		std::shared_ptr<ground> g;
+		proof() : rul(0), prev(0), s(sub()), g(std::make_shared<ground>()) {}
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, std::shared_ptr<subst> _s = sub(), std::shared_ptr<ground> _g = std::make_shared<ground>() ) 
 			: rul(r), last(l), prev(make_shared<proof>(*p)), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev ? make_shared<proof>(*p.prev) : 0), s(p.s), g(p.g) {}
 	};

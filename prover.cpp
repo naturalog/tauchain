@@ -316,7 +316,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, std::deque<shared_ptr<proof>
 		auto r = make_shared<proof>();
 		*r = *p;
 		r->g = p->g;
-		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), sub());
+		r->g->emplace_back(kb.add(evaluate(id, p->s), termset()), sub());
 		++r->last;
 		queue.push_back(r);
 	}
@@ -351,7 +351,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 			std::shared_ptr<subst> s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
 				auto r = make_shared<proof>(rl, 0, p, s, p->g);
-				if (kb.body()[rl].empty()) r->g.emplace_back(rl, sub());
+				if (kb.body()[rl].empty()) r->g->emplace_back(rl, sub());
 //				if (!euler_path(p, kb.head()[p->rul], queue))
 				queue.push_front(r);
 			}// else subs.erase(s);
@@ -381,7 +381,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 		auto r = make_shared<proof>(*p->prev);
 		r->g = p->g;
 		r->s = sub(*p->prev->s);
-		if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
+		if (!kb.body()[p->rul].empty()) r->g->emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
 		queue.push_back(r);
@@ -637,7 +637,7 @@ pobj prover::ejson() const {
 			(*t->MAP())[L"head"] = get(y.first).json(*this);
 			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
 			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
-			(*t1->MAP())[L"args"] = json(y.second);
+			(*t1->MAP())[L"args"] = json(*y.second);
 			l->LIST()->push_back(t);
 		}
 		(*o->MAP())[dstr(x.first)] = l;
