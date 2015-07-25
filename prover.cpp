@@ -346,7 +346,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 			std::shared_ptr<subst> s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
 				auto r = make_shared<proof>(rl, 0, p, s, p->g);
-				if (kb.body()[rl].empty()) r->g->emplace_back(rl, sub());
+//				if (kb.body()[rl].empty()) r->g->emplace_back(rl, sub());
 //				if (!euler_path(p, kb.head()[p->rul], queue))
 				queue.push_front(r);
 			}
@@ -358,15 +358,16 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 			substs.push_back(*p->s); // marpa hack
 	#endif
 			termid t = evaluate(r, p->s);
-			if (!t || hasvar(t)) continue;
-			TRACE(dout << "pushing evidence: " << format(t) << std::endl);
-			e[get(t).p].emplace(t, p->g);
+			if (!t /*|| hasvar(t)*/) continue;
+			TRACE(dout << "pushing evidence: " << format(t) << endl);
+			dout << "proved: " << format(t) << endl;
+//			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
 		auto r = make_shared<proof>(*p->prev);
 		r->g = p->g;
 		r->s = sub(*p->prev->s);
-		if (!kb.body()[p->rul].empty()) r->g->emplace_back(p->rul, p->s);
+//		if (!kb.body()[p->rul].empty()) r->g->emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
 		queue.push_back(r);
@@ -531,8 +532,8 @@ void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 		q = queue.back();
 		queue.pop_back();
 		step(q, queue);
-		if (steps % 10000 == 0) (dout << "step: " << steps << endl);
-	} while (!queue.empty()/* && steps < 1e+6*/);
+		if (steps % 100000 == 0) (dout << "step: " << steps << endl);
+	} while (!queue.empty() && steps < 2e+7);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	/*TRACE*/dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;

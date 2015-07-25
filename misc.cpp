@@ -55,6 +55,7 @@ resid bidict::set ( node v ) {
 
 node bidict::operator[] ( resid k ) {
 //	if (!has(k)) set(::tostr(k));
+	TRACE(if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting resid"));
 	return ip[k];
 }
 
