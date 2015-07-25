@@ -8,3 +8,7 @@ For verbose print: "./tau --level 100 < examples/socrates"
 
 deps:
 apt-get install libboost-system-dev libboost-filesystem-dev libcurl4-openssl-dev
+
+you will need a fairly new gcc, probably 4.9
+
+building: just run make. you can also use cmake, but the hand-written Makefile is the primary method.
