@@ -24,6 +24,7 @@ extern "C" {
 #include <boost/algorithm/string/predicate.hpp>
 
 typedef std::vector <resid> resids;
+typedef shared_ptr<prover::proof> proverproof;
 
 resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of o's out */
     resids r = resids();
@@ -118,7 +119,7 @@ resid ask1(prover *prover, const pnode p, resid o) {
         return 0;
 }
 
-std::vector<resid> get_list(prover *prover, resid head, prover::proof& p)
+std::vector<resid> get_list(prover *prover, resid head, prover::proof &p)
 {
     auto r = prover->get_list(prover->make(head), p);
     std::vector<resid> rr;
@@ -215,7 +216,7 @@ struct Marpa {
         marpa_g_unref(g);
     }
 
-    Marpa(prover *prvr_, resid language, prover::proof *prf) {
+    Marpa(prover *prvr_, resid language, proverproof prf) {
         /*init marpa*/
         if (marpa_check_version(MARPA_MAJOR_VERSION, MARPA_MINOR_VERSION, MARPA_MICRO_VERSION) != MARPA_ERR_NONE)
             throw std::runtime_error("marpa version...");
@@ -246,7 +247,7 @@ struct Marpa {
     }
 
     //create marpa symbols and rules from grammar description in rdf
-    sym add(resid thing, prover::proof *prf) {
+    sym add(resid thing, proverproof prf) {
 
 		//what we are adding
         string thingv = value(thing);
@@ -717,7 +718,7 @@ int load_n3_cmd::operator()(const strings &args) {
 }
 
 
-void *marpa_parser(prover *p, resid language, prover::proof *prf) {
+void *marpa_parser(prover *p, resid language, shared_ptr<prover::proof> prf) {
     return (void*)new Marpa(p, language, prf);
 }
 

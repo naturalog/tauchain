@@ -7,6 +7,6 @@ public:
 	virtual int operator() ( const strings& args );
 };
 
-void* marpa_parser(prover*, resid, prover::proof*);
+void* marpa_parser(prover*, resid, shared_ptr<prover::proof>);
 termid marpa_parse(void*, string);
 string load_file(std::ifstream &);
