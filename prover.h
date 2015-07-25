@@ -108,6 +108,8 @@ public:
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
 	string format(termid id, bool json = false);
+	void get_dotstyle_list(termid, std::list<resid>&);
+
 private:
 
 	class termdb {

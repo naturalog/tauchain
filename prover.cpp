@@ -175,6 +175,13 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 	return r;
 }
 
+void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
+	if (!get(id).s) return;
+	list.push_back(get(id).s);
+	get_dotstyle_list(get(id).o, list);
+	return;
+}
+
 void* testfunc(void* p) {
 	derr <<std::endl<< "***** Test func called ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());

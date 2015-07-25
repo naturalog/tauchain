@@ -26,6 +26,27 @@ extern "C" {
 typedef std::vector <resid> resids;
 typedef shared_ptr<prover::proof> proverproof;
 
+/*ok this is getting terrible*/
+bool ask(prover *prover, resid s, const pnode p, const pnode o) {
+    assert(s);
+    assert(p);
+    assert(o);
+
+    prover::termset query;
+    query.emplace_back(prover->make(p, prover->make(s), prover->make(o)));
+
+    (*prover)(query);
+
+    bool r = false;
+
+    for (auto x : prover->substs)
+        r = true;
+
+    prover->substs.clear();
+    prover->e.clear();
+    return r;
+}
+
 resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of o's out */
     resids r = resids();
     prover::termset query;
@@ -174,7 +195,6 @@ struct Marpa {
     const pnode bnf_zeroormore = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#zeroOrMore"));
     const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
     const pnode bnf_commaSeparatedListOf = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
-
 
 
     resid sym2resid(sym s) {
@@ -707,15 +727,24 @@ int load_n3_cmd::operator()(const strings &args) {
     query = load_quads(L"test", true);
     dout << "------" << std::endl;
     prover prvr2(prvr);
-    prvr2(*query);
+    //prvr2(*query);
 
     dout << "------" << std::endl;
     dout << "------" << std::endl;
     dout << "------" << std::endl;
 
-    prover::proof dummy;
-    auto x = prvr.get_list(raw, dummy);
-    dout << std::endl << x.size() << std::endl;
+    std::list<resid> statements;
+    prvr.get_dotstyle_list(raw, statements);
+    dout << std::endl << "statements: " << statements.size() << std::endl;
+
+    prvr.substs.clear();
+    prvr.e.clear();
+
+    for (auto x: statements)
+    {
+        if (ask(&prvr, x, mkiri(pstr(L"http://idni.org/marpa#is_parse_of")), mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement_with_dot"))))
+            dout << x;
+    }
 
     //...
     return 0;
