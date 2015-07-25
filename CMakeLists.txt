@@ -35,6 +35,11 @@ find_package(Boost REQUIRED regex)
 add_executable(tau ${SOURCE_FILES})
 add_executable(m-tau ${MARPA_FILES})
 
+target_link_libraries(m-tau PRIVATE "-L${CMAKE_SOURCE_DIR}/libmarpa/dist/.libs -lmarpa")
+
+target_link_libraries(m-tau PRIVATE ${Boost_LIBARIES} ${CMAKE_DL_LIBS})
+target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS})
+
 target_link_libraries(tau PRIVATE ${Boost_LIBARIES} ${CMAKE_DL_LIBS})
 target_include_directories(tau PRIVATE ${Boost_INCLUDE_DIRS})
 
