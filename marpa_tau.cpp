@@ -727,7 +727,7 @@ int load_n3_cmd::operator()(const strings &args) {
     query = load_quads(L"test", true);
     dout << "------" << std::endl;
     prover prvr2(prvr);
-    //prvr2(*query);
+    prvr2(*query);
 
     dout << "------" << std::endl;
     dout << "------" << std::endl;
@@ -739,11 +739,29 @@ int load_n3_cmd::operator()(const strings &args) {
 
     prvr.substs.clear();
     prvr.e.clear();
+    //prvr.formatkb();
 
-    for (auto x: statements)
+    for (auto swd: statements)
     {
-        if (ask(&prvr, x, mkiri(pstr(L"http://idni.org/marpa#is_parse_of")), mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement_with_dot"))))
-            dout << x;
+        if (ask(&prvr, swd, mkiri(pstr(L"http://idni.org/marpa#is_parse_of")), mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement_with_dot"))))
+        {
+            resid s = ask1(&prvr, swd, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement")));
+            assert (s);
+            resid sim = ask1(&prvr, s, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#simpleStatement")));
+            if (sim) {
+                dout << "   " << sim << "   ";
+                resid subj = ask1(&prvr, sim, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#subject")));
+                resid sspl = ask1(&prvr, sim, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#propertylist")));
+                resid se   = ask1(&prvr, subj, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#expression")));
+                assert(sspl);
+                assert(se);
+                resid sepi   = ask1(&prvr, se, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#pathitem")));
+                //subject = addpi(sepi);
+                
+
+
+            }
+        }
     }
 
     //...

@@ -266,6 +266,9 @@ void prover::printe() {
 		for (auto x : y.second) {
 			dout << indent() << format(x.first) << L" <= " << endl;
 			++_indent;
+			#ifdef with_marpa
+			if (x.second->size() > 1)
+			#endif
 			printg(x.second);
 			--_indent;
 			dout << endl;

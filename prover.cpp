@@ -176,8 +176,9 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 }
 
 void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
-	if (!get(id).s) return;
-	list.push_back(get(id).s);
+	auto s = get(id).s;
+	if (!s) return;
+	list.push_back(get(s).p);
 	get_dotstyle_list(get(id).o, list);
 	return;
 }
@@ -521,8 +522,12 @@ void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = s;
+	#ifdef with_marpa
+	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	#else
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	#endif
 	queue.push_front(p);
 	std::shared_ptr<proof> q;
 	using namespace std;
@@ -537,7 +542,9 @@ void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	/*TRACE*/dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
+	#ifndef with_marpa
 	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
+	#endif
 //	kb.revert();
 //	return results();
 }

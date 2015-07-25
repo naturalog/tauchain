@@ -109,6 +109,7 @@ public:
 	termid list2term_simple(std::list<termid>& l);
 	string format(termid id, bool json = false);
 	void get_dotstyle_list(termid, std::list<resid>&);
+	string formatkb(bool json = false);
 
 private:
 
@@ -155,7 +156,6 @@ private:
 	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);
 	string formatr(ruleid r, bool json = false);
-	string formatkb(bool json = false);
 	void printp(proof* p);
 	void printp(std::shared_ptr<proof> p) { printp(&*p); }
 	string formats(const subst& s, bool json = false);
