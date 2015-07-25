@@ -332,7 +332,9 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 		if (euler_path(p, queue)) return;
 		termid t = kb.body()[p->rul][p->last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
+		#ifdef with_marpa
 		if (builtin(t, p, queue) != -1) return;
+		#endif
 		for (auto rl : kb[get(t).p]) {
 			std::shared_ptr<subst> s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
