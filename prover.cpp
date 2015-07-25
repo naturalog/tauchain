@@ -346,7 +346,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 			std::shared_ptr<subst> s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
 				auto r = make_shared<proof>(rl, 0, p, s, p->g);
-//				if (kb.body()[rl].empty()) r->g->emplace_back(rl, sub());
+				if (kb.body()[rl].empty()) r->g->emplace_back(rl, sub());
 //				if (!euler_path(p, kb.head()[p->rul], queue))
 				queue.push_front(r);
 			}
@@ -360,14 +360,14 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 			termid t = evaluate(r, p->s);
 			if (!t /*|| hasvar(t)*/) continue;
 			TRACE(dout << "pushing evidence: " << format(t) << endl);
-			dout << "proved: " << format(t) << endl;
-//			e[get(t).p].emplace(t, p->g);
+//			dout << "proved: " << format(t) << endl;
+			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
 		auto r = make_shared<proof>(*p->prev);
 		r->g = p->g;
 		r->s = sub(*p->prev->s);
-//		if (!kb.body()[p->rul].empty()) r->g->emplace_back(p->rul, p->s);
+		if (!kb.body()[p->rul].empty()) r->g->emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
 		queue.push_back(r);
@@ -545,8 +545,8 @@ void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) const {
-	if (!id || id > (termid)_terms.size())
-		throw std::runtime_error("invalid term id passed to prover::get");
+	TRACE(if (!id || id > (termid)_terms.size())
+		throw std::runtime_error("invalid term id passed to prover::get"));
 	return _terms[id - 1]; 
 }
 
