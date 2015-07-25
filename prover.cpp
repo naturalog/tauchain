@@ -329,20 +329,6 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 	++steps;
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size()) {
-//		var src = 0
-//		for (var k = 0; k < cases[t.pred].length; k++) {
-//			var rl = cases[t.pred][k]
-//			src++
-//			var g = aCopy(c.ground)
-//			if (rl.body.length == 0) g.push({src:rl, env:{}})
-//			var r = {rule:rl, src:src, ind:0, parent:c, env:{}, ground:g}
-//			if (unify(t, c.env, rl.head, r.env, true)) {
-//				var ep = c
-//				while (ep = ep.parent) 
-//					if (ep.src == c.src && unify(ep.rule.head, ep.env, c.rule.head, c.env, false)) break
-//				if (ep == null) queue.unshift(r)
-//			}
-//		}
 		if (euler_path(p, queue)) return;
 		termid t = kb.body()[p->rul][p->last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
@@ -354,16 +340,11 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 				if (kb.body()[rl].empty()) r->g->emplace_back(rl, sub());
 //				if (!euler_path(p, kb.head()[p->rul], queue))
 				queue.push_front(r);
-			}// else subs.erase(s);
+			}
 		}
 	}
 	else if (!p->prev) {
 		for (auto r : kb.body()[p->rul]) {
-//			for (var i = 0; i < c.rule.body.length; i++) {
-//				var t = evaluate(c.rule.body[i], c.env)
-//				if (typeof(evidence[t.pred]) == 'undefined') evidence[t.pred] = []
-//				evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
-//			}
 	#ifdef with_marpa
 			substs.push_back(*p->s); // marpa hack
 	#endif
@@ -373,11 +354,6 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
-//		if (c.rule.body.length != 0) g.push({src:c.rule, env:c.env})
-//		var r = {rule:{head:c.parent.rule.head, body:c.parent.rule.body}, src:c.parent.src, ind:c.parent.ind, parent:c.parent.parent != null ? new copy(c.parent.parent) : null, env:new copy(c.parent.env), ground:g}
-//		unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true)
-//		r.ind++
-//		queue.push(r)
 		auto r = make_shared<proof>(*p->prev);
 		r->g = p->g;
 		r->s = sub(*p->prev->s);
@@ -546,12 +522,12 @@ void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 		q = queue.back();
 		queue.pop_back();
 		step(q, queue);
-		if (steps % 1000 == 0) (dout << "step: " << steps << endl);
+		if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty()/* && steps < 1e+6*/);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
+	/*TRACE*/dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
+	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 //	kb.revert();
 //	return results();
 }
@@ -664,15 +640,12 @@ void prover::ruleset::revert() {
 
 string prover::ruleset::format() const {
 	setproc(L"ruleset::format");
-//	dump();
 	std::wstringstream ss;
 	ss << L'['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
-//		TRACE(dout<<it->first<<endl);
 		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
 			ss << p->formatr(*iit, true);
-//			TRACE(dout<<s<<endl);
 			if (++iit != it->second.end()) ss << L',';
 			ss << endl;
 		}
