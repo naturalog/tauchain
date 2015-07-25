@@ -162,16 +162,18 @@ struct Marpa {
     const resid pcomma = dict[mkliteral(pstr(L","), 0, 0)];
     const pnode has_value = mkiri(pstr(L"http://idni.org/marpa#has_value"));
     const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
+    const pnode marpa_listOf = mkiri(pstr(L"http://idni.org/marpa#listOf"));
+    const pnode marpa_separator = mkiri(pstr(L"http://idni.org/marpa#separator"));
     const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
     const pnode rdfs_rest = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
     const pnode rdfs_first = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
     const pnode bnf_matches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
     const pnode bnf_document = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#document"));
     const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace"));
+    const pnode bnf_zeroormore = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#zeroOrMore"));
     const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
     const pnode bnf_commaSeparatedListOf = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
-    const pnode marpa_listOf = mkiri(pstr(L"http://idni.org/marpa#listOf"));
-    const pnode marpa_separator = mkiri(pstr(L"http://idni.org/marpa#separator"));
+
 
 
     resid sym2resid(sym s) {
@@ -279,7 +281,6 @@ struct Marpa {
             terminals[symbol] = pterminal(new terminal(thing, thingv, value(bind)));
             return symbol;
         }
-
         if ((bind = ask1(prvr2, thing, bnf_mustBeOneSequence))) {
 			// mustBeOneSequence is a list of lists
             std::vector <resid> lll = get_list(prvr2, bind, *prf);
@@ -301,6 +302,9 @@ struct Marpa {
             auto sep = ask1(prvr2, thing, marpa_separator);
             assert(sep);
             seq_new(symbol, add(bind, prf), add(sep, prf), 0, 0);
+        }
+        else if ((bind = ask1(prvr2, thing, bnf_zeroormore))) {
+            seq_new(symbol, add(bind, prf), -1, 0, 0);
         }
         else if (thingv == L"http://www.w3.org/2000/10/swap/grammar/bnf#eof") { }//so what?
         else
@@ -549,7 +553,7 @@ struct Marpa {
                     sym symbol = marpa_v_symbol(v);
                     size_t token = marpa_v_token_value(v) - 1;
                     string token_value = string(toks[token].first, toks[token].second);
-                    sexp[marpa_v_result(v)] = token_value;
+                    sexp[marpa_v_result(v)] = L"/*" + token_value + L"*/";
                     termid xx;
                     if (terminals.find(symbol) != terminals.end()) {
                         xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
@@ -562,10 +566,10 @@ struct Marpa {
                     break;
                 }
                 case MARPA_STEP_RULE: {
-                    string sexp_str = L"( ";
+                    string sexp_str = L"{ ";
 
                     resid res = rule2resid(marpa_v_rule(v));
-                    sexp_str += value(res) + L" ";
+                    sexp_str += L"\"" + value(res) + L"\" ";
 
                     std::list <termid> args;
 
@@ -575,7 +579,7 @@ struct Marpa {
                             sexp_str += sexp[i] + L" ";
                         }
                     }
-                    sexp[marpa_v_result(v)] = sexp_str + L") ";
+                    sexp[marpa_v_result(v)] = sexp_str + L"} ";
 
                     termid xx;
                     // if its a sequence
@@ -635,8 +639,18 @@ struct Marpa {
 
 };
 
+/*
+void create_rules(prover *prvr, resid raw)
+{
+    //termid iii = prvr->make(prvr->get(prvr->tmpvar()).p, prvr->make(raw), prvr->tmpvar());
+    //termid iii = prvr->make(mkiri(pstr(L"http://idni.org/marpa#arg0")), prvr->make(raw), prvr->tmpvar());
 
+    prover::termset query;
+    query.emplace_back(iii);
+    (*prvr)(query);
 
+}
+*/
 
 std::string load_n3_cmd::desc() const { return "load n3"; }
 
@@ -654,7 +668,8 @@ int load_n3_cmd::operator()(const strings &args) {
     if (!f.is_open())
         throw std::runtime_error("couldnt open file \"" + fname + "\"");
 
-    prover prvr(*load_quads(L"n3-grammar.nq"));
+    prover prvr(*load_quads(L"n3-grammar.nq", false));
+    dout << "------" << std::endl;
 
     pnode input = mkliteral(pstr(load_file(f)), 0, 0);
     assert(input);
@@ -665,15 +680,14 @@ int load_n3_cmd::operator()(const strings &args) {
                     prvr.make(mkliteral(pstr(L":input"), 0, 0)),
                     prvr.make(input)));
 
-    auto query = load_quads(L""
-                    "?M <http://idni.org/marpa#parser> <http://www.w3.org/2000/10/swap/grammar/n3#language> ."
-                    ":input :contents ?I ."
-                    "?O <http://idni.org/marpa#parse> (?I ?M) .");
+    auto query = load_quads(L"load_n3", false);
+    dout << "------" << std::endl;
 
     prvr(*query);
 
+    dout << "------" << std::endl;
+
     termid raw = 0;
-    dout << "______" << std::endl;
     for (auto x : prvr.substs) {
         prvr.prints(x); dout << std::endl;
         dout << "______" << std::endl;
@@ -687,8 +701,16 @@ int load_n3_cmd::operator()(const strings &args) {
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
 
+    //create_rules(new prover(prvr), raw);
 
+    query = load_quads(L"test", true);
+    dout << "------" << std::endl;
+    prover prvr2(prvr);
+    prvr2(*query);
 
+    prover::proof dummy;
+    auto x = prvr2.get_list(raw, dummy);
+    dout << std::endl << x.size() << std::endl;
 
     //...
     return 0;
