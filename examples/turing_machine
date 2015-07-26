@@ -1,0 +1,9 @@
+(:step0 :cell0) :symbol :sym0.
+:step0 :state :state0.
+:step0 :cursor :cell0.
+{ ?StepX :prime ?StepXP.  } => {?StepXP :state ?SP. (?StepXP ?CellY) :symbol ?DP}.
+{ ?StateX :prime ?StateXP.  ?CellY :prime ?CellYP. } => {?StepXP :cursor ?CellYP}.  
+{ ?StepX :state :state0.  (?StepX ?CellY) :symbol :sym0.  ?StepX :cursor ?CellY.  } => { ?Step1 :prime ?Step2. ?StateX :prime :state1. ?CellY :prime :cell1.  }.  
+fin.  
+?x :prime ?y. 
+ fin.

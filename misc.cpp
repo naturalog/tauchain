@@ -9,10 +9,11 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-resid marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
 #ifdef with_marpa
+	file_contents_iri = set(mkiri(pstr(L"http://idni.org/marpa#file_contents")));
 	marpa_parser_iri = set(mkiri(pstr(L"http://idni.org/marpa#parser")));
 	marpa_parse_iri = set(mkiri(pstr(L"http://idni.org/marpa#parse")));
 #endif
@@ -33,8 +34,8 @@ void bidict::init() {
 	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
 	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
 	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
-	//False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
-	False = set(mkiri(pstr(L"false")));
+	False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
+	//False = set(mkiri(pstr(L"false")));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
@@ -42,6 +43,7 @@ void bidict::set ( const std::vector<node>& v ) {
 }
 
 resid bidict::set ( node v ) {
+	if (!v.value) throw std::runtime_error("bidict::set called with a node containing null value");
 	auto it = pi.find ( v );
 	if ( it != pi.end() ) return it->second;
 	resid k = pi.size() + 1;
@@ -53,6 +55,7 @@ resid bidict::set ( node v ) {
 
 node bidict::operator[] ( resid k ) {
 //	if (!has(k)) set(::tostr(k));
+	TRACE(if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting resid"));
 	return ip[k];
 }
 
@@ -74,9 +77,14 @@ string bidict::tostr() {
 	return s.str();
 }
 
-string dstr ( resid p ) {
+string dstr ( resid p, bool escape ) {
 	if ( !deref ) return *tostr ( p );
 	string s = dict[p].tostring();
+	if (escape) {
+		replace_all(s, L"\\", L"\\\\");
+		replace_all(s, L"\"", L"\\\"");
+		replace_all(s, L"'", L"\\'");
+	}
 	if (s == L"GND") throw 0;
 	if ( !shorten ) return s;
 	if ( s.find ( L"#" ) == string::npos ) return s;
@@ -117,14 +125,12 @@ string prover::format(term p, bool json) {
 	if (!json) {
 		std::wstringstream ss;
 		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
-		ss << dstr(p.p) << L'(';
-		if (p.s) ss << format (p.s);
-		if (p.o) ss << L',' << format (p.o);
-		ss << L')';
+		ss << dstr(p.p, false);
+		if (p.s) ss << L'('<< format (p.s) << L',' << format (p.o) << L')';
 		return ss.str();
 	}
 	std::wstringstream ss;
-	ss << L"{ \"pred\":\"" << dstr(p.p) << L"\", \"args\":[ ";
+	ss << L"{pred:\"" << dstr(p.p, true) << L"\",args:[ ";
 	if (p.s) ss << format (p.s, true) << L", ";
 	if (p.o) ss << format (p.o, true);
 	ss << L" ] }";
@@ -211,7 +217,7 @@ string prover::formatr(ruleid r, bool json) {
 	 	ss << L".";
 		return ss.str();
 	}
-	ss << L"{\"head\":" << format(kb.head()[r],true) << L",\"body\":";
+	ss << L"{head:" << format(kb.head()[r],true) << L",body:";
 //	for (size_t n = 0; n < kb.body().size(); ++n) {
 		ss << format(kb.body()[r], true);
 //		if (n != (kb.body().size()-1)) ss << L',';
@@ -235,18 +241,15 @@ string prover::formatkb(bool json) {
 string prover::formatg(const ground& g, bool json) {
 	std::wstringstream ss;
 	for (auto x : g) {
-		ss << format(x.first), printr_substs(x.first, x.second);
+		ss << formatr(x.first) << tab << formats(x.second);
 		ss << endl;
 	}
 	return ss.str();
 }
 
 void prover::printg(const ground& g) {
-	for (auto x : g) {
-		dout << indent();
-		printr_substs(x.first, x.second);
-		dout << endl;
-	}
+	for (auto x : g) 
+		dout << indent() << formatr(x.first) << tab << formats(x.second) << endl;
 }
 
 pobj prover::term::json(const prover& pr) const {
@@ -263,6 +266,9 @@ void prover::printe() {
 		for (auto x : y.second) {
 			dout << indent() << format(x.first) << L" <= " << endl;
 			++_indent;
+			#ifdef with_marpa
+			if (x.second->size() > 1)
+			#endif
 			printg(x.second);
 			--_indent;
 			dout << endl;

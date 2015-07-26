@@ -24,12 +24,39 @@ extern "C" {
 #include <boost/algorithm/string/predicate.hpp>
 
 typedef std::vector <resid> resids;
+typedef shared_ptr<prover::proof> proverproof;
+
+/*ok this is getting terrible*/
+bool ask(prover *prover, resid s, const pnode p, const pnode o) {
+    assert(s);
+    assert(p);
+    assert(o);
+
+    prover::termset query;
+    query.emplace_back(prover->make(p, prover->make(s), prover->make(o)));
+
+    (*prover)(query);
+
+    bool r = false;
+
+    for (auto x : prover->substs)
+        r = true;
+
+    prover->substs.clear();
+    prover->e.clear();
+    return r;
+}
 
 resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of o's out */
     resids r = resids();
     prover::termset query;
-    prover::termid o_var = prover->tmpvar();
-    prover::termid iii = prover->make(p, prover->make(s), o_var);
+    termid o_var = prover->tmpvar();
+    assert(o_var);
+    assert(s);
+    auto xxs = prover->make(s);
+    assert (xxs);
+    termid iii = prover->make(p, xxs, o_var);
+    assert (iii);
     query.emplace_back(iii);
 
     //dout << "query: "<< prover->format(query) << endl;;
@@ -39,7 +66,7 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
     //dout << "substs: "<< std::endl;
 
     for (auto x : prover->substs) {
-        prover::subst::iterator binding_it = x.find(prover->get(o_var).p);
+        subst::iterator binding_it = x.find(prover->get(o_var).p);
         if (binding_it != x.end()) {
             r.push_back(prover->get((*binding_it).second).p);
             //prover->prints(x); dout << std::endl;
@@ -56,8 +83,13 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
 resids ask(prover *prover, const pnode p, resid o) {
     resids r = resids();
     prover::termset query;
-    prover::termid s_var = prover->tmpvar();
-    prover::termid iii = prover->make(p, s_var, prover->make(o));
+    termid s_var = prover->tmpvar();
+    assert (o);
+    auto oo = prover->make(o);
+    assert (oo);
+    assert(p);
+    assert(s_var);
+    termid iii = prover->make(p, s_var, oo);
     query.emplace_back(iii);
 
     //dout << "query: "<< prover->format(query) << endl;;
@@ -67,7 +99,7 @@ resids ask(prover *prover, const pnode p, resid o) {
     //dout << "substs: "<< std::endl;
 
     for (auto x : prover->substs) {
-        prover::subst::iterator binding_it = x.find(prover->get(s_var).p);
+        subst::iterator binding_it = x.find(prover->get(s_var).p);
         if (binding_it != x.end()) {
             r.push_back(prover->get((*binding_it).second).p);
             //prover->prints(x); dout << std::endl;
@@ -94,14 +126,21 @@ resid ask1(prover *prover, resid s, const pnode p) {
 resid ask1(prover *prover, const pnode p, resid o) {
     auto r = ask(prover, p, o);
     if (r.size() > 1)
-        throw wruntime_error(L"well, this is weird, more than one match");
+    {
+        std::wstringstream ss;
+        ss << L"well, this is weird, more than one match:";
+        for (auto xx: r)
+            ss << xx << " ";
+        throw wruntime_error(ss.str());
+    }
+
     if (r.size() == 1)
         return r[0];
     else
         return 0;
 }
 
-std::vector<resid> get_list(prover *prover, resid head, prover::proof& p)
+std::vector<resid> get_list(prover *prover, resid head, prover::proof &p)
 {
     auto r = prover->get_list(prover->make(head), p);
     std::vector<resid> rr;
@@ -135,24 +174,27 @@ typedef std::shared_ptr <terminal> pterminal;
 struct Marpa {
     Marpa_Grammar g;
     bool precomputed = false;
+    // everything in the grammar is either a terminal, defined by a regex, a "literal" - a simple string, or a rule
     map <sym, pterminal> terminals;
     map <sym, string> literals;
-    map <resid, sym> done;
+    map <resid, sym> done;//tracks rules and terminals..i might rework this
     map <rule, sym> rules;
-    prover *prvr;
-    string whitespace = L"";
-    const resid pcomma = dict[mkliteral(pstr(L","), pstr(L"XSD_STRING"), pstr(L"en"))];
+    prover *prvr, *prvr2;/*prvr is the one we are called from. we will use prvr2 for querying the grammar, so that prvr doesnt get messed up*/
+    string whitespace = L""; // i use this for comment regex, comments are processed kinda specially so they dont have to pollute the grammar
+    const resid pcomma = dict[mkliteral(pstr(L","), 0, 0)];
     const pnode has_value = mkiri(pstr(L"http://idni.org/marpa#has_value"));
     const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
+    const pnode marpa_listOf = mkiri(pstr(L"http://idni.org/marpa#listOf"));
+    const pnode marpa_separator = mkiri(pstr(L"http://idni.org/marpa#separator"));
     const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
     const pnode rdfs_rest = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
     const pnode rdfs_first = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
     const pnode bnf_matches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
     const pnode bnf_document = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#document"));
-    const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whitespace"));
+    const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace"));
+    const pnode bnf_zeroormore = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#zeroOrMore"));
     const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
     const pnode bnf_commaSeparatedListOf = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
-
 
 
     resid sym2resid(sym s) {
@@ -186,11 +228,16 @@ struct Marpa {
         return sss.str();
     }
 
+    string value(resid val) {
+        return *dict[val].value;
+    }
+
     ~Marpa() {
         marpa_g_unref(g);
     }
 
-    Marpa(prover *prvr_, resid language, prover::proof *prf) {
+    Marpa(prover *prvr_, resid language, proverproof prf) {
+        /*init marpa*/
         if (marpa_check_version(MARPA_MAJOR_VERSION, MARPA_MINOR_VERSION, MARPA_MICRO_VERSION) != MARPA_ERR_NONE)
             throw std::runtime_error("marpa version...");
         Marpa_Config marpa_config;
@@ -205,39 +252,42 @@ struct Marpa {
             throw std::runtime_error("marpa_g_force_valued failed?!?!?");
 
         prvr = prvr_;
-
-        resid whitespace_ = ask1(prvr, language, bnf_whitespace);
-        if (whitespace_)
+        prvr2 = new prover(*prvr);
+        /*bnf:whitespace is a property of bnf:language*/
+        resid whitespace_ = ask1(prvr2, language, bnf_whitespace);
+        if (whitespace_) {
             whitespace = value(whitespace_);
-
-        resid root = ask1(prvr, language, bnf_document);
-
-        sym start = add(prvr, root, prf);
-
+            dout << L"whitespace:" << whitespace <<std::endl;
+        }
+        /*so is bnf:document, the root rule*/
+        resid root = ask1(prvr2, language, bnf_document);
+        sym start = add(root, prf);
         start_symbol_set(start);
-    }
-
-    string value(resid val) {
-        return *dict[val].value;
+        delete prvr2;
     }
 
     //create marpa symbols and rules from grammar description in rdf
-    sym add(prover *prvr, resid thing, prover::proof *prf) {
+    sym add(resid thing, proverproof prf) {
+
+		//what we are adding
         string thingv = value(thing);
         dout << "thingv:" << thingv << std::endl;
 
+		//is it a rule or terminal thats been added or we started adding it already?
         if (done.find(thing) != done.end())
             return done[thing];
 
+		//is it a literal?
         if (dict[thing]._type == node::LITERAL) {
             //dout << "itsa str"<<std::endl;
             for (auto t: literals)
-                if (t.second == thingv)
+                if (t.second == thingv) // is it a done literal?
                     return t.first;
 
             sym symbol = symbol_new();
             //dout << "adding " << thingv << std::endl;
 
+			//we add it to the literals table and are done with it.
             literals[symbol] = thingv;
             return symbol;
         }
@@ -245,31 +295,37 @@ struct Marpa {
         //dout << "adding " << thingv << std::endl;
         sym symbol = symbol_new_resid(thing);
 
+		// is it a...
         resid bind;
-        if ((bind = ask1(prvr, thing, bnf_matches))) {
+        if ((bind = ask1(prvr2, thing, bnf_matches))) {
             //dout << "terminal: " << thingv << std::endl;
             terminals[symbol] = pterminal(new terminal(thing, thingv, value(bind)));
             return symbol;
         }
-
-        // mustBeOneSequence is a list of lists
-
-        resid ll;
-        if ((ll = ask1(prvr, thing, bnf_mustBeOneSequence))) {
-            std::vector <resid> lll = get_list(prvr, ll, *prf);
-            if (!ll)
+        if ((bind = ask1(prvr2, thing, bnf_mustBeOneSequence))) {
+			// mustBeOneSequence is a list of lists
+            std::vector <resid> lll = get_list(prvr2, bind, *prf);
+            if (!bind)
                 throw wruntime_error(L"mustBeOneSequence empty");
 
             for (auto l:lll) {
                 syms rhs;
-                std::vector <resid> seq = get_list(prvr, ll, *prf);
+                std::vector <resid> seq = get_list(prvr2, l, *prf);
                 for (auto rhs_item: seq)
-                    rhs.push_back(add(prvr, rhs_item, prf));
+                    rhs.push_back(add(rhs_item, prf));
                 rule_new(symbol, rhs);
             }
         }
-        else if ((ll = ask1(prvr, thing, bnf_commaSeparatedListOf))) {
-            seq_new(symbol, add(prvr, ll, prf), add(prvr, pcomma, prf), 0, MARPA_PROPER_SEPARATION);
+        else if ((bind = ask1(prvr2, thing, bnf_commaSeparatedListOf))) {
+            seq_new(symbol, add(bind, prf), add(pcomma, prf), 0, MARPA_PROPER_SEPARATION);
+        }
+        else if ((bind = ask1(prvr2, thing, marpa_listOf))) {
+            auto sep = ask1(prvr2, thing, marpa_separator);
+            assert(sep);
+            seq_new(symbol, add(bind, prf), add(sep, prf), 0, 0);
+        }
+        else if ((bind = ask1(prvr2, thing, bnf_zeroormore))) {
+            seq_new(symbol, add(bind, prf), -1, 0, 0);
         }
         else if (thingv == L"http://www.w3.org/2000/10/swap/grammar/bnf#eof") { }//so what?
         else
@@ -368,15 +424,7 @@ struct Marpa {
     }
 
 
-    pnode list2pnode(std::vector<pnode> pl)
-    {
-        std::list<pnode> l;
-        for (auto i:pl)
-            l.push_back(i);
-        return make_shared<node>(dict[prvr->get(prvr->list2term(l)).p]);
-    }
-
-    pnode parse(const string inp) {
+    termid parse(const string inp) {
         if (!precomputed)
             check_int(marpa_g_precompute(g));
 
@@ -410,7 +458,7 @@ struct Marpa {
 
             boost::wsmatch what;
 
-            if ((whitespace.size()) && (regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous))) {
+            if (whitespace.size() && regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous)) {
                 if (what.size()) {
                     int llll = what[0].length();
                     dout << L"skipping " << llll << L" comment chars" << std::endl;
@@ -481,7 +529,9 @@ struct Marpa {
                     post += 1;
                 //post += 10;
                 dout << L"at line " << std::count(inp.begin(), pos, '\n') << L", char " << charnum << L":" << std::endl;
-                dout << string(pre, pos - 1) << L"<HERE>" << string(pos, post) << std::endl;
+                auto poss(pos);
+                if (poss != inp.begin()) poss--;
+                dout << string(pre, poss) << L"<HERE>" << string(pos, post) << std::endl;
 //                        dout << L"..\"" << string(pre, pos-1) << L"<HERE>" << string(pos, post) << L"\"..." << std::endl;
 
 
@@ -512,7 +562,7 @@ struct Marpa {
         //"valuator" loop. marpa tells us what rules with what child nodes or tokens were matched,
         //we build the value/parse/ast in the stack, bottom-up
 
-        map <int, pnode> stack;
+        map <int, termid> stack;
         map <int, string> sexp;
 
         while (1) {
@@ -524,25 +574,25 @@ struct Marpa {
                     sym symbol = marpa_v_symbol(v);
                     size_t token = marpa_v_token_value(v) - 1;
                     string token_value = string(toks[token].first, toks[token].second);
-                    sexp[marpa_v_result(v)] = token_value;
-                    pnode xx;
+                    sexp[marpa_v_result(v)] = L"/*" + token_value + L"*/";
+                    termid xx;
                     if (terminals.find(symbol) != terminals.end()) {
-                        xx = mkbnode(jsonld_api::gen_bnode_id());
-                        prvr->addrules(make_shared<quad>(quad(xx, bnf_matches, make_shared<node>(dict[terminals[symbol]->thing]))));
-                        prvr->addrules(make_shared<quad>(quad(has_value, xx, mkliteral(pstr(token_value), pstr(L"XSD_STRING"), pstr(L"en")))));
+                        xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
+                        prvr->kb.add(prvr->make(bnf_matches, xx,  prvr->make(terminals[symbol]->thing)));
+                        prvr->kb.add(prvr->make(has_value, xx, prvr->make(mkliteral(pstr(token_value), 0, 0))));
                     }
                     else // it must be a literal
-                        xx = mkliteral(pstr(token_value), pstr(L"XSD_STRING"), pstr(L"en"));
+                        xx = prvr->make(mkliteral(pstr(token_value), 0, 0));
                     stack[marpa_v_result(v)] = xx;
                     break;
                 }
                 case MARPA_STEP_RULE: {
-                    string sexp_str = L"( ";
+                    string sexp_str = L"{ ";
 
                     resid res = rule2resid(marpa_v_rule(v));
-                    sexp_str += value(res) + L" ";
+                    sexp_str += L"\"" + value(res) + L"\" ";
 
-                    std::vector <pnode> args;
+                    std::list <termid> args;
 
                     for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++) {
                         if (stack[i]) {
@@ -550,42 +600,37 @@ struct Marpa {
                             sexp_str += sexp[i] + L" ";
                         }
                     }
-                    sexp[marpa_v_result(v)] = sexp_str + L") ";
+                    sexp[marpa_v_result(v)] = sexp_str + L"} ";
 
-
-                    pnode xx;
+                    termid xx;
                     // if its a sequence
-                    if (check_int(marpa_g_sequence_min(g, marpa_v_rule(v))) != -1)
-                        xx = list2pnode(args);
+                    if (check_int(marpa_g_sequence_min(g, marpa_v_rule(v))) != -1) {
+                        xx = prvr->list2term_simple(args);
+                    }
                     else {
-                        xx = mkbnode(jsonld_api::gen_bnode_id());
+                        xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
+                        //dout << L".xx: " << prvr->format(xx) << std::endl;
                         int rhs_item_index = 0;
                         for (auto arg: args) {
                             sym arg_sym = check_int(marpa_g_rule_rhs(g, marpa_v_rule(v), rhs_item_index));
-                            pnode arg_node;
 
-                            pnode pred = 0;
-
-                            if (literals.find(arg_sym) != literals.end()) { }
-                            else if (terminals.find(arg_sym) != terminals.end()) { }
-                            else {
-                                pred = make_shared<node>(dict[sym2resid(arg_sym)]);
+                            if (literals.find(arg_sym) == literals.end() &&
+                                (terminals.find(arg_sym) == terminals.end()))
+                            {
+                                prvr->kb.add(prvr->make(sym2resid(arg_sym), xx,  arg));
                             }
-
-                            if (pred)
-                                prvr->addrules(make_shared<quad>(quad(pred, xx, arg)));
 
 
                             std::wstringstream arg_pred;
-                            arg_pred << L"arg" << rhs_item_index;
-                            pnode pred2 = mkliteral(pstr(arg_pred.str()), pstr(L"XSD_STRING"), pstr(L"en"));
+                            arg_pred << L"http://idni.org/marpa#arg" << rhs_item_index;
 
-                            prvr->addrules(make_shared<quad>(quad(pred2, xx, arg)));
+                            prvr->kb.add(prvr->make(mkliteral(pstr(arg_pred.str()), 0, 0), xx, arg));
+                            rhs_item_index++;
                         }
                     }
 
-                    prvr->addrules(make_shared<quad>(quad(is_parse_of, xx, make_shared<node>(dict[res]))));
-
+                    prvr->kb.add(prvr->make(is_parse_of, xx, prvr->make(res)));
+                    //dout << L"xx: " << prvr->format(xx) << std::endl;
                     stack[marpa_v_result(v)] = xx;
 
                     break;
@@ -605,13 +650,28 @@ struct Marpa {
         marpa_o_unref(o);
         marpa_b_unref(b);
 
-        dout << sexp[0] << std::endl;
-        return stack[0];
+        dout << sexp[0] << std::endl<< std::endl;
+
+        termid result = stack[0];
+        dout << L"result0: " << prvr->format(result) << std::endl;
+        return result;
     }
 
 
 };
 
+/*
+void create_rules(prover *prvr, resid raw)
+{
+    //termid iii = prvr->make(prvr->get(prvr->tmpvar()).p, prvr->make(raw), prvr->tmpvar());
+    //termid iii = prvr->make(mkiri(pstr(L"http://idni.org/marpa#arg0")), prvr->make(raw), prvr->tmpvar());
+
+    prover::termset query;
+    query.emplace_back(iii);
+    (*prvr)(query);
+
+}
+*/
 
 std::string load_n3_cmd::desc() const { return "load n3"; }
 
@@ -620,58 +680,113 @@ std::string load_n3_cmd::help() const {
     return ss.str();
 }
 
-
-string load_file(string fname) {
-    std::ifstream t(ws(fname));
-    if (!t.is_open())
-        throw std::runtime_error("couldnt open file");// \"" + fname + L"\"");
-
-    std::string str((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
-    return ws(str);
-}
-
 int load_n3_cmd::operator()(const strings &args) {
-    prover prover(*load_quads(L"n3-grammar.nq"));
-    pnode parser = make_shared<node>(dict[ask1(&prover, make_shared<node>(dict[marpa_parser_iri]), dict[mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"))])]);
-    pnode input = mkliteral(pstr(load_file(args[2])), pstr(L"XSD_STRING"), pstr(L"en"));
-    std::list<pnode> query{parser, input};
-    resid raw = ask1(&prover, make_shared<node>(dict[marpa_parse_iri]), prover.get(prover.get(prover.list2term(query)).s).p);
+    if (args.size() != 3)
+        throw std::runtime_error("gimme a filename");
+
+    std::string fname = ws(args[2]);
+    std::ifstream f(fname);
+    if (!f.is_open())
+        throw std::runtime_error("couldnt open file \"" + fname + "\"");
+
+    prover prvr(*load_quads(L"n3-grammar.nq", false));
+    dout << "------" << std::endl;
+
+    pnode input = mkliteral(pstr(load_file(f)), 0, 0);
+    assert(input);
+
+    prvr.kb.add(
+            prvr.make(
+                    mkliteral(pstr(L":contents"), 0, 0),
+                    prvr.make(mkliteral(pstr(L":input"), 0, 0)),
+                    prvr.make(input)));
+
+    auto query = load_quads(L"load_n3", false);
+    dout << "------" << std::endl;
+
+    prvr(*query);
+
+    dout << "------" << std::endl;
+
+    termid raw = 0;
+    for (auto x : prvr.substs) {
+        prvr.prints(x); dout << std::endl;
+        dout << "______" << std::endl;
+        for (auto it: x)
+            if (*dict[it.first].value == L"?O") {
+                raw = it.second;
+                break;
+            }
+    }
+
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
+
+    //create_rules(new prover(prvr), raw);
+
+    query = load_quads(L"test", true);
+    dout << "------" << std::endl;
+    prover prvr2(prvr);
+    prvr2(*query);
+
+    dout << "------" << std::endl;
+    dout << "------" << std::endl;
+    dout << "------" << std::endl;
+
+    std::list<resid> statements;
+    prvr.get_dotstyle_list(raw, statements);
+    dout << std::endl << "statements: " << statements.size() << std::endl;
+
+    prvr.substs.clear();
+    prvr.e.clear();
+    //prvr.formatkb();
+
+    for (auto swd: statements)
+    {
+        if (ask(&prvr, swd, mkiri(pstr(L"http://idni.org/marpa#is_parse_of")), mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement_with_dot"))))
+        {
+            resid s = ask1(&prvr, swd, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement")));
+            assert (s);
+            resid sim = ask1(&prvr, s, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#simpleStatement")));
+            if (sim) {
+                dout << "   " << sim << "   ";
+                resid subj = ask1(&prvr, sim, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#subject")));
+                resid sspl = ask1(&prvr, sim, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#propertylist")));
+                resid se   = ask1(&prvr, subj, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#expression")));
+                assert(sspl);
+                assert(se);
+                resid sepi   = ask1(&prvr, se, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#pathitem")));
+                //subject = addpi(sepi);
+                
+
+
+            }
+        }
+    }
+
     //...
     return 0;
 }
 
 
-void *marpa_parser(prover *p, resid language, prover::proof *prf) {
+void *marpa_parser(prover *p, resid language, shared_ptr<prover::proof> prf) {
     return (void*)new Marpa(p, language, prf);
 }
 
-pnode marpa_parse(void* marpa, string input) {
-    return ((Marpa *) marpa)->parse(input);
+termid marpa_parse(void* marpa, string input) {
+    Marpa *m = (Marpa *)marpa;
+    termid result = m->parse(input);
+    dout << L"result1: " << m->prvr->format(result) << std::endl;
+    return result;
+}
+
+string load_file(std::ifstream &f) {
+    std::string str((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    return ws(str);
 }
 
 
 
-/*
----------------------
-
-
-?M :marpa_for_grammar http://www.w3.org/2000/10/swap/grammar/n3#language; ?X :parsed (?M ?FN).
-
-
-->
-
-
-?X a n3:document
-?X n3:declarations [ ("@base" "xxx")  ("@prefix" "xxx" "yyy")  ("@keywords" ("aaa" "bbb" "ccc")) ]
-?X n3:universals
-
-?X n3:statements [ 
-
-
-
-*/
 
 
 /*

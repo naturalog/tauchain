@@ -6,7 +6,6 @@
         Author: Ohad Asor
 */
 
-#define __CL_ENABLE_EXCEPTIONS
 #include <deque>
 #include <climits>
 #include "rdf.h"
@@ -16,42 +15,33 @@
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/containers/list.hpp>
-#ifdef OPENCL
-#define CL(x) x
-extern std::string clprog;
-#include <CL/cl.hpp>
-#else
-#define CL(x)
-#endif
 
-//enum etype { IRI, BNODE, BOOLEAN, DOUBLE, INT, FLOAT, DECIMAL, URISTR, STR };
+typedef u64 termid;
+typedef boost::container::map<resid, termid> subst;
+std::shared_ptr<subst> sub(const subst& s = subst());
 
 class prover {
 public:
-	typedef u64 termid;
 
 	class term {
 	public:
 		term();
 		term(resid _p, termid _s, termid _o);
-		term(const term& t);
-		term& operator=(const term& t);
 		resid p;
 		termid s, o;
-		bool isstr() const;
 		pobj json(const prover&) const;
 	};
 	typedef u64 ruleid;
 	typedef boost::container::vector<termid> termset;
-	typedef boost::container::map<resid, termid> subst;
 	class ruleset {
 		termset _head;
 		boost::container::vector<termset> _body;
 		size_t m = 0;
-		prover& p;
 	public:
-		ruleset(prover* _p) : p(*_p) {}
-		uint add(termid t, const termset& ts);
+		prover* p;
+		ruleset(prover* _p) : p(_p) {}
+		ruleid add(termid t, const termset& ts);
+		ruleid add(termid t);
 		const termset& head() const				{ return _head; }
 		const boost::container::vector<termset>& body() const	{ return _body; }
 		size_t size()						{ return _head.size(); }
@@ -59,12 +49,19 @@ public:
 		void revert();
 		typedef boost::container::list<ruleid> rulelist;
 		typedef boost::container::map<resid, rulelist> r2id_t;
+		string format() const;
 		inline const rulelist& operator[](resid id) const {
 			static rulelist empty;
-			auto x = r2id.find(id); 
-			return (x==r2id.end())?empty:x->second;
+			auto x = r2id.find(id);
+			return x == r2id.end() ? empty : x->second;
 		}
-		string format() const;
+/*		void dump() const {
+			for (auto x : r2id) {
+				dout << x.first << endl;
+				for (auto y : x.second)
+					dout << tab << y << tab << p->formatr(y, false) << tab << p->formatr(y, true)<<endl;
+			}
+		}*/
 	private:
 		r2id_t r2id, _r2id;
 	} kb;
@@ -72,18 +69,19 @@ public:
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
 	prover ( const prover& p );
-	void operator()(termset& goal, const subst* s = 0);
-	void operator()(qlist goal, const subst* s = 0);
+	void operator()(termset& goal, std::shared_ptr<subst> s = 0);
+	void operator()(const qdb& goal, std::shared_ptr<subst> s = 0);
 	const term& get(termid) const;
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
-	typedef boost::container::list<std::pair<ruleid, subst>> ground;
-	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+	typedef boost::container::list<std::pair<ruleid, std::shared_ptr<subst>>> ground;
+	typedef boost::container::map<resid, boost::container::set<std::pair<termid, std::shared_ptr<ground>>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
 	void printg(const ground& g);
+	void printg(std::shared_ptr<ground> g) { printg(*g); }
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(resid p, termid s = 0, termid o = 0);
@@ -91,33 +89,29 @@ public:
 	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
+	void prints(std::shared_ptr<subst> s) { prints(*s); }
 
 	struct proof {
 		ruleid rul;
 		uint last;
-		proof *prev;
-		subst s;
-		ground g;
-		proof() : rul(0), prev(0) {}
-		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
-			: rul(r), last(l), prev(p), s(_s), g(_g) {}
-		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) {}
+		std::shared_ptr<proof> prev;
+		std::shared_ptr<subst> s;
+		std::shared_ptr<ground> g;
+		proof() : rul(0), prev(0), s(sub()), g(std::make_shared<ground>()) {}
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, std::shared_ptr<subst> _s = sub(), std::shared_ptr<ground> _g = std::make_shared<ground>() ) 
+			: rul(r), last(l), prev(make_shared<proof>(*p)), s(_s), g(_g) {}
+		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev ? make_shared<proof>(*p.prev) : 0), s(p.s), g(p.g) {}
 	};
-	void addrules(pquad q);
+
+	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
-	termid list2term(std::list<pnode>& l);
-
-
-
+	termid list2term(std::list<pnode>& l, const qdb& quads);
+	termid list2term_simple(std::list<termid>& l);
+	string format(termid id, bool json = false);
+	void get_dotstyle_list(termid, std::list<resid>&);
+	string formatkb(bool json = false);
 
 private:
-
-#ifdef OPENCL
-typedef cl_short prop_t;
-typedef 
-#else
-typedef int prop_t;
-#endif
 
 	class termdb {
 	public:
@@ -132,59 +126,48 @@ typedef int prop_t;
 		p2id_t p2id;
 	} _terms;
 	friend ruleset;
+//	qdb quads;
+	int steps = 0;
 
-	void step (proof*, std::deque<proof*>&, bool del = true);
-
+	void step (std::shared_ptr<proof>, std::deque<shared_ptr<proof>>&, bool del = true);
 	bool hasvar(termid id);
 	termid evaluate(termid id, const subst& s);
+	inline termid evaluate(termid id, std::shared_ptr<subst> s) { return evaluate(id, *s); }
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool euler_path(proof* p, termid t);
-	int builtin(termid id, proof* p, std::deque<proof*>& queue);
-//	bool maybe_unify(const term, const term);
-//	std::set<uint>
+	inline bool unify(termid _s, std::shared_ptr<subst> ssub, termid _d, std::shared_ptr<subst> dsub, bool f) {
+		return unify(_s, *ssub, _d, *dsub, f);
+	}
+	bool euler_path(shared_ptr<proof>, const std::deque<shared_ptr<proof>>&);
+	int builtin(termid id, shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue);
 	bool match(termid e, termid h);
-	termid quad2term(const quad& p);
+	termid quad2term(const quad& p, const qdb& quads);
+	termid list_next(termid t, proof&);
+	termid list_first(termid t, proof&);
+	bool kbowner, goalowner;
+	string predstr(termid t);
+	string preddt(termid t);
+	string formatg(const ground& g, bool json = false);
+	bool islist(termid);
+	bool consistency(const qdb& quads);
 
-	string format(termid id, bool json = false);
+	// formatters
+
 	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string format(term t, bool json = false);
 	string formatr(ruleid r, bool json = false);
-	string formatkb(bool json = false);
 	void printp(proof* p);
+	void printp(std::shared_ptr<proof> p) { printp(&*p); }
 	string formats(const subst& s, bool json = false);
+	string formats(std::shared_ptr<subst>& s, bool json = false) { return formats(*s, json); }
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);
 	void printr_substs(ruleid r, const subst& s);
 	void jprinte();
-
-#ifdef OPENCL
-	void initcl();
-	std::vector<cl::Platform> platforms;
-	cl::Context context;
-	std::vector<cl::Device> devices;
-	cl::Program prog;
-	cl::Kernel kernel;
-	cl::Event event;
-	cl::CommandQueue cq;
-	uint last_rule, last_term;
-	cl::Buffer clterms, clrule, clresult;
-#endif
-//	termid va;
-	qdb quads;
-	termid list_next(termid t, proof&);
-	termid list_first(termid t, proof&);
-	bool kbowner, goalowner;
-	string predstr(prover::termid t);
-	string preddt(prover::termid t);
-	string formatg(const ground& g, bool json = false);
 	pobj json(const termset& ts) const;
 	pobj json(const subst& ts) const;
 	pobj json(const ground& g) const;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
-	bool islist(termid);
-	int steps = 0;
-	bool consistency();
 };
 #endif
