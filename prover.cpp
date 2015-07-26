@@ -371,16 +371,18 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
-		auto f = [this,p](){
+//		auto f = [this,p](){
 			shared_ptr<proof> r = make_shared<proof>(*p->prev);
 			r->g = p->g;
 			r->s = sub(*p->prev->s);
 			if (!kb.body()[p->rul].empty()) r->g->emplace_back(p->rul, p->s);
 			unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 			++r->last;
-			return r;
-		};
-		queue.push_back(std::async(f));
+//			queue.push_back(r);
+			step(r, queue);
+//			return r;
+//		};
+//		queue.push_back(std::async(f));
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
 }
@@ -619,7 +621,7 @@ pobj prover::json(ruleid t) const {
 	(*m->MAP())[L"head"] = get(kb.head()[t]).json(*this);
 	(*m->MAP())[L"body"] = json(kb.body()[t]);
 	return m;
-};
+}
 
 pobj prover::json(const ground& g) const {
 	pobj l = mk_olist_obj();
