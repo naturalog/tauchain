@@ -241,7 +241,7 @@ string prover::formatkb(bool json) {
 string prover::formatg(const ground& g, bool json) {
 	std::wstringstream ss;
 	for (auto x : g) {
-		ss << formatr(x.first) << tab << formats(x.second);
+		ss << formatr(x.first, json) << tab << formats(x.second, json);
 		ss << endl;
 	}
 	return ss.str();

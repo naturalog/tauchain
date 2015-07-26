@@ -21,7 +21,7 @@ pnode nqparser::readcurly() {
 	if (*s == L'}') { ++s; return mkbnode(r); }
 	auto t = (*this)(s, *r);
 	return mkbnode(r);
-};
+}
 
 pnode nqparser::readlist() {
 	setproc(L"readlist");
@@ -51,7 +51,7 @@ pnode nqparser::readlist() {
 	while (*s != L')');
 	do { ++s; } while (iswspace(*s));
 	return mkbnode(pstr(head));
-};
+}
 
 pnode nqparser::readiri() {
 	setproc(L"readiri");
@@ -85,7 +85,7 @@ pnode nqparser::readiri() {
 		iri = pstr(*it->second->value + iri->substr(i));
 	}
 	return mkiri(iri);
-};
+}
 
 pnode nqparser::readbnode() {
 	setproc(L"readbnode");
@@ -94,7 +94,7 @@ pnode nqparser::readbnode() {
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	return mkbnode(wstrim(t));
-};
+}
 
 void nqparser::readprefix() {
 	setproc(L"readprefix");
@@ -111,7 +111,7 @@ void nqparser::readprefix() {
 	prefixes[*tt] = readiri();
 	while (*s != '.') ++s;
 	++s;
-};
+}
 
 pnode nqparser::readvar() {
 	setproc(L"readvar");
@@ -120,7 +120,7 @@ pnode nqparser::readvar() {
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	return mkiri(wstrim(t));
-};
+}
 
 pnode nqparser::readlit() {
 	setproc(L"readlit");
@@ -148,7 +148,7 @@ pnode nqparser::readlit() {
 	string t1 = t;
 	boost::replace_all(t1, L"\\\\", L"\\");
 	return mkliteral(wstrim(t1), pstrtrim(dt), pstrtrim(lang));
-};
+}
 
 pnode nqparser::readany(bool lit){
 	pnode pn;
@@ -156,7 +156,7 @@ pnode nqparser::readany(bool lit){
 	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !(pn = readcurly()) && !(pn = readiri()) )
 		return (pnode)0;
 	return pn;
-};
+}
 
 
 std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
