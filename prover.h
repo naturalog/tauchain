@@ -94,7 +94,9 @@ public:
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
-	typedef boost::container::list<std::pair<ruleid, shared_ptr<subst>>> ground;
+	typedef boost::interprocess::allocator<std::pair<const ruleid, shared_ptr<subst>>, boost::interprocess::managed_mapped_file::segment_manager> galloc;
+	typedef boost::container::list<std::pair<ruleid, shared_ptr<subst>>, galloc> gbase;
+	class ground : public gbase { public: using gbase::gbase; ground():gbase(*alloc){}};
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, shared_ptr<ground>>>> evidence;
 	evidence e;
 	std::vector<subst> substs;

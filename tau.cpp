@@ -101,7 +101,7 @@ public:
 int main ( int argc, char** argv ) {
 	const char* fname = "/tmp/tau.bin";
 	try{std::remove(fname);}catch(...){}
-	segment = new boost::interprocess::managed_mapped_file(boost::interprocess::open_or_create, fname, 1024*1024*256);
+	segment = new boost::interprocess::managed_mapped_file(boost::interprocess::open_or_create, fname, 1024*1024*1024);
 	alloc = new allocator_t(segment->get_segment_manager());
 	dict.init();
 	cmds_t cmds = { {
