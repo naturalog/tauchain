@@ -51,7 +51,7 @@ statement_with_dot cfg:mustBeOneSequence ((statement "...")).
 
 # Formula does NOT need period on last statement
 
-formulacontent marpa:listOf statement;
+formulacontent marpa:list_of statement;
 	marpa:separator "...".
 
 statement  cfg:mustBeOneSequence (

@@ -171,6 +171,20 @@ public:
 
 typedef std::shared_ptr <terminal> pterminal;
 
+struct MarpaIris{
+    pnode iri(const std::string s)
+    {
+        return mkiri(pstr(prefix + ws(s)));
+    }
+    string prefix = L"http://idni.org/marpa#";
+    const pnode has_value = iri("has_value");
+    const pnode is_parse_of = iri("is_parse_of");
+    const pnode list_of = iri("list_of");
+    const pnode separator = iri("separator");
+};
+
+MarpaIris *marpa = 0;
+
 struct Marpa {
     Marpa_Grammar g;
     bool precomputed = false;
@@ -182,10 +196,6 @@ struct Marpa {
     prover *prvr, *prvr2;/*prvr is the one we are called from. we will use prvr2 for querying the grammar, so that prvr doesnt get messed up*/
     string whitespace = L""; // i use this for comment regex, comments are processed kinda specially so they dont have to pollute the grammar
     const resid pcomma = dict[mkliteral(pstr(L","), 0, 0)];
-    const pnode has_value = mkiri(pstr(L"http://idni.org/marpa#has_value"));
-    const pnode is_parse_of = mkiri(pstr(L"http://idni.org/marpa#is_parse_of"));
-    const pnode marpa_listOf = mkiri(pstr(L"http://idni.org/marpa#listOf"));
-    const pnode marpa_separator = mkiri(pstr(L"http://idni.org/marpa#separator"));
     const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
     const pnode rdfs_rest = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
     const pnode rdfs_first = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
@@ -250,6 +260,8 @@ struct Marpa {
         }
         if (marpa_g_force_valued(g) < 0)
             throw std::runtime_error("marpa_g_force_valued failed?!?!?");
+
+        if (!marpa)marpa=new MarpaIris();
 
         prvr = prvr_;
         prvr2 = new prover(*prvr);
@@ -319,8 +331,8 @@ struct Marpa {
         else if ((bind = ask1(prvr2, thing, bnf_commaSeparatedListOf))) {
             seq_new(symbol, add(bind, prf), add(pcomma, prf), 0, MARPA_PROPER_SEPARATION);
         }
-        else if ((bind = ask1(prvr2, thing, marpa_listOf))) {
-            auto sep = ask1(prvr2, thing, marpa_separator);
+        else if ((bind = ask1(prvr2, thing, marpa->list_of))) {
+            auto sep = ask1(prvr2, thing, marpa->separator);
             assert(sep);
             seq_new(symbol, add(bind, prf), add(sep, prf), 0, 0);
         }
@@ -579,7 +591,7 @@ struct Marpa {
                     if (terminals.find(symbol) != terminals.end()) {
                         xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
                         prvr->kb.add(prvr->make(bnf_matches, xx,  prvr->make(terminals[symbol]->thing)));
-                        prvr->kb.add(prvr->make(has_value, xx, prvr->make(mkliteral(pstr(token_value), 0, 0))));
+                        prvr->kb.add(prvr->make(marpa->has_value, xx, prvr->make(mkliteral(pstr(token_value), 0, 0))));
                     }
                     else // it must be a literal
                         xx = prvr->make(mkliteral(pstr(token_value), 0, 0));
@@ -614,8 +626,8 @@ struct Marpa {
                         for (auto arg: args) {
                             sym arg_sym = check_int(marpa_g_rule_rhs(g, marpa_v_rule(v), rhs_item_index));
 
-                            if (literals.find(arg_sym) == literals.end() &&
-                                (terminals.find(arg_sym) == terminals.end()))
+                            if (literals.find(arg_sym) == literals.end() )
+                              //  (terminals.find(arg_sym) == terminals.end()))
                             {
                                 prvr->kb.add(prvr->make(sym2resid(arg_sym), xx,  arg));
                             }
@@ -629,7 +641,7 @@ struct Marpa {
                         }
                     }
 
-                    prvr->kb.add(prvr->make(is_parse_of, xx, prvr->make(res)));
+                    prvr->kb.add(prvr->make(marpa->is_parse_of, xx, prvr->make(res)));
                     //dout << L"xx: " << prvr->format(xx) << std::endl;
                     stack[marpa_v_result(v)] = xx;
 
@@ -660,18 +672,99 @@ struct Marpa {
 
 };
 
-/*
-void create_rules(prover *prvr, resid raw)
+
+class N3
 {
-    //termid iii = prvr->make(prvr->get(prvr->tmpvar()).p, prvr->make(raw), prvr->tmpvar());
-    //termid iii = prvr->make(mkiri(pstr(L"http://idni.org/marpa#arg0")), prvr->make(raw), prvr->tmpvar());
+public:
 
-    prover::termset query;
-    query.emplace_back(iii);
-    (*prvr)(query);
+    pnode uri(std::string s)
+    {
+        return mkiri(pstr(ws("http://www.w3.org/2000/10/swap/grammar/n3#" + s)));
+    }
+    pnode n3symbol = uri("symbol");
+    pnode n3subject = uri("subject");
+    pnode n3explicituri = uri("explicituri");
+    pnode n3propertylist = uri("propertylist");
+    pnode n3expression = uri("expression");
+    pnode n3pathitem = uri("pathitem");
+    pnode n3statement_with_dot = uri("statement_with_dot");
+    pnode n3statement = uri("statement");
+    pnode n3simpleStatement = uri("simpleStatement");
+    pnode n3qname = uri("qname");
 
-}
-*/
+    prover *prvr, *dest;
+
+    N3(prover &prvr_, prover &dest_):prvr(&prvr_), dest(&dest_)
+    {
+        if (!marpa)marpa=new MarpaIris();
+    }
+
+    termid add_symbol(resid x)
+    {
+        resid uri = ask1(prvr, x, n3explicituri);
+        if (uri)
+        {
+            resid val = ask1(prvr, uri, marpa->has_value);
+            assert(val);
+            return dest->make(mkiri(dict[val].value));
+        }
+        resid qname = ask1(prvr, x, n3qname);
+        if (qname)
+        {
+            resid val = ask1(prvr, uri, marpa->has_value);
+            assert(val);
+            return dest->make(mkiri(dict[val].value));
+        }
+    }
+
+    termid add_pathitem(resid pi)
+    {
+        resid sym = ask1(prvr, pi, n3symbol);
+        if (sym)
+            return add_symbol(sym);
+
+    }
+
+    void add_simpleStatement(resid sim)
+    {
+        dout << "   " << sim << "   ";
+        resid subj = ask1(prvr, sim, n3subject);
+        resid sspl = ask1(prvr, sim, n3propertylist);
+        resid se   = ask1(prvr, subj, n3expression);
+        assert(sspl);
+        assert(se);
+        resid sepi = ask1(prvr, se, n3pathitem);
+        termid subject = add_pathitem(sepi);
+
+        //dest->kb.add(dest->make()
+
+
+    }
+
+    void add_statements(resid raw) {
+        std::list<resid> statements;
+        prvr->get_dotstyle_list(raw, statements);
+        prvr->substs.clear();
+        prvr->e.clear();
+        dout << std::endl << "statements: " << statements.size() << std::endl;
+
+        for (auto swd: statements) {
+            if (ask(prvr, swd, marpa->is_parse_of, n3statement_with_dot)) {
+                resid s = ask1(prvr, swd, n3statement);
+                assert (s);
+                resid sim = ask1(prvr, s, n3simpleStatement);
+                if (sim)
+                    add_simpleStatement(sim);
+            }
+        }
+    }
+};
+
+
+
+
+
+
 
 std::string load_n3_cmd::desc() const { return "load n3"; }
 
@@ -718,53 +811,27 @@ int load_n3_cmd::operator()(const strings &args) {
                 break;
             }
     }
+    prvr.substs.clear();
+    prvr.e.clear();
+
+    prvr.formatkb();
 
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
 
-    //create_rules(new prover(prvr), raw);
-
+    /*
     query = load_quads(L"test", true);
     dout << "------" << std::endl;
     prover prvr2(prvr);
     prvr2(*query);
-
-    dout << "------" << std::endl;
-    dout << "------" << std::endl;
-    dout << "------" << std::endl;
-
-    std::list<resid> statements;
-    prvr.get_dotstyle_list(raw, statements);
-    dout << std::endl << "statements: " << statements.size() << std::endl;
-
-    prvr.substs.clear();
-    prvr.e.clear();
-    //prvr.formatkb();
-
-    for (auto swd: statements)
-    {
-        if (ask(&prvr, swd, mkiri(pstr(L"http://idni.org/marpa#is_parse_of")), mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement_with_dot"))))
-        {
-            resid s = ask1(&prvr, swd, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#statement")));
-            assert (s);
-            resid sim = ask1(&prvr, s, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#simpleStatement")));
-            if (sim) {
-                dout << "   " << sim << "   ";
-                resid subj = ask1(&prvr, sim, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#subject")));
-                resid sspl = ask1(&prvr, sim, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#propertylist")));
-                resid se   = ask1(&prvr, subj, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#expression")));
-                assert(sspl);
-                assert(se);
-                resid sepi   = ask1(&prvr, se, mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#pathitem")));
-                //subject = addpi(sepi);
-                
+    */
+    dout << "......" << std::endl;
 
 
-            }
-        }
-    }
 
-    //...
+    prover dest(prvr);
+    N3 n3(prvr, dest);
+    n3.add_statements(raw);
     return 0;
 }
 
