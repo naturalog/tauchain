@@ -14,6 +14,8 @@ auto dummy = []() {
 #endif
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 jsonld_options opts;
+boost::interprocess::managed_mapped_file* segment;
+allocator_t* alloc;
 
 //void menu();
 //#include <boost/asio.hpp>
@@ -97,6 +99,10 @@ public:
 };
 
 int main ( int argc, char** argv ) {
+	const char* fname = "/tmp/tau.bin";
+	try{std::remove(fname);}catch(...){}
+	segment = new boost::interprocess::managed_mapped_file(boost::interprocess::open_or_create, fname, 1024*1024*256);
+	alloc = new allocator_t(segment->get_segment_manager());
 	dict.init();
 	cmds_t cmds = { {
 			#ifdef with_marpa

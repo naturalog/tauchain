@@ -20,11 +20,10 @@
 
 using namespace boost::algorithm;
 int _indent = 0;
-
 //const uint max_terms = 1024 * 1024;
 
 std::shared_ptr<subst> sub(const subst& s) {
-	std::shared_ptr<subst> r = std::make_shared<subst>(s);
+	std::shared_ptr<subst> r = std::make_shared<subst>(s, *alloc);
 	return r;
 }
 //std::shared_ptr<subst> sub(std::shared_ptr<subst> s) { return sub(prover::subs[s]); }
@@ -108,7 +107,7 @@ termid prover::tmpvar() {
 	static int last = 1;
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
-
+/*
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
@@ -174,7 +173,7 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 	TRACE(dout<<" returned " << r.size() << " items: "; for (auto n : r) dout<<format(n)<<' '; dout << std::endl);
 	return r;
 }
-
+*/
 void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
 	auto s = get(id).s;
 	if (!s) return;
@@ -278,7 +277,8 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		r = 1;
 	}*/
 	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
-		termset ts(2);
+		termset ts(2,0,*alloc);// = *segment->construct<termset>(0)(*alloc);
+//		ts.resize(2);
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
@@ -326,7 +326,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 			shared_ptr<proof> r = make_shared<proof>();
 			*r = *p;
 			r->g = p->g;
-			r->g->emplace_back(kb.add(evaluate(id, p->s), termset()), sub());
+			r->g->emplace_back(kb.add(evaluate(id, p->s), termset(*alloc)), sub());
 			++r->last;
 			return r;
 		};
@@ -371,7 +371,7 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 			e[get(t).p].emplace(t, p->g);
 		}
 	} else {
-//		auto f = [this,p](){
+		auto f = [this,p](){
 			shared_ptr<proof> r = make_shared<proof>(*p->prev);
 			r->g = p->g;
 			r->s = sub(*p->prev->s);
@@ -379,10 +379,10 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 			unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 			++r->last;
 //			queue.push_back(r);
-			step(r, queue);
-//			return r;
-//		};
-//		queue.push_back(std::async(f));
+//			step(r, queue);
+			return r;
+		};
+		queue.push_back(std::async(f));
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
 }
@@ -453,7 +453,7 @@ qlist merge ( const qdb& q ) {
 }
 
 void prover::operator()(const qdb& query, std::shared_ptr<subst> s) {
-	termset goal;
+	termset goal = termset(*alloc);
 	termid t;
 	for ( auto q : merge(query) ) 
 		if (	dict[q->pred] != rdffirst && 
@@ -476,7 +476,7 @@ void prover::addrules(pquad q, qdb& quads) {
 		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
 		for ( pquad y : *quads.first.at ( o ) ) {
 			if ( quads.first.find ( s ) == quads.first.end() ) continue;
-			termset ts;
+			termset ts = termset(*alloc);
 			for ( pquad z : *quads.first.at( s ) )
 				if ((dict[z->pred] != rdffirst && 
 					dict[z->pred] != rdfrest) &&
@@ -484,7 +484,7 @@ void prover::addrules(pquad q, qdb& quads) {
 					ts.push_back( t );
 			if ((t = quad2term(*y, quads))) kb.add(t, ts);
 		}
-	} else if ((t = quad2term(*q, quads))) kb.add(t, termset());
+	} else if ((t = quad2term(*q, quads))) kb.add(t, termset(*alloc));
 }
 
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
@@ -501,7 +501,7 @@ bool prover::consistency(const qdb& quads) {
 //	prover p(quads, false);
 	prover p(*this);
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
-	termset g;
+	termset g = termset(*alloc);
 	g.push_back(t);
 	p(g);
 	auto ee = p.e;
@@ -594,7 +594,7 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 }
 
 prover::ruleid prover::ruleset::add(termid t) {
-	termset ts;
+	termset ts = termset(*alloc);
 	return add(t, ts);
 }
 
@@ -650,7 +650,7 @@ pobj prover::ejson() const {
 	}
 	return o;
 }
-
+/*
 void prover::ruleset::mark() {
 	_r2id = r2id;
 	if (!m) m = size(); 
@@ -667,7 +667,7 @@ void prover::ruleset::revert() {
 	_body.erase(_body.begin() + (m-1), _body.end());
 	m = 0;
 }
-
+*/
 string prover::ruleset::format() const {
 	setproc(L"ruleset::format");
 	std::wstringstream ss;

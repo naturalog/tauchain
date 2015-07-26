@@ -16,14 +16,20 @@
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/containers/list.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
+#include <boost/interprocess/allocators/allocator.hpp>
+
+typedef boost::interprocess::allocator<void, boost::interprocess::managed_mapped_file::segment_manager> allocator_t;
+extern boost::interprocess::managed_mapped_file* segment;
+extern allocator_t* alloc;
 
 typedef u64 termid;
-typedef boost::container::map<resid, termid> subst;
-shared_ptr<subst> sub(const subst& s = subst());
+typedef boost::interprocess::allocator<std::pair<const resid, termid>, boost::interprocess::managed_mapped_file::segment_manager> salloc;
+typedef boost::container::map<resid, termid, std::less<resid>, salloc> subst;
+shared_ptr<subst> sub(const subst& s = subst(std::less<resid>(), *alloc));
 
 class prover {
 public:
-
 	class term {
 	public:
 		term();
@@ -33,26 +39,38 @@ public:
 		pobj json(const prover&) const;
 	};
 	typedef u64 ruleid;
-	typedef boost::container::vector<termid> termset;
+	typedef boost::interprocess::allocator<termid, boost::interprocess::managed_mapped_file::segment_manager> tidalloc;
+	typedef boost::container::vector<termid, tidalloc> termset;
 	class ruleset {
-		termset _head;
-		boost::container::vector<termset> _body;
+	public:
+		typedef boost::interprocess::allocator<termset, boost::interprocess::managed_mapped_file::segment_manager> tsalloc;
+		typedef boost::container::vector<termset, tsalloc> btype;
+	private:
+		termset _head = termset(*alloc);// = *segment->construct<termset>("head")(*alloc);
+		btype  _body = btype(*alloc);
 		size_t m = 0;
 	public:
 		prover* p;
 		ruleset(prover* _p) : p(_p) {}
 		ruleid add(termid t, const termset& ts);
 		ruleid add(termid t);
-		const termset& head() const				{ return _head; }
-		const boost::container::vector<termset>& body() const	{ return _body; }
-		size_t size()						{ return _head.size(); }
+		const termset& head() const	{ return _head; }
+		const btype& body() const	{ return _body; }
+		size_t size()			{ return _head.size(); }
 		void mark();
 		void revert();
-		typedef boost::container::list<ruleid> rulelist;
-		typedef boost::container::map<resid, rulelist> r2id_t;
+		typedef tidalloc ralloc;
+		typedef boost::container::list<ruleid, ralloc> rlbase;
+		class rulelist : public rlbase {
+		public:
+			rulelist() : rlbase(*alloc) {}
+			using rlbase::rlbase;
+		};
+		typedef boost::interprocess::allocator<std::pair<const resid, rulelist>, boost::interprocess::managed_mapped_file::segment_manager> r2alloc;
+		typedef boost::container::map<resid, rulelist, std::less<resid>, r2alloc> r2id_t;
 		string format() const;
 		inline const rulelist& operator[](resid id) const {
-			static rulelist empty;
+			static rulelist empty(*alloc);
 			auto x = r2id.find(id);
 			return x == r2id.end() ? empty : x->second;
 		}
@@ -64,7 +82,7 @@ public:
 			}
 		}*/
 	private:
-		r2id_t r2id, _r2id;
+		r2id_t r2id = r2id_t(std::less<resid>(), *alloc);
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
@@ -116,6 +134,9 @@ public:
 private:
 
 	class termdb {
+		typedef boost::interprocess::allocator<term, boost::interprocess::managed_mapped_file::segment_manager> talloc;
+		typedef boost::container::vector<term, talloc> terms_t;
+		terms_t terms = terms_t(*alloc);
 	public:
 		typedef boost::container::list<termid> termlist;
 		typedef boost::container::map<resid, termlist> p2id_t;
@@ -124,7 +145,6 @@ private:
 		inline const termlist& operator[](resid id) const { return p2id.at(id); }
 		inline termid add(resid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
 	private:
-		boost::container::vector<term> terms;
 		p2id_t p2id;
 	} _terms;
 	friend ruleset;
