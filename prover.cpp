@@ -22,10 +22,10 @@ using namespace boost::algorithm;
 int _indent = 0;
 //const uint max_terms = 1024 * 1024;
 
-std::shared_ptr<subst> sub(const subst& s) {
-	std::shared_ptr<subst> r = std::make_shared<subst>(s, *alloc);
-	return r;
-}
+//std::shared_ptr<subst> sub(const subst& s) {
+//	std::shared_ptr<subst> r = std::make_shared<subst>(s, *alloc);
+//	return r;
+//}
 //std::shared_ptr<subst> sub(std::shared_ptr<subst> s) { return sub(prover::subs[s]); }
 
 bool prover::hasvar(termid id) {
@@ -93,7 +93,7 @@ bool prover::euler_path(shared_ptr<proof> p) {
 	termid t = kb.head()[p->rul];
 	uint l = 0;
 	while ((ep = ep->prev))
-		if (ep->rul == p->rul && unify(kb.head()[ep->rul], *ep->s, t, *p->s, false))
+		if (ep->rul == p->rul && unify(kb.head()[ep->rul], ep->s, t, p->s, false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; } else ++l;
 	TRACE(dout<<"depth: " << l << endl)
 	
@@ -282,7 +282,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		auto f = [this,A,t,ts,p](){return make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, sub(), p->g);};
+		auto f = [this,A,t,ts,p](){return make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g);};
 		queue.push_front(std::async(f));
 	}
 	#ifdef with_marpa
@@ -326,7 +326,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 			shared_ptr<proof> r = make_shared<proof>();
 			*r = *p;
 			r->g = p->g;
-			r->g->emplace_back(kb.add(evaluate(id, p->s), termset(*alloc)), sub());
+			r->g.emplace_back(kb.add(evaluate(id, p->s), termset(*alloc)), subst());
 			++r->last;
 			return r;
 		};
@@ -348,11 +348,11 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 		if (builtin(t, p, queue) != -1) return;
 		#endif
 		for (auto rl : kb[get(t).p]) {
-			std::shared_ptr<subst> s = sub();
+			subst s;
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
 				auto f = [this,rl,p,s](){
 					shared_ptr<proof> r = make_shared<proof>(rl, 0, p, s, p->g);
-					if (kb.body()[rl].empty()) r->g->emplace_back(rl, sub());
+					if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
 					return r;
 				};
 				queue.push_front(std::async(f));
@@ -374,8 +374,8 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 		auto f = [this,p](){
 			shared_ptr<proof> r = make_shared<proof>(*p->prev);
 			r->g = p->g;
-			r->s = sub(*p->prev->s);
-			if (!kb.body()[p->rul].empty()) r->g->emplace_back(p->rul, p->s);
+			r->s = subst(p->prev->s);
+			if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
 			unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 			++r->last;
 //			queue.push_back(r);
@@ -452,7 +452,7 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-void prover::operator()(const qdb& query, std::shared_ptr<subst> s) {
+void prover::operator()(const qdb& query, subst* s) {
 	termset goal = termset(*alloc);
 	termid t;
 	for ( auto q : merge(query) ) 
@@ -524,7 +524,7 @@ bool prover::consistency(const qdb& quads) {
 }
 
 #include <chrono>
-void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
+void prover::operator()(termset& goal, subst* s) {
 //	setproc(L"prover()");
 	queue_t queue;
 	auto f = [&]() {
@@ -532,7 +532,7 @@ void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 		p->rul = kb.add(0, goal);
 		p->last = 0;
 		p->prev = 0;
-		if (s) p->s = s;
+		if (s) p->s = *s;
 		return p;
 	};
 	#ifdef with_marpa
@@ -628,7 +628,7 @@ pobj prover::json(const ground& g) const {
 	for (auto x : g) {
 		psomap_obj o = mk_somap_obj();
 		(*o->MAP())[L"src"] = json(x.first);
-		(*o->MAP())[L"env"] = json(*x.second);
+		(*o->MAP())[L"env"] = json(x.second);
 		l->LIST()->push_back(o);
 	}
 	return l;
@@ -643,7 +643,7 @@ pobj prover::ejson() const {
 			(*t->MAP())[L"head"] = get(y.first).json(*this);
 			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
 			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
-			(*t1->MAP())[L"args"] = json(*y.second);
+			(*t1->MAP())[L"args"] = json(y.second);
 			l->LIST()->push_back(t);
 		}
 		(*o->MAP())[dstr(x.first)] = l;

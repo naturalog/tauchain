@@ -25,8 +25,9 @@ extern allocator_t* alloc;
 
 typedef u64 termid;
 typedef boost::interprocess::allocator<std::pair<const resid, termid>, boost::interprocess::managed_mapped_file::segment_manager> salloc;
-typedef boost::container::map<resid, termid, std::less<resid>, salloc> subst;
-shared_ptr<subst> sub(const subst& s = subst(std::less<resid>(), *alloc));
+typedef boost::container::map<resid, termid, std::less<resid>, salloc> sbase;
+class subst : public sbase { public: using sbase::sbase; subst():sbase(std::less<resid>(), *alloc){}};
+//shared_ptr<subst> sub(const subst& s = subst());
 
 class prover {
 public:
@@ -88,16 +89,16 @@ public:
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
 	prover ( const prover& p );
-	void operator()(termset& goal, shared_ptr<subst> s = 0);
-	void operator()(const qdb& goal, shared_ptr<subst> s = 0);
+	void operator()(termset& goal, subst* s = 0);
+	void operator()(const qdb& goal, subst* s = 0);
 	const term& get(termid) const;
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
-	typedef boost::interprocess::allocator<std::pair<const ruleid, shared_ptr<subst>>, boost::interprocess::managed_mapped_file::segment_manager> galloc;
-	typedef boost::container::list<std::pair<ruleid, shared_ptr<subst>>, galloc> gbase;
+	typedef boost::interprocess::allocator<std::pair<ruleid, subst>, boost::interprocess::managed_mapped_file::segment_manager> galloc;
+	typedef boost::container::list<std::pair<ruleid, subst>, galloc> gbase;
 	class ground : public gbase { public: using gbase::gbase; ground():gbase(*alloc){}};
-	typedef boost::container::map<resid, boost::container::set<std::pair<termid, shared_ptr<ground>>>> evidence;
+	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
@@ -116,10 +117,10 @@ public:
 		ruleid rul;
 		uint last;
 		shared_ptr<proof> prev;
-		shared_ptr<subst> s;
-		shared_ptr<ground> g;
-		proof() : rul(0), prev(0), s(sub()), g(std::make_shared<ground>()) {}
-		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, shared_ptr<subst> _s = sub(), shared_ptr<ground> _g = std::make_shared<ground>() ) 
+		subst s;
+		ground g;
+		proof() : rul(0), prev(0) {}
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(make_shared<proof>(*p)), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev ? make_shared<proof>(*p.prev) : 0), s(p.s), g(p.g) {}
 	};
