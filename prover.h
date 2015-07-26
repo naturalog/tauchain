@@ -16,15 +16,15 @@
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/containers/list.hpp>
-#include <boost/interprocess/managed_mapped_file.hpp>
+#include <boost/interprocess/managed_heap_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 
-typedef boost::interprocess::allocator<void, boost::interprocess::managed_mapped_file::segment_manager> allocator_t;
-extern boost::interprocess::managed_mapped_file* segment;
+typedef boost::interprocess::allocator<void, boost::interprocess::managed_heap_memory::segment_manager> allocator_t;
+extern boost::interprocess::managed_heap_memory* segment;
 extern allocator_t* alloc;
 
 typedef u64 termid;
-typedef boost::interprocess::allocator<std::pair<const resid, termid>, boost::interprocess::managed_mapped_file::segment_manager> salloc;
+typedef boost::interprocess::allocator<std::pair<const resid, termid>, boost::interprocess::managed_heap_memory::segment_manager> salloc;
 typedef boost::container::map<resid, termid, std::less<resid>, salloc> sbase;
 class subst : public sbase { public: using sbase::sbase; subst():sbase(std::less<resid>(), *alloc){}};
 //shared_ptr<subst> sub(const subst& s = subst());
@@ -40,11 +40,11 @@ public:
 		pobj json(const prover&) const;
 	};
 	typedef u64 ruleid;
-	typedef boost::interprocess::allocator<termid, boost::interprocess::managed_mapped_file::segment_manager> tidalloc;
+	typedef boost::interprocess::allocator<termid, boost::interprocess::managed_heap_memory::segment_manager> tidalloc;
 	typedef boost::container::vector<termid, tidalloc> termset;
 	class ruleset {
 	public:
-		typedef boost::interprocess::allocator<termset, boost::interprocess::managed_mapped_file::segment_manager> tsalloc;
+		typedef boost::interprocess::allocator<termset, boost::interprocess::managed_heap_memory::segment_manager> tsalloc;
 		typedef boost::container::vector<termset, tsalloc> btype;
 	private:
 		termset _head = termset(*alloc);// = *segment->construct<termset>("head")(*alloc);
@@ -67,7 +67,7 @@ public:
 			rulelist() : rlbase(*alloc) {}
 			using rlbase::rlbase;
 		};
-		typedef boost::interprocess::allocator<std::pair<const resid, rulelist>, boost::interprocess::managed_mapped_file::segment_manager> r2alloc;
+		typedef boost::interprocess::allocator<std::pair<const resid, rulelist>, boost::interprocess::managed_heap_memory::segment_manager> r2alloc;
 		typedef boost::container::map<resid, rulelist, std::less<resid>, r2alloc> r2id_t;
 		string format() const;
 		inline const rulelist& operator[](resid id) const {
@@ -95,7 +95,7 @@ public:
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
-	typedef boost::interprocess::allocator<std::pair<ruleid, subst>, boost::interprocess::managed_mapped_file::segment_manager> galloc;
+	typedef boost::interprocess::allocator<std::pair<ruleid, subst>, boost::interprocess::managed_heap_memory::segment_manager> galloc;
 	typedef boost::container::list<std::pair<ruleid, subst>, galloc> gbase;
 	class ground : public gbase { public: using gbase::gbase; ground():gbase(*alloc){}};
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
@@ -137,7 +137,7 @@ public:
 private:
 
 	class termdb {
-		typedef boost::interprocess::allocator<term, boost::interprocess::managed_mapped_file::segment_manager> talloc;
+		typedef boost::interprocess::allocator<term, boost::interprocess::managed_heap_memory::segment_manager> talloc;
 		typedef boost::container::vector<term, talloc> terms_t;
 		terms_t terms = terms_t(*alloc);
 	public:
