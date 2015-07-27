@@ -34,7 +34,7 @@ int _indent = 0;
 //}
 //std::shared_ptr<subst> sub(std::shared_ptr<subst> s) { return sub(prover::subs[s]); }
 
-std::forward_list<prover::proof*> prover::proof::proofs;
+//std::forward_list<prover::shared_ptr<proof>> prover::proof::proofs;
 
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
@@ -87,8 +87,9 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	return r;
 }
 
-bool prover::euler_path(proof& p) {
-	auto ep = &p;
+bool prover::euler_path(shared_ptr<proof>& _p) {
+	auto ep = _p;
+	proof& p = *_p;
 	termid t = kb.head()[p.rul];
 	uint l = 0;
 	while ((ep = ep->prev))
@@ -187,7 +188,7 @@ void* testfunc(void* p) {
 //	return 0;
 }
 
-int prover::builtin(termid id, proof* p, queue_t& queue) {
+int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term t = get(id);
 	int r = -1;
@@ -274,7 +275,7 @@ int prover::builtin(termid id, proof* p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push_front(new proof(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g));
+		queue.push_front(make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g));
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
@@ -313,7 +314,7 @@ int prover::builtin(termid id, proof* p, queue_t& queue) {
 	}
 	#endif
 	if (r == 1) {
-		proof* r = new proof;
+		shared_ptr<proof> r = make_shared<proof>();
 		*r = *p;
 		r->g = p->g;
 		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), subst());
@@ -324,7 +325,7 @@ int prover::builtin(termid id, proof* p, queue_t& queue) {
 	return r;
 }
 
-void prover::pushev(proof* p) {
+void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : kb.body()[p->rul]) {
 		MARPA(substs.push_back(*p->s));
@@ -334,12 +335,13 @@ void prover::pushev(proof* p) {
 	}
 }
 
-void prover::step(proof& p, queue_t& queue, queue_t& gnd) {
+void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
 	++steps;
+	proof& p = *_p;
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p.last != kb.body()[p.rul].size()) {
-		if (euler_path(p)) return;
+		if (euler_path(_p)) return;
 		termid t = kb.body()[p.rul][p.last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		MARPA(if (builtin(t, p, queue) != -1) return);
@@ -349,22 +351,22 @@ void prover::step(proof& p, queue_t& queue, queue_t& gnd) {
 		auto kbp = kb[pred];
 		for (auto rl : kbp) {
 			if (unify(t, p.s, kb.head()[rl], s, true)) {
-				proof* r = new proof(rl, 0, &p, s, p.g);
+				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
 				queue.push_front(r);
 			}
 			s.clear();
 		}
+//		delete &p;
 	}
-	else if (!p.prev) gnd.push_back(&p);
+	else if (!p.prev) gnd.push_back(_p);
 	else {
-		proof* r = new proof(*p.prev, p.g);
+		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g);
 		ruleid rl = p.rul;
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
 		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = p.prev->s, true);
 		++r->last;
 		queue.push_back(r);
-		delete &p;
 //		step(r, queue);
 	}
 }
@@ -509,7 +511,7 @@ bool prover::consistency(const qdb& quads) {
 void prover::operator()(termset& goal, subst* s) {
 //	setproc(L"prover()");
 	queue_t queue, gnd;
-	proof* p = new proof;
+	shared_ptr<proof> p = make_shared<proof>();
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
@@ -521,14 +523,14 @@ void prover::operator()(termset& goal, subst* s) {
 	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	#endif
 	queue.push_front(p);
-	proof* q;
+	shared_ptr<proof> q;
 	using namespace std;
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	do {
 		q = queue.back();
 		queue.pop_back();
-		step(*q, queue, gnd);
+		step(q, queue, gnd);
 		if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
 	

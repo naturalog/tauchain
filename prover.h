@@ -88,18 +88,18 @@ public:
 	struct proof {
 		ruleid rul = 0;
 		uint last;
-		proof* prev = 0;
+		shared_ptr<proof> prev = 0;
 		subst s;
 		ground g;
-		static std::forward_list<proof*> proofs;
-		static void clear() { for (auto x : proofs) delete x; proofs.clear(); }
-		proof() { proofs.push_front(this); }
-		proof(ruleid r, uint l = 0, proof* p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
-			: rul(r), last(l), prev(p), s(_s), g(_g) { proofs.push_front(this); }
-		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) { proofs.push_front(this); }
-		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev ? /*make_shared<proof>*/(p.prev) : 0), g(_g) { proofs.push_front(this); }
+//		static std::forward_list<shared_ptr<proof>> proofs;
+//		static void clear() { for (auto x : proofs) delete x; proofs.clear(); }
+		proof() { }
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
+			: rul(r), last(l), prev(p), s(_s), g(_g) {} 
+		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) { }
+		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev ? /*make_shared<proof>*/(p.prev) : 0), g(_g) { }
 	};
-	typedef std::deque<proof*> queue_t;
+	typedef std::deque<shared_ptr<proof>> queue_t;
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
@@ -127,12 +127,12 @@ private:
 	friend ruleset;
 	int steps = 0;
 
-	void pushev(proof*);
-	void step (proof&, queue_t&, queue_t&);
+	void pushev(shared_ptr<proof>);
+	void step(shared_ptr<proof>&, queue_t&, queue_t&);
 	termid evaluate(termid id, const subst& s);
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool euler_path(proof&);
-	int builtin(termid, proof*, queue_t&);
+	bool euler_path(shared_ptr<proof>&);
+	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
@@ -145,8 +145,8 @@ private:
 	string format(term t, bool json = false);
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);
-	void printp(proof* p);
-	void printp(shared_ptr<proof> p) { printp(&*p); }
+	void printp(shared_ptr<proof> p);
+//	void printp(shared_ptr<proof> p) { printp(&*p); }
 	string formats(const subst& s, bool json = false);
 	string formats(shared_ptr<subst>& s, bool json = false) { return formats(*s, json); }
 	void printterm_substs(termid id, const subst& s);

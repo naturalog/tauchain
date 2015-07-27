@@ -137,7 +137,7 @@ string prover::format(term p, bool json) {
 	return ss.str();
 }
 
-void prover::printp(proof* p) {
+void prover::printp(shared_ptr<proof> p) {
 	if (!p) return;
 	dout << KCYN << indent() << L"rule:   " << formatr(p->rul) <<endl<<indent();
 	if (p->prev) dout << L"prev:   " << p->prev <<endl<<indent()<< L"subst:  ";
