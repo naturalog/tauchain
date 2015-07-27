@@ -2,7 +2,6 @@
 #include "cli.h"
 #include <sstream>
 #include "prover.h"
-#include "match.h"
 #ifdef with_marpa
 #include "marpa_tau.h"
 #endif
