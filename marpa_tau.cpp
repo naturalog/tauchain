@@ -658,6 +658,8 @@ struct Marpa {
             }
         }
         marpa_v_unref(v);
+        if(check_int(marpa_t_next(t)) != -1)
+            throw std::runtime_error("ambiguous parse");
         marpa_t_unref(t);
         marpa_o_unref(o);
         marpa_b_unref(b);
@@ -683,10 +685,14 @@ public:
     }
     pnode n3symbol = uri("symbol");
     pnode n3subject = uri("subject");
+    pnode n3object = uri("object");
+    pnode n3objecttail = uri("objecttail");
     pnode n3explicituri = uri("explicituri");
     pnode n3propertylist = uri("propertylist");
+    pnode n3propertylisttail = uri("propertylisttail");
     pnode n3expression = uri("expression");
     pnode n3pathitem = uri("pathitem");
+    pnode n3predicate = uri("predicate");
     pnode n3statement_with_dot = uri("statement_with_dot");
     pnode n3statement = uri("statement");
     pnode n3simpleStatement = uri("simpleStatement");
@@ -699,19 +705,24 @@ public:
         if (!marpa)marpa=new MarpaIris();
     }
 
+    resid q(resid s, pnode p)
+    {
+        return ask1(prvr, s, p);
+    }
+
     termid add_symbol(resid x)
     {
-        resid uri = ask1(prvr, x, n3explicituri);
+        resid uri = q(x, n3explicituri);
         if (uri)
         {
-            resid val = ask1(prvr, uri, marpa->has_value);
+            resid val = q(uri, marpa->has_value);
             assert(val);
             return dest->make(mkiri(dict[val].value));
         }
-        resid qname = ask1(prvr, x, n3qname);
+        resid qname = q(x, n3qname);
         if (qname)
         {
-            resid val = ask1(prvr, uri, marpa->has_value);
+            resid val = q(qname, marpa->has_value);
             assert(val);
             return dest->make(mkiri(dict[val].value));
         }
@@ -719,26 +730,113 @@ public:
 
     termid add_pathitem(resid pi)
     {
-        resid sym = ask1(prvr, pi, n3symbol);
+        resid sym = q(pi, n3symbol);
         if (sym)
             return add_symbol(sym);
+        /*todo( "{" formulacontent "}" )
+                ( quickvariable )
+                ( numericliteral )
+                ( literal )
+                ( "[" propertylist "]"  )
+                (  "("  pathlist ")"  )
+                ( boolean )*/
 
+    }
+
+    termid add_expression(resid e)
+    {
+        resid sepi = q(e, n3pathitem);
+        assert(sepi);
+        //todo pathtail
+        return add_pathitem(sepi);
     }
 
     void add_simpleStatement(resid sim)
     {
+        assert(sim);
         dout << "   " << sim << "   ";
-        resid subj = ask1(prvr, sim, n3subject);
-        resid sspl = ask1(prvr, sim, n3propertylist);
-        resid se   = ask1(prvr, subj, n3expression);
-        assert(sspl);
+        resid subj = q(sim, n3subject);
+        assert(subj);
+        resid se   = q(subj, n3expression);
         assert(se);
-        resid sepi = ask1(prvr, se, n3pathitem);
+        resid sepi = q(se, n3pathitem);
+        assert(sepi);
         termid subject = add_pathitem(sepi);
 
-        //dest->kb.add(dest->make()
 
+        resid sspl = q(sim, n3propertylist);
+        if (sspl) {
+            resid prop = sspl;
+            resids props;
+            while (prop) {
+                props.push_back(prop);
+                prop = q(prop, n3propertylisttail);
+                if (prop)
+                    prop = q(prop, n3propertylist);
+            }
+            //now we have property lists in a list
+            for (auto prop:props) {
 
+                termid predicate;
+                bool reverse = false;
+
+                resid pred = q(prop, n3predicate);
+                resid pe = q(pred, n3expression);
+
+                //get string value of first item
+                resid i0 = q(pred, mkiri(pstr(marpa->prefix + L"arg0")));
+                string i0v = *dict[i0].value; //?
+
+                if (pe) { // if this predicate contains an expression
+                    predicate = add_expression(pe);
+                    /*                ( expression )
+                                    ( "@has" expression )
+                                ( "@is" expression "@of" )*/
+                    if (i0v == L"@is")
+                        reverse = true;
+                }
+                else {
+                    string ps;
+                    if (i0v == L"@a")
+                        ps = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+                    else if (i0v == L"=")
+                        ps = L"http://www.w3.org/2002/07/owl#sameAs";
+                    else if (i0v == L"=>")
+                        ps = L"http://www.w3.org/2000/10/swap/log#implies";
+                    else if (i0v == L"<=") {
+                        ps = L"http://www.w3.org/2000/10/swap/log#implies";
+                        reverse = true;
+                    }
+                    else
+                        throw std::runtime_error("this shouldnt happen");
+                    predicate = dest->make(mkiri(pstr(ps)));
+                }
+
+                /* objects */
+                resids objs;
+                resid t = prop;
+                while (t) {
+                    resid ob = q(t, n3object);
+                    if(!ob)break;
+                    resid oe = q(ob, n3expression);
+                    objs.push_back(add_expression(oe));
+                    t = q(t, n3objecttail);
+                }
+
+                for (auto object: objs) {
+                    termid s, o;
+                    if (reverse) {
+                        s = object;
+                        o = subject;
+                    }
+                    else {
+                        o = object;
+                        s = subject;
+                    }
+                    dest->kb.add(dest->make(dest->get(predicate).p, s, o));
+                }
+            }
+        }
     }
 
     void add_statements(resid raw) {
@@ -750,9 +848,9 @@ public:
 
         for (auto swd: statements) {
             if (ask(prvr, swd, marpa->is_parse_of, n3statement_with_dot)) {
-                resid s = ask1(prvr, swd, n3statement);
+                resid s = q(swd, n3statement);
                 assert (s);
-                resid sim = ask1(prvr, s, n3simpleStatement);
+                resid sim = q(s, n3simpleStatement);
                 if (sim)
                     add_simpleStatement(sim);
             }
@@ -814,7 +912,7 @@ int load_n3_cmd::operator()(const strings &args) {
     prvr.substs.clear();
     prvr.e.clear();
 
-    prvr.formatkb();
+    //dout << prvr.formatkb();
 
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
@@ -828,10 +926,10 @@ int load_n3_cmd::operator()(const strings &args) {
     dout << "......" << std::endl;
 
 
-
-    prover dest(prvr);
+    prover dest(*load_quads(L"dummy.nq", false));
     N3 n3(prvr, dest);
     n3.add_statements(raw);
+    dout << std::endl << std::endl << "results:" << std::endl << dest.formatkb();
     return 0;
 }
 
