@@ -47,6 +47,6 @@
 :g9 :gnand2 :a11 .
 :g9 :gnand3 :cout .
 fin.
-#:cout :nand3 ?V1 .
+:cout :nand3 ?V1 .
 :sum :nand3 ?V2 .
-fin.
+in.

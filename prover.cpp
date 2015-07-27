@@ -339,8 +339,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 			if (unify(t, p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
-//				queue.push_front(r);
-				step(r, queue, gnd);
+				queue.push_back(r);
+//				step(r, queue, gnd);
 			}
 			s.clear();
 		}
