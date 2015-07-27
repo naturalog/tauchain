@@ -99,8 +99,6 @@ public:
 };
 
 int main ( int argc, char** argv ) {
-	const char* fname = "taub3561ydin";
-	try{std::remove(fname);}catch(...){}
 	segment = new boost::interprocess::managed_heap_memory(long(1024*1024*1024)*1);
 	alloc = new allocator_t(segment->get_segment_manager());
 	dict.init();

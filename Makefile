@@ -1,6 +1,6 @@
 CC=g++
-CXXFLAGS=-c -std=c++11 -Wextra -g -ggdb -DDEBUG -O0 -I/usr/local/include
-#CXXFLAGS=-c -std=c++11 -Wall -Wextra -W -Wpedantic -O3 -I/usr/local/include
+#CXXFLAGS=-c -std=c++11 -Wextra -g -ggdb -DDEBUG -O0 -I/usr/local/include
+CXXFLAGS=-c -std=c++11 -DNDEBUG -Wall -Wextra -W -Wpedantic -O3 -I/usr/local/include
 LDFLAGS= -L/usr/local/lib -ldl -pthread -lrt
 #OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 OBJECTS=tau.o jsonld.o rdf.o misc.o object.o cli.o prover.o nquads.o
@@ -23,7 +23,7 @@ with_marpa: OBJECTS += marpa_tau.o
 with_marpa: CXXFLAGS += -Dwith_marpa  -I libmarpa/dist -ggdb  #-Ilexertl
 with_marpa: LDFLAGS += -Llibmarpa/dist/.libs -lmarpa  -ggdb -lboost_regex
 debug: CXXFLAGS += -DDEBUG
-release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3
+release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3 -NDEBUG
 cl: CXXFLAGS += -DOPENCL
 irc: CXXFLAGS += -DIRC -DDEBUG
 

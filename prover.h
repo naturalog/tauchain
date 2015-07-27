@@ -124,7 +124,7 @@ public:
 			: rul(r), last(l), prev(make_shared<proof>(*p)), s(_s), g(_g) {}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev ? make_shared<proof>(*p.prev) : 0), s(p.s), g(p.g) {}
 	};
-	typedef std::deque<std::future<shared_ptr<proof>>> queue_t;
+	typedef std::deque<shared_ptr<proof>> queue_t;
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
