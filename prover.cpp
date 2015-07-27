@@ -323,23 +323,24 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
+	if (euler_path(_p)) return;
 	++steps;
 	proof& p = *_p;
 	TRACE(dout<<"popped frame:\n";printp(_p));
 	if (p.last != kb.body()[p.rul].size()) {
-		if (euler_path(_p)) return;
 		termid t = kb.body()[p.rul][p.last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		MARPA(if (builtin(t, p, queue) != -1) return);
 		resid pred = get(t).p;
-		if (kb.r2id.find(pred) == kb.r2id.end()) return;
+		auto it = kb.r2id.find(pred);
+		if (it == kb.r2id.end()) return;
 		subst s;
-		auto kbp = kb[pred];
-		for (auto rl : kbp) {
+		for (auto rl : it->second) {
 			if (unify(t, p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
-				queue.push_front(r);
+//				queue.push_front(r);
+				step(r, queue, gnd);
 			}
 			s.clear();
 		}
@@ -351,7 +352,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
 		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = p.prev->s, true);
 		++r->last;
-//		queue.push_back(r);
+//		queue.push_front(r);
 		step(r, queue, gnd);
 	}
 }
