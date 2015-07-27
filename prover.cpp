@@ -338,6 +338,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
+	if (_p->del) return;
 	if (euler_path(_p)) return;
 	++steps;
 	proof& p = *_p;
@@ -360,8 +361,9 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 			s.clear();
 		}
 	}
-	else if (!p.prev) gnd.push_back(_p);
+	else if (!p.prev) { gnd.push_back(_p); p.remove(queue); }
 	else {
+		p.remove(queue);
 		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g);
 		ruleid rl = p.rul;
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
