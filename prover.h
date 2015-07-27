@@ -65,7 +65,7 @@ public:
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
-	typedef boost::container::list<std::pair<ruleid, subst>> ground;
+	typedef boost::container::list<std::pair<ruleid, shared_ptr<subst>>> ground;
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
@@ -85,13 +85,13 @@ public:
 		ruleid rul = 0;
 		uint last;
 		shared_ptr<proof> prev = 0;
-		subst s;
+		shared_ptr<subst> s;
 		ground g;
-		proof() { }
+		proof() : s(make_shared<subst>()) {}
 		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
-			: rul(r), last(l), prev(p), s(_s), g(_g) {} 
-		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(p.s), g(p.g) { }
-		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev ? /*make_shared<proof>*/(p.prev) : 0), g(_g) { }
+			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) {} 
+		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(make_shared<subst>(*p.s)), g(p.g) { }
+		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { }
 	};
 	typedef std::deque<shared_ptr<proof>> queue_t;
 
@@ -123,8 +123,11 @@ private:
 
 	void pushev(shared_ptr<proof>);
 	void step(shared_ptr<proof>&, queue_t&, queue_t&);
+	termid evaluate(termid id);
 	termid evaluate(termid id, const subst& s);
+	inline termid evaluate(termid id, shared_ptr<subst>& s) { return s ? evaluate(id, *s) : evaluate(id); }
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f) { return unify(_s, *ssub, _d, *dsub, f); }
 	bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);

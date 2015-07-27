@@ -27,6 +27,21 @@
 using namespace boost::algorithm;
 int _indent = 0;
 
+termid prover::evaluate(termid id) {
+	if (!id) return 0;
+	setproc(L"evaluate");
+	termid r;
+	const term p = get(id);
+	if (p.p < 0) return 0;
+	if (!p.s && !p.o) r = id;
+	else {
+		termid a = evaluate(p.s), b = evaluate(p.o);
+		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
+	}
+	TRACE(printterm_substs(id, s); dout << " = "; if (!r) dout << "(null)"; else dout << format(r); dout << std::endl);
+	return r;
+}
+
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
@@ -303,7 +318,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		shared_ptr<proof> r = make_shared<proof>();
 		*r = *p;
 		r->g = p->g;
-		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), subst());
+		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), make_shared<subst>());
 		++r->last;
 		queue.push_back(r);
 	}
@@ -336,9 +351,9 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		if (it == kb.r2id.end()) return;
 		subst s;
 		for (auto rl : it->second) {
-			if (unify(t, p.s, kb.head()[rl], s, true)) {
+			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
-				if (kb.body()[rl].empty()) r->g.emplace_back(rl, subst());
+				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
 				queue.push_back(r);
 //				step(r, queue, gnd);
 			}
@@ -350,7 +365,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g);
 		ruleid rl = p.rul;
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
-		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = p.prev->s, true);
+		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = make_shared<subst>(*p.prev->s), true);
 		++r->last;
 //		queue.push_front(r);
 		step(r, queue, gnd);
@@ -501,7 +516,7 @@ void prover::operator()(termset& goal, subst* s) {
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
-	if (s) p->s = *s;
+	if (s) p->s = make_shared<subst>(*s);
 	#ifdef with_marpa
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	#else
@@ -604,7 +619,7 @@ pobj prover::json(const ground& g) const {
 	for (auto x : g) {
 		psomap_obj o = mk_somap_obj();
 		(*o->MAP())[L"src"] = json(x.first);
-		(*o->MAP())[L"env"] = json(x.second);
+		if (x.second) (*o->MAP())[L"env"] = json(*x.second);
 		l->LIST()->push_back(o);
 	}
 	return l;
