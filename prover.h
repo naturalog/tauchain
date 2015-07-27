@@ -21,8 +21,8 @@
 #include <boost/interprocess/allocators/allocator.hpp>
 
 typedef boost::interprocess::allocator<void, boost::interprocess::managed_heap_memory::segment_manager> allocator_t;
-extern boost::interprocess::managed_heap_memory* segment;
-extern allocator_t* alloc;
+//extern boost::interprocess::managed_heap_memory* segment;
+//extern allocator_t* alloc;
 
 typedef u64 termid;
 typedef boost::interprocess::allocator<std::pair<const resid, termid>, boost::interprocess::managed_heap_memory::segment_manager> salloc;
@@ -65,18 +65,16 @@ public:
 		void mark();
 		void revert();
 		typedef tidalloc ralloc;
-		typedef boost::container::list<ruleid, ralloc> rlbase;
-		class rulelist : public rlbase {
-		public:
-			rulelist() : rlbase(*alloc) {}
-			using rlbase::rlbase;
-		};
+		//typedef boost::container::list<ruleid, ralloc> rlbase;
+		//typedef boost::container::list<ruleid> rlbase;
+		typedef boost::container::list<ruleid> rulelist;
+//		class rulelist : public rlbase { public: rulelist() : rlbase(*alloc) {} using rlbase::rlbase; };
 		typedef boost::interprocess::allocator<std::pair<const resid, rulelist>, boost::interprocess::managed_heap_memory::segment_manager> r2alloc;
 		//typedef boost::container::map<resid, rulelist, std::less<resid>, r2alloc> r2id_t;
 		typedef boost::container::map<resid, rulelist> r2id_t;
 		string format() const;
 		inline const rulelist& operator[](resid id) const {
-			static rulelist empty(*alloc);
+			static rulelist empty;
 			auto x = r2id.find(id);
 			return x == r2id.end() ? empty : x->second;
 		}
@@ -94,8 +92,9 @@ public:
 	~prover();
 
 	typedef boost::interprocess::allocator<std::pair<ruleid, subst>, boost::interprocess::managed_heap_memory::segment_manager> galloc;
-	typedef boost::container::list<std::pair<ruleid, subst>, galloc> gbase;
-	class ground : public gbase { public: using gbase::gbase; ground():gbase(*alloc){}};
+	//typedef boost::container::list<std::pair<ruleid, subst>, galloc> gbase;
+	typedef boost::container::list<std::pair<ruleid, subst>> ground;
+//	class ground : public gbase { public: using gbase::gbase; ground():gbase(*alloc){}};
 	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
@@ -136,8 +135,9 @@ private:
 
 	class termdb {
 		typedef boost::interprocess::allocator<term, boost::interprocess::managed_heap_memory::segment_manager> talloc;
-		typedef boost::container::vector<term, talloc> terms_t;
-		terms_t terms = terms_t(*alloc);
+		//typedef boost::container::vector<term, talloc> terms_t;
+		typedef boost::container::vector<term> terms_t;
+		terms_t terms;// = terms_t(*alloc);
 	public:
 		typedef boost::container::list<termid> termlist;
 		typedef boost::container::map<resid, termlist> p2id_t;

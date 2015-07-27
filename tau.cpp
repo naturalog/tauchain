@@ -99,8 +99,8 @@ public:
 };
 
 int main ( int argc, char** argv ) {
-	segment = new boost::interprocess::managed_heap_memory(long(1024*1024*1024)*1);
-	alloc = new allocator_t(segment->get_segment_manager());
+//	segment = new boost::interprocess::managed_heap_memory(long(1024*1024*1024)*1);
+//	alloc = new allocator_t(segment->get_segment_manager());
 	dict.init();
 	cmds_t cmds = { {
 			#ifdef with_marpa
