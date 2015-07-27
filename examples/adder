@@ -1,37 +1,9 @@
-{?G :gnand1 ?A. 
-?G :gnand2 ?B. 
-?G :gnand3 ?C. 
-?A :nand1 "false". 
-?B :nand2 "false".} => 
-{?C :nand3 "true"}.
-{?G :gnand1 ?A. 
-?G :gnand2 ?B. 
-?G :gnand3 ?C. 
-?A :nand1 "false". 
-?B :nand2 "true".} => 
-{?C :nand3 "true"}.
-{?G :gnand1 ?A. 
-?G :gnand2 ?B. 
-?G :gnand3 ?C. 
-?A :nand1 "true". 
-?B :nand2 "false".} => 
-{?C :nand3 "true"}.
-{?G :gnand1 ?A. 
-?G :gnand2 ?B. 
-?G :gnand3 ?C. 
-?A :nand1 "true". 
-?B :nand2 "true".} => 
-{?C :nand3 "false"}.
-{?G1 :nandnand2 ?G2. 
-?G1 :gnand3 ?X. 
-?G2 :gnand2 ?X. 
-?X :nand3 ?V.} => 
-{?X :nand2 ?V}.
-{?G1 :nandnand1 ?G2. 
-?G1 :gnand3 ?X. 
-?G2 :gnand1 ?X. 
-?X :nand3 ?V.} => 
-{?X :nand1 ?V}.
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "false".} => {?C :nand3 "true"}.
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "true".} => {?C :nand3 "true"}.
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "true".  ?B :nand2 "false".} => {?C :nand3 "true"}.
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "true".  ?B :nand2 "true".} => {?C :nand3 "false"}.
+{?G1 :nandnand2 ?G2.  ?G1 :gnand3 ?X.  ?G2 :gnand2 ?X.  ?X :nand3 ?V.} => {?X :nand2 ?V}.
+{?G1 :nandnand1 ?G2.  ?G1 :gnand3 ?X.  ?G2 :gnand1 ?X.  ?X :nand3 ?V.} => {?X :nand1 ?V}.
 :a :nand1 "true" .
 :b :nand2 "true" .
 :cin :nand2 "true" .
@@ -75,6 +47,6 @@
 :g9 :gnand2 :a11 .
 :g9 :gnand3 :cout .
 fin.
-:cout :nand3 ?V1 .
-#:sum :nand3 ?V2 .
+#:cout :nand3 ?V1 .
+:sum :nand3 ?V2 .
 fin.

@@ -14,8 +14,6 @@ auto dummy = []() {
 #endif
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 jsonld_options opts;
-boost::interprocess::managed_heap_memory* segment;
-allocator_t* alloc;
 
 //void menu();
 //#include <boost/asio.hpp>
