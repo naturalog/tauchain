@@ -18,6 +18,12 @@
 #include <fstream>
 #endif
 
+#ifdef with_marpa
+#define MARPA(x) x
+#else
+#define MARPA(x)
+#endif
+
 using namespace boost::algorithm;
 int _indent = 0;
 //const uint max_terms = 1024 * 1024;
@@ -277,8 +283,8 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		r = 1;
 	}*/
 	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
-		termset ts(2,0,*alloc);// = *segment->construct<termset>(0)(*alloc);
-//		ts.resize(2);
+		//termset ts(2,0,*alloc);
+		termset ts(2);
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
@@ -324,7 +330,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		shared_ptr<proof> r = make_shared<proof>();
 		*r = *p;
 		r->g = p->g;
-		r->g.emplace_back(kb.add(evaluate(id, p->s), termset(*alloc)), subst());
+		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), subst());
 		++r->last;
 		queue.push_back(r);
 	}
@@ -353,15 +359,20 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 		}
 	}
 	else if (!p->prev) {
+		termid t;
 		for (auto r : kb.body()[p->rul]) {
-	#ifdef with_marpa
-			substs.push_back(*p->s); // marpa hack
-	#endif
-			termid t = evaluate(r, p->s);
-			if (!t /*|| hasvar(t)*/) continue;
-			TRACE(dout << "pushing evidence: " << format(t) << endl);
-//			dout << "proved: " << format(t) << endl;
+			MARPA(substs.push_back(*p->s));
+			if (!(t = evaluate(r, p->s))) continue;
 			e[get(t).p].emplace(t, p->g);
+			dout << "proved: " << format(t) << endl;
+			for (auto x = queue.begin(); x != queue.end(); ++x) {
+				auto y = *x;
+				while ((y = y->prev))
+					if (&*y == &*p) {
+						queue.erase(x);
+						dout<<L"<= <="<<endl;
+					}
+			}
 		}
 	} else {
 		shared_ptr<proof> r = make_shared<proof>(*p->prev);
@@ -370,8 +381,8 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 		if (!kb.body()[p->rul].empty()) r->g.emplace_back(p->rul, p->s);
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
-//		queue.push_back(r);
-		step(r, queue);
+		queue.push_back(r);
+//		step(r, queue);
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
 }
@@ -442,7 +453,7 @@ qlist merge ( const qdb& q ) {
 }
 
 void prover::operator()(const qdb& query, subst* s) {
-	termset goal = termset(*alloc);
+	termset goal = termset();
 	termid t;
 	for ( auto q : merge(query) ) 
 		if (	dict[q->pred] != rdffirst && 
@@ -465,7 +476,7 @@ void prover::addrules(pquad q, qdb& quads) {
 		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
 		for ( pquad y : *quads.first.at ( o ) ) {
 			if ( quads.first.find ( s ) == quads.first.end() ) continue;
-			termset ts = termset(*alloc);
+			termset ts = termset();
 			for ( pquad z : *quads.first.at( s ) )
 				if ((dict[z->pred] != rdffirst && 
 					dict[z->pred] != rdfrest) &&
@@ -473,7 +484,7 @@ void prover::addrules(pquad q, qdb& quads) {
 					ts.push_back( t );
 			if ((t = quad2term(*y, quads))) kb.add(t, ts);
 		}
-	} else if ((t = quad2term(*q, quads))) kb.add(t, termset(*alloc));
+	} else if ((t = quad2term(*q, quads))) kb.add(t, termset());
 }
 
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
@@ -490,7 +501,7 @@ bool prover::consistency(const qdb& quads) {
 //	prover p(quads, false);
 	prover p(*this);
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
-	termset g = termset(*alloc);
+	termset g = termset();
 	g.push_back(t);
 	p(g);
 	auto ee = p.e;
@@ -536,7 +547,7 @@ void prover::operator()(termset& goal, subst* s) {
 		q = queue.back();
 		queue.pop_back();
 		step(q, queue);
-		if (steps % 100000 == 0) (dout << "step: " << steps << endl);
+		if (steps % 1000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
@@ -580,7 +591,7 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 }
 
 prover::ruleid prover::ruleset::add(termid t) {
-	termset ts = termset(*alloc);
+	termset ts = termset();
 	return add(t, ts);
 }
 

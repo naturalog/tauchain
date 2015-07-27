@@ -13,6 +13,7 @@
 #include <future>
 #include <functional>
 #include <boost/interprocess/containers/map.hpp>
+#include <boost/interprocess/containers/flat_map.hpp>
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 #include <boost/interprocess/containers/list.hpp>
@@ -25,8 +26,9 @@ extern allocator_t* alloc;
 
 typedef u64 termid;
 typedef boost::interprocess::allocator<std::pair<const resid, termid>, boost::interprocess::managed_heap_memory::segment_manager> salloc;
-typedef boost::container::map<resid, termid, std::less<resid>, salloc> sbase;
-class subst : public sbase { public: using sbase::sbase; subst():sbase(std::less<resid>(), *alloc){}};
+//typedef boost::container::map<resid, termid, std::less<resid>, salloc> sbase;
+//class subst : public sbase { public: using sbase::sbase; subst():sbase(std::less<resid>(), *alloc){}};
+typedef boost::container::flat_map<resid, termid> subst;
 //shared_ptr<subst> sub(const subst& s = subst());
 
 class prover {
@@ -41,14 +43,16 @@ public:
 	};
 	typedef u64 ruleid;
 	typedef boost::interprocess::allocator<termid, boost::interprocess::managed_heap_memory::segment_manager> tidalloc;
-	typedef boost::container::vector<termid, tidalloc> termset;
+	//typedef boost::container::vector<termid, tidalloc> termset;
+	typedef boost::container::vector<termid> termset;
 	class ruleset {
 	public:
 		typedef boost::interprocess::allocator<termset, boost::interprocess::managed_heap_memory::segment_manager> tsalloc;
-		typedef boost::container::vector<termset, tsalloc> btype;
+		//typedef boost::container::vector<termset, tsalloc> btype;
+		typedef boost::container::vector<termset> btype;
 	private:
-		termset _head = termset(*alloc);// = *segment->construct<termset>("head")(*alloc);
-		btype  _body = btype(*alloc);
+		termset _head;// = termset(*alloc);
+		btype  _body;// = btype(*alloc);
 		size_t m = 0;
 	public:
 		prover* p;
@@ -68,22 +72,16 @@ public:
 			using rlbase::rlbase;
 		};
 		typedef boost::interprocess::allocator<std::pair<const resid, rulelist>, boost::interprocess::managed_heap_memory::segment_manager> r2alloc;
-		typedef boost::container::map<resid, rulelist, std::less<resid>, r2alloc> r2id_t;
+		//typedef boost::container::map<resid, rulelist, std::less<resid>, r2alloc> r2id_t;
+		typedef boost::container::map<resid, rulelist> r2id_t;
 		string format() const;
 		inline const rulelist& operator[](resid id) const {
 			static rulelist empty(*alloc);
 			auto x = r2id.find(id);
 			return x == r2id.end() ? empty : x->second;
 		}
-/*		void dump() const {
-			for (auto x : r2id) {
-				dout << x.first << endl;
-				for (auto y : x.second)
-					dout << tab << y << tab << p->formatr(y, false) << tab << p->formatr(y, true)<<endl;
-			}
-		}*/
 	private:
-		r2id_t r2id = r2id_t(std::less<resid>(), *alloc);
+		r2id_t r2id;// = r2id_t(std::less<resid>(), *alloc);
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
