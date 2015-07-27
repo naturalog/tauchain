@@ -331,7 +331,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	for (auto r : kb.body()[p->rul]) {
 		MARPA(substs.push_back(*p->s));
 		if (!(t = evaluate(r, p->s))) continue;
-		e[get(t).p].emplace(t, p->g);
+		e[get(t).p].emplace_back(t, p->g);
 		dout << "proved: " << format(t) << endl;
 	}
 }
@@ -339,8 +339,8 @@ void prover::pushev(shared_ptr<proof> p) {
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
 	if (_p->del) return;
-	if (euler_path(_p)) return;
 	++steps;
+	if (euler_path(_p)) return;
 	proof& p = *_p;
 	TRACE(dout<<"popped frame:\n";printp(_p));
 	if (p.last != kb.body()[p.rul].size()) {

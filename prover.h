@@ -66,7 +66,7 @@ public:
 	~prover();
 
 	typedef boost::container::list<std::pair<ruleid, shared_ptr<subst>>> ground;
-	typedef boost::container::map<resid, boost::container::set<std::pair<termid, ground>>> evidence;
+	typedef boost::container::map<resid, boost::container::list<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
