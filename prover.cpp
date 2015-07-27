@@ -26,15 +26,6 @@
 
 using namespace boost::algorithm;
 int _indent = 0;
-//const uint max_terms = 1024 * 1024;
-
-//std::shared_ptr<subst> sub(const subst& s) {
-//	std::shared_ptr<subst> r = std::make_shared<subst>(s, *alloc);
-//	return r;
-//}
-//std::shared_ptr<subst> sub(std::shared_ptr<subst> s) { return sub(prover::subs[s]); }
-
-//std::forward_list<prover::shared_ptr<proof>> prover::proof::proofs;
 
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
@@ -91,15 +82,9 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	auto ep = _p;
 	proof& p = *_p;
 	termid t = kb.head()[p.rul];
-	uint l = 0;
 	while ((ep = ep->prev))
 		if (ep->rul == p.rul && unify(kb.head()[ep->rul], ep->s, t, p.s, false))
-			{ TRACE(dout<<"Euler path detected\n"); return true; } else ++l;
-	TRACE(dout<<"depth: " << l << endl)
-	
-//	for (auto ep : queue)
-//		if (ep != p && (ep->rul == t || unify(kb.head()[ep->rul], ep->s, t, p->s, false)))
-//			{ TRACE(dout<<"Euler path detected\n"); return true; }
+			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return false;
 }
 
@@ -107,6 +92,7 @@ termid prover::tmpvar() {
 	static int last = 1;
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
+
 /*
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
@@ -339,7 +325,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
 	++steps;
 	proof& p = *_p;
-	TRACE(dout<<"popped frame:\n";printp(p));
+	TRACE(dout<<"popped frame:\n";printp(_p));
 	if (p.last != kb.body()[p.rul].size()) {
 		if (euler_path(_p)) return;
 		termid t = kb.body()[p.rul][p.last];
@@ -357,7 +343,6 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 			}
 			s.clear();
 		}
-//		delete &p;
 	}
 	else if (!p.prev) gnd.push_back(_p);
 	else {
@@ -366,8 +351,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
 		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = p.prev->s, true);
 		++r->last;
-		queue.push_back(r);
-//		step(r, queue);
+//		queue.push_back(r);
+		step(r, queue, gnd);
 	}
 }
 

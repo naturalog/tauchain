@@ -53,11 +53,7 @@ public:
 		typedef boost::container::map<resid, rulelist> r2id_t;
 		string format() const;
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
-//			static rulelist empty;
-//			auto x = r2id.find(id);
-//			return x == r2id.end() ? empty : x->second;
-//		}
-		r2id_t r2id;// = r2id_t(std::less<resid>(), *alloc);
+		r2id_t r2id;
 	} kb;
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
@@ -91,8 +87,6 @@ public:
 		shared_ptr<proof> prev = 0;
 		subst s;
 		ground g;
-//		static std::forward_list<shared_ptr<proof>> proofs;
-//		static void clear() { for (auto x : proofs) delete x; proofs.clear(); }
 		proof() { }
 		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(p), s(_s), g(_g) {} 
@@ -114,7 +108,7 @@ private:
 	class termdb {
 		typedef boost::container::vector<term> terms_t;
 	public:
-		terms_t terms;// = terms_t(*alloc);
+		terms_t terms;
 		typedef boost::container::vector<termid> termlist;
 		typedef boost::container::map<resid, termlist> p2id_t;
 		size_t size() const { return terms.size(); }
@@ -146,7 +140,6 @@ private:
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
-//	void printp(shared_ptr<proof> p) { printp(&*p); }
 	string formats(const subst& s, bool json = false);
 	string formats(shared_ptr<subst>& s, bool json = false) { return formats(*s, json); }
 	void printterm_substs(termid id, const subst& s);
