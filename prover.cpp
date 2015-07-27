@@ -38,7 +38,7 @@ termid prover::evaluate(termid id) {
 		termid a = evaluate(p.s), b = evaluate(p.o);
 		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
 	}
-	TRACE(printterm_substs(id, s); dout << " = "; if (!r) dout << "(null)"; else dout << format(r); dout << std::endl);
+	TRACE(dout << format(r) << std::endl);
 	return r;
 }
 
@@ -61,9 +61,9 @@ termid prover::evaluate(termid id, const subst& s) {
 }
 
 bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
+	if (!_d != !_s) return false;
 	setproc(L"unify");
 	termid v;
-	if (!_d != !_s) return false;
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
 	if (s.p < 0) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
@@ -534,16 +534,14 @@ void prover::operator()(termset& goal, subst* s) {
 		step(q, queue, gnd);
 		if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
+	for (auto x : gnd) pushev(x);
 	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 	t1 = high_resolution_clock::now();
-	for (auto x : gnd) pushev(x);
-	t2 = high_resolution_clock::now();
-	duration = duration_cast<microseconds>( t2 - t1 ).count();
-	/*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);
+	///*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);
 //	proof::clear();
 	#ifndef with_marpa
 	#endif

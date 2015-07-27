@@ -144,7 +144,7 @@ private:
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
 	string formats(const subst& s, bool json = false);
-	string formats(shared_ptr<subst>& s, bool json = false) { return formats(*s, json); }
+	string formats(shared_ptr<subst>& s, bool json = false) { return s ? formats(*s, json) : string(); }
 	void printterm_substs(termid id, const subst& s);
 	void printl_substs(const termset& l, const subst& s);
 	void printr_substs(ruleid r, const subst& s);
