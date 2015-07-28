@@ -361,7 +361,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 			s.clear();
 		}
 	}
-	else if (!p.prev) { gnd.push_back(_p); p.remove(queue); }
+	else if (!p.prev) { gnd.push_back(_p); /*p.remove(queue);*/ }
 	else {
 		p.remove(queue);
 		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g);
