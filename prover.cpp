@@ -339,6 +339,11 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
+//	auto ll = mkliteral(pstr(L"a"),0,0);
+//	auto ll1 = mkliteral(pstr(L"aa"),0,0);
+//	dout<<ll->tostring()<<endl;
+//	dout<<ll1->tostring()<<endl;
+//	exit(0);
 	if (_p->del) return;
 	++steps;
 	proof& p = *_p;
