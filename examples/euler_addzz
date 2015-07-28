@@ -1,5 +1,5 @@
 print = console.log
-//trace = print
+trace = print
 document = {writeln: print}
 
 
