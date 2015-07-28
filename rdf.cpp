@@ -43,11 +43,14 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		else r.datatype = datatype;
 	}
 	if ( language ) r.lang = language;
-	auto it = dict.nodes.find(*r.value);
-	if (it != dict.nodes.end()) return it->second;
+	auto it = dict.nodes.find(r.tostring());
+	if (it != dict.nodes.end()) {
+		assert(it->second->_type == r._type);
+		return it->second;
+	}
 	pnode pr = make_shared<node>(r); 
 	dict.set(pr);
-	return dict.nodes[*r.value] = pr;
+	return dict.nodes[r.tostring()] = pr;
 }
 
 pnode mkiri ( pstring iri ) {
@@ -56,11 +59,14 @@ pnode mkiri ( pstring iri ) {
 //	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
 	r.value = iri;
-	auto it =  dict.nodes.find(*r.value);
-	if (it != dict.nodes.end()) return it->second;
+	auto it =  dict.nodes.find(r.tostring());
+	if (it != dict.nodes.end()) {
+		assert(it->second->_type == r._type);
+		return it->second;
+	}
 	pnode pr = make_shared<node>(r); 
 	dict.set(pr);
-	return dict.nodes[*r.value] = pr;
+	return dict.nodes[r.tostring()] = pr;
 }
 
 pnode mkbnode ( pstring attribute ) {
@@ -69,14 +75,15 @@ pnode mkbnode ( pstring attribute ) {
 //	TRACE(dout << *attribute << endl);
 	node r ( node::BNODE );
 	r.value = attribute;
-	auto it =  dict.nodes.find(*r.value);
+	auto it =  dict.nodes.find(r.tostring());
 	if (it != dict.nodes.end()) {
+			assert(it->second->_type == r._type);
 //		TRACE(dout<<" returned existing node" << endl);
 		return it->second;
 	}
 	pnode pr = make_shared<node>(r); 
 	dict.set(pr);
-	return dict.nodes[*r.value] = pr;
+	return dict.nodes[r.tostring()] = pr;
 }
 
 rdf_db::rdf_db ( jsonld_api& api_ ) :

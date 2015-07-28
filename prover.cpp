@@ -334,6 +334,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, std::deque<shared_ptr<proof>
 
 void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue, bool) {
 	setproc(L"step");
+//	auto ll = mkliteral(pstr(L"a"),0,0);
+//	auto ll1 = mkliteral(pstr(L"aa"),0,0);
+//	dout<<ll->tostring()<<endl;
+//	dout<<ll1->tostring()<<endl;
+//	exit(0);
 	++steps;
 	TRACE(dout<<"popped frame:\n";printp(p));
 	if (p->last != kb.body()[p->rul].size()) {
