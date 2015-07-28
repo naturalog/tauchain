@@ -99,7 +99,8 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	termid t = kb.head()[p.rul];
 	while ((ep = ep->prev))
 		if (ep->rul == p.rul && unify(kb.head()[ep->rul], ep->s, t, p.s, false))
-			{ TRACE(dout<<"Euler path detected\n"); return true; }
+			break;//{ TRACE(dout<<"Euler path detected\n"); return true; }
+	return ep != 0;
 	return false;
 }
 
@@ -336,23 +337,22 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t&/* gnd*/) {
+void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
 	if (_p->del) return;
 	++steps;
-	if (euler_path(_p)) return;
 	proof& p = *_p;
 	TRACE(dout<<"popped frame:\n";printp(_p));
 	if (p.last != kb.body()[p.rul].size()) {
+		if (euler_path(_p)) return;
 		termid t = kb.body()[p.rul][p.last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		MARPA(if (builtin(t, p, queue) != -1) return);
-		resid pred = get(t).p;
-		auto it = kb.r2id.find(pred);
+		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
 		subst s;
 		for (auto rl : it->second) {
-//		for (auto iit = it->second.rbegin(); iit != it->second.rend(); ++iit) {
+//		for (auto iit = it->second.begin(); iit != it->second.end(); ++iit) {
 //			auto rl = *iit;
 			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
@@ -542,7 +542,7 @@ void prover::operator()(termset& goal, subst* s) {
 	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
+	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 	t1 = high_resolution_clock::now();
 	///*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);

@@ -96,7 +96,7 @@ public:
 		proof() : s(make_shared<subst>()) {}
 		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) { if(prev)prev->next.push_front(this);}
-		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(make_shared<subst>(*p.s)), g(p.g) { if(prev)prev->next.push_front(this); }
+		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(/*make_shared<subst>*/(p.s)), g(p.g) { if(prev)prev->next.push_front(this); }
 		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { if(prev)prev->next.push_front(this); }
 	};
 	typedef std::deque<shared_ptr<proof>> queue_t;
