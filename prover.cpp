@@ -336,7 +336,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
+void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t&/* gnd*/) {
 	setproc(L"step");
 	if (_p->del) return;
 	++steps;
@@ -352,6 +352,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		if (it == kb.r2id.end()) return;
 		subst s;
 		for (auto rl : it->second) {
+//		for (auto iit = it->second.rbegin(); iit != it->second.rend(); ++iit) {
+//			auto rl = *iit;
 			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
@@ -361,9 +363,9 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 			s.clear();
 		}
 	}
-	else if (!p.prev) { gnd.push_back(_p); /*p.remove(queue);*/ }
+	else if (!p.prev) { pushev(_p); } //gnd.push_back(_p); /*p.remove(queue);*/ }
 	else {
-		p.remove(queue);
+//		p.remove(queue);
 		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g);
 		ruleid rl = p.rul;
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
