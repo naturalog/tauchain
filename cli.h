@@ -3,12 +3,19 @@
 
 #include "rdf.h"
 
-typedef std::vector<string> strings;
-
-extern bool fnamebase, quad_in, nocolor;
+//COMMAND LINE
+/*
+Now all those extern command line variables declared here like they should be, and are available like we want/expect
+*/
 extern jsonld_options opts;
-extern string chan;
 
+extern bool autobt, _pause, __printkb, fnamebase, quad_in, nocolor, deref, shorten;
+
+
+//This is mine, just a test
+extern std::string test_loadn3;
+
+//FILE-IO & FORMATTING
 class cmd_t {
 protected:
 	pobj load_json ( string fname = L"", bool print = false );
@@ -26,10 +33,15 @@ public:
 	virtual int operator() ( const strings& args ) = 0;
 };
 
+
+
 typedef std::pair<std::map<string, cmd_t*>, std::map<std::pair<string, string>, bool*>>  cmds_t;
 
+//COMMAND LINE
 void print_usage ( const cmds_t& cmds );
 void process_flags ( const cmds_t& cmds, strings& args );
+
+//FILE-IO & FORMATTING
 class convert_cmd : public cmd_t {
 public:
 	virtual std::string desc() const;

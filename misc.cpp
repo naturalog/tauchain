@@ -5,10 +5,10 @@
 using namespace boost::algorithm;
 
 bidict& dict = *new bidict;
-bool deref = true, shorten = false;
+//aaahhhh:)
 int level = 1;
-
 extern int _indent;
+
 resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {

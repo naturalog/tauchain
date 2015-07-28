@@ -2,6 +2,7 @@
 #include <iostream>
 
 #ifdef DEBUG
+
 void bt() {
 /*	void *trace[16];
 	char **messages = 0;

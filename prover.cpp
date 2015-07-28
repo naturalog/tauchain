@@ -26,13 +26,6 @@
 
 using namespace boost::algorithm;
 int _indent = 0;
-//const uint max_terms = 1024 * 1024;
-
-//std::shared_ptr<subst> sub(const subst& s) {
-//	std::shared_ptr<subst> r = std::make_shared<subst>(s, *alloc);
-//	return r;
-//}
-//std::shared_ptr<subst> sub(std::shared_ptr<subst> s) { return sub(prover::subs[s]); }
 
 bool prover::hasvar(termid id) {
 	const term p = get(id);
@@ -113,73 +106,6 @@ termid prover::tmpvar() {
 	static int last = 1;
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
-/*
-termid prover::list_next(termid cons, proof& p) {
-	if (!cons) return 0;
-	setproc(L"list_next");
-	termset ts;
-	ts.push_back(make(rdfrest, cons, tmpvar()));
-	(*this)( ts, p.s);
-	if (e.find(rdfrest) == e.end()) return 0;
-	termid r = 0;
-	for (auto x : e[rdfrest])
-		if (get(x.first).s == cons) {
-			r = get(x.first).o;
-			break;
-		}
-	TRACE(dout <<"current cons: " << format(cons)<< " next cons: " << format(r) << std::endl);
-	return r;
-}
-
-termid prover::list_first(termid cons, proof& p) {
-	if (!cons || get(cons).p == rdfnil) return 0;
-	setproc(L"list_first");
-	termset ts;
-	ts.push_back(make(rdffirst, cons, tmpvar()));
-	(*this)( ts , p.s);
-	if (e.find(rdffirst) == e.end()) return 0;
-	termid r = 0;
-	for (auto x : e[rdffirst])
-		if (get(x.first).s == cons) {
-			r = get(x.first).o;
-			break;
-		}
-	TRACE(dout<<"current cons: " << format(cons) << " next cons: " << format(r) << std::endl);
-	return r;
-}
-
-uint64_t dlparam(const node& n) {
-	uint64_t p;
-	if (!n.datatype || !n.datatype->size() || *n.datatype == *XSD_STRING) {
-		p = (uint64_t)n.value->c_str();
-	} else {
-		const string &dt = *n.datatype, &v = *n.value;
-		if (dt == *XSD_BOOLEAN) p = (lower(v) == L"true");
-		else if (dt == *XSD_DOUBLE) {
-			double d;
-			d = std::stod(v);
-			memcpy(&p, &d, 8);
-		} else if (dt == *XSD_INTEGER)//|| dt == *XSD_PTR)
-			p = std::stol(v);
-	}
-	return p;
-}
-
-std::vector<termid> prover::get_list(termid head, proof& p) {
-	setproc(L"get_list");
-	termid t = list_first(head, p);
-	std::vector<termid> r;
-	TRACE(dout<<"get_list with "<<format(head));
-	while (t) {
-		r.push_back(t);
-		head = list_next(head, p);
-		t = list_first(head, p);
-	}
-//	e = e1;
-	TRACE(dout<<" returned " << r.size() << " items: "; for (auto n : r) dout<<format(n)<<' '; dout << std::endl);
-	return r;
-}
-*/
 void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
 	auto s = get(id).s;
 	if (!s) return;
@@ -191,7 +117,6 @@ void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
 void* testfunc(void* p) {
 	derr <<std::endl<< "***** Test func called ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());
-//	return 0;
 }
 
 string prover::predstr(termid t) { return *dict[get(t).p].value; }
@@ -215,73 +140,10 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
-//	else if (t.p == rdffirst && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
-//		r = ((!t0->s && !t0->o) || unify(t0->s, p->s, t.o, p->s, true)) ? 1 : 0;
-//	else if (t.p == rdfrest && t0 && startsWith(*dict[t0->p].value,L"_:list") && (!t0->s == !t0->o))
-//		r = ((!t0->s && !t0->o) || unify(t0->o, p->s, t.o, p->s, true)) ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
-/*	else if (t.p == _dlopen) {
-		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
-		std::vector<termid> params = get_list(t.s, *p);
-		if (params.size() >= 2) {
-			void* handle;
-			try {
-				string f = predstr(params[0]);
-				if (f == L"0") handle = dlopen(0, std::stol(predstr(params[1])));
-				else handle = dlopen(ws(f).c_str(), std::stol(predstr(params[1])));
-				pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-				subs[p->s][get(t.o).p] = make(dict.set(n), 0, 0);
-				r = 1;
-			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
-			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-		}
-	}
-	else if (t.p == _dlerror) {
-		if (get(t.o).p > 0) throw std::runtime_error("dlerror must be called with variable object.");
-		auto err = dlerror();
-		pnode n = mkliteral(err ? pstr(err) : pstr(L"NULL"), 0, 0);
-		subs[p->s][get(t.o).p] = make(dict.set(n), 0, 0);
-		r = 1;
-	}
-	else if (t.p == _dlsym) {
-//		if (t1) throw std::runtime_error("dlsym must be called with variable object.");
-		if (!t1) {
-			std::vector<termid> params = get_list(t.s, *p);
-			void* handle;
-			if (params.size()) {
-				try {
-					handle = dlsym((void*)std::stol(predstr(params[0])), ws(predstr(params[1])).c_str());
-					pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-					p->s[t1->p] = make(dict.set(n), 0, 0);
-					r = 1;
-				} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
-				catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
-			}
-		}
-	}
-	else if (t.p == _dlclose) {
-//		if (t1->p > 0) throw std::runtime_error("dlclose must be called with variable object.");
-		pnode n = mkliteral(tostr(ws(dlerror())), 0, 0);
-		p->s[t1->p] = make(dict.set(mkliteral(tostr(dlclose((void*)std::stol(*dict[t.p].value))), XSD_INTEGER, 0)), 0, 0);
-		r = 1;
-	}
-	else if (t.p == _invoke) {
-		typedef void*(*fptr)(void*);
-		auto params = get_list(t.s, *p);
-		if (params.size() != 2) return -1;
-		if (preddt(params[0]) != *XSD_INTEGER) return -1;
-		fptr func = (fptr)std::stol(predstr(params[0]));
-		void* res;
-		if (params.size() == 1) {
-			res = (*func)((void*)dlparam(dict[*get_list(params[1],*p).begin()]));
-			pnode n = mkliteral(tostr((uint64_t)res), XSD_INTEGER, 0);
-			p->s[get(t.o).p] = make(dict.set(n), 0, 0);
-		}
-		r = 1;
-	}*/
 	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		//termset ts(2,0,*alloc);
 		termset ts(2);
@@ -313,11 +175,8 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		//auto parser = dict[get(get(i1).s).p].value;
-		//if (t1->p != Dot) { TRACE(dout<<std::endl<<"p == " << *dict[t1->p].value<<std::endl);  return -1;}
 		term xx = get(i1);
 		term xxx = get(xx.s);
-		//string input = *dict[get(get(i1).s).p].value;
 		string input = *dict[xxx.p].value;
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
@@ -382,7 +241,6 @@ void prover::step(std::shared_ptr<proof> p, queue_t& queue, bool) {
 		unify(kb.head()[p->rul], p->s, kb.body()[r->rul][r->last], r->s, true);
 		++r->last;
 		queue.push_back(r);
-//		step(r, queue);
 	}
 	TRACE(dout<<"Deleting frame: " << std::endl; printp(p));
 }
@@ -427,7 +285,6 @@ termid prover::quad2term(const quad& p, const qdb& quads) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
-	//if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;
@@ -451,7 +308,10 @@ qlist merge ( const qdb& q ) {
 	for ( auto x : q.first ) for ( auto y : *x.second ) r.push_back ( y );
 	return r;
 }
+/*
 
+
+*/
 void prover::operator()(const qdb& query, subst* s) {
 	termset goal = termset();
 	termid t;
@@ -462,9 +322,13 @@ void prover::operator()(const qdb& query, subst* s) {
 			goal.push_back( t );
 	return (*this)(goal, s);
 }
+/*
 
+
+
+*/
 prover::~prover() { }
-prover::prover(const prover& q) : kb(q.kb), _terms(q._terms)/*, quads(q.quads)*/ { kb.p = this; } 
+prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) { kb.p = this; } 
 
 void prover::addrules(pquad q, qdb& quads) {
 	setproc(L"addrules");
@@ -498,7 +362,6 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 bool prover::consistency(const qdb& quads) {
 	setproc(L"consistency");
 	bool c = true;
-//	prover p(quads, false);
 	prover p(*this);
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
 	termset g = termset();
@@ -508,7 +371,6 @@ bool prover::consistency(const qdb& quads) {
 	for (auto x : ee) for (auto y : x.second) {
 		prover q(*this);
 		g.clear();
-//		p.e.clear();
 		string s = *dict[p.get(p.get(y.first).s).p].value;
 		if (s == L"GND") continue;
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
@@ -523,9 +385,16 @@ bool prover::consistency(const qdb& quads) {
 	return c;
 }
 
+
+
+
+
+/*
+
+
+*/
 #include <chrono>
 void prover::operator()(termset& goal, subst* s) {
-//	setproc(L"prover()");
 	queue_t queue;
 	shared_ptr<proof> p = make_shared<proof>();
 	p->rul = kb.add(0, goal);
@@ -554,10 +423,14 @@ void prover::operator()(termset& goal, subst* s) {
 	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	#ifndef with_marpa
 	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
-	#endif
-//	kb.revert();
-//	return results();
+	#endif//hate this part, because naturalog has this like ..umm..the main function of tau, printing out the rules at the top and time and everything, while i call this from marpa over and over to retrieve facts about the grammar:) ah i see :) yes i mean you can just look at it and see its too mixed up//yeah..well..thats just some food for thought for you.. hehe believe me i've got my eye on this :)ah cool
 }
+/*
+
+
+*/
+//btw
+
 
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
@@ -576,7 +449,6 @@ termid prover::make(resid p, termid s, termid o) {
 	if (!p) throw 0;
 #endif
 	return _terms.add(p, s, o);
-//	return _terms.size();
 }
 
 prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
@@ -587,7 +459,6 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 	r2id[t ? p->get(t).p : 0].push_back(r);
 	TRACE(dout<<r<<tab<<p->formatr(r)<<endl);
 	return r;
-	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 }
 
 prover::ruleid prover::ruleset::add(termid t) {
@@ -596,10 +467,7 @@ prover::ruleid prover::ruleset::add(termid t) {
 }
 
 
-//bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
 prover::term::term() : p(0), s(0), o(0) {}
-//prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
-//prover::term& prover::term::operator=(const prover::term& t) { p = t.p; s = t.s; o = t.o; return *this; }
 
 pobj prover::json(const termset& ts) const {
 	polist_obj l = mk_olist_obj(); 
@@ -647,24 +515,8 @@ pobj prover::ejson() const {
 	}
 	return o;
 }
-/*
-void prover::ruleset::mark() {
-	_r2id = r2id;
-	if (!m) m = size(); 
-	else m = std::min(size(), m);
-}
 
-void prover::ruleset::revert() {
-	r2id = _r2id;
-	if ( size() <= m ) { 
-		m = 0; 
-		return; 
-	}
-	_head.erase(_head.begin() + (m-1), _head.end());
-	_body.erase(_body.begin() + (m-1), _body.end());
-	m = 0;
-}
-*/
+
 string prover::ruleset::format() const {
 	setproc(L"ruleset::format");
 	std::wstringstream ss;

@@ -10,29 +10,37 @@
 #include <boost/interprocess/containers/map.hpp>
 #include "rdf.h"
 
-typedef i64 resid;
-
+//ok so everything in misc is either boostinterprocess stuff or this bidict rdf stuff
+//would be nice to have things logically packaged instead of randomly thrown into misc
 extern boost::container::list<string> proc;
+
+
 class bidict {
-	boost::container::map<resid, node> ip;
-	boost::container::map<node, resid> pi;
+        boost::container::map<resid, node> ip;
+        boost::container::map<node, resid> pi;
 public:
-	void init();
-	resid set ( node v );
-	resid set ( pnode v ) { return set (*v); }
-	void set ( const std::vector<node>& v );
-	node operator[] ( resid );
-	node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
-	resid operator[] ( node );
-	resid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
-	bool has ( resid k ) const;
-	bool has ( node v ) const;
-	string tostr();
-	boost::container::map<string, pnode> nodes;
+        void init();
+        resid set ( node v );
+        resid set ( pnode v ) { return set (*v); }
+        void set ( const std::vector<node>& v );
+        node operator[] ( resid );
+        node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
+        resid operator[] ( node );
+        resid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
+        bool has ( resid k ) const;
+        bool has ( node v ) const;
+        string tostr();
+        boost::container::map<string, pnode> nodes;
 };
 
 extern bidict& dict;
 extern resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+
+
+
+
+
+
 string dstr ( resid p, bool json = false );
 string indent();
 

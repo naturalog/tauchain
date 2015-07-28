@@ -6,7 +6,22 @@
 #include "cli.h"
 #include "json_spirit.h"
 
-pobj convert ( const json_spirit::wmValue& v );
+//so, i know some of the things Ohad's purposely moved around for optimization but idk how much is for these reasons or just for lack of organization
+//fileio and format conversions seems like something to be separated from strict command-line processing
+//dunno..i dont think a few short .h files can bog anything down..i would look for what they include maybe..like if it includes some boost header..especially and i think only boost is what's slowing it all down..and json_spirit , i see, well its not like our compilation time is terrible... about a couple minutes tops? on my slow computer..yeah..well..i wouldnt mind if it were faster:):) one thing i think is that it would be easier to track all these dependencies from a more logically organized structure.. when everything is optimized prematurely you don't know what's what or why//well..give it a try..youll see if you can wrestle with it:)yea.. hopefully i even clean things up in such a way to make the compile go faster :) that would be nice//yeah..if the logical structure could match the optimized structure that would be ideal... but is maybe just an ideal :) lots to figure out to determine that.
+//COMMAND-LINE
+/*
+Definitions to match the declarations i made in cli.h
+*/
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false, deref = true, shorten = false;
+
+jsonld_options opts;
+std::string test_loadn3;
+
+
+
+//FILE-IO & CONVERSION
+pobj  convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
 
@@ -24,6 +39,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	}
 	if ( print ) 
 		dout << q << std::endl;
+
 	return std::make_shared<qdb>(q);
 }
 
@@ -84,11 +100,18 @@ qdb cmd_t::convert ( const string& s ) {
 	return r;
 }
 
+
+
+//COMMANDLINE
 void process_flags ( const cmds_t& cmds, strings& args ) {
 	strings::iterator it;
 	for ( auto x : cmds.second )
 		if ( ( it = find ( args.begin(), args.end(), x.first.first ) ) != args.end() ) {
-			*x.second = !*x.second;
+			//ok so this *essentially* loops through each of the boolean-type arguments like --nocolor and --no-deref and then Ohad just toggles the boolean:
+			//I commented this out to demonstrate that the TCLAP stuff is working..ahh...so..you can eventually just delete all of this and dont deal with any lists like that(?).. well i think it would be nice to handle it this way
+
+			//ok so we see this is commented so any change can't be coming from here
+			//*x.second = !*x.second;
 			args.erase ( it );
 		}
 }

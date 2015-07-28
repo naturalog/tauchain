@@ -17,6 +17,7 @@ typedef int64_t i64;
 typedef uint8_t u8;
 typedef int8_t i8;
 typedef std::wstring string;
+typedef std::vector<string> strings;
 typedef std::shared_ptr<string> pstring;
 pstring pstr ( const string& s );
 pstring pstr ( const wchar_t* s );
@@ -196,6 +197,7 @@ template<typename T> string _tostr ( T t ) {
 
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
 
+//yea... its all scattered around, now watch this
 extern int level;
 
 #endif

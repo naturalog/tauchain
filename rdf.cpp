@@ -140,7 +140,7 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 		else if ( !keyword ( key ) ) setNamespace ( key, val );
 	}
 }
-
+//my favorite function so far... i think we can clean it up a bit and keep it within specs :) //maaan good luck with that, i wouldnt want to go diving into it
 void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	qlist triples;
 	{pnode first = mkiri ( RDF_FIRST );
@@ -216,12 +216,13 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 	}
 	else {
 		string id;
-		if ( item->MAP() ) {
+		if ( item->MAP() ) {h
 			id = *getid ( item )->STR();
 			if ( is_rel_iri ( id ) ) return 0;
-		} else id = *item->STR();
+		} else id = *item->STR();c
 		return id.find ( L"_:" ) ? mkiri ( pstr(id) ) : mkbnode ( pstr(id) );
 	}
+//yikes//haha yeah..although this is done following the jsonld spec..whi
 }
 
 quad::quad ( string subj, string pred, pnode object, string graph ) :

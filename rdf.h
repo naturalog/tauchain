@@ -5,6 +5,8 @@
 #include <list>
 #include <set>
 
+typedef i64 resid;
+
 typedef std::map<string, string> ssmap;
 typedef std::shared_ptr<ssmap> pssmap;
 
@@ -27,6 +29,7 @@ public:
 	pnode next = 0;
 };
 inline std::wostream& operator<<(std::wostream& o, const node& n) { return o << n.tostring(); }
+
 
 pnode mkliteral ( pstring value, pstring datatype, pstring language );
 pnode mkiri ( pstring iri );
@@ -111,4 +114,5 @@ public:
 	std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );
+
 #endif
