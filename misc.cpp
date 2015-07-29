@@ -128,8 +128,8 @@ string prover::format(term p, bool json) {
 		if (p.s) ss << L'(';
 		if (p.s) ss << format(p.s) << L' ';
 		ss << dstr(p.p, false);
-		if (p.o) ss << L' ' << format (p.o);
-		is (p.s) ss << L')';
+		if (p.o) ss << L' ' << format(p.o);
+		if (p.s) ss << L')';
 		return ss.str();
 	}
 	std::wstringstream ss;
