@@ -55,7 +55,9 @@ resid bidict::set ( node v ) {
 
 node bidict::operator[] ( resid k ) {
 //	if (!has(k)) set(::tostr(k));
-	TRACE(if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting resid"));
+#ifdef DEBUG
+	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting resid");
+#endif
 	return ip[k];
 }
 
@@ -140,9 +142,16 @@ string prover::format(term p, bool json) {
 	return ss.str();
 }
 
+string prover::formatp(shared_ptr<proof> p) {
+	std::wstringstream ss;
+	ss 	<< L"rule:   " << formatr(p->rul) << endl 
+		<< L"prev:   " << p->prev << endl
+		<< L"subst:  " << formats(p->s) << endl
+		<< L"ground: " << endl << formatg(p->g) << endl;
+	return ss.str();
+}
 void prover::printp(shared_ptr<proof> p) {
-	if (!p) return;
-	dout << KCYN << indent() << L"rule:   " << formatr(p->rul) <<endl<<indent();
+	dout << KCYN /*<< indent()*/ << L"rule:   " << formatr(p->rul) <<endl<<indent();
 	if (p->prev) dout << L"prev:   " << p->prev <<endl<<indent()<< L"subst:  ";
 	else dout << L"prev:   (null)"<<endl<<indent()<<"subst:  ";
 	prints(p->s);
@@ -150,8 +159,7 @@ void prover::printp(shared_ptr<proof> p) {
 	++_indent;
 	printg(p->g);
 	--_indent;
-	dout << L"\n";
-	dout << KNRM;
+	dout << endl << KNRM;
 }
 
 string prover::formats(const subst& s, bool json) {
@@ -283,6 +291,7 @@ boost::container::list<string> proc;
 string indent() {
 	if (!_indent) return string();
 	std::wstringstream ss;
+	size_t sz = proc.size();
 	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
 		string str = L"(";
 		str += *it;

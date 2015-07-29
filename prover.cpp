@@ -81,14 +81,14 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	else r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
 	TRACE(
 		dout << "Trying to unify " << format(_s, true) << " with " << format(_d, true);
-//		printterm_substs(_s, ssub);
-//		dout<<" ";
-//		printterm_substs(_d, dsub);
-//		dout<<" : ";
-//		if (r) {
-//			dout << "passed";
-//			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-//		} else dout << "failed";
+		printterm_substs(_s, ssub);
+		dout<<" ";
+		printterm_substs(_d, dsub);
+		dout<<" : ";
+		if (r) {
+			dout << "passed";
+			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+		} else dout << "failed";
 		dout << endl);
 //	dout<<"UNIFY"<<endl<<format(_s,true)<<endl;
 //	dout<<"WITH"<<endl<<format(_d,true)<<endl;
@@ -346,10 +346,10 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 //	dout<<ll->tostring()<<endl;
 //	dout<<ll1->tostring()<<endl;
 //	exit(0);
-	if (_p->del) return;
+//	if (_p->del) return;
 	++steps;
 	proof& p = *_p;
-	TRACE(dout<<"popped frame " << steps << " :" << endl;printp(_p));
+	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
 	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(kb.head()[p.rul])<<endl;
 	else dout<<steps<<" {}"<<endl;
 	if (p.last != kb.body()[p.rul].size()) {
@@ -565,8 +565,10 @@ void prover::operator()(termset& goal, subst* s) {
 prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) const {
-	TRACE(if (!id || id > (termid)_terms.size())
-		throw std::runtime_error("invalid term id passed to prover::get"));
+#ifdef DEBUG
+	if (!id || id > (termid)_terms.size())
+		throw std::runtime_error("invalid term id passed to prover::get");
+#endif
 	return _terms[id - 1]; 
 }
 
@@ -590,7 +592,7 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 	_head.push_back(t);
 	_body.push_back(ts);
 	r2id[t ? p->get(t).p : 0].push_back(r);
-	TRACE(dout<<r<<tab<<p->formatr(r)<<endl);
+//	TRACE(dout<<r<<tab<<p->formatr(r)<<endl);
 	return r;
 	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 }

@@ -149,6 +149,7 @@ private:
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
+	string formatp(shared_ptr<proof> p);
 	string formats(const subst& s, bool json = false);
 	string formats(shared_ptr<subst>& s, bool json = false) { return s ? formats(*s, json) : string(); }
 	void printterm_substs(termid id, const subst& s);
