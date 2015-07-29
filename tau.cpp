@@ -42,6 +42,16 @@ public:
                		}
         	}	
 	}
+	//this is cli stuff, and there's cli stuff in marpa, etc. it gets slightly
+	//extensive before all the loose ends get tied together
+	//hm.. well actually i can just continue to match ohad's structure there (possibly)
+	//right now cli stuff is scattered and doesn't perform what you asked for
+	//im offering that you make tclap or whatever produce a list of files with formats,
+	//some --query thrown in, some no-flags case, whatever, and from there
+	/*we can start reshaping all the mess...thats how i wouldddddddddddddddddddddn
+do it, if that doesnt work for you, i guess i will more or less leave you to your
+devices:)ah sure, that's what i'm trying to do now :)the files list?all the command line stuff
+//including that..ok..well..do your thing then
 
 	virtual int operator() ( const strings& args ) {
 		if ( ( args.size() == 3 && args[1] == L"help" ) || ( args.size() != 2 && args.size() != 4 ) ) {
@@ -71,7 +81,6 @@ public:
 	}
 };
 
-
 typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
 
 int main ( int argc, char** argv ) {
@@ -80,9 +89,8 @@ int main ( int argc, char** argv ) {
 	try{
 		TCLAP::CmdLine cmd("Tau command line",' ',"0.0");
 		
-		TCLAP::ValueArg<std::string> tc_loadn3("3","load_n3","load n3",false,"","",cmd);
 		TCLAP::ValueArg<int> tc_level("l","level","level",false,1,"",cmd);
-		
+		//
 		/*Ok now my goal is to make these definitions...*/
 		TCLAP::SwitchArg
 			tc_deref("d","no-deref","show integers only instead of strings",cmd,true),
@@ -107,109 +115,128 @@ int main ( int argc, char** argv ) {
 		for( auto x : tauFlags){
 			*x.second = (*(x.first)).getValue();
 		}	
-	
 	}catch(TCLAP::ArgException &e){
 		derr << "TCLAP error" << std::endl;
 	}
-
-
-
-	/*
-	2. All the old stuff that was there before
-	
-	From here it carries on as if my code wasn't even there except that I disabled the actual toggling of the "option" boolean vars in 'process_flags' in order to demonstrate that the TCLAP is actually working as expected. If the boolean-type (SwitchArgs) were not tied in with the other value-type (ValueArgs) here in this cmds_t cmds then that part couldjust be removed at this point.
-
-	*/
-
-	/*
-	Here's Ohad's equivalent of TCLAP 'argument objects', except here you see '--level', and '--help' aren't listed because they aren't accounted for in a homogeneous fashion with the rest of the arguments like '--convert', '--prove' etc.
-	*/
-	cmds_t cmds = { {
-			#ifdef with_marpa
-			{ string ( L"load_n3" ) , new load_n3_cmd },
-			#endif
-			{ string ( L"convert" ) , new convert_cmd },
-			{ string ( L"prove" ) , new prove_cmd }
-		},
-		 {
-			{ { L"--no-deref", L"show integers only instead of strings" }, &deref },
-			{ { L"--pause", L"pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
-			{ { L"--shorten", L"on IRIs containig # show only what after #" }, &shorten },
-			{ { L"--base", L"set file://<filename> as base in JsonLDOptions" }, &fnamebase },
-			{ { L"--quads", L"set input format for prove command as quads" }, &quad_in },
-			{ { L"--nocolor", L"disable color output" }, &nocolor }
-		}//ah..
-	};//see what i mean? //well..well...lets throw all the old crap away already? can't yet, it's too tied into other things, but that's the next step.. this thing i want to do with the lists is not so important, it can wait, here i commented the stuff down below pretty well though
-
-
-	/*
-
-	And then the argument handling starts
-	*/
-	strings args;
-	for ( int n = 0; n < argc; ++n ) args.push_back ( ws(std::string(argv[n])) );
-	for ( int n = 0; n < argc; ++n ) 
-		if (args[n] == L"--level") {
-			if (n + 1 == argc) {
-				derr<<"please specify log level."<<std::endl;
-				exit(1);
-			}
-			level = std::stoi(args[n+1]);
-			args.erase(args.begin() + n + 1);
-			args.erase(args.begin() + n);
-			break;
-		}
-	
-	/*
-	And here's where Ohad toggles the boolean-type options like I've done with SwitchArgs. This could be removed except for that the 'process_flags' loop removes these boolean-type options from the list which affects the following command-line code which is very much based on argument counts. This is the next stuff I'm looking at working into TCLAP.
-	*/
-	process_flags ( cmds, args );
-
 
 	/*hmm.. where can this go... does not fit here */
 	if (nocolor)
 		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 
 
-	argc = args.size();
-	//Not sure how much of this you've already gone through?havent been going thru this much, ok well scan this real quick it's fairly straight-forward
+	vector<std::pair<string, string>>input;
 
-	//No arguments (because 1st argument is './tau'). Default to 'prove' on an input stream, with quads as expected input format. This could either be interpreter, as in './tau', or a file as in './tau < examples/socrates'
+	/*magic goes here*/
+	/*test*/
+	input.push_back("short.natural3", "natural3");
 	
-	//in tclap you mean? im not sure what i mean :):) but you seem stuck in this..., ah not stuck so much as it just gets into other code and there are some questions/things to be agreed upon /i think i just have to try to see, do your thing :)ok
+	/*optionally, if we didnt get format, try to guess?*/
 	
-	if ( argc == 1 ) {
-		prove_cmd p;
-		quad_in = true;
-		return p({L"",L"",L"",L""});
+	qdb kb;
+	for file in input:
+	{
+		string format = file.second;
+		string name = file.first;
+		if (name=="-" or name == "")
+			std::wistream* pis = &std::wcin;
+		else.
+			pis = new std::wifstream(ws(fname));
+		std::wistream& is = *pis;
+//exactly, if the rest of the command line logic were set up over this it would be
+//what i described below. because from here i imagine something like a 'batch file'
+//which would just be a really long command line line..stuck into a file and
+//interpreted with some option like --batch
+//i mean as far as simplicity and consistency goes i think its pretty solid,
+//"everything works the same wherever you're doing it... basically"
+
+//yeah it sounds good
+//this will definitely be good when its more complete and we get to bigger more serious
+//testing, especially the batch files. two commands :) i'm thinking of is --kb and
+//--kb_append and maybe 3 with a --kb_clear or something
+//also in interpeter mode what happens if you enter a bad line? does it fail out or
+//does it just give you a warning and give you a new line? ofc if we have the
+//integration between command line, interpreter and batch files then in some cases
+//we'd want one, and in some cases we'd want the other, sounds like a command line option
+//--fail_on_error or --continue_on_error or something like that
+//also, what about merging multiple files into a single kb?
+//--kb file.n3 file.json file.nq  --query qfile1 qfile2 --kb-append file.n3 --query qfile3
+// --kb-clear --kb_fail_on_error true  --kb file.n3  file2.n3 and etc.......
+// ^ supposed to all be one command line
+//and the -- options are just what you would do in between "fin."s and starting the
+//next 'activity' (--kb, --kb-append, --query) etc. etc.
+
+//these 'activities' not really any different whether its cli, batch file, interpreter
+//mode or IRC bot (and especially these last two are identical)
+
+//thats my thoughts of it
+//ok...i think you should run it past HMC
+//sure lets see if hes around
+		ifstream blabla f(file.first);
+		load_file(kb,..
 	}
-
-	//Arguments
-	//If first argument not found in cmds.first, and is not "help" command
-	if (( cmds.first.find ( args[1] ) == cmds.first.end() && args[1] != L"help" ) ) {
-		print_usage ( cmds );
-		return 1;
+	
+	if (have_query)
+	{
+		qdb query;
+		if
+		load_file(query, query_format, query_fn);
+		
+		
 	}
-	//If the first argument is "help" and there's a command listed after it, i.e. './tau help prove'
-	if ( args[1] == L"help" && argc == 3 ) {
-		dout << ws(cmds.first[string ( args[2] )]->help());
-		return 0; 
-	}
-
-	//If the first argument is "help" and there's no command listed after it, i.e. './tau help'
-	if ( args[1] == L"help" && argc == 2 ) {
-		print_usage ( cmds );
-		return 0;
-	}
-
-	//If there are legal commands, but it's not 'help'
-	int rval = ( *cmds.first[args[1]] ) ( args );
-//look..how about i try to reorganize it all a bit? 
-
-
-
-
-
-
+	else
+		print_qdb(kb)
+	
+	
+	
+	
+	
+	
+	
+	//ok, now i need to think it thru a bit more, so it will work more or less
+	//like now.................
+	//one thing i was thinking is that load_quads has it set up so that it will
+	//work over both files and stdin in the interpreter mode (which i've got 
+	//prefixed with 'Tau>' now btw), was thinking whatever we set up the same things
+	//could be done in interpreter mode and it would be essentially the same interface
+	//command line commands essentially the same commands you'll give inside the
+	//interpreter to direct the course of things. like say i want to run another query
+	//after i'm done with my first one. right now Tau just exits.. but why?
+	//is essentially the same as just reading the next file and doing something with it
+	//from the commandline
+	//also brings up the idea of "quit" command :) which could actually have use
+	//already when i get into interpreter and didn't mean to.. it's cleaner and more
+	//considerate than making them Ctrl+Z, even though i personally have no problems
+	//with Ctrl+Z it's the thought that counts :) and could be a bigger thing later
+	//if we need more graceful tau shutdown, which i'm sure we would down the road.
+	//i agree down the road some sort of interpreter mode could be handy
+	//i figure that's already what we have and if we expanded the command line like
+	//we're talking about but kept it like it is now where it handles both files
+	//and 'interpreter', i.e. plain './tau', then that's exactly what we'd get :)
+	//tangential: we should bring back the IRC bot
+	//actually not completely tangential :)
+	//well..i will let you think about it:)
+	//command line commands, interpreter mode, irc mode(?), im not sure how
+	//to really approach any of it now
+	//basically just like we are now in the code except with the revisions of the command
+	//line like we've been talking about, and making these command line commands accessible
+	//in the interpreter
+	//basically, yeah
+	//basically an interpreter and the command line is no different except one has input
+	//from the user from the terminal and the other has input from files, and the commands/flags
+	//are all the same, and it all works exactly the same either way you do it
+	
+	
+	
 	return rval;
 } 
+
+load_file(qdb &kb, format, ifstream f)
+{
+		
+		if(format == "natural3")
+			load_natural3(kb, f);
+		else..
+		nq
+		else
+		jsonld
+}

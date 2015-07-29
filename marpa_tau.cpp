@@ -673,14 +673,7 @@ void create_rules(prover *prvr, resid raw)
 }
 */
 
-std::string load_n3_cmd::desc() const { return "load n3"; }
-
-std::string load_n3_cmd::help() const {
-    stringstream ss("Hilfe! Hilfe!:");
-    return ss.str();
-}
-
-int load_n3_cmd::operator()(const strings &args) {
+void  load_natural3()(ifstream f) {
     if (args.size() != 3)
         throw std::runtime_error("gimme a filename");
 
