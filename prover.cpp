@@ -80,9 +80,9 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 	else r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
 	TRACE(
-		dout << "Trying to unify " << format(_s, true) << " with " << format(_d, true);
+		dout << "Trying to unify ";
 		printterm_substs(_s, ssub);
-		dout<<" ";
+		dout<<" with ";
 		printterm_substs(_d, dsub);
 		dout<<" : ";
 		if (r) {
