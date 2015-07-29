@@ -24,6 +24,8 @@ extern "C" {
 #include <boost/algorithm/string/predicate.hpp>
 
 typedef std::vector <resid> resids;
+typedef std::vector <termid> termids;
+
 typedef shared_ptr<prover::proof> proverproof;
 
 /*ok this is getting terrible*/
@@ -75,6 +77,28 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
 
     //dout << r.size() << ":" << std::endl;
 
+    prover->substs.clear();
+    prover->e.clear();
+    return r;
+}
+
+termids t_ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of o's out */
+    termids r;
+    prover::termset query;
+    termid o_var = prover->tmpvar();
+    assert(o_var);
+    assert(s);
+    auto xxs = prover->make(s);
+    assert (xxs);
+    termid iii = prover->make(p, xxs, o_var);
+    assert (iii);
+    query.emplace_back(iii);
+    (*prover)(query);
+    for (auto x : prover->substs) {
+        subst::iterator binding_it = x.find(prover->get(o_var).p);
+        if (binding_it != x.end())
+            r.push_back((*binding_it).second);
+    }
     prover->substs.clear();
     prover->e.clear();
     return r;
@@ -333,8 +357,7 @@ struct Marpa {
         }
         else if ((bind = ask1(prvr2, thing, marpa->list_of))) {
             auto sep = ask1(prvr2, thing, marpa->separator);
-            assert(sep);
-            seq_new(symbol, add(bind, prf), add(sep, prf), 0, 0);
+            seq_new(symbol, add(bind, prf), sep?add(sep, prf):-1, 0, 0);
         }
         else if ((bind = ask1(prvr2, thing, bnf_zeroormore))) {
             seq_new(symbol, add(bind, prf), -1, 0, 0);
@@ -695,11 +718,9 @@ public:
 
     prover *prvr, *dest;
 
-    resids get_dotstyle_list(resid l) {
+    resids get_dotstyle_list(termid l) {
         std::list<resid> r;
         prvr->get_dotstyle_list(l, r);
-        prvr->substs.clear();
-        prvr->e.clear();
         resids rr;
         for (auto x:r)
             rr.push_back(x);
@@ -737,8 +758,17 @@ public:
     termid add_formulacontent(resid x)
     {
         //auto graph = mkbnode();
-        //add_statements(x, graph);
+        //add_statements(termid(x), graph);
         //return graph;
+    }
+
+    termid add_pathlist(termid x)/*TERMID*/
+    {
+        resids items = get_dotstyle_list(x);
+        std::list<termid> r;
+        for (auto i:items)
+            r.push_back(add_expression(i));
+        return dest->list2term_simple(r);
     }
 
     termid add_pathitem(resid pi)
@@ -754,9 +784,16 @@ public:
                 ( quickvariable )
                 ( numericliteral )
                 ( literal )
-                ( "[" propertylist "]"  )
-                (  "("  pathlist ")"  )
-                ( boolean )*/
+                ( "[" propertylist "]"  )*/
+        resid l = q(pi, mkiri(pstr(marpa->prefix + L"arg0")));
+        if(l && *dict[l].value == L"(") {
+            termids x = t_ask(prvr, pi, mkiri(pstr(marpa->prefix + L"arg1")));
+            assert(x.size() == 1);
+            termid xx = x[0];
+            assert (xx);
+            return add_pathlist(xx);
+        }
+                //( boolean )
 
     }
 
@@ -857,7 +894,7 @@ public:
         }
     }
 
-    void add_statements(resid raw) {
+    void add_statements(termid raw) {
         resids statements = get_dotstyle_list(raw);
         dout << std::endl << "statements: " << statements.size() << std::endl;
 

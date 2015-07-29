@@ -142,7 +142,7 @@ boolean cfg:mustBeOneSequence (
                 ( "@false" )
 ) .
 
-pathlist cfg:mustBeOneSequence (() (expression pathlist)).
+pathlist marpa:list_of expression.
 
 symbol cfg:mustBeOneSequence (
 		(explicituri)
