@@ -335,7 +335,7 @@ void prover::pushev(shared_ptr<proof> p) {
 		MARPA(substs.push_back(*p->s));
 		if (!(t = evaluate(r, p->s))) continue;
 		e[get(t).p].emplace_back(t, p->g);
-		dout << "proved: " << format(t) << endl;
+//		dout << "proved: " << format(t) << endl;
 	}
 }
 
@@ -349,8 +349,9 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	if (_p->del) return;
 	++steps;
 	proof& p = *_p;
-	TRACE(dout<<"popped frame:\n";printp(_p));
-	if (p.rul && kb.head()[p.rul]) dout<<"POP QUEUE"<<endl<<format(kb.head()[p.rul])<<endl;
+	TRACE(dout<<"popped frame " << steps << " :" << endl;printp(_p));
+	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(kb.head()[p.rul])<<endl;
+	else dout<<steps<<" {}"<<endl;
 	if (p.last != kb.body()[p.rul].size()) {
 		if (euler_path(_p)) return;
 		termid t = kb.body()[p.rul][p.last];

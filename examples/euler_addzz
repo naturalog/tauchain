@@ -10,7 +10,7 @@ function printterm(term) {
 function prove(goal, maxNumberOfSteps) {
   var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[]}]
   //if (typeof(evidence) == 'undefined') evidence = {}
-  if (typeof(step) == 'undefined') step = 0
+  step = 1
   while (queue.length > 0) {
     //console.log(queue.length)
     var c = queue.pop()
@@ -19,7 +19,8 @@ function prove(goal, maxNumberOfSteps) {
       console.log("step",step)
     }
     if (typeof(c.rule.head.args) != 'undefined') 
-	document.writeln('POP QUEUE\n' + printterm(c.rule.head) )
+	document.writeln( step + ' ' + printterm(c.rule.head) )
+    else document.writeln(step + ' ' + '{}')
 //	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
     var g = aCopy(c.ground)
     step++
