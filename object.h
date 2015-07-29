@@ -87,6 +87,7 @@ public:
 	string toString ( );
 };
 
+//yikes
 #define OBJ_IMPL(type, getter) \
 class type##_obj : public obj { \
 	std::shared_ptr<type> data; \
@@ -104,6 +105,7 @@ public: \
 	}\
 	virtual pobj clone() const { return std::make_shared<type##_obj>(*data);  }\
 };typedef std::shared_ptr<type##_obj> p##type##_obj
+
 
 OBJ_IMPL ( int64_t, INT );
 OBJ_IMPL ( uint64_t, UINT );

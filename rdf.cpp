@@ -140,7 +140,14 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 		else if ( !keyword ( key ) ) setNamespace ( key, val );
 	}
 }
-//my favorite function so far... i think we can clean it up a bit and keep it within specs :) //maaan good luck with that, i wouldnt want to go diving into it
+
+
+
+
+
+
+/* GRAPH TO RDF */
+
 void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	qlist triples;
 	{pnode first = mkiri ( RDF_FIRST );
@@ -195,6 +202,12 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	else first[graph_name]->insert ( first[graph_name]->end() , triples.begin(), triples.end() );
 }
 
+
+
+
+/*OBJECT TO RDF*/
+
+
 pnode rdf_db::obj_to_rdf ( pobj item ) {
 	if ( isvalue ( item ) ) {
 		pobj value = getvalue ( item ), datatype = sgettype ( item );
@@ -216,14 +229,17 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 	}
 	else {
 		string id;
-		if ( item->MAP() ) {h
+		if ( item->MAP() ) {
 			id = *getid ( item )->STR();
 			if ( is_rel_iri ( id ) ) return 0;
-		} else id = *item->STR();c
+		} else id = *item->STR();
 		return id.find ( L"_:" ) ? mkiri ( pstr(id) ) : mkbnode ( pstr(id) );
 	}
-//yikes//haha yeah..although this is done following the jsonld spec..whi
 }
+
+
+
+/* QUAD CONSTRUCTORS */
 
 quad::quad ( string subj, string pred, pnode object, string graph ) :
 	quad ( startsWith ( subj, L"_:" ) ? mkbnode ( pstr(subj) ) : mkiri ( pstr(subj) ), mkiri ( pstr(pred) ), object, graph ) {
@@ -245,6 +261,10 @@ quad::quad ( pnode s, pnode p, pnode o, string c ) :
 
 quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
 
+
+
+/* .tostring() */
+
 string quad::tostring ( ) const {
 	std::wstringstream ss;
 	bool _shorten = shorten;
@@ -263,6 +283,9 @@ string quad::tostring ( ) const {
 	return ss.str();
 }
 
+
+
+/*GET THE INPUT*/
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 
@@ -273,13 +296,16 @@ qdb readqdb ( std::wistream& is) {
 	qdb r;
 	nqparser p;
 	std::wstringstream ss;
+	
+	dout << L"Tau> "; 
 	while (getline(is, s)) {
 		trim(s);
 		if (s[0] == '#') continue;
 		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".") break;
-//		dout << s << endl;
 		ss << ' ' << s << ' ';
+		dout << L"Tau> ";
 	}
+	
 	auto rr = p((wchar_t*)ss.str().c_str());
 	r.second = rr.second;
 	for (quad q : rr.first) {
@@ -289,6 +315,9 @@ qdb readqdb ( std::wistream& is) {
 	}
 	return r;
 }
+
+
+/*CONVERSION STUFF*/
 
 std::string convert_cmd::desc() const {
 	return "Convert JSON-LD to quads including all dependent algorithms.";

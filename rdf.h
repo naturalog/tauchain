@@ -28,6 +28,7 @@ public:
 	}
 	pnode next = 0;
 };
+
 inline std::wostream& operator<<(std::wostream& o, const node& n) { return o << n.tostring(); }
 
 
@@ -53,6 +54,8 @@ typedef std::shared_ptr<quad> pquad;
 typedef std::list<pquad> qlist;
 typedef std::shared_ptr<qlist> pqlist;
 typedef std::pair<std::map<string, pqlist>, std::map<string, std::list<pnode>>> qdb;
+typedef std::shared_ptr<qdb> pqdb;
+
 
 extern const pnode first;
 extern const pnode rest;
@@ -113,6 +116,7 @@ public:
 	~nqparser();
 	std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
+
 qlist merge ( const qdb& q );
 
 #endif

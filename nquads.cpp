@@ -159,6 +159,8 @@ pnode nqparser::readany(bool lit){
 }
 
 
+
+/*Here's our bad boy*/
 std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
 	std::list<std::pair<pnode, plist>> preds;
 	s = _s;

@@ -5,11 +5,13 @@
 using namespace boost::algorithm;
 
 bidict& dict = *new bidict;
-//aaahhhh:)
 int level = 1;
 extern int _indent;
 
 resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+
+
+/* BIDICT STUFF*/
 
 void bidict::init() {
 #ifdef with_marpa
@@ -90,28 +92,8 @@ string dstr ( resid p, bool escape ) {
 	if ( s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 }
-bool endsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
-}
 
-bool startsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
-}
-
-string lower ( const string& s_ ) {
-	string s = s_;
-	std::transform ( s.begin(), s.end(), s.begin(), ::towlower );
-	return s;
-}
-
-string KNRM = L"\x1B[0m";
-string KRED = L"\x1B[31m";
-string KGRN = L"\x1B[32m";
-string KYEL = L"\x1B[33m";
-string KBLU = L"\x1B[34m";
-string KMAG = L"\x1B[35m";
-string KCYN = L"\x1B[36m";
-string KWHT = L"\x1B[37m";
+/* PROVER STUFF */
 
 string prover::format(termid id, bool json) { 
 	if (!id) return L"{}";
@@ -275,20 +257,10 @@ void prover::printe() {
 		}
 }
 
-boost::container::list<string> proc;
 
-string indent() {
-	if (!_indent) return string();
-	std::wstringstream ss;
-	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
-		string str = L"(";
-		str += *it;
-		str += L") ";
-		ss << std::setw(8) << str;
-	}
-	ss << "    " << std::setw(_indent * 2);
-	return ss.str();
-}
+/*PROC STUFF*/
+
+boost::container::list<string> proc;
 
 _setproc:: _setproc(const string& p) {
 	proc.push_front(p);
@@ -299,6 +271,10 @@ _setproc:: ~_setproc() {
 	proc.pop_front();
 	--_indent;
 }
+
+
+
+/*STRING PROCESSING*/
 
 pstring wstrim(string s) {
 	trim(s);
@@ -320,11 +296,50 @@ struct cmpstr {
 	}
 };
 
+bool endsWith ( const string& x, const string& y ) {
+        return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
+}
+
+bool startsWith ( const string& x, const string& y ) {
+        return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
+}
+
+string lower ( const string& s_ ) {
+        string s = s_;
+        std::transform ( s.begin(), s.end(), s.begin(), ::towlower );
+        return s;
+}
+
+string KNRM = L"\x1B[0m";
+string KRED = L"\x1B[31m";
+string KGRN = L"\x1B[32m";
+string KYEL = L"\x1B[33m";
+string KBLU = L"\x1B[34m";
+string KMAG = L"\x1B[35m";
+string KCYN = L"\x1B[36m";
+string KWHT = L"\x1B[37m";
+
+/* OTHER STRING PROCESSING */
+
+//Uses boost
 pstring pstr ( const string& s ) {
-	static boost::container::set<pstring, cmpstr> strings;
-	auto ps = std::make_shared<string> ( s );
-	auto it = strings.find(ps);
-	if (it != strings.end()) return *it;
-	strings.insert(ps);
-	return ps;
+        static boost::container::set<pstring, cmpstr> strings;
+        auto ps = std::make_shared<string> ( s );
+        auto it = strings.find(ps);
+        if (it != strings.end()) return *it;
+        strings.insert(ps);
+        return ps;
+}
+
+string indent() {
+        if (!_indent) return string();
+        std::wstringstream ss;
+        for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
+                string str = L"(";
+                str += *it;
+                str += L") ";
+                ss << std::setw(8) << str;
+        }
+        ss << "    " << std::setw(_indent * 2);
+        return ss.str();
 } 

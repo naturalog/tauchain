@@ -144,7 +144,12 @@ private:
 		size_t size() const { return terms.size(); }
 		inline const term& operator[](termid id) const { return terms.at(id); }
 		inline const termlist& operator[](resid id) const { return p2id.at(id); }
-		inline termid add(resid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
+		inline termid add(resid p, termid s, termid o) { 
+			terms.emplace_back(p, s, o); 
+			termid r = size(); 
+			p2id[p].push_back(r); 
+			return r; 
+		}
 	private:
 		p2id_t p2id;
 	} _terms;

@@ -6,16 +6,7 @@
 #include "marpa_tau.h"
 #endif
 #include <tclap/CmdLine.h>
-/*
 
-Cleaned stuff up here; some removed, some moved to cli.h/cpp
-
-*/
-
-
-
-
-/* Then we have some Ohad stuff */
 
 boost::interprocess::managed_heap_memory* segment;
 allocator_t* alloc;
@@ -25,29 +16,7 @@ std::wostream& derr = std::wcerr;
 
 #define ever ;;
 
-
-
-/*And here we go...*/
-
-
-//following?yeah:)coo//its good..dont hesitate to leave plenty comments in...and delete the old stuff:)cool:)heres one more thing
-/*So tau.cpp is divided into:
-
-	1) class prove_cmd : public cmd_t, 
-
-	2) int main( int argc, char** argv)
-	
-*/
-
-
-
-/*
-(1)
-*/
-
 class prove_cmd : public cmd_t {
-
-//Mostly stuff related to command line
 public:
 	virtual std::string desc() const {
 		return "Run a query against a knowledgebase.";
@@ -57,6 +26,23 @@ public:
 		ss << std::endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << "\tAnswers the query." << std::endl;
 		return ss.str();
 	}
+
+//well first i split off that core logic, it all still works well and good
+	void runTau(){
+		
+		auto kb = load_quads(L"");
+        	if (kb) {
+			dout << "kb input done." << std::endl;
+			auto query = load_quads(L"");
+			dout << "query loaded." << std::endl;
+			if (query) {
+				prover pr( *kb );
+				pr ( *query );
+				dout << "Ready." << std::endl;
+               		}
+        	}	
+	}
+
 	virtual int operator() ( const strings& args ) {
 		if ( ( args.size() == 3 && args[1] == L"help" ) || ( args.size() != 2 && args.size() != 4 ) ) {
 			dout << ws(help());
@@ -66,33 +52,10 @@ public:
 #ifdef IRC
 			for(ever) {try {
 #endif
-			/*
-			//
-			//
-			*/
-			/*
-			CORE LOGIC
-			Core bit of "main logic" encapsulated by stuff that's mostly just related to parsing command-line args
+
+			runTau();	
 
 
-			*/
-			auto kb = load_quads(L"");
-			if (kb) {
-				dout << "kb input done." << std::endl;
-				auto query = load_quads(L"");
-				dout << "query loaded." << std::endl;
-				if (query) {
-					prover pr( *kb );
-					pr ( *query );
-					dout << "Ready." << std::endl;
-				}
-			}
-			/*
-			//
-			//
-			*/
-
-			//And more command-line stuff...
 #ifdef IRC
 			} catch (std::exception& ex) { dout<<ex.what()<<std::endl; } 
 			catch (...) { dout<<"generic exception."<<std::endl; } 
@@ -108,67 +71,42 @@ public:
 	}
 };
 
-//so we have that little bit of core logic sandwiched between stuff that's just commandline
-//like i said before, id rather see all the input/output stuff here, the tclap code will be quite clean.. sure :)anyway..this works now?yea assuming i haven't broken anything lets check
 
-
-/*
-(2)
-*/
-
+typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
 
 int main ( int argc, char** argv ) {
 	dict.init();
-	/*
-	1. My new TCLAP command line stuff; just handling boolean-type or "SwitchArg" arguments like --nocolor and --no-deref
-	*/
 	
-
 	try{
-		/*
-		This is the object that holds all the cli info
-		*/
 		TCLAP::CmdLine cmd("Tau command line",' ',"0.0");
 		
-		/*
-		Here are the "argument objects", ValueArg's are parameterized by a type, SwitchArgs are boolean
-		*/
 		TCLAP::ValueArg<std::string> tc_loadn3("3","load_n3","load n3",false,"","",cmd);
-
-		//Compare this with://nice :)
-		TCLAP::SwitchArg 
+		TCLAP::ValueArg<int> tc_level("l","level","level",false,1,"",cmd);
+		
+		/*Ok now my goal is to make these definitions...*/
+		TCLAP::SwitchArg
 			tc_deref("d","no-deref","show integers only instead of strings",cmd,true),
 			tc_pause("P","pause","pause on each trace and offer showing the backtrace. available under -DDEBUG only.",cmd,false),
 			tc_shorten("s","shorten","on IRIs containing # show only what's after #",cmd,false),
 			tc_base("b","base","set file://<filename> as base in JsonLDOptions",cmd,true),
 			tc_quads("q","quads","set input format for prove as quads",cmd,false),
 			tc_nocolor("n","nocolor","disable color output",cmd,false);		
-
-		/*
-		Now we just run this and it parses our command line into the 'cmd' object
-		*/
+		
 		cmd.parse(argc,argv);
 		
+		/*Within this std::map<TCLAP::Arg*,bool*>, so that it looks pretty much exactly like the second part of cmds_t down there */
+		tcFlags tauFlags = {
+			{&tc_deref,&deref},
+			{&tc_pause,&_pause},
+			{&tc_shorten,&shorten},
+			{&tc_base,&fnamebase},
+			{&tc_quads,&quad_in},
+			{&tc_nocolor,&nocolor}
+		};
 
-		/*
-		Then we can reference the args with .getValue() and do what we want with them. Right now I'm having trouble putting these objects 'tc_deref', 'tc_pause' etc into things like std::list, std::tuple etc. But this works and handles our boolean-type commands like --nocolor and --no-deref.
-		*///why would you put them into lists?
-		/*
-		for something like
-		for(x : thisList){
-			bool = x.getValue();
-		}
-		
-		*///just a second, i'll show you how Ohad does
-		//i just don't like repitition :)
-		deref = tc_deref.getValue();
-		_pause = tc_pause.getValue();
-		shorten = tc_shorten.getValue();
-		fnamebase = tc_base.getValue();
-		quad_in = tc_quads.getValue();
-		nocolor = tc_nocolor.getValue();
-	//but youre done here, its processed, set, all done? yea it works :) so for the meantime i'm just leaving it even though i hope to implement something cleaner later
-
+		for( auto x : tauFlags){
+			*x.second = (*(x.first)).getValue();
+		}	
 	
 	}catch(TCLAP::ArgException &e){
 		derr << "TCLAP error" << std::endl;
@@ -193,7 +131,6 @@ int main ( int argc, char** argv ) {
 			{ string ( L"convert" ) , new convert_cmd },
 			{ string ( L"prove" ) , new prove_cmd }
 		},
-		//No different really?
 		 {
 			{ { L"--no-deref", L"show integers only instead of strings" }, &deref },
 			{ { L"--pause", L"pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },
@@ -202,7 +139,7 @@ int main ( int argc, char** argv ) {
 			{ { L"--quads", L"set input format for prove command as quads" }, &quad_in },
 			{ { L"--nocolor", L"disable color output" }, &nocolor }
 		}//ah..
-	};
+	};//see what i mean? //well..well...lets throw all the old crap away already? can't yet, it's too tied into other things, but that's the next step.. this thing i want to do with the lists is not so important, it can wait, here i commented the stuff down below pretty well though
 
 
 	/*
@@ -228,29 +165,51 @@ int main ( int argc, char** argv ) {
 	*/
 	process_flags ( cmds, args );
 
+
+	/*hmm.. where can this go... does not fit here */
 	if (nocolor)
 		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 
+
 	argc = args.size();
+	//Not sure how much of this you've already gone through?havent been going thru this much, ok well scan this real quick it's fairly straight-forward
+
+	//No arguments (because 1st argument is './tau'). Default to 'prove' on an input stream, with quads as expected input format. This could either be interpreter, as in './tau', or a file as in './tau < examples/socrates'
+	
+	//in tclap you mean? im not sure what i mean :):) but you seem stuck in this..., ah not stuck so much as it just gets into other code and there are some questions/things to be agreed upon /i think i just have to try to see, do your thing :)ok
+	
 	if ( argc == 1 ) {
 		prove_cmd p;
 		quad_in = true;
 		return p({L"",L"",L"",L""});
 	}
+
+	//Arguments
+	//If first argument not found in cmds.first, and is not "help" command
 	if (( cmds.first.find ( args[1] ) == cmds.first.end() && args[1] != L"help" ) ) {
 		print_usage ( cmds );
 		return 1;
 	}
+	//If the first argument is "help" and there's a command listed after it, i.e. './tau help prove'
 	if ( args[1] == L"help" && argc == 3 ) {
 		dout << ws(cmds.first[string ( args[2] )]->help());
-		return 0;
+		return 0; 
 	}
+
+	//If the first argument is "help" and there's no command listed after it, i.e. './tau help'
 	if ( args[1] == L"help" && argc == 2 ) {
 		print_usage ( cmds );
 		return 0;
 	}
 
+	//If there are legal commands, but it's not 'help'
 	int rval = ( *cmds.first[args[1]] ) ( args );
+//look..how about i try to reorganize it all a bit? 
+
+
+
+
+
 
 	return rval;
 } 
