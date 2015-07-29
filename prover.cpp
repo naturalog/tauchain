@@ -56,7 +56,8 @@ termid prover::evaluate(termid id, const subst& s) {
 		termid a = evaluate(p.s, s), b = evaluate(p.o, s);
 		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
 	}
-	TRACE(printterm_substs(id, s); dout << " = "; if (!r) dout << "(null)"; else dout << format(r); dout << std::endl);
+	TRACE(dout<<format(id) << ' ' << formats(s)<< " = " << format(r) << endl);
+//	TRACE(printterm_substs(id, s); dout << " = "; if (!r) dout << "(null)"; else dout << format(r); dout << std::endl);
 	return r;
 }
 
@@ -80,10 +81,11 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 	else r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
 	TRACE(
-		dout << "Trying to unify ";
-		printterm_substs(_s, ssub);
-		dout<<" with ";
-		printterm_substs(_d, dsub);
+		dout	<< "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+			<< " with " << format(_d) << " sub: " << formats(dsub);
+//		printterm_substs(_s, ssub);
+//		dout<<" with ";
+//		printterm_substs(_d, dsub);
 		dout<<" : ";
 		if (r) {
 			dout << "passed";
