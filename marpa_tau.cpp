@@ -670,14 +670,13 @@ struct Marpa {
 };
 
 
-class N3
-{
+class N3 {
 public:
 
-    pnode uri(std::string s)
-    {
+    pnode uri(std::string s) {
         return mkiri(pstr(ws("http://www.w3.org/2000/10/swap/grammar/n3#" + s)));
     }
+
     pnode n3symbol = uri("symbol");
     pnode n3subject = uri("subject");
     pnode n3object = uri("object");
@@ -692,8 +691,20 @@ public:
     pnode n3statement = uri("statement");
     pnode n3simpleStatement = uri("simpleStatement");
     pnode n3qname = uri("qname");
+    pnode n3formulacontent = uri("formulacontent");
 
     prover *prvr, *dest;
+
+    resids get_dotstyle_list(resid l) {
+        std::list<resid> r;
+        prvr->get_dotstyle_list(l, r);
+        prvr->substs.clear();
+        prvr->e.clear();
+        resids rr;
+        for (auto x:r)
+            rr.push_back(x);
+        return rr;
+    }
 
     N3(prover &prvr_, prover &dest_):prvr(&prvr_), dest(&dest_)
     {
@@ -723,12 +734,23 @@ public:
         }
     }
 
+    termid add_formulacontent(resid x)
+    {
+        //auto graph = mkbnode();
+        //add_statements(x, graph);
+        //return graph;
+    }
+
     termid add_pathitem(resid pi)
     {
         resid sym = q(pi, n3symbol);
         if (sym)
             return add_symbol(sym);
-        /*todo( "{" formulacontent "}" )
+        resid f = q(pi, n3formulacontent);
+        if (f)
+            return add_formulacontent(f);
+
+                /*todo
                 ( quickvariable )
                 ( numericliteral )
                 ( literal )
@@ -836,16 +858,11 @@ public:
     }
 
     void add_statements(resid raw) {
-        std::list<resid> statements;
-        prvr->get_dotstyle_list(raw, statements);
-        prvr->substs.clear();
-        prvr->e.clear();
+        resids statements = get_dotstyle_list(raw);
         dout << std::endl << "statements: " << statements.size() << std::endl;
 
-        for (auto swd: statements) {
-            if (ask(prvr, swd, marpa->is_parse_of, n3statement_with_dot)) {
-                resid s = q(swd, n3statement);
-                assert (s);
+        for (auto s: statements) {
+            if (ask(prvr, s, marpa->is_parse_of, n3statement)) {
                 resid sim = q(s, n3simpleStatement);
                 if (sim)
                     add_simpleStatement(sim);

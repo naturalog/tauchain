@@ -45,9 +45,9 @@ language a cfg:Language;
 	cfg:whiteSpace	"(?m)#(.)*?$". #comment. misuse?
 
 
-document cfg:zeroOrMore statement_with_dot.
-
-statement_with_dot cfg:mustBeOneSequence ((statement "...")).
+document marpa:list_of statement;
+	marpa:separator "...";
+	marpa:proper true.
 
 # Formula does NOT need period on last statement
 
