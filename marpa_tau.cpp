@@ -591,7 +591,7 @@ struct Marpa {
                     if (terminals.find(symbol) != terminals.end()) {
                         xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
                         prvr->kb.add(prvr->make(bnf_matches, xx,  prvr->make(terminals[symbol]->thing)));
-                        prvr->kb.add(prvr->make(marpa->has_value, xx, prvr->make(mkliteral(pstr(token_value), 0, 0))));
+                        prvr->kb.add(prvr->make(marpa->has_value, xx, prvr->make(mkliteral(pstr(token_value), XSD_STRING, 0))));
                     }
                     else // it must be a literal
                         xx = prvr->make(mkliteral(pstr(token_value), 0, 0));
@@ -599,20 +599,16 @@ struct Marpa {
                     break;
                 }
                 case MARPA_STEP_RULE: {
-                    string sexp_str = L"{ ";
-
                     resid res = rule2resid(marpa_v_rule(v));
-                    sexp_str += L"\"" + value(res) + L"\" ";
+                    string sexp_str = L"\"" + value(res) + L"\":{ ";
 
                     std::list <termid> args;
-
                     for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++) {
                         if (stack[i]) {
                             args.push_back(stack[i]);
                             sexp_str += sexp[i] + L" ";
                         }
                     }
-                    sexp[marpa_v_result(v)] = sexp_str + L"} ";
 
                     termid xx;
                     // if its a sequence
@@ -622,28 +618,27 @@ struct Marpa {
                     else {
                         xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
                         //dout << L".xx: " << prvr->format(xx) << std::endl;
-                        int rhs_item_index = 0;
-                        for (auto arg: args) {
-                            sym arg_sym = check_int(marpa_g_rule_rhs(g, marpa_v_rule(v), rhs_item_index));
+                        for (int i = 0; i <= marpa_v_arg_n(v) - marpa_v_arg_0(v); i++) {
+                            termid arg = stack[marpa_v_arg_0(v) + i];
+
+                            if (!arg) continue; // if it was nulled
+
+                            sym arg_sym = check_int(marpa_g_rule_rhs(g, marpa_v_rule(v), i));
 
                             if (literals.find(arg_sym) == literals.end() )
-                              //  (terminals.find(arg_sym) == terminals.end()))
-                            {
                                 prvr->kb.add(prvr->make(sym2resid(arg_sym), xx,  arg));
-                            }
-
 
                             std::wstringstream arg_pred;
-                            arg_pred << L"http://idni.org/marpa#arg" << rhs_item_index;
+                            arg_pred << L"http://idni.org/marpa#arg" << i;
 
-                            prvr->kb.add(prvr->make(mkliteral(pstr(arg_pred.str()), 0, 0), xx, arg));
-                            rhs_item_index++;
+                            prvr->kb.add(prvr->make(mkiri(pstr(arg_pred.str())), xx, arg));
                         }
                     }
 
                     prvr->kb.add(prvr->make(marpa->is_parse_of, xx, prvr->make(res)));
                     //dout << L"xx: " << prvr->format(xx) << std::endl;
                     stack[marpa_v_result(v)] = xx;
+                    sexp[marpa_v_result(v)] = sexp_str + L"} ";
 
                     break;
                 }
@@ -664,7 +659,7 @@ struct Marpa {
         marpa_o_unref(o);
         marpa_b_unref(b);
 
-        dout << sexp[0] << std::endl<< std::endl;
+        dout << L"{" << sexp[0] << L"}" << std::endl<< std::endl;
 
         termid result = stack[0];
         dout << L"result0: " << prvr->format(result) << std::endl;
@@ -774,6 +769,7 @@ public:
                 if (prop)
                     prop = q(prop, n3propertylist);
             }
+            dout << "props:" << props.size();
             //now we have property lists in a list
             for (auto prop:props) {
 
@@ -881,15 +877,15 @@ int load_n3_cmd::operator()(const strings &args) {
         throw std::runtime_error("couldnt open file \"" + fname + "\"");
 
     prover prvr(*load_quads(L"n3-grammar.nq", false));
-    dout << "------" << std::endl;
+    dout << "-----" << std::endl;
 
     pnode input = mkliteral(pstr(load_file(f)), 0, 0);
     assert(input);
 
     prvr.kb.add(
             prvr.make(
-                    mkliteral(pstr(L":contents"), 0, 0),
-                    prvr.make(mkliteral(pstr(L":input"), 0, 0)),
+                    mkiri(pstr(L":contents")),
+                    prvr.make(mkiri(pstr(L":input"))),
                     prvr.make(input)));
 
     auto query = load_quads(L"load_n3", false);
@@ -897,22 +893,26 @@ int load_n3_cmd::operator()(const strings &args) {
 
     prvr(*query);
 
-    dout << "------" << std::endl;
+    dout << "-------" << std::endl;
 
     termid raw = 0;
     for (auto x : prvr.substs) {
         prvr.prints(x); dout << std::endl;
         dout << "______" << std::endl;
-        for (auto it: x)
+        for (auto it: x) {
+            dout << *dict[it.first].value << std::endl;
             if (*dict[it.first].value == L"?O") {
                 raw = it.second;
                 break;
             }
+        }
     }
     prvr.substs.clear();
     prvr.e.clear();
 
-    //dout << prvr.formatkb();
+    dout << std::endl << std::endl << "prvr:" << std::endl << prvr.formatkb();
+    dout << "---------" << std::endl;
+
 
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");

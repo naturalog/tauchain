@@ -292,6 +292,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, std::deque<shared_ptr<proof>
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 		(*p->s)[get(t.s).p] = make(dict.set(n), 0, 0);
 		r = 1;
+		dout << "ppp";
 	}
 	else if (t.p == file_contents_iri) {
 		if (get(t.s).p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
@@ -306,12 +307,10 @@ int prover::builtin(termid id, shared_ptr<proof> p, std::deque<shared_ptr<proof>
 	}
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
+		dout << "pppp";
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		//auto parser = dict[get(get(i1).s).p].value;
-		//if (t1->p != Dot) { TRACE(dout<<std::endl<<"p == " << *dict[t1->p].value<<std::endl);  return -1;}
 		term xx = get(i1);
 		term xxx = get(xx.s);
-		//string input = *dict[get(get(i1).s).p].value;
 		string input = *dict[xxx.p].value;
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
@@ -345,9 +344,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 		if (euler_path(p, queue)) return;
 		termid t = kb.body()[p->rul][p->last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
-		#ifdef with_marpa
 		if (builtin(t, p, queue) != -1) return;
-		#endif
 		for (auto rl : kb[get(t).p]) {
 			std::shared_ptr<subst> s = sub();
 			if (unify(t, p->s, kb.head()[rl], s, true)) {
@@ -360,9 +357,7 @@ void prover::step(std::shared_ptr<proof> p, std::deque<shared_ptr<proof>>& queue
 	}
 	else if (!p->prev) {
 		for (auto r : kb.body()[p->rul]) {
-	#ifdef with_marpa
 			substs.push_back(*p->s); // marpa hack
-	#endif
 			termid t = evaluate(r, p->s);
 			if (!t /*|| hasvar(t)*/) continue;
 			TRACE(dout << "pushing evidence: " << format(t) << endl);
@@ -519,7 +514,7 @@ bool prover::consistency(const qdb& quads) {
 
 #include <chrono>
 void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
-//	setproc(L"prover()");
+	setproc(L"prover()");
 	shared_ptr<proof> p = make_shared<proof>();
 	std::deque<shared_ptr<proof>> queue;
 //	kb.mark();
@@ -546,7 +541,7 @@ void prover::operator()(termset& goal, std::shared_ptr<subst> s) {
 	} while (!queue.empty() && steps < 2e+7);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	/*TRACE*/dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
+	TRACE(dout << KWHT << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	#ifndef with_marpa
 	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 	#endif
