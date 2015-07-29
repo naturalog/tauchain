@@ -80,16 +80,18 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 	else r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
 	TRACE(
-		dout << "Trying to unify ";
-		printterm_substs(_s, ssub);
-		dout<<" with ";
-		printterm_substs(_d, dsub);
-		dout<<" : ";
-		if (r) {
-			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-		} else dout << "failed";
-		dout << std::endl);
+		dout << "Trying to unify " << format(_s, true) << " with " << format(_d, true);
+//		printterm_substs(_s, ssub);
+//		dout<<" ";
+//		printterm_substs(_d, dsub);
+//		dout<<" : ";
+//		if (r) {
+//			dout << "passed";
+//			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+//		} else dout << "failed";
+		dout << endl);
+//	dout<<"UNIFY"<<endl<<format(_s,true)<<endl;
+//	dout<<"WITH"<<endl<<format(_d,true)<<endl;
 	return r;
 }
 
@@ -486,7 +488,7 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
-	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
+//	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
 bool prover::consistency(const qdb& quads) {

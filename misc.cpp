@@ -130,10 +130,10 @@ string prover::format(term p, bool json) {
 		return ss.str();
 	}
 	std::wstringstream ss;
-	ss << L"{pred:\"" << dstr(p.p, true) << L"\",args:[ ";
-	if (p.s) ss << format (p.s, true) << L", ";
+	ss << L"{pred:\"" << dstr(p.p, true) << L"\",args:[";
+	if (p.s) ss << format (p.s, true) << L",";
 	if (p.o) ss << format (p.o, true);
-	ss << L" ] }";
+	ss << L"]}";
 	return ss.str();
 }
 

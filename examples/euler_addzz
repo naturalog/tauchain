@@ -1,7 +1,11 @@
 print = console.log
-trace = print
+//trace = print
 document = {writeln: print}
 
+function printterm(term) {
+	if (term.args.length == 0) return term.pred;
+	return printterm(term.args[0]) + ' ' + term.pred + ' ' + printterm(term.args[1]);
+}
 
 function prove(goal, maxNumberOfSteps) {
   var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[]}]
@@ -14,7 +18,8 @@ function prove(goal, maxNumberOfSteps) {
     if(step % 1000 == 0) {
       console.log("step",step)
     }
-    if (typeof(trace) != 'undefined') document.writeln('POP QUEUE\n' + JSON.stringify(c) + '\n')
+    if (typeof(c.rule.head.args) != 'undefined') 
+	document.writeln('POP QUEUE\n' + /*JSON.stringify*/printterm(c.rule.head) + '\n')
     var g = aCopy(c.ground)
     step++
     if (maxNumberOfSteps != -1 && step >= maxNumberOfSteps) return ''
@@ -69,7 +74,8 @@ function prove(goal, maxNumberOfSteps) {
 }
 
 function unify(s, senv, d, denv, f) {
-  if (typeof(trace) != 'undefined') document.writeln('UNIFY\n' + JSON.stringify(s) + '\nWITH\n' + JSON.stringify(d) + '\n')
+  if (typeof(trace) != 'undefined') 
+document.writeln('UNIFY\n' + JSON.stringify(s) + '\nWITH\n' + JSON.stringify(d) + '\n')
   if (isVar(s.pred)) {
     var sval = evaluate(s, senv)
     if (sval != null) return unify(sval, senv, d, denv, f)
@@ -393,8 +399,8 @@ else {
       cases[k] = cases[k] || []
       for(var o in obj[i][k]) {
         cases[k].push(obj[i][k][o])
-        printobj(obj[i][k][o])
-  console.log(" ");
+//        printobj(obj[i][k][o])
+//  console.log(" ");
       }
     }
   }
@@ -402,6 +408,6 @@ else {
   for (var i = 0; i < cases[""].length; i++) if (cases[""][i] != null) prove(cases[""][i], -1)
   for (var i in evidence) evidence["GND"] = cases["GND"]
   t = new Date() - t
-  print(JSON.stringify(evidence) + '\n')
-  print('//ENDS [' + step + ' steps/' + t + ' msec]')
+//  print(JSON.stringify(evidence) + '\n')
+//  print('//ENDS [' + step + ' steps/' + t + ' msec]')
 }
