@@ -4,7 +4,7 @@ document = {writeln: print}
 
 function printterm(term) {
 	if (term.args.length == 0) return term.pred;
-	return printterm(term.args[0]) + ' ' + term.pred + ' ' + printterm(term.args[1]);
+	return '('+printterm(term.args[0]) + ' ' + term.pred + ' ' + printterm(term.args[1])+')';
 }
 
 function prove(goal, maxNumberOfSteps) {
@@ -19,7 +19,8 @@ function prove(goal, maxNumberOfSteps) {
       console.log("step",step)
     }
     if (typeof(c.rule.head.args) != 'undefined') 
-	document.writeln('POP QUEUE\n' + /*JSON.stringify*/printterm(c.rule.head) + '\n')
+	document.writeln('POP QUEUE\n' + printterm(c.rule.head) )
+//	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
     var g = aCopy(c.ground)
     step++
     if (maxNumberOfSteps != -1 && step >= maxNumberOfSteps) return ''

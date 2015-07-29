@@ -350,6 +350,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	++steps;
 	proof& p = *_p;
 	TRACE(dout<<"popped frame:\n";printp(_p));
+	if (p.rul && kb.head()[p.rul]) dout<<"POP QUEUE"<<endl<<format(kb.head()[p.rul])<<endl;
 	if (p.last != kb.body()[p.rul].size()) {
 		if (euler_path(_p)) return;
 		termid t = kb.body()[p.rul][p.last];
