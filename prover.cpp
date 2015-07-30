@@ -351,8 +351,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		MARPA(if (builtin(t, p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
-		subst s;
 		for (auto rl : it->second) {
+			subst s;
 			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
@@ -362,7 +362,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 				else dout<<"PUSH QUEUE" << endl;
 //				step(r, queue, gnd);
 			}
-			s.clear();
+//			s.clear();
 		}
 	}
 	else if (!p.prev) { pushev(_p); } //gnd.push_back(_p); /*p.remove(queue);*/ }

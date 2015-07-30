@@ -33,7 +33,7 @@ function prove(goal, maxNumberOfSteps) {
     else document.writeln(step + ' ' + '{}')
     document.writeln(step + ' FSUB:' + prints(c.env));
     document.writeln(step + ' LEN:' + queue.length);
-//	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
+	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
     var g = aCopy(c.ground)
     step++
     if (maxNumberOfSteps != -1 && step >= maxNumberOfSteps) return ''
