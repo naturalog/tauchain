@@ -3,6 +3,8 @@ print = console.log
 document = {writeln: print}
 
 function printterm(term) {
+        if (typeof(term) == 'undefined') return ''
+        if (typeof(term.args) == 'undefined') return ''
 	if (term.args.length == 0) return term.pred;
 	return term.pred+'('+printterm(term.args[0]) + ',' + printterm(term.args[1])+')';
 }
@@ -40,7 +42,9 @@ function prove(goal, maxNumberOfSteps) {
       unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true)
       r.ind++
       queue.push(r)
-      if (typeof(trace) != 'undefined') document.writeln('PUSH QUEUE\n' + JSON.stringify(r.rule) + '\n')
+      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined') 
+	document.writeln('PUSH QUEUE ' + printterm(/*evaluate(*/r.rule.head/*, r.env)*/))
+	else document.writeln('PUSH QUEUE')
       continue
     }
     var t = c.rule.body[c.ind]

@@ -362,6 +362,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = make_shared<subst>(*p.prev->s), true);
 		++r->last;
 		queue.push_back(r);
+		dout<<"PUSH QUEUE " << format(/*evaluate(*/kb.head()[rl]/*, r->s)*/) << endl;
 //		step(r, queue, gnd);
 	}
 }
