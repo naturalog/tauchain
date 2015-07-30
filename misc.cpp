@@ -47,7 +47,7 @@ resid bidict::set ( node v ) {
 	auto it = pi.find ( v );
 	if ( it != pi.end() ) return it->second;
 	resid k = pi.size() + 1;
-	if ( /*v._type == node::IRI &&*/ (*v.value)[0] == L'?' ) k = -k;
+	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;

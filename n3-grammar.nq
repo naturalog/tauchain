@@ -283,7 +283,7 @@ _:genid2d406ee6651afc40789e23c5bb4338fdce2dli112 <http://www.w3.org/1999/02/22-r
 <http://www.w3.org/2000/10/swap/grammar/n3#qname> <http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith> "a" .
 <http://www.w3.org/2000/10/swap/grammar/n3#qname> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "(([A-Z_a-z][\\-0-9A-Z_a-z]*)?:)?[A-Z_a-z][\\-0-9A-Z_a-z]*" .
 <http://www.w3.org/2000/10/swap/grammar/n3#quickvariable> <http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith> "?" .
-<http://www.w3.org/2000/10/swap/grammar/n3#quickvariable> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "\\~[A-Z_a-z][\\-0-9A-Z_a-z]*" .
+<http://www.w3.org/2000/10/swap/grammar/n3#quickvariable> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "\\?[A-Z_a-z][\\-0-9A-Z_a-z]*" .
 <http://www.w3.org/2000/10/swap/grammar/n3#rational> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:genid2d406ee6651afc40789e23c5bb4338fdce2dli106 .
 <http://www.w3.org/2000/10/swap/grammar/n3#simpleStatement> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:genid2d406ee6651afc40789e23c5bb4338fdce2dli26 .
 <http://www.w3.org/2000/10/swap/grammar/n3#statement> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:genid2d406ee6651afc40789e23c5bb4338fdce2dli8 .

@@ -720,12 +720,23 @@ public:
     pnode n3simpleStatement = uri("simpleStatement");
     pnode n3qname = uri("qname");
     pnode n3literal = uri("literal");
+    pnode n3numericliteral = uri("numericliteral");
     pnode n3string = uri("string");
+    pnode n3integer = uri("integer");
     pnode n3dtlang = uri("dtlang");
     pnode n3quickvariable= uri("quickvariable");
     pnode n3formulacontent = uri("formulacontent");
 
-    prover *prvr, *dest;
+    prover *prvr;
+    qdb &dest;
+
+    string listid()
+    {
+        static int curid = 0;
+        std::wstringstream ss;
+        ss << L"_:list" << curid;
+        return ss.str();
+    };
 
     resids get_dotstyle_list(termid l) {
         std::list<resid> r;
@@ -736,7 +747,7 @@ public:
         return rr;
     }
 
-    N3(prover &prvr_, prover &dest_):prvr(&prvr_), dest(&dest_)
+    N3(prover &prvr_, qdb &dest_):prvr(&prvr_), dest(dest_)
     {
         if (!marpa)marpa=new MarpaIris();
     }
@@ -754,7 +765,7 @@ public:
         s.erase(s.size() - xxx.size());
     }
 
-    termid add_literal(resid x) {
+    pnode add_literal(resid x) {
         resid sss = q(x, n3string);
         assert (sss);
         resid v = q(sss, marpa->has_value);
@@ -767,68 +778,78 @@ public:
         else
             trim(s, L"\"");
 
-        return dest->make(mkliteral(pstr(s), 0, 0));
+        return mkliteral(pstr(s), 0, 0);
     }
 
-    termid add_symbol(resid x)
+    pnode add_numericliteral(resid x) {
+        resid sss = q(x, n3integer);
+        assert (sss);
+        resid v = q(sss, marpa->has_value);
+        assert(v);
+        return mkliteral(dict[v].value, pstr(L"XSD_INTEGER"), 0);
+    }
+
+    pnode add_symbol(resid x)
     {
         resid uri = q(x, n3explicituri);
         if (uri)
         {
             resid val = q(uri, marpa->has_value);
             assert(val);
-            return dest->make(mkiri(dict[val].value));
+            return mkiri(dict[val].value);
         }
         resid qname = q(x, n3qname);
         if (qname)
         {
             resid val = q(qname, marpa->has_value);
             assert(val);
-            return dest->make(mkiri(dict[val].value));
+            return mkiri(dict[val].value);
         }
     }
 
-    termid add_quickvariable(resid x)
+    pnode add_quickvariable(resid x)
     {
         resid v = q(x, marpa->has_value);
         assert(v);
         string s = *dict[v].value;
         s[0] = '?';//workaround
-        return dest->make(mkiri(pstr(s)));
+        return mkiri(pstr(s));
     }
 
-    termid add_formulacontent(resid x)
+    pnode add_formulacontent(termid x)
     {
-        //auto graph = mkbnode();
-        //add_statements(termid(x), graph);
-        //return graph;
+        auto graph = mkbnode(jsonld_api::gen_bnode_id());
+        add_statements(x, *graph->value);
+        return graph;
     }
 
-    termid add_pathlist(termid/*TERMID*/x)
+    pnode add_pathlist(termid/*TERMID - internalized list*/x)
     {
-        std::list<termid> r;
+        std::list<pnode> r;
         if(x) {
             resids items = get_dotstyle_list(x);
             for (auto i:items)
                 r.push_back(add_expression(i));
         }
-        return dest->list2term_simple(r);
+        auto id = listid();
+        dest.second[id] = r;
+        return mkbnode(pstr(id));
     }
 
-    termid add_pathitem(resid pi)
+    pnode add_pathitem(resid pi)
     {
         resid sym = q(pi, n3symbol);
         if (sym)
             return add_symbol(sym);
-        resid f = q(pi, n3formulacontent);
+        termid f = ask1t(prvr, pi, n3formulacontent);
         if (f)
             return add_formulacontent(f);
         resid qv = q(pi, n3quickvariable);
         if (qv)
             return add_quickvariable(qv);
-
-                //( numericliteral )
-
+        resid nl = q(pi, n3numericliteral);
+        if (nl)
+            return add_numericliteral(nl);
         resid lit = q(pi, n3literal);
         if (lit)
             return add_literal(lit);
@@ -844,7 +865,7 @@ public:
 
     }
 
-    termid add_expression(resid e)
+    pnode add_expression(resid e)
     {
         resid sepi = q(e, n3pathitem);
         assert(sepi);
@@ -852,7 +873,7 @@ public:
         return add_pathitem(sepi);
     }
 
-    void add_simpleStatement(resid sim)
+    void add_simpleStatement(resid sim, string graph)
     {
         assert(sim);
         dout << "   " << sim << "   ";
@@ -862,7 +883,7 @@ public:
         assert(se);
         resid sepi = q(se, n3pathitem);
         assert(sepi);
-        termid subject = add_pathitem(sepi);
+        pnode subject = add_pathitem(sepi);
 
 
         resid sspl = q(sim, n3propertylist);
@@ -879,7 +900,7 @@ public:
             //now we have property lists in a list
             for (auto prop:props) {
 
-                termid predicate;
+                pnode predicate;
                 bool reverse = false;
 
                 resid pred = q(prop, n3predicate);
@@ -911,11 +932,11 @@ public:
                     }
                     else
                         throw std::runtime_error("this shouldnt happen");
-                    predicate = dest->make(mkiri(pstr(ps)));
+                    predicate = mkiri(pstr(ps));
                 }
 
                 /* objects */
-                resids objs;
+                std::vector<pnode> objs;
                 resid t = prop;
                 while (t) {
                     resid ob = q(t, n3object);
@@ -926,7 +947,7 @@ public:
                 }
 
                 for (auto object: objs) {
-                    termid s, o;
+                    pnode s, o;
                     if (reverse) {
                         s = object;
                         o = subject;
@@ -935,21 +956,23 @@ public:
                         o = object;
                         s = subject;
                     }
-                    dest->kb.add(dest->make(dest->get(predicate).p, s, o));
+                    if(dest.first.find(graph) == dest.first.end())
+                        dest.first[graph] = mk_qlist();
+                    dest.first[graph]->push_back(make_shared<quad>(s, predicate, o, graph));
                 }
             }
         }
     }
 
-    void add_statements(termid raw) {
-        resids statements = get_dotstyle_list(raw);
-        dout << std::endl << "statements: " << statements.size() << std::endl;
+    void add_statements(termid list, string graph) {
+        resids statements = get_dotstyle_list(list);
+        dout << std::endl << graph << " statements: " << statements.size() << std::endl;
 
         for (auto s: statements) {
             if (ask(prvr, s, marpa->is_parse_of, n3statement)) {
                 resid sim = q(s, n3simpleStatement);
                 if (sim)
-                    add_simpleStatement(sim);
+                    add_simpleStatement(sim, graph);
             }
         }
     }
@@ -1027,10 +1050,12 @@ int load_n3_cmd::operator()(const strings &args) {
     dout << "......" << std::endl;
 
 
-    prover dest(*load_quads(L"dummy.nq", false));
+    qdb dest;
     N3 n3(prvr, dest);
-    n3.add_statements(raw);
-    dout << std::endl << std::endl << "results:" << std::endl << dest.formatkb();
+    n3.add_statements(raw, L"@default");
+
+    prover d(dest);
+    dout << std::endl << std::endl << "results:" << std::endl << d.formatkb();
     return 0;
 }
 
