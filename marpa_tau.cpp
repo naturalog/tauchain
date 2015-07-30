@@ -37,7 +37,7 @@ bool ask(prover *prover, resid s, const pnode p, const pnode o) {
     prover::termset query;
     query.emplace_back(prover->make(p, prover->make(s), prover->make(o)));
 
-    (*prover)(query);
+    prover->query(query);
 
     bool r = false;
 
@@ -63,7 +63,7 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
 
     //dout << "query: "<< prover->format(query) << endl;;
 
-    (*prover)(query);
+    prover->query(query);
 
     //dout << "substs: "<< std::endl;
 
@@ -93,7 +93,7 @@ termid ask1t(prover *prover, resid s, const pnode p) {
     termid iii = prover->make(p, xxs, o_var);
     assert (iii);
     query.emplace_back(iii);
-    (*prover)(query);
+    prover->query(query);
     for (auto x : prover->substs) {
         subst::iterator binding_it = x.find(prover->get(o_var).p);
         if (binding_it != x.end())
@@ -123,7 +123,7 @@ resids ask(prover *prover, const pnode p, resid o) {
 
     //dout << "query: "<< prover->format(query) << endl;;
 
-    (*prover)(query);
+    prover->query(query);
 
     //dout << "substs: "<< std::endl;
 
@@ -818,6 +818,7 @@ public:
             assert(val);
             return mkiri(dict[val].value);
         }
+        assert(false);
     }
 
     pnode add_quickvariable(resid x)
@@ -877,6 +878,7 @@ public:
         resid b = q(pi, n3boolean);
         if (b)
             return add_boolean(b);
+        assert(false);
 
     }
 
@@ -1030,7 +1032,7 @@ int load_n3_cmd::operator()(const strings &args) {
     auto query = load_quads(L"load_n3", false);
     dout << "------" << std::endl;
 
-    prvr(*query);
+    prvr.query(*query);
 
     dout << "-------" << std::endl;
 
