@@ -16,11 +16,11 @@ function prints(s) {
 		r += x + ':' + printterm(s[x]) + ',';
 	return r
 }
+step = 1
 
 function prove(goal, maxNumberOfSteps) {
   var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[]}]
   //if (typeof(evidence) == 'undefined') evidence = {}
-  step = 1
   while (queue.length > 0) {
     //console.log(queue.length)
     var c = queue.pop()
@@ -96,7 +96,7 @@ function prove(goal, maxNumberOfSteps) {
 
 function unify(s, senv, d, denv, f) {
   if (typeof(trace) != 'undefined' && f) 
-document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.stringify*/printterm(d) )
+document.writeln(step + ' UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.stringify*/printterm(d) )
     if (f && typeof(senv) != 'undefined') document.writeln('SSUB ' + prints(senv))
     else if (f) document.writeln('SSUB')
     if (f && typeof(denv) != 'undefined') document.writeln('DSUB ' + prints(denv))

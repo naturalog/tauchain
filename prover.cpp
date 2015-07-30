@@ -51,7 +51,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	setproc(L"unify");
 	termid v;
 	if (f) {
-		dout << "UNIFY " << format(_s) << " WITH " << format(_d) << endl;
+		dout << steps << " UNIFY " << format(_s) << " WITH " << format(_d) << endl;
 		dout << "SSUB " << formats(ssub) << endl;
 		dout << "DSUB " << formats(dsub) << endl;
 	}
