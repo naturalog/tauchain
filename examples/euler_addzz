@@ -44,7 +44,8 @@ function prove(goal, maxNumberOfSteps) {
       continue
     }
     var t = c.rule.body[c.ind]
-    var b = builtin(t, c)
+    document.writeln( 'Tracking back from ' + printterm(t) )
+    var b = -1;//builtin(t, c)
     if (b == 1) {
       g.push({src:{head:evaluate(t, c.env), body:[]}, env:{}})
       var r = {rule:{head:c.rule.head, body:c.rule.body}, src:c.src, ind:c.ind, parent:c.parent, env:c.env, ground:g}

@@ -338,7 +338,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		dout << endl;
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
-		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
+		/*TRACE*/(dout<<"Tracking back from " << format(t) << std::endl);
 		MARPA(if (builtin(t, p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
