@@ -12,10 +12,10 @@
 
 typedef i64 resid;
 
-extern boost::container::list<string> proc;
+extern std::list<string> proc;
 class bidict {
-	boost::container::map<resid, node> ip;
-	boost::container::map<node, resid> pi;
+	std::map<resid, node> ip;
+	std::map<node, resid> pi;
 public:
 	void init();
 	resid set ( node v );
@@ -28,7 +28,7 @@ public:
 	bool has ( resid k ) const;
 	bool has ( node v ) const;
 	string tostr();
-	boost::container::map<string, pnode> nodes;
+	std::map<string, pnode> nodes;
 };
 
 extern bidict& dict;

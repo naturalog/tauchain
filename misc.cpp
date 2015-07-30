@@ -286,7 +286,7 @@ void prover::printe() {
 		}
 }
 
-boost::container::list<string> proc;
+std::list<string> proc;
 
 string indent() {
 	if (!_indent) return string();
@@ -333,7 +333,7 @@ struct cmpstr {
 };
 
 pstring pstr ( const string& s ) {
-	static boost::container::set<pstring, cmpstr> strings;
+	static std::set<pstring, cmpstr> strings;
 	auto ps = std::make_shared<string> ( s );
 	auto it = strings.find(ps);
 	if (it != strings.end()) return *it;

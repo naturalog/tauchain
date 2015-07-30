@@ -18,7 +18,7 @@
 #include <boost/interprocess/containers/vector.hpp>
 
 typedef u64 termid;
-typedef boost::container::map<resid, termid> subst;
+typedef std::map<resid, termid> subst;
 
 class prover {
 public:
@@ -31,10 +31,10 @@ public:
 		pobj json(const prover&) const;
 	};
 	typedef u64 ruleid;
-	typedef boost::container::vector<termid> termset;
+	typedef std::vector<termid> termset;
 	class ruleset {
 	public:
-		typedef boost::container::vector<termset> btype;
+		typedef std::vector<termset> btype;
 	private:
 		termset _head;
 		btype  _body;
@@ -50,7 +50,7 @@ public:
 		void mark();
 		void revert();
 		typedef std::vector<ruleid> rulelist;
-		typedef boost::container::map<resid, rulelist> r2id_t;
+		typedef std::map<resid, rulelist> r2id_t;
 		string format() const;
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
@@ -65,8 +65,8 @@ public:
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();
 
-	typedef boost::container::list<std::pair<ruleid, shared_ptr<subst>>> ground;
-	typedef boost::container::map<resid, boost::container::list<std::pair<termid, ground>>> evidence;
+	typedef std::list<std::pair<ruleid, shared_ptr<subst>>> ground;
+	typedef std::map<resid, std::list<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
@@ -112,11 +112,11 @@ public:
 private:
 
 	class termdb {
-		typedef boost::container::vector<term> terms_t;
+		typedef std::vector<term> terms_t;
 	public:
 		terms_t terms;
-		typedef boost::container::vector<termid> termlist;
-		typedef boost::container::map<resid, termlist> p2id_t;
+		typedef std::vector<termid> termlist;
+		typedef std::map<resid, termlist> p2id_t;
 		size_t size() const { return terms.size(); }
 		inline const term& operator[](termid id) const { return terms.at(id); }
 		inline const termlist& operator[](resid id) const { return p2id.at(id); }
