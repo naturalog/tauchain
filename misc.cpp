@@ -47,7 +47,7 @@ resid bidict::set ( node v ) {
 	auto it = pi.find ( v );
 	if ( it != pi.end() ) return it->second;
 	resid k = pi.size() + 1;
-	if ( (*v.value)[0] == L'?' ) k = -k;
+	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;
@@ -278,7 +278,7 @@ void prover::printe() {
 			dout << indent() << format(x.first) << L" <= " << endl;
 			++_indent;
 			#ifdef with_marpa
-			if (x.second->size() > 1)
+			if (x.second.size() > 1)
 			#endif
 			printg(x.second);
 			--_indent;
