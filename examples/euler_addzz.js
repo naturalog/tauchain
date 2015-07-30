@@ -105,8 +105,8 @@ document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.s
   }
   else {
     if (f && typeof(trace) != 'undefined') document.writeln('FAILED TO UNIFY ' + printterm(s) + ' WITH ' + printterm(d))
-    if (f && typeof(ssub) != 'undefined') document.writeln('SSUB ' + JSON.stringify(ssub))
-    if (f && typeof(dsub) != 'undefined') document.writeln('DSUB ' + JSON.stringify(dsub))
+    if (f && typeof(senv) != 'undefined') document.writeln('SSUB ' + JSON.stringify(senv))
+    if (f && typeof(denv) != 'undefined') document.writeln('DSUB ' + JSON.stringify(denv))
     return false
   }
 }
