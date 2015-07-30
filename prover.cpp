@@ -348,6 +348,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
 				if (euler_path(_p)) continue;
 				queue.push_front(r);
+				if (kb.head()[r->rul]) dout<<"PUSH QUEUE " << format(evaluate(kb.head()[r->rul], r->s)) << endl;
+				else dout<<"PUSH QUEUE" << endl;
 //				step(r, queue, gnd);
 			}
 			s.clear();

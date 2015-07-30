@@ -72,6 +72,9 @@ function prove(goal, maxNumberOfSteps) {
         while (ep = ep.parent) if (ep.src == c.src && unify(ep.rule.head, ep.env, c.rule.head, c.env, false)) break
         if (ep == null) {
           queue.unshift(r)
+      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined' && typeof(r.rule.head.pred) != 'undefined' ) 
+	document.writeln('PUSH QUEUE ' + printterm(evaluate(r.rule.head, r.env)))
+	else document.writeln('PUSH QUEUE')
           if (typeof(trace) != 'undefined') document.writeln('EULER PATH UNSHIFT QUEUE\n' + JSON.stringify(r.rule) + '\n')
         }
       }
