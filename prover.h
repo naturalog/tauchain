@@ -59,8 +59,8 @@ public:
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
 	prover ( const prover& p );
-	void operator()(termset& goal, subst* s = 0);
-	void operator()(const qdb& goal, subst* s = 0);
+	void query(termset& goal, subst* s = 0);
+	void query(const qdb& goal, subst* s = 0);
 	const term& get(termid) const;
 	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
 	~prover();

@@ -13,8 +13,6 @@ set(SOURCE_FILES
     jsonld.cpp
     jsonld.h
     json_spirit.h
-    match.cpp
-    match.h
     misc.cpp
     misc.h
     nquads.cpp

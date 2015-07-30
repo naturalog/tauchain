@@ -452,15 +452,15 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-void prover::operator()(const qdb& query, subst* s) {
+void prover::query(const qdb& q_, subst* s) {
 	termset goal = termset();
 	termid t;
-	for ( auto q : merge(query) ) 
+	for ( auto q : merge(q_) )
 		if (	dict[q->pred] != rdffirst && 
 			dict[q->pred] != rdfrest &&
-			(t = quad2term( *q, query )) )
+			(t = quad2term( *q, q_ )) )
 			goal.push_back( t );
-	return (*this)(goal, s);
+	query(goal, s);
 }
 
 prover::~prover() { }
@@ -503,7 +503,7 @@ bool prover::consistency(const qdb& quads) {
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
 	termset g = termset();
 	g.push_back(t);
-	p(g);
+	p.query(g);
 	auto ee = p.e;
 	for (auto x : ee) for (auto y : x.second) {
 		prover q(*this);
@@ -514,7 +514,7 @@ bool prover::consistency(const qdb& quads) {
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
 		qdb qq;
 		qq.first[L""] = quads.first.at(s);
-		q(qq);
+		q.query(qq);
 		if (q.e.size()) {
 			derr << L"Inconsistency found: " << q.format(y.first) << L" is provable as true and false."<<endl;
 			c = false;
@@ -524,7 +524,7 @@ bool prover::consistency(const qdb& quads) {
 }
 
 #include <chrono>
-void prover::operator()(termset& goal, subst* s) {
+void prover::query(termset& goal, subst* s) {
 //	setproc(L"prover()");
 	queue_t queue, gnd;
 	shared_ptr<proof> p = make_shared<proof>();
