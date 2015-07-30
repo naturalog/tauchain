@@ -82,7 +82,7 @@ resids ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of
     return r;
 }
 
-termids t_ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list of o's out */
+termid ask1t(prover *prover, resid s, const pnode p) {
     termids r;
     prover::termset query;
     termid o_var = prover->tmpvar();
@@ -101,7 +101,12 @@ termids t_ask(prover *prover, resid s, const pnode p) {    /* s and p in, a list
     }
     prover->substs.clear();
     prover->e.clear();
-    return r;
+    if (r.size() > 1)
+        throw std::runtime_error("well, this is weird, " + std::to_string(r.size()) + " matches.");
+    if (r.size())
+        return r[0];
+    else
+        return 0;
 }
 
 resids ask(prover *prover, const pnode p, resid o) {
@@ -714,6 +719,10 @@ public:
     pnode n3statement = uri("statement");
     pnode n3simpleStatement = uri("simpleStatement");
     pnode n3qname = uri("qname");
+    pnode n3literal = uri("literal");
+    pnode n3string = uri("string");
+    pnode n3dtlang = uri("dtlang");
+    pnode n3quickvariable= uri("quickvariable");
     pnode n3formulacontent = uri("formulacontent");
 
     prover *prvr, *dest;
@@ -737,6 +746,30 @@ public:
         return ask1(prvr, s, p);
     }
 
+    void trim(string &s, string xxx)
+    {
+        assert(startsWith(s, xxx));
+        assert(endsWith(s, xxx));
+        s.erase(0, xxx.size());
+        s.erase(s.size() - xxx.size());
+    }
+
+    termid add_literal(resid x) {
+        resid sss = q(x, n3string);
+        assert (sss);
+        resid v = q(sss, marpa->has_value);
+        assert(v);
+        string s = *dict[v].value;
+        string triple = string(L"\"\"\"");
+
+        if(startsWith(s, triple))
+            trim(s, triple);
+        else
+            trim(s, L"\"");
+
+        return dest->make(mkliteral(pstr(s), 0, 0));
+    }
+
     termid add_symbol(resid x)
     {
         resid uri = q(x, n3explicituri);
@@ -755,6 +788,13 @@ public:
         }
     }
 
+    termid add_quickvariable(resid x)
+    {
+        resid v = q(x, marpa->has_value);
+        assert(v);
+        return dest->make(mkiri(dict[v].value));
+    }
+
     termid add_formulacontent(resid x)
     {
         //auto graph = mkbnode();
@@ -762,12 +802,14 @@ public:
         //return graph;
     }
 
-    termid add_pathlist(termid x)/*TERMID*/
+    termid add_pathlist(termid/*TERMID*/x)
     {
-        resids items = get_dotstyle_list(x);
         std::list<termid> r;
-        for (auto i:items)
-            r.push_back(add_expression(i));
+        if(x) {
+            resids items = get_dotstyle_list(x);
+            for (auto i:items)
+                r.push_back(add_expression(i));
+        }
         return dest->list2term_simple(r);
     }
 
@@ -779,19 +821,22 @@ public:
         resid f = q(pi, n3formulacontent);
         if (f)
             return add_formulacontent(f);
+        resid qv = q(pi, n3quickvariable);
+        if (qv)
+            return add_quickvariable(qv);
 
-                /*todo
-                ( quickvariable )
-                ( numericliteral )
-                ( literal )
-                ( "[" propertylist "]"  )*/
+                //( numericliteral )
+
+        resid lit = q(pi, n3literal);
+        if (lit)
+            return add_literal(lit);
+
+                //( "[" propertylist "]"  )
+
         resid l = q(pi, mkiri(pstr(marpa->prefix + L"arg0")));
         if(l && *dict[l].value == L"(") {
-            termids x = t_ask(prvr, pi, mkiri(pstr(marpa->prefix + L"arg1")));
-            assert(x.size() == 1);
-            termid xx = x[0];
-            assert (xx);
-            return add_pathlist(xx);
+            termid x = ask1t(prvr, pi, mkiri(pstr(marpa->prefix + L"arg1")));
+            return add_pathlist(x);
         }
                 //( boolean )
 
