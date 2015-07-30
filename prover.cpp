@@ -59,6 +59,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 			if (f) {
 				dsub[d.p] = evaluate(_s, ssub);
 				ns = true;
+				dout << "NEW SUB " << dstr(d.p) << ' ' << format(dsub[d.p]) << endl;
 			}
 			r = true;
 		}
@@ -67,7 +68,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
 		r = unify(s.o, ssub, d.o, dsub, f);
-	TRACE(dout	<< "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+	if (f) TRACE(dout	<< "Trying to unify " << format(_s) << " sub: " << formats(ssub)
 			<< " with " << format(_d) << " sub: " << formats(dsub);
 //		printterm_substs(_s, ssub);
 //		dout<<" with ";
@@ -78,6 +79,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
 		} else dout << "failed";
 		dout << endl);
+	if (f) dout << "SSUB " << formats(ssub) << endl;
 //	dout<<"UNIFY"<<endl<<format(_s,true)<<endl;
 //	dout<<"WITH"<<endl<<format(_d,true)<<endl;
 	return r;

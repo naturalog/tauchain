@@ -160,6 +160,7 @@ void prover::printp(shared_ptr<proof> p) {
 }
 
 string prover::formats(const subst& s, bool json) {
+	if (s.empty()) return L"{}";
 	std::wstringstream ss;
 	for (auto x : s)
 		ss << L"\"" << dstr(x.first) << L"\":" << format(x.second, json) << L',';

@@ -86,6 +86,8 @@ function prove(goal, maxNumberOfSteps) {
 function unify(s, senv, d, denv, f) {
   if (typeof(trace) != 'undefined' && f) 
 document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.stringify*/printterm(d) )
+    if (f && typeof(senv) != 'undefined') document.writeln('SSUB ' + JSON.stringify(senv))
+    else if (f) document.writeln('SSUB')
   if (isVar(s.pred)) {
     var sval = evaluate(s, senv)
     if (sval != null) return unify(sval, senv, d, denv, f)
@@ -95,7 +97,9 @@ document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.s
     var dval = evaluate(d, denv)
     if (dval != null) return unify(s, senv, dval, denv, f)
     else {
-      if (f != null) denv[d.pred] = evaluate(s, senv)
+      if (f != null) {
+	denv[d.pred] = evaluate(s, senv)
+	}
       return true
     }
   }
@@ -105,7 +109,6 @@ document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.s
   }
   else {
     if (f && typeof(trace) != 'undefined') document.writeln('FAILED TO UNIFY ' + printterm(s) + ' WITH ' + printterm(d))
-    if (f && typeof(senv) != 'undefined') document.writeln('SSUB ' + JSON.stringify(senv))
     if (f && typeof(denv) != 'undefined') document.writeln('DSUB ' + JSON.stringify(denv))
     return false
   }
