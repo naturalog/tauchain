@@ -106,13 +106,13 @@ termid prover::tmpvar() {
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
 
-/*
+
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
-	(*this)( ts, p.s);
+	query( ts, &*p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
@@ -129,7 +129,7 @@ termid prover::list_first(termid cons, proof& p) {
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
-	(*this)( ts , p.s);
+	query( ts , &*p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
@@ -172,7 +172,7 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 	TRACE(dout<<" returned " << r.size() << " items: "; for (auto n : r) dout<<format(n)<<' '; dout << std::endl);
 	return r;
 }
-*/
+
 void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
 	auto s = get(id).s;
 	if (!s) return;
@@ -284,6 +284,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 		(*p->s)[get(t.s).p] = make(dict.set(n), 0, 0);
 		r = 1;
+		dout << "ppp";
 	}
 	else if (t.p == file_contents_iri) {
 		if (get(t.s).p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
@@ -298,12 +299,10 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	}
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
+		dout << "pppp";
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		//auto parser = dict[get(get(i1).s).p].value;
-		//if (t1->p != Dot) { TRACE(dout<<std::endl<<"p == " << *dict[t1->p].value<<std::endl);  return -1;}
 		term xx = get(i1);
 		term xxx = get(xx.s);
-		//string input = *dict[get(get(i1).s).p].value;
 		string input = *dict[xxx.p].value;
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
@@ -336,6 +335,11 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
+//	auto ll = mkliteral(pstr(L"a"),0,0);
+//	auto ll1 = mkliteral(pstr(L"aa"),0,0);
+//	dout<<ll->tostring()<<endl;
+//	dout<<ll1->tostring()<<endl;
+//	exit(0);
 	++steps;
 	proof& p = *_p;
 	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
@@ -348,7 +352,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
 		/*TRACE*/(dout<<"Tracking back from " << format(t) << std::endl);
-		MARPA(if (builtin(t, p, queue) != -1) return);
+		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
 		for (auto rl : it->second) {
@@ -445,17 +449,6 @@ qlist merge ( const qdb& q ) {
 	return r;
 }
 
-void prover::query(const qdb& q_, subst* s) {
-	termset goal = termset();
-	termid t;
-	for ( auto q : merge(q_) )
-		if (	dict[q->pred] != rdffirst && 
-			dict[q->pred] != rdfrest &&
-			(t = quad2term( *q, q_ )) )
-			goal.push_back( t );
-	query(goal, s);
-}
-
 prover::~prover() { }
 prover::prover(const prover& q) : kb(q.kb), _terms(q._terms)/*, quads(q.quads)*/ { kb.p = this; } 
 
@@ -516,6 +509,17 @@ bool prover::consistency(const qdb& quads) {
 	return c;
 }
 
+void prover::query(const qdb& q_, subst* s) {
+	termset goal = termset();
+	termid t;
+	for ( auto q : merge(q_) )
+		if (	dict[q->pred] != rdffirst &&
+			dict[q->pred] != rdfrest &&
+			(t = quad2term( *q, q_ )) )
+			goal.push_back( t );
+	query(goal, s);
+}
+
 #include <chrono>
 void prover::query(termset& goal, subst* s) {
 //	setproc(L"prover()");
@@ -547,12 +551,12 @@ void prover::query(termset& goal, subst* s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
+	#ifndef with_marpa
 	/*TRACE*/(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
 	t1 = high_resolution_clock::now();
 	///*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);
-//	proof::clear();
-	#ifndef with_marpa
 	#endif
+//	proof::clear();
 //	kb.revert();
 //	return results();
 }
