@@ -792,7 +792,9 @@ public:
     {
         resid v = q(x, marpa->has_value);
         assert(v);
-        return dest->make(mkiri(dict[v].value));
+        string s = *dict[v].value;
+        s[0] = '?';//workaround
+        return dest->make(mkiri(pstr(s)));
     }
 
     termid add_formulacontent(resid x)
