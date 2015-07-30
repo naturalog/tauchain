@@ -1,5 +1,5 @@
 print = console.log
-//trace = print
+trace = print
 document = {writeln: print}
 
 function printterm(term) {
@@ -84,8 +84,8 @@ function prove(goal, maxNumberOfSteps) {
 }
 
 function unify(s, senv, d, denv, f) {
-  if (typeof(trace) != 'undefined') 
-document.writeln('UNIFY\n' + JSON.stringify(s) + '\nWITH\n' + JSON.stringify(d) + '\n')
+  if (typeof(trace) != 'undefined' && f) 
+document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.stringify*/printterm(d) )
   if (isVar(s.pred)) {
     var sval = evaluate(s, senv)
     if (sval != null) return unify(sval, senv, d, denv, f)
@@ -104,7 +104,7 @@ document.writeln('UNIFY\n' + JSON.stringify(s) + '\nWITH\n' + JSON.stringify(d) 
     return true
   }
   else {
-    if (typeof(trace) != 'undefined') document.writeln('FAILED TO UNIFY\n' + JSON.stringify(s) + '\nWITH\n' + JSON.stringify(d) + '\n')
+    if (f && typeof(trace) != 'undefined') document.writeln('FAILED TO UNIFY ' + printterm(s) + ' WITH ' + printterm(d) + '\n')
     return false
   }
 }

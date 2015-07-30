@@ -84,6 +84,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 }
 
 bool prover::euler_path(shared_ptr<proof>& _p) {
+	setproc(L"euler_path");
 	auto ep = _p;
 	proof& p = *_p;
 	termid t = kb.head()[p.rul];
@@ -333,7 +334,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
 	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(evaluate(kb.head()[p.rul], p.s))<<endl;
 	else dout<<steps<<" {}"<<endl;
-	if (steps == 369)
+	if (steps == 203)
 		steps += 0;
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
