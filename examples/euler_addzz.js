@@ -17,7 +17,6 @@ function prints(s) {
 	return r
 }
 
-
 function prove(goal, maxNumberOfSteps) {
   var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[]}]
   //if (typeof(evidence) == 'undefined') evidence = {}
@@ -33,6 +32,7 @@ function prove(goal, maxNumberOfSteps) {
 	document.writeln( step + ' ' + printterm(evaluate(c.rule.head,c.env)) )
     else document.writeln(step + ' ' + '{}')
     document.writeln(step + ' FSUB:' + prints(c.env));
+    document.writeln(step + ' LEN:' + queue.length);
 //	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
     var g = aCopy(c.ground)
     step++
@@ -71,6 +71,7 @@ function prove(goal, maxNumberOfSteps) {
     else if (b == 0) continue
     if (cases[t.pred] == null) continue
     var src = 0
+    document.writeln(step + ' TT:' + printterm(t));
     for (var k = 0; k < cases[t.pred].length; k++) {
       var rl = cases[t.pred][k]
       src++
@@ -96,8 +97,10 @@ function prove(goal, maxNumberOfSteps) {
 function unify(s, senv, d, denv, f) {
   if (typeof(trace) != 'undefined' && f) 
 document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.stringify*/printterm(d) )
-    if (f && typeof(senv) != 'undefined') document.writeln('SSUB ' + JSON.stringify(senv))
+    if (f && typeof(senv) != 'undefined') document.writeln('SSUB ' + prints(senv))
     else if (f) document.writeln('SSUB')
+    if (f && typeof(denv) != 'undefined') document.writeln('DSUB ' + prints(denv))
+    else if (f) document.writeln('DSUB')
   if (isVar(s.pred)) {
     var sval = evaluate(s, senv)
     if (sval != null) return unify(sval, senv, d, denv, f)
@@ -109,6 +112,7 @@ document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.s
     else {
       if (f != null) {
 	denv[d.pred] = evaluate(s, senv)
+    	document.writeln('NEW SUB ' + d.pred + '=' + printterm(denv[d.pred]) + ' DURING ' + printterm(s) + '|' + printterm(d) + '|' + prints(senv) + '|' + prints(denv))
 	}
       return true
     }
@@ -119,7 +123,7 @@ document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.s
   }
   else {
     if (f && typeof(trace) != 'undefined') document.writeln('FAILED TO UNIFY ' + printterm(s) + ' WITH ' + printterm(d))
-    if (f && typeof(denv) != 'undefined') document.writeln('DSUB ' + JSON.stringify(denv))
+    if (f && typeof(denv) != 'undefined') document.writeln('DFSUB ' + prints(denv))
     return false
   }
 }

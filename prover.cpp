@@ -59,7 +59,8 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 			if (f) {
 				dsub[d.p] = evaluate(_s, ssub);
 				ns = true;
-				dout << "NEW SUB " << dstr(d.p) << ' ' << format(dsub[d.p]) << endl;
+				dout 	<< "NEW SUB " << dstr(d.p) << '=' << format(dsub[d.p]) << " DURING " <<
+					format(_s) << '|' << format(_d) << '|' << formats(ssub) << '|' << formats(dsub) << endl;
 			}
 			r = true;
 		}
@@ -80,6 +81,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 		} else dout << "failed";
 		dout << endl);
 	if (f) dout << "SSUB " << formats(ssub) << endl;
+	if (f) dout << "DSUB " << formats(dsub) << endl;
 //	dout<<"UNIFY"<<endl<<format(_s,true)<<endl;
 //	dout<<"WITH"<<endl<<format(_d,true)<<endl;
 	return r;
@@ -339,6 +341,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	if (steps == 203)
 		steps += 0;
 	dout<<steps<< " FSUB:"<<formats(p.s)<<endl;
+	dout<<steps<< " LEN:"<<queue.size()<<endl;
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
 		/*TRACE*/(dout<<"Tracking back from " << format(t) << std::endl);
