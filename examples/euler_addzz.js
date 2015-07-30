@@ -42,8 +42,8 @@ function prove(goal, maxNumberOfSteps) {
       unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true)
       r.ind++
       queue.push(r)
-      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined') 
-	document.writeln('PUSH QUEUE ' + printterm(/*evaluate(*/r.rule.head/*, r.env)*/))
+      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined' && typeof(r.rule.head.pred) != 'undefined' ) 
+	document.writeln('PUSH QUEUE ' + printterm(evaluate(r.rule.head, r.env)))
 	else document.writeln('PUSH QUEUE')
       continue
     }

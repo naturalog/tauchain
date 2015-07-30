@@ -334,7 +334,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(evaluate(kb.head()[p.rul], p.s))<<endl;
 	else dout<<steps<<" {}"<<endl;
 	if (steps == 369)
-		dout << endl;
+		steps += 0;
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
 		/*TRACE*/(dout<<"Tracking back from " << format(t) << std::endl);
@@ -362,7 +362,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = make_shared<subst>(*p.prev->s), true);
 		++r->last;
 		queue.push_back(r);
-		if (kb.head()[r->rul]) dout<<"PUSH QUEUE " << format(/*evaluate(*/kb.head()[r->rul]/*, r->s)*/) << endl;
+		if (kb.head()[r->rul]) dout<<"PUSH QUEUE " << format(evaluate(kb.head()[r->rul], r->s)) << endl;
 		else dout<<"PUSH QUEUE" << endl;
 //		step(r, queue, gnd);
 	}
