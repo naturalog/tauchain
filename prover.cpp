@@ -27,21 +27,6 @@
 using namespace boost::algorithm;
 int _indent = 0;
 
-termid prover::evaluate(termid id) {
-	if (!id) return 0;
-	setproc(L"evaluate");
-	termid r;
-	const term p = get(id);
-	if (p.p < 0) return 0;
-	if (!p.s && !p.o) r = id;
-	else {
-		termid a = evaluate(p.s), b = evaluate(p.o);
-		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
-	}
-	TRACE(dout << format(r) << std::endl);
-	return r;
-}
-
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
@@ -79,9 +64,10 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 		}
 	}
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else r = !s.s || (unify(s.s, ssub, d.s, dsub, f) && unify(s.o, ssub, d.o, dsub, f));
-	TRACE(
-		dout	<< "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+	else if (!s.s) r = true;
+	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
+		r = unify(s.o, ssub, d.o, dsub, f);
+	TRACE(dout	<< "Trying to unify " << format(_s) << " sub: " << formats(ssub)
 			<< " with " << format(_d) << " sub: " << formats(dsub);
 //		printterm_substs(_s, ssub);
 //		dout<<" with ";
@@ -103,9 +89,8 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	termid t = kb.head()[p.rul];
 	while ((ep = ep->prev))
 		if (ep->rul == p.rul && unify(kb.head()[ep->rul], ep->s, t, p.s, false))
-			break;//{ TRACE(dout<<"Euler path detected\n"); return true; }
+			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return ep != 0;
-	return false;
 }
 
 termid prover::tmpvar() {
@@ -343,19 +328,15 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
-//	auto ll = mkliteral(pstr(L"a"),0,0);
-//	auto ll1 = mkliteral(pstr(L"aa"),0,0);
-//	dout<<ll->tostring()<<endl;
-//	dout<<ll1->tostring()<<endl;
-//	exit(0);
-//	if (_p->del) return;
 	++steps;
 	proof& p = *_p;
 	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
-	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(kb.head()[p.rul])<<endl;
+	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(evaluate(kb.head()[p.rul], p.s))<<endl;
 	else dout<<steps<<" {}"<<endl;
+	if (euler_path(_p)) return;
+	if (steps == 369)
+		dout << endl;
 	if (p.last != kb.body()[p.rul].size()) {
-		if (euler_path(_p)) return;
 		termid t = kb.body()[p.rul][p.last];
 		TRACE(dout<<"Tracking back from " << format(t) << std::endl);
 		MARPA(if (builtin(t, p, queue) != -1) return);
@@ -363,8 +344,6 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		if (it == kb.r2id.end()) return;
 		subst s;
 		for (auto rl : it->second) {
-//		for (auto iit = it->second.begin(); iit != it->second.end(); ++iit) {
-//			auto rl = *iit;
 			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
@@ -427,7 +406,7 @@ termid prover::quad2term(const quad& p, const qdb& quads) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
-	//if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
+	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;

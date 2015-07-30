@@ -129,9 +129,11 @@ private:
 
 	void pushev(shared_ptr<proof>);
 	void step(shared_ptr<proof>&, queue_t&, queue_t&);
-	termid evaluate(termid id);
 	termid evaluate(termid id, const subst& s);
-	inline termid evaluate(termid id, shared_ptr<subst>& s) { return s ? evaluate(id, *s) : evaluate(id); }
+	inline termid evaluate(termid id, shared_ptr<subst>& s) {
+		static subst emp;
+		return s ? evaluate(id, *s) : evaluate(id, emp);
+	}
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f) { return unify(_s, *ssub, _d, *dsub, f); }
 	bool euler_path(shared_ptr<proof>&);
