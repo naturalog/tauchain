@@ -333,7 +333,6 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
 	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(evaluate(kb.head()[p.rul], p.s))<<endl;
 	else dout<<steps<<" {}"<<endl;
-	if (euler_path(_p)) return;
 	if (steps == 369)
 		dout << endl;
 	if (p.last != kb.body()[p.rul].size()) {
@@ -347,6 +346,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
+				if (euler_path(_p)) continue;
 				queue.push_front(r);
 //				step(r, queue, gnd);
 			}
