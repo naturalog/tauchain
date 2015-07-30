@@ -338,6 +338,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	else dout<<steps<<" {}"<<endl;
 	if (steps == 203)
 		steps += 0;
+	dout<<steps<< " FSUB:"<<formats(p.s)<<endl;
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
 		/*TRACE*/(dout<<"Tracking back from " << format(t) << std::endl);

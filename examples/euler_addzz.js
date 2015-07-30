@@ -9,6 +9,15 @@ function printterm(term) {
 	return term.pred+'('+printterm(term.args[0]) + ',' + printterm(term.args[1])+')';
 }
 
+function prints(s) {
+	if (typeof(s) == 'undefined' || s.length == 0) return '{}'
+	var r = '';
+	for (var x in s)
+		r += x + ':' + printterm(s[x]) + ',';
+	return r
+}
+
+
 function prove(goal, maxNumberOfSteps) {
   var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[]}]
   //if (typeof(evidence) == 'undefined') evidence = {}
@@ -23,6 +32,7 @@ function prove(goal, maxNumberOfSteps) {
     if (typeof(c.rule.head.args) != 'undefined') 
 	document.writeln( step + ' ' + printterm(evaluate(c.rule.head,c.env)) )
     else document.writeln(step + ' ' + '{}')
+    document.writeln(step + ' FSUB:' + prints(c.env));
 //	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
     var g = aCopy(c.ground)
     step++
