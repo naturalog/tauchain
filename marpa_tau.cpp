@@ -210,6 +210,9 @@ struct MarpaIris{
     const pnode is_parse_of = iri("is_parse_of");
     const pnode list_of = iri("list_of");
     const pnode separator = iri("separator");
+    const pnode arg0 = iri("arg0");
+    const pnode arg1 = iri("arg1");
+    const pnode arg2 = iri("arg2");
 };
 
 MarpaIris *marpa = 0;
@@ -722,6 +725,7 @@ public:
     pnode n3literal = uri("literal");
     pnode n3numericliteral = uri("numericliteral");
     pnode n3string = uri("string");
+    pnode n3boolean = uri("boolean");
     pnode n3integer = uri("integer");
     pnode n3dtlang = uri("dtlang");
     pnode n3quickvariable= uri("quickvariable");
@@ -786,7 +790,16 @@ public:
         assert (sss);
         resid v = q(sss, marpa->has_value);
         assert(v);
-        return mkliteral(dict[v].value, pstr(L"XSD_INTEGER"), 0);
+        return mkliteral(dict[v].value, XSD_INTEGER, 0);
+    }
+
+    pnode add_boolean(resid x) {
+        resid v = q(x, marpa->arg0);
+        assert(v);
+
+        auto s = *dict[v].value;
+        s.erase(0, 1);
+        return mkliteral(pstr(s), XSD_BOOLEAN, 0);
     }
 
     pnode add_symbol(resid x)
@@ -812,7 +825,7 @@ public:
         resid v = q(x, marpa->has_value);
         assert(v);
         string s = *dict[v].value;
-        s[0] = '?';//workaround
+        //s[0] = '?';//workaround
         return mkiri(pstr(s));
     }
 
@@ -854,14 +867,16 @@ public:
         if (lit)
             return add_literal(lit);
 
-                //( "[" propertylist "]"  )
+        //( "[" propertylist "]"  )
 
-        resid l = q(pi, mkiri(pstr(marpa->prefix + L"arg0")));
+        resid l = q(pi, marpa->arg0);
         if(l && *dict[l].value == L"(") {
-            termid x = ask1t(prvr, pi, mkiri(pstr(marpa->prefix + L"arg1")));
+            termid x = ask1t(prvr, pi, marpa->arg1);
             return add_pathlist(x);
         }
-                //( boolean )
+        resid b = q(pi, n3boolean);
+        if (b)
+            return add_boolean(b);
 
     }
 
@@ -907,14 +922,14 @@ public:
                 resid pe = q(pred, n3expression);
 
                 //get string value of first item
-                resid i0 = q(pred, mkiri(pstr(marpa->prefix + L"arg0")));
+                resid i0 = q(pred, marpa->arg0);
                 string i0v = *dict[i0].value; //?
 
                 if (pe) { // if this predicate contains an expression
                     predicate = add_expression(pe);
-                    /*                ( expression )
-                                    ( "@has" expression )
-                                ( "@is" expression "@of" )*/
+                    /*      ( expression )
+                        ( "@has" expression )
+                      ( "@is" expression "@of" )*/
                     if (i0v == L"@is")
                         reverse = true;
                 }

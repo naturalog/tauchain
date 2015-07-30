@@ -251,7 +251,7 @@ _:genid2d406ee6651afc40789e23c5bb4338fdce2dli112 <http://www.w3.org/1999/02/22-r
 <http://www.w3.org/2000/10/swap/grammar/n3#dtlang> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:genid2d406ee6651afc40789e23c5bb4338fdce2dli115 .
 <http://www.w3.org/2000/10/swap/grammar/n3#existential> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:genid2d406ee6651afc40789e23c5bb4338fdce2dli14 .
 <http://www.w3.org/2000/10/swap/grammar/n3#explicituri> <http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith> "<" .
-<http://www.w3.org/2000/10/swap/grammar/n3#explicituri> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "<[^>]*>" .
+<http://www.w3.org/2000/10/swap/grammar/n3#explicituri> <http://www.w3.org/2000/10/swap/grammar/bnf#matches> "<[^>\ ]*>" .
 <http://www.w3.org/2000/10/swap/grammar/n3#expression> <http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence> _:genid2d406ee6651afc40789e23c5bb4338fdce2dli60 .
 <http://www.w3.org/2000/10/swap/grammar/n3#formulacontent> <http://idni.org/marpa#list_of> <http://www.w3.org/2000/10/swap/grammar/n3#statement> .
 <http://www.w3.org/2000/10/swap/grammar/n3#formulacontent> <http://idni.org/marpa#separator> "..." .
