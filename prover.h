@@ -85,7 +85,7 @@ public:
 		ruleid rul = 0;
 		uint last;
 		shared_ptr<proof> prev = 0;
-		shared_ptr<subst> s;
+		shared_ptr<subst> s = make_shared<subst>();
 		ground g;
 		bool del = false;
 		void remove(std::deque<shared_ptr<proof>>& q) {
@@ -93,7 +93,7 @@ public:
 			del = true;
 		}
 		std::forward_list<proof*> next;
-		proof() : s(make_shared<subst>()) {}
+		proof() {}
 		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
 			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) { if(prev)prev->next.push_front(this);}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(/*make_shared<subst>*/(p.s)), g(p.g) { if(prev)prev->next.push_front(this); }
@@ -135,7 +135,7 @@ private:
 		return s ? evaluate(id, *s) : evaluate(id, emp);
 	}
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f) { return unify(_s, *ssub, _d, *dsub, f); }
+//	inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f) { return unify(_s, *ssub, _d, *dsub, f); }
 	bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);

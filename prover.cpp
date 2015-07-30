@@ -96,7 +96,7 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	proof& p = *_p;
 	termid t = kb.head()[p.rul];
 	while ((ep = ep->prev))
-		if (ep->rul == p.rul && unify(kb.head()[ep->rul], ep->s, t, p.s, false))
+		if (ep->rul == p.rul && unify(kb.head()[ep->rul], *ep->s, t, *p.s, false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return ep != 0;
 }
@@ -206,9 +206,9 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->s, p->s, t.o, p->s, true) ? 1 : 0;
+		r = unify(t0->s, *p->s, t.o, *p->s, true) ? 1 : 0;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->o, p->s, t.o, p->s, true) ? 1 : 0;
+		r = unify(t0->o, *p->s, t.o, *p->s, true) ? 1 : 0;
 /*	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -341,7 +341,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
 	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(evaluate(kb.head()[p.rul], p.s))<<endl;
 	else dout<<steps<<" {}"<<endl;
-	if (steps == 203)
+	if (steps == 47)
 		steps += 0;
 	dout<<steps<< " FSUB:"<<formats(p.s)<<endl;
 	dout<<steps<< " LEN:"<<queue.size()<<endl;
@@ -371,7 +371,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g);
 		ruleid rl = p.rul;
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
-		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = make_shared<subst>(*p.prev->s), true);
+		unify(kb.head()[rl], *p.s, kb.body()[r->rul][r->last], *(r->s = make_shared<subst>(*p.prev->s)), true);
 		++r->last;
 		queue.push_back(r);
 		if (kb.head()[r->rul]) dout<<"PUSH QUEUE " << format(evaluate(kb.head()[r->rul], r->s)) << endl;
