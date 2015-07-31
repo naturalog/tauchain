@@ -175,7 +175,7 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 	return r;
 }
 
-void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
+void prover::get_dotstyle_list(termid id, std::list<nodeid> &list) {
 	auto s = get(id).s;
 	if (!s) return;
 	list.push_back(get(s).p);
@@ -567,7 +567,7 @@ void prover::query(termset& goal, subst* s) {
 //	return results();
 }
 
-prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
+prover::term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) const {
 #ifdef DEBUG
@@ -581,7 +581,7 @@ termid prover::make(pnode p, termid s, termid o) {
 	return make(dict.set(*p), s, o); 
 }
 
-termid prover::make(resid p, termid s, termid o) {
+termid prover::make(nodeid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif

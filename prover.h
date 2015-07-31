@@ -18,15 +18,15 @@
 #include <boost/interprocess/containers/vector.hpp>
 
 typedef u64 termid;
-typedef std::map<resid, termid> subst;
+typedef std::map<nodeid, termid> subst;
 
 class prover {
 public:
 	class term {
 	public:
 		term();
-		term(resid _p, termid _s, termid _o);
-		resid p;
+		term(nodeid _p, termid _s, termid _o);
+		nodeid p;
 		termid s, o;
 		pobj json(const prover&) const;
 	};
@@ -50,9 +50,9 @@ public:
 		void mark();
 		void revert();
 		typedef std::vector<ruleid> rulelist;
-		typedef std::map<resid, rulelist> r2id_t;
+		typedef std::map<nodeid, rulelist> r2id_t;
 		string format() const;
-		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
+		inline const rulelist& operator[](nodeid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
 	prover ( qdb, bool check_consistency = true);
@@ -62,11 +62,11 @@ public:
 	void query(termset& goal, subst* s = 0);
 	void query(const qdb& goal, subst* s = 0);
 	const term& get(termid) const;
-	const term& get(resid) const { throw std::runtime_error("called get(termid) with resid"); }
+	const term& get(nodeid) const { throw std::runtime_error("called get(termid) with nodeid"); }
 	~prover();
 
 	typedef std::list<std::pair<ruleid, shared_ptr<subst>>> ground;
-	typedef std::map<resid, std::list<std::pair<termid, ground>>> evidence;
+	typedef std::map<nodeid, std::list<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
@@ -74,9 +74,9 @@ public:
 	void printg(shared_ptr<ground> g) { printg(*g); }
 	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
-	termid make(resid p, termid s = 0, termid o = 0);
-	termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
-	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	termid make(nodeid p, termid s = 0, termid o = 0);
+	termid make(termid) { throw std::runtime_error("called make(pnode/nodeid) with termid"); }
+	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/nodeid) with termid"); }
 	string format(const termset& l, bool json = false);
 	void prints(const subst& s);
 	void prints(shared_ptr<subst> s) { prints(*s); }
@@ -106,7 +106,7 @@ public:
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
 	string format(termid id, bool json = false);
-	void get_dotstyle_list(termid, std::list<resid>&);
+	void get_dotstyle_list(termid, std::list<nodeid>&);
 	string formatkb(bool json = false);
 
 private:
@@ -116,11 +116,11 @@ private:
 	public:
 		terms_t terms;
 		typedef std::vector<termid> termlist;
-		typedef std::map<resid, termlist> p2id_t;
+		typedef std::map<nodeid, termlist> p2id_t;
 		size_t size() const { return terms.size(); }
 		inline const term& operator[](termid id) const { return terms.at(id); }
-		inline const termlist& operator[](resid id) const { return p2id.at(id); }
-		inline termid add(resid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
+		inline const termlist& operator[](nodeid id) const { return p2id.at(id); }
+		inline termid add(nodeid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
 	private:
 		p2id_t p2id;
 	} _terms;
@@ -145,8 +145,8 @@ private:
 	bool consistency(const qdb& quads);
 
 	// formatters
-	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
-	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
+	string format(nodeid) { throw std::runtime_error("called format(termid) with nodeid"); }
+	string format(nodeid, bool) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(term t, bool json = false);
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);

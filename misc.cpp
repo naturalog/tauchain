@@ -9,7 +9,7 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
 #ifdef with_marpa
@@ -42,7 +42,7 @@ void bidict::set ( const std::vector<node>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
-resid bidict::set ( node v ) {
+nodeid bidict::set ( node v ) {
 	if (!v.value) throw std::runtime_error("bidict::set called with a node containing null value");
 	auto it = pi.find ( v );
 	if ( it != pi.end() )
@@ -50,26 +50,26 @@ resid bidict::set ( node v ) {
 		assert (v._type == it->first._type);
 		return it->second;
 	}
-	resid k = pi.size() + 1;
+	nodeid k = pi.size() + 1;
 	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;
 }
 
-node bidict::operator[] ( resid k ) {
+node bidict::operator[] ( nodeid k ) {
 //	if (!has(k)) set(::tostr(k));
 #ifdef DEBUG
-	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting resid");
+	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting nodeid");
 #endif
 	return ip[k];
 }
 
-resid bidict::operator[] ( node v ) {
+nodeid bidict::operator[] ( node v ) {
 	return pi[v];
 }
 
-bool bidict::has ( resid k ) const {
+bool bidict::has ( nodeid k ) const {
 	return ip.find ( k ) != ip.end();
 }
 
@@ -83,7 +83,7 @@ string bidict::tostr() {
 	return s.str();
 }
 
-string dstr ( resid p, bool escape ) {
+string dstr ( nodeid p, bool escape ) {
 	if ( !deref ) return *tostr ( p );
 	string s = dict[p].tostring();
 	if (escape) {
