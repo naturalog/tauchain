@@ -10,7 +10,7 @@ function printterm(term) {
 }
 
 function prints(s){
-	if(s==null) return 'null';
+	if(s==null) return '{}';
 	if(typeof(s) == undefined || s.length == 0) return '{}';
 	var r = '';
 	for(var x in s){
@@ -21,10 +21,6 @@ function prints(s){
 }
 
 function printq(q){
-	if(!q){
-		document.writeln( "no queue");
-		return;
-	}
 	for(var i=0;i<q.length;i++){
 		var pqid = 0;
 		c = q[i];
@@ -39,7 +35,7 @@ function prove(goal, maxNumberOfSteps) {
   frame_id = 0;	
   var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[],qid:frame_id}];
   //if (typeof(evidence) == 'undefined') evidence = {}
-  step = 1;
+  step = 0;
   while (queue.length > 0) {
 /*	if(step < 50){
 	document.writeln( step + ': {src: ' + queue.src + ', ind: ' + queue.ind + ', parent: ' + queue.parent + ', env: ' + queue.env);

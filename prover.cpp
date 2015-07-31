@@ -378,7 +378,7 @@ void prover::printq(queue_t& q){
 	for (auto p : q) {
 		int pqid = -1;
 		if (p->prev) pqid = (p->prev)->qid;
-		dout << n++ << ") qid: " << p->qid << ", ind: " << p->last << ", pqid: " << pqid << " env: " << formats(p->s) << endl;
+		dout << n++ << ") qid: " << p->qid << ", ind: " << p->last << ", pqid: " << pqid << ", env: " << (p->s->empty() ? string(L"undefined") : formats(p->s)) << endl;
 	}
 }
 
