@@ -179,7 +179,9 @@ function unify(s, senv, d, denv, f) {
     //otherwise, check for matching predicates
     else if (s.pred == d.pred && s.args.length == d.args.length) {
         //they match, check each argument and make sure they also unify, fail out if not
-        for (var i = 0; i < s.args.length; i++) if (!unify(s.args[i], senv, d.args[i], denv, f)) return false;
+        for (var i = 0; i < s.args.length; i++) 
+		if (!unify(s.args[i], senv, d.args[i], denv, f)) 
+			return false;
         //everything matched!  These statements unify and denv is updated.
         return true;
     }

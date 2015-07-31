@@ -92,13 +92,19 @@ public:
 			for (auto x : next) x->remove(q);
 			del = true;
 		}
+		int qid = -1;
 		std::forward_list<proof*> next;
 		proof() : s(make_shared<subst>()) {}
-		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground() ) 
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground(), int qid = -1) 
 			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) { if(prev)prev->next.push_front(this);}
 		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(/*make_shared<subst>*/(p.s)), g(p.g) { if(prev)prev->next.push_front(this); }
-		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { if(prev)prev->next.push_front(this); }
+		proof(const proof& p, const ground& _g, int qid = -1) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { if(prev)prev->next.push_front(this); }
 	};
+
+	
+	void printq(int i, shared_ptr<proof>& _p);
+
+	int frame_id = 0;
 	typedef std::deque<shared_ptr<proof>> queue_t;
 
 	void addrules(pquad q, qdb& quads);
@@ -126,6 +132,7 @@ private:
 	} _terms;
 	friend ruleset;
 	int steps = 0;
+	bool printNow;
 
 	void pushev(shared_ptr<proof>);
 	void step(shared_ptr<proof>&, queue_t&, queue_t&);
@@ -134,8 +141,8 @@ private:
 		static subst emp;
 		return s ? evaluate(id, *s) : evaluate(id, emp);
 	}
-	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f) { return unify(_s, *ssub, _d, *dsub, f); }
+	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f, bool printNow);
+	inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f, bool printNow) { return unify(_s, *ssub, _d, *dsub, f, printNow); }
 	bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);
