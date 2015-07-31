@@ -10,30 +10,30 @@
 #include <boost/interprocess/containers/map.hpp>
 #include "rdf.h"
 
-typedef i64 resid;
+typedef i64 nodeid;
 
-extern boost::container::list<string> proc;
+extern std::list<string> proc;
 class bidict {
-	boost::container::map<resid, node> ip;
-	boost::container::map<node, resid> pi;
+	std::map<nodeid, node> ip;
+	std::map<node, nodeid> pi;
 public:
 	void init();
-	resid set ( node v );
-	resid set ( pnode v ) { return set (*v); }
+	nodeid set ( node v );
+	nodeid set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
-	node operator[] ( resid );
+	node operator[] ( nodeid);
 	node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
-	resid operator[] ( node );
-	resid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
-	bool has ( resid k ) const;
+	nodeid operator[] ( node );
+	nodeid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
+	bool has ( nodeid k ) const;
 	bool has ( node v ) const;
 	string tostr();
-	boost::container::map<string, pnode> nodes;
+	std::map<string, pnode> nodes;
 };
 
 extern bidict& dict;
-extern resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
-string dstr ( resid p, bool json = false );
+extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+string dstr ( nodeid p, bool json = false );
 string indent();
 
 struct _setproc {

@@ -45,13 +45,13 @@ language a cfg:Language;
 	cfg:whiteSpace	"(?m)#(.)*?$". #comment. misuse?
 
 
-document cfg:zeroOrMore statement_with_dot.
-
-statement_with_dot cfg:mustBeOneSequence ((statement "...")).
+document marpa:list_of statement;
+	marpa:separator "...";
+	marpa:proper true.
 
 # Formula does NOT need period on last statement
 
-formulacontent marpa:listOf statement;
+formulacontent marpa:list_of statement;
 	marpa:separator "...".
 
 statement  cfg:mustBeOneSequence (
@@ -142,7 +142,7 @@ boolean cfg:mustBeOneSequence (
                 ( "@false" )
 ) .
 
-pathlist cfg:mustBeOneSequence (() (expression pathlist)).
+pathlist marpa:list_of expression.
 
 symbol cfg:mustBeOneSequence (
 		(explicituri)

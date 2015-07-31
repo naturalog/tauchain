@@ -28,6 +28,10 @@ using namespace boost::algorithm;
 int _indent = 0;
 
 
+bool isvar(nodeid p)
+{
+	return p < 0;
+}
 
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
@@ -35,7 +39,7 @@ termid prover::evaluate(termid id, const subst& s) {
 	termid r;
 	const term p = get(id);
 	
-	if (p.p < 0) {
+	if (isvar(p.p)) {
 		auto it = s.find(p.p);
 		r = it == s.end() ? 0 : evaluate(it->second, s);
 	} else if (!p.s && !p.o)
@@ -49,40 +53,34 @@ termid prover::evaluate(termid id, const subst& s) {
 }
 
 
-bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f, bool printNow) {
+bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
 	if (!_d != !_s) return false;
 	setproc(L"unify");
 	termid v;
+	if (f) {
+		#ifndef with_marpa
+		/*
+		dout << steps << " UNIFY " << format(_s) << " WITH " << format(_d) << endl;
+		dout << "SSUB " << formats(ssub) << endl;
+		dout << "DSUB " << formats(dsub) << endl;
+		*/
+		#endif
+	}
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
 
-	//If the source predicate is a variable
-	//Evaluate it in the environment
-	//If it did evaluate, unify with the value
-	//Otherwise assume match
-	if (s.p < 0){
-		if(( r = (v = evaluate(_s, ssub)))) r = unify(v, ssub, _d, dsub, f, printNow);
-		else {
-			/*
-			if(printNow){
-			dout << "A. SSUB: " << formats(ssub) << ", DSUB: " << formats(dsub) << std::endl;
-			}*/
-			r = true;
-		}
-
-	}
-	//If the destination predicate is a variable
-	else if (d.p < 0) {
-		//Evaluate it in the environment
-		//If it did evaluate, unify with the value
-		if (r = (v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f, printNow);
-		//Otherwise
+	if (isvar(s.p)) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
+	else if (isvar(d.p)) {
+		if ((v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f);
 		else {
 			//If we have override flag, update the destination predicate
 			//with its value from source
 			if (f) {
 				dsub[d.p] = evaluate(_s, ssub);
 				ns = true;
+				/*
+				dout 	<< "NEW SUB " << dstr(d.p) << '=' << format(dsub[d.p]) << " DURING " <<
+					format(_s) << '|' << format(_d) << '|' << formats(ssub) << '|' << formats(dsub) << endl;*/
 			}
 			/*
 			if(printNow){
@@ -105,12 +103,23 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f,
 		r = true;
 	}
 
-	else if ((r = unify(s.s, ssub, d.s, dsub, f, printNow)))
-		r = unify(s.o, ssub, d.o, dsub, f, printNow);
+	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
+		r = unify(s.o, ssub, d.o, dsub, f);
 
 	/*
 	if(printNow){
 	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub) << " with " << format(_d) << " sub: " << formats(dsub);
+=======
+	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else if (!s.s) r = true;
+	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
+		r = unify(s.o, ssub, d.o, dsub, f);
+	if (f) TRACE(dout	<< "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+			<< " with " << format(_d) << " sub: " << formats(dsub);
+//		printterm_substs(_s, ssub);
+//		dout<<" with ";
+//		printterm_substs(_d, dsub);
+>>>>>>> 9ea4d2291a23ebf4f790407a9d647127f0f897e7
 		dout<<" : ";
 		if (r) {
 			dout << "passed";
@@ -127,7 +136,7 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	proof& p = *_p;
 	termid t = kb.head()[p.rul];
 	while ((ep = ep->prev))
-		if (ep->rul == p.rul && unify(kb.head()[ep->rul], ep->s, t, p.s, false, printNow))
+		if (ep->rul == p.rul && unify(kb.head()[ep->rul], *ep->s, t, *p.s, false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return ep != 0;
 }
@@ -137,13 +146,13 @@ termid prover::tmpvar() {
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
 
-/*
+
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
-	(*this)( ts, p.s);
+	query( ts, &*p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
@@ -160,7 +169,7 @@ termid prover::list_first(termid cons, proof& p) {
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
-	(*this)( ts , p.s);
+	query( ts , &*p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
@@ -203,8 +212,8 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 	TRACE(dout<<" returned " << r.size() << " items: "; for (auto n : r) dout<<format(n)<<' '; dout << std::endl);
 	return r;
 }
-*/
-void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
+
+void prover::get_dotstyle_list(termid id, std::list<nodeid> &list) {
 	auto s = get(id).s;
 	if (!s) return;
 	list.push_back(get(s).p);
@@ -237,9 +246,9 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->s, p->s, t.o, p->s, true,false) ? 1 : 0;
+		r = unify(t0->s, *p->s, t.o, *p->s, true) ? 1 : -1;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->o, p->s, t.o, p->s, true,false) ? 1 : 0;
+		r = unify(t0->o, *p->s, t.o, *p->s, true) ? 1 : -1;
 /*	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -315,6 +324,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 		(*p->s)[get(t.s).p] = make(dict.set(n), 0, 0);
 		r = 1;
+		dout << "ppp";
 	}
 	else if (t.p == file_contents_iri) {
 		if (get(t.s).p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
@@ -329,12 +339,10 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	}
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
+		dout << "pppp";
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		//auto parser = dict[get(get(i1).s).p].value;
-		//if (t1->p != Dot) { TRACE(dout<<std::endl<<"p == " << *dict[t1->p].value<<std::endl);  return -1;}
 		term xx = get(i1);
 		term xxx = get(xx.s);
-		//string input = *dict[get(get(i1).s).p].value;
 		string input = *dict[xxx.p].value;
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
@@ -376,6 +384,11 @@ void prover::printq(int i, shared_ptr<proof>& _p){
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
+//	auto ll = mkliteral(pstr(L"a"),0,0);
+//	auto ll1 = mkliteral(pstr(L"aa"),0,0);
+//	dout<<ll->tostring()<<endl;
+//	dout<<ll1->tostring()<<endl;
+//	exit(0);
 	++steps;
 	bool printNow = false;
 	if(steps < 50){
@@ -405,9 +418,9 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		MARPA(if (builtin(t, p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
-		subst s;
 		for (auto rl : it->second) {
-			if (unify(t, *p.s, kb.head()[rl], s, true, printNow)) {
+			subst s;
+			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g, -1);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
 				if (euler_path(_p)) continue;
@@ -416,23 +429,16 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 					printq(fps++,r);
 				}
 				queue.push_front(r);
-				/*
-				if(printNow){
-				if (kb.head()[r->rul]) dout<<"PUSH QUEUE " << format(evaluate(kb.head()[r->rul], r->s)) << endl;
-				else dout<<"PUSH QUEUE" << endl;
-				}*/
-//				step(r, queue, gnd);
 			}
-			s.clear();
 		}
 	}
-	else if (!p.prev) { pushev(_p); } //gnd.push_back(_p); /*p.remove(queue);*/ }
+	else if (!p.prev) { pushev(_p); }
 	else {
-//		p.remove(queue);
+//		
 		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g, -1);
 		ruleid rl = p.rul;
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
-		unify(kb.head()[rl], p.s, kb.body()[r->rul][r->last], r->s = make_shared<subst>(*p.prev->s), true, printNow);
+		unify(kb.head()[rl], *p.s, kb.body()[r->rul][r->last], *(r->s = make_shared<subst>(*p.prev->s)), true);
 		++r->last;
 		r->qid = frame_id++;
 		if(printNow){
@@ -440,13 +446,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		}
 		queue.push_back(r);
 
-		/*
-		if(printNow){
-		if (kb.head()[r->rul]) dout<<"PUSH QUEUE " << format(evaluate(kb.head()[r->rul], r->s)) << endl;
-		else dout<<"PUSH QUEUE" << endl;
-		}*/
 
-//		step(r, queue, gnd);
 	}
 }
 
@@ -471,7 +471,6 @@ termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 	else {
 		pnode x = l.front();
 		l.pop_front();
-//		TRACE(dout << x->tostring() << endl);
 		auto it = quads.second.find(*x->value);
 		//item is not a list
 		if (it == quads.second.end())
@@ -490,7 +489,9 @@ termid prover::quad2term(const quad& p, const qdb& quads) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
+	#ifndef with_marpa
 	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
+	#endif
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;
@@ -513,17 +514,6 @@ qlist merge ( const qdb& q ) {
 	qlist r;
 	for ( auto x : q.first ) for ( auto y : *x.second ) r.push_back ( y );
 	return r;
-}
-
-void prover::query(const qdb& q_, subst* s) {
-	termset goal = termset();
-	termid t;
-	for ( auto q : merge(q_) )
-		if (	dict[q->pred] != rdffirst && 
-			dict[q->pred] != rdfrest &&
-			(t = quad2term( *q, q_ )) )
-			goal.push_back( t );
-	query(goal, s);
 }
 
 prover::~prover() { }
@@ -586,6 +576,17 @@ bool prover::consistency(const qdb& quads) {
 	return c;
 }
 
+void prover::query(const qdb& q_, subst* s) {
+	termset goal = termset();
+	termid t;
+	for ( auto q : merge(q_) )
+		if (	dict[q->pred] != rdffirst &&
+			dict[q->pred] != rdfrest &&
+			(t = quad2term( *q, q_ )) )
+			goal.push_back( t );
+	query(goal, s);
+}
+
 #include <chrono>
 void prover::query(termset& goal, subst* s) {
 //	setproc(L"prover()");
@@ -595,14 +596,15 @@ void prover::query(termset& goal, subst* s) {
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = make_shared<subst>(*s);
-	/*
+	
 	#ifdef with_marpa
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+
 	#else
+	/*
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	#endif
-	*/
+	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);*/
+	#endif	
 	queue.push_front(p);
 	shared_ptr<proof> q;
 	using namespace std;
@@ -621,16 +623,14 @@ void prover::query(termset& goal, subst* s) {
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	//TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	/*TRACE*///(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
-	t1 = high_resolution_clock::now();
+	//t1 = high_resolution_clock::now();
 	///*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);
 //	proof::clear();
-	#ifndef with_marpa
-	#endif
 //	kb.revert();
 //	return results();
 }
 
-prover::term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
+prover::term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 const prover::term& prover::get(termid id) const {
 #ifdef DEBUG
@@ -644,7 +644,7 @@ termid prover::make(pnode p, termid s, termid o) {
 	return make(dict.set(*p), s, o); 
 }
 
-termid prover::make(resid p, termid s, termid o) {
+termid prover::make(nodeid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif

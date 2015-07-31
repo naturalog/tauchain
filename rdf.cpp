@@ -44,8 +44,11 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	}
 	if ( language ) r.lang = language;
 	auto it = dict.nodes.find(r.tostring());
-	if (it != dict.nodes.end()) return it->second;
-	pnode pr = make_shared<node>(r); 
+	if (it != dict.nodes.end()) {
+		assert(it->second->_type == r._type);
+		return it->second;
+	}
+	pnode pr = make_shared<node>(r);
 	dict.set(pr);
 	return dict.nodes[r.tostring()] = pr;
 }
@@ -57,8 +60,11 @@ pnode mkiri ( pstring iri ) {
 	node r ( node::IRI );
 	r.value = iri;
 	auto it =  dict.nodes.find(r.tostring());
-	if (it != dict.nodes.end()) return it->second;
-	pnode pr = make_shared<node>(r); 
+	if (it != dict.nodes.end()) {
+		assert(it->second->_type == r._type);
+		return it->second;
+	}
+	pnode pr = make_shared<node>(r);
 	dict.set(pr);
 	return dict.nodes[r.tostring()] = pr;
 }
@@ -71,6 +77,7 @@ pnode mkbnode ( pstring attribute ) {
 	r.value = attribute;
 	auto it =  dict.nodes.find(r.tostring());
 	if (it != dict.nodes.end()) {
+		assert(it->second->_type == r._type);
 //		TRACE(dout<<" returned existing node" << endl);
 		return it->second;
 	}
