@@ -88,18 +88,13 @@ public:
 		shared_ptr<proof> prev = 0;
 		shared_ptr<subst> s = make_shared<subst>();
 		ground g;
-		bool del = false;
-		void remove(std::deque<shared_ptr<proof>>& q) {
-			for (auto x : next) x->remove(q);
-			del = true;
-		}
 		int qid = 0;
 		std::forward_list<proof*> next;
 		proof() : s(make_shared<subst>()) {}
 		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground(), int qid = -1) 
-			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) { if(prev)prev->next.push_front(this);}
-		proof(const proof& p) : rul(p.rul), last(p.last), prev(p.prev), s(/*make_shared<subst>*/(p.s)), g(p.g) { if(prev)prev->next.push_front(this); }
-		proof(const proof& p, const ground& _g, int qid = -1) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { if(prev)prev->next.push_front(this); }
+			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) { }
+		proof(const proof& p) : proof(p.rul, p.last, p.prev, *p.s, p.g) { }
+		proof(const proof& p, const ground& _g, int qid = -1) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { }
 	};
 
 	

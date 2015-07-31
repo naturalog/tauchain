@@ -27,19 +27,12 @@
 using namespace boost::algorithm;
 int _indent = 0;
 
-
-bool isvar(nodeid p)
-{
-	return p < 0;
-}
-
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
 	const term p = get(id);
-	
-	if (isvar(p.p)) {
+	if (p.p < 0) {
 		auto it = s.find(p.p);
 		r = it == s.end() ? 0 : evaluate(it->second, s);
 	} else if (!p.s && !p.o)
@@ -52,81 +45,39 @@ termid prover::evaluate(termid id, const subst& s) {
 	return r;
 }
 
-
 bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
 	if (!_d != !_s) return false;
 	setproc(L"unify");
 	termid v;
 	if (f) {
-		#ifndef with_marpa
-		/*
 		dout << steps << " UNIFY " << format(_s) << " WITH " << format(_d) << endl;
 		dout << "SSUB " << formats(ssub) << endl;
 		dout << "DSUB " << formats(dsub) << endl;
-		*/
-		#endif
 	}
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
-
-	if (isvar(s.p)) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
-	else if (isvar(d.p)) {
+	if (s.p < 0) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
+	else if (d.p < 0) {
 		if ((v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f);
 		else {
-			//If we have override flag, update the destination predicate
-			//with its value from source
 			if (f) {
 				dsub[d.p] = evaluate(_s, ssub);
 				ns = true;
-				/*
-				dout 	<< "NEW SUB " << dstr(d.p) << '=' << format(dsub[d.p]) << " DURING " <<
-					format(_s) << '|' << format(_d) << '|' << formats(ssub) << '|' << formats(dsub) << endl;*/
 			}
-			/*
-			if(printNow){
-				dout << "B. SSUB: " << formats(ssub) << ", DSUB: " << formats(dsub) << std::endl;
-			}*/
 			r = true;
 		}
 	}
-
-	//Otherwise check for matching predicates
-	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o))
-		 r = false;
-	
-	//They match
-	else if (!s.s){
-		/*
-		if(printNow){
-		dout << "C. SSUB: " << formats(ssub) << ", DSUB: " << formats(dsub) << std::endl;
-		}*/
-		r = true;
-	}
-
-	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
-		r = unify(s.o, ssub, d.o, dsub, f);
-
-	/*
-	if(printNow){
-	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub) << " with " << format(_d) << " sub: " << formats(dsub);
-=======
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
 		r = unify(s.o, ssub, d.o, dsub, f);
-	if (f) TRACE(dout	<< "Trying to unify " << format(_s) << " sub: " << formats(ssub)
-			<< " with " << format(_d) << " sub: " << formats(dsub);
-//		printterm_substs(_s, ssub);
-//		dout<<" with ";
-//		printterm_substs(_d, dsub);
->>>>>>> 9ea4d2291a23ebf4f790407a9d647127f0f897e7
-		dout<<" : ";
+	if (f) TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
 		if (r) {
 			dout << "passed";
 			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
 		} else dout << "failed";
 		dout << endl);
-	}*/
 	return r;
 }
 
@@ -384,38 +335,11 @@ void prover::printq(queue_t& q){
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
-//	auto ll = mkliteral(pstr(L"a"),0,0);
-//	auto ll1 = mkliteral(pstr(L"aa"),0,0);
-//	dout<<ll->tostring()<<endl;
-//	dout<<ll1->tostring()<<endl;
-//	exit(0);
 	++steps;
-	/*
-	bool printNow = false;
-	if(steps < 50){
-		printNow = true;
-	}*/
-
 	proof& p = *_p;
-
-	//if(printNow){
-		dout << "STEP: " << steps << std::endl;		
-	//}
-	//int fps = 0;	
-	/*
-	if(printNow){
-	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
-	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(evaluate(kb.head()[p.rul], p.s))<<endl;
-	else dout<<steps<<" {}"<<endl;
-	}*/
-	
+	dout << "STEP: " << steps << std::endl;		
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
-		/*
-		if(printNow){
-			dout<<"Tracking back from " << format(t) << std::endl;
-		}
-		*/
 		MARPA(if (builtin(t, p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
@@ -427,28 +351,19 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 				if (euler_path(_p)) continue;
 				r->qid = frame_id++;
 				queue.push_front(r);
-				/*if(printNow){
-					printq(fps++,r);
-				}*/
 			}
 		}
 	}
 	else if (!p.prev) { pushev(_p); }
 	else {
-//		
 		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g, -1);
 		ruleid rl = p.rul;
 		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
-		unify(kb.head()[rl], *p.s, kb.body()[r->rul][r->last], *(r->s = make_shared<subst>(*p.prev->s)), true);
+		r->s = make_shared<subst>(*p.prev->s);
+		unify(kb.head()[rl], *p.s, kb.body()[r->rul][r->last], *r->s, true);
 		++r->last;
 		r->qid = frame_id++;
 		queue.push_back(r);
-		/*
-		if(printNow){
-			printq(fps++,r);
-		}*/
-
-
 	}
 }
 
