@@ -9,268 +9,126 @@ function printterm(term) {
 	return term.pred+'('+printterm(term.args[0]) + ',' + printterm(term.args[1])+')';
 }
 
-function prints(s){
-	if(s==null) return '{}';
-	if(typeof(s) == undefined || s.length == 0) return '{}';
+function prints(s) {
+	if (typeof(s) == 'undefined' || s.length == 0) return '{}'
 	var r = '';
-	for(var x in s){
+	for (var x in s)
 		r += x + ':' + printterm(s[x]) + ',';
-	}
-		return r;
-
+	return r
 }
-
-function printq(q){
-	for(var i=0;i<q.length;i++){
-		var pqid = 0;
-		c = q[i];
-		if(c.parent != null){
-			pqid = c.parent.qid;	
-		}
-		document.writeln(i + ') qid: ' + c.qid + ', ind: ' + c.ind + ', pqid: ' + pqid + ', env: ' + prints(c.env));
-	}
-}
+step = 1
 
 function prove(goal, maxNumberOfSteps) {
-  frame_id = 0;	
-  var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[],qid:frame_id}];
+  var queue = [{rule:goal, src:0, ind:0, parent:null, env:{}, ground:[]}]
   //if (typeof(evidence) == 'undefined') evidence = {}
-  step = 0;
   while (queue.length > 0) {
-/*	if(step < 50){
-	document.writeln( step + ': {src: ' + queue.src + ', ind: ' + queue.ind + ', parent: ' + queue.parent + ', env: ' + queue.env);
-	}*/
-	//document.writeln( step + ' ' + printterm(evaluate(c.rule.head,c.env)) );
-	printNow = false;
-	/*
-	if(step == 203 || step == 204){
-		printNow = true;
-	}
-	*/
-    
     //console.log(queue.length)
-    var c = queue.pop();
-    pqid = -1;
-    if(c.parent != null){
-	pqid = c.parent.qid;
-    } 
-
-    printq(queue);
-	
-    //document.writeln( step + ' ' + printterm(evaluate(c.rule.head,c.env)) );
+    var c = queue.pop()
     //console.log(JSON.stringify(c.rule.head))
-    if(printNow){
     if(step % 1000 == 0) {
-      console.log("step",step);
+      console.log("step",step)
     }
-    if (typeof(c.rule.head.args) != 'undefined'){
-	 
-	document.writeln( step + ' ' + printterm(evaluate(c.rule.head,c.env)) );
-    }
-    else{
-        document.writeln(step + ' ' + '{}');
-    }
-    }
-//	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
-    var g = aCopy(c.ground);
-    step++;
-    document.writeln('STEP: ' + step);
-    var fps = 0;	
-    if (maxNumberOfSteps != -1 && step >= maxNumberOfSteps){
-	 return '';
-    }
+    if (typeof(c.rule.head.args) != 'undefined') 
+	document.writeln( step + ' ' + printterm(evaluate(c.rule.head,c.env)) )
+    else document.writeln(step + ' ' + '{}')
+    document.writeln(step + ' FSUB:' + prints(c.env));
+    document.writeln(step + ' LEN:' + queue.length);
+	document.writeln('POP QUEUE\n' + JSON.stringify(c.rule.head) + '\n')
+    var g = aCopy(c.ground)
+    step++
+    if (maxNumberOfSteps != -1 && step >= maxNumberOfSteps) return ''
     if (c.ind >= c.rule.body.length) {
       if (c.parent == null) {
         for (var i = 0; i < c.rule.body.length; i++) {
-          var t = evaluate(c.rule.body[i], c.env);
-          if (typeof(evidence[t.pred]) == 'undefined'){
-		 evidence[t.pred] = [];
-	  }
-          evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]});
+          var t = evaluate(c.rule.body[i], c.env)
+          if (typeof(evidence[t.pred]) == 'undefined') evidence[t.pred] = []
+          evidence[t.pred].push({head:t, body:[{pred:'GND', args:c.ground}]})
         }
-        continue;
+        continue
       }
-      if (c.rule.body.length != 0){
-	 g.push({src:c.rule, env:c.env});
-      }
-      var r = {
-		rule:{
-			head:c.parent.rule.head, 
-			body:c.parent.rule.body
-		}, 
-		src:c.parent.src, 
-		ind:c.parent.ind, 
-                parent:c.parent.parent != null ? new copy(c.parent.parent) : null, env:new copy(c.parent.env), 
-		ground:g,
-		qid:null
-	};
-      
-      unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true, printNow);
-      r.ind++;
-      r.qid = frame_id++;
-      /*if(step < 50){
-	printq(fps++, r);
-      }*/
-      queue.push(r);
-      if(printNow){
-      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined' && typeof(r.rule.head.pred) != 'undefined' ){ 
+      if (c.rule.body.length != 0) g.push({src:c.rule, env:c.env})
+      var r = {rule:{head:c.parent.rule.head, body:c.parent.rule.body}, src:c.parent.src, ind:c.parent.ind, 
+               parent:c.parent.parent != null ? new copy(c.parent.parent) : null, env:new copy(c.parent.env), ground:g}
+      unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true)
+      r.ind++
+      queue.push(r)
+      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined' && typeof(r.rule.head.pred) != 'undefined' ) 
 	document.writeln('PUSH QUEUE ' + printterm(evaluate(r.rule.head, r.env)))
-      }
-      else{
-	 document.writeln('PUSH QUEUE');
-      }
-      }
-      continue;
+	else document.writeln('PUSH QUEUE')
+      continue
     }
-
-    var t = c.rule.body[c.ind];
-    if(printNow){
-    document.writeln( 'Tracking back from ' + printterm(t) );
-    }
+    var t = c.rule.body[c.ind]
+    document.writeln( 'Tracking back from ' + printterm(t) )
     var b = -1;//builtin(t, c)
     if (b == 1) {
-      g.push({src:{head:evaluate(t, c.env), body:[]}, env:{}});
-      //frame_id++;
-      var r = {
-		rule:{
-			head:c.rule.head, 
-			body:c.rule.body
-		}, 
-		src:c.src, 
-		ind:c.ind, 
-		parent:c.parent, 
-		env:c.env, 
-		ground:g,
-		qid:null
-	};
-      r.ind++;
-      r.qid = frame_id++;
-      /*if(step < 50){
-	printq(fps++, r);
-	}*/
-      queue.push(r);
-      if(printNow){
-      if (typeof(trace) != 'undefined'){
-	 document.writeln('PUSH QUEUE\n' + JSON.stringify(r.rule) + '\n');
-      }
-      }
-      continue;
+      g.push({src:{head:evaluate(t, c.env), body:[]}, env:{}})
+      var r = {rule:{head:c.rule.head, body:c.rule.body}, src:c.src, ind:c.ind, parent:c.parent, env:c.env, ground:g}
+      r.ind++
+      queue.push(r)
+      if (typeof(trace) != 'undefined') document.writeln('PUSH QUEUE\n' + JSON.stringify(r.rule) + '\n')
+      continue
     }
-    else if (b == 0){
-	 continue;
-    }
-    if (cases[t.pred] == null){
-	 continue;
-    }
-    var src = 0;
+    else if (b == 0) continue
+    if (cases[t.pred] == null) continue
+    var src = 0
+    document.writeln(step + ' TT:' + printterm(t));
     for (var k = 0; k < cases[t.pred].length; k++) {
-      var rl = cases[t.pred][k];
-      src++;
-      var g = aCopy(c.ground);
-      if (rl.body.length == 0){
-	 g.push({src:rl, env:{}});
-      }
-      var r = {
-		rule:rl, 
-		src:src, 
-		ind:0, 
-		parent:c, 
-		env:{}, 
-		ground:g,
-		qid:null
-	};
-      if (unify(t, c.env, rl.head, r.env, true, printNow)) {
-        var ep = c;  // euler path
-        while (ep = ep.parent){
-		if (ep.src == c.src && unify(ep.rule.head, ep.env, c.rule.head, c.env, false,printNow)){
-		 break;
-		}
-	}
+      var rl = cases[t.pred][k]
+      src++
+      var g = aCopy(c.ground)
+      if (rl.body.length == 0) g.push({src:rl, env:{}})
+      var r = {rule:rl, src:src, ind:0, parent:c, env:{}, ground:g}
+      if (unify(t, c.env, rl.head, r.env, true)) {
+        var ep = c  // euler path
+        while (ep = ep.parent) if (ep.src == c.src && unify(ep.rule.head, ep.env, c.rule.head, c.env, false)) break
         if (ep == null) {
-	  r.qid = frame_id++;
-	  if(step<50){ printq(fps++, r);}
-          queue.unshift(r);
-	if(printNow){
-      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined' && typeof(r.rule.head.pred) != 'undefined' ){ 
-		document.writeln('PUSH QUEUE ' + printterm(evaluate(r.rule.head, r.env)))
-	}
-	else{
-		document.writeln('PUSH QUEUE');
-	
-	
-        if (typeof(trace) != 'undefined'){ 
-		document.writeln('EULER PATH UNSHIFT QUEUE\n' + JSON.stringify(r.rule) + '\n');
-      
-       }
-       }
-       }
-       }
+          queue.unshift(r)
+      if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined' && typeof(r.rule.head.pred) != 'undefined' ) 
+	document.writeln('PUSH QUEUE ' + printterm(evaluate(r.rule.head, r.env)))
+	else document.writeln('PUSH QUEUE')
+          if (typeof(trace) != 'undefined') document.writeln('EULER PATH UNSHIFT QUEUE\n' + JSON.stringify(r.rule) + '\n')
+        }
       }
     }
   }
-  document.writeln('STEPS: ' + step);
-  print('FAIL');
+  print('FAIL')
 }
 
-function unify(s, senv, d, denv, f, printNow) {
-  if (typeof(trace) != 'undefined' && f){
- 	if(printNow){
-		document.writeln('UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.stringify*/printterm(d) );
-	}
-  }
+function unify(s, senv, d, denv, f) {
+//  if (typeof(trace) != 'undefined' && f) 
+var r = false, ns=false;
   if (isVar(s.pred)) {
-    var sval = evaluate(s, senv);
-    if (sval != null){
-	 return unify(sval, senv, d, denv, f);
-    }
-    else{
-	if(printNow){
-	document.writeln('A. SSUB: ' + JSON.stringify(senv) + ', DSUB: ' + JSON.stringify(denv));
-	}	
-	return true;
-    }
+    var sval = evaluate(s, senv)
+    if (sval != null) r = unify(sval, senv, d, denv, f)
+    else r = true
   }
   else if (isVar(d.pred)) {
-    var dval = evaluate(d, denv);
-    if (dval != null){ 
-	return unify(s, senv, dval, denv, f);
-    }
+    var dval = evaluate(d, denv)
+    if (dval != null) r = unify(s, senv, dval, denv, f)
     else {
-      if (f != null){
-	 denv[d.pred] = evaluate(s, senv);
-      }
-      if(printNow){
-      document.writeln('B. SSUB: ' + JSON.stringify(senv) + ', DSUB: ' + JSON.stringify(denv));
-      }
-      return true;
+      if (f != null) {
+	denv[d.pred] = evaluate(s, senv)
+	ns = true
+	}
+      r = true
     }
   }
-
   else if (s.pred == d.pred && s.args.length == d.args.length) {
-	for (var i = 0; i < s.args.length; i++){
- 		if (!unify(s.args[i], senv, d.args[i], denv, f)){
-  			return false;
-		}
- 	}
-	if(printNow){	
-	document.writeln('C. SSUB: ' + JSON.stringify(senv) + ', DSUB: ' + JSON.stringify(denv));
-	}
-	return true;
+    for (var i = 0; i < s.args.length; i++) if (!unify(s.args[i], senv, d.args[i], denv, f)) { r = false; break; }
+    r = true
   }
   else {
-	if(printNow){
-    if (f && typeof(trace) != 'undefined'){
-	 document.writeln('FAILED TO UNIFY ' + printterm(s) + ' WITH ' + printterm(d));
-    }
-    if (f && typeof(senv) != 'undefined'){
-	document.writeln('SSUB ' + JSON.stringify(senv));
-    }
-    if (f && typeof(denv) != 'undefined'){
-	 document.writeln('DSUB ' + JSON.stringify(denv));
-    } 
-    }
-   return false;
+    if (f && typeof(trace) != 'undefined') document.writeln('FAILED TO UNIFY ' + printterm(s) + ' WITH ' + printterm(d))
+    if (f && typeof(denv) != 'undefined') document.writeln('DFSUB ' + prints(denv))
+    r = false
   }
+document.writeln(step + ' UNIFY ' + /*JSON.stringify*/printterm(s) + ' WITH ' + /*JSON.stringify*/printterm(d) )
+    if (f && typeof(senv) != 'undefined') document.writeln('SSUB ' + prints(senv))
+    else if (f) document.writeln('SSUB')
+    if (f && typeof(denv) != 'undefined') document.writeln('DSUB ' + prints(denv))
+    else if (f) document.writeln('DSUB')
+ if (ns)   	document.writeln('NEW SUB ' + d.pred + '=' + printterm(denv[d.pred]) + ' DURING ' + printterm(s) + '|' + printterm(d) + '|' + prints(senv) + '|' + prints(denv))
+  return r;
 }
 
 function evaluate(t, env) {
