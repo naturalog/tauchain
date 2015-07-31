@@ -373,12 +373,12 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-void prover::printq(int i, shared_ptr<proof>& _p){
+void prover::printq(shared_ptr<proof>& _p){
 	int pqid = -1;
 	if(_p->prev != 0){
 		pqid = (_p->prev)->qid;
 	}	
-	dout << i << ") qid: " << _p->qid << ", ind: " << _p->last << ", pqid: " << pqid << " env: " << formats(_p->s) << std::endl;
+	dout << "?) qid: " << _p->qid << ", ind: " << _p->last << ", pqid: " << pqid << " env: " << formats(_p->s) << std::endl;
 	
 }
 
@@ -390,17 +390,18 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 //	dout<<ll1->tostring()<<endl;
 //	exit(0);
 	++steps;
+	/*
 	bool printNow = false;
 	if(steps < 50){
 		printNow = true;
-	}
+	}*/
 
 	proof& p = *_p;
 
-	if(printNow){
+	//if(printNow){
 		dout << "STEP: " << steps << std::endl;		
-	}
-	int fps = 0;	
+	//}
+	//int fps = 0;	
 	/*
 	if(printNow){
 	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
@@ -425,10 +426,10 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
 				if (euler_path(_p)) continue;
 				r->qid = frame_id++;
-				if(printNow){
-					printq(fps++,r);
-				}
 				queue.push_front(r);
+				/*if(printNow){
+					printq(fps++,r);
+				}*/
 			}
 		}
 	}
@@ -441,10 +442,11 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		unify(kb.head()[rl], *p.s, kb.body()[r->rul][r->last], *(r->s = make_shared<subst>(*p.prev->s)), true);
 		++r->last;
 		r->qid = frame_id++;
+		queue.push_back(r);
+		/*
 		if(printNow){
 			printq(fps++,r);
-		}
-		queue.push_back(r);
+		}*/
 
 
 	}
@@ -614,6 +616,7 @@ void prover::query(termset& goal, subst* s) {
 		q = queue.back();
 		
 		queue.pop_back();
+		printq(q);
 		step(q, queue, gnd);
 		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);

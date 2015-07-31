@@ -13,12 +13,13 @@
 #include <future>
 #include <functional>
 #include <forward_list>
+#include <unordered_map>
 #include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 
 typedef u64 termid;
-typedef std::map<nodeid, termid> subst;
+typedef std::unordered_map<nodeid, termid> subst;
 
 class prover {
 public:
@@ -102,7 +103,7 @@ public:
 	};
 
 	
-	void printq(int i, shared_ptr<proof>& _p);
+	void printq(shared_ptr<proof>& _p);
 
 	int frame_id = 0;
 	typedef std::deque<shared_ptr<proof>> queue_t;
