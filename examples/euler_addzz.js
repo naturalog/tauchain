@@ -15,8 +15,8 @@ function prints(s){
 	var r = '';
 	for(var x in s){
 		r += x + ':' + printterm(s[x]) + ',';
-		return r;
 	}
+		return r;
 
 }
 
