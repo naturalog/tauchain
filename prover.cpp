@@ -375,11 +375,9 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::printq(shared_ptr<proof>& _p){
 	int pqid = -1;
-	if(_p->prev != 0){
-		pqid = (_p->prev)->qid;
-	}	
-	dout << "?) qid: " << _p->qid << ", ind: " << _p->last << ", pqid: " << pqid << " env: " << formats(_p->s) << std::endl;
 	
+	if (_p->prev) pqid = (_p->prev)->qid;
+	dout << "?) qid: " << _p->qid << ", ind: " << _p->last << ", pqid: " << pqid << " env: " << formats(_p->s, true) << endl;
 }
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
