@@ -340,7 +340,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	dout << "STEP: " << steps << std::endl;		
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
-		MARPA(if (builtin(t, p, queue) != -1) return);
+		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
 		for (auto rl : it->second) {
