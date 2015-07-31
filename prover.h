@@ -103,10 +103,10 @@ public:
 	};
 
 	
-	void printq(shared_ptr<proof>& _p);
 
 	int frame_id = 0;
 	typedef std::deque<shared_ptr<proof>> queue_t;
+	void printq(queue_t& _p);
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);

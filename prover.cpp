@@ -373,11 +373,13 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-void prover::printq(shared_ptr<proof>& _p){
-	int pqid = -1;
-	
-	if (_p->prev) pqid = (_p->prev)->qid;
-	dout << "?) qid: " << _p->qid << ", ind: " << _p->last << ", pqid: " << pqid << " env: " << formats(_p->s, true) << endl;
+void prover::printq(queue_t& q){
+	int n = 0;
+	for (auto p : q) {
+		int pqid = -1;
+		if (p->prev) pqid = (p->prev)->qid;
+		dout << n++ << ") qid: " << p->qid << ", ind: " << p->last << ", pqid: " << pqid << " env: " << formats(p->s) << endl;
+	}
 }
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
@@ -614,7 +616,7 @@ void prover::query(termset& goal, subst* s) {
 		q = queue.back();
 		
 		queue.pop_back();
-		printq(q);
+		printq(queue);
 		step(q, queue, gnd);
 		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
