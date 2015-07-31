@@ -49,11 +49,11 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	if (!_d != !_s) return false;
 	setproc(L"unify");
 	termid v;
-	if (f) {
-		dout << steps << " UNIFY " << format(_s) << " WITH " << format(_d) << endl;
-		dout << "SSUB " << formats(ssub) << endl;
-		dout << "DSUB " << formats(dsub) << endl;
-	}
+//	if (f) {
+//		dout << steps << " UNIFY " << format(_s) << " WITH " << format(_d) << endl;
+//		dout << "SSUB " << formats(ssub) << endl;
+//		dout << "DSUB " << formats(dsub) << endl;
+//	}
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
 	if (s.p < 0) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
