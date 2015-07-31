@@ -45,7 +45,11 @@ void bidict::set ( const std::vector<node>& v ) {
 resid bidict::set ( node v ) {
 	if (!v.value) throw std::runtime_error("bidict::set called with a node containing null value");
 	auto it = pi.find ( v );
-	if ( it != pi.end() ) return it->second;
+	if ( it != pi.end() )
+	{
+		assert (v._type == it->first._type);
+		return it->second;
+	}
 	resid k = pi.size() + 1;
 	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;

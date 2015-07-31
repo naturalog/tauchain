@@ -1018,7 +1018,7 @@ int load_n3_cmd::operator()(const strings &args) {
         throw std::runtime_error("couldnt open file \"" + fname + "\"");
 
     prover prvr(*load_quads(L"n3-grammar.nq", false));
-    dout << "-----" << std::endl;
+    dout << "grammar loaded." << std::endl;
 
     pnode input = mkliteral(pstr(load_file(f)), 0, 0);
     assert(input);
@@ -1030,16 +1030,16 @@ int load_n3_cmd::operator()(const strings &args) {
                     prvr.make(input)));
 
     auto query = load_quads(L"load_n3", false);
-    dout << "------" << std::endl;
+    dout << "query loaded." << std::endl;
 
     prvr.query(*query);
 
-    dout << "-------" << std::endl;
+    dout << "query done." << std::endl;
 
     termid raw = 0;
     for (auto x : prvr.substs) {
+        dout << "subst:" << std::endl;
         prvr.prints(x); dout << std::endl;
-        dout << "______" << std::endl;
         for (auto it: x) {
             dout << *dict[it.first].value << std::endl;
             if (*dict[it.first].value == L"?O") {
@@ -1052,8 +1052,6 @@ int load_n3_cmd::operator()(const strings &args) {
     prvr.e.clear();
 
     dout << std::endl << std::endl << "prvr:" << std::endl << prvr.formatkb();
-    dout << "---------" << std::endl;
-
 
     if (!raw)
         throw std::runtime_error("oopsie, something went wrong with your tau.");
@@ -1064,8 +1062,7 @@ int load_n3_cmd::operator()(const strings &args) {
     prover prvr2(prvr);
     prvr2(*query);
     */
-    dout << "......" << std::endl;
-
+    dout << "retrieving results." << std::endl;
 
     qdb dest;
     N3 n3(prvr, dest);

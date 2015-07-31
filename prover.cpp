@@ -51,9 +51,11 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	setproc(L"unify");
 	termid v;
 	if (f) {
+		#ifndef with_marpa
 		dout << steps << " UNIFY " << format(_s) << " WITH " << format(_d) << endl;
 		dout << "SSUB " << formats(ssub) << endl;
 		dout << "DSUB " << formats(dsub) << endl;
+		#endif
 	}
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
@@ -206,9 +208,9 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->s, *p->s, t.o, *p->s, true) ? 1 : 0;
+		r = unify(t0->s, *p->s, t.o, *p->s, true) ? 1 : -1;
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->o, *p->s, t.o, *p->s, true) ? 1 : 0;
+		r = unify(t0->o, *p->s, t.o, *p->s, true) ? 1 : -1;
 /*	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -342,6 +344,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 //	exit(0);
 	++steps;
 	proof& p = *_p;
+	#ifndef with_marpa
 	TRACE(dout<<"popped frame " << steps << " :" << endl; printp(_p));
 	if (p.rul && kb.head()[p.rul]) dout<<steps<<' '<<format(evaluate(kb.head()[p.rul], p.s))<<endl;
 	else dout<<steps<<" {}"<<endl;
@@ -349,6 +352,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		steps += 0;
 	dout<<steps<< " FSUB:"<<formats(p.s)<<endl;
 	dout<<steps<< " LEN:"<<queue.size()<<endl;
+	#endif
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
 		/*TRACE*/(dout<<"Tracking back from " << format(t) << std::endl);
@@ -424,7 +428,9 @@ termid prover::quad2term(const quad& p, const qdb& quads) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
 	termid t, s, o;
+	#ifndef with_marpa
 	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
+	#endif
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;
