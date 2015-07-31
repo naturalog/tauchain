@@ -20,12 +20,19 @@ function prints(s){
 
 }
 
-function printq(i, c){
-	var pqid = 0;
-	if(c.parent != null){
-		pqid = c.parent.qid;	
+function printq(q){
+	if(!q){
+		document.writeln( "no queue");
+		return;
 	}
-	document.writeln(i + ') qid: ' + c.qid + ', ind: ' + c.ind + ', pqid: ' + pqid + ', env: ' + prints(c.env));
+	for(var i=0;i<q.length;i++){
+		var pqid = 0;
+		c = q[i];
+		if(c.parent != null){
+			pqid = c.parent.qid;	
+		}
+		document.writeln(i + ') qid: ' + c.qid + ', ind: ' + c.ind + ', pqid: ' + pqid + ', env: ' + prints(c.env));
+	}
 }
 
 function prove(goal, maxNumberOfSteps) {
@@ -52,7 +59,8 @@ function prove(goal, maxNumberOfSteps) {
 	pqid = c.parent.qid;
     } 
 
-
+    printq(queue);
+	
     //document.writeln( step + ' ' + printterm(evaluate(c.rule.head,c.env)) );
     //console.log(JSON.stringify(c.rule.head))
     if(printNow){
@@ -104,9 +112,9 @@ function prove(goal, maxNumberOfSteps) {
       unify(c.rule.head, c.env, r.rule.body[r.ind], r.env, true, printNow);
       r.ind++;
       r.qid = frame_id++;
-      if(step < 50){
+      /*if(step < 50){
 	printq(fps++, r);
-      }
+      }*/
       queue.push(r);
       if(printNow){
       if (typeof(r.rule) != 'undefined' && typeof(r.rule.head) != 'undefined' && typeof(r.rule.head.pred) != 'undefined' ){ 
@@ -141,9 +149,9 @@ function prove(goal, maxNumberOfSteps) {
 	};
       r.ind++;
       r.qid = frame_id++;
-      if(step < 50){
+      /*if(step < 50){
 	printq(fps++, r);
-	}
+	}*/
       queue.push(r);
       if(printNow){
       if (typeof(trace) != 'undefined'){
