@@ -87,7 +87,7 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	proof& p = *_p;
 	termid t = kb.head()[p.rul];
 	while ((ep = ep->prev))
-		if (ep->rul == p.rul && unify(kb.head()[ep->rul], *ep->s, t, *p.s, false))
+		if (ep->rul == p.rul && unify(kb.head()[ep->rul], *ep->s, t, *p.s, true))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return ep != 0;
 }
