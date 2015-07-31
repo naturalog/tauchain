@@ -738,7 +738,7 @@ public:
     {
         static int curid = 0;
         std::wstringstream ss;
-        ss << L"_:list" << curid;
+        ss << L"_:list" << curid++;
         return ss.str();
     };
 
@@ -1000,6 +1000,7 @@ public:
 
 
 
+/*cli*/
 
 std::string load_n3_cmd::desc() const { return "load n3"; }
 
@@ -1009,14 +1010,31 @@ std::string load_n3_cmd::help() const {
 }
 
 int load_n3_cmd::operator()(const strings &args) {
-    if (args.size() != 3)
-        throw std::runtime_error("gimme a filename");
+    if (args.size() != 4)
+        throw std::runtime_error("gimme a kb and a query filenames");
 
     std::string fname = ws(args[2]);
     std::ifstream f(fname);
     if (!f.is_open())
-        throw std::runtime_error("couldnt open file \"" + fname + "\"");
+        throw std::runtime_error("couldnt open natural3 kb file \"" + fname + "\"");
+    qdb kb = load_n3(f);
 
+    fname = ws(args[3]);
+    std::ifstream qf(fname);
+    if (!qf.is_open())
+        throw std::runtime_error("couldnt open natural3 query file \"" + fname + "\"");
+    qdb query = load_n3(qf);
+
+
+    prover p(kb);
+    p.query(query);
+
+
+    return 0;
+}
+
+
+qdb load_n3_cmd::load_n3(std::ifstream &f) {
     prover prvr(*load_quads(L"n3-grammar.nq", false));
     dout << "grammar loaded." << std::endl;
 
@@ -1039,7 +1057,8 @@ int load_n3_cmd::operator()(const strings &args) {
     termid raw = 0;
     for (auto x : prvr.substs) {
         dout << "subst:" << std::endl;
-        prvr.prints(x); dout << std::endl;
+        prvr.prints(x);
+        dout << std::endl;
         for (auto it: x) {
             dout << *dict[it.first].value << std::endl;
             if (*dict[it.first].value == L"?O") {
@@ -1062,17 +1081,25 @@ int load_n3_cmd::operator()(const strings &args) {
     prover prvr2(prvr);
     prvr2(*query);
     */
-    dout << "retrieving results." << std::endl;
 
+    dout << "retrieving results." << std::endl;
     qdb dest;
     N3 n3(prvr, dest);
     n3.add_statements(raw, L"@default");
 
+    /*just to show*/
     prover d(dest);
     dout << std::endl << std::endl << "results:" << std::endl << d.formatkb();
-    return 0;
+
+    return dest;
 }
 
+
+
+
+
+
+/*builtins*/
 
 void *marpa_parser(prover *p, nodeid language, shared_ptr<prover::proof> prf) {
     return (void*)new Marpa(p, language, prf);
