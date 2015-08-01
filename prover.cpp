@@ -338,7 +338,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
 	++steps;
 	proof& p = *_p;
-	dout << "STEP: " << steps << std::endl;		
+//	dout << "STEP: " << steps << std::endl;		
 	if (p.last != kb.body()[p.rul].size()) {
 		termid t = kb.body()[p.rul][p.last];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
@@ -539,10 +539,10 @@ void prover::query(termset& goal, subst* s) {
 	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	//TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	/*TRACE*///(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
-	//t1 = high_resolution_clock::now();
-	///*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);
+	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
+	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
+	t1 = high_resolution_clock::now();
+	/*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);
 //	proof::clear();
 //	kb.revert();
 //	return results();
