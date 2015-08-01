@@ -87,7 +87,7 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	proof& p = *_p;
 	termid t = kb.head()[p.rul];
 	while ((ep = ep->prev))
-		if (ep->rul == p.rul && unify(kb.head()[ep->rul], *ep->s, t, *p.s, true))
+		if (ep->rul == p.rul && unify(kb.head()[ep->rul], *ep->s, t, *p.s, false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return ep != 0;
 }
@@ -529,9 +529,8 @@ void prover::query(termset& goal, subst* s) {
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	do {
 		q = queue.back();
-		
 		queue.pop_back();
-		printq(queue);
+//		printq(queue);
 		step(q, queue, gnd);
 		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
