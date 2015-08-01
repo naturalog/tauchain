@@ -13,13 +13,12 @@
 #include <future>
 #include <functional>
 #include <forward_list>
-#include <unordered_map>
 #include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 
 typedef u64 termid;
-typedef std::unordered_map<nodeid, termid> subst;
+typedef std::map<nodeid, termid> subst;
 
 class prover {
 public:
@@ -88,8 +87,8 @@ public:
 		shared_ptr<proof> prev = 0;
 		shared_ptr<subst> s = make_shared<subst>();
 		ground g;
-		int qid = 0;
-		std::forward_list<proof*> next;
+//		int qid = 0;
+//		std::forward_list<proof*> next;
 		proof() : s(make_shared<subst>()) {}
 		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground(), int qid = -1) 
 			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) { }
@@ -97,11 +96,9 @@ public:
 		proof(const proof& p, const ground& _g, int qid = -1) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { }
 	};
 
-	
-
-	int frame_id = 0;
+//	int frame_id = 0;
 	typedef std::deque<shared_ptr<proof>> queue_t;
-	void printq(queue_t& _p);
+//	void printq(queue_t& _p);
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
@@ -111,10 +108,7 @@ public:
 	void get_dotstyle_list(termid, std::list<nodeid>&);
 	string formatkb(bool json = false);
 
-
-
 private:
-
 	class termdb {
 		typedef std::vector<term> terms_t;
 	public:
@@ -133,7 +127,7 @@ private:
 	bool printNow;
 
 	void pushev(shared_ptr<proof>);
-	void step(shared_ptr<proof>&, queue_t&, queue_t&);
+	void step(shared_ptr<proof>&, queue_t&);
 	termid evaluate(termid id, const subst& s);
 	inline termid evaluate(termid id, shared_ptr<subst>& s) {
 		static subst emp;

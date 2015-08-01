@@ -28,6 +28,8 @@ using namespace boost::algorithm;
 int _indent = 0;
 #define ISVAR(term) ((term.p < 0))
 
+prover::term::term() : p(0), s(0), o(0) {}
+
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
@@ -50,11 +52,6 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	if (!_d != !_s) return false;
 	setproc(L"unify");
 	termid v;
-//	if (f) {
-//		dout << steps << " UNIFY " << format(_s) << " WITH " << format(_d) << endl;
-//		dout << "SSUB " << formats(ssub) << endl;
-//		dout << "DSUB " << formats(dsub) << endl;
-//	}
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
 	if (ISVAR(s)) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
@@ -72,13 +69,15 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
 		r = unify(s.o, ssub, d.o, dsub, f);
-	if (f) TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+	if (f) {
+		TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
 			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
 		if (r) {
 			dout << "passed";
 			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
 		} else dout << "failed";
 		dout << endl);
+	}
 	return r;
 }
 
@@ -325,22 +324,22 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-void prover::printq(queue_t& q){
-	int n = 0;
-	for (auto p : q) {
-		int pqid = -1;
-		if (p->prev) pqid = (p->prev)->qid;
-		dout << n++ << ") qid: " << p->qid << ", ind: " << p->last << ", pqid: " << pqid << ", env: " << (/*p->s->empty() ? string(L"undefined") :*/ formats(p->s)) << endl;
-	}
-}
+//void prover::printq(queue_t& q){
+//	int n = 0;
+//	for (auto p : q) {
+//		int pqid = -1;
+//		if (p->prev) pqid = (p->prev)->qid;
+//		dout << n++ << ") qid: " << p->qid << ", ind: " << p->last << ", pqid: " << pqid << ", env: " << (/*p->s->empty() ? string(L"undefined") :*/ formats(p->s)) << endl;
+//	}
+//}
 
-void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
+void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 	setproc(L"step");
 	++steps;
 	proof& p = *_p;
-//	dout << "STEP: " << steps << std::endl;		
-	if (p.last != kb.body()[p.rul].size()) {
-		termid t = kb.body()[p.rul][p.last];
+	auto rul = kb.body()[p.rul];
+	if (p.last != rul.size()) {
+		termid t = rul[p.last];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
@@ -349,9 +348,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 			if (unify(t, *p.s, kb.head()[rl], s, true)) {
 				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g, -1);
 				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
-				if (euler_path(_p)) continue;
-				r->qid = frame_id++;
-				queue.push_front(r);
+//				r->qid = frame_id++;
+				if (!euler_path(r)) queue.push_front(r);
 			}
 		}
 	}
@@ -363,8 +361,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		r->s = make_shared<subst>(*p.prev->s);
 		unify(kb.head()[rl], *p.s, kb.body()[r->rul][r->last], *r->s, true);
 		++r->last;
-		r->qid = frame_id++;
-		queue.push_back(r);
+//		r->qid = frame_id++;
+		if (!euler_path(r)) step(r, queue);//queue.push_back(r);
 	}
 }
 
@@ -435,7 +433,7 @@ qlist merge ( const qdb& q ) {
 }
 
 prover::~prover() { }
-prover::prover(const prover& q) : kb(q.kb), _terms(q._terms)/*, quads(q.quads)*/ { kb.p = this; } 
+prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) { kb.p = this; } 
 
 void prover::addrules(pquad q, qdb& quads) {
 	setproc(L"addrules");
@@ -463,13 +461,12 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
-//	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
+	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
 bool prover::consistency(const qdb& quads) {
 	setproc(L"consistency");
 	bool c = true;
-//	prover p(quads, false);
 	prover p(*this);
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
 	termset g = termset();
@@ -479,7 +476,6 @@ bool prover::consistency(const qdb& quads) {
 	for (auto x : ee) for (auto y : x.second) {
 		prover q(*this);
 		g.clear();
-//		p.e.clear();
 		string s = *dict[p.get(p.get(y.first).s).p].value;
 		if (s == L"GND") continue;
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
@@ -519,9 +515,9 @@ void prover::query(termset& goal, subst* s) {
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 
 	#else
-	/*
+	
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);*/
+//	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	#endif	
 	queue.push_front(p);
 	shared_ptr<proof> q;
@@ -532,20 +528,16 @@ void prover::query(termset& goal, subst* s) {
 		q = queue.back();
 		queue.pop_back();
 //		printq(queue);
-		step(q, queue, gnd);
+		step(q, queue);
 		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
 	for (auto x : gnd) pushev(x);
 	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl);
+	dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
+	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
 	t1 = high_resolution_clock::now();
-	/*TRACE*/(dout << "ev took: " << (duration / 1000.) << "ms steps: " << steps << endl);
-//	proof::clear();
-//	kb.revert();
-//	return results();
 }
 
 prover::term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
@@ -569,7 +561,6 @@ termid prover::make(nodeid p, termid s, termid o) {
 	if (_terms.terms.capacity() - _terms.terms.size() < 10)
 		_terms.terms.reserve(5 * _terms.terms.size() / 6);
 	return _terms.add(p, s, o);
-//	return _terms.size();
 }
 
 prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
@@ -578,9 +569,7 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 	_head.push_back(t);
 	_body.push_back(ts);
 	r2id[t ? p->get(t).p : 0].push_back(r);
-//	TRACE(dout<<r<<tab<<p->formatr(r)<<endl);
 	return r;
-	//TRACE(if (!ts.size() && !p->get(t).s) throw 0);
 }
 
 prover::ruleid prover::ruleset::add(termid t) {
@@ -588,90 +577,3 @@ prover::ruleid prover::ruleset::add(termid t) {
 	return add(t, ts);
 }
 
-
-//bool prover::term::isstr() const { node n = dict[p]; return n._type == node::LITERAL && n.datatype == XSD_STRING; }
-prover::term::term() : p(0), s(0), o(0) {}
-//prover::term::term(const prover::term& t) : p(t.p), s(t.s), o(t.o) {}
-//prover::term& prover::term::operator=(const prover::term& t) { p = t.p; s = t.s; o = t.o; return *this; }
-
-pobj prover::json(const termset& ts) const {
-	polist_obj l = mk_olist_obj(); 
-	for (termid t : ts) l->LIST()->push_back(get(t).json(*this));
-	return l;
-}
-
-pobj prover::json(const subst& s) const {
-	psomap_obj o = mk_somap_obj();
-	for (auto x : s) (*o->MAP())[dstr(x.first)] = get(x.second).json(*this);
-	return o;
-}
-
-pobj prover::json(ruleid t) const {
-	pobj m = mk_somap_obj();
-	(*m->MAP())[L"head"] = get(kb.head()[t]).json(*this);
-	(*m->MAP())[L"body"] = json(kb.body()[t]);
-	return m;
-}
-
-pobj prover::json(const ground& g) const {
-	pobj l = mk_olist_obj();
-	for (auto x : g) {
-		psomap_obj o = mk_somap_obj();
-		(*o->MAP())[L"src"] = json(x.first);
-		if (x.second) (*o->MAP())[L"env"] = json(*x.second);
-		l->LIST()->push_back(o);
-	}
-	return l;
-}
-
-pobj prover::ejson() const {
-	pobj o = mk_somap_obj();
-	for (auto x : e) {
-		polist_obj l = mk_olist_obj();
-		for (auto y : x.second) {
-			psomap_obj t = mk_somap_obj(), t1;
-			(*t->MAP())[L"head"] = get(y.first).json(*this);
-			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
-			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
-			(*t1->MAP())[L"args"] = json(y.second);
-			l->LIST()->push_back(t);
-		}
-		(*o->MAP())[dstr(x.first)] = l;
-	}
-	return o;
-}
-/*
-void prover::ruleset::mark() {
-	_r2id = r2id;
-	if (!m) m = size(); 
-	else m = std::min(size(), m);
-}
-
-void prover::ruleset::revert() {
-	r2id = _r2id;
-	if ( size() <= m ) { 
-		m = 0; 
-		return; 
-	}
-	_head.erase(_head.begin() + (m-1), _head.end());
-	_body.erase(_body.begin() + (m-1), _body.end());
-	m = 0;
-}
-*/
-string prover::ruleset::format() const {
-	setproc(L"ruleset::format");
-	std::wstringstream ss;
-	ss << L'['<<endl;
-	for (auto it = r2id.begin(); it != r2id.end();) {
-		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
-		for (auto iit = it->second.begin(); iit != it->second.end();) {
-			ss << p->formatr(*iit, true);
-			if (++iit != it->second.end()) ss << L',';
-			ss << endl;
-		}
-		ss << L"]}";
-		if (++it != r2id.end()) ss << L',';
-	}
-	ss << L']';
-	return ss.str();
-}

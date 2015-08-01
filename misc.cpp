@@ -344,3 +344,68 @@ pstring pstr ( const string& s ) {
 	strings.insert(ps);
 	return ps;
 } 
+
+pobj prover::json(const termset& ts) const {
+	polist_obj l = mk_olist_obj(); 
+	for (termid t : ts) l->LIST()->push_back(get(t).json(*this));
+	return l;
+}
+
+pobj prover::json(const subst& s) const {
+	psomap_obj o = mk_somap_obj();
+	for (auto x : s) (*o->MAP())[dstr(x.first)] = get(x.second).json(*this);
+	return o;
+}
+
+pobj prover::json(ruleid t) const {
+	pobj m = mk_somap_obj();
+	(*m->MAP())[L"head"] = get(kb.head()[t]).json(*this);
+	(*m->MAP())[L"body"] = json(kb.body()[t]);
+	return m;
+}
+
+pobj prover::json(const ground& g) const {
+	pobj l = mk_olist_obj();
+	for (auto x : g) {
+		psomap_obj o = mk_somap_obj();
+		(*o->MAP())[L"src"] = json(x.first);
+		if (x.second) (*o->MAP())[L"env"] = json(*x.second);
+		l->LIST()->push_back(o);
+	}
+	return l;
+}
+
+pobj prover::ejson() const {
+	pobj o = mk_somap_obj();
+	for (auto x : e) {
+		polist_obj l = mk_olist_obj();
+		for (auto y : x.second) {
+			psomap_obj t = mk_somap_obj(), t1;
+			(*t->MAP())[L"head"] = get(y.first).json(*this);
+			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
+			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
+			(*t1->MAP())[L"args"] = json(y.second);
+			l->LIST()->push_back(t);
+		}
+		(*o->MAP())[dstr(x.first)] = l;
+	}
+	return o;
+}
+
+string prover::ruleset::format() const {
+	setproc(L"ruleset::format");
+	std::wstringstream ss;
+	ss << L'['<<endl;
+	for (auto it = r2id.begin(); it != r2id.end();) {
+		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
+		for (auto iit = it->second.begin(); iit != it->second.end();) {
+			ss << p->formatr(*iit, true);
+			if (++iit != it->second.end()) ss << L',';
+			ss << endl;
+		}
+		ss << L"]}";
+		if (++it != r2id.end()) ss << L',';
+	}
+	ss << L']';
+	return ss.str();
+}
