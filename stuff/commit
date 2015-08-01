@@ -9,10 +9,11 @@ for line in todo:
 	if line != "----\n":
 		out += line
 	else: # we have read in everything above a ---- by now
-		newtodo = (line + "".join(todo)) # keep the ---- line
-		open("todo", "w").write(newtodo)
+		if(0 == os.system("git commit -m \"" + out + "\"")):
+			newtodo = (line + "".join(todo)) # keep the ---- line
+			open("todo", "w").write(newtodo)
 
-		os.system("git commit -m \"" + out + "\"")
+			
 
 
 

@@ -322,7 +322,9 @@ struct Marpa {
             return done[thing];
 
 		//is it a literal?
-        if (dict[thing]._type == node::LITERAL) {
+        if ((dict[thing]._type == node::LITERAL) ||
+                (dict[thing]._type == node::IRI && thingv == L".")) // crap: nquads parser bug workaround
+        {
             //dout << "itsa str"<<std::endl;
             for (auto t: literals)
                 if (t.second == thingv) // is it a done literal?
@@ -571,9 +573,9 @@ struct Marpa {
                 while (post != inp.end() && *post != '\n')
                     post += 1;
                 //post += 10;
-                dout << L"at line " << std::count(inp.begin(), pos, '\n') << L", char " << charnum << L":" << std::endl;
+                dout << L"at line " << 1 + std::count(inp.begin(), pos, '\n') << L", char " << charnum << L":" << std::endl;
                 auto poss(pos);
-                if (poss != inp.begin()) poss--;
+                //if (poss != inp.begin()) poss--;
                 dout << string(pre, poss) << L"<HERE>" << string(pos, post) << std::endl;
 //                        dout << L"..\"" << string(pre, pos-1) << L"<HERE>" << string(pos, post) << L"\"..." << std::endl;
 
@@ -1127,6 +1129,6 @@ resources
 https://github.com/jeffreykegler/libmarpa/blob/master/test/simple/rule1.c#L18
 https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900
 https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
-*/
+ */
 
 

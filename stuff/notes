@@ -7,12 +7,6 @@ the nodes talk, as long as it is some valid encoding of quads?
 
 
 
-intro:
-http://sourceforge.net/p/eulersharp/code/HEAD/tree/trunk/2006/02swap/classes/Euler4.js
-
-
-
-
 env CC="clang++-3.6 -Xclang -fcolor-diagnostics" make -e  marpa 2>&1 | less -R
 env LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so ./tau --level 1 load_n3 n3.natural3
 
