@@ -26,13 +26,14 @@
 
 using namespace boost::algorithm;
 int _indent = 0;
+#define ISVAR(term) ((term.p < 0))
 
 termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
 	const term p = get(id);
-	if (p.p < 0) {
+	if (ISVAR(p)) {
 		auto it = s.find(p.p);
 		r = it == s.end() ? 0 : evaluate(it->second, s);
 	} else if (!p.s && !p.o)
@@ -56,8 +57,8 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 //	}
 	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
-	if (s.p < 0) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
-	else if (d.p < 0) {
+	if (ISVAR(s)) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
+	else if (ISVAR(d)) {
 		if ((v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f);
 		else {
 			if (f) {
