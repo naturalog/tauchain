@@ -95,9 +95,9 @@ public:
 		ground g(prover*) const;
 		termid btterm = 0;
 		proof(){}// : s(make_shared<subst>()) {}
-		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst()) 
-			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)){}
-		proof(const proof& p) : proof(p.rul, p.last, p.prev){}
+		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst()) 
+			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), creator(c) {}
+		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rul, p.last, p.prev){}
 	};
 
 	typedef std::queue<shared_ptr<proof>> queue_t;

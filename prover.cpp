@@ -357,7 +357,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push([&](){return make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst()/*, p->g*/);}());
+		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subst()));
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
@@ -437,19 +437,13 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		if (it == kb.r2id.end()) return;
 		subst s;
 		auto& ss = _p->s;
-#define LOOP { \
-	shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s); \
-	r->creator = _p; \
-	queue.push(r); \
-} s.clear()
-		if (ss) for (auto rl : it->second) { if (unify(t, *ss, head[rl], s, true)) LOOP; }
-		else	for (auto rl : it->second) { if (unify(t, head[rl], s, true)) LOOP; }
+		if (ss) for (auto rl : it->second) { if (unify(t, *ss, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
+		else	for (auto rl : it->second) { if (unify(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
 	}
 	else if (!p.prev) { pushev(_p); }
 	else {
-		shared_ptr<proof> r = make_shared<proof>(*p.prev);
+		shared_ptr<proof> r = make_shared<proof>(_p, *p.prev);
 		ruleid rl = p.rul;
-		r->creator = _p;
 		auto& ss = p.prev->s;
 		if (ss) r->s = make_shared<subst>(*ss);
 		else r->s = make_shared<subst>();
