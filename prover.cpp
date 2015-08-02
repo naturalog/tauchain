@@ -365,7 +365,6 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 				queue.push_front(std::async([rl, this, _p, s]() {
 					shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s/*, _p->g*/);
 					r->creator = _p;
-//					if (body[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
 					return r;
 				}));
 		}
@@ -375,14 +374,10 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		shared_ptr<proof> r = make_shared<proof>(*p.prev/*, p.g*/);
 		ruleid rl = p.rul;
 		r->creator = _p;
-//		if (!body[rl].empty()) r->g.emplace_back(rl, p.s);
 		r->s = make_shared<subst>(*p.prev->s);
 		unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
 		++r->last;
-//		r->qid = frame_id++;
-		//if (!euler_path(r)) 
-		step(r, queue);//
-//		queue.push_back(r);
+		step(r, queue);
 	}
 }
 

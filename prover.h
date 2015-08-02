@@ -87,13 +87,12 @@ public:
 		ruleid rul = 0;
 		uint last;
 		shared_ptr<proof> prev = 0, creator = 0;
-		shared_ptr<subst> s = make_shared<subst>();
+		shared_ptr<subst> s = 0;//make_shared<subst>();
 		ground g(prover*) const;
 		proof() : s(make_shared<subst>()) {}
 		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst()/*, const ground& _g = ground()*/) 
 			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)){}//, g(_g) { }
-		proof(const proof& p) : proof(p.rul, p.last, p.prev, *p.s){}//, p.g) { }
-		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev){}//, g(_g) { }
+		proof(const proof& p) : proof(p.rul, p.last, p.prev){}//, p.g) { }
 	};
 
 //	int frame_id = 0;
