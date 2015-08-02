@@ -46,18 +46,19 @@ language a cfg:Language;
 
 
 document marpa:list_of statement;
-	marpa:separator "...";
-	marpa:proper true.
+	marpa:separator ".";
+	marpa:proper true. 
 
+# for statements, separator after last item isnt optional
 # Formula does NOT need period on last statement
 
 formulacontent marpa:list_of statement;
-	marpa:separator "...".
+	marpa:separator ".".
 
 statement  cfg:mustBeOneSequence (
 		(declaration)
-		(universal)
-		(existential)
+#		(universal)
+#		(existential)
 		(simpleStatement)
 	).
 
@@ -74,9 +75,9 @@ existential cfg:mustBeOneSequence(
 
 
 declaration cfg:mustBeOneSequence(
-		( "@base" explicituri  )
+#		( "@base" explicituri  )
 		( "@prefix" prefix explicituri  )
-		( "@keywords" [ cfg:commaSeparatedListOf barename ] )
+#		( "@keywords" [ cfg:commaSeparatedListOf barename ] )
 	).
 
 
@@ -119,8 +120,8 @@ expression cfg:mustBeOneSequence(
 
 pathtail cfg:mustBeOneSequence(
 		(  )
-		( "!" expression )
-		( "^" expression )
+#		( "!" expression )
+#		( "^" expression )
 	).
 
 
@@ -152,15 +153,15 @@ symbol cfg:mustBeOneSequence (
 
 numericliteral cfg:mustBeOneSequence (
           ( integer )
-          ( rational )
-          ( double )
-          ( decimal )
+#          ( rational )
+#          ( double )
+#          ( decimal )
 ) .
 
 rational cfg:mustBeOneSequence (( integer "/" unsignedint)).
 
 
-literal cfg:mustBeOneSequence(( string dtlang)).
+literal cfg:mustBeOneSequence(( string )).#dtlang)).
 
 dtlang cfg:mustBeOneSequence(  ()  ("@" langcode)  ("^^" symbol)).
 
