@@ -35,12 +35,16 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	termid v;
 	bool r, ns = false;
 	const term& d = *_d, s = *_s;
-	if (ISVAR(s)) r = (v = evalvar(s, ssub)) ? unify_snovar(v, ssub, _d, dsub, f) : true;
+	if (ISVAR(s)) {
+		evalvar(v, s, ssub);
+		r = v ? unify_snovar(v, ssub, _d, dsub, f) : true;
+	}
 	else if (ISVAR(d)) {
-		if ((v = evalvar(d, dsub))) r = unify_dnovar(_s, ssub, v, dsub, f);
+		evalvar(v, d, dsub);
+		if (v) r = unify_dnovar(_s, ssub, v, dsub, f);
 		else {
 			if (f) {
-				dsub[d.p] = evaluate(_s, ssub);
+				dsub[d.p] = EVALS(_s, ssub);
 				ns = true;
 			}
 			r = true;
@@ -70,10 +74,11 @@ bool prover::unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, 
 	bool r, ns = false;
 	const term& d = *_d, s = *_s;
 	if (ISVAR(d)) {
-		if ((v = evalvar(d, dsub))) r = unify_dnovar(_s, ssub, v, dsub, f);
+		evalvar(v, d, dsub);
+		if (v) r = unify_dnovar(_s, ssub, v, dsub, f);
 		else {
 			if (f) {
-				dsub[d.p] = evaluate(_s, ssub);
+				dsub[d.p] = EVALS(_s, ssub);
 				ns = true;
 			}
 			r = true;
@@ -102,7 +107,10 @@ bool prover::unify_dnovar(termid _s, const subst& ssub, termid _d, subst& dsub, 
 	termid v;
 	bool r, ns = false;
 	const term& d = *_d, s = *_s;
-	if (ISVAR(s)) r = (v = evalvar(s, ssub)) ? unify_snovar(v, ssub, _d, dsub, f) : true;
+	if (ISVAR(s)) {
+		evalvar(v, s, ssub);
+		r = v ? unify_snovar(v, ssub, _d, dsub, f) : true;
+	}
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
@@ -128,10 +136,11 @@ bool prover::unify(termid _s, termid _d, subst& dsub, bool f) {
 	const term& d = *_d, s = *_s;
 	if (ISVAR(s)) r = true;
 	else if (ISVAR(d)) {
-		if ((v = evalvar(d, dsub))) r = unify_dnovar(_s, v, dsub, f);
+		evalvar(v, d, dsub);
+		if (v) r = unify_dnovar(_s, v, dsub, f);
 		else {
 			if (f) {
-				dsub[d.p] = evaluate(_s);
+				dsub[d.p] = EVAL(_s);
 				ns = true;
 			}
 			r = true;
@@ -278,11 +287,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term& t = *id;
 	int r = -1;
-	termid i0 = t.s ? evaluate(t.s, *p->s) : 0;
-	termid i1 = t.o ? evaluate(t.o, *p->s) : 0;
+	termid i0 = t.s ? EVALS(t.s, *p->s) : 0;
+	termid i1 = t.o ? EVALS(t.o, *p->s) : 0;
 	term r1, r2;
-	const term *t0 = i0 ? &(r1=*(i0=evaluate(t.s, *p->s))) : 0;
-	const term* t1 = i1 ? &(r2=*(i1=evaluate(t.o, *p->s))) : 0;
+	const term *t0 = i0 ? &(r1=*(i0=EVALS(t.s, *p->s))) : 0;
+	const term* t1 = i1 ? &(r2=*(i1=EVALS(t.o, *p->s))) : 0;
 	TRACE(	dout<<"called with term " << format(id); 
 		if (t0) dout << " subject = " << format(i0);
 		if (t1) dout << " object = " << format(i1);
@@ -402,7 +411,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		queue.push([p, id, this](){
 			shared_ptr<proof> r = make_shared<proof>();
 			*r = *p;
-			r->btterm = evaluate(id, *p->s);
+			r->btterm = EVALS(id, *p->s);
 			++r->last;
 			return r;
 		}());
@@ -413,7 +422,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : body[p->rul]) {
 		MARPA(substs.push_back(*p->s));
-		if (!(t = (p->s ? evaluate(r, *p->s) : evaluate(r)))) continue;
+		if (!(t = (p->s ? EVALS(r, *p->s) : EVAL(r)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 //		dout << "proved: " << format(t) << endl;
 	}

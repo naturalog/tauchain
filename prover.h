@@ -20,6 +20,12 @@
 
 #define ISVAR(term) ((term.p < 0))
 
+#define evalvar(v, x, s) { \
+		++evals; \
+		auto evvit = s.find(x.p); \
+		v = (evvit == s.end() ? 0 : evaluate(*evvit->second, s)); \
+	}
+
 struct term;
 class prover;
 typedef const term* termid;
@@ -130,8 +136,8 @@ private:
 
 	inline void pushev(shared_ptr<proof>);
 	inline void step(shared_ptr<proof>&, queue_t&);
-	inline termid evaluate(termid id) { return id ? evaluate(*id) : 0; }
-	inline termid evaluate(termid id, const subst& s) { return id ? evaluate(*id, s) : 0; }
+	#define EVAL(id) ((id) ? evaluate(*id) : 0)
+	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
 	inline termid evaluate(const term& p) {
 		++evals;
 		setproc(L"evaluate");
@@ -148,7 +154,7 @@ private:
 		termid r;
 		if (ISVAR(p)) {
 			auto it = s.find(p.p);
-			r = it == s.end() ? 0 : evaluate(it->second, s);
+			r = it == s.end() ? 0 : EVALS(it->second, s);
 		} else if (!p.s/* && !p.o*/)
 			r = &p;
 		else {
@@ -159,11 +165,6 @@ private:
 		return r;
 	}
 
-	inline termid evalvar(const term& p, const subst& s) {
-		++evals;
-		auto it = s.find(p.p);
-		return it == s.end() ? 0 : evaluate(*it->second, s);
-	}
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	bool unify(termid _s, termid _d, subst& dsub, bool f);
 	bool unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
