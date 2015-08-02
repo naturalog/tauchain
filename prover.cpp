@@ -26,38 +26,8 @@
 
 using namespace boost::algorithm;
 int _indent = 0;
-#define ISVAR(term) ((term.p < 0))
 
 term::term() : p(0), s(0), o(0) {}
-
-termid prover::evaluate(termid id) {
-	if (!id) return 0;
-	setproc(L"evaluate");
-	termid r;
-	const term& p = *id;
-	if (ISVAR(p)) return 0;
-	if (!p.s && !p.o) return id;
-	termid a = evaluate(p.s), b = evaluate(p.o);
-	return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
-}
-
-termid prover::evaluate(termid id, const subst& s) {
-	if (!id) return 0;
-	setproc(L"evaluate");
-	termid r;
-	const term& p = *id;
-	if (ISVAR(p)) {
-		auto it = s.find(p.p);
-		r = it == s.end() ? 0 : evaluate(it->second, s);
-	} else if (!p.s && !p.o)
-		r = id;
-	else {
-		termid a = evaluate(p.s, s), b = evaluate(p.o, s);
-		r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
-	}
-	TRACE(dout<<format(id) << ' ' << formats(s)<< " = " << format(r) << endl);
-	return r;
-}
 
 bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
 	if (!_s || !_d) return !_s == !_d;
@@ -65,9 +35,9 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	termid v;
 	bool r, ns = false;
 	const term& d = *_d, s = *_s;
-	if (ISVAR(s)) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
+	if (ISVAR(s)) r = (v = evalvar(s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
 	else if (ISVAR(d)) {
-		if ((v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f);
+		if ((v = evalvar(d, dsub))) r = unify(_s, ssub, v, dsub, f);
 		else {
 			if (f) {
 				dsub[d.p] = evaluate(_s, ssub);
@@ -100,7 +70,7 @@ bool prover::unify(termid _s, termid _d, subst& dsub, bool f) {
 	const term& d = *_d, s = *_s;
 	if (ISVAR(s)) r = true;
 	else if (ISVAR(d)) {
-		if ((v = evaluate(_d, dsub))) r = unify(_s, v, dsub, f);
+		if ((v = evalvar(d, dsub))) r = unify(_s, v, dsub, f);
 		else {
 			if (f) {
 				dsub[d.p] = evaluate(_s);

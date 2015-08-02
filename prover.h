@@ -17,9 +17,11 @@
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 
+#define ISVAR(term) ((term.p < 0))
+
 struct term;
 class prover;
-typedef term* termid;
+typedef const term* termid;
 struct term {
 	term();
 	term(nodeid _p, termid _s, termid _o);
@@ -127,8 +129,37 @@ private:
 
 	inline void pushev(shared_ptr<proof>);
 	inline void step(shared_ptr<proof>&, queue_t&);
-	termid evaluate(termid id);
-	termid evaluate(termid id, const subst& s);
+	inline termid evaluate(termid id) { return id ? evaluate(*id) : 0; }
+	inline termid evaluate(termid id, const subst& s) { return id ? evaluate(*id, s) : 0; }
+	inline termid evaluate(const term& p) {
+		setproc(L"evaluate");
+		termid r;
+		if (ISVAR(p)) return 0;
+		if (!p.s/* && !p.o*/) return &p;
+		termid a = evaluate(*p.s), b = evaluate(*p.o);
+		return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
+	}
+
+	inline termid evaluate(const term& p, const subst& s) {
+		setproc(L"evaluate");
+		termid r;
+		if (ISVAR(p)) {
+			auto it = s.find(p.p);
+			r = it == s.end() ? 0 : evaluate(it->second, s);
+		} else if (!p.s/* && !p.o*/)
+			r = &p;
+		else {
+			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
+			r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
+		}
+		TRACE(dout<<format(id) << ' ' << formats(s)<< " = " << format(r) << endl);
+		return r;
+	}
+
+	inline termid evalvar(const term& p, const subst& s) {
+		auto it = s.find(p.p);
+		return it == s.end() ? 0 : evaluate(*it->second, s);
+	}
 //	inline termid evaluate(termid id, shared_ptr<subst>& s) {
 //		static subst emp;
 //		return s ? evaluate(id, *s) : evaluate(id, emp);
