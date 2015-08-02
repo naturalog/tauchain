@@ -736,9 +736,9 @@ public:
     pnode n3formulacontent = uri("formulacontent");
 
     prover *prvr;
-    qdb dest;
-
-    qdb *input_before_fin = 0;
+    qdb *dest;
+    qdb kb;
+    qdb query;
     bool single_file_mode;
 
     map<string, string> prefixes;
@@ -771,7 +771,7 @@ public:
         return *s;
     }
 
-    N3(prover &prvr_, bool single_file_mode_ = false):prvr(&prvr_), single_file_mode(single_file_mode_)
+    N3(prover &prvr_, bool single_file_mode_ = false):prvr(&prvr_), single_file_mode(single_file_mode_), dest(&kb)
     {
         if (!marpa)marpa=new MarpaIris();
     }
@@ -876,7 +876,7 @@ public:
                 r.push_back(add_expression(i));
         }
         auto id = listid();
-        dest.second[id] = r;
+        dest->second[id] = r;
         return mkbnode(pstr(id));
     }
 
@@ -1003,16 +1003,16 @@ public:
                         o = object;
                         s = subject;
                     }
-                    if(dest.first.find(graph) == dest.first.end())
-                        dest.first[graph] = mk_qlist();
-                    dest.first[graph]->push_back(make_shared<quad>(s, predicate, o, graph));
+                    if(dest->first.find(graph) == dest->first.end())
+                        dest->first[graph] = mk_qlist();
+                    dest->first[graph]->push_back(make_shared<quad>(s, predicate, o, graph));
                 }
             }
         }
         else if (single_file_mode && *subject->value == L"fin" && graph == L"@default") {
             single_file_mode = false;//ignore further fins
-            input_before_fin = &dest;
-            dest = qdb();
+            dout <<  kb.first.size() << " rules loaded." << std::endl;
+            dest = &query;
         }
     }
 
@@ -1131,7 +1131,7 @@ std::string load_n3_cmd::help() const {
 
 int load_n3_cmd::operator()(const strings &args) {
     prover prvr(*load_quads(L"n3-grammar.nq", false));
-    TRACE("grammar loaded.");
+    TRACE(dout << "grammar loaded."<<std::endl);
 
     if (args.size() == 4) {
             std::string fname = ws(args[2]);
@@ -1148,10 +1148,10 @@ int load_n3_cmd::operator()(const strings &args) {
 
             N3 query = parse(qf, prvr);
 
-        prover p(kb.dest);
+        prover p(*kb.dest);
         dout << std::endl << std::endl << "kb:" << std::endl << p.formatkb();
 
-        p.query(query.dest);
+        p.query(*query.dest);
     }
     else if (args.size() == 3)
     {
@@ -1161,13 +1161,9 @@ int load_n3_cmd::operator()(const strings &args) {
             throw std::runtime_error("couldnt open natural3 file \"" + fname + "\"");
 
         N3 input = parse(f, prvr, true);
-
-        if (input.input_before_fin) {
-            prover p(*input.input_before_fin);
-            TRACE(dout << KRED << L"@default Rules:\n" << p.formatkb()<<std::endl);
-            p.query(input.dest);
-        }else
-            prover p(input.dest);
+        prover p(input.kb);
+        TRACE(dout << KRED << L"@default Rules:\n" << p.formatkb()<<std::endl);
+        p.query(input.query);
     }
     else
         throw std::runtime_error("gimme a filename or two");
