@@ -148,7 +148,7 @@ string prover::formatp(shared_ptr<proof> p) {
 	ss 	<< L"rule:   " << formatr(p->rul) << endl 
 		<< L"prev:   " << p->prev << endl
 		<< L"subst:  " << formats(p->s) << endl
-		<< L"ground: " << endl << formatg(p->g) << endl;
+		<< L"ground: " << endl << formatg(p->g(this)) << endl;
 	return ss.str();
 }
 void prover::printp(shared_ptr<proof> p) {
@@ -158,7 +158,7 @@ void prover::printp(shared_ptr<proof> p) {
 	prints(p->s);
 	dout <<endl<<indent()<< L"ground: " << endl;
 	++_indent;
-	printg(p->g);
+	printg(p->g(this));
 	--_indent;
 	dout << endl << KNRM;
 }

@@ -30,20 +30,34 @@ int _indent = 0;
 
 prover::term::term() : p(0), s(0), o(0) {}
 
-termid prover::evaluate(termid id, const subst& s) {
+termid prover::evaluate(termid id) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
 	const term p = get(id);
-	if (ISVAR(p)) {
-		auto it = s.find(p.p);
-		r = it == s.end() ? 0 : evaluate(it->second, s);
-	} else if (!p.s && !p.o)
-		r = id;
-	else {
-		termid a = evaluate(p.s, s), b = evaluate(p.o, s);
-		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
-	}
+	if (ISVAR(p)) return 0;
+	if (!p.s && !p.o) return id;
+	termid a = evaluate(p.s), b = evaluate(p.o);
+	return make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
+}
+
+termid prover::evaluate(termid id, const subst& s) {
+	if (!id) return 0;
+	setproc(L"evaluate");
+	termid r;
+//	if (s.empty()) r = evaluate(id);
+//	else {
+		const term p = get(id);
+		if (ISVAR(p)) {
+			auto it = s.find(p.p);
+			r = it == s.end() ? 0 : evaluate(it->second, s);
+		} else if (!p.s && !p.o)
+			r = id;
+		else {
+			termid a = evaluate(p.s, s), b = evaluate(p.o, s);
+			r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
+		}
+//	}
 	TRACE(dout<<format(id) << ' ' << formats(s)<< " = " << format(r) << endl);
 	return r;
 }
@@ -85,9 +99,9 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	setproc(L"euler_path");
 	auto ep = _p;
 	proof& p = *_p;
-	termid t = kb.head()[p.rul];
+	termid t = head[p.rul];
 	while ((ep = ep->prev))
-		if (ep->rul == p.rul && unify(kb.head()[ep->rul], *ep->s, t, *p.s, false))
+		if (ep->rul == p.rul && unify(head[ep->rul], *ep->s, t, *p.s, false))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return ep != 0;
 }
@@ -133,7 +147,7 @@ termid prover::list_first(termid cons, proof& p) {
 }
 
 uint64_t dlparam(const node& n) {
-	uint64_t p;
+	uint64_t p = 0;
 	if (!n.datatype || !n.datatype->size() || *n.datatype == *XSD_STRING) {
 		p = (uint64_t)n.value->c_str();
 	} else {
@@ -182,11 +196,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term t = get(id);
 	int r = -1;
-	termid i0 = t.s ? evaluate(t.s, p->s) : 0;
-	termid i1 = t.o ? evaluate(t.o, p->s) : 0;
+	termid i0 = t.s ? evaluate(t.s, *p->s) : 0;
+	termid i1 = t.o ? evaluate(t.o, *p->s) : 0;
 	term r1, r2;
-	const term *t0 = i0 ? &(r1=get(i0=evaluate(t.s, p->s))) : 0;
-	const term* t1 = i1 ? &(r2=get(i1=evaluate(t.o, p->s))) : 0;
+	const term *t0 = i0 ? &(r1=get(i0=evaluate(t.s, *p->s))) : 0;
+	const term* t1 = i1 ? &(r2=get(i1=evaluate(t.o, *p->s))) : 0;
 	TRACE(	dout<<"called with term " << format(id); 
 		if (t0) dout << " subject = " << format(i0);
 		if (t1) dout << " object = " << format(i1);
@@ -265,7 +279,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push_front(make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst(), p->g));
+		queue.push_front(std::async([&](){return make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst()/*, p->g*/);}));
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
@@ -302,24 +316,25 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		r = 1;
 	}
 	#endif
-	if (r == 1) {
-		shared_ptr<proof> r = make_shared<proof>();
-		*r = *p;
-		r->g = p->g;
-		r->g.emplace_back(kb.add(evaluate(id, p->s), termset()), make_shared<subst>());
-		++r->last;
-		queue.push_back(r);
-	}
-
+	if (r == 1) 
+		queue.push_back(std::async([p, id, this](){
+			shared_ptr<proof> r = make_shared<proof>();
+			*r = *p;
+//			TODO
+//			r->g = p->g;
+//			r->g.emplace_back(kb.add(evaluate(id, *p->s), termset()), make_shared<subst>());
+			++r->last;
+			return r;
+		}));
 	return r;
 }
 
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
-	for (auto r : kb.body()[p->rul]) {
+	for (auto r : body[p->rul]) {
 		MARPA(substs.push_back(*p->s));
-		if (!(t = evaluate(r, p->s))) continue;
-		e[get(t).p].emplace_back(t, p->g);
+		if (!(t = (p->s ? evaluate(r, *p->s) : evaluate(r)))) continue;
+		e[get(t).p].emplace_back(t, p->g(this));
 //		dout << "proved: " << format(t) << endl;
 	}
 }
@@ -337,33 +352,47 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 	setproc(L"step");
 	++steps;
 	proof& p = *_p;
-	auto rul = kb.body()[p.rul];
+	auto rul = body[p.rul];
 	if (p.last != rul.size()) {
+		if (euler_path(_p)) return;
 		termid t = rul[p.last];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
 		for (auto rl : it->second) {
 			subst s;
-			if (unify(t, *p.s, kb.head()[rl], s, true)) {
-				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s, p.g, -1);
-				if (kb.body()[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
-//				r->qid = frame_id++;
-				if (!euler_path(r)) queue.push_front(r);
-			}
+			if (unify(t, *_p->s, head[rl], s, true))
+				queue.push_front(std::async([rl, this, _p, s]() {
+					shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s/*, _p->g*/);
+					r->creator = _p;
+//					if (body[rl].empty()) r->g.emplace_back(rl, (shared_ptr<subst>)0);
+					return r;
+				}));
 		}
 	}
 	else if (!p.prev) { pushev(_p); }
 	else {
-		shared_ptr<proof> r = make_shared<proof>(*p.prev, p.g, -1);
+		shared_ptr<proof> r = make_shared<proof>(*p.prev/*, p.g*/);
 		ruleid rl = p.rul;
-		if (!kb.body()[rl].empty()) r->g.emplace_back(rl, p.s);
+		r->creator = _p;
+//		if (!body[rl].empty()) r->g.emplace_back(rl, p.s);
 		r->s = make_shared<subst>(*p.prev->s);
-		unify(kb.head()[rl], *p.s, kb.body()[r->rul][r->last], *r->s, true);
+		unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
 		++r->last;
 //		r->qid = frame_id++;
-		if (!euler_path(r)) step(r, queue);//queue.push_back(r);
+		//if (!euler_path(r)) 
+		step(r, queue);//
+//		queue.push_back(r);
 	}
+}
+
+prover::ground prover::proof::g(prover* p) const {
+	if (!creator) return ground();
+	ground r = creator->g(p);
+	if (creator->last != p->body[creator->rul].size()) {
+		if (p->body[rul].empty()) r.emplace_back(rul, (shared_ptr<subst>)0);
+	} else if (!p->body[creator->rul].empty()) r.emplace_back(creator->rul, creator->s);
+	return r;	
 }
 
 termid prover::list2term_simple(std::list<termid>& l) {
@@ -505,11 +534,14 @@ void prover::query(const qdb& q_, subst* s) {
 void prover::query(termset& goal, subst* s) {
 //	setproc(L"prover()");
 	queue_t queue, gnd;
+	queue.push_front(std::async([&](){
 	shared_ptr<proof> p = make_shared<proof>();
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = make_shared<subst>(*s);
+	return p;
+	}));
 	
 	#ifdef with_marpa
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
@@ -519,25 +551,23 @@ void prover::query(termset& goal, subst* s) {
 	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 //	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	#endif	
-	queue.push_front(p);
 	shared_ptr<proof> q;
 	using namespace std;
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	do {
-		q = queue.back();
+		q = queue.back().get();
 		queue.pop_back();
 //		printq(queue);
 		step(q, queue);
 		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
-	for (auto x : gnd) pushev(x);
+//	for (auto x : gnd) pushev(x);
 	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
 	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
-	t1 = high_resolution_clock::now();
 }
 
 prover::term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}

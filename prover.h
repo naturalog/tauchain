@@ -31,10 +31,10 @@ public:
 		pobj json(const prover&) const;
 	};
 	typedef u64 ruleid;
-	typedef std::vector<termid> termset;
+	typedef boost::container::vector<termid> termset;
 	class ruleset {
 	public:
-		typedef std::vector<termset> btype;
+		typedef boost::container::vector<termset> btype;
 	private:
 		termset _head;
 		btype  _body;
@@ -55,6 +55,8 @@ public:
 		inline const rulelist& operator[](nodeid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
+	const termset& head = kb.head();
+	const boost::container::vector<termset>& body = kb.body();
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
@@ -84,20 +86,19 @@ public:
 	struct proof {
 		ruleid rul = 0;
 		uint last;
-		shared_ptr<proof> prev = 0;
+		shared_ptr<proof> prev = 0, creator = 0;
 		shared_ptr<subst> s = make_shared<subst>();
-		ground g;
-//		int qid = 0;
-//		std::forward_list<proof*> next;
+		ground g(prover*) const;
 		proof() : s(make_shared<subst>()) {}
-		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), const ground& _g = ground(), int qid = -1) 
-			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), g(_g) { }
-		proof(const proof& p) : proof(p.rul, p.last, p.prev, *p.s, p.g) { }
-		proof(const proof& p, const ground& _g, int qid = -1) : rul(p.rul), last(p.last), prev(p.prev), g(_g) { }
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst()/*, const ground& _g = ground()*/) 
+			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)){}//, g(_g) { }
+		proof(const proof& p) : proof(p.rul, p.last, p.prev, *p.s){}//, p.g) { }
+		proof(const proof& p, const ground& _g) : rul(p.rul), last(p.last), prev(p.prev){}//, g(_g) { }
 	};
 
 //	int frame_id = 0;
-	typedef std::deque<shared_ptr<proof>> queue_t;
+	//typedef std::map<size_t, std::future<shared_ptr<proof>>> queue_t;
+	typedef std::deque<std::future<shared_ptr<proof>>> queue_t;
 //	void printq(queue_t& _p);
 
 	void addrules(pquad q, qdb& quads);
@@ -110,32 +111,34 @@ public:
 
 private:
 	class termdb {
-		typedef std::vector<term> terms_t;
+		typedef boost::container::vector<term> terms_t;
 	public:
 		terms_t terms;
-		typedef std::vector<termid> termlist;
-		typedef std::map<nodeid, termlist> p2id_t;
+		typedef std::map<nodeid, termset> p2id_t;
 		size_t size() const { return terms.size(); }
 		inline const term& operator[](termid id) const { return terms.at(id); }
-		inline const termlist& operator[](nodeid id) const { return p2id.at(id); }
+		inline const termset& operator[](nodeid id) const { return p2id.at(id); }
 		inline termid add(nodeid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
 	private:
 		p2id_t p2id;
 	} _terms;
 	friend ruleset;
+	friend proof;
 	int steps = 0;
 	bool printNow;
 
-	void pushev(shared_ptr<proof>);
-	void step(shared_ptr<proof>&, queue_t&);
-	termid evaluate(termid id, const subst& s);
-	inline termid evaluate(termid id, shared_ptr<subst>& s) {
-		static subst emp;
-		return s ? evaluate(id, *s) : evaluate(id, emp);
-	}
-	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	inline void pushev(shared_ptr<proof>);
+	inline void step(shared_ptr<proof>&, queue_t&);
+	inline termid evaluate(termid id);
+	inline termid evaluate(termid id, const subst& s);
+//	inline termid evaluate(termid id, shared_ptr<subst>& s) {
+//		static subst emp;
+//		return s ? evaluate(id, *s) : evaluate(id, emp);
+//	}
+	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+//	bool unify2(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	//inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f, bool printNow) { return unify(_s, *ssub, _d, *dsub, f, printNow); }
-	bool euler_path(shared_ptr<proof>&);
+	inline bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
