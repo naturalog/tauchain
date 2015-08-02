@@ -14,9 +14,9 @@
 #include <future>
 #include <functional>
 #include <forward_list>
-#include <boost/interprocess/containers/map.hpp>
-#include <boost/interprocess/containers/set.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+//#include <boost/interprocess/containers/map.hpp>
+//#include <boost/interprocess/containers/set.hpp>
+//#include <boost/interprocess/containers/vector.hpp>
 
 #define ISVAR(term) ((term.p < 0))
 
@@ -35,10 +35,10 @@ typedef std::map<nodeid, termid> subst;
 class prover {
 public:
 	typedef u64 ruleid;
-	typedef boost::container::vector<termid> termset;
+	typedef std::vector<termid> termset;
 	class ruleset {
 	public:
-		typedef boost::container::vector<termset> btype;
+		typedef std::vector<termset> btype;
 	private:
 		termset _head;
 		btype  _body;
@@ -60,7 +60,7 @@ public:
 		r2id_t r2id;
 	} kb;
 	const termset& head = kb.head();
-	const boost::container::vector<termset>& body = kb.body();
+	const std::vector<termset>& body = kb.body();
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
@@ -161,23 +161,11 @@ private:
 		auto it = s.find(p.p);
 		return it == s.end() ? 0 : evaluate(*it->second, s);
 	}
-//	inline termid evaluate(termid id, shared_ptr<subst>& s) {
-//		static subst emp;
-//		return s ? evaluate(id, *s) : evaluate(id, emp);
-//	}
-//	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, ssub, get(_d), _d, dsub, f); }
-//	inline bool unify(const term& s, termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, ssub, get(_d), _d, dsub, f) : 0; }
-//	inline bool unify(termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, ssub, d, _d, dsub, f) : 0; }
 	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-//	inline bool unify(termid _s, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, get(_d), _d, dsub, f); }
-//	inline bool unify(const term& s, termid _s, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, get(_d), _d, dsub, f) : 0; }
-//	inline bool unify(termid _s, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, d, _d, dsub, f) : 0; }
 	bool unify(termid _s, termid _d, subst& dsub, bool f);
-//	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-//	inline bool unify(const term& s, termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-//	inline bool unify(termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f);
-//	bool unify2(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	//inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f, bool printNow) { return unify(_s, *ssub, _d, *dsub, f, printNow); }
+	bool unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	bool unify_dnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	bool unify_dnovar(termid _s, termid _d, subst& dsub, bool f);
 	inline bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);
