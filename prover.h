@@ -135,7 +135,7 @@ private:
 	bool printNow;
 
 	inline void pushev(shared_ptr<proof>);
-	inline void step(shared_ptr<proof>&, queue_t&);
+	inline void step(shared_ptr<proof>&, queue_t&, queue_t&);
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
 	inline termid evaluate(const term& p) {

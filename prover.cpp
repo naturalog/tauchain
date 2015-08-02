@@ -437,7 +437,7 @@ void prover::pushev(shared_ptr<proof> p) {
 //	}
 //}
 
-void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
+void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
 	++steps;
 	proof& p = *_p;
@@ -453,7 +453,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		if (ss) for (auto rl : it->second) { if (unify(t, *ss, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
 		else	for (auto rl : it->second) { if (unify(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
 	}
-	else if (!p.prev) { pushev(_p); }
+	else if (!p.prev) { gnd.push(_p); }
 	else {
 		shared_ptr<proof> r = make_shared<proof>(_p, *p.prev);
 		ruleid rl = p.rul;
@@ -463,7 +463,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		if (p.s) unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
 		else unify(head[rl], body[r->rul][r->last], *r->s, true);
 		++r->last;
-		step(r, queue);
+		step(r, queue, gnd);
 	}
 }
 
@@ -641,13 +641,12 @@ void prover::query(termset& goal, subst* s) {
 		q = queue.front();//.get();
 		queue.pop();
 //		printq(queue);
-		step(q, queue);
+		step(q, queue, gnd);
 		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
-//	for (auto x : gnd) pushev(x);
-	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
+	while (!gnd.empty()) { auto x = gnd.front(); gnd.pop(); pushev(x); }
 	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl;
 }
