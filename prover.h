@@ -7,6 +7,7 @@
 */
 
 #include <deque>
+#include <queue>
 #include <climits>
 #include "rdf.h"
 #include "misc.h"
@@ -99,7 +100,7 @@ public:
 		proof(const proof& p) : proof(p.rul, p.last, p.prev){}
 	};
 
-	typedef std::deque<shared_ptr<proof>> queue_t;
+	typedef std::queue<shared_ptr<proof>> queue_t;
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
