@@ -37,7 +37,7 @@ bool ask(prover *prover, nodeid s, const pnode p, const pnode o) {
     prover::termset query;
     query.emplace_back(prover->make(p, prover->make(s), prover->make(o)));
 
-    prover->query(query);
+    prover->do_query(query);
 
     bool r = false;
 
@@ -63,7 +63,7 @@ resids ask(prover *prover, nodeid s, const pnode p) {    /* s and p in, a list o
 
     //dout << "query: "<< prover->format(query) << endl;;
 
-    prover->query(query);
+    prover->do_query(query);
 
     //dout << "substs: "<< std::endl;
 
@@ -93,7 +93,7 @@ termid ask1t(prover *prover, nodeid s, const pnode p) {
     termid iii = prover->make(p, xxs, o_var);
     assert (iii);
     query.emplace_back(iii);
-    prover->query(query);
+    prover->do_query(query);
     for (auto x : prover->substs) {
         subst::iterator binding_it = x.find(prover->get(o_var).p);
         if (binding_it != x.end())
@@ -123,7 +123,7 @@ resids ask(prover *prover, const pnode p, nodeid o) {
 
     //dout << "query: "<< prover->format(query) << endl;;
 
-    prover->query(query);
+    prover->do_query(query);
 
     //dout << "substs: "<< std::endl;
 
@@ -301,7 +301,7 @@ struct Marpa {
         nodeid whitespace_ = ask1(prvr2, language, bnf_whitespace);
         if (whitespace_) {
             whitespace = value(whitespace_);
-            dout << L"whitespace:" << whitespace <<std::endl;
+            TRACE(dout << L"whitespace:" << whitespace <<std::endl);
         }
         /*so is bnf:document, the root rule*/
         nodeid root = ask1(prvr2, language, bnf_document);
@@ -315,7 +315,7 @@ struct Marpa {
 
 		//what we are adding
         string thingv = value(thing);
-        dout << "thingv:" << thingv << std::endl;
+        TRACE(dout << "thingv:" << thingv << std::endl);
 
 		//is it a rule or terminal thats been added or we started adding it already?
         if (done.find(thing) != done.end())
@@ -376,7 +376,7 @@ struct Marpa {
         else
             throw wruntime_error(L"whats " + thingv + L"?");
 
-        dout << "added sym " << symbol << std::endl;
+        TRACE(dout << "added sym " << symbol << std::endl);
         return symbol;
     }
 
@@ -407,10 +407,10 @@ struct Marpa {
     }
 
     void rule_new(sym lhs, syms rhs) {
-        dout << sym2str(lhs) << L" ::= ";
+        TRACE(dout << sym2str(lhs) << L" ::= ");
         for (sym s: rhs)
-            dout << sym2str(s);
-        dout << std::endl;
+            TRACE(dout << sym2str(s));
+        TRACE(dout << std::endl);
         rules[check_int(marpa_g_rule_new(g, lhs, &rhs[0], rhs.size()))] = lhs;
         /*if (r == -2)
         {
@@ -475,11 +475,11 @@ struct Marpa {
 
         print_events();
 
-        dout << "terminals:\n";
+        TRACE(dout << "terminals:\n");
         for (auto t:terminals)
-            dout << "(" << t.first << ")" << t.second->name << ": " << t.second->regex << std::endl;
+            TRACE(dout << "(" << t.first << ")" << t.second->name << ": " << t.second->regex << std::endl);
 
-        dout << "tokenizing..\n";
+        TRACE(dout << "tokenizing..\n");
 
         std::vector <tokt> toks; // ranges of individual tokens within the input string
         toks.push_back(tokt(inp.end(), inp.end()));
@@ -506,7 +506,7 @@ struct Marpa {
             if (whitespace.size() && regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous)) {
                 if (what.size()) {
                     int llll = what[0].length();
-                    dout << L"skipping " << llll << L" comment chars" << std::endl;
+                    TRACE(dout << L"skipping " << llll << L" comment chars" << std::endl);
                     pos += llll;
                     continue;
                 }
@@ -555,8 +555,8 @@ struct Marpa {
                 }
                 assert(best_syms.size());
                 toks.push_back(tokt(pos, pos + best_len));
-                dout << std::distance(inp.begin(), pos) << L"-" << std::distance(inp.begin(), pos + best_len) <<
-                L" \"" << string(pos, pos + best_len) << L"\" - " << sym2str(best_syms[0]) << std::endl;
+                TRACE(dout << std::distance(inp.begin(), pos) << L"-" << std::distance(inp.begin(), pos + best_len) <<
+                L" \"" << string(pos, pos + best_len) << L"\" - " << sym2str(best_syms[0]) << std::endl);
                 check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1));
                 check_int(marpa_r_earleme_complete(r));
                 pos += best_len;
@@ -591,7 +591,7 @@ struct Marpa {
             }
         }
 
-        dout << "evaluating.." << std::endl;
+        TRACE(dout << "evaluating.." << std::endl);
 
         //marpa allows variously ordered lists of ambiguous parses, we just grab the default
         Marpa_Bocage b = marpa_b_new(r, -1);
@@ -692,10 +692,10 @@ struct Marpa {
         marpa_o_unref(o);
         marpa_b_unref(b);
 
-        dout << L"{" << sexp[0] << L"}" << std::endl<< std::endl;
+        TRACE(dout << L"{" << sexp[0] << L"}" << std::endl<< std::endl);
 
         termid result = stack[0];
-        dout << L"result0: " << prvr->format(result) << std::endl;
+        TRACE(dout << L"result0: " << prvr->format(result) << std::endl);
         return result;
     }
 
@@ -720,21 +720,28 @@ public:
     pnode n3expression = uri("expression");
     pnode n3pathitem = uri("pathitem");
     pnode n3predicate = uri("predicate");
-    pnode n3statement_with_dot = uri("statement_with_dot");
+    //pnode n3statement_with_dot = uri("statement_with_dot");
     pnode n3statement = uri("statement");
+    pnode n3declaration = uri("declaration");
     pnode n3simpleStatement = uri("simpleStatement");
+    pnode n3prefix = uri("prefix");
     pnode n3qname = uri("qname");
     pnode n3literal = uri("literal");
     pnode n3numericliteral = uri("numericliteral");
     pnode n3string = uri("string");
     pnode n3boolean = uri("boolean");
     pnode n3integer = uri("integer");
-    pnode n3dtlang = uri("dtlang");
+    //pnode n3dtlang = uri("dtlang");
     pnode n3quickvariable= uri("quickvariable");
     pnode n3formulacontent = uri("formulacontent");
 
     prover *prvr;
-    qdb &dest;
+    qdb dest;
+
+    qdb *input_before_fin = 0;
+    bool single_file_mode;
+
+    map<string, string> prefixes;
 
     string listid()
     {
@@ -753,7 +760,18 @@ public:
         return rr;
     }
 
-    N3(prover &prvr_, qdb &dest_):prvr(&prvr_), dest(dest_)
+
+    string get_value(nodeid n)
+    {
+        assert(n);
+        nodeid v = q(n, marpa->has_value);
+        assert(v);
+        auto s = dict[v].value;
+        assert(s);
+        return *s;
+    }
+
+    N3(prover &prvr_, bool single_file_mode_ = false):prvr(&prvr_), single_file_mode(single_file_mode_)
     {
         if (!marpa)marpa=new MarpaIris();
     }
@@ -816,9 +834,19 @@ public:
         nodeid qname = q(x, n3qname);
         if (qname)
         {
-            nodeid val = q(qname, marpa->has_value);
-            assert(val);
-            return mkiri(dict[val].value);
+            string v = get_value(qname);
+
+            auto pos = v.find(L":");
+            if (pos != string::npos)
+            {
+                string pref = string(v.begin(), v.begin() + pos);
+                if (prefixes.find(pref) != prefixes.end())
+                {
+                    string rest = string(v.begin() + pos + 1, v.end());
+                    v = prefixes[pref] + rest;
+                }
+            }
+            return mkiri(pstr(v));
         }
         assert(false);
     }
@@ -895,7 +923,7 @@ public:
     void add_simpleStatement(nodeid sim, string graph)
     {
         assert(sim);
-        dout << "   " << sim << "   ";
+        TRACE(dout << "   " << sim << "   ");
         nodeid subj = q(sim, n3subject);
         assert(subj);
         nodeid se   = q(subj, n3expression);
@@ -915,7 +943,7 @@ public:
                 if (prop)
                     prop = q(prop, n3propertylist);
             }
-            dout << "props:" << props.size();
+            TRACE(dout << "props:" << props.size());
             //now we have property lists in a list
             for (auto prop:props) {
 
@@ -981,21 +1009,111 @@ public:
                 }
             }
         }
+        else if (single_file_mode && *subject->value == L"fin" && graph == L"@default") {
+            single_file_mode = false;//ignore further fins
+            input_before_fin = &dest;
+            dest = qdb();
+        }
     }
 
     void add_statements(termid list, string graph) {
         resids statements = get_dotstyle_list(list);
-        dout << std::endl << graph << " statements: " << statements.size() << std::endl;
+        TRACE(dout << std::endl << graph << ":" << std::endl);
 
         for (auto s: statements) {
             if (ask(prvr, s, marpa->is_parse_of, n3statement)) {
                 nodeid sim = q(s, n3simpleStatement);
                 if (sim)
                     add_simpleStatement(sim, graph);
+            }else if (ask(prvr, s, marpa->is_parse_of, n3declaration)) {
+                nodeid decl = q(s, n3declaration);
+                nodeid a0 = q(decl, marpa->arg0);
+                assert(a0);
+                if(*dict[a0].value == L"@prefix")
+                {
+                    nodeid p = q(decl, n3prefix);
+                    nodeid uri = q(decl, n3explicituri);
+                    string uri_s = get_value(uri);
+                    string p_s = get_value(p);
+                    prefixes[p_s] = uri_s;
+                }
+
+
             }
+
         }
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+N3 parse(std::ifstream &f, prover& grammar, bool single_file_mode = false)
+{
+    setproc(L"N3");
+    prover prvr(grammar);
+
+    pnode input = mkliteral(pstr(load_file(f)), 0, 0);
+    assert(input);
+
+    prvr.kb.add(
+            prvr.make(
+                    mkiri(pstr(L":contents")),
+                    prvr.make(mkiri(pstr(L":input"))),
+                    prvr.make(input)));
+
+    std::wifstream ln3("load_n3");
+
+    auto query = readqdb (ln3);
+    TRACE(dout << "query loaded.");
+
+    prvr.do_query(query);
+
+    TRACE(dout << "query done.");
+
+    termid raw = 0;
+    for (auto x : prvr.substs) {
+        TRACE(dout << "subst:");
+        TRACE(prvr.prints(x));
+        TRACE(dout << std::endl);
+        for (auto it: x) {
+            TRACE(dout << *dict[it.first].value << std::endl);
+            if (*dict[it.first].value == L"?O") {
+                raw = it.second;
+                break;
+            }
+        }
+    }
+    prvr.substs.clear();
+    prvr.e.clear();
+
+    TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << prvr.formatkb());
+
+    if (!raw)
+        throw std::runtime_error("oopsie, something went wrong with your tau.");
+
+    /*
+    query = load_quads(L"test", true);
+    dout << "------" << std::endl;
+    prover prvr2(prvr);
+    prvr2(*query);
+    */
+
+    TRACE(dout << "retrieving results." << std::endl);
+
+    N3 n3(prvr, single_file_mode);
+    n3.add_statements(raw, L"@default");
+
+    return n3;
+}
+
 
 
 
@@ -1012,88 +1130,49 @@ std::string load_n3_cmd::help() const {
 }
 
 int load_n3_cmd::operator()(const strings &args) {
-    if (args.size() != 4)
-        throw std::runtime_error("gimme a kb and a query filenames");
+    prover prvr(*load_quads(L"n3-grammar.nq", false));
+    TRACE("grammar loaded.");
 
-    std::string fname = ws(args[2]);
-    std::ifstream f(fname);
-    if (!f.is_open())
-        throw std::runtime_error("couldnt open natural3 kb file \"" + fname + "\"");
-    qdb kb = load_n3(f);
+    if (args.size() == 4) {
+            std::string fname = ws(args[2]);
+            std::ifstream f(fname);
+            if (!f.is_open())
+                throw std::runtime_error("couldnt open natural3 kb file \"" + fname + "\"");
 
-    fname = ws(args[3]);
-    std::ifstream qf(fname);
-    if (!qf.is_open())
-        throw std::runtime_error("couldnt open natural3 query file \"" + fname + "\"");
-    qdb query = load_n3(qf);
+            N3 kb = parse(f, prvr);
 
+            fname = ws(args[3]);
+            std::ifstream qf(fname);
+            if (!qf.is_open())
+                throw std::runtime_error("couldnt open natural3 query file \"" + fname + "\"");
 
-    prover p(kb);
-    p.query(query);
+            N3 query = parse(qf, prvr);
 
+        prover p(kb.dest);
+        dout << std::endl << std::endl << "kb:" << std::endl << p.formatkb();
+
+        p.query(query.dest);
+    }
+    else if (args.size() == 3)
+    {
+        std::string fname = ws(args[2]);
+        std::ifstream f(fname);
+        if (!f.is_open())
+            throw std::runtime_error("couldnt open natural3 file \"" + fname + "\"");
+
+        N3 input = parse(f, prvr, true);
+
+        if (input.input_before_fin) {
+            prover p(*input.input_before_fin);
+            TRACE(dout << KRED << L"@default Rules:\n" << p.formatkb()<<std::endl);
+            p.query(input.dest);
+        }else
+            prover p(input.dest);
+    }
+    else
+        throw std::runtime_error("gimme a filename or two");
 
     return 0;
-}
-
-
-qdb load_n3_cmd::load_n3(std::ifstream &f) {
-    prover prvr(*load_quads(L"n3-grammar.nq", false));
-    dout << "grammar loaded." << std::endl;
-
-    pnode input = mkliteral(pstr(load_file(f)), 0, 0);
-    assert(input);
-
-    prvr.kb.add(
-            prvr.make(
-                    mkiri(pstr(L":contents")),
-                    prvr.make(mkiri(pstr(L":input"))),
-                    prvr.make(input)));
-
-    auto query = load_quads(L"load_n3", false);
-    dout << "query loaded." << std::endl;
-
-    prvr.query(*query);
-
-    dout << "query done." << std::endl;
-
-    termid raw = 0;
-    for (auto x : prvr.substs) {
-        dout << "subst:" << std::endl;
-        prvr.prints(x);
-        dout << std::endl;
-        for (auto it: x) {
-            dout << *dict[it.first].value << std::endl;
-            if (*dict[it.first].value == L"?O") {
-                raw = it.second;
-                break;
-            }
-        }
-    }
-    prvr.substs.clear();
-    prvr.e.clear();
-
-    dout << std::endl << std::endl << "prvr:" << std::endl << prvr.formatkb();
-
-    if (!raw)
-        throw std::runtime_error("oopsie, something went wrong with your tau.");
-
-    /*
-    query = load_quads(L"test", true);
-    dout << "------" << std::endl;
-    prover prvr2(prvr);
-    prvr2(*query);
-    */
-
-    dout << "retrieving results." << std::endl;
-    qdb dest;
-    N3 n3(prvr, dest);
-    n3.add_statements(raw, L"@default");
-
-    /*just to show*/
-    prover d(dest);
-    dout << std::endl << std::endl << "results:" << std::endl << d.formatkb();
-
-    return dest;
 }
 
 
@@ -1110,7 +1189,6 @@ void *marpa_parser(prover *p, nodeid language, shared_ptr<prover::proof> prf) {
 termid marpa_parse(void* marpa, string input) {
     Marpa *m = (Marpa *)marpa;
     termid result = m->parse(input);
-    dout << L"result1: " << m->prvr->format(result) << std::endl;
     return result;
 }
 
