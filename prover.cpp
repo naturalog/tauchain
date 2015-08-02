@@ -601,14 +601,6 @@ void prover::query(termset& goal, subst* s) {
 
 prover::term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
-const prover::term& prover::get(termid id) const {
-#ifdef DEBUG
-	if (!id || id > (termid)_terms.size())
-		throw std::runtime_error("invalid term id passed to prover::get");
-#endif
-	return _terms[id - 1]; 
-}
-
 termid prover::make(pnode p, termid s, termid o) { 
 	return make(dict.set(*p), s, o); 
 }
@@ -617,8 +609,8 @@ termid prover::make(nodeid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif
-	if (_terms.terms.capacity() - _terms.terms.size() < 10)
-		_terms.terms.reserve(5 * _terms.terms.size() / 6);
+//	if ( (_terms.terms.capacity() - _terms.terms.size() ) < _terms.terms.size() )
+//		_terms.terms.reserve(2 * _terms.terms.size());
 	return _terms.add(p, s, o);
 }
 

@@ -34,11 +34,11 @@ Y a nat.
 o succ two.
  
 fin.
-(z z) add ?q.
+?p add ?q.
+?r mul ?t.
+?q eq ?t.
 
 #(?q two) mul ?r.
-
-
 #?p succ ?u.
 #(?u ?v) mul ?m.
 #(?u ?v) add ?s.

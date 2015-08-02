@@ -63,7 +63,7 @@ public:
 	prover ( const prover& p );
 	void query(termset& goal, subst* s = 0);
 	void query(const qdb& goal, subst* s = 0);
-	const term& get(termid) const;
+	inline const term& get(termid t) const { return _terms[t]; }
 	const term& get(nodeid) const { throw std::runtime_error("called get(termid) with nodeid"); }
 	~prover();
 
@@ -108,14 +108,19 @@ public:
 
 private:
 	class termdb {
-		typedef boost::container::vector<term> terms_t;
+		typedef boost::container::map<termid, term> terms_t;
 	public:
 		terms_t terms;
 		typedef std::map<nodeid, termset> p2id_t;
 		size_t size() const { return terms.size(); }
 		inline const term& operator[](termid id) const { return terms.at(id); }
 		inline const termset& operator[](nodeid id) const { return p2id.at(id); }
-		inline termid add(nodeid p, termid s, termid o) { terms.emplace_back(p, s, o); termid r = size(); p2id[p].push_back(r); return r; }
+		inline termid add(nodeid p, termid s, termid o) {
+			termid r = size() + 1;
+			terms[r] = term(p, s, o);
+			p2id[p].push_back(r);
+			return r;
+		}
 	private:
 		p2id_t p2id;
 	} _terms;
