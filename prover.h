@@ -76,8 +76,6 @@ public:
 	void do_query(const qdb& goal, subst* s = 0);
 	void query(const termset& goal, subst* s = 0);
 	void query(const qdb& goal, subst* s = 0);
-//	inline const term& get(termid t) const { return *t; }// _terms[t]; }
-	const term& get(nodeid) const { throw std::runtime_error("called get(termid) with nodeid"); }
 	~prover();
 
 	typedef std::list<std::pair<ruleid, shared_ptr<subst>>> ground;
