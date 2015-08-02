@@ -96,7 +96,7 @@ public:
 		proof(const proof& p) : proof(p.rul, p.last, p.prev){}
 	};
 
-	typedef std::deque<std::future<shared_ptr<proof>>> queue_t;
+	typedef std::deque<shared_ptr<proof>> queue_t;
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);

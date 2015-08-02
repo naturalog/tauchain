@@ -303,7 +303,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push_front(std::async([&](){return make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst()/*, p->g*/);}));
+		queue.push_front([&](){return make_shared<proof>(kb.add(make ( A, t.s, t.o ), ts), 0, p, subst()/*, p->g*/);}());
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
@@ -341,13 +341,13 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	}
 	#endif
 	if (r == 1) 
-		queue.push_back(std::async([p, id, this](){
+		queue.push_back([p, id, this](){
 			shared_ptr<proof> r = make_shared<proof>();
 			*r = *p;
 			r->btterm = evaluate(id, *p->s);
 			++r->last;
 			return r;
-		}));
+		}());
 	return r;
 }
 
@@ -382,14 +382,20 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
 		subst s;
-		for (auto rl : it->second) {
-			auto& ss = _p->s;
-			if (ss ? unify(t, *_p->s, head[rl], s, true) : unify(t, head[rl], s, true))
-				queue.push_front(std::async([rl, this, _p, s]() {
-					shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s);
-					r->creator = _p;
-					return r;
-				}));
+		auto& ss = _p->s;
+		if (ss) for (auto rl : it->second) {
+			if (unify(t, *ss, head[rl], s, true)) {
+				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s);
+				r->creator = _p;
+				queue.push_front(r);
+			}
+			s.clear();
+		} else for (auto rl : it->second) {
+			if (unify(t, head[rl], s, true)) {
+				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s);
+				r->creator = _p;
+				queue.push_front(r);
+			}
 			s.clear();
 		}
 	}
@@ -557,14 +563,14 @@ void prover::query(const qdb& q_, subst* s) {
 void prover::query(termset& goal, subst* s) {
 //	setproc(L"prover()");
 	queue_t queue, gnd;
-	queue.push_front(std::async([&](){
+	queue.push_front([&](){
 	shared_ptr<proof> p = make_shared<proof>();
 	p->rul = kb.add(0, goal);
 	p->last = 0;
 	p->prev = 0;
 	if (s) p->s = make_shared<subst>(*s);
 	return p;
-	}));
+	}());
 	
 	#ifdef with_marpa
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
@@ -579,7 +585,7 @@ void prover::query(termset& goal, subst* s) {
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	do {
-		q = queue.back().get();
+		q = queue.back();//.get();
 		queue.pop_back();
 //		printq(queue);
 		step(q, queue);
@@ -589,7 +595,7 @@ void prover::query(termset& goal, subst* s) {
 	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
+	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
 }
 
