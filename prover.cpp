@@ -30,50 +30,43 @@ int _indent = 0;
 
 prover::term::term() : p(0), s(0), o(0) {}
 
-termid prover::evaluate(termid id) {
+termid prover::evaluate(const term& p, termid id) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
-	const term p = get(id);
 	if (ISVAR(p)) return 0;
 	if (!p.s && !p.o) return id;
 	termid a = evaluate(p.s), b = evaluate(p.o);
 	return make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
 }
 
-termid prover::evaluate(termid id, const subst& s) {
+termid prover::evaluate(const term& p, termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
-//	if (s.empty()) r = evaluate(id);
-//	else {
-		const term p = get(id);
-		if (ISVAR(p)) {
-			auto it = s.find(p.p);
-			r = it == s.end() ? 0 : evaluate(it->second, s);
-		} else if (!p.s && !p.o)
-			r = id;
-		else {
-			termid a = evaluate(p.s, s), b = evaluate(p.o, s);
-			r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
-		}
-//	}
+	if (ISVAR(p)) {
+		auto it = s.find(p.p);
+		r = it == s.end() ? 0 : evaluate(it->second, s);
+	} else if (!p.s && !p.o)
+		r = id;
+	else {
+		termid a = evaluate(p.s, s), b = evaluate(p.o, s);
+		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
+	}
 	TRACE(dout<<format(id) << ' ' << formats(s)<< " = " << format(r) << endl);
 	return r;
 }
 
-bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
-	if (!_d != !_s) return false;
+bool prover::unify(const prover::term& s, termid _s, const subst& ssub, const prover::term& d, termid _d, subst& dsub, bool f) {
 	setproc(L"unify");
 	termid v;
-	const term s = get(_s), d = get(_d);
 	bool r, ns = false;
-	if (ISVAR(s)) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
+	if (ISVAR(s)) r = (v = evaluate(s, _s, ssub)) ? unify(v, ssub, d, _d, dsub, f) : true;
 	else if (ISVAR(d)) {
-		if ((v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f);
+		if ((v = evaluate(d, _d, dsub))) r = unify(s, _s, ssub, v, dsub, f);
 		else {
 			if (f) {
-				dsub[d.p] = evaluate(_s, ssub);
+				dsub[d.p] = evaluate(s, _s, ssub);
 				ns = true;
 			}
 			r = true;
@@ -85,6 +78,37 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 		r = unify(s.o, ssub, d.o, dsub, f);
 	if (f) {
 		TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+		if (r) {
+			dout << "passed";
+			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+		} else dout << "failed";
+		dout << endl);
+	}
+	return r;
+}
+
+bool prover::unify(const prover::term& s, termid _s, const prover::term& d, termid _d, subst& dsub, bool f) {
+	setproc(L"unify");
+	termid v;
+	bool r, ns = false;
+	if (ISVAR(s)) r = true;
+	else if (ISVAR(d)) {
+		if ((v = evaluate(d, _d, dsub))) r = unify(s, _s, v, dsub, f);
+		else {
+			if (f) {
+				dsub[d.p] = evaluate(s, _s);
+				ns = true;
+			}
+			r = true;
+		}
+	}
+	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else if (!s.s) r = true;
+	else if ((r = unify(s.s, d.s, dsub, f)))
+		r = unify(s.o, d.o, dsub, f);
+	if (f) {
+		TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
 			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
 		if (r) {
 			dout << "passed";
@@ -320,9 +344,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		queue.push_back(std::async([p, id, this](){
 			shared_ptr<proof> r = make_shared<proof>();
 			*r = *p;
-//			TODO
-//			r->g = p->g;
-//			r->g.emplace_back(kb.add(evaluate(id, *p->s), termset()), make_shared<subst>());
+			r->btterm = evaluate(id, *p->s);
 			++r->last;
 			return r;
 		}));
@@ -359,23 +381,28 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto it = kb.r2id.find(get(t).p);
 		if (it == kb.r2id.end()) return;
+		subst s;
 		for (auto rl : it->second) {
-			subst s;
-			if (unify(t, *_p->s, head[rl], s, true))
+			auto& ss = _p->s;
+			if (ss ? unify(t, *_p->s, head[rl], s, true) : unify(t, head[rl], s, true))
 				queue.push_front(std::async([rl, this, _p, s]() {
-					shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s/*, _p->g*/);
+					shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s);
 					r->creator = _p;
 					return r;
 				}));
+			s.clear();
 		}
 	}
 	else if (!p.prev) { pushev(_p); }
 	else {
-		shared_ptr<proof> r = make_shared<proof>(*p.prev/*, p.g*/);
+		shared_ptr<proof> r = make_shared<proof>(*p.prev);
 		ruleid rl = p.rul;
 		r->creator = _p;
-		r->s = make_shared<subst>(*p.prev->s);
-		unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
+		auto& ss = p.prev->s;
+		if (ss) r->s = make_shared<subst>(*ss);
+		else r->s = make_shared<subst>();
+		if (p.s) unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
+		else unify(head[rl], body[r->rul][r->last], *r->s, true);
 		++r->last;
 		step(r, queue);
 	}
@@ -384,7 +411,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 prover::ground prover::proof::g(prover* p) const {
 	if (!creator) return ground();
 	ground r = creator->g(p);
-	if (creator->last != p->body[creator->rul].size()) {
+	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), make_shared<subst>());
+	else if (creator->last != p->body[creator->rul].size()) {
 		if (p->body[rul].empty()) r.emplace_back(rul, (shared_ptr<subst>)0);
 	} else if (!p->body[creator->rul].empty()) r.emplace_back(creator->rul, creator->s);
 	return r;	

@@ -89,16 +89,14 @@ public:
 		shared_ptr<proof> prev = 0, creator = 0;
 		shared_ptr<subst> s = 0;//make_shared<subst>();
 		ground g(prover*) const;
-		proof() : s(make_shared<subst>()) {}
-		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst()/*, const ground& _g = ground()*/) 
-			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)){}//, g(_g) { }
-		proof(const proof& p) : proof(p.rul, p.last, p.prev){}//, p.g) { }
+		termid btterm = 0;
+		proof(){}// : s(make_shared<subst>()) {}
+		proof(ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst()) 
+			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)){}
+		proof(const proof& p) : proof(p.rul, p.last, p.prev){}
 	};
 
-//	int frame_id = 0;
-	//typedef std::map<size_t, std::future<shared_ptr<proof>>> queue_t;
 	typedef std::deque<std::future<shared_ptr<proof>>> queue_t;
-//	void printq(queue_t& _p);
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof& p);
@@ -128,13 +126,25 @@ private:
 
 	inline void pushev(shared_ptr<proof>);
 	inline void step(shared_ptr<proof>&, queue_t&);
-	inline termid evaluate(termid id);
-	inline termid evaluate(termid id, const subst& s);
+	termid evaluate(termid id, const subst& s) { return id ? evaluate(get(id), id, s) : 0; }
+	inline termid evaluate(termid id) { return id ? evaluate(get(id), id) : 0; }
+	termid evaluate(const term&, termid id);
+	termid evaluate(const term&, termid id, const subst& s);
 //	inline termid evaluate(termid id, shared_ptr<subst>& s) {
 //		static subst emp;
 //		return s ? evaluate(id, *s) : evaluate(id, emp);
 //	}
-	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, ssub, get(_d), _d, dsub, f); }
+	inline bool unify(const term& s, termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, ssub, get(_d), _d, dsub, f) : 0; }
+	inline bool unify(termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, ssub, d, _d, dsub, f) : 0; }
+	bool unify(const term& s, termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f);
+	inline bool unify(termid _s, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, get(_d), _d, dsub, f); }
+	inline bool unify(const term& s, termid _s, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, get(_d), _d, dsub, f) : 0; }
+	inline bool unify(termid _s, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, d, _d, dsub, f) : 0; }
+	bool unify(const term& s, termid _s, const term& d, termid _d, subst& dsub, bool f);
+//	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+//	inline bool unify(const term& s, termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+//	inline bool unify(termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f);
 //	bool unify2(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	//inline bool unify(termid _s, shared_ptr<subst>& ssub, termid _d, shared_ptr<subst>& dsub, bool f, bool printNow) { return unify(_s, *ssub, _d, *dsub, f, printNow); }
 	inline bool euler_path(shared_ptr<proof>&);
