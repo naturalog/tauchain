@@ -121,10 +121,10 @@ string KWHT = L"\x1B[37m";
 
 string prover::format(termid id, bool json) { 
 	if (!id) return L"{}";
-	if (json) return format(get(id),json);
+	if (json) return format(*id,json);
 	std::wstringstream ss; 
 	if (level > 100) ss <<L'['<< id << L']';
-	ss << format(get(id), json);
+	ss << format(*id, json);
 	return ss.str();
 }
 string prover::format(term p, bool json) {
@@ -191,7 +191,7 @@ string prover::format(const termset& l, bool json) {
 }
 
 void prover::printterm_substs(termid id, const subst& s) {
-	const term p = get(id);
+	const term& p = *id;
 	dout << dstr(p.p) << L'(';
 	if (p.s) {
 		printterm_substs(p.s, s);
@@ -267,12 +267,12 @@ void prover::printg(const ground& g) {
 		dout << indent() << formatr(x.first) << tab << formats(x.second) << endl;
 }
 
-pobj prover::term::json(const prover& pr) const {
+pobj term::json(const prover& pr) const {
 	pobj r = mk_somap_obj(), l;
 	(*r->MAP())[L"pred"] = mk_str_obj(dict[p].tostring());
 	(*r->MAP())[L"args"] = l = mk_olist_obj();
-	if (s) l->LIST()->push_back(pr.get(s).json(pr));
-	if (o) l->LIST()->push_back(pr.get(o).json(pr));
+	if (s) l->LIST()->push_back(s->json(pr));
+	if (o) l->LIST()->push_back(o->json(pr));
 	return r;
 }
 
@@ -347,19 +347,19 @@ pstring pstr ( const string& s ) {
 
 pobj prover::json(const termset& ts) const {
 	polist_obj l = mk_olist_obj(); 
-	for (termid t : ts) l->LIST()->push_back(get(t).json(*this));
+	for (termid t : ts) l->LIST()->push_back(t->json(*this));
 	return l;
 }
 
 pobj prover::json(const subst& s) const {
 	psomap_obj o = mk_somap_obj();
-	for (auto x : s) (*o->MAP())[dstr(x.first)] = get(x.second).json(*this);
+	for (auto x : s) (*o->MAP())[dstr(x.first)] = x.second->json(*this);
 	return o;
 }
 
 pobj prover::json(ruleid t) const {
 	pobj m = mk_somap_obj();
-	(*m->MAP())[L"head"] = get(kb.head()[t]).json(*this);
+	(*m->MAP())[L"head"] = kb.head()[t]->json(*this);
 	(*m->MAP())[L"body"] = json(kb.body()[t]);
 	return m;
 }
@@ -381,7 +381,7 @@ pobj prover::ejson() const {
 		polist_obj l = mk_olist_obj();
 		for (auto y : x.second) {
 			psomap_obj t = mk_somap_obj(), t1;
-			(*t->MAP())[L"head"] = get(y.first).json(*this);
+			(*t->MAP())[L"head"] = y.first->json(*this);
 			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
 			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
 			(*t1->MAP())[L"args"] = json(y.second);

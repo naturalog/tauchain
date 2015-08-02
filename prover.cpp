@@ -28,22 +28,24 @@ using namespace boost::algorithm;
 int _indent = 0;
 #define ISVAR(term) ((term.p < 0))
 
-prover::term::term() : p(0), s(0), o(0) {}
+term::term() : p(0), s(0), o(0) {}
 
-termid prover::evaluate(const term& p, termid id) {
+termid prover::evaluate(termid id) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
+	const term& p = *id;
 	if (ISVAR(p)) return 0;
 	if (!p.s && !p.o) return id;
 	termid a = evaluate(p.s), b = evaluate(p.o);
-	return make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
+	return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 }
 
-termid prover::evaluate(const term& p, termid id, const subst& s) {
+termid prover::evaluate(termid id, const subst& s) {
 	if (!id) return 0;
 	setproc(L"evaluate");
 	termid r;
+	const term& p = *id;
 	if (ISVAR(p)) {
 		auto it = s.find(p.p);
 		r = it == s.end() ? 0 : evaluate(it->second, s);
@@ -51,22 +53,24 @@ termid prover::evaluate(const term& p, termid id, const subst& s) {
 		r = id;
 	else {
 		termid a = evaluate(p.s, s), b = evaluate(p.o, s);
-		r = make(p.p, a ? a : make(get(p.s).p), b ? b : make(get(p.o).p));
+		r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 	}
 	TRACE(dout<<format(id) << ' ' << formats(s)<< " = " << format(r) << endl);
 	return r;
 }
 
-bool prover::unify(const prover::term& s, termid _s, const subst& ssub, const prover::term& d, termid _d, subst& dsub, bool f) {
+bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
+	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify");
 	termid v;
 	bool r, ns = false;
-	if (ISVAR(s)) r = (v = evaluate(s, _s, ssub)) ? unify(v, ssub, d, _d, dsub, f) : true;
+	const term& d = *_d, s = *_s;
+	if (ISVAR(s)) r = (v = evaluate(_s, ssub)) ? unify(v, ssub, _d, dsub, f) : true;
 	else if (ISVAR(d)) {
-		if ((v = evaluate(d, _d, dsub))) r = unify(s, _s, ssub, v, dsub, f);
+		if ((v = evaluate(_d, dsub))) r = unify(_s, ssub, v, dsub, f);
 		else {
 			if (f) {
-				dsub[d.p] = evaluate(s, _s, ssub);
+				dsub[d.p] = evaluate(_s, ssub);
 				ns = true;
 			}
 			r = true;
@@ -88,16 +92,18 @@ bool prover::unify(const prover::term& s, termid _s, const subst& ssub, const pr
 	return r;
 }
 
-bool prover::unify(const prover::term& s, termid _s, const prover::term& d, termid _d, subst& dsub, bool f) {
+bool prover::unify(termid _s, termid _d, subst& dsub, bool f) {
+	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify");
 	termid v;
 	bool r, ns = false;
+	const term& d = *_d, s = *_s;
 	if (ISVAR(s)) r = true;
 	else if (ISVAR(d)) {
-		if ((v = evaluate(d, _d, dsub))) r = unify(s, _s, v, dsub, f);
+		if ((v = evaluate(_d, dsub))) r = unify(_s, v, dsub, f);
 		else {
 			if (f) {
-				dsub[d.p] = evaluate(s, _s);
+				dsub[d.p] = evaluate(_s);
 				ns = true;
 			}
 			r = true;
@@ -145,8 +151,8 @@ termid prover::list_next(termid cons, proof& p) {
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
-		if (get(x.first).s == cons) {
-			r = get(x.first).o;
+		if (x.first->s == cons) {
+			r = x.first->o;
 			break;
 		}
 	TRACE(dout <<"current cons: " << format(cons)<< " next cons: " << format(r) << std::endl);
@@ -154,7 +160,7 @@ termid prover::list_next(termid cons, proof& p) {
 }
 
 termid prover::list_first(termid cons, proof& p) {
-	if (!cons || get(cons).p == rdfnil) return 0;
+	if (!cons || cons->p == rdfnil) return 0;
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
@@ -162,8 +168,8 @@ termid prover::list_first(termid cons, proof& p) {
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
-		if (get(x.first).s == cons) {
-			r = get(x.first).o;
+		if (x.first->s == cons) {
+			r = x.first->o;
 			break;
 		}
 	TRACE(dout<<"current cons: " << format(cons) << " next cons: " << format(r) << std::endl);
@@ -203,10 +209,10 @@ std::vector<termid> prover::get_list(termid head, proof& p) {
 }
 
 void prover::get_dotstyle_list(termid id, std::list<nodeid> &list) {
-	auto s = get(id).s;
+	auto s = id->s;
 	if (!s) return;
-	list.push_back(get(s).p);
-	get_dotstyle_list(get(id).o, list);
+	list.push_back(s->p);
+	get_dotstyle_list(id->o, list);
 	return;
 }
 
@@ -218,13 +224,13 @@ void* testfunc(void* p) {
 
 int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
-	const term t = get(id);
+	const term& t = *id;
 	int r = -1;
 	termid i0 = t.s ? evaluate(t.s, *p->s) : 0;
 	termid i1 = t.o ? evaluate(t.o, *p->s) : 0;
 	term r1, r2;
-	const term *t0 = i0 ? &(r1=get(i0=evaluate(t.s, *p->s))) : 0;
-	const term* t1 = i1 ? &(r2=get(i1=evaluate(t.o, *p->s))) : 0;
+	const term *t0 = i0 ? &(r1=*(i0=evaluate(t.s, *p->s))) : 0;
+	const term* t1 = i1 ? &(r2=*(i1=evaluate(t.o, *p->s))) : 0;
 	TRACE(	dout<<"called with term " << format(id); 
 		if (t0) dout << " subject = " << format(i0);
 		if (t1) dout << " object = " << format(i1);
@@ -356,7 +362,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	for (auto r : body[p->rul]) {
 		MARPA(substs.push_back(*p->s));
 		if (!(t = (p->s ? evaluate(r, *p->s) : evaluate(r)))) continue;
-		e[get(t).p].emplace_back(t, p->g(this));
+		e[t->p].emplace_back(t, p->g(this));
 //		dout << "proved: " << format(t) << endl;
 	}
 }
@@ -379,7 +385,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		if (euler_path(_p)) return;
 		termid t = rul[p.last];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
-		auto it = kb.r2id.find(get(t).p);
+		auto it = kb.r2id.find(t->p);
 		if (it == kb.r2id.end()) return;
 		subst s;
 		auto& ss = _p->s;
@@ -534,7 +540,7 @@ bool prover::consistency(const qdb& quads) {
 	for (auto x : ee) for (auto y : x.second) {
 		prover q(*this);
 		g.clear();
-		string s = *dict[p.get(p.get(y.first).s).p].value;
+		string s = *dict[y.first->s->p].value;
 		if (s == L"GND") continue;
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
 		qdb qq;
@@ -599,7 +605,7 @@ void prover::query(termset& goal, subst* s) {
 	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
 }
 
-prover::term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
+term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 termid prover::make(pnode p, termid s, termid o) { 
 	return make(dict.set(*p), s, o); 
@@ -619,7 +625,7 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 	ruleid r =  _head.size();
 	_head.push_back(t);
 	_body.push_back(ts);
-	r2id[t ? p->get(t).p : 0].push_back(r);
+	r2id[t ? t->p : 0].push_back(r);
 	return r;
 }
 

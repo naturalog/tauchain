@@ -17,19 +17,20 @@
 #include <boost/interprocess/containers/set.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 
-typedef u64 termid;
+struct term;
+class prover;
+typedef term* termid;
+struct term {
+	term();
+	term(nodeid _p, termid _s, termid _o);
+	nodeid p;
+	termid s, o;
+	pobj json(const prover&) const;
+};
 typedef std::map<nodeid, termid> subst;
 
 class prover {
 public:
-	class term {
-	public:
-		term();
-		term(nodeid _p, termid _s, termid _o);
-		nodeid p;
-		termid s, o;
-		pobj json(const prover&) const;
-	};
 	typedef u64 ruleid;
 	typedef boost::container::vector<termid> termset;
 	class ruleset {
@@ -63,7 +64,7 @@ public:
 	prover ( const prover& p );
 	void query(termset& goal, subst* s = 0);
 	void query(const qdb& goal, subst* s = 0);
-	inline const term& get(termid t) const { return _terms[t]; }
+//	inline const term& get(termid t) const { return *t; }// _terms[t]; }
 	const term& get(nodeid) const { throw std::runtime_error("called get(termid) with nodeid"); }
 	~prover();
 
@@ -108,16 +109,11 @@ public:
 
 private:
 	class termdb {
-		typedef boost::container::map<termid, term> terms_t;
 	public:
-		terms_t terms;
 		typedef std::map<nodeid, termset> p2id_t;
-		size_t size() const { return terms.size(); }
-		inline const term& operator[](termid id) const { return terms.at(id); }
 		inline const termset& operator[](nodeid id) const { return p2id.at(id); }
 		inline termid add(nodeid p, termid s, termid o) {
-			termid r = size() + 1;
-			terms[r] = term(p, s, o);
+			auto r = new term/*make_shared<term>*/(p, s, o);
 			p2id[p].push_back(r);
 			return r;
 		}
@@ -131,22 +127,20 @@ private:
 
 	inline void pushev(shared_ptr<proof>);
 	inline void step(shared_ptr<proof>&, queue_t&);
-	termid evaluate(termid id, const subst& s) { return id ? evaluate(get(id), id, s) : 0; }
-	inline termid evaluate(termid id) { return id ? evaluate(get(id), id) : 0; }
-	termid evaluate(const term&, termid id);
-	termid evaluate(const term&, termid id, const subst& s);
+	termid evaluate(termid id);
+	termid evaluate(termid id, const subst& s);
 //	inline termid evaluate(termid id, shared_ptr<subst>& s) {
 //		static subst emp;
 //		return s ? evaluate(id, *s) : evaluate(id, emp);
 //	}
-	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, ssub, get(_d), _d, dsub, f); }
-	inline bool unify(const term& s, termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, ssub, get(_d), _d, dsub, f) : 0; }
-	inline bool unify(termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, ssub, d, _d, dsub, f) : 0; }
-	bool unify(const term& s, termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f);
-	inline bool unify(termid _s, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, get(_d), _d, dsub, f); }
-	inline bool unify(const term& s, termid _s, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, get(_d), _d, dsub, f) : 0; }
-	inline bool unify(termid _s, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, d, _d, dsub, f) : 0; }
-	bool unify(const term& s, termid _s, const term& d, termid _d, subst& dsub, bool f);
+//	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, ssub, get(_d), _d, dsub, f); }
+//	inline bool unify(const term& s, termid _s, const subst& ssub, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, ssub, get(_d), _d, dsub, f) : 0; }
+//	inline bool unify(termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, ssub, d, _d, dsub, f) : 0; }
+	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+//	inline bool unify(termid _s, termid _d, subst& dsub, bool f) { return !_s ? _s == _d : unify(get(_s), _s, get(_d), _d, dsub, f); }
+//	inline bool unify(const term& s, termid _s, termid _d, subst& dsub, bool f) { return _d ? unify(s, _s, get(_d), _d, dsub, f) : 0; }
+//	inline bool unify(termid _s, const term& d, termid _d, subst& dsub, bool f) { return _s ? unify(get(_s), _s, d, _d, dsub, f) : 0; }
+	bool unify(termid _s, termid _d, subst& dsub, bool f);
 //	inline bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 //	inline bool unify(const term& s, termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 //	inline bool unify(termid _s, const subst& ssub, const term& d, termid _d, subst& dsub, bool f);
