@@ -359,21 +359,13 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue) {
 		if (it == kb.r2id.end()) return;
 		subst s;
 		auto& ss = _p->s;
-		if (ss) for (auto rl : it->second) {
-			if (unify(t, *ss, head[rl], s, true)) {
-				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s);
-				r->creator = _p;
-				queue.push_front(r);
-			}
-			s.clear();
-		} else for (auto rl : it->second) {
-			if (unify(t, head[rl], s, true)) {
-				shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s);
-				r->creator = _p;
-				queue.push_front(r);
-			}
-			s.clear();
-		}
+#define LOOP { \
+	shared_ptr<proof> r = make_shared<proof>(rl, 0, _p, s); \
+	r->creator = _p; \
+	queue.push_front(r); \
+} s.clear()
+		if (ss) for (auto rl : it->second) { if (unify(t, *ss, head[rl], s, true)) LOOP; }
+		else	for (auto rl : it->second) { if (unify(t, head[rl], s, true)) LOOP; }
 	}
 	else if (!p.prev) { pushev(_p); }
 	else {

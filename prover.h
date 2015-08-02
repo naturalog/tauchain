@@ -152,7 +152,7 @@ private:
 			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
 			r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 		}
-		TRACE(dout<<format(id) << ' ' << formats(s)<< " = " << format(r) << endl);
+		TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl);
 		return r;
 	}
 
