@@ -31,8 +31,8 @@ struct term {
 	pobj json(const prover&) const;
 };
 typedef std::map<nodeid, termid> subst;
-
 class prover {
+	size_t evals = 0, unifs = 0;
 public:
 	typedef u64 ruleid;
 	typedef std::vector<termid> termset;
@@ -133,6 +133,7 @@ private:
 	inline termid evaluate(termid id) { return id ? evaluate(*id) : 0; }
 	inline termid evaluate(termid id, const subst& s) { return id ? evaluate(*id, s) : 0; }
 	inline termid evaluate(const term& p) {
+		++evals;
 		setproc(L"evaluate");
 		termid r;
 		if (ISVAR(p)) return 0;
@@ -142,6 +143,7 @@ private:
 	}
 
 	inline termid evaluate(const term& p, const subst& s) {
+		++evals;
 		setproc(L"evaluate");
 		termid r;
 		if (ISVAR(p)) {
@@ -158,6 +160,7 @@ private:
 	}
 
 	inline termid evalvar(const term& p, const subst& s) {
+		++evals;
 		auto it = s.find(p.p);
 		return it == s.end() ? 0 : evaluate(*it->second, s);
 	}

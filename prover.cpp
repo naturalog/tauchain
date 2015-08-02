@@ -28,8 +28,8 @@ using namespace boost::algorithm;
 int _indent = 0;
 
 term::term() : p(0), s(0), o(0) {}
-
 bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
+	++unifs;
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify");
 	termid v;
@@ -63,6 +63,7 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 }
 
 bool prover::unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
+	++unifs;
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify");
 	termid v;
@@ -95,6 +96,7 @@ bool prover::unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, 
 }
 
 bool prover::unify_dnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
+	++unifs;
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify");
 	termid v;
@@ -118,6 +120,7 @@ bool prover::unify_dnovar(termid _s, const subst& ssub, termid _d, subst& dsub, 
 }
 
 bool prover::unify(termid _s, termid _d, subst& dsub, bool f) {
+	++unifs;
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify");
 	termid v;
@@ -151,6 +154,7 @@ bool prover::unify(termid _s, termid _d, subst& dsub, bool f) {
 }
 
 bool prover::unify_dnovar(termid _s, termid _d, subst& dsub, bool f) {
+	++unifs;
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify");
 	termid v;
@@ -636,7 +640,7 @@ void prover::query(termset& goal, subst* s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << endl;
+	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl;
 }
 
 term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
