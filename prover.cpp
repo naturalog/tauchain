@@ -208,7 +208,7 @@ termid prover::list_next(termid cons, proof& p) {
 	setproc(L"list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
-	query( ts, &*p.s);
+	do_query( ts, &*p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
@@ -225,7 +225,7 @@ termid prover::list_first(termid cons, proof& p) {
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
-	query( ts , &*p.s);
+	do_query( ts , &*p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
@@ -380,7 +380,6 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 		(*p->s)[get(t.s).p] = make(dict.set(n), 0, 0);
 		r = 1;
-		dout << "ppp";
 	}
 	else if (t.p == file_contents_iri) {
 		if (get(t.s).p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
@@ -395,14 +394,12 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	}
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
-		dout << "pppp";
 		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
 		term xx = get(i1);
 		term xxx = get(xx.s);
 		string input = *dict[xxx.p].value;
 		string marpa = *dict[get(get(get(i1).o).s).p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
-		dout << L"result2: " << format(result) << std::endl;
 		(*p->s)[get(t.s).p] = result;
 		r = 1;
 	}
@@ -606,20 +603,38 @@ bool prover::consistency(const qdb& quads) {
 	return c;
 }
 
-void prover::query(const qdb& q_, subst* s) {
+prover::termset prover::qdb2termset(const qdb &q_) {
 	termset goal = termset();
 	termid t;
-	for ( auto q : merge(q_) )
-		if (	dict[q->pred] != rdffirst &&
+	for (auto q : merge(q_))
+		if (dict[q->pred] != rdffirst && //wat
 			dict[q->pred] != rdfrest &&
-			(t = quad2term( *q, q_ )) )
-			goal.push_back( t );
-	query(goal, s);
+			(t = quad2term(*q, q_)))
+			goal.push_back(t);
+	return goal;
 }
 
-#include <chrono>
-void prover::query(termset& goal, subst* s) {
-//	setproc(L"prover()");
+
+void prover::query(const qdb& q_, subst* s) {
+	const termset &t = qdb2termset(q_);
+	query(t, s);
+}
+
+void prover::do_query(const qdb& q_, subst* s) {
+	termset t = qdb2termset(q_);
+	do_query(t, s);
+}
+
+void prover::query(const termset& goal, subst* s) {
+	TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	auto duration = do_query(goal, s);
+	dout << KYEL << "Evidence:" << endl;
+	printe();/* << ejson()->toString()*/ dout << KNRM;
+	dout << "elapsed: " << duration << "ms steps: " << steps << endl;
+}
+
+int prover::do_query(const termset& goal, subst* s) {
+	setproc(L"do_query");
 	queue_t queue, gnd;
 	queue.push([&](){
 	shared_ptr<proof> p = make_shared<proof>();
@@ -630,14 +645,14 @@ void prover::query(termset& goal, subst* s) {
 	return p;
 	}());
 	
-	#ifdef with_marpa
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	{
+		setproc(L"rules");
+		TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	}
 
-	#else
-	
-	TRACE(dout << KRED << L"Rules:\n" << formatkb()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
-//	TRACE(dout << KRED << L"Rules:\n" << kb.format()<<endl<< KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	#endif	
+	//queue.push_front(p);
+
 	shared_ptr<proof> q;
 	using namespace std;
 	using namespace std::chrono;
@@ -649,11 +664,14 @@ void prover::query(termset& goal, subst* s) {
 		step(q, queue, gnd);
 		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
 	} while (!queue.empty() && steps < 2e+7);
+
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
 	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl;
+	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
+
+	//for (auto x : gnd) pushev(x);
 }
 
 term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
