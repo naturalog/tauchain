@@ -421,7 +421,7 @@ void prover::pushev(shared_ptr<proof> p) {
 		MARPA(substs.push_back(*p->s));
 		if (!(t = (p->s ? EVALS(r, *p->s) : EVAL(r)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
-		dout << "proved: " << format(t) << endl;
+//		dout << "proved: " << format(t) << endl;
 	}
 }
 
@@ -630,9 +630,9 @@ void prover::do_query(const qdb& q_, subst* s) {
 void prover::query(const termset& goal, subst* s) {
 	TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	auto duration = do_query(goal, s);
-	dout << KYEL << "Evidence:" << endl;
+	TRACE(dout << KYEL << "Evidence:" << endl);
 	printe();/* << ejson()->toString()*/ dout << KNRM;
-	dout << "elapsed: " << duration << "ms steps: " << steps << endl;
+	dout << "elapsed: " << duration << "ms steps: " << steps << " unifs: " << unifs << " evals: " << evals << endl;
 }
 
 int prover::do_query(const termset& goal, subst* s) {
