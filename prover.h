@@ -106,7 +106,7 @@ public:
 			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), creator(c) {}
 		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rul, p.last, p.prev) { if (prev) level = prev->level + 1; }
 	};
-	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level > y->level; }};
+	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level; }};
 	typedef std::priority_queue<shared_ptr<proof>, std::vector<shared_ptr<proof>>, proofcmp> queue_t;
 
 	void addrules(pquad q, qdb& quads);
