@@ -424,7 +424,7 @@ void prover::pushev(shared_ptr<proof> p) {
 		MARPA(substs.push_back(*p->s));
 		if (!(t = (p->s ? EVALS(r, *p->s) : EVAL(r)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
-//		dout << "proved: " << format(t) << endl;
+		dout << "proved: " << format(t) << endl;
 	}
 }
 
@@ -441,6 +441,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
 	++steps;
 	proof& p = *_p;
+//	queue_t qq;
 	auto rul = body[p.rul];
 	if (p.last != rul.size()) {
 		if (euler_path(_p)) return;
@@ -453,18 +454,22 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		if (ss) for (auto rl : it->second) { if (unify(t, *ss, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
 		else	for (auto rl : it->second) { if (unify(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
 	}
-	else if (!p.prev) { gnd.push(_p); }
+	else if (!p.prev) { gnd.push(_p); /* while (!queue.empty()) queue.pop();*/ }
 	else {
 		shared_ptr<proof> r = make_shared<proof>(_p, *p.prev);
 		ruleid rl = p.rul;
 		auto& ss = p.prev->s;
-		if (ss) r->s = make_shared<subst>(*ss);
-		else r->s = make_shared<subst>();
+		r->s = ss ? make_shared<subst>(*ss) : make_shared<subst>();
 		if (p.s) unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
 		else unify(head[rl], body[r->rul][r->last], *r->s, true);
 		++r->last;
 		step(r, queue, gnd);
 	}
+//	while (!qq.empty()) {
+//		auto ff = qq.top();
+//		qq.pop();
+//		step(ff, qq, gnd);
+//	}
 }
 
 prover::ground prover::proof::g(prover* p) const {
@@ -638,7 +643,7 @@ void prover::query(termset& goal, subst* s) {
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	do {
-		q = queue.front();//.get();
+		q = queue.top();//.get();
 		queue.pop();
 //		printq(queue);
 		step(q, queue, gnd);
@@ -646,7 +651,7 @@ void prover::query(termset& goal, subst* s) {
 	} while (!queue.empty() && steps < 2e+7);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	while (!gnd.empty()) { auto x = gnd.front(); gnd.pop(); pushev(x); }
+	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
 	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl;
 }
