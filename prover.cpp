@@ -439,6 +439,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	++steps;
 	proof& p = *_p;
 //	queue_t qq;
+	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto rul = body[p.rul];
 	if (p.last != rul.size()) {
 		if (euler_path(_p)) return;
@@ -670,7 +671,7 @@ int prover::do_query(const termset& goal, subst* s) {
 	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
 	TRACE(dout << KYEL << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
-
+	return duration/1000.;
 	//for (auto x : gnd) pushev(x);
 }
 

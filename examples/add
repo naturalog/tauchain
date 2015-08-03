@@ -1,0 +1,15 @@
+z a nat.
+z succ o.
+o succ two.
+(z z) add z.
+{ ?nn a nat. ?mm a nat. (?nn ?mm) add ?kk } => { ?kk a nat }.
+{ ?x a nat. ?x succ ?y } => { ?y a nat }.
+{ ?ee a nat. } => { ?ee eq ?ee }.
+{ ?q eq ?p } => { ?p eq ?q }.
+{ ?xx succ ?yy. ?xx succ ?zz } => { ?yy eq ?zz }.
+{ ?yyy succ ?xxx. ?zzz succ ?xxx } => { ?yyy eq ?zzz }.
+{ ?zzzz eq ?yyyy } => { ?yyyy eq ?zzzz }.
+{ (?aa ?bb) add ?cc. ?aa succ ?ss. ?cc succ ?dd } => { (?ss ?bb) add ?dd }.
+fin.
+(z o) add ?c.
+fin.
