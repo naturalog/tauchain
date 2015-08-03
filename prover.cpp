@@ -436,6 +436,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 	setproc(L"step");
+	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
 	proof& p = *_p;
 //	queue_t qq;
@@ -663,8 +664,7 @@ int prover::do_query(const termset& goal, subst* s) {
 		queue.pop();
 //		printq(queue);
 		step(q, queue, gnd);
-		//if (steps % 10000 == 0) (dout << "step: " << steps << endl);
-	} while (!queue.empty() && steps < 2e+7);
+	} while (!queue.empty());// && steps < 2e+7);
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
