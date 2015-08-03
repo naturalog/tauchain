@@ -26,7 +26,7 @@ string clause(vector<int> c) {
 
 string negs(int n) {
 	stringstream ss;
-	while (n--) ss << var(n) << " not " << var(-n) << '.' <<endl;
+	for (int k = 1; k <= n; ++k) ss << var(k) << " not " << var(-k) << '.' <<endl;
 	return ss.str();
 }
 
