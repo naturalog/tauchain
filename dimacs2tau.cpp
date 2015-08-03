@@ -48,6 +48,8 @@ int main() {
 		<<"(F F) or  F."<<endl
 		<<"T not F."<<endl
 		<<"F not T."<<endl
+		<<"{ T not T } => false."<<endl
+		<<"{ F not F } => false."<<endl
 		<<"{ (?X0 ?Y0) or ?Z0 } => { (?Y0 ?X0) or ?Z. }."<<endl
 		<<"{ (?X1 ?Y1) or T. (?Y1 ?Z1) or T } => { (?X1 ?Y1 ?Z1) or T }."<<endl
 		<<"{ (?X2 ?Y2) or F. (?Y2 ?Z2) or T } => { (?X2 ?Y2 ?Z2) or T }."<<endl
