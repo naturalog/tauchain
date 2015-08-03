@@ -47,6 +47,7 @@ pnode nqparser::readlist() {
 		if (*s == L')') lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));
 		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(id())));
 		if (*s == L'.') while (iswspace(*s++));
+		if (*s == L'}') throw wruntime_error(string(L"expected { inside list: ") + string(s,0,48));
 	}
 	while (*s != L')');
 	do { ++s; } while (iswspace(*s));
@@ -206,6 +207,7 @@ std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operato
 		while (*s == '.') ++s;
 		while (iswspace(*s)) ++s;
 		if (*s == L'}') { ++s; return { r, qlists }; }
+		if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
 	}
 	return { r, qlists };
 }
