@@ -630,8 +630,8 @@ void prover::do_query(const qdb& q_, subst* s) {
 void prover::query(const termset& goal, subst* s) {
 	TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	auto duration = do_query(goal, s);
-	TRACE(dout << KYEL << "Evidence:" << endl);
-	printe();/* << ejson()->toString()*/ dout << KNRM;
+//	TRACE(dout << KYEL << "Evidence:" << endl);
+//	printe();/* << ejson()->toString()*/ dout << KNRM;
 	dout << "elapsed: " << duration << "ms steps: " << steps << " unifs: " << unifs << " evals: " << evals << endl;
 }
 
