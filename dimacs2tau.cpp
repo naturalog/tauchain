@@ -56,6 +56,8 @@ int main() {
 		<<"{ (?X3 ?Y3) or F. (?Y3 ?Z3) or F } => { (?X3 ?Y3 ?Z3) or F }."<<endl;
 
 	for (auto x : cnf) cout << clause(x) << endl;
-	cout << "fin." << endl << negs(N) << "fin." << endl;
+	//cout << "fin." << endl << negs(N) << "fin." << endl;
+	cout << negs(N) << "fin." << endl;
+	cout << "?x a T. " << endl << "fin." << endl;
 	return 0;
 }

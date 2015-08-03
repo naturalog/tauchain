@@ -132,7 +132,7 @@ string prover::format(term p, bool json) {
 		std::wstringstream ss;
 		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
 		ss << dstr(p.p, false);
-		if (p.s) ss << L'('<< format(p.s) << L',' << format(p.o) << L')';
+		if (p.s) ss << L'('<< prover::format(p.s) << L',' << prover::format(p.o) << L')';
 		return ss.str();
 	}
 	std::wstringstream ss;
@@ -169,7 +169,7 @@ string prover::formats(const subst& s, bool json) {
 	std::map<string, string> r;
 	for (auto x : s)
 		r[dstr(x.first)] = format(x.second, json);
-	for (auto x = r.rbegin(); x != r.rend(); ++x) ss << x->first << ':' << x->second << ',';
+	for (auto x = r.rbegin(); x != r.rend(); ++x) ss << x->first << '\\' << x->second << ',';
 	return ss.str();
 }
 
@@ -276,10 +276,18 @@ pobj term::json(const prover& pr) const {
 	return r;
 }
 
+string prover::fsubsts(const prover::ground& g) {
+	subst s;
+	for (auto x : g)
+		if (x.second)
+			s.insert(x.second->begin(), x.second->end());
+	return prover::formats(s);
+}
+
 void prover::printe() {
 	for (auto y : e)
 		for (auto x : y.second) {
-			dout << indent() << format(x.first) << L" <= " << endl;
+			dout << indent() << format(x.first) << " under subst: " << fsubsts(x.second) << L" <= " << endl;
 			++_indent;
 			#ifdef with_marpa
 			if (x.second.size() > 1)

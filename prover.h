@@ -83,16 +83,10 @@ public:
 	evidence e;
 	std::vector<subst> substs;
 	termid tmpvar();
-	void printg(const ground& g);
-	void printg(shared_ptr<ground> g) { printg(*g); }
-	void printe();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(nodeid p, termid s = 0, termid o = 0);
 	termid make(termid) { throw std::runtime_error("called make(pnode/nodeid) with termid"); }
 	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/nodeid) with termid"); }
-	string format(const termset& l, bool json = false);
-	void prints(const subst& s);
-	void prints(shared_ptr<subst> s) { prints(*s); }
 
 	struct proof {
 		ruleid rul = 0;
@@ -180,6 +174,12 @@ private:
 	bool consistency(const qdb& quads);
 
 	// formatters
+	void printg(const ground& g);
+	void printg(shared_ptr<ground> g) { printg(*g); }
+	void printe();
+	string format(const termset& l, bool json = false);
+	void prints(const subst& s);
+	void prints(shared_ptr<subst> s) { prints(*s); }
 	string format(nodeid) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(nodeid, bool) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(term t, bool json = false);
@@ -198,5 +198,6 @@ private:
 	pobj json(const ground& g) const;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
+	string fsubsts(const ground& g);
 };
 #endif
