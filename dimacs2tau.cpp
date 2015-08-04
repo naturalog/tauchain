@@ -50,10 +50,11 @@ int main() {
 		<<"F not T."<<endl
 		<<"{ T not T } => false."<<endl
 		<<"{ F not F } => false."<<endl
-		<<"{ (?X0 ?Y0) or ?Z0 } => { (?Y0 ?X0) or ?Z. }."<<endl
-		<<"{ (?X1 ?Y1) or T. (?Y1 ?Z1) or T } => { (?X1 ?Y1 ?Z1) or T }."<<endl
-		<<"{ (?X2 ?Y2) or F. (?Y2 ?Z2) or T } => { (?X2 ?Y2 ?Z2) or T }."<<endl
-		<<"{ (?X3 ?Y3) or F. (?Y3 ?Z3) or F } => { (?X3 ?Y3 ?Z3) or F }."<<endl;
+		<<"{ (?X ?Y) or ?Z } => { (?Y ?X) or ?Z. }."<<endl
+		<<"{ (?X ?Y) or T. (?Y ?Z) or T } => { (?X ?Y ?Z) or T }."<<endl
+		<<"{ (?X ?Y) or F. (?Y ?Z) or T } => { (?X ?Y ?Z) or T }."<<endl
+		<<"{ (?X ?Y) or T. (?Y ?Z) or F } => { (?X ?Y ?Z) or T }."<<endl
+		<<"{ (?X ?Y) or F. (?Y ?Z) or F } => { (?X ?Y ?Z) or F }."<<endl;
 
 	for (auto x : cnf) cout << clause(x) << endl;
 	//cout << "fin." << endl << negs(N) << "fin." << endl;

@@ -165,6 +165,8 @@ private:
 	bool unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	bool unify_dnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
 	bool unify_dnovar(termid _s, termid _d, subst& dsub, bool f);
+	bool unify_sdnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
+	bool unify_sdnovar(termid _s, termid _d, subst& dsub, bool f);
 	inline bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);

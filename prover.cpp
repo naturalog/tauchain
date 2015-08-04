@@ -54,15 +54,13 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f)
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
 		r = unify(s.o, ssub, d.o, dsub, f);
-	if (f) {
-		TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
-			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-		if (r) {
-			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-		} else dout << "failed";
-		dout << endl);
-	}
+	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+	if (r) {
+		dout << "passed";
+		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+	} else dout << "failed";
+	dout << endl);
 	return r;
 }
 
@@ -88,15 +86,13 @@ bool prover::unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, 
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
 		r = unify(s.o, ssub, d.o, dsub, f);
-	if (f) {
-		TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
-			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-		if (r) {
-			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-		} else dout << "failed";
-		dout << endl);
-	}
+	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+	if (r) {
+		dout << "passed";
+		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+	} else dout << "failed";
+	dout << endl);
 	return r;
 }
 
@@ -150,15 +146,13 @@ bool prover::unify(termid _s, termid _d, subst& dsub, bool f) {
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, d.s, dsub, f)))
 		r = unify(s.o, d.o, dsub, f);
-	if (f) {
-		TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
-			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-		if (r) {
-			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-		} else dout << "failed";
-		dout << endl);
-	}
+	TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
+		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+	if (r) {
+		dout << "passed";
+		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+	} else dout << "failed";
+	dout << endl);
 	return r;
 }
 
@@ -174,17 +168,57 @@ bool prover::unify_dnovar(termid _s, termid _d, subst& dsub, bool f) {
 	else if (!s.s) r = true;
 	else if ((r = unify(s.s, d.s, dsub, f)))
 		r = unify(s.o, d.o, dsub, f);
-	if (f) {
-		TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
-			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-		if (r) {
-			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-		} else dout << "failed";
-		dout << endl);
-	}
+	TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
+		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+	if (r) {
+		dout << "passed";
+		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+	} else dout << "failed";
+	dout << endl);
 	return r;
 }
+bool prover::unify_sdnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
+	++unifs;
+	if (!_s || !_d) return !_s == !_d;
+	setproc(L"unify");
+	termid v;
+	bool r, ns = false;
+	const term& d = *_d, s = *_s;
+	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else if (!s.s) r = true;
+	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
+		r = unify(s.o, ssub, d.o, dsub, f);
+	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
+		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+	if (r) {
+		dout << "passed";
+		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+	} else dout << "failed";
+	dout << endl);
+	return r;
+}
+
+bool prover::unify_sdnovar(termid _s, termid _d, subst& dsub, bool f) {
+	++unifs;
+	if (!_s || !_d) return !_s == !_d;
+	setproc(L"unify");
+	termid v;
+	bool r, ns = false;
+	const term& d = *_d, s = *_s;
+	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else if (!s.s) r = true;
+	else if ((r = unify(s.s, d.s, dsub, f)))
+	r = unify(s.o, d.o, dsub, f);
+	TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
+		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+	if (r) {
+		dout << "passed";
+		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+	} else dout << "failed";
+	dout << endl);
+	return r;
+}
+
 
 bool prover::euler_path(shared_ptr<proof>& _p) {
 	setproc(L"euler_path");
@@ -450,8 +484,8 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		if (it == kb.r2id.end()) return;
 		subst s;
 		auto& ss = _p->s;
-		if (ss) for (auto rl : it->second) { if (unify(t, *ss, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
-		else	for (auto rl : it->second) { if (unify(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
+		if (ss) { const subst& _s = *ss; for (auto rl : it->second) { if (unify_sdnovar(t, _s, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); } }
+		else	for (auto rl : it->second) { if (unify_sdnovar(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
 	}
 	else if (!p.prev) { gnd.push(_p); /* while (!queue.empty()) queue.pop();*/ }
 	else {
