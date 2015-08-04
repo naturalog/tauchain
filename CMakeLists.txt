@@ -16,8 +16,8 @@ set(SOURCE_FILES
     misc.cpp
     misc.h
     nquads.cpp
-    object.cpp
-    object.h
+    jsonld_object.cpp
+    jsonld_object.h
     prover.cpp
     prover.h
     rdf.cpp
