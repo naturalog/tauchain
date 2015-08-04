@@ -31,7 +31,8 @@ term::term() : p(0), s(0), o(0) {}
 
 bool prover::euler_path(shared_ptr<proof>& _p) {
 	setproc(L"euler_path");
-	auto ep = _p;
+	if (_p) return false;
+	auto& ep = _p;
 	proof& p = *_p;
 	termid t = head[p.rul];
 	if (!t) return false;
@@ -40,7 +41,12 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	while ((ep = ep->prev))
 		if (ep->rul == p.rul && unify_ep(head[ep->rul], *ep->s, rt, ps))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
-	return ep != 0;
+	ep = _p;
+	while (ep->prev) ep = ep->prev;
+	for (auto x : body[ep->rul])
+		if (evaluate(*x, ps))
+			return true;
+	return false;
 }
 
 termid prover::tmpvar() {
@@ -274,7 +280,7 @@ void prover::pushev(shared_ptr<proof> p) {
 		MARPA(substs.push_back(*p->s));
 		if (!(t = (p->s ? EVALS(r, *p->s) : EVAL(r)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
-//		dout << "proved: " << format(t) << endl;
+		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
 }
 
@@ -306,21 +312,21 @@ void prover::step(shared_ptr<proof>& _p) {
 		subst s;
 		auto& ss = p.s;
 		if (ss) {
-			const subst& _s = *ss;
+//			const subst& _s = *ss;
 			for (auto rl : it->second) {
-				if (unify_sdnovar(rt, _s, *head[rl], s))
+				if (unify/*_sdnovar*/(t, *ss, head[rl], s))
 					queue.push(make_shared<proof>(_p, rl, 0, _p, s, src));
 				s.clear();
 				++src; 
 			}
 		} else for (auto rl : it->second) { 
-			if (unify_sdnovar(rt, *head[rl], s))
+			if (unify/*_sdnovar*/(t, head[rl], s))
 				queue.push(make_shared<proof>(_p, rl, 0, _p, s, src));
-				s.clear();
-				++src;
+			s.clear();
+			++src;
 		}
 	}
-	else if (!p.prev) { gnd.push(_p); /* while (!queue.empty()) queue.pop();*/ }
+	else if (!p.prev) gnd.push(_p);
 	else {
 		proof& ppr = *p.prev;
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);

@@ -26,12 +26,6 @@
 #define PROFILE(x)
 #endif
 
-#define evalvar(v, x, s) { \
-		PROFILE(++evals); \
-		auto evvit = s.find(x.p); \
-		v = (evvit == s.end() ? 0 : evaluate(*evvit->second, s)); \
-	}
-
 struct term;
 class prover;
 typedef const term* termid;
@@ -139,6 +133,14 @@ private:
 	inline void step(shared_ptr<proof>&);
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
+	termid evalvar(const term& x, const subst& s) {
+		PROFILE(++evals);
+		setproc(L"evalvar");
+		auto evvit = s.find(x.p);
+		termid r = evvit == s.end() ? 0 : evaluate(*evvit->second, s);
+		TRACE(dout<<format(x) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
+		return r;
+	}
 	inline termid evaluate(const term& p) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
@@ -162,7 +164,7 @@ private:
 			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
 			r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 		}
-		TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl);
+		TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
 		return r;
 	}
 
@@ -214,5 +216,8 @@ private:
 	pobj ejson() const;
 	string fsubsts(const ground& g);
 	queue_t queue, gnd;
+// used by unify
+	termid v;
+	bool r, ns;
 };
 #endif

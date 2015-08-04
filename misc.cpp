@@ -91,7 +91,6 @@ string dstr ( nodeid p, bool escape ) {
 		replace_all(s, L"\"", L"\\\"");
 		replace_all(s, L"'", L"\\'");
 	}
-	if (s == L"GND") throw 0;
 	if ( !shorten ) return s;
 	if ( s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );

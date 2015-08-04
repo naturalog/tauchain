@@ -1,46 +1,22 @@
 z a nat.
 { ?x a nat. ?x succ ?y } => { ?y a nat }.
-#{ ?X a ?Y. ?Y a ?X } => { ?X eq ?Y. ?Y eq ?X }
- 
-#{ ?X eq ?Y } => { ?X a ?Y. ?Y a ?X }
-#{ ?Y eq ?X } => { ?X a ?Y. ?Y a ?X }
- 
 { (?x ?y) add ?z } => { (?y ?x) add ?z }.
 { (?x ?y) mul ?z } => { (?y ?x) mul ?z }.
- 
-#{ ?x a nat. ?y a nat. (?x ?y) add ?z } => { ?z a nat }.
-#{ ?x a nat. ?y a nat. (?x ?y) mul ?z } => { ?z a nat }.
- 
 { (?x z) mul ?z } => { ?z eq z }.
 { (?x o) mul ?z } => { ?z eq ?x }.
 { (?x z) add ?z } => { ?z eq ?x }.
- 
 { ?z eq z } => { (?x z) mul ?z } .
 { ?z eq ?x } => { (?x o) mul ?z } .
 { ?z eq ?x } => { (?x z) add ?z } .
- 
 { ?x a nat. ?x succ ?y. } => { (?x o) add ?y }.
- 
 z succ o.
- 
 (z z) add z.
 (z z) mul z.
- 
 X a nat.
 Y a nat.
 (X Y) add S.
 (X Y) mul M.
- 
 o succ two.
- 
 fin.
 (z z) add ?q.
-
-#(?q two) mul ?r.
-
-
-#?p succ ?u.
-#(?u ?v) mul ?m.
-#(?u ?v) add ?s.
-#?m eq ?s.
 fin.
