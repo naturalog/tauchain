@@ -303,6 +303,8 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->s, *p->s, t.o, *p->s, true) ? 1 : -1;
+		// returning -1 here because plz also look into the kb,
+		// dont assume that if this builtin didnt succeed, the kb cant contain such fact
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, *p->s, t.o, *p->s, true) ? 1 : -1;
 /*	else if (t.p == _dlopen) {
@@ -364,7 +366,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 		r = 1;
 	}*/
-	else if ((t.p == A || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
+	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)
+		r = 1;
+	else if ((
+					 t.p == A // parser kludge
+					 || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		//termset ts(2,0,*alloc);
 		termset ts(2);
 		termid va = tmpvar();
