@@ -303,7 +303,7 @@ std::list<string> proc;
 string indent() {
 	if (!_indent) return string();
 	std::wstringstream ss;
-	size_t sz = proc.size();
+//	size_t sz = proc.size();
 	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
 		string str = L"(";
 		str += *it;

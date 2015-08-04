@@ -14,7 +14,7 @@
 #include <future>
 #include <functional>
 #include <forward_list>
-//#include <boost/interprocess/containers/map.hpp>
+#include <boost/interprocess/containers/map.hpp>
 //#include <boost/interprocess/containers/set.hpp>
 //#include <boost/interprocess/containers/vector.hpp>
 
@@ -37,6 +37,7 @@ struct term {
 	pobj json(const prover&) const;
 };
 typedef std::map<nodeid, termid> subst;
+//typedef boost::container::map<nodeid, termid> subst;
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
@@ -90,14 +91,15 @@ public:
 
 	struct proof {
 		ruleid rul = 0;
-		uint last, level = 0, src = 0;
+		uint last, level = 0;
 		shared_ptr<proof> prev = 0, creator = 0;
 		shared_ptr<subst> s = 0;//make_shared<subst>();
 		ground g(prover*) const;
 		termid btterm = 0;
+		uint src = 0;
 		proof(){}// : s(make_shared<subst>()) {}
 		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), uint _src = 0) 
-			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), creator(c), src(_src) {}
+			: rul(r), last(l), prev(p), creator(c), s(make_shared<subst>(_s)), src(_src) {}
 		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rul, p.last, p.prev) { if (prev) level = prev->level + 1; }
 	};
 	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->last < y->last; }};
@@ -142,7 +144,6 @@ private:
 	inline termid evaluate(const term& p) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
-		termid r;
 		if (ISVAR(p)) return 0;
 		if (!p.s && !p.o) return &p;
 		termid a = evaluate(*p.s), b = evaluate(*p.o);

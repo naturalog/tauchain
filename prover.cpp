@@ -305,7 +305,7 @@ void prover::step(shared_ptr<proof>& _p) {
 	if (p.last != rul.size()) {
 		if (euler_path(_p)) return;
 		termid t = rul[p.last];
-		const term& rt = *t;
+//		const term& rt = *t;
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto it = kb.r2id.find(t->p);
 		if (it == kb.r2id.end()) return;
