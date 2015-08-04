@@ -1,7 +1,7 @@
 #ifndef __RDF_DATA__
 #define __RDF_DATA__
 
-#include "jsonld_object.h"
+#include "json_object.h"
 #include <list>
 #include <set>
 

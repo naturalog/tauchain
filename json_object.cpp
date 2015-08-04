@@ -1,4 +1,4 @@
-#include "jsonld_object.h"
+#include "json_object.h"
 #include <iostream>
 
 #ifdef DEBUG
