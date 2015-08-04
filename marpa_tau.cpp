@@ -7,7 +7,7 @@ http://www.w3.org/2000/10/swap/grammar/n3.n3
 #include <fstream>
 
 #include "prover.h"
-#include "object.h"
+#include "json_object.h"
 #include "cli.h"
 #include "rdf.h"
 #include "misc.h"

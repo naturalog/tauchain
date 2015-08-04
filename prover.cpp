@@ -7,7 +7,7 @@
 #include <ostream>
 #include "misc.h"
 #include <utility>
-#include "object.h"
+#include "json_object.h"
 #include "prover.h"
 #include <iterator>
 #include <forward_list>

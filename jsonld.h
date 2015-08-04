@@ -14,7 +14,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
-#include "object.h"
+#include "json_object.h"
 #include "strings.h"
 #include "rdf.h"
 
