@@ -450,6 +450,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 			*r = *p;
 			r->btterm = EVALS(id, *p->s);
 			++r->last;
+			r->src = p->src;
 			return r;
 		}());
 	return r;
@@ -474,7 +475,7 @@ void prover::pushev(shared_ptr<proof> p) {
 //	}
 //}
 
-void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
+void prover::step(shared_ptr<proof>& _p) {
 	setproc(L"step");
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
@@ -482,6 +483,7 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 //	queue_t qq;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto rul = body[p.rul];
+	size_t src = 0;
 	if (p.last != rul.size()) {
 		if (euler_path(_p)) return;
 		termid t = rul[p.last];
@@ -489,20 +491,22 @@ void prover::step(shared_ptr<proof>& _p, queue_t& queue, queue_t& gnd) {
 		auto it = kb.r2id.find(t->p);
 		if (it == kb.r2id.end()) return;
 		subst s;
-		auto& ss = _p->s;
-		if (ss) { const subst& _s = *ss; for (auto rl : it->second) { if (unify_sdnovar(t, _s, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); } }
-		else	for (auto rl : it->second) { if (unify_sdnovar(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s)); s.clear(); }
+		auto& ss = p.s;
+		if (ss) { const subst& _s = *ss; for (auto rl : it->second) { if (unify_sdnovar(t, _s, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s, src)); s.clear(); ++src; } }
+		else	for (auto rl : it->second) { if (unify_sdnovar(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s, src)); s.clear(); ++src; }
 	}
 	else if (!p.prev) { gnd.push(_p); /* while (!queue.empty()) queue.pop();*/ }
 	else {
-		shared_ptr<proof> r = make_shared<proof>(_p, *p.prev);
+		proof& ppr = *p.prev;
+		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
 		ruleid rl = p.rul;
-		auto& ss = p.prev->s;
+		r->src = ppr.src;
+		auto& ss = ppr.s;
 		r->s = ss ? make_shared<subst>(*ss) : make_shared<subst>();
 		if (p.s) unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
 		else unify(head[rl], body[r->rul][r->last], *r->s, true);
 		++r->last;
-		step(r, queue, gnd);
+		step(r);
 	}
 //	while (!qq.empty()) {
 //		auto ff = qq.top();
@@ -677,7 +681,6 @@ void prover::query(const termset& goal, subst* s) {
 
 int prover::do_query(const termset& goal, subst* s) {
 //	setproc(L"do_query");
-	queue_t queue, gnd;
 	queue.push([&](){
 	shared_ptr<proof> p = make_shared<proof>();
 	p->rul = kb.add(0, goal);
@@ -703,7 +706,7 @@ int prover::do_query(const termset& goal, subst* s) {
 		q = queue.top();//.get();
 		queue.pop();
 //		printq(queue);
-		step(q, queue, gnd);
+		step(q);
 	} while (!queue.empty());// && steps < 2e+7);
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();

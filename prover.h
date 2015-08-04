@@ -90,17 +90,17 @@ public:
 
 	struct proof {
 		ruleid rul = 0;
-		uint last, level = 0;
+		uint last, level = 0, src = 0;
 		shared_ptr<proof> prev = 0, creator = 0;
 		shared_ptr<subst> s = 0;//make_shared<subst>();
 		ground g(prover*) const;
 		termid btterm = 0;
 		proof(){}// : s(make_shared<subst>()) {}
-		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst()) 
-			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), creator(c) {}
+		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), uint _src = 0) 
+			: rul(r), last(l), prev(p), s(make_shared<subst>(_s)), creator(c), src(_src) {}
 		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rul, p.last, p.prev) { if (prev) level = prev->level + 1; }
 	};
-	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level; }};
+	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->last < y->last; }};
 	typedef std::priority_queue<shared_ptr<proof>, std::vector<shared_ptr<proof>>, proofcmp> queue_t;
 
 	void addrules(pquad q, qdb& quads);
@@ -130,7 +130,7 @@ private:
 	bool printNow;
 
 	inline void pushev(shared_ptr<proof>);
-	inline void step(shared_ptr<proof>&, queue_t&, queue_t&);
+	inline void step(shared_ptr<proof>&);
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
 	inline termid evaluate(const term& p) {
@@ -201,5 +201,6 @@ private:
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
 	string fsubsts(const ground& g);
+	queue_t queue, gnd;
 };
 #endif
