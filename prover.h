@@ -155,7 +155,7 @@ private:
 		termid r;
 		if (ISVAR(p)) {
 			auto it = s.find(p.p);
-			r = it == s.end() ? 0 : EVALS(it->second, s);
+			r = it == s.end() ? 0 : evaluate(*it->second, s);
 		} else if (!p.s && !p.o) r = &p;
 		else {
 			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
