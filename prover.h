@@ -107,9 +107,7 @@ public:
 	std::vector<termid> get_list(termid head, proof& p);
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
-	string format(termid id, bool json = false);
 	void get_dotstyle_list(termid, std::list<nodeid>&);
-	string formatkb(bool json = false);
 
 private:
 	class termdb {
@@ -146,7 +144,7 @@ private:
 		setproc(L"evaluate");
 		termid r;
 		if (ISVAR(p)) return 0;
-		if (!p.s/* && !p.o*/) return &p;
+		if (!p.s && !p.o) return &p;
 		termid a = evaluate(*p.s), b = evaluate(*p.o);
 		return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 	}
@@ -158,8 +156,7 @@ private:
 		if (ISVAR(p)) {
 			auto it = s.find(p.p);
 			r = it == s.end() ? 0 : EVALS(it->second, s);
-		} else if (!p.s/* && !p.o*/)
-			r = &p;
+		} else if (!p.s && !p.o) r = &p;
 		else {
 			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
 			r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
@@ -190,6 +187,8 @@ private:
 	bool consistency(const qdb& quads);
 
 	// formatters
+	string format(termid id, bool json = false);
+	string formatkb(bool json = false);
 	void printg(const ground& g);
 	void printg(shared_ptr<ground> g) { printg(*g); }
 	void printe();
@@ -198,7 +197,7 @@ private:
 	void prints(shared_ptr<subst> s) { prints(*s); }
 	string format(nodeid) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(nodeid, bool) { throw std::runtime_error("called format(termid) with nodeid"); }
-	string format(term t, bool json = false);
+	string format(const term&, bool json = false);
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
