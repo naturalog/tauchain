@@ -16,6 +16,7 @@ set(SOURCE_FILES
     misc.cpp
     misc.h
     nquads.cpp
+    unifiers.cpp
     json_object.cpp
     json_object.h
     prover.cpp
