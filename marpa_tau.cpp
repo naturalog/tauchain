@@ -41,10 +41,10 @@ bool ask(prover *prover, nodeid s, const pnode p, const pnode o) {
 
     bool r = false;
 
-    for (auto x : prover->substs)
+    for (auto x : prover->substss)
         r = true;
 
-    prover->substs.clear();
+    prover->substss.clear();
     prover->e.clear();
     return r;
 }
@@ -67,8 +67,8 @@ resids ask(prover *prover, nodeid s, const pnode p) {    /* s and p in, a list o
 
     //dout << "substs: "<< std::endl;
 
-    for (auto x : prover->substs) {
-        subst::iterator binding_it = x.find(prover->get(o_var).p);
+    for (auto x : prover->substss) {
+        substs::iterator binding_it = x.find(prover->get(o_var).p);
         if (binding_it != x.end()) {
             r.push_back(prover->get((*binding_it).second).p);
             //prover->prints(x); dout << std::endl;
@@ -77,7 +77,7 @@ resids ask(prover *prover, nodeid s, const pnode p) {    /* s and p in, a list o
 
     //dout << r.size() << ":" << std::endl;
 
-    prover->substs.clear();
+    prover->substss.clear();
     prover->e.clear();
     return r;
 }
@@ -94,12 +94,12 @@ termid ask1t(prover *prover, nodeid s, const pnode p) {
     assert (iii);
     query.emplace_back(iii);
     prover->do_query(query);
-    for (auto x : prover->substs) {
-        subst::iterator binding_it = x.find(prover->get(o_var).p);
+    for (auto x : prover->substss) {
+        substs::iterator binding_it = x.find(prover->get(o_var).p);
         if (binding_it != x.end())
             r.push_back((*binding_it).second);
     }
-    prover->substs.clear();
+    prover->substss.clear();
     prover->e.clear();
     if (r.size() > 1)
         throw std::runtime_error("well, this is weird, " + std::to_string(r.size()) + " matches.");
@@ -128,7 +128,7 @@ resids ask(prover *prover, const pnode p, nodeid o) {
     //dout << "substs: "<< std::endl;
 
     for (auto x : prover->substs) {
-        subst::iterator binding_it = x.find(prover->get(s_var).p);
+        substs::iterator binding_it = x.find(prover->get(s_var).p);
         if (binding_it != x.end()) {
             r.push_back(prover->get((*binding_it).second).p);
             //prover->prints(x); dout << std::endl;

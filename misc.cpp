@@ -145,14 +145,14 @@ string prover::format(const term& p, bool json) {
 
 string prover::formatp(shared_ptr<proof> p) {
 	std::wstringstream ss;
-	ss 	<< L"rule:   " << formatr(p->rul) << endl 
+	ss 	<< L"rule:   " << formatr(p->rule) << endl
 		<< L"prev:   " << p->prev << endl
 		<< L"subst:  " << formats(p->s) << endl
 		<< L"ground: " << endl << formatg(p->g(this)) << endl;
 	return ss.str();
 }
 void prover::printp(shared_ptr<proof> p) {
-	dout << KCYN /*<< indent()*/ << L"rule:   " << formatr(p->rul) <<endl<<indent();
+	dout << KCYN /*<< indent()*/ << L"rule:   " << formatr(p->rule) <<endl<<indent();
 	if (p->prev) dout << L"prev:   " << p->prev <<endl<<indent()<< L"subst:  ";
 	else dout << L"prev:   (null)"<<endl<<indent()<<"subst:  ";
 	prints(p->s);
@@ -163,7 +163,7 @@ void prover::printp(shared_ptr<proof> p) {
 	dout << endl << KNRM;
 }
 
-string prover::formats(const subst& s, bool json) {
+string prover::formats(const substs & s, bool json) {
 	if (s.empty()) return L"";
 	std::wstringstream ss;
 	std::map<string, string> r;
@@ -173,7 +173,7 @@ string prover::formats(const subst& s, bool json) {
 	return ss.str();
 }
 
-void prover::prints(const subst& s) {
+void prover::prints(const substs & s) {
 	for (auto x : s)
 		dout << dstr(x.first) << L" / " << format(x.second) << ' ';
 }
@@ -190,7 +190,7 @@ string prover::format(const termset& l, bool json) {
 	return ss.str();
 }
 
-void prover::printterm_substs(termid id, const subst& s) {
+void prover::printterm_substs(termid id, const substs & s) {
 	const term& p = *id;
 	dout << dstr(p.p) << L'(';
 	if (p.s) {
@@ -207,7 +207,7 @@ void prover::printterm_substs(termid id, const subst& s) {
 	dout << L')';
 }
 
-void prover::printl_substs(const termset& l, const subst& s) {
+void prover::printl_substs(const termset& l, const substs & s) {
 	auto x = l.begin();
 	while (x != l.end()) {
 		printterm_substs(*x, s);
@@ -216,7 +216,7 @@ void prover::printl_substs(const termset& l, const subst& s) {
 	}
 }
 
-void prover::printr_substs(ruleid r, const subst& s) {
+void prover::printr_substs(ruleid r, const substs & s) {
 	printl_substs(kb.body()[r], s);
 	dout << L" => ";
 	printterm_substs(kb.head()[r], s);
@@ -233,9 +233,9 @@ string prover::formatr(ruleid r, bool json) {
 		return ss.str();
 	}
 	ss << L"{head:" << format(kb.head()[r],true) << L",body:";
-//	for (size_t n = 0; n < kb.body().size(); ++n) {
+//	for (size_t n = 0; n < kb.bodies().size(); ++n) {
 		ss << format(kb.body()[r], true);
-//		if (n != (kb.body().size()-1)) ss << L',';
+//		if (n != (kb.bodies().size()-1)) ss << L',';
 //	}
  	ss << L"}";
 	return ss.str();
@@ -277,7 +277,7 @@ pobj term::json(const prover& pr) const {
 }
 
 string prover::fsubsts(const prover::ground& g) {
-	subst s;
+	substs s;
 	for (auto x : g)
 		if (x.second)
 			s.insert(x.second->begin(), x.second->end());
@@ -359,7 +359,7 @@ pobj prover::json(const termset& ts) const {
 	return l;
 }
 
-pobj prover::json(const subst& s) const {
+pobj prover::json(const substs & s) const {
 	psomap_obj o = mk_somap_obj();
 	for (auto x : s) (*o->MAP())[dstr(x.first)] = x.second->json(*this);
 	return o;

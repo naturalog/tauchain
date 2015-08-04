@@ -36,8 +36,8 @@ struct term {
 	termid s, o;
 	pobj json(const prover&) const;
 };
-typedef std::map<nodeid, termid> subst;
-//typedef boost::container::map<nodeid, termid> subst;
+typedef std::map<nodeid, termid> substs;
+//typedef boost::container::map<nodeid, termid> substs;
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
@@ -66,23 +66,23 @@ public:
 		inline const rulelist& operator[](nodeid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
-	const termset& head = kb.head();
-	const std::vector<termset>& body = kb.body();
+	const termset&heads = kb.head();
+	const std::vector<termset>&bodies = kb.body();
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
 	prover ( const prover& p );
 	termset qdb2termset(const qdb &q_);
-	int  do_query(const termset& goal, subst* s = 0);
-	void do_query(const qdb& goal, subst* s = 0);
-	void query(const termset& goal, subst* s = 0);
-	void query(const qdb& goal, subst* s = 0);
+	int  do_query(const termset& goal, substs * s = 0);
+	void do_query(const qdb& goal, substs * s = 0);
+	void query(const termset& goal, substs * s = 0);
+	void query(const qdb& goal, substs * s = 0);
 	~prover();
 
-	typedef std::list<std::pair<ruleid, shared_ptr<subst>>> ground;
+	typedef std::list<std::pair<ruleid, shared_ptr<substs>>> ground;
 	typedef std::map<nodeid, std::list<std::pair<termid, ground>>> evidence;
 	evidence e;
-	std::vector<subst> substs;
+	std::vector<substs> substss;
 	termid tmpvar();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(nodeid p, termid s = 0, termid o = 0);
@@ -90,19 +90,19 @@ public:
 	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/nodeid) with termid"); }
 
 	struct proof {
-		ruleid rul = 0;
-		uint last, level = 0;
+		ruleid rule = 0;
+		uint term_idx, level = 0;
 		shared_ptr<proof> prev = 0, creator = 0;
-		shared_ptr<subst> s = 0;//make_shared<subst>();
+		shared_ptr<substs> s = 0;//make_shared<substs>();
 		ground g(prover*) const;
 		termid btterm = 0;
 		uint src = 0;
-		proof(){}// : s(make_shared<subst>()) {}
-		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subst& _s = subst(), uint _src = 0) 
-			: rul(r), last(l), prev(p), creator(c), s(make_shared<subst>(_s)), src(_src) {}
-		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rul, p.last, p.prev) { if (prev) level = prev->level + 1; }
+		proof(){}// : s(make_shared<substs>()) {}
+		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const substs & _s = substs(), uint _src = 0)
+			: rule(r), term_idx(l), prev(p), creator(c), s(make_shared<substs>(_s)), src(_src) {}
+		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rule, p.term_idx, p.prev) { if (prev) level = prev->level + 1; }
 	};
-	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->last < y->last; }};
+	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->term_idx < y->term_idx; }};
 	typedef std::priority_queue<shared_ptr<proof>, std::vector<shared_ptr<proof>>, proofcmp> queue_t;
 
 	void addrules(pquad q, qdb& quads);
@@ -133,7 +133,7 @@ private:
 	inline void step(shared_ptr<proof>&);
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
-	termid evalvar(const term& x, const subst& s) {
+	termid evalvar(const term& x, const substs & s) {
 		PROFILE(++evals);
 		setproc(L"evalvar");
 		auto evvit = s.find(x.p);
@@ -150,7 +150,7 @@ private:
 		return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 	}
 
-	inline termid evaluate(const term& p, const subst& s) {
+	inline termid evaluate(const term& p, const substs & s) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
 		termid r;
@@ -166,18 +166,18 @@ private:
 		return r;
 	}
 
-	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub);
-	bool unify(termid _s, termid _d, subst& dsub);
-	bool unify_snovar(const term& s, const subst& ssub, termid _d, subst& dsub);
-	bool unify_dnovar(termid _s, const subst& ssub, const term& _d, subst& dsub);
-	bool unify_dnovar(termid _s, const term& d, subst& dsub);
-	bool unify_sdnovar(const term& s, const subst& ssub, const term& d, subst& dsub);
-	bool unify_sdnovar(const term& s, const term& d, subst& dsub);
-	bool unify_snovar_dvar(const term& s, const subst& ssub, const term& d, subst& dsub);
-	bool unify_dnovar_ep(termid _s, const subst& ssub, const term& d, const subst& dsub);
-	bool unify_snovar_dvar_ep(const term& s, const subst& ssub, const term& d, const subst& dsub);
-	bool unify_ep(termid _s, const subst& ssub, const term& d, const subst& dsub);
-	bool unify_sdnovar_ep(const term& s, const subst& ssub, const term& d, const subst& dsub);
+	bool unify(termid _s, const substs & ssub, termid _d, substs & dsub);
+	bool unify(termid _s, termid _d, substs & dsub);
+	bool unify_snovar(const term& s, const substs & ssub, termid _d, substs & dsub);
+	bool unify_dnovar(termid _s, const substs & ssub, const term& _d, substs & dsub);
+	bool unify_dnovar(termid _s, const term& d, substs & dsub);
+	bool unify_sdnovar(const term& s, const substs & ssub, const term& d, substs & dsub);
+	bool unify_sdnovar(const term& s, const term& d, substs & dsub);
+	bool unify_snovar_dvar(const term& s, const substs & ssub, const term& d, substs & dsub);
+	bool unify_dnovar_ep(termid _s, const substs & ssub, const term& d, const substs & dsub);
+	bool unify_snovar_dvar_ep(const term& s, const substs & ssub, const term& d, const substs & dsub);
+	bool unify_ep(termid _s, const substs & ssub, const term& d, const substs & dsub);
+	bool unify_sdnovar_ep(const term& s, const substs & ssub, const term& d, const substs & dsub);
 
 	inline bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
@@ -194,8 +194,8 @@ private:
 	void printg(shared_ptr<ground> g) { printg(*g); }
 	void printe();
 	string format(const termset& l, bool json = false);
-	void prints(const subst& s);
-	void prints(shared_ptr<subst> s) { prints(*s); }
+	void prints(const substs & s);
+	void prints(shared_ptr<substs> s) { prints(*s); }
 	string format(nodeid) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(nodeid, bool) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(const term&, bool json = false);
@@ -203,14 +203,14 @@ private:
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
 	string formatp(shared_ptr<proof> p);
-	string formats(const subst& s, bool json = false);
-	string formats(shared_ptr<subst>& s, bool json = false) { return s ? formats(*s, json) : string(); }
-	void printterm_substs(termid id, const subst& s);
-	void printl_substs(const termset& l, const subst& s);
-	void printr_substs(ruleid r, const subst& s);
+	string formats(const substs & s, bool json = false);
+	string formats(shared_ptr<substs>& s, bool json = false) { return s ? formats(*s, json) : string(); }
+	void printterm_substs(termid id, const substs & s);
+	void printl_substs(const termset& l, const substs & s);
+	void printr_substs(ruleid r, const substs & s);
 	void jprinte();
 	pobj json(const termset& ts) const;
-	pobj json(const subst& ts) const;
+	pobj json(const substs & ts) const;
 	pobj json(const ground& g) const;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
