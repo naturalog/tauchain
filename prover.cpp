@@ -579,3 +579,57 @@ prover::ruleid prover::ruleset::add(termid t) {
 	return add(t, ts);
 }
 
+prover::nodeids prover::ask(termid s, const pnode p, termid o) {
+	setproc(L"ask");
+	termid question = make(p, s_var, oo);
+	termset query;
+	query.emplace_back(question);
+	nodeids r = nodeids();
+	do_query(query);
+	for (auto x : substs) {
+		substs::iterator binding_it = x.find(s_var->p);
+		if (binding_it != x.end()) {
+			r.push_back((*binding_it).second->p);
+			TRACE(dout << "result:" << prints(x);
+						  dout << std::endl);
+		}
+	}
+	substs.clear();
+	e.clear();
+	return r;
+}
+prover::nodeids prover::ask4ss(const pnode p, pnode o) {
+    assert(p);
+	assert (o);
+
+    auto oo = make(o);
+    assert (oo);
+
+    termid s_var = tmpvar();
+	assert(s_var);
+
+	return ask(s_var, p, o);
+}
+
+prover::nodeid prover::ask4o(pnode s, const pnode p) {
+    return force_one(ask4os(s, p));
+}
+
+prover::nodeid prover::ask1(const pnode p, nodeid o) {
+	return force_one(ask4ss(prover, p, o));
+}
+
+prover::nodeid prover::force_one(prover::nodeids r) {
+    if (r.size() > 1)
+    {
+        std::wstringstream ss;
+        ss << L"well, this is weird, more than one match:";
+        for (auto xx: r)
+            ss << xx << " ";
+        throw wruntime_error(ss.str());
+    }
+    if (r.size() == 1)
+        return r[0];
+    else
+        return 0;
+}

@@ -23,12 +23,10 @@ extern "C" {
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
-typedef std::vector <nodeid> resids;
+typedef std::vector <nodeid> nodeids;
 typedef std::vector <termid> termids;
-
 typedef shared_ptr<prover::proof> proverproof;
 
-/*ok this is getting terrible*/
 bool ask(prover *prover, nodeid s, const pnode p, const pnode o) {
     assert(s);
     assert(p);
@@ -49,8 +47,8 @@ bool ask(prover *prover, nodeid s, const pnode p, const pnode o) {
     return r;
 }
 
-resids ask(prover *prover, nodeid s, const pnode p) {    /* s and p in, a list of o's out */
-    resids r = resids();
+nodeids ask(prover *prover, nodeid s, const pnode p) {    /* s and p in, a list of o's out */
+    nodeids r = nodeids();
     prover::termset query;
     termid o_var = prover->tmpvar();
     assert(o_var);
@@ -109,8 +107,8 @@ termid ask1t(prover *prover, nodeid s, const pnode p) {
         return 0;
 }
 
-resids ask(prover *prover, const pnode p, nodeid o) {
-    resids r = resids();
+nodeids ask(prover *prover, const pnode p, nodeid o) {
+    nodeids r = nodeids();
     prover::termset query;
     termid s_var = prover->tmpvar();
     assert (o);
@@ -120,13 +118,7 @@ resids ask(prover *prover, const pnode p, nodeid o) {
     assert(s_var);
     termid iii = prover->make(p, s_var, oo);
     query.emplace_back(iii);
-
-    //dout << "query: "<< prover->format(query) << endl;;
-
     prover->do_query(query);
-
-    //dout << "substs: "<< std::endl;
-
     for (auto x : prover->substs) {
         substs::iterator binding_it = x.find(prover->get(s_var).p);
         if (binding_it != x.end()) {
@@ -134,40 +126,35 @@ resids ask(prover *prover, const pnode p, nodeid o) {
             //prover->prints(x); dout << std::endl;
         }
     }
-
-    //dout << r.size() << ":" << std::endl;
-
     prover->substs.clear();
     prover->e.clear();
     return r;
 }
 
-nodeid ask1(prover *prover, nodeid s, const pnode p) {
-    auto r = ask(prover, s, p);
-    if (r.size() > 1)
-        throw wruntime_error(L"well, this is weird");
-    if (r.size() == 1)
-        return r[0];
-    else
-        return 0;
-}
-
-nodeid ask1(prover *prover, const pnode p, nodeid o) {
-    auto r = ask(prover, p, o);
-    if (r.size() > 1)
-    {
-        std::wstringstream ss;
-        ss << L"well, this is weird, more than one match:";
-        for (auto xx: r)
-            ss << xx << " ";
-        throw wruntime_error(ss.str());
+nodeids ask(prover *prover, const pnode p, nodeid o) {
+    nodeids r = nodeids();
+    prover::termset query;
+    termid s_var = prover->tmpvar();
+    assert (o);
+    auto oo = prover->make(o);
+    assert (oo);
+    assert(p);
+    assert(s_var);
+    termid iii = prover->make(p, s_var, oo);
+    query.emplace_back(iii);
+    prover->do_query(query);
+    for (auto x : prover->substs) {
+        substs::iterator binding_it = x.find(prover->get(s_var).p);
+        if (binding_it != x.end()) {
+            r.push_back(prover->get((*binding_it).second).p);
+            //prover->prints(x); dout << std::endl;
+        }
     }
-
-    if (r.size() == 1)
-        return r[0];
-    else
-        return 0;
+    prover->substs.clear();
+    prover->e.clear();
+    return r;
 }
+
 
 std::vector<nodeid> get_list(prover *prover, nodeid head, prover::proof &p)
 {
@@ -751,10 +738,10 @@ public:
         return ss.str();
     };
 
-    resids get_dotstyle_list(termid l) {
+    nodeids get_dotstyle_list(termid l) {
         std::list<nodeid> r;
         prvr->get_dotstyle_list(l, r);
-        resids rr;
+        nodeids rr;
         for (auto x:r)
             rr.push_back(x);
         return rr;
@@ -871,7 +858,7 @@ public:
     {
         std::list<pnode> r;
         if(x) {
-            resids items = get_dotstyle_list(x);
+            nodeids items = get_dotstyle_list(x);
             for (auto i:items)
                 r.push_back(add_expression(i));
         }
@@ -936,7 +923,7 @@ public:
         nodeid sspl = q(sim, n3propertylist);
         if (sspl) {
             nodeid prop = sspl;
-            resids props;
+            nodeids props;
             while (prop) {
                 props.push_back(prop);
                 prop = q(prop, n3propertylisttail);
@@ -1017,7 +1004,7 @@ public:
     }
 
     void add_statements(termid list, string graph) {
-        resids statements = get_dotstyle_list(list);
+        nodeids statements = get_dotstyle_list(list);
         TRACE(dout << std::endl << graph << ":" << std::endl);
 
         for (auto s: statements) {
