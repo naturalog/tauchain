@@ -216,8 +216,5 @@ private:
 	pobj ejson() const;
 	string fsubsts(const ground& g);
 	queue_t queue, gnd;
-// used by unify
-	termid v;
-	bool r, ns;
 };
 #endif

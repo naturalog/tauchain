@@ -4,7 +4,8 @@ bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub) {
 	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify_bind");
-	ns = false;
+	termid v;
+	bool r, ns = false;
 	const term& d = *_d, s = *_s;
 	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub) << " with " << format(_d) << " sub: " << formats(dsub) << endl);
 	if (ISVAR(s)) {
@@ -48,6 +49,8 @@ bool prover::unify_ep(termid _s, const subst& ssub, const term& d, const subst& 
 	if (!_s) return false;
 	setproc(L"unify_ep");
 	const term& s = *_s;
+	termid v;
+	bool r;
 	if (ISVAR(s)) {
 		v = evalvar(s, ssub);
 		r = v ? (ISVAR(d) ? unify_snovar_dvar_ep(*v, ssub, d, dsub) : unify_sdnovar_ep(*v, ssub, d, dsub)) : true;
@@ -71,7 +74,7 @@ bool prover::unify_snovar(const term& s, const subst& ssub, termid _d, subst& ds
 	PROFILE(++unifs);
 	const term& d = *_d;
 	if (ISVAR(d)) {
-		v = evalvar(d, dsub);
+		termid v = evalvar(d, dsub);
 		if (v) return unify_sdnovar(s, ssub, *v, dsub);
 		dsub[d.p] = evaluate(s, ssub);
 		TRACE(dout<<"new sub:"<<format(dsub[d.p])<<endl);
@@ -85,7 +88,7 @@ bool prover::unify_snovar(const term& s, const subst& ssub, termid _d, subst& ds
 
 bool prover::unify_snovar_dvar(const term& s, const subst& ssub, const term& d, subst& dsub) {
 	PROFILE(++unifs);
-	v = evalvar(d, dsub);
+	termid v = evalvar(d, dsub);
 	if (v) return unify_sdnovar(s, ssub, *v, dsub);
 	dsub[d.p] = evaluate(s, ssub);
 	TRACE(dout<<"new sub:"<<format(dsub[d.p])<<endl);
@@ -96,7 +99,7 @@ bool prover::unify_dnovar(termid _s, const subst& ssub, const term& d, subst& ds
 	PROFILE(++unifs);
 	const term& s = *_s;
 	if (ISVAR(s)) {
-		v = evalvar(s, ssub);
+		termid v = evalvar(s, ssub);
 		return v ? unify_sdnovar(*v, ssub, d, dsub) : true;
 	}
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
@@ -107,7 +110,7 @@ bool prover::unify_dnovar(termid _s, const subst& ssub, const term& d, subst& ds
 
 bool prover::unify_snovar_dvar_ep(const term& s, const subst& ssub, const term& d, const subst& dsub) {
 	PROFILE(++unifs);
-	v = evalvar(d, dsub);
+	termid v = evalvar(d, dsub);
 	return v ? unify_sdnovar_ep(s, ssub, *v, dsub) : true;
 }
 
@@ -116,8 +119,8 @@ bool prover::unify_dnovar_ep(termid _s, const subst& ssub, const term& d, const 
 	setproc(L"unify");
 	const term& s = *_s;
 	if (ISVAR(s)) {
-		v = evalvar(s, ssub);
-		r = v ? unify_sdnovar_ep(*v, ssub, d, dsub) : true;
+		termid v = evalvar(s, ssub);
+		return v ? unify_sdnovar_ep(*v, ssub, d, dsub) : true;
 	}
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
 	if (!s.s) return true;
@@ -131,7 +134,7 @@ bool prover::unify(termid _s, termid _d, subst& dsub) {
 	const term& d = *_d, s = *_s;
 	if (ISVAR(s)) return true;
 	else if (ISVAR(d)) {
-		v = evalvar(d, dsub);
+		termid v = evalvar(d, dsub);
 		if (v) return unify_sdnovar(s, *v, dsub);
 		dsub[d.p] = evaluate(s);
 		TRACE(dout<<"new sub:"<<format(dsub[d.p])<<endl);
