@@ -20,8 +20,14 @@
 
 #define ISVAR(term) ((term.p < 0))
 
+#ifdef PROF
+#define PROFILE(x) x
+#else
+#define PROFILE(x)
+#endif
+
 #define evalvar(v, x, s) { \
-		++evals; \
+		PROFILE(++evals); \
 		auto evvit = s.find(x.p); \
 		v = (evvit == s.end() ? 0 : evaluate(*evvit->second, s)); \
 	}
@@ -134,7 +140,7 @@ private:
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
 	inline termid evaluate(const term& p) {
-		++evals;
+		PROFILE(++evals);
 		setproc(L"evaluate");
 		termid r;
 		if (ISVAR(p)) return 0;
@@ -144,7 +150,7 @@ private:
 	}
 
 	inline termid evaluate(const term& p, const subst& s) {
-		++evals;
+		PROFILE(++evals);
 		setproc(L"evaluate");
 		termid r;
 		if (ISVAR(p)) {
@@ -160,13 +166,19 @@ private:
 		return r;
 	}
 
-	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool unify(termid _s, termid _d, subst& dsub, bool f);
-	bool unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool unify_dnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool unify_dnovar(termid _s, termid _d, subst& dsub, bool f);
-	bool unify_sdnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f);
-	bool unify_sdnovar(termid _s, termid _d, subst& dsub, bool f);
+	bool unify(termid _s, const subst& ssub, termid _d, subst& dsub);
+	bool unify(termid _s, termid _d, subst& dsub);
+	bool unify_snovar(const term& s, const subst& ssub, termid _d, subst& dsub);
+	bool unify_dnovar(termid _s, const subst& ssub, const term& _d, subst& dsub);
+	bool unify_dnovar(termid _s, const term& d, subst& dsub);
+	bool unify_sdnovar(const term& s, const subst& ssub, const term& d, subst& dsub);
+	bool unify_sdnovar(const term& s, const term& d, subst& dsub);
+	bool unify_snovar_dvar(const term& s, const subst& ssub, const term& d, subst& dsub);
+	bool unify_dnovar_ep(termid _s, const subst& ssub, const term& d, const subst& dsub);
+	bool unify_snovar_dvar_ep(const term& s, const subst& ssub, const term& d, const subst& dsub);
+	bool unify_ep(termid _s, const subst& ssub, const term& d, const subst& dsub);
+	bool unify_sdnovar_ep(const term& s, const subst& ssub, const term& d, const subst& dsub);
+
 	inline bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);

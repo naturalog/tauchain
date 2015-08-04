@@ -28,205 +28,17 @@ using namespace boost::algorithm;
 int _indent = 0;
 
 term::term() : p(0), s(0), o(0) {}
-bool prover::unify(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
-	++unifs;
-	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify");
-	termid v;
-	bool r, ns = false;
-	const term& d = *_d, s = *_s;
-	if (ISVAR(s)) {
-		evalvar(v, s, ssub);
-		r = v ? unify_snovar(v, ssub, _d, dsub, f) : true;
-	}
-	else if (ISVAR(d)) {
-		evalvar(v, d, dsub);
-		if (v) r = unify_dnovar(_s, ssub, v, dsub, f);
-		else {
-			if (f) {
-				dsub[d.p] = EVALS(_s, ssub);
-				ns = true;
-			}
-			r = true;
-		}
-	}
-	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else if (!s.s) r = true;
-	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
-		r = unify(s.o, ssub, d.o, dsub, f);
-	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
-		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-	if (r) {
-		dout << "passed";
-		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-	} else dout << "failed";
-	dout << endl);
-	return r;
-}
-
-bool prover::unify_snovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
-	++unifs;
-	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify");
-	termid v;
-	bool r, ns = false;
-	const term& d = *_d, s = *_s;
-	if (ISVAR(d)) {
-		evalvar(v, d, dsub);
-		if (v) r = unify_dnovar(_s, ssub, v, dsub, f);
-		else {
-			if (f) {
-				dsub[d.p] = EVALS(_s, ssub);
-				ns = true;
-			}
-			r = true;
-		}
-	}
-	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else if (!s.s) r = true;
-	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
-		r = unify(s.o, ssub, d.o, dsub, f);
-	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
-		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-	if (r) {
-		dout << "passed";
-		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-	} else dout << "failed";
-	dout << endl);
-	return r;
-}
-
-bool prover::unify_dnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
-	++unifs;
-	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify");
-	termid v;
-	bool r, ns = false;
-	const term& d = *_d, s = *_s;
-	if (ISVAR(s)) {
-		evalvar(v, s, ssub);
-		r = v ? unify_snovar(v, ssub, _d, dsub, f) : true;
-	}
-	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else if (!s.s) r = true;
-	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
-		r = unify(s.o, ssub, d.o, dsub, f);
-	if (f) {
-		TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
-			  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-		if (r) {
-			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-		} else dout << "failed";
-		dout << endl);
-	}
-	return r;
-}
-
-bool prover::unify(termid _s, termid _d, subst& dsub, bool f) {
-	++unifs;
-	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify");
-	termid v;
-	bool r, ns = false;
-	const term& d = *_d, s = *_s;
-	if (ISVAR(s)) r = true;
-	else if (ISVAR(d)) {
-		evalvar(v, d, dsub);
-		if (v) r = unify_dnovar(_s, v, dsub, f);
-		else {
-			if (f) {
-				dsub[d.p] = EVAL(_s);
-				ns = true;
-			}
-			r = true;
-		}
-	}
-	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else if (!s.s) r = true;
-	else if ((r = unify(s.s, d.s, dsub, f)))
-		r = unify(s.o, d.o, dsub, f);
-	TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
-		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-	if (r) {
-		dout << "passed";
-		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-	} else dout << "failed";
-	dout << endl);
-	return r;
-}
-
-bool prover::unify_dnovar(termid _s, termid _d, subst& dsub, bool f) {
-	++unifs;
-	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify");
-	termid v;
-	bool r, ns = false;
-	const term& d = *_d, s = *_s;
-	if (ISVAR(s)) r = true;
-	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else if (!s.s) r = true;
-	else if ((r = unify(s.s, d.s, dsub, f)))
-		r = unify(s.o, d.o, dsub, f);
-	TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
-		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-	if (r) {
-		dout << "passed";
-		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-	} else dout << "failed";
-	dout << endl);
-	return r;
-}
-bool prover::unify_sdnovar(termid _s, const subst& ssub, termid _d, subst& dsub, bool f) {
-	++unifs;
-	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify");
-	termid v;
-	bool r, ns = false;
-	const term& d = *_d, s = *_s;
-	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else if (!s.s) r = true;
-	else if ((r = unify(s.s, ssub, d.s, dsub, f)))
-		r = unify(s.o, ssub, d.o, dsub, f);
-	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub)
-		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-	if (r) {
-		dout << "passed";
-		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-	} else dout << "failed";
-	dout << endl);
-	return r;
-}
-
-bool prover::unify_sdnovar(termid _s, termid _d, subst& dsub, bool f) {
-	++unifs;
-	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify");
-	termid v;
-	bool r, ns = false;
-	const term& d = *_d, s = *_s;
-	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
-	else if (!s.s) r = true;
-	else if ((r = unify(s.s, d.s, dsub, f)))
-	r = unify(s.o, d.o, dsub, f);
-	TRACE(dout << "Trying to unify " << format(_s) << " sub: " 
-		  << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
-	if (r) {
-		dout << "passed";
-		if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
-	} else dout << "failed";
-	dout << endl);
-	return r;
-}
-
 
 bool prover::euler_path(shared_ptr<proof>& _p) {
 	setproc(L"euler_path");
 	auto ep = _p;
 	proof& p = *_p;
 	termid t = head[p.rul];
+	if (!t) return false;
+	const term& rt = *t;
+	subst& ps = *p.s;
 	while ((ep = ep->prev))
-		if (ep->rul == p.rul && unify(head[ep->rul], *ep->s, t, *p.s, false))
+		if (ep->rul == p.rul && unify_ep(head[ep->rul], *ep->s, rt, ps))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
 	return ep != 0;
 }
@@ -336,11 +148,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->s, *p->s, t.o, *p->s, true) ? 1 : -1;
+		r = unify(t0->s, *p->s, t.o, *p->s) ? 1 : -1;
 		// returning -1 here because plz also look into the kb,
 		// dont assume that if this builtin didnt succeed, the kb cant contain such fact
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->o, *p->s, t.o, *p->s, true) ? 1 : -1;
+		r = unify(t0->o, *p->s, t.o, *p->s) ? 1 : -1;
 /*	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -487,13 +299,26 @@ void prover::step(shared_ptr<proof>& _p) {
 	if (p.last != rul.size()) {
 		if (euler_path(_p)) return;
 		termid t = rul[p.last];
+		const term& rt = *t;
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto it = kb.r2id.find(t->p);
 		if (it == kb.r2id.end()) return;
 		subst s;
 		auto& ss = p.s;
-		if (ss) { const subst& _s = *ss; for (auto rl : it->second) { if (unify_sdnovar(t, _s, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s, src)); s.clear(); ++src; } }
-		else	for (auto rl : it->second) { if (unify_sdnovar(t, head[rl], s, true)) queue.push(make_shared<proof>(_p, rl, 0, _p, s, src)); s.clear(); ++src; }
+		if (ss) {
+			const subst& _s = *ss;
+			for (auto rl : it->second) {
+				if (unify_sdnovar(rt, _s, *head[rl], s))
+					queue.push(make_shared<proof>(_p, rl, 0, _p, s, src));
+				s.clear();
+				++src; 
+			}
+		} else for (auto rl : it->second) { 
+			if (unify_sdnovar(rt, *head[rl], s))
+				queue.push(make_shared<proof>(_p, rl, 0, _p, s, src));
+				s.clear();
+				++src;
+		}
 	}
 	else if (!p.prev) { gnd.push(_p); /* while (!queue.empty()) queue.pop();*/ }
 	else {
@@ -503,8 +328,8 @@ void prover::step(shared_ptr<proof>& _p) {
 		r->src = ppr.src;
 		auto& ss = ppr.s;
 		r->s = ss ? make_shared<subst>(*ss) : make_shared<subst>();
-		if (p.s) unify(head[rl], *p.s, body[r->rul][r->last], *r->s, true);
-		else unify(head[rl], body[r->rul][r->last], *r->s, true);
+		if (p.s) unify(head[rl], *p.s, body[r->rul][r->last], *r->s);
+		else unify(head[rl], body[r->rul][r->last], *r->s);
 		++r->last;
 		step(r);
 	}
@@ -520,7 +345,7 @@ prover::ground prover::proof::g(prover* p) const {
 	ground r = creator->g(p);
 	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), make_shared<subst>());
 	else if (creator->last != p->body[creator->rul].size()) {
-		if (p->body[rul].empty()) r.emplace_back(rul, (shared_ptr<subst>)0);
+		if (p->body[rul].empty()) r.emplace_back(rul, nullptr);
 	} else if (!p->body[creator->rul].empty()) r.emplace_back(creator->rul, creator->s);
 	return r;	
 }
