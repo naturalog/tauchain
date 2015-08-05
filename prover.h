@@ -132,7 +132,7 @@ public:
 		ruleid rule = 0;
 		uint term_idx, level = 0;
 		shared_ptr<proof> prev = 0, creator = 0;
-		shared_ptr<substs> s = 0;//make_shared<substs>();
+		shared_ptr<substs> s = make_shared<substs>();
 		ground g(prover*) const;
 		termid btterm = 0;
 		uint src = 0;

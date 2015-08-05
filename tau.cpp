@@ -133,7 +133,12 @@ int main ( int argc, char** argv ) {
 	if (nocolor)
 		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 	argc = args.size();
-	prover::unittest();
+	try {
+		prover::unittest();
+	} catch (std::exception& ex) {
+		dout << "unit test failed: " << ex.what() << endl;
+		exit(1);
+	}
 	if ( argc == 1 ) {
 		prove_cmd p;
 		quad_in = true;

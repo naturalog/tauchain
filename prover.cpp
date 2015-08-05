@@ -305,44 +305,36 @@ void prover::step(shared_ptr<proof>& _p) {
 	setproc(L"step");
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
-	proof&proof_step = *_p;
-//	queue_t qq;
+	proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
-	auto body = bodies[proof_step.rule];
+	auto body = bodies[frame.rule];
 	size_t src = 0;
 	// if we still have some terms in rule body to process
-	if (proof_step.term_idx != body.size()) {
+	if (frame.term_idx != body.size()) {
 		if (euler_path(_p)) return;
-		termid t = body[proof_step.term_idx];
-//		const term& rt = *t;
+		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
-		if (/*proof_step.predvar && */t->p < 0)//ISVAR
-			for(auto rulelst: kb.r2id)
-				step_in(src, rulelst.second, _p, t);
-		else {
-			auto rulelist_it = kb.r2id.find(t->p);
-			if (rulelist_it == kb.r2id.end()) return;
-			step_in(src, rulelist_it->second, _p, t);
+		auto rulelist_it = kb.r2id.find(t->p);
+		if (rulelist_it == kb.r2id.end()) return;
+		substs s;
+		for (auto rule : rulelist_it->second) {
+			if (unify(t, *frame.s, heads[rule], s))
+				queue.push(make_shared<proof>(_p, rule, 0, _p, s, src));
+			s.clear();
+			++src; 
 		}
 	}
-	else if (!proof_step.prev) gnd.push(_p);
+	else if (!frame.prev) gnd.push(_p);
 	else {
-		proof& ppr = *proof_step.prev;
+		proof& ppr = *frame.prev;
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
-		ruleid rl = proof_step.rule;
+		ruleid rl = frame.rule;
 		r->src = ppr.src;
-		auto& ss = ppr.s;
-		r->s = ss ? make_shared<substs>(*ss) : make_shared<substs>();
-		if (proof_step.s) unify(heads[rl], *proof_step.s, bodies[r->rule][r->term_idx], *r->s);
-		else unify(heads[rl], bodies[r->rule][r->term_idx], *r->s);
+		r->s = make_shared<substs>(*ppr.s);
+		unify(heads[rl], *frame.s, bodies[r->rule][r->term_idx], *r->s);
 		++r->term_idx;
 		step(r);
 	}
-//	while (!qq.empty()) {
-//		auto ff = qq.top();
-//		qq.pop();
-//		step(ff, qq, gnd);
-//	}
 }
 void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> &_p, termid t) {
 	setproc(L"step_in");
