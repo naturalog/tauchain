@@ -1,6 +1,8 @@
 /*
 http://www.w3.org/2000/10/swap/grammar/bnf
 http://www.w3.org/2000/10/swap/grammar/n3.n3
+
+doesnt do proofs.
 */
 
 #include <iostream>
@@ -23,147 +25,8 @@ extern "C" {
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
-typedef std::vector <nodeid> nodeids;
-typedef std::vector <termid> termids;
-typedef shared_ptr<prover::proof> proverproof;
-
-bool ask(prover *prover, nodeid s, const pnode p, const pnode o) {
-    assert(s);
-    assert(p);
-    assert(o);
-
-    prover::termset query;
-    query.emplace_back(prover->make(p, prover->make(s), prover->make(o)));
-
-    prover->do_query(query);
-
-    bool r = false;
-
-    for (auto x : prover->substss)
-        r = true;
-
-    prover->substss.clear();
-    prover->e.clear();
-    return r;
-}
-
-nodeids ask(prover *prover, nodeid s, const pnode p) {    /* s and p in, a list of o's out */
-    nodeids r = nodeids();
-    prover::termset query;
-    termid o_var = prover->tmpvar();
-    assert(o_var);
-    assert(s);
-    auto xxs = prover->make(s);
-    assert (xxs);
-    termid iii = prover->make(p, xxs, o_var);
-    assert (iii);
-    query.emplace_back(iii);
-
-    //dout << "query: "<< prover->format(query) << endl;;
-
-    prover->do_query(query);
-
-    //dout << "substs: "<< std::endl;
-
-    for (auto x : prover->substss) {
-        substs::iterator binding_it = x.find(prover->get(o_var).p);
-        if (binding_it != x.end()) {
-            r.push_back(prover->get((*binding_it).second).p);
-            //prover->prints(x); dout << std::endl;
-        }
-    }
-
-    //dout << r.size() << ":" << std::endl;
-
-    prover->substss.clear();
-    prover->e.clear();
-    return r;
-}
-
-termid ask1t(prover *prover, nodeid s, const pnode p) {
-    termids r;
-    prover::termset query;
-    termid o_var = prover->tmpvar();
-    assert(o_var);
-    assert(s);
-    auto xxs = prover->make(s);
-    assert (xxs);
-    termid iii = prover->make(p, xxs, o_var);
-    assert (iii);
-    query.emplace_back(iii);
-    prover->do_query(query);
-    for (auto x : prover->substss) {
-        substs::iterator binding_it = x.find(prover->get(o_var).p);
-        if (binding_it != x.end())
-            r.push_back((*binding_it).second);
-    }
-    prover->substss.clear();
-    prover->e.clear();
-    if (r.size() > 1)
-        throw std::runtime_error("well, this is weird, " + std::to_string(r.size()) + " matches.");
-    if (r.size())
-        return r[0];
-    else
-        return 0;
-}
-
-nodeids ask(prover *prover, const pnode p, nodeid o) {
-    nodeids r = nodeids();
-    prover::termset query;
-    termid s_var = prover->tmpvar();
-    assert (o);
-    auto oo = prover->make(o);
-    assert (oo);
-    assert(p);
-    assert(s_var);
-    termid iii = prover->make(p, s_var, oo);
-    query.emplace_back(iii);
-    prover->do_query(query);
-    for (auto x : prover->substs) {
-        substs::iterator binding_it = x.find(prover->get(s_var).p);
-        if (binding_it != x.end()) {
-            r.push_back(prover->get((*binding_it).second).p);
-            //prover->prints(x); dout << std::endl;
-        }
-    }
-    prover->substs.clear();
-    prover->e.clear();
-    return r;
-}
-
-nodeids ask(prover *prover, const pnode p, nodeid o) {
-    nodeids r = nodeids();
-    prover::termset query;
-    termid s_var = prover->tmpvar();
-    assert (o);
-    auto oo = prover->make(o);
-    assert (oo);
-    assert(p);
-    assert(s_var);
-    termid iii = prover->make(p, s_var, oo);
-    query.emplace_back(iii);
-    prover->do_query(query);
-    for (auto x : prover->substs) {
-        substs::iterator binding_it = x.find(prover->get(s_var).p);
-        if (binding_it != x.end()) {
-            r.push_back(prover->get((*binding_it).second).p);
-            //prover->prints(x); dout << std::endl;
-        }
-    }
-    prover->substs.clear();
-    prover->e.clear();
-    return r;
-}
 
 
-std::vector<nodeid> get_list(prover *prover, nodeid head, prover::proof &p)
-{
-    auto r = prover->get_list(prover->make(head), p);
-    std::vector<nodeid> rr;
-    for (auto rrr: r)
-        rr.push_back(prover->get(rrr).p);
-    return rr;
-}
 
 typedef Marpa_Symbol_ID sym;
 typedef Marpa_Rule_ID rule;
@@ -265,7 +128,7 @@ struct Marpa {
         marpa_g_unref(g);
     }
 
-    Marpa(prover *prvr_, nodeid language, proverproof prf) {
+    Marpa(prover *prvr_, nodeid language) {
         /*init marpa*/
         if (marpa_check_version(MARPA_MAJOR_VERSION, MARPA_MINOR_VERSION, MARPA_MICRO_VERSION) != MARPA_ERR_NONE)
             throw std::runtime_error("marpa version...");
@@ -292,13 +155,13 @@ struct Marpa {
         }
         /*so is bnf:document, the root rule*/
         nodeid root = ask1(prvr2, language, bnf_document);
-        sym start = add(root, prf);
+        sym start = add(root);
         start_symbol_set(start);
         delete prvr2;
     }
 
     //create marpa symbols and rules from grammar description in rdf
-    sym add(nodeid thing, proverproof prf) {
+    sym add(nodeid thing) {
 
 		//what we are adding
         string thingv = value(thing);
@@ -337,27 +200,27 @@ struct Marpa {
         }
         if ((bind = ask1(prvr2, thing, bnf_mustBeOneSequence))) {
 			// mustBeOneSequence is a list of lists
-            std::vector <nodeid> lll = get_list(prvr2, bind, *prf);
+            std::vector <nodeid> lll = get_list(prvr2, bind);
             if (!bind)
                 throw wruntime_error(L"mustBeOneSequence empty");
 
             for (auto l:lll) {
                 syms rhs;
-                std::vector <nodeid> seq = get_list(prvr2, l, *prf);
+                std::vector <nodeid> seq = get_list(prvr2, l);
                 for (auto rhs_item: seq)
-                    rhs.push_back(add(rhs_item, prf));
+                    rhs.push_back(add(rhs_item));
                 rule_new(symbol, rhs);
             }
         }
         else if ((bind = ask1(prvr2, thing, bnf_commaSeparatedListOf))) {
-            seq_new(symbol, add(bind, prf), add(pcomma, prf), 0, MARPA_PROPER_SEPARATION);
+            seq_new(symbol, add(bind), add(pcomma), 0, MARPA_PROPER_SEPARATION);
         }
         else if ((bind = ask1(prvr2, thing, marpa->list_of))) {
             auto sep = ask1(prvr2, thing, marpa->separator);
-            seq_new(symbol, add(bind, prf), sep?add(sep, prf):-1, 0, 0);
+            seq_new(symbol, add(bind), sep?add(sep):-1, 0, 0);
         }
         else if ((bind = ask1(prvr2, thing, bnf_zeroormore))) {
-            seq_new(symbol, add(bind, prf), -1, 0, 0);
+            seq_new(symbol, add(bind), -1, 0, 0);
         }
         else if (thingv == L"http://www.w3.org/2000/10/swap/grammar/bnf#eof") { }//so what?
         else
@@ -1165,8 +1028,8 @@ int load_n3_cmd::operator()(const strings &args) {
 
 /*builtins*/
 
-void *marpa_parser(prover *p, nodeid language, shared_ptr<prover::proof> prf) {
-    return (void*)new Marpa(p, language, prf);
+void *marpa_parser(prover *p, nodeid language) {
+    return (void*)new Marpa(p, language);
 }
 
 termid marpa_parse(void* marpa, string input) {

@@ -111,6 +111,21 @@ public:
 	termid list2term_simple(std::list<termid>& l);
 	void get_dotstyle_list(termid, std::list<nodeid>&);
 
+	typedef std::vector <nodeid> nodeids;
+	typedef std::vector <termid> termids;
+
+	nodeids get_list(nodeid head);
+
+	termids askts(termid var, termid s, pnode p, termid o, int stop_at=0);
+	nodeids askns(termid var, termid s, pnode p, termid o, int stop_at=0);
+	nodeids ask4ss(pnode p, pnode o, int stop_at = 0);
+	nodeids ask4os(pnode s, pnode p, int stop_at = 0);
+	nodeid ask1o(pnode s, pnode p);
+	nodeid ask1s(pnode p, pnode o);
+	termid ask1st(pnode s, pnode p);
+	nodeid force_one_n(auto r);
+	termid force_one_t(auto r);
+
 private:
 	class termdb {
 	public:

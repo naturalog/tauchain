@@ -579,48 +579,77 @@ prover::ruleid prover::ruleset::add(termid t) {
 	return add(t, ts);
 }
 
-prover::nodeids prover::ask(termid s, const pnode p, termid o) {
+
+
+
+prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_at) {
+	assert(var);assert(s);assert(p);assert(o);
 	setproc(L"ask");
-	termid question = make(p, s_var, oo);
+	termid question = make(p, s, o);
 	termset query;
 	query.emplace_back(question);
-	nodeids r = nodeids();
 	do_query(query);
-	for (auto x : substs) {
-		substs::iterator binding_it = x.find(s_var->p);
+	prover::termids r;
+	int count=0;
+	for (auto x : substss) {
+		substs::iterator binding_it = x.find(var->p);
 		if (binding_it != x.end()) {
-			r.push_back((*binding_it).second->p);
+			r.push_back((*binding_it).second);
 			TRACE(dout << "result:" << prints(x);
 						  dout << std::endl);
+			if(stop_at && stop_at == count++) break;
 		}
 	}
-	substs.clear();
+	substss.clear();
 	e.clear();
 	return r;
 }
-prover::nodeids prover::ask4ss(const pnode p, pnode o) {
-    assert(p);
-	assert (o);
-
-    auto oo = make(o);
-    assert (oo);
-
+prover::nodeids prover::askns(termid var, termid s, pnode p, termid o, int stop_at) {
+	auto r = askts(var, s, p, o, stop_at);
+	prover::nodeids rr;
+	for (auto rrr:r)
+		rr.push_back(rrr->p);
+	return rr;
+}
+prover::nodeids prover::ask4ss(pnode p, pnode o, int stop_at) {
+    assert(p && o);
+    auto ot = make(o);
+    assert (ot);
     termid s_var = tmpvar();
 	assert(s_var);
-
-	return ask(s_var, p, o);
+	return askns(s_var, s_var, p, ot, stop_at);
 }
 
-prover::nodeid prover::ask4o(pnode s, const pnode p) {
-    return force_one(ask4os(s, p));
+prover::nodeids prover::ask4os(pnode s, pnode p, int stop_at) {
+    assert(s && p);
+    auto st = make(s);
+    assert (st);
+    termid o_var = tmpvar();
+	assert(o_var);
+	return askns(o_var, st, p, o_var, stop_at);
 }
 
-prover::nodeid prover::ask1(const pnode p, nodeid o) {
-	return force_one(ask4ss(prover, p, o));
+nodeid prover::ask1o(pnode s, pnode p) {
+    return force_one_n(ask4os(s, p, 1));
 }
 
-prover::nodeid prover::force_one(prover::nodeids r) {
-    if (r.size() > 1)
+nodeid prover::ask1s(pnode p, pnode o) {
+	return force_one_n(ask4ss(p, o, 1));
+}
+
+termid prover::ask1st(pnode s, pnode p) {
+    assert(s);
+    assert(p);
+    termid o_var = tmpvar();
+    assert(o_var);
+    auto xxs = make(s);
+    assert (xxs);
+    return force_one_t(askts(o_var, xxs, p, o_var, 1));
+}
+
+nodeid prover::force_one_n(auto r) {
+    /*#ifdef debug
+     * if (r.size() > 1)
     {
         std::wstringstream ss;
         ss << L"well, this is weird, more than one match:";
@@ -628,8 +657,27 @@ prover::nodeid prover::force_one(prover::nodeids r) {
             ss << xx << " ";
         throw wruntime_error(ss.str());
     }
-    if (r.size() == 1)
-        return r[0];
-    else
+     #endif*/
+    if (r.size() == 0)
         return 0;
+    else
+		return r[0];
 }
+termid prover::force_one_t(auto r) {
+    if (r.size() == 0)
+        return 0;
+    else
+		return r[0];
+}
+
+prover::nodeids prover::get_list(nodeid head)
+{
+	prover::proof dummy;
+    auto r = get_list(make(head), dummy);
+    nodeids rr;
+    for (auto rrr: r)
+        rr.push_back(rrr->p);
+    return rr;
+}
+
+
