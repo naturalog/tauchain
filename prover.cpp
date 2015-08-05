@@ -581,7 +581,6 @@ prover::ruleid prover::ruleset::add(termid t) {
 
 
 
-
 prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_at) {
 	assert(var);assert(s);assert(p);assert(o);
 	setproc(L"ask");
@@ -595,8 +594,8 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 		substs::iterator binding_it = x.find(var->p);
 		if (binding_it != x.end()) {
 			r.push_back((*binding_it).second);
-			TRACE(dout << "result:" << prints(x);
-						  dout << std::endl);
+			TRACE(dout << " result:")
+			TRACE(prints(x);)
 			if(stop_at && stop_at == count++) break;
 		}
 	}
@@ -647,7 +646,7 @@ termid prover::ask1st(pnode s, pnode p) {
     return force_one_t(askts(o_var, xxs, p, o_var, 1));
 }
 
-nodeid prover::force_one_n(auto r) {
+nodeid prover::force_one_n(nodeids r) {
     /*#ifdef debug
      * if (r.size() > 1)
     {
@@ -663,7 +662,7 @@ nodeid prover::force_one_n(auto r) {
     else
 		return r[0];
 }
-termid prover::force_one_t(auto r) {
+termid prover::force_one_t(termids r) {
     if (r.size() == 0)
         return 0;
     else
