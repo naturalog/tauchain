@@ -14,6 +14,7 @@
 #include <future>
 #include <functional>
 #include <forward_list>
+#include <malloc.h>
 //#include <boost/interprocess/containers/map.hpp>
 //#include <boost/interprocess/containers/set.hpp>
 //#include <boost/interprocess/containers/vector.hpp>
@@ -36,7 +37,8 @@ struct term {
 	termid s, o;
 	pobj json(const prover&) const;
 };
-
+#include <sys/mman.h>
+#include <errno.h>
 struct substs {
 	//typedef std::map<nodeid, termid> data_t;
 	struct sub {
@@ -52,8 +54,25 @@ struct substs {
 	bool empty() const;
 	string format(bool json = false) const;
 	size_t sz = 0;
+	substs() {
+		auto pagesize = sysconf(_SC_PAGE_SIZE);
+		data = (sub*)memalign(pagesize, 8192 * pagesize);
+		dout << "pagesize: " << pagesize << endl;
+		lock();
+}
 private:
-	sub *data = new sub[1024];
+	sub *data;
+	void lock() {
+		if (-1 == mprotect(data, sizeof(sub) * 1024, PROT_READ) ) {
+			if (errno == EACCES) dout << "EACCES ";
+			if (errno == EINVAL) dout << "EINVAL ";
+			if (errno == ENOMEM) dout << "ENOMEM ";
+			throw std::runtime_error("mproect() failed");
+		}
+	}
+	void unlock() {
+		mprotect(data, sizeof(sub) * 1024, PROT_READ | PROT_WRITE);
+	}
 };
 
 //typedef boost::container::map<nodeid, termid> substs;

@@ -709,7 +709,9 @@ void substs::set(nodeid p, termid t) {
 	setproc(L"substs::set");
 	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t)<<endl);
 	TRACE(dout<<"before: " << format());
+	unlock();
 	data[sz++] = sub{ p, t };
+	lock();
 	TRACE(dout<<"after: " << format());
 }
 
@@ -724,8 +726,9 @@ const substs::sub* substs::find(nodeid p) const {
 
 void substs::clear() {
 	setproc(L"substs::clear");
-//	data.clear();
+	lock();
 	memset(data, 0, sizeof(sub) * sz);
+	unlock();
 }	
 
 bool substs::empty() const {
