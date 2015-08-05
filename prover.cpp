@@ -218,6 +218,9 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 		r = 1;
 	}*/
+
+
+
 	else if (t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		termset ts(2);
 		termid p = tmpvar();
@@ -226,6 +229,19 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		ts[1] = make(p, t.s, o);
 		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, substs(), 0, true));
 	}
+		/*http://pastebin.com/raw.php?i=peBGdq4B
+		 * 05:08 < HMC_Alf> naturalog: how does one currently go about querying from within a builtin? :-)
+05:09 < HMC_Alf> do i have to copy the prover?
+
+05:41 < HMC_Alf> and there has to be a better way to do a query from a builtin than to copy the db
+08:32 < naturalog> hard to give answer that i'll know it works, as long as this bug exists
+08:36 < naturalog> but it goes down to more questions:
+08:36 < naturalog> 1. why copy and not use the same prover? dont we want that buitin's query proof?
+08:36 < naturalog> 2. what has to be copied? like, should the queue be copied?
+08:37 < naturalog> such qs define how builtins work or how copy works
+
+
+	*/
 	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
 	else if ((
@@ -532,6 +548,14 @@ void prover::unittest() {
 	q.first[L"@default"]->push_back(make_shared<quad>(a, x, x));
 	prover p(kb, false);
 	p.query(q);
+}
+
+int prover::do_query(const termid goal)
+{
+	termset query;
+	query.emplace_back(goal);
+	substs s;
+	return do_query(query, &s);
 }
 
 int prover::do_query(const termset& goal, substs * s) {
