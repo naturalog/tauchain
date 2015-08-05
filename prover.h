@@ -14,7 +14,7 @@
 #include <future>
 #include <functional>
 #include <forward_list>
-#include <boost/interprocess/containers/map.hpp>
+//#include <boost/interprocess/containers/map.hpp>
 //#include <boost/interprocess/containers/set.hpp>
 //#include <boost/interprocess/containers/vector.hpp>
 
@@ -36,7 +36,29 @@ struct term {
 	termid s, o;
 	pobj json(const prover&) const;
 };
-typedef std::map<nodeid, termid> substs;
+
+struct substs {
+	typedef std::map<nodeid, termid> data_t;
+	data_t data;
+	termid get(nodeid p) const {
+		return data.at(p);
+	}
+	void set(nodeid p, termid t) {
+		data[p] = t;
+	}
+	data_t::const_iterator find(nodeid p) const {
+		return data.find(p);
+	}
+	data_t::const_iterator begin() const {
+		return data.begin();
+	}
+	data_t::const_iterator end() const {
+		return data.end();
+	}
+	void clear() { data.clear(); }	
+	bool empty() const { return data.empty(); }	
+};
+
 //typedef boost::container::map<nodeid, termid> substs;
 class prover {
 	size_t evals = 0, unifs = 0;
@@ -73,7 +95,7 @@ public:
 	prover ( string filename );
 	prover ( const prover& p );
 	termset qdb2termset(const qdb &q_);
-	int  do_query(const termset& goal, substs * s = 0);
+	int  do_query(const termset& goal, substs* s = 0);
 	void do_query(const qdb& goal, substs * s = 0);
 	void query(const termset& goal, substs * s = 0);
 	void query(const qdb& goal, substs * s = 0);

@@ -198,7 +198,7 @@ void prover::printterm_substs(termid id, const substs & s) {
 		dout << L' ';
 	}
 	if(s.find(p.p) != s.end()) {
-		dout << L" (" << format(s.at(p.p)) << L" )";
+		dout << L" (" << format(s.get(p.p)) << L" )";
 	}
 	if (p.o) {
 		dout << L',';
@@ -280,7 +280,8 @@ string prover::fsubsts(const prover::ground& g) {
 	substs s;
 	for (auto x : g)
 		if (x.second)
-			s.insert(x.second->begin(), x.second->end());
+			for (auto y : *x.second)
+				s.set(y.first, y.second);
 	return prover::formats(s);
 }
 

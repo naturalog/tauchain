@@ -20,7 +20,7 @@ bool prover::unify(termid _s, const substs & ssub, termid _d, substs & dsub) {
 		//if (v) r = unify_sdnovar(s, ssub, *v, dsub);
 		if (v) r = unify(_s, ssub, v, dsub);
 		else {
-			dsub[d.p] = evaluate(s, ssub);
+			dsub.set(d.p, evaluate(s, ssub));
 			TRACE(dout<<"new sub:"<<formats(dsub)<<endl);
 			r = ns = true;
 		}
@@ -38,7 +38,7 @@ bool prover::unify(termid _s, const substs & ssub, termid _d, substs & dsub) {
 	TRACE(dout << "Trial to unify " << format(_s) << " sub: " << formats(ssub) << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
 		if (r) {
 			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
+			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub.get(d.p));
 		} else dout << "failed";
 		dout << endl);
 	return r;
@@ -76,8 +76,8 @@ bool prover::unify_snovar(const term& s, const substs & ssub, termid _d, substs 
 	if (ISVAR(d)) {
 		termid v = evalvar(d, dsub);
 		if (v) return unify_sdnovar(s, ssub, *v, dsub);
-		dsub[d.p] = evaluate(s, ssub);
-		TRACE(dout<<"new sub:"<<format(dsub[d.p])<<endl);
+		dsub.set(d.p, evaluate(s, ssub));
+		TRACE(dout<<"new sub:"<<format(dsub.get(d.p))<<endl);
 		return true;
 	}
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
@@ -90,8 +90,8 @@ bool prover::unify_snovar_dvar(const term& s, const substs & ssub, const term& d
 	PROFILE(++unifs);
 	termid v = evalvar(d, dsub);
 	if (v) return unify_sdnovar(s, ssub, *v, dsub);
-	dsub[d.p] = evaluate(s, ssub);
-	TRACE(dout<<"new sub:"<<format(dsub[d.p])<<endl);
+	dsub.set(d.p, evaluate(s, ssub));
+	TRACE(dout<<"new sub:"<<format(dsub.get(d.p))<<endl);
 	return true;
 }
 
@@ -136,8 +136,8 @@ bool prover::unify(termid _s, termid _d, substs & dsub) {
 	else if (ISVAR(d)) {
 		termid v = evalvar(d, dsub);
 		if (v) return unify_sdnovar(s, *v, dsub);
-		dsub[d.p] = evaluate(s);
-		TRACE(dout<<"new sub:"<<format(dsub[d.p])<<endl);
+		dsub.set(d.p, evaluate(s));
+		TRACE(dout<<"new sub:"<<format(dsub.get(d.p))<<endl);
 		return true;
 	}
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;

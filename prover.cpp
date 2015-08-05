@@ -591,7 +591,7 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 	prover::termids r;
 	int count=0;
 	for (auto x : substss) {
-		substs::iterator binding_it = x.find(var->p);
+		auto binding_it = x.find(var->p);
 		if (binding_it != x.end()) {
 			r.push_back((*binding_it).second);
 			TRACE(dout << " result:")
