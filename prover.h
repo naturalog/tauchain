@@ -112,6 +112,7 @@ public:
 	prover ( string filename );
 	prover ( const prover& p );
 	termset qdb2termset(const qdb &q_);
+	int do_query(const termid goal);
 	int  do_query(const termset& goal, substs* s = 0);
 	void do_query(const qdb& goal, substs * s = 0);
 	void query(const termset& goal, substs * s = 0);
