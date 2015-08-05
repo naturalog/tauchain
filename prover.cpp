@@ -218,7 +218,15 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 		r = 1;
 	}*/
-	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)
+	else if (t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+		termset ts(2);
+		termid p = tmpvar();
+		termid o = tmpvar();
+		ts[0] = make(rdfsdomain, p, t.o);
+		ts[1] = make(p, t.s, o);
+		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, substs(), 0, true));
+	}
+	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
 	else if ((
 					 t.p == A // parser kludge
@@ -308,23 +316,13 @@ void prover::step(shared_ptr<proof>& _p) {
 		termid t = body[proof_step.term_idx];
 //		const term& rt = *t;
 		MARPA(if (builtin(t, _p, queue) != -1) return);
-		auto rulelist_it = kb.r2id.find(t->p);
-		if (rulelist_it == kb.r2id.end()) return;
-		substs s;
-		auto&substs = proof_step.s;
-		if (substs) {
-//			const subst& _s = *ss;
-			for (auto rule : rulelist_it->second) {
-				if (unify/*_sdnovar*/(t, *substs, heads[rule], s))
-					queue.push(make_shared<proof>(_p, rule, 0, _p, s, src));
-				s.clear();
-				++src; 
-			}
-		} else for (auto rl : rulelist_it->second) {
-			if (unify/*_sdnovar*/(t, heads[rl], s))
-				queue.push(make_shared<proof>(_p, rl, 0, _p, s, src));
-			s.clear();
-			++src;
+		if (/*proof_step.predvar && */t->p < 0)//ISVAR
+			for(auto rulelst: kb.r2id)
+				step_in(src, rulelst.second, _p, t);
+		else {
+			auto rulelist_it = kb.r2id.find(t->p);
+			if (rulelist_it == kb.r2id.end()) return;
+			step_in(src, rulelist_it->second, _p, t);
 		}
 	}
 	else if (!proof_step.prev) gnd.push(_p);
@@ -346,6 +344,27 @@ void prover::step(shared_ptr<proof>& _p) {
 //		step(ff, qq, gnd);
 //	}
 }
+void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> &_p, termid t) {
+	setproc(L"step_in");
+	substs s;
+	auto &substs = _p->s;
+	if (substs) {
+//		const subst& _s = *ss;
+		for (auto rule : candidates) {
+			if (unify/*_sdnovar*/(t, *substs, heads[rule], s))
+				queue.push(make_shared<proof>(_p, rule, 0, _p, s, src));
+			s.clear();
+			++src;
+		}
+	} else
+		for (auto rl : candidates) {
+			if (unify/*_sdnovar*/(t, heads[rl], s))
+				queue.push(make_shared<proof>(_p, rl, 0, _p, s, src));
+			s.clear();
+			++src;
+		}
+}
+
 
 prover::ground prover::proof::g(prover* p) const {
 	if (!creator) return ground();

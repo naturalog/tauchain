@@ -9,7 +9,7 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfsdomain, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
 #ifdef with_marpa
@@ -25,6 +25,7 @@ void bidict::init() {
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	A = set(mkiri(pstr(L"a")));
 	rdfsResource = set(mkiri(pstr(L"rdfs:Resource")));
+	rdfsdomain = set(mkiri(pstr(L"rdfs:domain")));
 	rdfList = set(mkiri(pstr(L"rdf:List")));
 	Dot = set(mkiri(pstr(L".")));
 	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
