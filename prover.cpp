@@ -40,7 +40,7 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	substs & ps = *p.s;
 	while ((ep = ep->prev))
 		if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt, ps))
-			{ TRACE(dout<<"Euler path detected\n"); return true; }
+			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 //	ep = _p;
 //	while (ep->prev) ep = ep->prev;
 //	for (auto x : bodies[ep->rule])
@@ -720,12 +720,11 @@ termid substs::get(nodeid p) const {
 
 void substs::set(nodeid p, termid t) {
 	setproc(L"substs::set");
-	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t)<<endl);
-	TRACE(dout<<"before: " << format());
+	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t) <<", before: " << format() << endl);
 	unlock();
 	data[sz++] = sub{ p, t };
 	lock();
-	TRACE(dout<<"after: " << format());
+	TRACE(dout<<"after: " << format() << endl);
 }
 
 const substs::sub* substs::find(nodeid p) const {
@@ -751,10 +750,22 @@ bool substs::empty() const {
 
 string substs::format(bool json) const {
 	if (empty()) return L"";
-	std::wstringstream ss;
-	std::map<string, string> r;
-	for (size_t n = 0; n < sz; ++n)
-		r[dstr(data[n].first)] = prover::format(data[n].second, json);
-	for (auto x = r.rbegin(); x != r.rend(); ++x) ss << x->first << '\\' << x->second << ',';
-	return ss.str();
+	//std::wstringstream ss;
+	string ss;
+	auto& r = *new std::map<string, string>;
+	for (size_t n = 0; n < sz; ++n) {
+		termid tt = data[n].second;
+		string st = prover::format(data[n].second, json);
+		if (tt != data[n].second) throw 0;
+		r[dstr(data[n].first)] = st;
+		if (tt != data[n].second) throw 0;
+	}
+	for (auto x = r.rbegin(); x != r.rend(); ++x) {
+		ss += x->first;
+		ss += L"\\"; 
+		ss += x->second;
+		ss += L",";
+	}
+	delete &r;
+	return ss;
 }
