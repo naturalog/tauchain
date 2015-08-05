@@ -41,11 +41,11 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	while ((ep = ep->prev))
 		if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt, ps))
 			{ TRACE(dout<<"Euler path detected\n"); return true; }
-	ep = _p;
-	while (ep->prev) ep = ep->prev;
-	for (auto x : bodies[ep->rule])
-		if (evaluate(*x, ps))
-			return true;
+//	ep = _p;
+//	while (ep->prev) ep = ep->prev;
+//	for (auto x : bodies[ep->rule])
+//		if (evaluate(*x, ps))
+//			return true;
 	return false;
 }
 
@@ -592,7 +592,7 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 	int count=0;
 	for (auto x : substss) {
 		auto binding_it = x.find(var->p);
-		if (binding_it != x.end()) {
+		if (binding_it) {
 			r.push_back((*binding_it).second);
 			TRACE(dout << " result:")
 			TRACE(prints(x);)
@@ -679,4 +679,47 @@ prover::nodeids prover::get_list(nodeid head)
     return rr;
 }
 
+termid substs::get(nodeid p) const {
+	setproc(L"substs::get");
+	termid t = find(p)->second;
+	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t)<<endl);
+	return t;
+}
 
+void substs::set(nodeid p, termid t) {
+	setproc(L"substs::set");
+	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t)<<endl);
+	TRACE(dout<<"before: " << format());
+	data[sz++] = sub{ p, t };
+	TRACE(dout<<"after: " << format());
+}
+
+const substs::sub* substs::find(nodeid p) const {
+	setproc(L"substs::find");
+	TRACE(dout<<dict[p].tostring()<<endl);
+	for (size_t n = 0; n < sz; ++n)
+		if (data[n].first == p)
+			return &data[n];
+	return 0;
+}
+
+void substs::clear() {
+	setproc(L"substs::clear");
+//	data.clear();
+	memset(data, 0, sizeof(sub) * sz);
+}	
+
+bool substs::empty() const {
+	setproc(L"substs::empty");
+	return sz == 0;
+}
+
+string substs::format(bool json) const {
+	if (empty()) return L"";
+	std::wstringstream ss;
+	std::map<string, string> r;
+	for (size_t n = 0; n < sz; ++n)
+		r[dstr(data[n].first)] = prover::format(data[n].second, json);
+	for (auto x = r.rbegin(); x != r.rend(); ++x) ss << x->first << '\\' << x->second << ',';
+	return ss.str();
+}

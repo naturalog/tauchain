@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.0)
 
 project(tauchain)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -ggdb -DDEBUG")
 
 set(SOURCE_FILES
     cli.cpp
@@ -27,18 +27,18 @@ set(SOURCE_FILES
     tau.cpp
 )
 
-set(MARPA_FILES ${SOURCE_FILES} marpa_tau.cpp)
+#set(MARPA_FILES ${SOURCE_FILES} marpa_tau.cpp)
 
-find_package(Boost REQUIRED regex)
+#find_package(Boost REQUIRED regex)
 
 add_executable(tau ${SOURCE_FILES})
-add_executable(m-tau ${MARPA_FILES})
+#add_executable(m-tau ${MARPA_FILES})
 
-target_link_libraries(m-tau PRIVATE "-L${CMAKE_SOURCE_DIR}/libmarpa/dist/.libs -lmarpa")
-SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -DDEBUG -Dwith_marpa")
+#target_link_libraries(m-tau PRIVATE "-L${CMAKE_SOURCE_DIR}/libmarpa/dist/.libs -lmarpa")
+#SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -DDEBUG -ggdb")
 
-target_link_libraries(m-tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS})
+#target_link_libraries(m-tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
+#target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_include_directories(tau PRIVATE ${Boost_INCLUDE_DIRS})

@@ -30,12 +30,16 @@ bool prover::unify(termid _s, const substs & ssub, termid _d, substs & dsub) {
 	else {
 		dout <<"dsub1: " << formats(dsub)<<endl;
 		if ((r = unify(s.s, ssub, d.s, dsub))) {
-			dout <<"dsub2: " << formats(dsub)<<endl;
+			dout <<"dsub2: " << dsub.format()<<endl;
 			r = unify(s.o, ssub, d.o, dsub);
-			dout <<"dsub3: " << formats(dsub)<<endl;
 		}
 	}
-	TRACE(dout << "Trial to unify " << format(_s) << " sub: " << formats(ssub) << " with " << format(_d) << " sub: " << formats(dsub) << " : ";
+	string ss = ssub.format();
+	string ds = dsub.format();
+	string s1 = format(s);
+	string s2 = format(d);
+	TRACE(
+		dout << "Trial to unify " << s1 << " sub: " << ss << " with " << s2 << " sub: " << ds << " : ";
 		if (r) {
 			dout << "passed";
 			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub.get(d.p));

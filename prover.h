@@ -38,25 +38,22 @@ struct term {
 };
 
 struct substs {
-	typedef std::map<nodeid, termid> data_t;
-	data_t data;
-	termid get(nodeid p) const {
-		return data.at(p);
-	}
-	void set(nodeid p, termid t) {
-		data[p] = t;
-	}
-	data_t::const_iterator find(nodeid p) const {
-		return data.find(p);
-	}
-	data_t::const_iterator begin() const {
-		return data.begin();
-	}
-	data_t::const_iterator end() const {
-		return data.end();
-	}
-	void clear() { data.clear(); }	
-	bool empty() const { return data.empty(); }	
+	//typedef std::map<nodeid, termid> data_t;
+	struct sub {
+		nodeid first;
+		termid second;
+	};
+	termid get(nodeid p) const;
+	void set(nodeid p, termid t);
+	const sub* find(nodeid p) const;
+//	const sub* begin() const;
+//	const sub* end() const;
+	void clear();
+	bool empty() const;
+	string format(bool json = false) const;
+	size_t sz = 0;
+private:
+	sub *data = new sub[1024];
 };
 
 //typedef boost::container::map<nodeid, termid> substs;
@@ -173,7 +170,7 @@ private:
 		PROFILE(++evals);
 		setproc(L"evalvar");
 		auto evvit = s.find(x.p);
-		termid r = evvit == s.end() ? 0 : evaluate(*evvit->second, s);
+		termid r = evvit ? evaluate(*evvit->second, s) : 0;
 		TRACE(dout<<format(x) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
 		return r;
 	}
@@ -192,7 +189,7 @@ private:
 		termid r;
 		if (ISVAR(p)) {
 			auto it = s.find(p.p);
-			r = it == s.end() ? 0 : evaluate(*it->second, s);
+			r = it ? evaluate(*it->second, s) : 0;
 		} else if (!p.s && !p.o) r = &p;
 		else {
 			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
@@ -224,7 +221,9 @@ private:
 	bool consistency(const qdb& quads);
 
 	// formatters
-	string format(termid id, bool json = false);
+public:
+	static string format(termid id, bool json = false);
+	static string format(const term&, bool json = false);
 	string formatkb(bool json = false);
 	void printg(const ground& g);
 	void printg(shared_ptr<ground> g) { printg(*g); }
@@ -234,12 +233,11 @@ private:
 	void prints(shared_ptr<substs> s) { prints(*s); }
 	string format(nodeid) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(nodeid, bool) { throw std::runtime_error("called format(termid) with nodeid"); }
-	string format(const term&, bool json = false);
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
 	string formatp(shared_ptr<proof> p);
-	string formats(const substs & s, bool json = false);
+	string formats(const substs & s, bool json = false) { return s.format(json); }
 	string formats(shared_ptr<substs>& s, bool json = false) { return s ? formats(*s, json) : string(); }
 	void printterm_substs(termid id, const substs & s);
 	void printl_substs(const termset& l, const substs & s);
