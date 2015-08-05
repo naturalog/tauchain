@@ -754,9 +754,11 @@ void substs::set(nodeid p, termid t) {
 const substs::sub* substs::find(nodeid p) const {
 	setproc(L"substs::find");
 	TRACE(dout<<dict[p].tostring()<<endl);
-	for (size_t n = 0; n < sz; ++n)
-		if (data[n].first == p)
+	for (size_t n = 0; n < sz; ++n) {
+		if (data[n].first == p) {
 			return &data[n];
+		}
+	}
 	return 0;
 }
 
@@ -772,18 +774,19 @@ bool substs::empty() const {
 	return sz == 0;
 }
 
+string st, ss;
 string substs::format(bool json) const {
 	if (empty()) return L"";
 	//std::wstringstream ss;
-	string ss;
 	auto& r = *new std::map<string, string>;
 	for (size_t n = 0; n < sz; ++n) {
 		termid tt = data[n].second;
-		string st = prover::format(data[n].second, json);
+		st = prover::format(data[n].second, json);
 		if (tt != data[n].second) throw 0;
 		r[dstr(data[n].first)] = st;
 		if (tt != data[n].second) throw 0;
 	}
+	ss = L"";
 	for (auto x = r.rbegin(); x != r.rend(); ++x) {
 		ss += x->first;
 		ss += L"\\"; 
