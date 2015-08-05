@@ -271,5 +271,6 @@ public:
 	pobj ejson() const;
 	string fsubsts(const ground& g);
 	queue_t queue, gnd;
+	static void unittest(); 
 };
 #endif

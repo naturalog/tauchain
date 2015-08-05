@@ -530,6 +530,18 @@ void prover::query(const termset& goal, substs * s) {
 	dout << "elapsed: " << duration << "ms steps: " << steps << " unifs: " << unifs << " evals: " << evals << endl;
 }
 
+void prover::unittest() {
+	pnode x = mkiri(pstr(L"x"));
+	pnode a = mkiri(pstr(L"?a"));
+	qdb kb, q;
+	kb.first[L"@default"] = mk_qlist();
+	q.first[L"@default"] = mk_qlist();
+	kb.first[L"@default"]->push_back(make_shared<quad>(x, x, x));
+	q.first[L"@default"]->push_back(make_shared<quad>(a, x, x));
+	prover p(kb);
+	p.query(q);
+}
+
 int prover::do_query(const termset& goal, substs * s) {
 //	setproc(L"do_query");
 	queue.push([&](){
