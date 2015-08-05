@@ -133,10 +133,7 @@ int main ( int argc, char** argv ) {
 	if (nocolor)
 		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 	argc = args.size();
-	dout<<"running unittest"<<endl;
 	prover::unittest();
-	dout<<"aborted after unittest. to continue, mark line tau.cpp:138"<<endl;
-	return 0;
 	if ( argc == 1 ) {
 		prove_cmd p;
 		quad_in = true;

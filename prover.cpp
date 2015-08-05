@@ -538,7 +538,7 @@ void prover::unittest() {
 	q.first[L"@default"] = mk_qlist();
 	kb.first[L"@default"]->push_back(make_shared<quad>(x, x, x));
 	q.first[L"@default"]->push_back(make_shared<quad>(a, x, x));
-	prover p(kb);
+	prover p(kb, false);
 	p.query(q);
 }
 

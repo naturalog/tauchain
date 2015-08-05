@@ -27,6 +27,8 @@
 #define PROFILE(x)
 #endif
 
+const size_t pagesize = sysconf(_SC_PAGE_SIZE);
+
 struct term;
 class prover;
 typedef const term* termid;
@@ -55,15 +57,14 @@ struct substs {
 	string format(bool json = false) const;
 	size_t sz = 0;
 	substs() {
-		auto pagesize = sysconf(_SC_PAGE_SIZE);
-		data = (sub*)memalign(pagesize, 8192 * pagesize);
-		dout << "pagesize: " << pagesize << endl;
+		data = (sub*)memalign(pagesize, 4 * pagesize);
+//		dout << "pagesize: " << pagesize << endl;
 		lock();
 }
 private:
 	sub *data;
 	void lock() {
-		if (-1 == mprotect(data, sizeof(sub) * 1024, PROT_READ) ) {
+		if (-1 == mprotect(data, pagesize * 4, PROT_READ) ) {
 			if (errno == EACCES) dout << "EACCES ";
 			if (errno == EINVAL) dout << "EINVAL ";
 			if (errno == ENOMEM) dout << "ENOMEM ";
@@ -71,7 +72,7 @@ private:
 		}
 	}
 	void unlock() {
-		mprotect(data, sizeof(sub) * 1024, PROT_READ | PROT_WRITE);
+		mprotect(data, pagesize * 4, PROT_READ | PROT_WRITE);
 	}
 };
 
