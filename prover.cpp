@@ -610,8 +610,7 @@ prover::ruleid prover::ruleset::add(termid t) {
 	return add(t, ts);
 }
 
-
-
+/*query, return termids*/
 prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_at) {
 	assert(var);assert(s);assert(p);assert(o);
 	setproc(L"ask");
@@ -634,6 +633,8 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 	e.clear();
 	return r;
 }
+
+/*askts wrapper*/
 prover::nodeids prover::askns(termid var, termid s, pnode p, termid o, int stop_at) {
 	auto r = askts(var, s, p, o, stop_at);
 	prover::nodeids rr;
@@ -641,6 +642,8 @@ prover::nodeids prover::askns(termid var, termid s, pnode p, termid o, int stop_
 		rr.push_back(rrr->p);
 	return rr;
 }
+
+/*query for subjects*/
 prover::nodeids prover::ask4ss(pnode p, pnode o, int stop_at) {
     assert(p && o);
     auto ot = make(o);
@@ -650,6 +653,7 @@ prover::nodeids prover::ask4ss(pnode p, pnode o, int stop_at) {
 	return askns(s_var, s_var, p, ot, stop_at);
 }
 
+/*query for objects*/
 prover::nodeids prover::ask4os(pnode s, pnode p, int stop_at) {
     assert(s && p);
     auto st = make(s);
@@ -659,14 +663,17 @@ prover::nodeids prover::ask4os(pnode s, pnode p, int stop_at) {
 	return askns(o_var, st, p, o_var, stop_at);
 }
 
+/*query for one object*/
 nodeid prover::ask1o(pnode s, pnode p) {
     return force_one_n(ask4os(s, p, 1));
 }
 
+/*query for one subject*/
 nodeid prover::ask1s(pnode p, pnode o) {
 	return force_one_n(ask4ss(p, o, 1));
 }
 
+/*query for one subject term*/
 termid prover::ask1st(pnode s, pnode p) {
     assert(s);
     assert(p);
@@ -693,6 +700,7 @@ nodeid prover::force_one_n(nodeids r) {
     else
 		return r[0];
 }
+
 termid prover::force_one_t(termids r) {
     if (r.size() == 0)
         return 0;
@@ -700,6 +708,7 @@ termid prover::force_one_t(termids r) {
 		return r[0];
 }
 
+/*get_list wrapper useful in marpa*/
 prover::nodeids prover::get_list(nodeid head)
 {
 	prover::proof dummy;
