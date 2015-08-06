@@ -9,7 +9,8 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfsdomain, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, rdfnil, False, rdfsResource, rdfsdomain;
+//nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
 #ifdef with_marpa
@@ -26,17 +27,16 @@ void bidict::init() {
 	A = set(mkiri(pstr(L"a")));
 	rdfsResource = set(mkiri(pstr(L"rdfs:Resource")));
 	rdfsdomain = set(mkiri(pstr(L"rdfs:domain")));
-	rdfList = set(mkiri(pstr(L"rdf:List")));
+//	rdfList = set(mkiri(pstr(L"rdf:List")));
 	Dot = set(mkiri(pstr(L".")));
 	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
 	rdfssubClassOf = set(mkiri(pstr(L"rdfs:subClassOf")));
-	_dlopen = set(mkiri(pstr(L"dlfcn:dlopen")));
-	_dlerror = set(mkiri(pstr(L"dlfcn:dlerror")));
-	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
-	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
-	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
+//	_dlopen = set(mkiri(pstr(L"dlfcn:dlopen")));
+//	_dlerror = set(mkiri(pstr(L"dlfcn:dlerror")));
+//	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
+//	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
+//	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
 	False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
-	//False = set(mkiri(pstr(L"false")));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
@@ -301,7 +301,7 @@ void prover::printe() {
 		}
 }
 
-std::list<string> proc;
+std::list<string>& proc = *new std::list<string>;
 
 string indent() {
 	if (!_indent) return string();
@@ -331,6 +331,7 @@ pstring wstrim(string s) {
 	trim(s);
 	return pstr(s);
 }
+
 pstring pstrtrim ( const string& s ) { string ss = s; trim(ss);return std::make_shared<string> ( ss ); } 
 pstring pstrtrim ( const wchar_t* s ) { if (!s) return 0; return pstrtrim ( string(s) ); }
 string ws(const std::string& s) { return string(s.begin(), s.end()); }

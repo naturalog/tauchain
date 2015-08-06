@@ -335,7 +335,7 @@ void prover::step(shared_ptr<proof>& _p) {
 	size_t src = 0;
 	// if we still have some terms in rule body to process
 	if (frame.term_idx != body.size()) {
-		if (euler_path(_p)) return;
+//		if (euler_path(_p)) return;
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		auto rulelist_it = kb.r2id.find(t->p);
@@ -483,7 +483,7 @@ void prover::addrules(pquad q, qdb& quads) {
 }
 
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
-	auto it = qkb.first.find(L"@default");
+	auto it = qkb.first.find(str_default);
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
@@ -549,13 +549,16 @@ void prover::query(const termset& goal, substs * s) {
 void prover::unittest() {
 	pnode x = mkiri(pstr(L"x"));
 	pnode a = mkiri(pstr(L"?a"));
-	qdb kb, q;
-	kb.first[L"@default"] = mk_qlist();
-	q.first[L"@default"] = mk_qlist();
-	kb.first[L"@default"]->push_back(make_shared<quad>(x, x, x));
-	q.first[L"@default"]->push_back(make_shared<quad>(a, x, x));
-	prover p(kb, false);
+	qdb &kb = *new qdb, &q = *new qdb;
+	kb.first[str_default] = mk_qlist();
+	q.first[str_default] = mk_qlist();
+	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
+	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
+	prover &p = *new prover(kb, false);
 	p.query(q);
+	delete &kb;
+	delete &q;
+	delete &p;
 }
 
 int prover::do_query(const termid goal)

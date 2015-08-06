@@ -6,13 +6,13 @@
 #include <vector>
 //#include <boost/bimap.hpp>
 #include "strings.h"
-#include <boost/interprocess/containers/list.hpp>
-#include <boost/interprocess/containers/map.hpp>
+//#include <boost/interprocess/containers/list.hpp>
+//#include <boost/interprocess/containers/map.hpp>
 #include "rdf.h"
 
 typedef i64 nodeid;
 
-extern std::list<string> proc;
+extern std::list<string>& proc;
 class bidict {
 	std::map<nodeid, node> ip;
 	std::map<node, nodeid> pi;
@@ -32,7 +32,8 @@ public:
 };
 
 extern bidict& dict;
-extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, rdfsResource, rdfsdomain, rdfList, Dot, GND, rdfsType, rdfssubClassOf, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain;
+//extern nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke;
 string dstr ( nodeid p, bool json = false );
 string indent();
 

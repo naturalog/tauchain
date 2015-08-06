@@ -7,13 +7,12 @@
 
 #ifdef JSON
 #include "json_spirit.h"
-
 pobj convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
 #endif
-std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
-	qdb q;
+
+std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool ) {
 	try {
 		qdb r;
 		std::wistream* pis = &std::wcin;
@@ -23,9 +22,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
 	}
-	if ( print ) 
-		dout << q << std::endl;
-	return std::make_shared<qdb>(q);
+	return nullptr;
 }
 
 #ifdef JSON
@@ -86,6 +83,7 @@ qdb cmd_t::convert ( const string& s ) {
 	return r;
 }
 #endif
+
 void process_flags ( const cmds_t& cmds, strings& args ) {
 	strings::iterator it;
 	for ( auto x : cmds.second )

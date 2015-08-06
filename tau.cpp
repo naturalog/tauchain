@@ -100,7 +100,8 @@ int main ( int argc, char** argv ) {
 //	segment = new boost::interprocess::managed_heap_memory(long(1024*1024*1024)*1);
 //	alloc = new allocator_t(segment->get_segment_manager());
 	dict.init();
-	cmds_t cmds = { {
+	cmds_t& cmds = *new cmds_t;
+	cmds = { {
 			#ifdef with_marpa
 			{ string ( L"load_n3" ) , new load_n3_cmd },
 			#endif
@@ -118,7 +119,7 @@ int main ( int argc, char** argv ) {
 			{ { L"--nocolor", L"disable color output" }, &nocolor }
 		}
 	};
-	strings args;
+	strings& args = *new strings;
 	for ( int n = 0; n < argc; ++n ) args.push_back ( ws(std::string(argv[n])) );
 	for ( int n = 0; n < argc; ++n ) 
 		if (args[n] == L"--level") {

@@ -15,6 +15,9 @@
 #include <functional>
 #include <forward_list>
 #include <malloc.h>
+#include <assert.h>
+#include <sys/mman.h>
+#include <errno.h>
 //#include <boost/interprocess/containers/map.hpp>
 //#include <boost/interprocess/containers/set.hpp>
 //#include <boost/interprocess/containers/vector.hpp>
@@ -27,7 +30,7 @@
 #define PROFILE(x)
 #endif
 
-const size_t pagesize = sysconf(_SC_PAGE_SIZE);
+//const size_t pagesize = sysconf(_SC_PAGE_SIZE);
 
 struct term;
 class prover;
@@ -41,8 +44,6 @@ struct term {
 	pobj json(const prover&) const;
 #endif
 };
-#include <sys/mman.h>
-#include <errno.h>
 struct substs {
 	//typedef std::map<nodeid, termid> data_t;
 	struct sub {
@@ -66,17 +67,15 @@ struct substs {
 private:
 	sub *data;
 	void lock() {
-		return;
-		if (-1 == mprotect(data, pagesize * 4, PROT_READ) ) {
-			if (errno == EACCES) dout << "EACCES ";
-			if (errno == EINVAL) dout << "EINVAL ";
-			if (errno == ENOMEM) dout << "ENOMEM ";
-			throw std::runtime_error("mprotect() failed");
-		}
+//		if (-1 == mprotect(data, pagesize * 4, PROT_READ) ) {
+//			if (errno == EACCES) dout << "EACCES ";
+//			if (errno == EINVAL) dout << "EINVAL ";
+//			if (errno == ENOMEM) dout << "ENOMEM ";
+//			throw std::runtime_error("mprotect() failed");
+//		}
 	}
 	void unlock() {
-		return;
-		mprotect(data, pagesize * 4, PROT_READ | PROT_WRITE);
+//		mprotect(data, pagesize * 4, PROT_READ | PROT_WRITE);
 	}
 };
 
