@@ -218,10 +218,8 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 		r = 1;
 	}*/
-
-
-
-	else if (t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	/*
+	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		termset ts(2);
 		termid p = tmpvar();
 		termid o = tmpvar();
@@ -229,18 +227,6 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		ts[1] = make(p, t.s, o);
 		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, substs(), 0, true));
 	}
-		/*http://pastebin.com/raw.php?i=peBGdq4B
-		 * 05:08 < HMC_Alf> naturalog: how does one currently go about querying from within a builtin? :-)
-05:09 < HMC_Alf> do i have to copy the prover?
-
-05:41 < HMC_Alf> and there has to be a better way to do a query from a builtin than to copy the db
-08:32 < naturalog> hard to give answer that i'll know it works, as long as this bug exists
-08:36 < naturalog> but it goes down to more questions:
-08:36 < naturalog> 1. why copy and not use the same prover? dont we want that buitin's query proof?
-08:36 < naturalog> 2. what has to be copied? like, should the queue be copied?
-08:37 < naturalog> such qs define how builtins work or how copy works
-
-
 	*/
 	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
@@ -253,6 +239,28 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
 		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, substs()));
+	}
+	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+		substs s;
+		termset ts(1);
+		termid p = tmpvar();
+		termid o = tmpvar();
+		ts[0] = make(rdfsdomain, p, t.o);
+		prover copy(*this); //(Does this copy correctly?)
+		copy.do_query(ts, &s);
+		if (copy.e.size()) {
+			termid np = evaluate(*p, s);
+			std::cout << "\n\nYAY!!\n\n";
+			ts[0] = make(np, t.s, o);
+			copy.e.clear();
+			substs s;
+			copy.do_query(ts, &s);
+			if (copy.e.size() > 0) {
+				std::cout << "\n\nYay even more\n\n";
+				//TODO: correctly, so that subqery proof trace not opaque?
+				return 1;
+			}
+		}
 	}
 	#ifdef with_marpa
 	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
@@ -689,8 +697,8 @@ nodeid prover::ask1s(pnode p, pnode o) {
 	return force_one_n(ask4ss(p, o, 1));
 }
 
-/*query for one subject term*/
-termid prover::ask1st(pnode s, pnode p) {
+/*query for one object term*/
+termid prover::ask1ot(pnode s, pnode p) {
     assert(s);
     assert(p);
     termid o_var = tmpvar();

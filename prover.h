@@ -162,7 +162,7 @@ public:
 	nodeids ask4os(pnode s, pnode p, int stop_at = 0);
 	nodeid ask1o(pnode s, pnode p);
 	nodeid ask1s(pnode p, pnode o);
-	termid ask1st(pnode s, pnode p);
+	termid ask1ot(pnode s, pnode p);
 	nodeid force_one_n(nodeids r);
 	termid force_one_t(termids r);
 
