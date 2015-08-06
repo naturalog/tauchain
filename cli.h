@@ -6,8 +6,6 @@
 typedef std::vector<string> strings;
 
 extern bool fnamebase, quad_in, nocolor;
-extern jsonld_options opts;
-extern string chan;
 
 class cmd_t {
 protected:
@@ -33,6 +31,7 @@ typedef std::pair<std::map<string, cmd_t*>, std::map<std::pair<string, string>, 
 void print_usage ( const cmds_t& cmds );
 void process_flags ( const cmds_t& cmds, strings& args );
 #ifdef JSON
+extern jsonld_options opts;
 class convert_cmd : public cmd_t {
 public:
 	virtual std::string desc() const;

@@ -37,7 +37,9 @@ struct term {
 	term(nodeid _p, termid _s, termid _o);
 	nodeid p;
 	termid s, o;
+#ifdef JSON
 	pobj json(const prover&) const;
+#endif
 };
 #include <sys/mman.h>
 #include <errno.h>
@@ -57,13 +59,14 @@ struct substs {
 	string format(bool json = false) const;
 	size_t sz = 0;
 	substs() {
-		data = (sub*)memalign(pagesize, 4 * pagesize);
+		data = new sub[1024];//(sub*)memalign(pagesize, 4 * pagesize);
 //		dout << "pagesize: " << pagesize << endl;
 		lock();
 }
 private:
 	sub *data;
 	void lock() {
+		return;
 		if (-1 == mprotect(data, pagesize * 4, PROT_READ) ) {
 			if (errno == EACCES) dout << "EACCES ";
 			if (errno == EINVAL) dout << "EINVAL ";
@@ -72,6 +75,7 @@ private:
 		}
 	}
 	void unlock() {
+		return;
 		mprotect(data, pagesize * 4, PROT_READ | PROT_WRITE);
 	}
 };
@@ -273,12 +277,14 @@ public:
 	void printterm_substs(termid id, const substs & s);
 	void printl_substs(const termset& l, const substs & s);
 	void printr_substs(ruleid r, const substs & s);
+#ifdef JSON
 	void jprinte();
 	pobj json(const termset& ts) const;
 	pobj json(const substs & ts) const;
 	pobj json(const ground& g) const;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;
+#endif
 	string fsubsts(const ground& g);
 	queue_t queue, gnd;
 	static void unittest(); 

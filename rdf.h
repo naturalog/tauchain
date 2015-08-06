@@ -60,7 +60,7 @@ pqlist mk_qlist();
 std::wostream& operator<< ( std::wostream& o, const qdb& );
 std::wostream& operator<< ( std::wostream& o, const qlist& );
 qdb readqdb ( std::wistream& is );
-
+#ifdef JSON
 class jsonld_api;
 class rdf_db: public qdb {
 	ssmap context;
@@ -87,6 +87,7 @@ private:
 };
 
 typedef std::shared_ptr<rdf_db> prdf_db;
+#endif
 class nqparser {
 private:
 	wchar_t *t;

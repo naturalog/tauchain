@@ -268,7 +268,7 @@ void prover::printg(const ground& g) {
 	for (auto x : g) 
 		dout << indent() << formatr(x.first) << tab << formats(x.second) << endl;
 }
-
+#ifdef JSON
 pobj term::json(const prover& pr) const {
 	pobj r = mk_somap_obj(), l;
 	(*r->MAP())[L"pred"] = mk_str_obj(dict[p].tostring());
@@ -277,7 +277,7 @@ pobj term::json(const prover& pr) const {
 	if (o) l->LIST()->push_back(o->json(pr));
 	return r;
 }
-
+#endif
 string prover::fsubsts(const prover::ground& g) {
 	substs s;
 //	for (auto x : g)
@@ -355,12 +355,13 @@ pstring pstr ( const string& s ) {
 	strings.insert(ps);
 	return ps;
 } 
-
+#ifdef JSON
 pobj prover::json(const termset& ts) const {
 	polist_obj l = mk_olist_obj(); 
 	for (termid t : ts) l->LIST()->push_back(t->json(*this));
 	return l;
 }
+#endif
 /*
 pobj prover::json(const substs & s) const {
 	psomap_obj o = mk_somap_obj();

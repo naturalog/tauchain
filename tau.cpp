@@ -12,7 +12,9 @@ auto dummy = []() {
 }();
 #endif
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
+#ifdef JSON
 jsonld_options opts;
+#endif
 
 //void menu();
 //#include <boost/asio.hpp>

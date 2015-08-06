@@ -85,12 +85,6 @@ pnode mkbnode ( pstring attribute ) {
 	dict.set(pr);
 	return dict.nodes[r.tostring()] = pr;
 }
-
-rdf_db::rdf_db ( jsonld_api& api_ ) :
-	qdb(), api ( api_ ) {
-	first[str_default] = mk_qlist();
-}
-
 std::wostream& operator<< ( std::wostream& o, const qlist& x ) {
 	for ( pquad q : x )
 		o << q->tostring ( ) << std::endl;
@@ -102,13 +96,19 @@ std::wostream& operator<< ( std::wostream& o, const qdb& q ) {
 		o /*<< x.first*/ << *x.second;
 	return o;
 }
+#ifdef JSON
+rdf_db::rdf_db ( jsonld_api& api_ ) :
+	qdb(), api ( api_ ) {
+	first[str_default] = mk_qlist();
+}
+
 
 string rdf_db::tostring() {
 	std::wstringstream s;
 	s << *this;
 	return s.str();
 }
-#ifdef JSON
+
 void rdf_db::setNamespace ( string ns, string prefix ) {
 	context[ns] = prefix;
 }

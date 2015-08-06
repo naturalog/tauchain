@@ -14,6 +14,9 @@
 #include "strings.h"
 #include <iostream>
 #include <list>
+extern bool deref, shorten;
+typedef std::nullptr_t null;
+typedef std::shared_ptr<bool> pbool;
 
 string indent();
 using std::endl;
@@ -22,10 +25,12 @@ using std::endl;
 #else
 #define TRACE(X)
 #endif
-//#include "logger.h"
-extern bool deref, shorten;
-//#define DEBUG
-//#define VERBOSE
+
+extern std::wostream& dout;
+extern std::wostream& derr;
+
+#ifdef JSON
+
 #ifdef DEBUG
 //logger _logger;
 extern bool autobt, _pause;
@@ -37,11 +42,6 @@ void bt();
 #define trace(x)
 #endif
 
-typedef std::nullptr_t null;
-typedef std::shared_ptr<bool> pbool;
-
-extern std::wostream& dout;
-extern std::wostream& derr;
 
 class obj {
 protected:
@@ -173,4 +173,5 @@ struct jsonld_options {
 	pbool useNamespaces = std::make_shared<bool> ( true );
 	pstring outputForm = 0;
 };
+#endif
 #endif
