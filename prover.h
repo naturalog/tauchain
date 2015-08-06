@@ -68,7 +68,7 @@ private:
 			if (errno == EACCES) dout << "EACCES ";
 			if (errno == EINVAL) dout << "EINVAL ";
 			if (errno == ENOMEM) dout << "ENOMEM ";
-			throw std::runtime_error("mproect() failed");
+			throw std::runtime_error("mprotect() failed");
 		}
 	}
 	void unlock() {
@@ -171,9 +171,17 @@ private:
 	public:
 		typedef std::map<nodeid, termset> p2id_t;
 		inline const termset& operator[](nodeid id) const { return p2id.at(id); }
+		bool equals(termid x, termid y) {
+			if (!x || !y) return !x == !y;
+			if (x->p == y->p) return equals(x->s, y->s) && equals(x->o, y->o);
+			return false;
+		}
 		inline termid add(nodeid p, termid s, termid o) {
-			auto r = new term/*make_shared<term>*/(p, s, o);
-			p2id[p].push_back(r);
+			auto& pp = p2id[p];
+			termid r = new term/*make_shared<term>*/(p, s, o);
+			for (auto x : pp) if (equals(x, r)) { delete r; return x; }
+			dout <<"watch *(int*)"<< r << endl;
+			pp.push_back(r);
 			return r;
 		}
 	private:

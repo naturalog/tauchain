@@ -1,5 +1,5 @@
 CC=clang++-3.6
-CXXFLAGS=-c -std=c++11 -Wall -Wextra -g -ggdb -DDEBUG -O0 -I/usr/local/include
+CXXFLAGS=-c -std=c++11 -Wall -Wextra -g -ggdb -DNDEBUG -O0 -I/usr/local/include
 #CXXFLAGS=-c -std=c++11 -Wall -Wextra -I/usr/local/include -DNDEBUG -O3
 LDFLAGS= -L/usr/local/lib -ldl -pthread -lrt
 #OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))

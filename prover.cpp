@@ -756,6 +756,7 @@ void substs::set(nodeid p, termid t) {
 	unlock();
 	data[sz++] = sub{ p, t };
 	lock();
+	dout <<"watch *(int*)"<< &data[sz-1].second->p << endl;
 	TRACE(dout<<"after: " << format() << endl);
 }
 
