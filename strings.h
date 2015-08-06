@@ -38,10 +38,12 @@ public:
 	}
 };
 
+const string tab = L"\t";
+const string str_default = L"@default";
+#ifdef JSON
 const string str_base = L"@base";
 const string str_context = L"@context";
 const string str_embed = L"@embed";
-const string str_default = L"@default";
 const string str_container = L"@container";
 const string str_graph = L"@graph";
 const string str_id = L"@id";
@@ -57,8 +59,7 @@ const string str_vocab = L"@vocab";
 const string str_explicit = L"@explicit";
 const string str_set = L"@set";
 const string str_embedChildren = L"@embedChildren";
-const string tab = L"\t";
-
+#endif
 const string RDF_SYNTAX_NS = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const string RDF_SCHEMA_NS = L"http://www.w3.org/2000/01/rdf-schema#";
 const string XSD_NS = L"http://www.w3.org/2001/XMLSchema#";
@@ -81,6 +82,7 @@ const string RDF_OBJECT = RDF_SYNTAX_NS + L"object";
 const string RDF_LANGSTRING = RDF_SYNTAX_NS + L"langString";
 const string RDF_LIST = RDF_SYNTAX_NS + L"List";
 
+#ifdef JSON
 const string LOADING_DOCUMENT_FAILED = L"loading document failed";
 const string LIST_OF_LISTS = L"list of lists";
 const string INVALID_INDEX_VALUE = L"invalid @index value";
@@ -142,7 +144,7 @@ const auto Ex16 = wruntime_error ( INVALID_TYPE_VALUE + tab + string ( L"@type v
 const auto Ex17 = wruntime_error ( LIST_OF_LISTS + tab + string ( L"A list may not contain another list" ) );
 const auto Ex18 = wruntime_error ( INVALID_REVERSE_VALUE + tab + string ( L"@reverse value must be an object" ) );
 const auto Ex19 = wruntime_error ( LIST_OF_LISTS + tab + string ( L"lists of lists are not permitted." ) );
-
+#endif
 const string implication = L"http://www.w3.org/2000/10/swap/log#implies";
 const pstring pimplication = pstr(implication);
 
