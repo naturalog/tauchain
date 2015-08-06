@@ -4,19 +4,20 @@
 #include "prover.h"
 #include "jsonld.h"
 #include "cli.h"
+
+#ifdef JSON
 #include "json_spirit.h"
 
 pobj convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
-
+#endif
 std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	qdb q;
 	try {
 		qdb r;
 		std::wistream* pis = &std::wcin;
-		if (fname != L"")
-			pis = new std::wifstream(ws(fname));
+		if (fname != L"") pis = new std::wifstream(ws(fname));
 		std::wistream& is = *pis;
 		return std::make_shared<qdb>(readqdb(is));
 	} catch (std::exception& ex) {
@@ -27,6 +28,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool print ) {
 	return std::make_shared<qdb>(q);
 }
 
+#ifdef JSON
 pobj cmd_t::load_json ( string fname, bool print ) {
 	json_spirit::wmValue v;
 	if ( fname == L"" ) json_spirit::read_stream ( std::wcin, v );
@@ -83,7 +85,7 @@ qdb cmd_t::convert ( const string& s ) {
 	qdb r = convert ( load_json ( s ) );
 	return r;
 }
-
+#endif
 void process_flags ( const cmds_t& cmds, strings& args ) {
 	strings::iterator it;
 	for ( auto x : cmds.second )

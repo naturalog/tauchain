@@ -108,7 +108,7 @@ string rdf_db::tostring() {
 	s << *this;
 	return s.str();
 }
-
+#ifdef JSON
 void rdf_db::setNamespace ( string ns, string prefix ) {
 	context[ns] = prefix;
 }
@@ -178,7 +178,7 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 					pnode firstBnode = nil, head;
 					if ( list && list->size() ) {
 						last = obj_to_rdf ( *list->rbegin() );
-						head = mkbnode ( api.gen_bnode_id() );
+						head = mkbnode ( gen_bnode_id() );
 					}
 					triples.push_back ( make_shared <quad> ( subj, pred, firstBnode, graph_name ) );
 					for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
@@ -230,6 +230,7 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 		return id.find ( L"_:" ) ? mkiri ( pstr(id) ) : mkbnode ( pstr(id) );
 	}
 }
+#endif
 
 quad::quad ( string subj, string pred, pnode object, string graph ) :
 	quad ( startsWith ( subj, L"_:" ) ? mkbnode ( pstr(subj) ) : mkiri ( pstr(subj) ), mkiri ( pstr(pred) ), object, graph ) {
@@ -295,7 +296,7 @@ qdb readqdb ( std::wistream& is) {
 	}
 	return r;
 }
-
+#ifdef JSON
 std::string convert_cmd::desc() const {
 	return "Convert JSON-LD to quads including all dependent algorithms.";
 }
@@ -319,3 +320,4 @@ int convert_cmd::operator() ( const strings& args ) {
 		return 1;
 	}
 }
+#endif

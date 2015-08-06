@@ -17,7 +17,7 @@ pnode nqparser::readcurly() {
 	if (*s != L'{') return (pnode)0;
 	++s;
 	while (iswspace(*s)) ++s;
-	auto r = jsonld_api::gen_bnode_id();
+	auto r = gen_bnode_id();
 	if (*s == L'}') { ++s; return mkbnode(r); }
 	auto t = (*this)(s, *r);
 	return mkbnode(r);

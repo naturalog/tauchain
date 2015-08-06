@@ -49,7 +49,6 @@ class listen_cmd : public cmd_t {
 };
 */
 #define ever ;;
-
 class prove_cmd : public cmd_t {
 public:
 	virtual std::string desc() const {
@@ -103,8 +102,10 @@ int main ( int argc, char** argv ) {
 			#ifdef with_marpa
 			{ string ( L"load_n3" ) , new load_n3_cmd },
 			#endif
+#ifdef JSON
 			{ string ( L"convert" ) , new convert_cmd },
 			{ string ( L"prove" ) , new prove_cmd }
+#endif
 		}, {
 			{ { L"--no-deref", L"show integers only instead of strings" }, &deref },
 			{ { L"--pause", L"pause on each trace and offer showing the backtrace. available under -DDEBUG only." }, &_pause },

@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <memory>
+#include <fstream>
 using std::map;
 using std::stringstream;
 using std::shared_ptr;
@@ -193,9 +194,18 @@ template<typename T> string _tostr ( T t ) {
 	return s.str();
 }
 
+inline pstring gen_bnode_id ( string id = L"" ) {
+	static size_t blankNodeCounter;
+	static map<string, string> bnode_id_map;
+	if (id.size())
+		if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) 
+			return pstr(bnode_id_map[id]);
+	std::wstringstream ss;
+	ss << L"_:b" << ( blankNodeCounter++ );
+	return pstr(bnode_id_map[id] = ss.str());
+}
 
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
-
 extern int level;
 
 #endif

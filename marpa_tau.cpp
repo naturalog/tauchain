@@ -472,7 +472,7 @@ struct Marpa {
                     sexp[marpa_v_result(v)] = L"/*" + token_value + L"*/";
                     termid xx;
                     if (terminals.find(symbol) != terminals.end()) {
-                        xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
+                        xx = prvr->make(mkbnode(gen_bnode_id()));
                         prvr->kb.add(prvr->make(bnf_matches, xx,  prvr->make(terminals[symbol]->thing)));
                         prvr->kb.add(prvr->make(marpa->has_value, xx, prvr->make(mkliteral(pstr(token_value), XSD_STRING, 0))));
                     }
@@ -499,7 +499,7 @@ struct Marpa {
                         xx = prvr->list2term_simple(args);
                     }
                     else {
-                        xx = prvr->make(mkbnode(jsonld_api::gen_bnode_id()));
+                        xx = prvr->make(mkbnode(gen_bnode_id()));
                         //dout << L".xx: " << prvr->format(xx) << std::endl;
                         for (int i = 0; i <= marpa_v_arg_n(v) - marpa_v_arg_0(v); i++) {
                             termid arg = stack[marpa_v_arg_0(v) + i];
@@ -712,7 +712,7 @@ public:
 
     pnode add_formulacontent(termid x)
     {
-        auto graph = mkbnode(jsonld_api::gen_bnode_id());
+        auto graph = mkbnode(gen_bnode_id());
         add_statements(x, *graph->value);
         return graph;
     }

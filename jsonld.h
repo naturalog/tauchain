@@ -1,3 +1,4 @@
+#ifdef JSON
 #ifndef __JSONLD_H__
 #define __JSONLD_H__
 
@@ -12,7 +13,6 @@
 //#include <curl/curlbuild.h>
 #include <sstream>
 #include <iostream>
-#include <fstream>
 #include <stdexcept>
 #include "json_object.h"
 #include "strings.h"
@@ -152,8 +152,6 @@ public:
 	jsonld_options opts;
 	pobj value = 0;
 	pcontext context = 0;
-	static size_t blankNodeCounter;
-	static map<string, string> bnode_id_map;
 
 	jsonld_api ( pobj input, jsonld_options opts );
 	jsonld_api ( jsonld_options opts_ = jsonld_options ( L"" ) ) :
@@ -171,7 +169,6 @@ public:
 	pobj expand ( pcontext act_ctx, pstring act_prop, pobj element );
 	static bool deepCompare ( pobj v1, pobj v2, bool listOrderMatters = false );
 	static bool deepContains ( polist values, pobj value );
-	static pstring gen_bnode_id ( string id = L"" );
 	void gen_node_map ( pobj element, psomap nodeMap );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph );
 	void gen_node_map ( pobj element, psomap nodeMap, string activeGraph, pobj activeSubject, pstring act_prop, psomap list );
@@ -182,4 +179,5 @@ public:
 
 pobj expand ( pobj input, jsonld_options opts = jsonld_options() );
 
+#endif
 #endif
