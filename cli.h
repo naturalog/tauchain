@@ -19,7 +19,9 @@ protected:
 	qdb convert ( pobj o );
 	qdb convert ( const string& s );
 #endif
+#ifndef NOPARSER
 	std::shared_ptr<qdb> load_quads ( string fname, bool print = true );
+#endif
 public:
 	virtual std::string desc() const = 0;
 	virtual std::string help() const = 0;

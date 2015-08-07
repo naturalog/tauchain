@@ -1,3 +1,4 @@
+#ifndef NOPARSER
 #include <string>
 #include <iostream>
 #include <set>
@@ -211,3 +212,4 @@ std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operato
 	}
 	return { r, qlists };
 }
+#endif

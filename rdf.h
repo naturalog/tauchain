@@ -59,7 +59,9 @@ pqlist mk_qlist();
 
 std::wostream& operator<< ( std::wostream& o, const qdb& );
 std::wostream& operator<< ( std::wostream& o, const qlist& );
+#ifndef NOPARSER
 qdb readqdb ( std::wistream& is );
+#endif
 #ifdef JSON
 class jsonld_api;
 class rdf_db: public qdb {
@@ -88,6 +90,7 @@ private:
 
 typedef std::shared_ptr<rdf_db> prdf_db;
 #endif
+#ifndef NOPARSER
 class nqparser {
 private:
 	wchar_t *t;
@@ -112,4 +115,5 @@ public:
 	std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );
+#endif
 #endif

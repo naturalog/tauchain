@@ -11,7 +11,7 @@ pobj convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
 #endif
-
+#ifndef NOPARSER
 std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool ) {
 	try {
 		qdb r;
@@ -24,7 +24,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool ) {
 	}
 	return nullptr;
 }
-
+#endif
 #ifdef JSON
 pobj cmd_t::load_json ( string fname, bool print ) {
 	json_spirit::wmValue v;

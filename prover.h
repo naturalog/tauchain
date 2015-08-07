@@ -136,14 +136,15 @@ public:
 		ruleid rule = 0;
 		uint term_idx, level = 0;
 		shared_ptr<proof> prev = 0, creator = 0;
-		shared_ptr<substs> s = make_shared<substs>();
+//		shared_ptr<substs> s = make_shared<substs>();
+		substs s;
 		ground g(prover*) const;
 		termid btterm = 0;
 		uint src = 0;
 		/*bool predvar = false;*/
 		proof(){}// : s(make_shared<substs>()) {}
 		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const substs & _s = substs(), uint _src = 0/*, bool _predvar = false*/)
-			: rule(r), term_idx(l), prev(p), creator(c), s(make_shared<substs>(_s)), src(_src)/*, predvar(_predvar)*/{}
+			: rule(r), term_idx(l), prev(p), creator(c), s(/*make_shared<substs>*/(_s)), src(_src)/*, predvar(_predvar)*/{}
 		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rule, p.term_idx, p.prev) { if (prev) level = prev->level + 1; }
 	};
 	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->term_idx < y->term_idx; }};

@@ -272,7 +272,7 @@ string quad::tostring ( ) const {
 
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
-
+#ifndef NOPARSER
 qdb readqdb ( std::wistream& is) {
 	string s;
 	string c;
@@ -296,6 +296,7 @@ qdb readqdb ( std::wistream& is) {
 	}
 	return r;
 }
+#endif
 #ifdef JSON
 std::string convert_cmd::desc() const {
 	return "Convert JSON-LD to quads including all dependent algorithms.";

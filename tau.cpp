@@ -51,6 +51,7 @@ class listen_cmd : public cmd_t {
 };
 */
 #define ever ;;
+#ifndef NOPARSER
 class prove_cmd : public cmd_t {
 public:
 	virtual std::string desc() const {
@@ -95,7 +96,7 @@ public:
 		return 0;
 	}
 };
-
+#endif
 int main ( int argc, char** argv ) {
 //	segment = new boost::interprocess::managed_heap_memory(long(1024*1024*1024)*1);
 //	alloc = new allocator_t(segment->get_segment_manager());
@@ -143,6 +144,7 @@ int main ( int argc, char** argv ) {
 		dout << "unit test failed: " << ex.what() << endl;
 		exit(1);
 	}
+#ifndef NOPARSER
 	if ( argc == 1 ) {
 		prove_cmd p;
 		quad_in = true;
@@ -164,4 +166,5 @@ int main ( int argc, char** argv ) {
 	int rval = ( *cmds.first[args[1]] ) ( args );
 
 	return rval;
+#endif
 }

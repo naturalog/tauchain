@@ -37,9 +37,9 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	termid t = heads[p.rule];
 	if (!t) return false;
 	const term& rt = *t;
-	substs & ps = *p.s;
+	substs& ps = p.s;
 	while ((ep = ep->prev))
-		if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt, ps))
+		if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, ps))
 			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 //	ep = _p;
 //	while (ep->prev) ep = ep->prev;
@@ -60,7 +60,7 @@ termid prover::list_next(termid cons, proof& p) {
 	setproc(L"list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
-	do_query( ts, &*p.s);
+	do_query( ts, &p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
@@ -77,7 +77,7 @@ termid prover::list_first(termid cons, proof& p) {
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
-	do_query( ts , &*p.s);
+	do_query( ts, &p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
@@ -139,11 +139,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term& t = *id;
 	int r = -1;
-	termid i0 = t.s ? EVALS(t.s, *p->s) : 0;
-	termid i1 = t.o ? EVALS(t.o, *p->s) : 0;
+	termid i0 = t.s ? EVALS(t.s, p->s) : 0;
+	termid i1 = t.o ? EVALS(t.o, p->s) : 0;
 	term r1, r2;
-	const term *t0 = i0 ? &(r1=*(i0=EVALS(t.s, *p->s))) : 0;
-	const term* t1 = i1 ? &(r2=*(i1=EVALS(t.o, *p->s))) : 0;
+	const term *t0 = i0 ? &(r1=*(i0=EVALS(t.s, p->s))) : 0;
+	const term* t1 = i1 ? &(r2=*(i1=EVALS(t.o, p->s))) : 0;
 	TRACE(	dout<<"called with term " << format(id); 
 		if (t0) dout << " subject = " << format(i0);
 		if (t1) dout << " object = " << format(i1);
@@ -154,11 +154,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->s, *p->s, t.o, *p->s) ? 1 : -1;
+		r = unify(t0->s, p->s, t.o, p->s) ? 1 : -1;
 		// returning -1 here because plz also look into the kb,
 		// dont assume that if this builtin didnt succeed, the kb cant contain such fact
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
-		r = unify(t0->o, *p->s, t.o, *p->s) ? 1 : -1;
+		r = unify(t0->o, p->s, t.o, p->s) ? 1 : -1;
 /*	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -298,7 +298,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		queue.push([p, id, this](){
 			shared_ptr<proof> r = make_shared<proof>();
 			*r = *p;
-			r->btterm = EVALS(id, *p->s);
+			r->btterm = EVALS(id, p->s);
 			++r->term_idx;
 			r->src = p->src;
 			return r;
@@ -310,7 +310,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
 		MARPA(substs.push_back(*p->s));
-		if (!(t = (p->s ? EVALS(r, *p->s) : EVAL(r)))) continue;
+		if (!(t = (/*p->s ? */EVALS(r, p->s)/* : EVAL(r)*/))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
@@ -342,7 +342,7 @@ void prover::step(shared_ptr<proof>& _p) {
 		if (rulelist_it == kb.r2id.end()) return;
 		substs s;
 		for (auto rule : rulelist_it->second) {
-			if (unify(t, *frame.s, heads[rule], s))
+			if (unify(t, frame.s, heads[rule], s))
 				queue.push(make_shared<proof>(_p, rule, 0, _p, s, src));
 			s.clear();
 			++src; 
@@ -354,41 +354,20 @@ void prover::step(shared_ptr<proof>& _p) {
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
 		ruleid rl = frame.rule;
 		r->src = ppr.src;
-		r->s = make_shared<substs>(*ppr.s);
-		unify(heads[rl], *frame.s, bodies[r->rule][r->term_idx], *r->s);
+		r->s = /*make_shared<substs>*/(ppr.s);
+		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s);
 		++r->term_idx;
 		step(r);
 	}
 }
-void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> &_p, termid t) {
-	setproc(L"step_in");
-	substs s;
-	auto &substs = _p->s;
-	if (substs) {
-//		const subst& _s = *ss;
-		for (auto rule : candidates) {
-			if (unify/*_sdnovar*/(t, *substs, heads[rule], s))
-				queue.push(make_shared<proof>(_p, rule, 0, _p, s, src));
-			s.clear();
-			++src;
-		}
-	} else
-		for (auto rl : candidates) {
-			if (unify/*_sdnovar*/(t, heads[rl], s))
-				queue.push(make_shared<proof>(_p, rl, 0, _p, s, src));
-			s.clear();
-			++src;
-		}
-}
-
 
 prover::ground prover::proof::g(prover* p) const {
 	if (!creator) return ground();
 	ground r = creator->g(p);
-	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), make_shared<substs>());
+	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), nullptr);
 	else if (creator->term_idx != p->bodies[creator->rule].size()) {
 		if (p->bodies[rule].empty()) r.emplace_back(rule, nullptr);
-	} else if (!p->bodies[creator->rule].empty()) r.emplace_back(creator->rule, creator->s);
+	} else if (!p->bodies[creator->rule].empty()) r.emplace_back(creator->rule, make_shared<substs>(creator->s));
 	return r;	
 }
 
@@ -529,7 +508,7 @@ prover::termset prover::qdb2termset(const qdb &q_) {
 
 
 void prover::query(const qdb& q_, substs * s) {
-	const termset &t = qdb2termset(q_);
+	const termset t = qdb2termset(q_);
 	query(t, s);
 }
 
@@ -576,7 +555,7 @@ int prover::do_query(const termset& goal, substs * s) {
 	p->rule = kb.add(0, goal);
 	p->term_idx = 0;
 	p->prev = 0;
-	if (s) p->s = make_shared<substs>(*s);
+	if (s) p->s = /*make_shared<substs>*/(*s);
 	return p;
 	}());
 	
@@ -786,8 +765,8 @@ bool substs::empty() const {
 	return sz == 0;
 }
 
-string st, ss;
 string substs::format(bool json) const {
+	static string st, ss;
 	if (empty()) return L"";
 	//std::wstringstream ss;
 	auto& r = *new std::map<string, string>;
