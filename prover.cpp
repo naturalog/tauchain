@@ -108,6 +108,7 @@ uint64_t dlparam(const node& n) {
 
 std::vector<termid> prover::get_list(termid head, proof* _p) {
 	setproc(L"get_list");
+	assert(_p);
 	proof& p = *_p;
 	termid t = list_first(head, p);
 	std::vector<termid> r;

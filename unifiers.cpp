@@ -70,7 +70,10 @@ bool prover::unify_ep(termid _s, const substs & ssub, const term& d, const subst
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 	else if (!s.s) r = true;
 	else if ((r = unify_ep(s.s, ssub, *d.s, dsub)))
+	{
+		assert(d.o);
 		r = unify_ep(s.o, ssub, *d.o, dsub);
+	}
 	TRACE(dout << "Trying to unify " << format(s) << " sub: " << formats(ssub)
 		  << " with " << format(d) << " sub: " << formats(dsub) << " : ";
 		if (r) dout << "passed"; else dout << "failed";
