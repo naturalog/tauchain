@@ -63,6 +63,7 @@ node bidict::operator[] ( nodeid k ) {
 #ifdef DEBUG
 	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting nodeid");
 #endif
+	dout << k << ' ' << ip[k] << endl;
 	return ip[k];
 }
 
@@ -119,13 +120,10 @@ string KMAG = L"\x1B[35m";
 string KCYN = L"\x1B[36m";
 string KWHT = L"\x1B[37m";
 
-string prover::format(termid id, bool json) { 
+string prover::format(termid id, bool json) {
 	if (!id) return L"{}";
-	if (json) return format(*id,json);
-	std::wstringstream ss; 
-	if (level > 100) ss <<L'['<< id << L']';
-	ss << format(*id, json);
-	return ss.str();
+	if (!id->p) throw 0;
+	return format(*id,json);
 }
 
 string prover::format(const term& p, bool json) {

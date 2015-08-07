@@ -201,7 +201,7 @@ private:
 	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> &_p, termid t);
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
-	termid evalvar(const term& x, const substs & s) {
+/*	termid evalvar(const term& x, const substs & s) {
 		PROFILE(++evals);
 		setproc(L"evalvar");
 		auto evvit = s.find(x.p);
@@ -217,20 +217,22 @@ private:
 		termid a = evaluate(*p.s), b = evaluate(*p.o);
 		return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 	}
-
+*/
 	inline termid evaluate(const term& p, const substs & s) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
+		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
 		termid r;
 		if (ISVAR(p)) {
 			auto it = s.find(p.p);
 			r = it ? evaluate(*it->second, s) : 0;
 		} else if (!p.s && !p.o) r = &p;
+		else if (!p.s != !p.o) throw 0;
 		else {
 			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
 			r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 		}
-		TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
+		TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl);
 		return r;
 	}
 

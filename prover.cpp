@@ -310,7 +310,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
 		MARPA(substs.push_back(*p->s));
-		if (!(t = (/*p->s ? */EVALS(r, p->s)/* : EVAL(r)*/))) continue;
+		if (!(t = (/*p->s ? */evaluate(*r, p->s)/* : EVAL(r)*/))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
@@ -591,6 +591,8 @@ termid prover::make(nodeid p, termid s, termid o) {
 #endif
 //	if ( (_terms.terms.capacity() - _terms.terms.size() ) < _terms.terms.size() )
 //		_terms.terms.reserve(2 * _terms.terms.size());
+	if (!p) throw 0;
+	if (!s != !o) throw 0;
 	return _terms.add(p, s, o);
 }
 
@@ -725,8 +727,10 @@ termid substs::get(nodeid p) const {
 
 void substs::set(nodeid p, termid t) {
 	setproc(L"substs::set");
-	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t) <<", before: " << format() << endl);
+//	TRACE(
+	dout<<dict[p].tostring()<<'/'<<prover::format(t) <<", before: " << format() << endl;
 	unlock();
+	if (!p || !t) throw 0;
 	data[sz++] = sub{ p, t };
 	lock();
 	dout <<"watch *(int*)"<< &data[sz-1].second->p << endl;
@@ -748,6 +752,7 @@ void substs::clear() {
 	setproc(L"substs::clear");
 	lock();
 	memset(data, 0, sizeof(sub) * sz);
+	sz = 0;
 	unlock();
 }	
 
@@ -763,6 +768,7 @@ string substs::format(bool json) const {
 //	auto& r = *new std::map<string, string>;
 	for (size_t n = 0; n < sz; ++n) {
 //		termid tt = data[n].second;
+		if (!data[n].second->p) throw 0;
 		dout << dstr(data[n].first) << L"\\" << prover::format(data[n].second, json) << L",";
 	}
 /*	ss = L"";
