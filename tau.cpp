@@ -6,12 +6,13 @@
 #include "marpa_tau.h"
 #endif
 
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
+
 #ifdef DEBUG
 auto dummy = []() {
 	return ( bool ) std::cin.tie ( &std::clog );
 }();
 #endif
-bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 #ifdef JSON
 jsonld_options opts;
 #endif

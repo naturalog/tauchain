@@ -106,8 +106,9 @@ uint64_t dlparam(const node& n) {
 	return p;
 }
 
-std::vector<termid> prover::get_list(termid head, proof& p) {
+std::vector<termid> prover::get_list(termid head, proof* _p) {
 	setproc(L"get_list");
+	proof& p = *_p;
 	termid t = list_first(head, p);
 	std::vector<termid> r;
 	TRACE(dout<<"get_list with "<<format(head));
@@ -296,8 +297,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	#endif
 	if (r == 1) 
 		queue.push([p, id, this](){
-			shared_ptr<proof> r = make_shared<proof>();
-			*r = *p;
+			shared_ptr<proof> r = make_shared<proof>(p, *p);
 			r->btterm = EVALS(id, p->s);
 			++r->term_idx;
 			r->src = p->src;
@@ -550,14 +550,9 @@ int prover::do_query(const termid goal)
 
 int prover::do_query(const termset& goal, substs * s) {
 //	setproc(L"do_query");
-	queue.push([&](){
-	shared_ptr<proof> p = make_shared<proof>();
-	p->rule = kb.add(0, goal);
-	p->term_idx = 0;
-	p->prev = 0;
+	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = /*make_shared<substs>*/(*s);
-	return p;
-	}());
+	queue.push(p);
 	
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	{
@@ -565,9 +560,6 @@ int prover::do_query(const termset& goal, substs * s) {
 		TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	}
 
-	//queue.push_front(p);
-
-	shared_ptr<proof> q;
 	using namespace std;
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -717,8 +709,7 @@ termid prover::force_one_t(termids r) {
 /*get_list wrapper useful in marpa*/
 prover::nodeids prover::get_list(nodeid head)
 {
-	prover::proof dummy;
-    auto r = get_list(make(head), dummy);
+    auto r = get_list(make(head), nullptr);
     nodeids rr;
     for (auto rrr: r)
         rr.push_back(rrr->p);
@@ -766,18 +757,15 @@ bool substs::empty() const {
 }
 
 string substs::format(bool json) const {
-	static string st, ss;
+//	static string st, ss;
 	if (empty()) return L"";
-	//std::wstringstream ss;
-	auto& r = *new std::map<string, string>;
+//	std::wstringstream ss;
+//	auto& r = *new std::map<string, string>;
 	for (size_t n = 0; n < sz; ++n) {
-		termid tt = data[n].second;
-		st = prover::format(data[n].second, json);
-		if (tt != data[n].second) throw 0;
-		r[dstr(data[n].first)] = st;
-		if (tt != data[n].second) throw 0;
+//		termid tt = data[n].second;
+		dout << dstr(data[n].first) << L"\\" << prover::format(data[n].second, json) << L",";
 	}
-	ss = L"";
+/*	ss = L"";
 	for (auto x = r.rbegin(); x != r.rend(); ++x) {
 		ss += x->first;
 		ss += L"\\"; 
@@ -785,5 +773,5 @@ string substs::format(bool json) const {
 		ss += L",";
 	}
 	delete &r;
-	return ss;
+*/	return L"";//ss.str();
 }
