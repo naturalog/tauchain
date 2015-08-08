@@ -535,6 +535,10 @@ void prover::unittest() {
 	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
 	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
 	prover &p = *new prover(kb, false);
+	substs s1, s2;
+	termid xx = p.make(x, p.make(x,0,0), p.make(x,0,0));
+	termid aa = p.make(a, p.make(x,0,0), p.make(x,0,0));
+	p.unify(xx , s1, aa, s2);
 	p.query(q);
 	delete &kb;
 	delete &q;
