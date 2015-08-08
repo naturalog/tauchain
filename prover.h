@@ -237,7 +237,7 @@ private:
 	inline termid evaluate(const term& p, const substs & s) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
-		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
+//		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
 		termid r;
 		if (ISVAR(p)) {
 			auto it = s.find(p.p);

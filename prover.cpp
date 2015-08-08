@@ -531,16 +531,16 @@ void prover::unittest() {
 	pnode a = mkiri(pstr(L"?a"));
 	qdb &kb = *new qdb, &q = *new qdb;
 	kb.first[str_default] = mk_qlist();
-	q.first[str_default] = mk_qlist();
-	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
-	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
+//	q.first[str_default] = mk_qlist();
+//	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
+//	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
 	prover &p = *new prover(kb, false);
 	substs s1, s2;
 	termid xx = p.make(x, p.make(x,0,0), p.make(x,0,0));
 	termid aa = p.make(a, p.make(x,0,0), p.make(x,0,0));
 	for (uint n = 0; n < 2; ++n) {
 		p.unify(xx , s1, aa, s2);
-		dout <<"s1: "<< s1.format() << "s2: "<< s2.format() << endl;
+//		dout <<"s1: "<< s1.format() << "s2: "<< s2.format() << endl;
 	}
 	exit(0);
 	p.query(q);
@@ -730,25 +730,25 @@ prover::nodeids prover::get_list(nodeid head)
 termid substs::get(nodeid p) const {
 	setproc(L"substs::get");
 	termid t = find(p)->second;
-	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t)<<endl);
+//	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t)<<endl);
 	return t;
 }
 
 void substs::set(nodeid p, termid t) {
 	setproc(L"substs::set");
 //	TRACE(
-	dout<<dict[p].tostring()<<'/'<<prover::format(t) <<", before: " << format() << endl;
+//	dout<<dict[p].tostring()<<'/'<<prover::format(t) <<", before: " << format() << endl;
 	unlock();
 	if (!p || !t) throw 0;
 	data[sz++] = sub{ p, t };
 	lock();
-	dout <<"watch *(int*)"<< &data[sz-1].second->p << endl;
-	TRACE(dout<<"after: " << format() << endl);
+//	dout <<"watch *(int*)"<< &data[sz-1].second->p << endl;
+//	TRACE(dout<<"after: " << format() << endl);
 }
 
 const substs::sub* substs::find(nodeid p) const {
 	setproc(L"substs::find");
-	TRACE(dout<<dict[p].tostring()<<endl);
+//	TRACE(dout<<dict[p].tostring()<<endl);
 	for (size_t n = 0; n < sz; ++n) {
 		if (data[n].first == p) {
 			return &data[n];

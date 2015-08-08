@@ -28,9 +28,9 @@ bool prover::unify(termid _s, const substs & ssub, termid _d, substs & dsub) {
 	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
 	else if (!s.s) r = true;
 	else {
-		dout <<"dsub1: " << formats(dsub)<<endl;
+//		dout <<"dsub1: " << formats(dsub)<<endl;
 		if ((r = unify(s.s, ssub, d.s, dsub))) {
-			dout <<"dsub2: " << dsub.format()<<endl;
+//			dout <<"dsub2: " << dsub.format()<<endl;
 			r = unify(s.o, ssub, d.o, dsub);
 		}
 	}
