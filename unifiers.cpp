@@ -6,7 +6,7 @@ bool prover::unify(termid _s, const substs & ssub, termid _d, substs & dsub) {
 	setproc(L"unify_bind");
 	termid v;
 	bool r, ns = false;
-	const term& d = *_d, s = *_s;
+	const term& d = *_d, &s = *_s;
 	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub) << " with " << format(_d) << " sub: " << formats(dsub) << endl);
 	if (ISVAR(s)) {
 		//v = evalvar(s, ssub);
