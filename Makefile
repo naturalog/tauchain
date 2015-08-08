@@ -1,5 +1,5 @@
 CC=clang++-3.6
-CXXFLAGS=-c -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -D_N_D_EBUG -O0 -I/usr/local/include -DNOPARSER -I/usr/include -I/usr/local/linuxbrew/include #-DJSON
+CXXFLAGS=-c -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -DDEBUG -O0 -I/usr/local/include -DNOPARSER -I/usr/include -I/usr/local/linuxbrew/include #-DJSON
 #CXXFLAGS=-c -std=c++11 -Wall -Wextra -I/usr/local/include -DNDEBUG -O3 -DNOPARSER -I/usr/include -I/usr/local/linuxbrew/include
 LDFLAGS= -L/usr/local/lib #-ldl -pthread -lrt
 #OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))

@@ -538,7 +538,11 @@ void prover::unittest() {
 	substs s1, s2;
 	termid xx = p.make(x, p.make(x,0,0), p.make(x,0,0));
 	termid aa = p.make(a, p.make(x,0,0), p.make(x,0,0));
-	p.unify(xx , s1, aa, s2);
+	for (uint n = 0; n < 2; ++n) {
+		p.unify(xx , s1, aa, s2);
+		dout <<"s1: "<< s1.format() << "s2: "<< s2.format() << endl;
+	}
+	exit(0);
 	p.query(q);
 	delete &kb;
 	delete &q;

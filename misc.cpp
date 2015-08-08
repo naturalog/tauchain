@@ -63,7 +63,7 @@ node bidict::operator[] ( nodeid k ) {
 #ifdef DEBUG
 	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting nodeid");
 #endif
-	dout << k << ' ' << ip[k] << endl;
+//	dout << k << ' ' << ip[k] << endl;
 	return ip[k];
 }
 
