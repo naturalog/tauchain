@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <unistd.h>
 //#include <boost/interprocess/containers/map.hpp>
 //#include <boost/interprocess/containers/set.hpp>
 //#include <boost/interprocess/containers/vector.hpp>
@@ -30,7 +31,7 @@
 #define PROFILE(x)
 #endif
 
-//const size_t pagesize = sysconf(_SC_PAGE_SIZE);
+const size_t pagesize = sysconf(_SC_PAGE_SIZE);
 
 struct term;
 class prover;
@@ -44,6 +45,7 @@ struct term {
 	pobj json(const prover&) const;
 #endif
 };
+
 struct substs {
 	//typedef std::map<nodeid, termid> data_t;
 	struct sub {
@@ -182,14 +184,28 @@ private:
 		}
 		inline termid add(nodeid p, termid s, termid o) {
 			auto& pp = p2id[p];
-			termid r = new term/*make_shared<term>*/(p, s, o);
-			for (auto x : pp) if (equals(x, r)) { delete r; return x; }
-			dout <<"watch *(int*)"<< r << endl;
+			term t(p, s, o);
+			for (auto x : pp) if (equals(x, &t)) return x;
+//			dout <<"watch *(int*)"<< r << endl;
+			unlock();
+			termid r = &(data[sz++] = t);
+			lock();
 			pp.push_back(r);
 			return r;
 		}
+		termdb(){lock();}
 	private:
+		size_t sz = 0;
+		const size_t pages = 4;
+		term* data = (term*)memalign(pagesize, pagesize * pages);
 		p2id_t p2id;
+	        void lock() {
+	                if (-1 == mprotect(data, pagesize * pages, PROT_READ) ) {
+	                        dout<<(errno==EACCES?"EACCES ":errno==EINVAL?"EINVAL ":errno==ENOMEM?"ENOMEM ":"");
+	                        throw std::runtime_error("mprotect() failed");
+	                }
+        	}
+	        void unlock() { mprotect(data, pagesize * pages, PROT_READ | PROT_WRITE); }
 	} _terms;
 	friend ruleset;
 	friend proof;
