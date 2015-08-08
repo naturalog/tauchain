@@ -531,18 +531,18 @@ void prover::unittest() {
 	pnode a = mkiri(pstr(L"?a"));
 	qdb &kb = *new qdb, &q = *new qdb;
 	kb.first[str_default] = mk_qlist();
-//	q.first[str_default] = mk_qlist();
-//	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
-//	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
+	q.first[str_default] = mk_qlist();
+	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
+	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
 	prover &p = *new prover(kb, false);
-	substs s1, s2;
-	termid xx = p.make(x, p.make(x,0,0), p.make(x,0,0));
-	termid aa = p.make(a, p.make(x,0,0), p.make(x,0,0));
-	for (uint n = 0; n < 2; ++n) {
-		p.unify(xx , s1, aa, s2);
+//	substs s1, s2;
+//	termid xx = p.make(x, p.make(x,0,0), p.make(x,0,0));
+//	termid aa = p.make(a, p.make(x,0,0), p.make(x,0,0));
+//	for (uint n = 0; n < 2; ++n) {
+//		p.unify(xx , s1, aa, s2);
 //		dout <<"s1: "<< s1.format() << "s2: "<< s2.format() << endl;
-	}
-	exit(0);
+//	}
+//	exit(0);
 	p.query(q);
 	delete &kb;
 	delete &q;
