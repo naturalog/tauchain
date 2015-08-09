@@ -29,7 +29,7 @@ bool prover::unify(termid _s, const substs& ssub, termid _d, substs& dsub) {
 		dout << "Trial to unify " << format(s) << " sub: " << formats(ssub) << " with " << format(d) << " sub: " << formats(dsub) << " : ";
 		if (r) {
 			dout << "passed";
-			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(*dsub.find({d.p, 0}));
+			if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]);
 		} else dout << "failed";
 		dout << endl);
 	return r;
