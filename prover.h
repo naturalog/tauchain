@@ -44,6 +44,8 @@ struct term {
 #endif
 };
 
+//struct subcmp { bool operator()( const std::pair<nodeid, termid>& x, const std::pair<nodeid, termid>& y) const { return x.first < y.first; } };
+//typedef std::set<std::pair<nodeid, termid>, subcmp> substs;
 typedef std::map<nodeid, termid> substs;
 class prover {
 	size_t evals = 0, unifs = 0;

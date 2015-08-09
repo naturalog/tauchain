@@ -332,7 +332,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p) {
 	setproc(L"step");
-	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
+//	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
 	if (euler_path(_p)) return;
 	proof& frame = *_p;
@@ -344,13 +344,15 @@ void prover::step(shared_ptr<proof>& _p) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
-		if (frame.s)
+		if (frame.s) {
+			substs& ps = *frame.s;
 			for (auto rule : rit->second) {
-				if (unify(t, frame.s, heads[rule], termsub))
+				if (unify(t, ps, heads[rule], termsub))
 					queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
 				termsub.clear();
 				++src; 
 			}
+		}
 		else for (auto rule : rit->second)
 			if (unify(t, heads[rule], termsub)) {
 				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));

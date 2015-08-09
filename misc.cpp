@@ -282,7 +282,8 @@ string prover::fsubsts(const prover::ground& g) {
 	for (auto x : g)
 		if (x.second)
 			for (auto y : *x.second)
-				s[y.first] = y.second;
+				//s[y.first] = y.second;
+				s.emplace(y.first, y.second);
 	return prover::formats(s);
 }
 
