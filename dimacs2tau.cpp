@@ -40,25 +40,11 @@ int main() {
 		{ 1, -2, -3 }
 	};
 	int N = 0;
-	for (auto x : cnf) for (auto y : x) if (abs(y)>N)N=abs(y);
-
-	cout	<<"(T T) or  T."<<endl
-		<<"(T F) or  T."<<endl
-		<<"(F T) or  T."<<endl
-		<<"(F F) or  F."<<endl
-		<<"T not F."<<endl
-		<<"F not T."<<endl
-		<<"{ T not T } => false."<<endl
-		<<"{ F not F } => false."<<endl
-		<<"{ (?X ?Y) or ?Z } => { (?Y ?X) or ?Z. }."<<endl
-		<<"{ (?X ?Y) or T. (?Y ?Z) or T } => { (?X ?Y ?Z) or T }."<<endl
-		<<"{ (?X ?Y) or F. (?Y ?Z) or T } => { (?X ?Y ?Z) or T }."<<endl
-		<<"{ (?X ?Y) or T. (?Y ?Z) or F } => { (?X ?Y ?Z) or T }."<<endl
-		<<"{ (?X ?Y) or F. (?Y ?Z) or F } => { (?X ?Y ?Z) or F }."<<endl;
-
+	cout << "T not F.\nF not T.\n(T T T) or T.\n(T T F) or T.\n(T F T) or T.\n(T F F) or T.\n(F T T) or T.\n(F T F) or T.\n(F F T) or T.\n{ ";
+	for (auto x : cnf) for (auto y : x) if (abs(y)>N) N = abs(y);
 	for (auto x : cnf) cout << clause(x) << endl;
 	//cout << "fin." << endl << negs(N) << "fin." << endl;
-	cout << negs(N) << "fin." << endl;
-	cout << "?x not F. " << endl << "fin." << endl;
+	cout << negs(N) << " } => { CNF a SAT }.\nfin.\n";
+	cout << "?X a SAT. " << endl << "fin." << endl;
 	return 0;
 }
