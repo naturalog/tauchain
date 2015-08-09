@@ -593,7 +593,7 @@ int prover::do_query(const termset& goal, substs * s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
-	TRACE(dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
+	dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
 //	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
 	return duration/1000.;
 	//for (auto x : gnd) pushev(x);

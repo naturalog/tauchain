@@ -48,10 +48,23 @@ int main() {
 			}
 		}
 	}
-	cout << "T not F.\nF not T.\n(T) or T.\n(T T) or T.\n(T F) or T.\n(F T) or T.\n(T T T) or T.\n(T T F) or T.\n(T F T) or T.\n(T F F) or T.\n(F T T) or T.\n(F T F) or T.\n(F F T) or T.\n{ ";
+	cout 
+		<<"T not F."<<endl
+		<<"F not T."<<endl
+		<<"(T) or T."<<endl
+		<<"(T T) or T."<<endl
+		<<"(T F) or T."<<endl
+		<<"(F T) or T."<<endl
+		<<"(T T T) or T."<<endl
+		<<"(T T F) or T."<<endl
+		<<"(T F T) or T."<<endl
+		<<"(T F F) or T."<<endl
+		<<"(F T T) or T."<<endl
+		<<"(F T F) or T."<<endl
+		<<"(F F T) or T."<<endl<<"{ ";
+	cout << negs(N);
 	for (auto x : cnf) cout << clause(x) << endl;
-	//cout << "fin." << endl << negs(N) << "fin." << endl;
-	cout << negs(N) << " } => { CNF a SAT }.\nfin.\n";
+	cout << " } => { CNF a SAT }.\nfin.\n";
 	cout << "?X a SAT. " << endl << "fin." << endl;
 	return 0;
 }
