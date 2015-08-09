@@ -14,11 +14,11 @@
 #include <future>
 #include <functional>
 #include <forward_list>
-#include <malloc.h>
+//#include <malloc.h>
 #include <assert.h>
-#include <sys/mman.h>
-#include <errno.h>
-#include <unistd.h>
+//#include <sys/mman.h>
+//#include <errno.h>
+//#include <unistd.h>
 //#include <boost/interprocess/containers/map.hpp>
 //#include <boost/interprocess/containers/set.hpp>
 //#include <boost/interprocess/containers/vector.hpp>
@@ -30,8 +30,6 @@
 #else
 #define PROFILE(x)
 #endif
-
-const size_t pagesize = sysconf(_SC_PAGE_SIZE);
 
 struct term;
 class prover;
@@ -46,42 +44,7 @@ struct term {
 #endif
 };
 
-struct substs {
-	//typedef std::map<nodeid, termid> data_t;
-	struct sub {
-		nodeid first;
-		termid second;
-	};
-	termid get(nodeid p) const;
-	void set(nodeid p, termid t);
-	const sub* find(nodeid p) const;
-//	const sub* begin() const;
-//	const sub* end() const;
-	void clear();
-	bool empty() const;
-	string format(bool json = false) const;
-	size_t sz = 0;
-	substs() {
-		data = new sub[1024];//(sub*)memalign(pagesize, 4 * pagesize);
-//		dout << "pagesize: " << pagesize << endl;
-		lock();
-}
-private:
-	sub *data;
-	void lock() {
-//		if (-1 == mprotect(data, pagesize * 4, PROT_READ) ) {
-//			if (errno == EACCES) dout << "EACCES ";
-//			if (errno == EINVAL) dout << "EINVAL ";
-//			if (errno == ENOMEM) dout << "ENOMEM ";
-//			throw std::runtime_error("mprotect() failed");
-//		}
-	}
-	void unlock() {
-//		mprotect(data, pagesize * 4, PROT_READ | PROT_WRITE);
-	}
-};
-
-//typedef boost::container::map<nodeid, termid> substs;
+typedef std::map<nodeid, termid> substs;
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
@@ -187,25 +150,26 @@ private:
 			term t(p, s, o);
 			for (auto x : pp) if (equals(x, &t)) return x;
 //			dout <<"watch *(int*)"<< r << endl;
-			unlock();
-			termid r = &(data[sz++] = t);
-			lock();
+//			unlock();
+//			termid r = &(data[sz++] = t);
+//			lock();
+			termid r = new term(p, s, o);
 			pp.push_back(r);
 			return r;
 		}
-		termdb(){lock();}
+//		termdb(){lock();}
 	private:
-		size_t sz = 0;
-		const size_t pages = 4;
-		term* data = (term*)memalign(pagesize, pagesize * pages);
+//		size_t sz = 0;
+//		const size_t pages = 4;
+//		term* data = (term*)memalign(pagesize, pagesize * pages);
 		p2id_t p2id;
-	        void lock() {
-	                if (-1 == mprotect(data, pagesize * pages, PROT_READ) ) {
-	                        dout<<(errno==EACCES?"EACCES ":errno==EINVAL?"EINVAL ":errno==ENOMEM?"ENOMEM ":"");
-	                        throw std::runtime_error("mprotect() failed");
-	                }
-        	}
-	        void unlock() { mprotect(data, pagesize * pages, PROT_READ | PROT_WRITE); }
+//	        void lock() {
+//	                if (-1 == mprotect(data, pagesize * pages, PROT_READ) ) {
+//	                        dout<<(errno==EACCES?"EACCES ":errno==EINVAL?"EINVAL ":errno==ENOMEM?"ENOMEM ":"");
+//	                        throw std::runtime_error("mprotect() failed");
+//	                }
+//        	}
+//	        void unlock() { mprotect(data, pagesize * pages, PROT_READ | PROT_WRITE); }
 	} _terms;
 	friend ruleset;
 	friend proof;
@@ -215,13 +179,13 @@ private:
 	inline void pushev(shared_ptr<proof>);
 	inline void step(shared_ptr<proof>&);
 	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> &_p, termid t);
+	substs::const_iterator evvit;
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
-/*	termid evalvar(const term& x, const substs & s) {
+	termid evalvar(const term& x, const substs& s) {
 		PROFILE(++evals);
 		setproc(L"evalvar");
-		auto evvit = s.find(x.p);
-		termid r = evvit ? evaluate(*evvit->second, s) : 0;
+		termid r = ((evvit = s.find(x.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
 		TRACE(dout<<format(x) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
 		return r;
 	}
@@ -233,16 +197,14 @@ private:
 		termid a = evaluate(*p.s), b = evaluate(*p.o);
 		return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 	}
-*/
+
 	inline termid evaluate(const term& p, const substs & s) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
 //		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
 		termid r;
-		if (ISVAR(p)) {
-			auto it = s.find(p.p);
-			r = it ? evaluate(*it->second, s) : 0;
-		} else if (!p.s && !p.o) r = &p;
+		if (ISVAR(p)) r = ((evvit = s.find(p.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
+		else if (!p.s && !p.o) r = &p;
 		else if (!p.s != !p.o) throw 0;
 		else {
 			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
@@ -290,7 +252,7 @@ public:
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
 	string formatp(shared_ptr<proof> p);
-	string formats(const substs & s, bool json = false) { return s.format(json); }
+	string formats(const substs & s, bool json = false);// { return s.format(json); }
 	string formats(shared_ptr<substs>& s, bool json = false) { return s ? formats(*s, json) : string(); }
 	void printterm_substs(termid id, const substs & s);
 	void printl_substs(const termset& l, const substs & s);
@@ -305,6 +267,8 @@ public:
 #endif
 	string fsubsts(const ground& g);
 	queue_t queue, gnd;
-	static void unittest(); 
+	static void unittest();
+	substs termsub;
+	ruleset::r2id_t::const_iterator rit;
 };
 #endif

@@ -185,7 +185,7 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 						pnode object = obj_to_rdf ( list->at ( i ) );
 						triples.push_back ( make_shared <quad> ( firstBnode, first, object, graph_name ) );
 						second[*head->value].push_back(object);
-						pnode restBnode = mkbnode ( api.gen_bnode_id() );
+						pnode restBnode = mkbnode ( gen_bnode_id() );
 						triples.push_back ( make_shared <quad> ( firstBnode, rest, restBnode, graph_name ) );
 						firstBnode = restBnode;
 					}

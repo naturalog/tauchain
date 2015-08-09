@@ -100,7 +100,7 @@ uint64_t dlparam(const node& n) {
 			double d;
 			d = std::stod(v);
 			memcpy(&p, &d, 8);
-		} else if (dt == *XSD_INTEGER)//|| dt == *XSD_PTR)
+		} else if (dt == *XSD_INTEGER)
 			p = std::stol(v);
 	}
 	return p;
@@ -317,35 +317,24 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-//void prover::printq(queue_t& q){
-//	int n = 0;
-//	for (auto p : q) {
-//		int pqid = -1;
-//		if (p->prev) pqid = (p->prev)->qid;
-//		dout << n++ << ") qid: " << p->qid << ", ind: " << p->term_idx << ", pqid: " << pqid << ", env: " << (/*p->s->empty() ? string(L"undefined") :*/ formats(p->s)) << endl;
-//	}
-//}
-
 void prover::step(shared_ptr<proof>& _p) {
 	setproc(L"step");
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
+	if (euler_path(_p)) return;
 	proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto body = bodies[frame.rule];
 	size_t src = 0;
 	// if we still have some terms in rule body to process
 	if (frame.term_idx != body.size()) {
-//		if (euler_path(_p)) return;
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
-		auto rulelist_it = kb.r2id.find(t->p);
-		if (rulelist_it == kb.r2id.end()) return;
-		substs s;
-		for (auto rule : rulelist_it->second) {
-			if (unify(t, frame.s, heads[rule], s))
-				queue.push(make_shared<proof>(_p, rule, 0, _p, s, src));
-			s.clear();
+		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
+		for (auto rule : rit->second) {
+			if (unify(t, frame.s, heads[rule], termsub))
+				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+			termsub.clear();
 			++src; 
 		}
 	}
@@ -631,7 +620,7 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 	int count=0;
 	for (auto x : substss) {
 		auto binding_it = x.find(var->p);
-		if (binding_it) {
+		if (binding_it != x.end()) {
 			r.push_back((*binding_it).second);
 			TRACE(dout << " result:")
 			TRACE(prints(x);)
@@ -725,68 +714,4 @@ prover::nodeids prover::get_list(nodeid head)
     for (auto rrr: r)
         rr.push_back(rrr->p);
     return rr;
-}
-
-termid substs::get(nodeid p) const {
-	setproc(L"substs::get");
-	termid t = find(p)->second;
-//	TRACE(dout<<dict[p].tostring()<<'/'<<prover::format(t)<<endl);
-	return t;
-}
-
-void substs::set(nodeid p, termid t) {
-	setproc(L"substs::set");
-//	TRACE(
-//	dout<<dict[p].tostring()<<'/'<<prover::format(t) <<", before: " << format() << endl;
-	unlock();
-	if (!p || !t) throw 0;
-	data[sz++] = sub{ p, t };
-	lock();
-//	dout <<"watch *(int*)"<< &data[sz-1].second->p << endl;
-//	TRACE(dout<<"after: " << format() << endl);
-}
-
-const substs::sub* substs::find(nodeid p) const {
-	setproc(L"substs::find");
-//	TRACE(dout<<dict[p].tostring()<<endl);
-	for (size_t n = 0; n < sz; ++n) {
-		if (data[n].first == p) {
-			return &data[n];
-		}
-	}
-	return 0;
-}
-
-void substs::clear() {
-	setproc(L"substs::clear");
-	lock();
-	memset(data, 0, sizeof(sub) * sz);
-	sz = 0;
-	unlock();
-}	
-
-bool substs::empty() const {
-	setproc(L"substs::empty");
-	return sz == 0;
-}
-
-string substs::format(bool json) const {
-//	static string st, ss;
-	if (empty()) return L"";
-//	std::wstringstream ss;
-//	auto& r = *new std::map<string, string>;
-	for (size_t n = 0; n < sz; ++n) {
-//		termid tt = data[n].second;
-		if (!data[n].second->p) throw 0;
-		dout << dstr(data[n].first) << L"\\" << prover::format(data[n].second, json) << L",";
-	}
-/*	ss = L"";
-	for (auto x = r.rbegin(); x != r.rend(); ++x) {
-		ss += x->first;
-		ss += L"\\"; 
-		ss += x->second;
-		ss += L",";
-	}
-	delete &r;
-*/	return L"";//ss.str();
 }

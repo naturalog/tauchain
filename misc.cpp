@@ -161,7 +161,7 @@ void prover::printp(shared_ptr<proof> p) {
 	--_indent;
 	dout << endl << KNRM;
 }
-/*
+
 string prover::formats(const substs & s, bool json) {
 	if (s.empty()) return L"";
 	std::wstringstream ss;
@@ -171,9 +171,9 @@ string prover::formats(const substs & s, bool json) {
 	for (auto x = r.rbegin(); x != r.rend(); ++x) ss << x->first << '\\' << x->second << ',';
 	return ss.str();
 }
-*/
+
 void prover::prints(const substs & s) {
-	dout << s.format(false);
+	dout << formats(s, false);
 //	for (auto x : s)
 //		dout << dstr(x.first) << L" / " << format(x.second) << ' ';
 }
@@ -276,12 +276,13 @@ pobj term::json(const prover& pr) const {
 	return r;
 }
 #endif
+
 string prover::fsubsts(const prover::ground& g) {
 	substs s;
-//	for (auto x : g)
-//		if (x.second)
-//			for (auto y : *x.second)
-//				s.set(y.first, y.second);
+	for (auto x : g)
+		if (x.second)
+			for (auto y : *x.second)
+				s[y.first] = y.second;
 	return prover::formats(s);
 }
 

@@ -666,6 +666,11 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 			}
 	}
 }
+
+void jsonld_api::gen_node_map ( pobj element, psomap nodeMap ) {
+	gen_node_map ( element, nodeMap, str_default, pobj(), pstring(), psomap() );
+}
+
 prdf_db jsonld_api::toRDF() {
 	psomap nodeMap = make_shared<somap>();
 	( *nodeMap ) [str_default] = mk_somap_obj();
@@ -1009,8 +1014,8 @@ void jsonld_api::gen_node_map ( pobj element, psomap nodeMap, string activeGraph
 	gen_node_map ( element, nodeMap, activeGraph, pobj(), pstring(), psomap() );
 }
 
-size_t jsonld_api::blankNodeCounter = 0;
-map<string, string> jsonld_api::bnode_id_map;
+//size_t jsonld_api::blankNodeCounter = 0;
+//map<string, string> jsonld_api::bnode_id_map;
 //void* curl = curl_easy_init();
 
 string obj::toString() {
