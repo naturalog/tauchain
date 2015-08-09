@@ -332,7 +332,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 void prover::step(shared_ptr<proof>& _p) {
 	setproc(L"step");
-//	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
+	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
 	if (euler_path(_p)) return;
 	proof& frame = *_p;

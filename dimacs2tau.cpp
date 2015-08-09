@@ -59,6 +59,6 @@ int main() {
 	for (auto x : cnf) cout << clause(x) << endl;
 	//cout << "fin." << endl << negs(N) << "fin." << endl;
 	cout << negs(N) << "fin." << endl;
-	cout << "?x a T. " << endl << "fin." << endl;
+	cout << "?x not F. " << endl << "fin." << endl;
 	return 0;
 }
