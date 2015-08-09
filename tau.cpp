@@ -77,84 +77,92 @@ int main ( int argc, char** argv ) {
 	dict.init();
 	bool repl;
 
-	try{
-		TCLAP::CmdLine cmd("Tau command line",' ',"0.0");
-		
-		TCLAP::ValueArg<int> tc_level("l","level","level",false,1,"",cmd);
+	try {
+		TCLAP::CmdLine cmd("Tau command line", ' ', "0.0");
+
+		TCLAP::ValueArg <int> tc_level("l", "level", "level", false, 1, "", cmd);
 		//
 		/*Ok now my goal is to make these definitions...*/
 		TCLAP::SwitchArg
-			tc_deref("d","no-deref","show integers only instead of strings",cmd,true),
-			tc_pause("P","pause","pause on each trace and offer showing the backtrace. available under -DDEBUG only.",cmd,false),
-			tc_shorten("s","shorten","on IRIs containing # show only what's after #",cmd,false),
-			tc_base("b","base","set file://<filename> as base in JsonLDOptions",cmd,true),
-			tc_quads("q","quads","set input format for prove as quads",cmd,false),
-			tc_nocolor("n","nocolor","disable color output",cmd,false);		
-		
-		cmd.parse(argc,argv);
-		
+				tc_deref("d", "no-deref", "show integers only instead of strings", cmd, true),
+				tc_pause("P", "pause",
+						 "pause on each trace and offer showing the backtrace. available under -DDEBUG only.", cmd,
+						 false),
+				tc_shorten("s", "shorten", "on IRIs containing # show only what's after #", cmd, false),
+				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
+				tc_quads("q", "quads", "set input format for prove as quads", cmd, false),
+				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
+
+		cmd.parse(argc, argv);
+
 		/*Within this std::map<TCLAP::Arg*,bool*>, so that it looks pretty much exactly like the second part of cmds_t down there */
 		tcFlags tauFlags = {
-			{&tc_deref,&deref},
-			{&tc_pause,&_pause},
-			{&tc_shorten,&shorten},
-			{&tc_base,&fnamebase},
-			{&tc_quads,&quad_in},
-			{&tc_nocolor,&nocolor}
+				{&tc_deref,   &deref},
+				{&tc_pause,   &_pause},
+				{&tc_shorten, &shorten},
+				{&tc_base,    &fnamebase},
+				{&tc_quads,   &quad_in},
+				{&tc_nocolor, &nocolor}
 		};
 
-		for( auto x : tauFlags){
+		for (auto x : tauFlags) {
 			*x.second = (*(x.first)).getValue();
 		}
 
-	}catch(TCLAP::ArgException &e){
+	} catch (TCLAP::ArgException &e) {
 		derr << "TCLAP error: " << e.what() << std::endl;
 	}
--za
+	-za
 	if (nocolor)
 		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 
-	vector<std::pair<string, string>>input;
 
-	{
-		string fmt, fn;
-		for (string x: args) {
-			if (startsWith(x, "--"))
-				fmt = string(x.begin() + 2, x.end());
-			else
-				fn = x;
-			if (fn != "") {
-				input.push_back(fh, fmt);
-				fn = "";
-			}
-		}
-	}
-
-	if(input.size() == 0)
+	if (input.size() == 0)
 		repl = true;
 
 	/*test*/
 	//input.push_back("short.natural3", "natural3");
 
 	/*optionally, if we didnt get format, try to guess*/
-	
+
 	prover prvr;
+	int togo = args.size();
+	for (string x: args) {
+		repl(prvr, x, --togo);
+	}
 
-	for file in input:
+}
+
+void repl(prover &prvr, string x, int togo)
+{
+	static string fmt;
+	string fn;
+	if (startsWith(x, "--"))
+		/*
+		if (x == "--pass")
+		 {
+		 if(!togo)
+		 dump
+		 else error
+		 } else
+		 */
+		fmt = string(x.begin() + 2, x.end());
+
+	else {
+		fn = x;
+	}
+
 	{
-		string format = file.second;
-		string name = file.first;
-		qdb xx = load_file(name, format);
-		if(!is last)
-			prvr.add_qdb(xx);
-		else
+		qdb xx = ;
+		prvr.add_qdb(load_file(x, fmt));
+		else {
+			qdb query;
+			if
+				load_file(query, query_format, query_fn);
 
-	if (have_query)
-	{
-		qdb query;
-		if
-		load_file(query, query_format, query_fn);
-
+		}
+		fmt = "";
+	}
 
 		/*
 		if (name=="-"// or name == "")
@@ -231,11 +239,6 @@ load_file(qdb &kb, format, ifstream f)
 //these 'activities' not really any different whether its cli, batch file, interpreter
 //mode or IRC bot (and especially these last two are identical)
 
-//thats my thoughts of it
-//ok...i think you should run it past HMC
-//sure lets see if hes around
-
-
 	//ok, now i need to think it thru a bit more, so it will work more or less
 	//like now.................
 	//one thing i was thinking is that load_quads has it set up so that it will
@@ -247,6 +250,7 @@ load_file(qdb &kb, format, ifstream f)
 	//after i'm done with my first one. right now Tau just exits.. but why?
 	//is essentially the same as just reading the next file and doing something with it
 	//from the commandline
+
 	//also brings up the idea of "quit" command :) which could actually have use
 	//already when i get into interpreter and didn't mean to.. it's cleaner and more
 	//considerate than making them Ctrl+Z, even though i personally have no problems
