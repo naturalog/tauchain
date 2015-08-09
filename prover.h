@@ -101,15 +101,15 @@ public:
 		ruleid rule = 0;
 		uint term_idx, level = 0;
 		shared_ptr<proof> prev = 0, creator = 0;
-//		shared_ptr<substs> s = make_shared<substs>();
-		substs s;
+		shared_ptr<substs> s = 0;//make_shared<substs>();
+//		substs s;
 		ground g(prover*) const;
 		termid btterm = 0;
 		uint src = 0;
 		/*bool predvar = false;*/
 //		proof(){}// : s(make_shared<substs>()) {}
-		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const substs & _s = substs(), uint _src = 0/*, bool _predvar = false*/)
-			: rule(r), term_idx(l), prev(p), creator(c), s(/*make_shared<substs>*/(_s)), src(_src)/*, predvar(_predvar)*/{}
+		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const substs&  _s = substs(), uint _src = 0/*, bool _predvar = false*/)
+			: rule(r), term_idx(l), prev(p), creator(c), s(make_shared<substs>(_s)), src(_src)/*, predvar(_predvar)*/{}
 		proof(shared_ptr<proof> c, const proof& p) : proof(c, p.rule, p.term_idx, p.prev) { if (prev) level = prev->level + 1; }
 	};
 	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->term_idx < y->term_idx; }};
@@ -182,6 +182,7 @@ private:
 	substs::const_iterator evvit;
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
+	#define EVALPS(id, s) ((s) ? (EVALS(id, *s)) : ((EVAL(id))))
 	termid evalvar(const term& x, const substs& s) {
 		PROFILE(++evals);
 		setproc(L"evalvar");
@@ -198,7 +199,7 @@ private:
 		return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
 	}
 
-	inline termid evaluate(const term& p, const substs & s) {
+	inline termid evaluate(const term& p, const substs&  s) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
 //		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
@@ -214,18 +215,41 @@ private:
 		return r;
 	}
 
-	bool unify(termid _s, const substs & ssub, termid _d, substs & dsub);
-	bool unify(termid _s, termid _d, substs & dsub);
-	bool unify_snovar(const term& s, const substs & ssub, termid _d, substs & dsub);
-	bool unify_dnovar(termid _s, const substs & ssub, const term& _d, substs & dsub);
-	bool unify_dnovar(termid _s, const term& d, substs & dsub);
-	bool unify_sdnovar(const term& s, const substs & ssub, const term& d, substs & dsub);
-	bool unify_sdnovar(const term& s, const term& d, substs & dsub);
-	bool unify_snovar_dvar(const term& s, const substs & ssub, const term& d, substs & dsub);
-	bool unify_dnovar_ep(termid _s, const substs & ssub, const term& d, const substs & dsub);
-	bool unify_snovar_dvar_ep(const term& s, const substs & ssub, const term& d, const substs & dsub);
-	bool unify_ep(termid _s, const substs & ssub, const term& d, const substs & dsub);
-	bool unify_sdnovar_ep(const term& s, const substs & ssub, const term& d, const substs & dsub);
+	bool unify(termid _s, const substs& ssub, termid _d, substs& dsub);
+//	bool unify(termid _s, const substs& ssub, termid _d);
+//	bool unify(termid _s, termid _d);
+	bool unify(termid _s, termid _d, substs& dsub);
+	bool unify_snovar(const term& s, const substs& ssub, termid _d, substs& dsub);
+	bool unify_dnovar(termid _s, const substs& ssub, const term& _d, substs& dsub);
+	bool unify_dnovar(termid _s, const term& d, substs& dsub);
+	bool unify_sdnovar(const term& s, const substs& ssub, const term& d, substs& dsub);
+	bool unify_sdnovar(const term& s, const term& d, substs& dsub);
+	bool unify_snovar_dvar(const term& s, const substs& ssub, const term& d, substs& dsub);
+	bool unify_dnovar_ep(termid _s, const substs& ssub, const term& d, const substs& dsub);
+	bool unify_snovar_dvar_ep(const term& s, const substs& ssub, const term& d, const substs& dsub);
+	bool unify_ep(termid _s, const substs& ssub, const term& d, const substs& dsub);
+	bool unify_ep(termid _s, const substs& ssub, const term& d);
+	bool unify_ep(termid _s, const term& d, const substs& dsub);
+	bool unify_ep(termid _s, const term& d);
+	bool unify_snovar_ep(const term& s, const substs& ssub, const term& d);
+	bool unify_sdnovar_ep(const term& s, const substs& ssub, const term& d);
+	bool unify_sdnovar_ep(const term& s, const term& d, const substs& dsub);
+	bool unify_sdnovar_ep(const term& s, const substs& ssub, const term& d, const substs& dsub);
+	bool unify(termid _s, const shared_ptr<substs>& ssub, termid _d, substs& dsub) {
+		return ssub ? unify(_s, *ssub, _d, dsub) : unify(_s, _d, dsub);
+	}
+	bool unify(termid _s, const shared_ptr<substs>& ssub, termid _d, shared_ptr<substs>& dsub) {
+		return ssub ? unify(_s, *ssub, _d, *dsub) : unify(_s, _d, *dsub);
+	}
+	bool unify_ep(termid _s, const shared_ptr<substs>& ssub, const term& _d, const shared_ptr<substs>& dsub) {
+		return ssub ? unify_ep(_s, *ssub, _d, dsub) : unify_ep(_s, _d, dsub);
+	}
+	bool unify_ep(termid _s, const substs& ssub, const term& _d, const shared_ptr<substs>& dsub) {
+		return dsub ? unify_ep(_s, ssub, _d, *dsub) : unify_ep(_s, ssub, _d);
+	}
+	bool unify_ep(termid _s, const term& _d, const shared_ptr<substs>& dsub) {
+		return dsub ? unify_ep(_s, _d, *dsub) : unify_ep(_s, _d);
+	}
 
 	inline bool euler_path(shared_ptr<proof>&);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
@@ -244,7 +268,7 @@ public:
 	void printg(shared_ptr<ground> g) { printg(*g); }
 	void printe();
 	string format(const termset& l, bool json = false);
-	void prints(const substs & s);
+	void prints(const substs&  s);
 	void prints(shared_ptr<substs> s) { prints(*s); }
 	string format(nodeid) { throw std::runtime_error("called format(termid) with nodeid"); }
 	string format(nodeid, bool) { throw std::runtime_error("called format(termid) with nodeid"); }
@@ -252,15 +276,15 @@ public:
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
 	string formatp(shared_ptr<proof> p);
-	string formats(const substs & s, bool json = false);// { return s.format(json); }
+	string formats(const substs&  s, bool json = false);// { return s.format(json); }
 	string formats(shared_ptr<substs>& s, bool json = false) { return s ? formats(*s, json) : string(); }
-	void printterm_substs(termid id, const substs & s);
-	void printl_substs(const termset& l, const substs & s);
-	void printr_substs(ruleid r, const substs & s);
+	void printterm_substs(termid id, const substs&  s);
+	void printl_substs(const termset& l, const substs&  s);
+	void printr_substs(ruleid r, const substs&  s);
 #ifdef JSON
 	void jprinte();
 	pobj json(const termset& ts) const;
-	pobj json(const substs & ts) const;
+	pobj json(const substs&  ts) const;
 	pobj json(const ground& g) const;
 	pobj json(ruleid rl) const;
 	pobj ejson() const;

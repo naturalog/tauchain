@@ -1,6 +1,6 @@
 #include "prover.h"
 
-bool prover::unify(termid _s, const substs & ssub, termid _d, substs & dsub) {
+bool prover::unify(termid _s, const substs& ssub, termid _d, substs& dsub) {
 	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify_bind");
@@ -35,7 +35,7 @@ bool prover::unify(termid _s, const substs & ssub, termid _d, substs & dsub) {
 	return r;
 }
 
-bool prover::unify_ep(termid _s, const substs & ssub, const term& d, const substs & dsub) {
+bool prover::unify_ep(termid _s, const substs& ssub, const term& d, const substs& dsub) {
 	PROFILE(++unifs);
 	if (!_s) return false;
 	setproc(L"unify_ep");
@@ -61,7 +61,68 @@ bool prover::unify_ep(termid _s, const substs & ssub, const term& d, const subst
 	return r;
 }
 
-bool prover::unify_snovar(const term& s, const substs & ssub, termid _d, substs & dsub) {
+bool prover::unify_ep(termid _s, const term& d) {
+	PROFILE(++unifs);
+	if (!_s) return false;
+	setproc(L"unify_ep");
+	const term& s = *_s;
+	bool r;
+	if (ISVAR(s) || ISVAR(d)) return true;
+	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else if (!s.s) r = true;
+	else if ((r = unify_ep(s.s, *d.s)))
+		r = unify_ep(s.o, *d.o);
+	return r;
+}
+
+bool prover::unify_snovar_ep(const term& s, const substs& ssub, const term& d) {
+	PROFILE(++unifs);
+	if (ISVAR(d)) return true;
+	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
+	if (!s.s) return true;
+	if (!unify_ep(s.s, ssub, *d.s)) return false;
+	return unify_ep(s.o, ssub, *d.o);
+}
+
+bool prover::unify_ep(termid _s, const substs& ssub, const term& d) {
+	PROFILE(++unifs);
+	if (!_s) return false;
+	setproc(L"unify_ep");
+	const term& s = *_s;
+	termid v;
+	bool r;
+	if (ISVAR(s)) {
+		v = evalvar(s, ssub);
+		r = v ? unify_snovar_ep(*v, ssub, d) : true;
+	}
+	else if (ISVAR(d)) return true;
+	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else if (!s.s) r = true;
+	else if ((r = unify_ep(s.s, ssub, *d.s)))
+		r = unify_ep(s.o, ssub, *d.o);
+	return r;
+}
+
+bool prover::unify_ep(termid _s, const term& d, const substs& dsub) {
+	PROFILE(++unifs);
+	if (!_s) return false;
+	setproc(L"unify_ep");
+	const term& s = *_s;
+	termid v;
+	bool r;
+	if (ISVAR(s)) return true;
+	else if (ISVAR(d)) {
+		v = evalvar(d, dsub);
+		r = v ? unify_sdnovar_ep(s, *v, dsub) : true;
+	}
+	else if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) r = false;
+	else if (!s.s) r = true;
+	else if ((r = unify_ep(s.s, *d.s, dsub)))
+		r = unify_ep(s.o, *d.o, dsub);
+	return r;
+}
+
+bool prover::unify_snovar(const term& s, const substs& ssub, termid _d, substs& dsub) {
 	PROFILE(++unifs);
 	const term& d = *_d;
 	if (ISVAR(d)) {
@@ -77,7 +138,7 @@ bool prover::unify_snovar(const term& s, const substs & ssub, termid _d, substs 
 	return unify(s.o, ssub, d.o, dsub);
 }
 
-bool prover::unify_snovar_dvar(const term& s, const substs & ssub, const term& d, substs & dsub) {
+bool prover::unify_snovar_dvar(const term& s, const substs& ssub, const term& d, substs& dsub) {
 	PROFILE(++unifs);
 	termid v = evalvar(d, dsub);
 	if (v) return unify_sdnovar(s, ssub, *v, dsub);
@@ -86,7 +147,7 @@ bool prover::unify_snovar_dvar(const term& s, const substs & ssub, const term& d
 	return true;
 }
 
-bool prover::unify_dnovar(termid _s, const substs & ssub, const term& d, substs & dsub) {
+bool prover::unify_dnovar(termid _s, const substs& ssub, const term& d, substs& dsub) {
 	PROFILE(++unifs);
 	const term& s = *_s;
 	if (ISVAR(s)) {
@@ -99,13 +160,13 @@ bool prover::unify_dnovar(termid _s, const substs & ssub, const term& d, substs 
 	return unify(s.o, ssub, d.o, dsub);
 }
 
-bool prover::unify_snovar_dvar_ep(const term& s, const substs & ssub, const term& d, const substs & dsub) {
+bool prover::unify_snovar_dvar_ep(const term& s, const substs& ssub, const term& d, const substs& dsub) {
 	PROFILE(++unifs);
 	termid v = evalvar(d, dsub);
 	return v ? unify_sdnovar_ep(s, ssub, *v, dsub) : true;
 }
 
-bool prover::unify_dnovar_ep(termid _s, const substs & ssub, const term& d, const substs & dsub) {
+bool prover::unify_dnovar_ep(termid _s, const substs& ssub, const term& d, const substs& dsub) {
 	PROFILE(++unifs);
 	setproc(L"unify");
 	const term& s = *_s;
@@ -119,12 +180,12 @@ bool prover::unify_dnovar_ep(termid _s, const substs & ssub, const term& d, cons
 	return unify_ep(s.o, ssub, *d.o, dsub);
 }
 
-bool prover::unify(termid _s, termid _d, substs & dsub) {
+bool prover::unify(termid _s, termid _d, substs& dsub) {
 	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
 	const term& d = *_d, &s = *_s;
 	if (ISVAR(s)) return true;
-	else if (ISVAR(d)) {
+	if (ISVAR(d)) {
 		termid v = evalvar(d, dsub);
 		if (v) return unify_sdnovar(s, *v, dsub);
 		dsub[d.p] = evaluate(s);
@@ -137,7 +198,7 @@ bool prover::unify(termid _s, termid _d, substs & dsub) {
 	return unify(s.o, d.o, dsub);
 }
 
-bool prover::unify_dnovar(termid _s, const term& d, substs & dsub) {
+bool prover::unify_dnovar(termid _s, const term& d, substs& dsub) {
 	PROFILE(++unifs);
 	setproc(L"unify");
 	const term& s = *_s;
@@ -148,7 +209,7 @@ bool prover::unify_dnovar(termid _s, const term& d, substs & dsub) {
 	return unify(s.o, d.o, dsub);
 }
 
-bool prover::unify_sdnovar(const term& s, const substs & ssub, const term& d, substs & dsub) {
+bool prover::unify_sdnovar(const term& s, const substs& ssub, const term& d, substs& dsub) {
 	PROFILE(++unifs);
 	setproc(L"unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
@@ -157,7 +218,25 @@ bool prover::unify_sdnovar(const term& s, const substs & ssub, const term& d, su
 	return unify(s.o, ssub, d.o, dsub);
 }
 
-bool prover::unify_sdnovar_ep(const term& s, const substs & ssub, const term& d, const substs & dsub) {
+bool prover::unify_sdnovar_ep(const term& s, const substs& ssub, const term& d) {
+	PROFILE(++unifs);
+	setproc(L"unify");
+	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
+	if (!s.s) return true;
+	if (!unify_ep(s.s, ssub, *d.s)) return false;
+	return unify_ep(s.o, ssub, *d.o);
+}
+
+bool prover::unify_sdnovar_ep(const term& s, const term& d, const substs& dsub) {
+	PROFILE(++unifs);
+	setproc(L"unify");
+	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
+	if (!s.s) return true;
+	if (!unify_ep(s.s, *d.s, dsub)) return false;
+	return unify_ep(s.o, *d.o, dsub);
+}
+
+bool prover::unify_sdnovar_ep(const term& s, const substs& ssub, const term& d, const substs& dsub) {
 	PROFILE(++unifs);
 	setproc(L"unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
@@ -166,7 +245,7 @@ bool prover::unify_sdnovar_ep(const term& s, const substs & ssub, const term& d,
 	return unify_ep(s.o, ssub, *d.o, dsub);
 }
 
-bool prover::unify_sdnovar(const term& s, const term& d, substs & dsub) {
+bool prover::unify_sdnovar(const term& s, const term& d, substs& dsub) {
 	PROFILE(++unifs);
 	setproc(L"unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;

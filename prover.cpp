@@ -37,10 +37,24 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	termid t = heads[p.rule];
 	if (!t) return false;
 	const term& rt = *t;
-	substs& ps = p.s;
-	while ((ep = ep->prev))
-		if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, ps))
+//	while ((ep = ep->prev))
+//			if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
+//				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
+	if (p.s) {
+		substs& ps = *p.s;
+		while ((ep = ep->prev))
+			if (ep->s) {
+				if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt, ps))
+					{ TRACE(dout<<"Euler path detected"<<endl); return true; }
+			} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt, ps))
+				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
+	} else while ((ep = ep->prev))
+		if (ep->s) {
+			if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt))
+				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
+		} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt))
 			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
+
 //	ep = _p;
 //	while (ep->prev) ep = ep->prev;
 //	for (auto x : bodies[ep->rule])
@@ -54,13 +68,12 @@ termid prover::tmpvar() {
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
 
-
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
-	do_query( ts, &p.s);
+	do_query( ts, &*p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
@@ -77,7 +90,7 @@ termid prover::list_first(termid cons, proof& p) {
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
-	do_query( ts, &p.s);
+	do_query( ts, &*p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
@@ -141,11 +154,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term& t = *id;
 	int r = -1;
-	termid i0 = t.s ? EVALS(t.s, p->s) : 0;
-	termid i1 = t.o ? EVALS(t.o, p->s) : 0;
+	termid i0 = t.s ? EVALPS(t.s, p->s) : 0;
+	termid i1 = t.o ? EVALPS(t.o, p->s) : 0;
 	term r1, r2;
-	const term *t0 = i0 ? &(r1=*(i0=EVALS(t.s, p->s))) : 0;
-	const term* t1 = i1 ? &(r2=*(i1=EVALS(t.o, p->s))) : 0;
+	const term *t0 = i0 ? &(r1=*(i0=EVALPS(t.s, p->s))) : 0;
+	const term* t1 = i1 ? &(r2=*(i1=EVALPS(t.o, p->s))) : 0;
 	TRACE(	dout<<"called with term " << format(id); 
 		if (t0) dout << " subject = " << format(i0);
 		if (t1) dout << " object = " << format(i1);
@@ -299,7 +312,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	if (r == 1) 
 		queue.push([p, id, this](){
 			shared_ptr<proof> r = make_shared<proof>(p, *p);
-			r->btterm = EVALS(id, p->s);
+			r->btterm = EVALPS(id, p->s);
 			++r->term_idx;
 			r->src = p->src;
 			return r;
@@ -311,7 +324,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
 		MARPA(substs.push_back(*p->s));
-		if (!(t = (/*p->s ? */evaluate(*r, p->s)/* : EVAL(r)*/))) continue;
+		if (!(t = (EVALPS(r, p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
@@ -331,12 +344,19 @@ void prover::step(shared_ptr<proof>& _p) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
-		for (auto rule : rit->second) {
-			if (unify(t, frame.s, heads[rule], termsub))
+		if (frame.s)
+			for (auto rule : rit->second) {
+				if (unify(t, frame.s, heads[rule], termsub))
+					queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+				termsub.clear();
+				++src; 
+			}
+		else for (auto rule : rit->second)
+			if (unify(t, heads[rule], termsub)) {
 				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-			termsub.clear();
-			++src; 
-		}
+				termsub.clear();
+				++src; 
+			}
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
@@ -344,7 +364,7 @@ void prover::step(shared_ptr<proof>& _p) {
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
 		ruleid rl = frame.rule;
 		r->src = ppr.src;
-		r->s = /*make_shared<substs>*/(ppr.s);
+		r->s = make_shared<substs>(*ppr.s);
 		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s);
 		++r->term_idx;
 		step(r);
@@ -357,7 +377,7 @@ prover::ground prover::proof::g(prover* p) const {
 	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), nullptr);
 	else if (creator->term_idx != p->bodies[creator->rule].size()) {
 		if (p->bodies[rule].empty()) r.emplace_back(rule, nullptr);
-	} else if (!p->bodies[creator->rule].empty()) r.emplace_back(creator->rule, make_shared<substs>(creator->s));
+	} else if (!p->bodies[creator->rule].empty()) r.emplace_back(creator->rule, creator->s);
 	return r;	
 }
 
@@ -549,7 +569,7 @@ int prover::do_query(const termid goal)
 int prover::do_query(const termset& goal, substs * s) {
 //	setproc(L"do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
-	if (s) p->s = /*make_shared<substs>*/(*s);
+	if (s) p->s = make_shared<substs>(*s);
 	queue.push(p);
 	
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
