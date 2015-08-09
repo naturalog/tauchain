@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <cstring>
 
 using namespace std;
 
@@ -31,14 +32,18 @@ string negs(int n) {
 }
 
 int main() {
-	vector<vector<int>> cnf = {
-		{ 1, 2, 3 },
-		{ -1, 2, 3 },
-		{ 1, -2, 3 },
-		{ 1, 2, -3 },
-		{ -1, -2, 3 },
-		{ 1, -2, -3 }
-	};
+	string s;
+	vector<vector<int>> cnf;
+	while (getline(cin, s)) {
+		if (s.size() && (s[0] == 'c' || s[0] == 'p')) continue;
+		cnf.emplace_back();
+		auto& clause = cnf.back();
+		int x, y, z;
+		sscanf(s.c_str(), "%d %d %d", &x, &y, &z);
+		clause.push_back(x);
+		clause.push_back(y);
+		clause.push_back(z);
+	}
 	int N = 0;
 	cout << "T not F.\nF not T.\n(T T T) or T.\n(T T F) or T.\n(T F T) or T.\n(T F F) or T.\n(F T T) or T.\n(F T F) or T.\n(F F T) or T.\n{ ";
 	for (auto x : cnf) for (auto y : x) if (abs(y)>N) N = abs(y);
