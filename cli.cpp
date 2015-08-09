@@ -16,7 +16,7 @@ pobj  convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
 
-pqdb cmd_t::load_quads ( string fname, bool print ) {
+qdb load_file( string fname, bool print ) {
 	qdb q;
 	try {
 		qdb r;
@@ -28,12 +28,29 @@ pqdb cmd_t::load_quads ( string fname, bool print ) {
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
 	}
-	if ( print ) 
+	if ( print )
 		dout << q << std::endl;
 
 	return std::make_shared<qdb>(q);
 }
 
+qdb load_quads ( string fname, bool print ) {
+	qdb q;
+	try {
+		qdb r;
+		std::wistream* pis = &std::wcin;
+		if (fname != L"")
+			pis = new std::wifstream(ws(fname));
+		std::wistream& is = *pis;
+		return std::make_shared<qdb>(readqdb(is));
+	} catch (std::exception& ex) {
+		derr << L"Error reading quads: " << ex.what() << std::endl;
+	}
+	if ( print )
+		dout << q << std::endl;
+
+	return std::make_shared<qdb>(q);
+}
 
 
 pobj cmd_t::load_json ( string fname, bool print ) {
