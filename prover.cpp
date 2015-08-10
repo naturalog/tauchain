@@ -246,7 +246,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p));
+		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, substs()));
 	}
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		substs s;
@@ -348,10 +348,10 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 //			using namespace std::placeholders;
 //			auto unifunc = std::bind(&prover::unify_bind, this, t, ps, _1, _2);
 			for (auto rule : rit->second)
-				if (unify_sdnovar(t, frame.s, heads[rule], termsub)) queuepush;
+				if (unify(t, frame.s, heads[rule], termsub)) queuepush;
 		}
 		else for (auto rule : rit->second)
-			if (unify_sdnovar(t, heads[rule], termsub)) queuepush;
+			if (unify(t, heads[rule], termsub)) queuepush;
 #endif
 #ifdef PREDVARS
 		}
@@ -591,7 +591,7 @@ int prover::do_query(const termid goal)
 
 int prover::do_query(const termset& goal, substs * s) {
 //	setproc(L"do_query");
-	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal), 0, nullptr), q;
+	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = /*make_shared<substs>*/(*s);
 	queue.push(p);
 	

@@ -102,8 +102,7 @@ public:
 	struct proof {
 		ruleid rule = 0;
 		uint term_idx, level = 0;
-		const shared_ptr<proof> prev = 0, creator = 0;
-		shared_ptr<proof> next = 0;
+		shared_ptr<proof> prev = 0, creator = 0, next = 0;
 //		shared_ptr<substs> s = 0;//make_shared<substs>();
 		substs s;
 		ground g(prover*) const;
@@ -111,9 +110,7 @@ public:
 		uint src = 0;
 		/*bool predvar = false;*/
 //		proof(){}// : s(make_shared<substs>()) {}
-		proof(shared_ptr<proof> c, ruleid r, uint l, shared_ptr<proof> p)
-			: rule(r), term_idx(l), prev(p), creator(c) {}
-		proof(shared_ptr<proof> c, ruleid r, uint l, shared_ptr<proof> p, const substs&  _s, uint _src)
+		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const substs&  _s = substs(), uint _src = 0)
 			: rule(r), term_idx(l), prev(p), creator(c), s(/*make_shared<substs>*/(_s)), src(_src) { }
 		proof(shared_ptr<proof> c, const proof& p) 
 			: proof(c, p.rule, p.term_idx, p.prev) { if (prev) level = prev->level + 1; }
@@ -221,9 +218,10 @@ private:
 		return r;
 	}
 
-	bool unify(termid _s, const substs& ssub, termid _d, substs& dsub);
-	bool unify_sdnovar(termid _s, termid _d, substs& dsub);
-	bool unify_sdnovar(termid _s, const substs& ssub, termid _d, substs& dsub);
+	bool unify(termid _s, const substs& ssub, termid _d, substs& dsub) { return unify_bind(_s,ssub,_d,dsub); }
+	bool unify_bind(termid _s, const substs& ssub, termid _d, substs& dsub);
+//	bool unify(termid _s, const substs& ssub, termid _d);
+//	bool unify(termid _s, termid _d);
 	bool unify(termid _s, termid _d, substs& dsub);
 	bool unify_snovar(const term& s, const substs& ssub, termid _d, substs& dsub);
 	bool unify_dnovar(termid _s, const substs& ssub, const term& _d, substs& dsub);
