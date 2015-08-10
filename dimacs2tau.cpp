@@ -33,10 +33,10 @@ int main() {
 	vector<vector<int>> cnf;
 	while (getline(cin, s)) {
 		if (s.size() && (s[0] == 'c' || s[0] == 'p')) continue;
+		int x, y, z;
+		if (!sscanf(s.c_str(), "%d %d %d", &x, &y, &z)) continue;
 		cnf.emplace_back();
 		auto& clause = cnf.back();
-		int x, y, z;
-		sscanf(s.c_str(), "%d %d %d", &x, &y, &z);
 		clause.push_back(x);
 		N = max(N, x);
 		if (y) {
