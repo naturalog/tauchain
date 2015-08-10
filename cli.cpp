@@ -20,10 +20,6 @@ qdb load_file( string fname, bool print ) {
 	qdb q;
 	try {
 		qdb r;
-		std::wistream* pis = &std::wcin;
-		if (fname != L"")
-			pis = new std::wifstream(ws(fname));
-		std::wistream& is = *pis;
 		return std::make_shared<qdb>(readqdb(is));
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;

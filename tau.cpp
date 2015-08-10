@@ -14,62 +14,10 @@ allocator_t* alloc;
 std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 
-#define ever ;;
-
-class prove_cmd : public cmd_t {
-public:
-	virtual std::string desc() const {
-		return "Run a query against a knowledgebase.";
-	}
-	virtual std::string help() const {
-		std::stringstream ss ( "Usage:" );
-		ss << std::endl << "\ttau prove [JSON-LD kb filename] [JSON-LD query filename]" << "\tAnswers the query." << std::endl;
-		return ss.str();
-	}
-
-//well first i split off that core logic, it all still works well and good
-	void runTau(){
-		
-		auto kb = load_quads(L"");
-        	if (kb) {
-			dout << "kb input done." << std::endl;
-			auto query = load_quads(L"");
-			dout << "query loaded." << std::endl;
-			if (query) {
-				prover pr( *kb );
-				pr ( *query );
-				dout << "Ready." << std::endl;
-               		}
-        	}	
-	}
-
-	virtual int operator() ( const strings& args ) {
-		if ( ( args.size() == 3 && args[1] == L"help" ) || ( args.size() != 2 && args.size() != 4 ) ) {
-			dout << ws(help());
-			return 1;
-		}
-		try {
-#ifdef IRC
-			for(ever) {try {
-#endif
-
-			runTau();	
 
 
-#ifdef IRC
-			} catch (std::exception& ex) { dout<<ex.what()<<std::endl; } 
-			catch (...) { dout<<"generic exception."<<std::endl; } 
-			sleep(1);
-			}
-#endif
-			return 0;
-		} catch ( std::exception& ex ) {
-			derr << ex.what() << std::endl;
-			return 1;
-		}
-		return 0;
-	}
-};
+
+
 
 typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
 
@@ -112,7 +60,7 @@ int main ( int argc, char** argv ) {
 	} catch (TCLAP::ArgException &e) {
 		derr << "TCLAP error: " << e.what() << std::endl;
 	}
-	-za
+
 	if (nocolor)
 		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 
@@ -120,89 +68,86 @@ int main ( int argc, char** argv ) {
 	if (input.size() == 0)
 		repl = true;
 
-	/*test*/
-	//input.push_back("short.natural3", "natural3");
+	vector <std::pair<string, string>> inputs;
 
-	/*optionally, if we didnt get format, try to guess*/
+	string fmt, fn;
+	for (string x: args) {
+		if (startsWith(x, "--"))
+			fmt = string(x.begin() + 2, x.end());
+		else
+			fn = x;
+		if (fn != "") {
+			input.push_back(fh, fmt);
+			fn = "";
+		}
+	}
+
+	if (inputs.size() == 0)
+		inputs.push_back("-", fmt);
 
 	prover prvr;
-	int togo = args.size();
-	for (string x: args) {
-		repl(prvr, x, --togo);
+	int togo = inputs.size();
+	int pos = 0;
+	for (x: inputs) {
+		load_file(prvr, x.first, x.second, ++pos = inputs.size());
 	}
-
 }
 
-void repl(prover &prvr, string x, int togo)
+
+void load_file(prover prvr&, string fn, string fmt, bool is_last)
 {
-	static string fmt;
-	string fn;
-	if (startsWith(x, "--"))
-		/*
-		if (x == "--pass")
-		 {
-		 if(!togo)
-		 dump
-		 else error
-		 } else
-		 */
-		fmt = string(x.begin() + 2, x.end());
+	fmt = lcase(fmt);
+	qdb kb, q;
 
-	else {
-		fn = x;
-	}
+	std::vector<string> exts({"jsonld", "nat3", "natq", "n3", "nq"});
 
+	if (fmt == "")
 	{
-		qdb xx = ;
-		prvr.add_qdb(load_file(x, fmt));
-		else {
-			qdb query;
-			if
-				load_file(query, query_format, query_fn);
-
-		}
-		fmt = "";
+		for (auto x:exts)
+			if (lcase(fn).endsWith(x))
+				format = x;
 	}
+	if (fmt == "")
+		fmt = "natq";
 
-		/*
-		if (name=="-"// or name == "")
-			std::wistream* pis = &std::wcin;
-		else.
-			pis = new std::wifstream(ws(fname));
-		std::wistream& is = *pis;
-		ifstream blabla f(file.first);
-		load_file(kb,..
-		 */
-	}
 
-		
-	}
+	std::wistream* pis
+	if (fn == "-")
+		pis =  = &std::wcin;
 	else
-		print_qdb(kb)
-	
-	return rval;
-} 
+		pis = new std::wifstream(ws(fn));
 
-load_file(qdb &kb, format, ifstream f)
-{
-	format = lcase(format);
-
-	if (format == "")
-		for (x in {"jsonld", "natural3",
-		if (lcase(fn).fn.endsWith(x))
-			format = x;
+	std::wistream& is = *pis;
 
 
-		if(format == "natural3" || format == "n3")
-			load_natural3(kb, f);
+	if(format == "nat3" || fmt == "n3")
+		load_natural3(kb, q, f);
+	/*
 		else..
 		nq
 		else
-		jsonld
+		jsonld*/
+
+
+	if(is_last)
+	{
+		if(q.size())
+		{
+			prvr.add_qdb(kb);
+			prover.query(q);
+		else
+			prover.query(kb);
+	else
+	{
+		if(q.size())
+			dout << "ignoring query in fn";
+		else
+			prvr.add_qdb(kb);
 }
 
 
 
+#ifdef xxxxxxxxxxxxxxxxxxxxxxxxxx
 
 /*
  *
@@ -275,3 +220,100 @@ load_file(qdb &kb, format, ifstream f)
 
 
  */
+
+
+	/*	for (string x: args) {
+		repl(prvr, x, --togo);
+
+void repl(prover &prvr, string x, int togo)
+{
+	static string fmt;
+	string fn;
+	static string block;
+	if (startsWith(x, "--"))
+		/*
+		if (x == "--pass")
+		 {
+		 if(!togo)
+		 dump
+		 else error
+		 } else
+		 */
+		fmt = string(x.begin() + 2, x.end());
+
+	else {
+		fn = x;
+	}
+
+	if (fn == "-")
+	{
+		string block = "";
+		int phase = 0;
+		while(true)
+		{
+			line = readline(stdin);
+			if (line == "fin.")
+			{
+				phase++;
+
+			}
+			if (fmt != "")
+			{
+
+			}
+		}
+
+	{
+		qdb xx = ;
+		prvr.add_qdb(load_file(x, fmt));
+		else {
+			qdb query;
+			if
+				load_file(query, query_format, query_fn);
+
+		}
+		fmt = "";
+	}
+
+		/*
+		if (name=="-"// or name == "")
+			std::wistream* pis = &std::wcin;
+		else.
+			pis = new std::wifstream(ws(fname));
+		std::wistream& is = *pis;
+		ifstream blabla f(file.first);
+		load_file(kb,..
+		 */
+	}
+
+
+	}
+	else
+		print_qdb(kb)
+
+	return rval;
+}
+			} catch (std::exception& ex) { dout<<ex.what()<<std::endl; }
+			catch (...) { dout<<"generic exception."<<std::endl; }
+			sleep(1);
+			}
+
+
+*/
+*
+* 	void runTau(){
+
+		auto kb = load_quads(L"");
+        	if (kb) {
+			dout << "kb input done." << std::endl;
+			auto query = load_quads(L"");
+			dout << "query loaded." << std::endl;
+			if (query) {
+				prover pr( *kb );
+				pr ( *query );
+				dout << "Ready." << std::endl;
+               		}
+        	}
+	}
+
+#endif
