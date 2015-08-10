@@ -10,6 +10,12 @@
 //#include <boost/interprocess/containers/map.hpp>
 #include "rdf.h"
 
+#ifdef with_marpa
+#define MARPA(x) x
+#else
+#define MARPA(x)
+#endif
+
 typedef i64 nodeid;
 
 extern std::list<string>& proc;

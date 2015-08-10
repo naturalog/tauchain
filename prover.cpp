@@ -18,12 +18,6 @@
 #include <fstream>
 #endif
 
-#ifdef with_marpa
-#define MARPA(x) x
-#else
-#define MARPA(x)
-#endif
-
 using namespace boost::algorithm;
 int _indent = 0;
 
@@ -347,7 +341,7 @@ void prover::step(shared_ptr<proof>& _p) {
 		if (t->p < 0)//ISVAR
 			for(auto rulelst: kb.r2id)
 				step_in(src, rulelst.second, _p, t);
-		else
+		else {
 #else
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
 		if (frame.s) {
@@ -365,6 +359,9 @@ void prover::step(shared_ptr<proof>& _p) {
 				termsub.clear();
 				++src; 
 			}
+#endif
+#ifdef PREDVARS
+		}
 #endif
 	}
 	else if (!frame.prev) gnd.push(_p);
