@@ -34,18 +34,17 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 //	while ((ep = ep->prev))
 //			if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
 //				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-//	if (p.s) {
-		substs& ps = p.s;
+	if (!p.s.empty()) {
 		while ((ep = ep->prev))
 //			if (ep->s) {
-				if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, ps))
+				if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
 					{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 //			} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt, ps))
 //				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-//	} else while ((ep = ep->prev))
+	} else while ((ep = ep->prev))
 //		if (ep->s) {
-//			if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt))
-//				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
+			if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt))
+				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 //		} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt))
 //			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 
@@ -345,15 +344,14 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		else {
 #else
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-//		if (frame.s) {
-			const substs& ps = frame.s;
+		if (!frame.s.empty()) {
 //			using namespace std::placeholders;
 //			auto unifunc = std::bind(&prover::unify_bind, this, t, ps, _1, _2);
 			for (auto rule : rit->second)
-				if (unify(t, ps, heads[rule], termsub)) queuepush;
-//		}
-//		else for (auto rule : rit->second)
-//			if (unify(t, heads[rule], termsub)) queuepush;
+				if (unify(t, frame.s, heads[rule], termsub)) queuepush;
+		}
+		else for (auto rule : rit->second)
+			if (unify(t, heads[rule], termsub)) queuepush;
 #endif
 #ifdef PREDVARS
 		}
