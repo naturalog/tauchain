@@ -51,6 +51,8 @@ int main() {
 	cout 
 		<<"T not F."<<endl
 		<<"F not T."<<endl
+		<<"{ T not T } => false."<<endl
+		<<"{ F not F } => false."<<endl
 		<<"(T) or T."<<endl
 		<<"(T T) or T."<<endl
 		<<"(T F) or T."<<endl
@@ -61,10 +63,11 @@ int main() {
 		<<"(T F F) or T."<<endl
 		<<"(F T T) or T."<<endl
 		<<"(F T F) or T."<<endl
-		<<"(F F T) or T."<<endl<<"{ ";
+		<<"(F F T) or T."<<endl;//<<"{ ";
 	cout << negs(N);
 	for (auto x : cnf) cout << clause(x) << endl;
-	cout << " } => { CNF a SAT }.\nfin.\n";
-	cout << "?X a SAT. " << endl << "fin." << endl;
+//	cout << " } => { CNF a SAT }.\nfin.\n";
+//	cout << "?X a SAT. " << endl 
+	cout << "fin." << endl;
 	return 0;
 }

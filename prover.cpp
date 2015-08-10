@@ -494,7 +494,8 @@ void prover::addrules(pquad q, qdb& quads) {
 					ts.push_back( t );
 			if ((t = quad2term(*y, quads))) kb.add(t, ts);
 		}
-	} else if ((t = quad2term(*q, quads))) kb.add(t, termset());
+	}// else
+	if ((t = quad2term(*q, quads))) kb.add(t, termset()); // remarking the 'else' is essential for consistency checker
 }
 
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
