@@ -32,7 +32,8 @@ int main() {
 	string s;
 	vector<vector<int>> cnf;
 	while (getline(cin, s)) {
-		if (s.size() && (s[0] == 'c' || s[0] == 'p')) continue;
+		if (!s.size()) continue;
+		if (s[0] == 'c' || s[0] == 'p' || s[0] == '0' || s[0] == '%') continue;
 		int x, y, z;
 		if (!sscanf(s.c_str(), "%d %d %d", &x, &y, &z)) continue;
 		cnf.emplace_back();
