@@ -1,6 +1,6 @@
 #include "prover.h"
 
-bool prover::unify_bind(termid _s, const substs& ssub, termid _d, substs& dsub) {
+bool prover::unify(termid _s, const substs& ssub, termid _d, substs& dsub) {
 	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
 	setproc(L"unify_bind");
