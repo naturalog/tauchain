@@ -102,7 +102,7 @@ public:
 	struct proof {
 		ruleid rule = 0;
 		uint term_idx, level = 0;
-		shared_ptr<proof> prev = 0, creator = 0;
+		shared_ptr<proof> prev = 0, creator = 0, next = 0;
 		shared_ptr<substs> s = 0;//make_shared<substs>();
 //		substs s;
 		ground g(prover*) const;
@@ -180,7 +180,7 @@ private:
 	bool printNow;
 
 	inline void pushev(shared_ptr<proof>);
-	inline void step(shared_ptr<proof>&);
+	inline shared_ptr<proof> step(shared_ptr<proof>);
 	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t);
 	substs::const_iterator evvit;
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
@@ -297,5 +297,6 @@ public:
 	static void unittest();
 	substs termsub;
 	ruleset::r2id_t::const_iterator rit;
+	shared_ptr<proof> lastp = 0;
 };
 #endif

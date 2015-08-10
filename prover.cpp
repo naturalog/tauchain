@@ -324,16 +324,17 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-void prover::step(shared_ptr<proof>& _p) {
+shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
-	if (euler_path(_p)) return;
-	proof& frame = *_p;
+	if (euler_path(_p)) return _p->next;
+	const proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto body = bodies[frame.rule];
 	size_t src = 0;
 	// if we still have some terms in rule body to process
+#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
@@ -343,19 +344,19 @@ void prover::step(shared_ptr<proof>& _p) {
 				step_in(src, rulelst.second, _p, t);
 		else {
 #else
-		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
+		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
 		if (frame.s) {
 			substs& ps = *frame.s;
 			for (auto rule : rit->second) {
 				if (unify(t, ps, heads[rule], termsub))
-					queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+					queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
 				termsub.clear();
 				++src; 
 			}
 		}
 		else for (auto rule : rit->second)
 			if (unify(t, heads[rule], termsub)) {
-				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
 				termsub.clear();
 				++src; 
 			}
@@ -375,6 +376,7 @@ void prover::step(shared_ptr<proof>& _p) {
 		++r->term_idx;
 		step(r);
 	}
+	return frame.next;
 }
 
 void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
@@ -608,12 +610,14 @@ int prover::do_query(const termset& goal, substs * s) {
 	using namespace std;
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
-	do {
-		q = queue.top();//.get();
-		queue.pop();
+	lastp = p;
+	while ((p = step(p)));
+//	do {
+//		q = queue.top();//.get();
+//		queue.pop();
 //		printq(queue);
-		step(q);
-	} while (!queue.empty());// && steps < 2e+7);
+//		step(q);
+//	} while (!queue.empty());// && steps < 2e+7);
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
