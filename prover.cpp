@@ -348,11 +348,6 @@ void prover::step(shared_ptr<proof>& _p) {
 			for(auto rulelst: kb.r2id)
 				step_in(src, rulelst.second, _p, t);
 		else
-		{
-			auto rulelist_it = kb.r2id.find(t->p);
-			if (rulelist_it == kb.r2id.end()) return;
-			step_in(src, rulelist_it->second, _p, t);
-		}
 #else
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
 		if (frame.s) {

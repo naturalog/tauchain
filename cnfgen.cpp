@@ -26,8 +26,8 @@ int main(int argc, char** argv) {
 	float sat = 0, tot = 0;
 	bool res = true;
 	for(int u = 0; u < 5; ++u) {
-		int k = 14; // clauses
-		int n = 4; // vars
+		int k = 200; // clauses
+		int n = 50; // vars
 		sat=tot=0;
 		while(res) {
 			SATSolver solver;
@@ -36,14 +36,10 @@ int main(int argc, char** argv) {
 			solver.new_vars(n);
 			for (int m = 0; m < k; ++m) {
 				auto t = triple(n);
-//				clause.clear();
 				for (auto x : t) clause.push_back(Lit(abs(x)-1, x>=0));
 				solver.add_clause(clause);
 				clause.clear();
-//				for (auto x : t) clause.push_back(Lit(abs(x)-1, x<0));
-//				solver.add_clause(clause);
 			}
-		
 			lbool ret = solver.solve();
 			if ((res=(ret == l_True))) /*cout << "SAT"*/; else { cout << "UNSAT" << endl; return 0; }
 			cout << endl;

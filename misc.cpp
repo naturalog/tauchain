@@ -292,9 +292,7 @@ void prover::printe() {
 		for (auto x : y.second) {
 			dout << indent() << format(x.first) << " under subst: " << fsubsts(x.second) << L" <= " << endl;
 			TRACE(
-				#ifdef with_marpa
-				if (x.second.size() > 1)
-				#endif
+				MARPA(if (x.second.size() > 1))
 				printg(x.second);
 				dout << endl
 			);
