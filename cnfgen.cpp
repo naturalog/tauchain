@@ -26,8 +26,8 @@ int main(int argc, char** argv) {
 	float sat = 0, tot = 0;
 	bool res = true;
 	for(int u = 0; u < 5; ++u) {
-		int k = 200; // clauses
-		int n = 50; // vars
+		int k = 1000; // clauses
+		int n = 250; // vars
 		sat=tot=0;
 		while(res) {
 			SATSolver solver;
