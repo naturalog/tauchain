@@ -180,7 +180,7 @@ private:
 
 	inline void pushev(shared_ptr<proof>);
 	inline void step(shared_ptr<proof>&);
-	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> &_p, termid t);
+	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t);
 	substs::const_iterator evvit;
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)

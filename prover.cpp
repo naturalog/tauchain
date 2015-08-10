@@ -343,11 +343,18 @@ void prover::step(shared_ptr<proof>& _p) {
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
-#ifndef PREDVARS
-		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
+#ifdef PREDVARS
+		if (t->p < 0)//ISVAR
+			for(auto rulelst: kb.r2id)
+				step_in(src, rulelst.second, _p, t);
+		else
+		{
+			auto rulelist_it = kb.r2id.find(t->p);
+			if (rulelist_it == kb.r2id.end()) return;
+			step_in(src, rulelist_it->second, _p, t);
+		}
 #else
-		for (rit = kb.r2id.begin(); rit != kb.r2id.end(); ++rit)
-#endif
+		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
 		if (frame.s) {
 			substs& ps = *frame.s;
 			for (auto rule : rit->second) {
@@ -363,6 +370,7 @@ void prover::step(shared_ptr<proof>& _p) {
 				termsub.clear();
 				++src; 
 			}
+#endif
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
@@ -375,6 +383,26 @@ void prover::step(shared_ptr<proof>& _p) {
 		++r->term_idx;
 		step(r);
 	}
+}
+
+void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
+{
+	proof& frame = *_p;
+	if (frame.s) {
+		substs& ps = *frame.s;
+		for (auto rule : candidates) {
+			if (unify(t, ps, heads[rule], termsub))
+				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+			termsub.clear();
+			++src;
+		}
+	}
+	else for (auto rule : rit->second)
+		if (unify(t, heads[rule], termsub)) {
+			queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+			termsub.clear();
+			++src;
+		}
 }
 
 prover::ground prover::proof::g(prover* p) const {
