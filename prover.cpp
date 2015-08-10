@@ -343,7 +343,11 @@ void prover::step(shared_ptr<proof>& _p) {
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
+#ifndef PREDVARS
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return;
+#else
+		for (rit = kb.r2id.begin(); rit != kb.r2id.end(); ++rit)
+#endif
 		if (frame.s) {
 			substs& ps = *frame.s;
 			for (auto rule : rit->second) {
