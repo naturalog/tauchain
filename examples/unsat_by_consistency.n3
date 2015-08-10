@@ -1,0 +1,35 @@
+T not F.
+F not T.
+{T not T}=>false.
+{F not F}=>false.
+(T) or T.
+(T T) or T.
+(T F) or T.
+(F T) or T.
+(T T T) or T.
+(T T F) or T.
+(T F T) or T.
+(T F F) or T.
+(F T T) or T.
+(F T F) or T.
+(F F T) or T.
+?p1 not ?n1.
+?p2 not ?n2.
+?p3 not ?n3.
+(?p3 ?n2 ?p1 ) or T.
+(?n4 ?p3 ?p1 ) or T.
+(?p2 ?p1 ?n3 ) or T.
+(?n3 ?n1 ?p2 ) or T.
+(?n4 ?n3 ?p2 ) or T.
+(?p3 ?n4 ?n1 ) or T.
+(?p3 ?p1 ?p2 ) or T.
+(?n1 ?n3 ?n2 ) or T.
+(?n4 ?n2 ?n1 ) or T.
+(?p2 ?n3 ?p1 ) or T.
+(?p2 ?n1 ?p3 ) or T.
+(?p3 ?n2 ?n1 ) or T.
+(?n3 ?p1 ?n2 ) or T.
+(?p1 ?n2 ?n4 ) or T.
+fin.
+?X a SAT. 
+fin.
