@@ -28,6 +28,7 @@ set(SOURCE_FILES
 )
 
 set(MARPA_FILES ${SOURCE_FILES} marpa_tau.cpp)
+set(MARPA_DIST ${CMAKE_SOURCE_DIR}/libmarpa-dist/dist/)
 
 find_package(Boost REQUIRED regex)
 
@@ -35,13 +36,13 @@ add_executable(tau ${SOURCE_FILES})
 add_executable(m-tau ${MARPA_FILES})
 add_executable(p-tau ${SOURCE_FILES})
 
-SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -I${CMAKE_SOURCE_DIR}/libmarpa/dist/ -DDEBUG -Dwith_marpa -ggdb")
-target_link_libraries(m-tau PRIVATE "-L${CMAKE_SOURCE_DIR}/libmarpa/dist/.libs -lmarpa")
+SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -I${MARPA_DIST} -DDEBUG -Dwith_marpa -ggdb")
+target_link_libraries(m-tau PRIVATE "-L${MARPA_DIST}/.libs -lmarpa")
 
 target_link_libraries(p-tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_link_libraries(m-tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_link_libraries(  tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS} "-I${CMAKE_SOURCE_DIR}/libmarpa/dist/")
+target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS} "-I${MARPA_DIST}")
 target_include_directories(p-tau PRIVATE ${Boost_INCLUDE_DIRS})
 target_include_directories(  tau PRIVATE ${Boost_INCLUDE_DIRS})
 

@@ -325,6 +325,8 @@ int convert_cmd::operator() ( const strings& args ) {
 
 qdb merge_qdbs(const std::vector<qdb> qdbs)
 {
+	if (x.size() > 1)
+		dout << "warning, bnode renaming not implemented";
 	qdb r;
 	for (auto x:qdbs) {
 		r.first.insert(x.first.begin(), x.first.end());
