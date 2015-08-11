@@ -25,7 +25,7 @@ std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 
 
-void parse(qdb &kb, qdb &q, std::string fn, string input, std::string fmt)
+void parse(qdb &kb, qdb &q, istream &f , std::string fn, string input, std::string fmt)
 {
 	fmt = tolower(fmt);
 
@@ -41,7 +41,7 @@ void parse(qdb &kb, qdb &q, std::string fn, string input, std::string fmt)
 	if (fmt == "") // default
 		fmt = "natq";
 
-	if(format == "nat3" || fmt == "n3")
+	if(fmt == "nat3" || fmt == "n3")
 		parse_natural3(kb, q, f);
 	/*
 		else..

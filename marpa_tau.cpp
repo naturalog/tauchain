@@ -907,7 +907,7 @@ public:
 
 
 
-int parse_natural3(qdb kb&, qdb &q, std::istream &f, prover& grammar)
+int parse_natural3(qdb kb&, qdb &q, std::istream &f)
 {
     setproc(L"N3");
     strtic prover prvr(*load_quads(L"n3-grammar.nq", false));
