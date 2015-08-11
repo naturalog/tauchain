@@ -51,6 +51,8 @@ typedef std::list<pquad> qlist;
 typedef std::shared_ptr<qlist> pqlist;
 typedef std::pair<std::map<string, pqlist>, std::map<string, std::list<pnode>>> qdb;
 
+qdb merge_qdbs(const std::vector<qdb> qdbs);
+
 extern const pnode first;
 extern const pnode rest;
 extern const pnode nil;

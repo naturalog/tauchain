@@ -322,3 +322,13 @@ int convert_cmd::operator() ( const strings& args ) {
 	}
 }
 #endif
+
+qdb merge_qdbs(const std::vector<qdb> qdbs)
+{
+	qdb r;
+	for (auto x:qdbs) {
+		r.first.insert(x.first.begin(), x.first.end());
+		r.second.insert(x.second.begin(), x.second.end());
+	}
+	return r;
+}

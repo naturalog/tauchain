@@ -272,34 +272,35 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 	}
 	#ifdef with_marpa
-	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
+	else if (t.p == marpa_parser_iri && t.s && t.o)
 	/* ?X is a parser created from grammar */
 	{
-		void* handle = marpa_parser(this, get(t.o).p, p);
+		if (t0->p > 0) throw std::runtime_error("must be called with variable subject.");
+		void* handle = marpa_parser(this, t1->p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-		(*p->s)[get(t.s).p] = make(dict.set(n), 0, 0);
+		(*p->s)[t0->p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == file_contents_iri) {
-		if (get(t.s).p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
-		string fn = *dict[get(t.o).p].value;
+		if (t0->p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
+		string fn = *dict[t0->p].value;
 		std::string fnn = ws(fn);
 	    std::ifstream f(fnn);
 	    if (f.is_open())
 		{
-			(*p->s)[get(t.s).p] = make(mkliteral(pstr(load_file(f)), 0, 0));
+			(*p->s)[t0->p] = make(mkliteral(pstr(load_file(f)), 0, 0));
 			r = 1;
 		}
 	}
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
-		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		term xx = get(i1);
-		term xxx = get(xx.s);
-		string input = *dict[xxx.p].value;
-		string marpa = *dict[get(get(get(i1).o).s).p].value;
+		if (t0->p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
+		termid xxx = t1->s;
+		termid xxx2 = t1->o;
+		string input = *dict[xxx->p].value;
+		string marpa = *dict[xxx2->p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
-		(*p->s)[get(t.s).p] = result;
+		(*p->s)[t0->p] = result;
 		r = 1;
 	}
 	#endif
@@ -317,7 +318,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
-		MARPA(substs.push_back(*p->s));
+		MARPA(substss.push_back(*p->s));
 		if (!(t = (EVALPS(r, p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;

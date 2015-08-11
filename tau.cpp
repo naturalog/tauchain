@@ -8,6 +8,8 @@
 #include <tclap/CmdLine.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
+
 
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 
@@ -26,78 +28,96 @@ std::wostream& derr = std::wcerr;
 
 
 /*return value same as parse_xxx: 0: error, 1: incomplete input, 2: success*/
-void parse(qdb &kb, qdb &q, istream &f , std::string fn, string input, std::string fmt)
+void parse(qdb &kb, qdb &q, istream &f , std::string fn, std::string fmt)
 {
-	fmt = tolower(fmt);
+	boost::algorithm::to_lower(fmt);
 
-	std::vector<string> exts({"jsonld", "nat3", "natq", "n3", "nq"});
+	std::vector<std::string> exts({"jsonld", "nat3", "natq", "n3", "nq"});
+
+	std::string fnl(fn);
+	boost::algorithm::to_lower(fnl);
 
 	if (fmt == "") // try to guess from file extension
 	{
 		for (auto x:exts)
-			if (tolower(fn).endsWith(x))
+			if (boost::ends_with(fnl, x))
 				fmt = x;
 	}
 
 	if (fmt == "") // default
 		fmt = "natq";
 
+#ifdef with_marpa
 	if(fmt == "nat3" || fmt == "n3")
 		parse_natural3(kb, q, f);
+	else
+#endif
 	/*
 		else..
 		nq
 		else
 		jsonld*/
 
-
-
 }
 
+typedef std::pair<std::string, std::string> fn_fmt;
 
-int process_args(args)
+int process_args(std::vector<std::string> args)
 {
 	if (args.size() == 0)
 		{}//do interactive quads
 
-	vector <std::pair<string, string>> inputs;
+	std::vector<fn_fmt>  inputs;
 
-	string fmt, fn;
-	for (string x: args) {
-		if (startsWith(x, "--"))
-			fmt = string(x.begin() + 2, x.end());
+	std::string fmt, fn;
+
+	for (std::string x: args) {
+		if (boost::starts_with(x, "--"))
+			fmt = std::string(x.begin() + 2, x.end());
 		else
 			fn = x;
 		if (fn != "") {
-			input.push_back(fh, fmt);
+			inputs.push_back(fn_fmt(fn, fmt));
 			fn = "";
 		}
 	}
 
-	prover prvr;
-	int togo = inputs.size();
-	int pos = 0;
-	for (x: inputs) {
-		string fn = x.first;
-		string fmt = x.second;
-		
+	uint pos = 0;
+	std::vector<qdb> kbs;
+	for (auto x: inputs) {
+		std::string fn = x.first;
+		std::string fmt = x.second;
+		qdb kb;
+		qdb query;
+
+
+		std::string fn2 = args[2];
+		std::ifstream f(fn2);
+		if (!f.is_open())
+			throw std::runtime_error("couldnt open file \"" + fn2 + "\"");
+
+		parse(kb, query, f, fn, fmt);
+
 		if(++pos == inputs.size())
 		{
-			if(q.size())
-			{
-				prvr.add_qdb(kb);
-				prover.query(q);
-			else
-				prover.query(kb);
-		else
-		{
-			if(q.size())
-				dout << "ignoring query in " + fn;
-			else
-				prvr.add_qdb(kb);
+			if(query.first.size()) {
+				kbs.push_back(kb);
+				prover prvr(merge_qdbs(kbs));
+				prvr.query(query);
+			}
+			else {
+				prover prvr(merge_qdbs(kbs));
+				prvr.query(kb);
+			}
+		}
+		else {
+			kbs.push_back(kb);
+			if (query.first.size())
+				dout << L"ignoring query in " << ws(fn);
+		}
+	}
+	return 0;
 }
-
-
 
 
 typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
@@ -237,9 +257,6 @@ void blimp(prover &prvr, std::string x, int togo) {
 			sleep(1);
 			}
 */
-#endif
-
-
 
 /*
  *
@@ -310,53 +327,6 @@ void blimp(prover &prvr, std::string x, int togo) {
 	//from the user from the terminal and the other has input from files, and the commands/flags
 	//are all the same, and it all works exactly the same either way you do it
 */
-
-
-
-
-
-
-{
-
-    if (args.size() == 4) {
-            std::string fname = ws(args[2]);
-            std::ifstream f(fname);
-            if (!f.is_open())
-                throw std::runtime_error("couldnt open natural3 kb file \"" + fname + "\"");
-
-            N3 kb = parse(f, prvr);
-
-            fname = ws(args[3]);
-            std::ifstream qf(fname);
-            if (!qf.is_open())
-                throw std::runtime_error("couldnt open natural3 query file \"" + fname + "\"");
-
-            N3 query = parse(qf, prvr);
-
-        prover p(*kb.dest);
-        dout << std::endl << std::endl << "kb:" << std::endl << p.formatkb();
-
-        p.query(*query.dest);
-    }
-    else if (args.size() == 3)
-    {
-        std::string fname = ws(args[2]);
-        std::ifstream f(fname);
-        if (!f.is_open())
-            throw std::runtime_error("couldnt open natural3 file \"" + fname + "\"");
-
-        N3 input = parse(f, prvr, true);
-        prover p(input.kb);
-        TRACE(dout << KRED << L"@default Rules:\n" << p.formatkb()<<std::endl);
-        p.query(input.query);
-    }
-    else
-        throw std::runtime_error("gimme a filename or two");
-
-    return 0;
-}
-
-
 
 
 #endif
