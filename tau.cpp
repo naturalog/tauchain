@@ -25,6 +25,7 @@ std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 
 
+/*return value same as parse_xxx: 0: error, 1: incomplete input, 2: success*/
 void parse(qdb &kb, qdb &q, istream &f , std::string fn, string input, std::string fmt)
 {
 	fmt = tolower(fmt);
@@ -53,7 +54,116 @@ void parse(qdb &kb, qdb &q, istream &f , std::string fn, string input, std::stri
 
 }
 
-void repl(prover &prvr, std::string x, int togo) {
+
+int process_args(args)
+{
+	if (args.size() == 0)
+		{}//do interactive quads
+
+	vector <std::pair<string, string>> inputs;
+
+	string fmt, fn;
+	for (string x: args) {
+		if (startsWith(x, "--"))
+			fmt = string(x.begin() + 2, x.end());
+		else
+			fn = x;
+		if (fn != "") {
+			input.push_back(fh, fmt);
+			fn = "";
+		}
+	}
+
+	prover prvr;
+	int togo = inputs.size();
+	int pos = 0;
+	for (x: inputs) {
+		string fn = x.first;
+		string fmt = x.second;
+		
+		if(++pos == inputs.size())
+		{
+			if(q.size())
+			{
+				prvr.add_qdb(kb);
+				prover.query(q);
+			else
+				prover.query(kb);
+		else
+		{
+			if(q.size())
+				dout << "ignoring query in " + fn;
+			else
+				prvr.add_qdb(kb);
+}
+
+
+
+
+typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
+
+int main ( int argc, char** argv ) {
+	dict.init();
+	std::vector<std::string> args;
+
+	try {
+		TCLAP::CmdLine cmd("Tau command line", ' ', "0.0");
+
+		TCLAP::ValueArg <int> tc_level("l", "level", "level", false, 1, "", cmd);
+
+		TCLAP::SwitchArg
+				tc_deref("d", "no-deref", "show integers only instead of strings", cmd, true),
+				tc_pause("P", "pause",
+						 "pause on each trace and offer showing the backtrace. available under -DDEBUG only.", cmd,
+						 false),
+				tc_shorten("s", "shorten", "on IRIs containing # show only what's after #", cmd, false),
+				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
+				tc_quads("q", "quads", "set input format for prove as quads", cmd, false),
+				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
+
+		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "desc", false, "typedesc");
+
+		cmd.parse(argc, argv);
+
+		tcFlags tauFlags = {
+				{&tc_deref,   &deref},
+				{&tc_pause,   &_pause},
+				{&tc_shorten, &shorten},
+				{&tc_base,    &fnamebase},
+				{&tc_quads,   &quad_in},
+				{&tc_nocolor, &nocolor}
+		};
+
+		for (auto x : tauFlags) {
+			*x.second = (*(x.first)).getValue();
+		}
+
+		args = multi.getValue();
+
+	} catch (TCLAP::ArgException &e) {
+		derr << "TCLAP error: " << e.what() << std::endl;
+	}
+
+	if (nocolor)
+		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
+
+	return process_args(args);
+}
+
+
+#ifdef xxxxxxxxxxxxxxxxxxxxxxxxxxBLIMP
+
+
+int process_args(args)
+{
+	int pos = 0;
+	prover prvr;
+	for (std::string x: args) {
+		blimp(prvr, x, ++pos = args.size());
+	}
+}
+
+void blimp(prover &prvr, std::string x, int togo) {
 	static std::string fmt;
 	std::string fn;
 	static std::string block;
@@ -127,129 +237,7 @@ void repl(prover &prvr, std::string x, int togo) {
 			sleep(1);
 			}
 */
-
-
-
-
-typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
-
-int main ( int argc, char** argv ) {
-	dict.init();
-	std::vector<std::string> args;
-
-	try {
-		TCLAP::CmdLine cmd("Tau command line", ' ', "0.0");
-
-		TCLAP::ValueArg <int> tc_level("l", "level", "level", false, 1, "", cmd);
-
-		TCLAP::SwitchArg
-				tc_deref("d", "no-deref", "show integers only instead of strings", cmd, true),
-				tc_pause("P", "pause",
-						 "pause on each trace and offer showing the backtrace. available under -DDEBUG only.", cmd,
-						 false),
-				tc_shorten("s", "shorten", "on IRIs containing # show only what's after #", cmd, false),
-				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
-				tc_quads("q", "quads", "set input format for prove as quads", cmd, false),
-				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
-
-		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "desc", false, "typedesc");
-
-		cmd.parse(argc, argv);
-
-		tcFlags tauFlags = {
-				{&tc_deref,   &deref},
-				{&tc_pause,   &_pause},
-				{&tc_shorten, &shorten},
-				{&tc_base,    &fnamebase},
-				{&tc_quads,   &quad_in},
-				{&tc_nocolor, &nocolor}
-		};
-
-		for (auto x : tauFlags) {
-			*x.second = (*(x.first)).getValue();
-		}
-
-		args = multi.getValue();
-
-	} catch (TCLAP::ArgException &e) {
-		derr << "TCLAP error: " << e.what() << std::endl;
-	}
-
-	if (nocolor)
-		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
-
-	int pos = 0;
-	prover prvr;
-	for (std::string x: args) {
-		repl(prvr, x, ++pos = args.size());
-	}
-	return 0;
-}
-
-
-#ifdef xxxxxxxxxxxxxxxxxxxxxxxxxx
-
-
-
-/*
-backup solution
-*/
-
-	if (input.size() == 0)
-		repl = true;
-
-	vector <std::pair<string, string>> inputs;
-
-	string fmt, fn;
-	for (string x: args) {
-		if (startsWith(x, "--"))
-			fmt = string(x.begin() + 2, x.end());
-		else
-			fn = x;
-		if (fn != "") {
-			input.push_back(fh, fmt);
-			fn = "";
-		}
-	}
-
-	if (inputs.size() == 0)
-		inputs.push_back("-", fmt);
-
-	prover prvr;
-	int togo = inputs.size();
-	int pos = 0;
-	for (x: inputs) {
-		load_file(prvr, x.first, x.second, ++pos = inputs.size());
-	}
-}
-
-
-void load_file(prover prvr&, string fn, string fmt, bool is_last)
-{
-	if(is_last)
-	{
-		if(q.size())
-		{
-			prvr.add_qdb(kb);
-			prover.query(q);
-		else
-			prover.query(kb);
-	else
-	{
-		if(q.size())
-			dout << "ignoring query in fn";
-		else
-			prvr.add_qdb(kb);
-}
-
-
-	std::wistream* pis
-	if (fn == "-")
-		pis =  = &std::wcin;
-	else
-		pis = new std::wifstream(ws(fn));
-
-	std::wistream& is = *pis;
+#endif
 
 
 
