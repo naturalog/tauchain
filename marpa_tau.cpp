@@ -319,7 +319,7 @@ struct Marpa {
     }
 
 
-    termid parse(const string inp) {
+    int parse(termid & const string inp) {
         if (!precomputed)
             check_int(marpa_g_precompute(g));
 
@@ -407,7 +407,9 @@ struct Marpa {
                 toks.push_back(tokt(pos, pos + best_len));
                 TRACE(dout << std::distance(inp.begin(), pos) << L"-" << std::distance(inp.begin(), pos + best_len) <<
                 L" \"" << string(pos, pos + best_len) << L"\" - " << sym2str(best_syms[0]) << std::endl);
-                check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1));
+                int r = check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1));
+                if (MARPA_ERR_UNEXPECTED_TOKEN_ID == r)
+                    return 0;
                 check_int(marpa_r_earleme_complete(r));
                 pos += best_len;
             }
@@ -437,7 +439,7 @@ struct Marpa {
                 }
 
 
-                throw(std::runtime_error("no parse"));
+                return 0;
             }
         }
 
@@ -445,7 +447,8 @@ struct Marpa {
 
         //marpa allows variously ordered lists of ambiguous parses, we just grab the default
         Marpa_Bocage b = marpa_b_new(r, -1);
-        check_null(b);
+        if (!b)
+            return 0;
         Marpa_Order o = marpa_o_new(b);
         check_null(o);
         Marpa_Tree t = marpa_t_new(o);
@@ -904,125 +907,28 @@ public:
 
 
 
-
-N3 parse(std::ifstream &f, prover& grammar, bool single_file_mode = false)
+int parse_natural3(qdb kb&, qdb &q, std::istream &f, prover& grammar)
 {
     setproc(L"N3");
-    prover prvr(grammar);
+    strtic prover prvr(*load_quads(L"n3-grammar.nq", false));
+    TRACE(dout << "grammar loaded."<<std::endl);
+    static Marpa* parser = Marpa(prvr, dict[mkiri(L"http://www.w3.org/2000/10/swap/grammar/n3#language"));
 
-    pnode input = mkliteral(pstr(load_file(f)), 0, 0);
-    assert(input);
-
-    prvr.kb.add(
-            prvr.make(
-                    mkiri(pstr(L":contents")),
-                    prvr.make(mkiri(pstr(L":input"))),
-                    prvr.make(input)));
-
-    std::wifstream ln3("load_n3");
-
-    auto query = readqdb (ln3);
-    TRACE(dout << "query loaded.");
-
-    prvr.do_query(query);
-
-    TRACE(dout << "query done.");
-
-    termid raw = 0;
-    for (auto x : prvr.substs) {
-        TRACE(dout << "subst:");
-        TRACE(prvr.prints(x));
-        TRACE(dout << std::endl);
-        for (auto it: x) {
-            TRACE(dout << *dict[it.first].value << std::endl);
-            if (*dict[it.first].value == L"?O") {
-                raw = it.second;
-                break;
-            }
-        }
-    }
-    prvr.substs.clear();
-    prvr.e.clear();
+    string in = load_file(f);
+    termid raw = parser->parse(in);
 
     TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << prvr.formatkb());
 
     if (!raw)
-        throw std::runtime_error("oopsie, something went wrong with your tau.");
-
-    /*
-    query = load_quads(L"test", true);
-    dout << "------" << std::endl;
-    prover prvr2(prvr);
-    prvr2(*query);
-    */
+        return 0;
 
     TRACE(dout << "retrieving results." << std::endl);
 
-    N3 n3(prvr, single_file_mode);
+    N3 n3(prvr, true);
     n3.add_statements(raw, L"@default");
 
     return n3;
 }
-
-
-
-
-
-
-
-/*cli*/
-
-std::string load_n3_cmd::desc() const { return "load n3"; }
-
-std::string load_n3_cmd::help() const {
-    stringstream ss("Hilfe! Hilfe!:");
-    return ss.str();
-}
-
-int load_n3_cmd::operator()(const strings &args) {
-    prover prvr(*load_quads(L"n3-grammar.nq", false));
-    TRACE(dout << "grammar loaded."<<std::endl);
-
-    if (args.size() == 4) {
-            std::string fname = ws(args[2]);
-            std::ifstream f(fname);
-            if (!f.is_open())
-                throw std::runtime_error("couldnt open natural3 kb file \"" + fname + "\"");
-
-            N3 kb = parse(f, prvr);
-
-            fname = ws(args[3]);
-            std::ifstream qf(fname);
-            if (!qf.is_open())
-                throw std::runtime_error("couldnt open natural3 query file \"" + fname + "\"");
-
-            N3 query = parse(qf, prvr);
-
-        prover p(*kb.dest);
-        dout << std::endl << std::endl << "kb:" << std::endl << p.formatkb();
-
-        p.query(*query.dest);
-    }
-    else if (args.size() == 3)
-    {
-        std::string fname = ws(args[2]);
-        std::ifstream f(fname);
-        if (!f.is_open())
-            throw std::runtime_error("couldnt open natural3 file \"" + fname + "\"");
-
-        N3 input = parse(f, prvr, true);
-        prover p(input.kb);
-        TRACE(dout << KRED << L"@default Rules:\n" << p.formatkb()<<std::endl);
-        p.query(input.query);
-    }
-    else
-        throw std::runtime_error("gimme a filename or two");
-
-    return 0;
-}
-
-
-
 
 
 
@@ -1046,7 +952,6 @@ string load_file(std::ifstream &f) {
 
 
 
-
 /*
 resources
 
@@ -1054,5 +959,3 @@ https://github.com/jeffreykegler/libmarpa/blob/master/test/simple/rule1.c#L18
 https://github.com/jeffreykegler/Marpa--R2/issues/134#issuecomment-41091900
 https://github.com/pstuifzand/marpa-cpp-rules/blob/master/marpa-cpp/marpa.hpp
  */
-
-

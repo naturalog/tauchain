@@ -6,6 +6,8 @@
 #include "marpa_tau.h"
 #endif
 #include <tclap/CmdLine.h>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
 
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 
@@ -23,69 +25,46 @@ std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 
 
-#include <tclap/CmdLine.h>
+void parse(qdb &kb, qdb &q, std::string fn, string input, std::string fmt)
+{
+	fmt = tolower(fmt);
 
+	std::vector<string> exts({"jsonld", "nat3", "natq", "n3", "nq"});
 
-
-typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
-
-int main ( int argc, char** argv ) {
-	dict.init();
-	vector<string> args;
-
-	try {
-		TCLAP::CmdLine cmd("Tau command line", ' ', "0.0");
-
-		TCLAP::ValueArg <int> tc_level("l", "level", "level", false, 1, "", cmd);
-		//
-		/*Ok now my goal is to make these definitions...*/
-		TCLAP::SwitchArg
-				tc_deref("d", "no-deref", "show integers only instead of strings", cmd, true),
-				tc_pause("P", "pause",
-						 "pause on each trace and offer showing the backtrace. available under -DDEBUG only.", cmd,
-						 false),
-				tc_shorten("s", "shorten", "on IRIs containing # show only what's after #", cmd, false),
-				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
-				tc_quads("q", "quads", "set input format for prove as quads", cmd, false),
-				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
-
-		UnlabeledMultiArg<string> multi("stuff");
-
-		cmd.parse(argc, argv);
-
-		tcFlags tauFlags = {
-				{&tc_deref,   &deref},
-				{&tc_pause,   &_pause},
-				{&tc_shorten, &shorten},
-				{&tc_base,    &fnamebase},
-				{&tc_quads,   &quad_in},
-				{&tc_nocolor, &nocolor}
-		};
-
-		for (auto x : tauFlags) {
-			*x.second = (*(x.first)).getValue();
-		}
-
-		args = multi.getValue();
-
-	} catch (TCLAP::ArgException &e) {
-		derr << "TCLAP error: " << e.what() << std::endl;
+	if (fmt == "") // try to guess from file extension
+	{
+		for (auto x:exts)
+			if (tolower(fn).endsWith(x))
+				fmt = x;
 	}
 
-	if (nocolor)
-		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
+	if (fmt == "") // default
+		fmt = "natq";
 
-	int pos = 0;
-	prover prvr;
-	for (string x: args) {
-		repl(prvr, x, ++pos = args.size());
+	if(format == "nat3" || fmt == "n3")
+		parse_natural3(kb, q, f);
+	/*
+		else..
+		nq
+		else
+		jsonld*/
 
 
-void repl(prover &prvr, string x, int togo) {
-	static string fmt;
-	string fn;
-	static string block;
-	if (startsWith(x, "--"))
+
+}
+
+void repl(prover &prvr, std::string x, int togo) {
+	static std::string fmt;
+	std::string fn;
+	static std::string block;
+
+	const int COMMANDS = 0;
+	const int KB = 1;
+	const int QUERY = 2;
+	const int WORK = 3;
+	static int phase = 0;
+
+	if (boost::starts_with(x, "--"))
 	{
 		/*
 		if (x == "--pass")
@@ -95,7 +74,7 @@ void repl(prover &prvr, string x, int togo) {
 		 else error
 		 } else
 		 */
-		fmt = string(x.begin() + 2, x.end());
+		fmt = std::string(x.begin() + 2, x.end());
 	}
 
 	else {
@@ -103,15 +82,13 @@ void repl(prover &prvr, string x, int togo) {
 		//try to load file, return
 	}
 	if (x == "fin." || x == "fin .") {
-		phase++;
+		phase = phase + 1;
 		if (phase== WORK) { }
 	}
-	string block += x + "\n";
+	block += x + "\n";
 	if (fmt != "")
 	{
-		if(r = parse(x, fmt))
-
-
+		int r = parse(x, fmt);
 	}
 /*
 	{
@@ -149,30 +126,132 @@ void repl(prover &prvr, string x, int togo) {
 			catch (...) { dout<<"generic exception."<<std::endl; }
 			sleep(1);
 			}
-
-
 */
-/*
-* 	void runTau(){
 
-		auto kb = load_quads(L"");
-        	if (kb) {
-			dout << "kb input done." << std::endl;
-			auto query = load_quads(L"");
-			dout << "query loaded." << std::endl;
-			if (query) {
-				prover pr( *kb );
-				pr ( *query );
-				dout << "Ready." << std::endl;
-               		}
-        	}
+
+
+
+typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
+
+int main ( int argc, char** argv ) {
+	dict.init();
+	std::vector<std::string> args;
+
+	try {
+		TCLAP::CmdLine cmd("Tau command line", ' ', "0.0");
+
+		TCLAP::ValueArg <int> tc_level("l", "level", "level", false, 1, "", cmd);
+
+		TCLAP::SwitchArg
+				tc_deref("d", "no-deref", "show integers only instead of strings", cmd, true),
+				tc_pause("P", "pause",
+						 "pause on each trace and offer showing the backtrace. available under -DDEBUG only.", cmd,
+						 false),
+				tc_shorten("s", "shorten", "on IRIs containing # show only what's after #", cmd, false),
+				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
+				tc_quads("q", "quads", "set input format for prove as quads", cmd, false),
+				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
+
+		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "desc", false, "typedesc");
+
+		cmd.parse(argc, argv);
+
+		tcFlags tauFlags = {
+				{&tc_deref,   &deref},
+				{&tc_pause,   &_pause},
+				{&tc_shorten, &shorten},
+				{&tc_base,    &fnamebase},
+				{&tc_quads,   &quad_in},
+				{&tc_nocolor, &nocolor}
+		};
+
+		for (auto x : tauFlags) {
+			*x.second = (*(x.first)).getValue();
+		}
+
+		args = multi.getValue();
+
+	} catch (TCLAP::ArgException &e) {
+		derr << "TCLAP error: " << e.what() << std::endl;
 	}
 
-*/
+	if (nocolor)
+		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 
+	int pos = 0;
+	prover prvr;
+	for (std::string x: args) {
+		repl(prvr, x, ++pos = args.size());
+	}
+	return 0;
+}
 
 
 #ifdef xxxxxxxxxxxxxxxxxxxxxxxxxx
+
+
+
+/*
+backup solution
+*/
+
+	if (input.size() == 0)
+		repl = true;
+
+	vector <std::pair<string, string>> inputs;
+
+	string fmt, fn;
+	for (string x: args) {
+		if (startsWith(x, "--"))
+			fmt = string(x.begin() + 2, x.end());
+		else
+			fn = x;
+		if (fn != "") {
+			input.push_back(fh, fmt);
+			fn = "";
+		}
+	}
+
+	if (inputs.size() == 0)
+		inputs.push_back("-", fmt);
+
+	prover prvr;
+	int togo = inputs.size();
+	int pos = 0;
+	for (x: inputs) {
+		load_file(prvr, x.first, x.second, ++pos = inputs.size());
+	}
+}
+
+
+void load_file(prover prvr&, string fn, string fmt, bool is_last)
+{
+	if(is_last)
+	{
+		if(q.size())
+		{
+			prvr.add_qdb(kb);
+			prover.query(q);
+		else
+			prover.query(kb);
+	else
+	{
+		if(q.size())
+			dout << "ignoring query in fn";
+		else
+			prvr.add_qdb(kb);
+}
+
+
+	std::wistream* pis
+	if (fn == "-")
+		pis =  = &std::wcin;
+	else
+		pis = new std::wifstream(ws(fn));
+
+	std::wistream& is = *pis;
+
+
 
 /*
  *
@@ -246,101 +325,48 @@ void repl(prover &prvr, string x, int togo) {
 
 
 
-/*
 
 
 
-
-backup solution
-
-
-
-
-*/
-
-
-
-
-	if (input.size() == 0)
-		repl = true;
-
-	vector <std::pair<string, string>> inputs;
-
-	string fmt, fn;
-	for (string x: args) {
-		if (startsWith(x, "--"))
-			fmt = string(x.begin() + 2, x.end());
-		else
-			fn = x;
-		if (fn != "") {
-			input.push_back(fh, fmt);
-			fn = "";
-		}
-	}
-
-	if (inputs.size() == 0)
-		inputs.push_back("-", fmt);
-
-	prover prvr;
-	int togo = inputs.size();
-	int pos = 0;
-	for (x: inputs) {
-		load_file(prvr, x.first, x.second, ++pos = inputs.size());
-	}
-}
-
-
-void load_file(prover prvr&, string fn, string fmt, bool is_last)
 {
-	fmt = lcase(fmt);
-	qdb kb, q;
 
-	std::vector<string> exts({"jsonld", "nat3", "natq", "n3", "nq"});
+    if (args.size() == 4) {
+            std::string fname = ws(args[2]);
+            std::ifstream f(fname);
+            if (!f.is_open())
+                throw std::runtime_error("couldnt open natural3 kb file \"" + fname + "\"");
 
-	if (fmt == "")
-	{
-		for (auto x:exts)
-			if (lcase(fn).endsWith(x))
-				format = x;
-	}
-	if (fmt == "")
-		fmt = "natq";
+            N3 kb = parse(f, prvr);
 
+            fname = ws(args[3]);
+            std::ifstream qf(fname);
+            if (!qf.is_open())
+                throw std::runtime_error("couldnt open natural3 query file \"" + fname + "\"");
 
-	std::wistream* pis
-	if (fn == "-")
-		pis =  = &std::wcin;
-	else
-		pis = new std::wifstream(ws(fn));
+            N3 query = parse(qf, prvr);
 
-	std::wistream& is = *pis;
+        prover p(*kb.dest);
+        dout << std::endl << std::endl << "kb:" << std::endl << p.formatkb();
 
+        p.query(*query.dest);
+    }
+    else if (args.size() == 3)
+    {
+        std::string fname = ws(args[2]);
+        std::ifstream f(fname);
+        if (!f.is_open())
+            throw std::runtime_error("couldnt open natural3 file \"" + fname + "\"");
 
-	if(format == "nat3" || fmt == "n3")
-		load_natural3(kb, q, f);
-	/*
-		else..
-		nq
-		else
-		jsonld*/
+        N3 input = parse(f, prvr, true);
+        prover p(input.kb);
+        TRACE(dout << KRED << L"@default Rules:\n" << p.formatkb()<<std::endl);
+        p.query(input.query);
+    }
+    else
+        throw std::runtime_error("gimme a filename or two");
 
-
-	if(is_last)
-	{
-		if(q.size())
-		{
-			prvr.add_qdb(kb);
-			prover.query(q);
-		else
-			prover.query(kb);
-	else
-	{
-		if(q.size())
-			dout << "ignoring query in fn";
-		else
-			prvr.add_qdb(kb);
+    return 0;
 }
-
 
 
 
