@@ -36,12 +36,12 @@ std::wostream& derr = std::wcerr;
 
 #ifndef NOPARSER
 int parse_nq(qdb &kb, qdb &q, istream &f)
-	try {
+/*	try {
 		kb = readqdb(is);
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
 		return 0;
-	}
+	}*/
 }
 #endif
 
