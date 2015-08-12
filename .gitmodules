@@ -1,3 +1,6 @@
 [submodule "libmarpa-dist"]
 	path = libmarpa-dist
 	url = https://github.com/lemon-operating-language/libmarpa-dist.git
+[submodule "tclap"]
+	path = tclap
+	url = git://git.code.sf.net/p/tclap/code
