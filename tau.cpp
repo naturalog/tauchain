@@ -181,7 +181,7 @@ int main ( int argc, char** argv ) {
 				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
 				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
 
-		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "desc", false, "typedesc", cmd);
+		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "file names, optionally prefixed with formats", false, "typedesc", cmd);
 
 		cmd.parse(argc, argv);
 
