@@ -46,8 +46,8 @@ target_link_libraries(m-tau PRIVATE "-L${MARPA_DIST}/.libs -lmarpa")
 
 target_link_libraries(m-tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_link_libraries(  tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
-target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS} ${MARPA_DIST})
-target_include_directories(  tau PRIVATE ${Boost_INCLUDE_DIRS})
+#target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS} ${MARPA_DIST})
+#target_include_directories(  tau PRIVATE ${Boost_INCLUDE_DIRS})
 
 
 
