@@ -5,6 +5,7 @@
 using namespace boost::algorithm;
 
 bidict& dict = *new bidict;
+
 bool deref = true, shorten = false;
 int level = 1;
 

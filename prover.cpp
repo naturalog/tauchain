@@ -503,7 +503,7 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
-	//if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
+	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
 bool prover::consistency(const qdb& quads) {
@@ -523,7 +523,7 @@ bool prover::consistency(const qdb& quads) {
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
 		qdb qq;
 		qq.first[L""] = quads.first.at(s);
-		q.query(qq);
+		q.do_query(qq);
 		if (q.e.size()) {
 			derr << L"Inconsistency found: " << q.format(y.first) << L" is provable as true and false."<<endl;
 			c = false;
@@ -594,7 +594,7 @@ int prover::do_query(const termid goal)
 }
 
 int prover::do_query(const termset& goal, substs * s) {
-//	setproc(L"do_query");
+	setproc(L"do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = make_shared<substs>(*s);
 	queue.push(p);
@@ -618,7 +618,7 @@ int prover::do_query(const termset& goal, substs * s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
-	dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
+	TRACE(dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 //	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
 	return duration/1000.;
 	//for (auto x : gnd) pushev(x);

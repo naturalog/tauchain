@@ -10,8 +10,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
-
-bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
+extern int level;
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, nocolor = false;
 
 #ifdef DEBUG
 auto dummy = []() {
@@ -128,13 +128,15 @@ int process_args(std::vector<std::string> args)
 		{
 			if(query.first.size()) {
 				kbs.push_back(kb);
-				TRACE(dout << "QUERYING" << std::endl);
 				prover prvr(merge_qdbs(kbs));
+				TRACE(dout << "QUERYING" << std::endl);
 				prvr.query(query);
 			}
 			else {
-				TRACE(dout << "QUERYING" << std::endl);
+				if (kbs.size() == 0)
+					throw std::runtime_error("would use last file as query, but have no kb");
 				prover prvr(merge_qdbs(kbs));
+				TRACE(dout << "QUERYING" << std::endl);
 				prvr.query(kb);
 			}
 		}
@@ -166,25 +168,19 @@ int main ( int argc, char** argv ) {
 						 false),
 				tc_shorten("s", "shorten", "on IRIs containing # show only what's after #", cmd, false),
 				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
-				tc_quads("q", "quads", "set input format for prove as quads", cmd, false),
 				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
 
 		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "desc", false, "typedesc", cmd);
 
 		cmd.parse(argc, argv);
 
-		tcFlags tauFlags = {
-				{&tc_deref,   &deref},
-				{&tc_pause,   &_pause},
-				{&tc_shorten, &shorten},
-				{&tc_base,    &fnamebase},
-				{&tc_quads,   &quad_in},
-				{&tc_nocolor, &nocolor}
-		};
-
-		for (auto x : tauFlags) {
-			*x.second = (*(x.first)).getValue();
-		}
+		level = tc_level.getValue();
+		deref = tc_deref.getValue();
+		_pause = tc_pause.getValue();
+		shorten = tc_shorten.getValue();
+		fnamebase = tc_base.getValue();
+		nocolor = tc_nocolor.getValue();
+		//sorry stoopkid
 
 		args = multi.getValue();
 
