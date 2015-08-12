@@ -363,7 +363,7 @@ euler:
 	goto noeuler;
 }
 
-#ifdef PREDVARS
+#ifdef PREDVARSxx
 void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
 {
 	proof& frame = *_p;
@@ -544,8 +544,8 @@ void prover::do_query(const qdb& q_, subs * s) {
 void prover::query(const termset& goal, subs * s) {
 	TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	auto duration = do_query(goal, s);
-//	TRACE(dout << KYEL << "Evidence:" << endl);
-//	printe();/* << ejson()->toString()*/ dout << KNRM;
+	TRACE(dout << KYEL << "Evidence:" << endl);
+	printe();/* << ejson()->toString()*/ dout << KNRM;
 	dout << "elapsed: " << duration << "ms steps: " << steps << " unifs: " << unifs << " evals: " << evals << endl;
 }
 
