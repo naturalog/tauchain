@@ -308,6 +308,8 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
+#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src;
+
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
@@ -318,7 +320,6 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	auto body = bodies[frame.rule];
 	size_t src = 0;
 	// if we still have some terms in rule body to process
-#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src; 
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
@@ -329,16 +330,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		else {
 #else
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-		if (!frame.s.empty()) {
-			for (auto rule : rit->second) {
-				if (unify(t, frame.s, heads[rule], termsub))
-					queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-			}
-		}
-		else for (auto rule : rit->second) {
-			if (unify(t, heads[rule], termsub)) 
-				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-			}
+		step_in(src, rit.second, _p, t);
 #endif
 #ifdef PREDVARS
 		}
@@ -357,24 +349,19 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	return frame.next;
 }
 
-#ifdef PREDVARSxx
+#ifdef PREDVARS
 void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
 {
 	proof& frame = *_p;
-	if (frame.s) {
-		subs& ps = *frame.s;
-		for (auto rule : candidates) {
-			if (unify(t, ps, heads[rule], termsub))
-				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-			termsub.clear();
-			++src;
+	if (!frame.s.empty()) {
+		for (auto rule : rit->second) {
+			if (unify(t, frame.s, heads[rule], termsub))
+				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
 		}
 	}
-	else for (auto rule : rit->second)
-		if (unify(t, heads[rule], termsub)) {
-			queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-			termsub.clear();
-			++src;
+	else for (auto rule : rit->second) {
+		if (unify(t, heads[rule], termsub))
+			queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
 		}
 }
 #endif
