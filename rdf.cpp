@@ -273,11 +273,10 @@ string quad::tostring ( ) const {
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 #ifndef NOPARSER
-qdb readqdb ( std::wistream& is) {
+void readqdb (qdb &r, std::wistream& is) {
 	string s;
 	string c;
 	quad q;
-	qdb r;
 	nqparser p;
 	std::wstringstream ss;
 	while (getline(is, s)) {
@@ -294,7 +293,6 @@ qdb readqdb ( std::wistream& is) {
 		if (r.first.find(c) == r.first.end()) r.first[c] = make_shared<qlist>();
 		r.first[c]->push_back(make_shared<quad>(q));
 	}
-	return r;
 }
 #endif
 #ifdef JSON
@@ -322,3 +320,15 @@ int convert_cmd::operator() ( const strings& args ) {
 	}
 }
 #endif
+
+qdb merge_qdbs(const std::vector<qdb> qdbs)
+{
+	if (qdbs.size() > 1)
+		dout << "warning, bnode renaming not implemented";
+	qdb r;
+	for (auto x:qdbs) {
+		r.first.insert(x.first.begin(), x.first.end());
+		r.second.insert(x.second.begin(), x.second.end());
+	}
+	return r;
+}

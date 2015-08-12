@@ -252,34 +252,35 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 	}
 	#ifdef with_marpa
-	else if (t.p == marpa_parser_iri)// && !t.s && t.o) //fixme
+	else if (t.p == marpa_parser_iri && t.s && t.o)
 	/* ?X is a parser created from grammar */
 	{
-		void* handle = marpa_parser(this, get(t.o).p, p);
+		if (t0->p > 0) throw std::runtime_error("must be called with variable subject.");
+		void* handle = marpa_parser(this, t1->p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-		(*p->s)[get(t.s).p] = make(dict.set(n), 0, 0);
+		(*p->s)[t0->p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == file_contents_iri) {
-		if (get(t.s).p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
-		string fn = *dict[get(t.o).p].value;
+		if (t0->p > 0) throw std::runtime_error("file_contents must be called with variable subject.");
+		string fn = *dict[t0->p].value;
 		std::string fnn = ws(fn);
 	    std::ifstream f(fnn);
 	    if (f.is_open())
 		{
-			(*p->s)[get(t.s).p] = make(mkliteral(pstr(load_file(f)), 0, 0));
+			(*p->s)[t0->p] = make(mkliteral(pstr(load_file(f)), 0, 0));
 			r = 1;
 		}
 	}
 	else if (t.p == marpa_parse_iri) {
 	/* ?X is a parse of (input with parser) */
-		if (get(t.s).p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
-		term xx = get(i1);
-		term xxx = get(xx.s);
-		string input = *dict[xxx.p].value;
-		string marpa = *dict[get(get(get(i1).o).s).p].value;
+		if (t0->p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
+		termid xxx = t1->s;
+		termid xxx2 = t1->o;
+		string input = *dict[xxx->p].value;
+		string marpa = *dict[xxx2->p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
-		(*p->s)[get(t.s).p] = result;
+		(*p->s)[t0->p] = result;
 		r = 1;
 	}
 	#endif
@@ -509,7 +510,7 @@ bool prover::consistency(const qdb& quads) {
 		TRACE(dout<<L"Trying to prove false context: " << s << endl);
 		qdb qq;
 		qq.first[L""] = quads.first.at(s);
-		q.query(qq);
+		q.do_query(qq);
 		if (q.e.size()) {
 			derr << L"Inconsistency found: " << q.format(y.first) << L" is provable as true and false."<<endl;
 			c = false;
@@ -580,7 +581,7 @@ int prover::do_query(const termid goal)
 }
 
 int prover::do_query(const termset& goal, subs * s) {
-//	setproc(L"do_query");
+	setproc(L"do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = *s;
 	queue.push(p);
@@ -606,7 +607,7 @@ int prover::do_query(const termset& goal, subs * s) {
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
 	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
-	dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
+	TRACE(dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 //	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
 	return duration/1000.;
 	//for (auto x : gnd) pushev(x);

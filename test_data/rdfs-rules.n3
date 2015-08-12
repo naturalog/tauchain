@@ -1,0 +1,70 @@
+<> <#rcsid> "$Id: rdfs-rules.n3 2865 2009-05-21 18:28:02Z josd $".
+
+@prefix log: <http://www.w3.org/2000/10/swap/log#>.
+@prefix str: <http://www.w3.org/2000/10/swap/string#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#>.
+@prefix : <http://eulersharp.sourceforge.net/2003/03swap/rdfs-rules#>.
+
+
+### Resource Description Framework RDF(S)
+
+rdf:Alt rdfs:subClassOf rdfs:Container.
+rdf:Bag rdfs:subClassOf rdfs:Container.
+rdfs:ContainerMembershipProperty rdfs:subClassOf rdf:Property.
+rdfs:Datatype rdfs:subClassOf rdfs:Class.
+rdf:Seq rdfs:subClassOf rdfs:Container.
+rdf:XMLLiteral rdfs:subClassOf rdfs:Literal; a rdfs:Datatype.
+
+rdfs:comment rdfs:domain rdfs:Resource; rdfs:range rdfs:Literal.
+rdfs:domain rdfs:domain rdf:Property; rdfs:range rdfs:Class.
+rdf:first rdfs:domain rdf:List; rdfs:range rdfs:Resource; a owl:FunctionalProperty.
+rdfs:isDefinedBy rdfs:domain rdfs:Resource; rdfs:range rdfs:Resource; rdfs:subPropertyOf rdfs:seeAlso.
+rdfs:label rdfs:domain rdfs:Resource; rdfs:range rdfs:Literal.
+rdfs:member rdfs:domain rdfs:Container; rdfs:range rdfs:Resource.
+rdf:object rdfs:domain rdf:Statement; rdfs:range rdfs:Resource.
+rdf:predicate rdfs:domain rdf:Statement; rdfs:range rdf:Property.
+rdfs:range rdfs:domain rdf:Property; rdfs:range rdfs:Class.
+rdf:rest rdfs:domain rdf:List; rdfs:range rdf:List; a owl:FunctionalProperty.
+rdfs:seeAlso rdfs:domain rdfs:Resource; rdfs:range rdfs:Resource.
+rdfs:subClassOf rdfs:domain rdfs:Class; rdfs:range rdfs:Class.
+rdfs:subPropertyOf rdfs:domain rdf:Property; rdfs:range rdf:Property.
+rdf:subject rdfs:domain rdf:Statement; rdfs:range rdfs:Resource.
+rdf:type rdfs:domain rdfs:Resource; rdfs:range rdfs:Class.
+rdf:value rdfs:domain rdfs:Resource; rdfs:range rdfs:Resource.
+
+rdf:nil a rdf:List.
+
+
+### inference rules for RDF(S)
+
+{?S ?P ?O} => {?P a rdf:Property}.
+
+{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+
+{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+
+{?S ?P ?O} => {?S a rdfs:Resource}.
+{?S ?P ?O} => {?O a rdfs:Resource}.
+
+{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+
+{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+
+{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+
+{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+
+{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
+
+{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
+
+{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
+
+
+### inconsistency detections @@
+
+{?S a rdf:XMLLiteral; e:clashesWith rdf:XMLLiteral} => false.

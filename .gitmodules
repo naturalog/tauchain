@@ -1,3 +1,3 @@
-[submodule "libmarpa"]
-	path = libmarpa
-	url = https://github.com/jeffreykegler/libmarpa.git
+[submodule "libmarpa-dist"]
+	path = libmarpa-dist
+	url = https://github.com/lemon-operating-language/libmarpa-dist.git

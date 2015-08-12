@@ -1,6 +1,3 @@
-#ifdef IRC
-#include "pstream.h"
-#endif
 #include "prover.h"
 #include "jsonld.h"
 #include "cli.h"
@@ -10,20 +7,6 @@
 pobj convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
-#endif
-#ifndef NOPARSER
-std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool ) {
-	try {
-		qdb r;
-		std::wistream* pis = &std::wcin;
-		if (fname != L"") pis = new std::wifstream(ws(fname));
-		std::wistream& is = *pis;
-		return std::make_shared<qdb>(readqdb(is));
-	} catch (std::exception& ex) {
-		derr << L"Error reading quads: " << ex.what() << std::endl;
-	}
-	return nullptr;
-}
 #endif
 #ifdef JSON
 pobj cmd_t::load_json ( string fname, bool print ) {
@@ -84,24 +67,3 @@ qdb cmd_t::convert ( const string& s ) {
 }
 #endif
 
-void process_flags ( const cmds_t& cmds, strings& args ) {
-	strings::iterator it;
-	for ( auto x : cmds.second )
-		if ( ( it = find ( args.begin(), args.end(), x.first.first ) ) != args.end() ) {
-			*x.second = !*x.second;
-			args.erase ( it );
-		}
-}
-
-void print_usage ( const cmds_t& cmds ) {
-	dout << std::endl << L"Tau-Chain by http://idni.org" << std::endl;
-	dout << std::endl << L"Usage:" << std::endl;
-	dout << L"\ttau help <command>\t\tPrints usage of <command>." << std::endl;
-	dout << L"\ttau <command> [<args>]\t\tRun <command> with <args>." << std::endl;
-	dout << std::endl << L"Available commands:" << std::endl << std::endl;
-	for ( auto c : cmds.first ) dout << tab << c.first << tab << ws(c.second->desc()) << std::endl;
-	dout << std::endl << L"Available flags:" << std::endl << std::endl;
-	for ( auto c : cmds.second ) dout << tab << c.first.first << tab << c.first.second << std::endl;
-	dout << tab << L"--level <depth>" << tab << L"Verbosity level" << std::endl;
-	dout << std::endl;
-}

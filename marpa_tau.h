@@ -1,11 +1,7 @@
 #include "cli.h"
+#include <istream>
 
-class load_n3_cmd : public cmd_t{
-public:
-	virtual std::string desc() const;
-	virtual std::string help() const;
-	virtual int operator() ( const strings& args );
-};
+int parse_natural3(qdb &kb, qdb &q, std::istream &f);
 
 void* marpa_parser(prover*, nodeid, shared_ptr<prover::proof>);
 termid marpa_parse(void*, string);

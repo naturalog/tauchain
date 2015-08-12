@@ -1,0 +1,38 @@
+# $Id: rdfs-query.n3,v 1.28 2005/09/22 11:50:38 amdus Exp $
+
+# PxButton | test  | java euler.EulerRunner --local --step 200000 rdfs-facts.n3 rdfs-rules.n3 rdfs-query.n3
+# PxButton | test# | Euler --local --step 200000 rdfs-facts.n3 rdfs-rules.n3 rdfs-query.n3
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix log: <http://www.w3.org/2000/10/swap/log#>.
+
+rdf:Alt a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdf:Bag a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdfs:Class a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdfs:ContainerMembershipProperty a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdfs:Datatype a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdfs:Literal a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdf:List a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdf:Property a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdfs:Resource a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdf:Seq a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdf:Statement a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+rdf:XMLLiteral a rdfs:Class, rdfs:Resource; rdfs:subClassOf rdfs:Resource.
+
+rdfs:comment a rdf:Property.
+rdfs:domain a rdf:Property.
+rdf:first a rdf:Property.
+rdfs:isDefinedBy a rdf:Property.
+rdfs:label a rdf:Property.
+rdfs:member a rdf:Property.
+rdf:object a rdf:Property.
+rdf:predicate a rdf:Property.
+rdfs:range a rdf:Property.
+rdf:rest a rdf:Property.
+rdfs:seeAlso a rdf:Property.
+rdfs:subClassOf a rdf:Property.
+rdfs:subPropertyOf a rdf:Property.
+rdf:subject a rdf:Property.
+rdf:type a rdf:Property.
+rdf:value a rdf:Property.
