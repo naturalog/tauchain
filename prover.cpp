@@ -503,7 +503,7 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
-	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
+	//if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
 bool prover::consistency(const qdb& quads) {

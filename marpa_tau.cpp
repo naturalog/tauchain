@@ -148,7 +148,7 @@ struct Marpa {
         prvr = prvr_;
         prvr2 = new prover(*prvr);
         /*bnf:whitespace is a property of bnf:language*/
-        nodeid whitespace_ = ask1(prvr2, language, bnf_whitespace);
+        nodeid whitespace_ = prvr2->ask1o(language, bnf_whitespace);
         if (whitespace_) {
             whitespace = value(whitespace_);
             TRACE(dout << L"whitespace:" << whitespace <<std::endl);
@@ -319,7 +319,7 @@ struct Marpa {
     }
 
 
-    int parse(termid & const string inp) {
+    int parse(const string inp) {
         if (!precomputed)
             check_int(marpa_g_precompute(g));
 

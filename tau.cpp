@@ -35,20 +35,27 @@ std::wostream& derr = std::wcerr;
 
 
 #ifndef NOPARSER
-int parse_nq(qdb &kb, qdb &q, istream &f)
+int parse_nq(qdb &kb, qdb &q, std::wistream &f)
 {
-/*	try {
-		kb = readqdb(is);
+	try {
+		readqdb(kb, f);
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
 		return 0;
-	}*/
+	}
+	try {
+		readqdb(q, f);
+	} catch (std::exception& ex) {
+		derr << L"Error reading quads: " << ex.what() << std::endl;
+		return 0;
+	}
+	return 2;
 }
 #endif
 
 
 
-void parse(qdb &kb, qdb &q, istream &f , std::string fn, std::string fmt)
+void parse(qdb &kb, qdb &q, std::wistream &f , std::string fn, std::string fmt)
 {
 	boost::algorithm::to_lower(fmt);
 
@@ -72,7 +79,7 @@ void parse(qdb &kb, qdb &q, istream &f , std::string fn, std::string fmt)
 		parse_natural3(kb, q, f);
 	else
 #endif
-	if(fmt == "natq" || fmt == "nq")
+	if(fmt == "natq" || fmt == "nq" || fmt == "nquads")
 		parse_nq(kb, q, f);
 
 /*		else
@@ -111,7 +118,7 @@ int process_args(std::vector<std::string> args)
 		qdb kb;
 		qdb query;
 
-		std::ifstream f(fn);
+		std::wifstream f(fn);
 		if (!f.is_open())
 			throw std::runtime_error("couldnt open file \"" + fn + "\"");
 
@@ -121,10 +128,12 @@ int process_args(std::vector<std::string> args)
 		{
 			if(query.first.size()) {
 				kbs.push_back(kb);
+				TRACE(dout << "QUERYING" << std::endl);
 				prover prvr(merge_qdbs(kbs));
 				prvr.query(query);
 			}
 			else {
+				TRACE(dout << "QUERYING" << std::endl);
 				prover prvr(merge_qdbs(kbs));
 				prvr.query(kb);
 			}
@@ -132,7 +141,7 @@ int process_args(std::vector<std::string> args)
 		else {
 			kbs.push_back(kb);
 			if (query.first.size())
-				dout << L"ignoring query in " << ws(fn);
+				dout << L"ignoring query in " << ws(fn) << std::endl;
 		}
 	}
 	return 0;
