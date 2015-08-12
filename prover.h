@@ -76,7 +76,7 @@ public:
 		r2id_t r2id;
 	} kb;
 	const termset&heads = kb.head();
-	const std::vector<termset>& bodies = kb.body();
+	const std::vector<termset>&bodies = kb.body();
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
