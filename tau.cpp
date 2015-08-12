@@ -36,6 +36,7 @@ std::wostream& derr = std::wcerr;
 
 #ifndef NOPARSER
 int parse_nq(qdb &kb, qdb &q, istream &f)
+{
 /*	try {
 		kb = readqdb(is);
 	} catch (std::exception& ex) {
@@ -51,7 +52,7 @@ void parse(qdb &kb, qdb &q, istream &f , std::string fn, std::string fmt)
 {
 	boost::algorithm::to_lower(fmt);
 
-	std::vector<std::string> exts({"jsonld", "nat3", "natq", "n3", "nq"});
+	std::vector<std::string> exts({"jsonld", "natural3", "natq", "n3", "nq"});
 
 	std::string fnl(fn);
 	boost::algorithm::to_lower(fnl);
@@ -67,7 +68,7 @@ void parse(qdb &kb, qdb &q, istream &f , std::string fn, std::string fmt)
 		fmt = "natq";
 
 #ifdef with_marpa
-	if(fmt == "nat3" || fmt == "n3")
+	if(fmt == "natural3" || fmt == "n3")
 		parse_natural3(kb, q, f);
 	else
 #endif
@@ -110,11 +111,9 @@ int process_args(std::vector<std::string> args)
 		qdb kb;
 		qdb query;
 
-
-		std::string fn2 = args[2];
-		std::ifstream f(fn2);
+		std::ifstream f(fn);
 		if (!f.is_open())
-			throw std::runtime_error("couldnt open file \"" + fn2 + "\"");
+			throw std::runtime_error("couldnt open file \"" + fn + "\"");
 
 		parse(kb, query, f, fn, fmt);
 
@@ -149,7 +148,7 @@ int main ( int argc, char** argv ) {
 	try {
 		TCLAP::CmdLine cmd("Tau-Chain by http://idni.org. ", ' ', "0.0");
 
-		TCLAP::ValueArg <int> tc_level("l", "level", "level", false, 1, "", cmd);
+		TCLAP::ValueArg <int> tc_level("l", "level", "debug level", false, 1, "", cmd);
 
 		TCLAP::SwitchArg
 				tc_deref("d", "no-deref", "show integers only instead of strings", cmd, true),
@@ -161,7 +160,7 @@ int main ( int argc, char** argv ) {
 				tc_quads("q", "quads", "set input format for prove as quads", cmd, false),
 				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
 
-		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "desc", false, "typedesc");
+		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "desc", false, "typedesc", cmd);
 
 		cmd.parse(argc, argv);
 
