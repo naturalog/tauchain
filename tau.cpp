@@ -109,6 +109,17 @@ int process_args(std::vector<std::string> args)
 			fn = "";
 		}
 	}
+	//now that we have optionally collected a format
+
+	if (inputs.size() == 0)
+	{
+		qdb kb, query;
+		parse(kb, query, std::wcin, "", fmt);
+		prover prvr(kb);
+		TRACE(dout << "QUERYING" << std::endl);
+		prvr.query(query);
+		return 0;
+	}
 
 	uint pos = 0;
 	std::vector<qdb> kbs;
