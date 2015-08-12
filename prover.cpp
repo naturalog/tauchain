@@ -31,8 +31,12 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	termid t = heads[p.rule];
 	if (!t) return false;
 	const term& rt = *t;
-	while ((ep = ep->prev))
-		if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
+	if (!p.s.empty()) {
+		while ((ep = ep->prev))
+			if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
+				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
+	} else while ((ep = ep->prev))
+		if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt))
 			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 	return false;
 }
@@ -304,31 +308,21 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-prover::termset nulltermset;
-
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
-	size_t src;
-	termset& body = nulltermset;
-	termid t;
-	ruleid rl;
-	shared_ptr<proof> r, ppr, ep;
 #define CONT(x) { _p = (x).next; if (!_p) return 0; goto begin; }
 begin:
-	if (!_p) return 0;
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
 	const proof& frame = *_p;
-//	if (euler_path(_p)) CONT(frame);//
-	goto euler;
-noeuler:
+	if (euler_path(_p)) CONT(frame);//
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
-	body = bodies[frame.rule];
-	src = 0;
+	auto body = bodies[frame.rule];
+	size_t src = 0;
 	// if we still have some terms in rule body to process
 #define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src; 
 	if (frame.term_idx != body.size()) {
-		t = body[frame.term_idx];
+		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) CONT(frame);// return frame.next;
 		for (auto rule : rit->second) {
@@ -338,28 +332,16 @@ noeuler:
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
-		ppr = frame.prev;
-		r = make_shared<proof>(_p, *ppr);
-		rl = frame.rule;
-		r->src = ppr->src;
-		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s = ppr->s);
+		proof& ppr = *frame.prev;
+		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
+		ruleid rl = frame.rule;
+		r->src = ppr.src;
+		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s = ppr.s);
 		++r->term_idx;
-//		step(r);
-		r->next = frame.next;
-		_p = r;
-		goto begin;
+		step(r);
 	}
 	CONT(frame);//return frame.next;
 //	return 0;
-euler:
-	if (!_p) return 0;
-	ep = _p;
-	t = heads[frame.rule];
-	if (!t) goto noeuler;
-	while ((ep = ep->prev))
-		if (ep->rule == frame.rule && unify_ep(heads[ep->rule], ep->s, *t, frame.s))
-			{ TRACE(dout<<"Euler path detected"<<endl); CONT(frame); }
-	goto noeuler;
 }
 
 #ifdef PREDVARS
