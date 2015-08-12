@@ -37,11 +37,11 @@ std::wostream& derr = std::wcerr;
 #ifndef NOPARSER
 int parse_nq(qdb &kb, qdb &q, istream &f)
 	try {
-		(readqdb(is));
+		kb = readqdb(is);
 	} catch (std::exception& ex) {
 		derr << L"Error reading quads: " << ex.what() << std::endl;
+		return 0;
 	}
-	return nullptr;
 }
 #endif
 
@@ -71,12 +71,13 @@ void parse(qdb &kb, qdb &q, istream &f , std::string fn, std::string fmt)
 		parse_natural3(kb, q, f);
 	else
 #endif
-	/*
-		else..
-		nq
-		else
-		jsonld*/
+	if(fmt == "natq" || fmt == "nq")
+		parse_nq(kb, q, f);
 
+/*		else
+		jsonld*/
+	else
+		throw std::runtime_error("unknown format");
 }
 
 typedef std::pair<std::string, std::string> fn_fmt;

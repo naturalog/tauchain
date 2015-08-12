@@ -1,6 +1,6 @@
 #!/bin/sh
 
-sudo apt-get install build-essentials autoconf automake libtool
+sudo apt-get install build-essential autoconf automake libtool
 
 git submodule init;
 git submodule update;
