@@ -162,7 +162,7 @@ void prover::printp(shared_ptr<proof> p) {
 	dout << endl << KNRM;
 }
 
-string prover::formats(const substs & s, bool json) {
+string prover::formats(const subs & s, bool json) {
 	if (s.empty()) return L"";
 	std::wstringstream ss;
 	std::map<string, string> r;
@@ -172,7 +172,7 @@ string prover::formats(const substs & s, bool json) {
 	return ss.str();
 }
 
-void prover::prints(const substs & s) {
+void prover::prints(const subs & s) {
 	dout << formats(s, false);
 //	for (auto x : s)
 //		dout << dstr(x.first) << L" / " << format(x.second) << ' ';
@@ -190,11 +190,11 @@ string prover::format(const termset& l, bool json) {
 	return ss.str();
 }
 /*
-void prover::printterm_substs(termid id, const substs & s) {
+void prover::printterm_subs(termid id, const subs & s) {
 	const term& p = *id;
 	dout << dstr(p.p) << L'(';
 	if (p.s) {
-		printterm_substs(p.s, s);
+		printterm_subs(p.s, s);
 		dout << L' ';
 	}
 	if(s.find(p.p) != s.end()) {
@@ -202,24 +202,24 @@ void prover::printterm_substs(termid id, const substs & s) {
 	}
 	if (p.o) {
 		dout << L',';
-		printterm_substs(p.o, s);
+		printterm_subs(p.o, s);
 	}
 	dout << L')';
 }
 
-void prover::printl_substs(const termset& l, const substs & s) {
+void prover::printl_subs(const termset& l, const subs & s) {
 	auto x = l.begin();
 	while (x != l.end()) {
-		printterm_substs(*x, s);
+		printterm_subs(*x, s);
 		if (++x != l.end())
 			dout << L',';
 	}
 }
 
-void prover::printr_substs(ruleid r, const substs & s) {
-	printl_substs(kb.body()[r], s);
+void prover::printr_subs(ruleid r, const subs & s) {
+	printl_subs(kb.body()[r], s);
 	dout << L" => ";
-	printterm_substs(kb.head()[r], s);
+	printterm_subs(kb.head()[r], s);
 }
 */
 string prover::formatr(ruleid r, bool json) {
@@ -277,20 +277,19 @@ pobj term::json(const prover& pr) const {
 }
 #endif
 
-string prover::fsubsts(const prover::ground& g) {
-	substs s;
+string prover::fsubs(const prover::ground& g) {
+	subs s;
 	for (auto x : g)
-		if (x.second)
-			for (auto y : *x.second)
-				//s[y.first] = y.second;
-				s.emplace(y.first, y.second);
+		for (auto y : x.second)
+			//s[y.first] = y.second;
+			s.emplace(y.first, y.second);
 	return prover::formats(s);
 }
 
 void prover::printe() {
 	for (auto y : e)
 		for (auto x : y.second) {
-			dout << indent() << format(x.first) << " under subst: " << fsubsts(x.second) << L" <= " << endl;
+			dout << indent() << format(x.first) << " under subst: " << fsubs(x.second) << L" <= " << endl;
 			TRACE(
 				MARPA(if (x.second.size() > 1))
 				printg(x.second);
@@ -362,7 +361,7 @@ pobj prover::json(const termset& ts) const {
 }
 #endif
 /*
-pobj prover::json(const substs & s) const {
+pobj prover::json(const subs & s) const {
 	psomap_obj o = mk_somap_obj();
 	for (auto x : s) (*o->MAP())[dstr(x.first)] = x.second->json(*this);
 	return o;

@@ -31,29 +31,13 @@ bool prover::euler_path(shared_ptr<proof>& _p) {
 	termid t = heads[p.rule];
 	if (!t) return false;
 	const term& rt = *t;
-//	while ((ep = ep->prev))
-//			if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
-//				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-	if (p.s) {
-		substs& ps = *p.s;
+	if (!p.s.empty()) {
 		while ((ep = ep->prev))
-			if (ep->s) {
-				if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt, ps))
-					{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-			} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt, ps))
+			if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
 				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 	} else while ((ep = ep->prev))
-		if (ep->s) {
-			if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt))
-				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-		} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt))
+		if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt))
 			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-
-//	ep = _p;
-//	while (ep->prev) ep = ep->prev;
-//	for (auto x : bodies[ep->rule])
-//		if (evaluate(*x, ps))
-//			return true;
 	return false;
 }
 
@@ -67,7 +51,7 @@ termid prover::list_next(termid cons, proof& p) {
 	setproc(L"list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
-	do_query( ts, &*p.s);
+	do_query( ts, &p.s);
 	if (e.find(rdfrest) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdfrest])
@@ -84,7 +68,7 @@ termid prover::list_first(termid cons, proof& p) {
 	setproc(L"list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
-	do_query( ts, &*p.s);
+	do_query( ts, &p.s);
 	if (e.find(rdffirst) == e.end()) return 0;
 	termid r = 0;
 	for (auto x : e[rdffirst])
@@ -234,7 +218,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid o = tmpvar();
 		ts[0] = make(rdfsdomain, p, t.o);
 		ts[1] = make(p, t.s, o);
-		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, substs(), 0, true));
+		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, subs(), 0, true));
 	}
 	*/
 	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
@@ -247,10 +231,10 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, substs()));
+		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
 	}
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
-		substs s;
+		subs s;
 		termset ts(1);
 		termid p = tmpvar();
 		termid o = tmpvar();
@@ -262,7 +246,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 			std::cout << "\n\nYAY!!\n\n";
 			ts[0] = make(np, t.s, o);
 			copy.e.clear();
-			substs s;
+			subs s;
 			copy.do_query(ts, &s);
 			if (copy.e.size() > 0) {
 				std::cout << "\n\nYay even more\n\n";
@@ -317,7 +301,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
-		MARPA(substs.push_back(*p->s));
+		MARPA(subs.push_back(*p->s));
 		if (!(t = (EVALPS(r, p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
@@ -334,7 +318,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	auto body = bodies[frame.rule];
 	size_t src = 0;
 	// if we still have some terms in rule body to process
-#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
+#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src; 
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
@@ -345,20 +329,15 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		else {
 #else
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-		if (frame.s) {
-			substs& ps = *frame.s;
+		if (!frame.s.empty()) {
 			for (auto rule : rit->second) {
-				if (unify(t, ps, heads[rule], termsub))
+				if (unify(t, frame.s, heads[rule], termsub))
 					queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-				termsub.clear();
-				++src; 
 			}
 		}
-		else for (auto rule : rit->second)
-			if (unify(t, heads[rule], termsub)) {
+		else for (auto rule : rit->second) {
+			if (unify(t, heads[rule], termsub)) 
 				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-				termsub.clear();
-				++src; 
 			}
 #endif
 #ifdef PREDVARS
@@ -371,19 +350,19 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
 		ruleid rl = frame.rule;
 		r->src = ppr.src;
-		r->s = make_shared<substs>(*ppr.s);
-		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s);
+		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s = ppr.s);
 		++r->term_idx;
 		step(r);
 	}
 	return frame.next;
 }
 
+#ifdef PREDVARS
 void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
 {
 	proof& frame = *_p;
 	if (frame.s) {
-		substs& ps = *frame.s;
+		subs& ps = *frame.s;
 		for (auto rule : candidates) {
 			if (unify(t, ps, heads[rule], termsub))
 				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
@@ -398,13 +377,13 @@ void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proo
 			++src;
 		}
 }
-
+#endif
 prover::ground prover::proof::g(prover* p) const {
 	if (!creator) return ground();
 	ground r = creator->g(p);
-	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), nullptr);
+	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), subs());
 	else if (creator->term_idx != p->bodies[creator->rule].size()) {
-		if (p->bodies[rule].empty()) r.emplace_back(rule, nullptr);
+		if (p->bodies[rule].empty()) r.emplace_back(rule, subs());
 	} else if (!p->bodies[creator->rule].empty()) r.emplace_back(creator->rule, creator->s);
 	return r;	
 }
@@ -546,17 +525,17 @@ prover::termset prover::qdb2termset(const qdb &q_) {
 }
 
 
-void prover::query(const qdb& q_, substs * s) {
+void prover::query(const qdb& q_, subs * s) {
 	const termset t = qdb2termset(q_);
 	query(t, s);
 }
 
-void prover::do_query(const qdb& q_, substs * s) {
+void prover::do_query(const qdb& q_, subs * s) {
 	termset t = qdb2termset(q_);
 	do_query(t, s);
 }
 
-void prover::query(const termset& goal, substs * s) {
+void prover::query(const termset& goal, subs * s) {
 	TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	auto duration = do_query(goal, s);
 //	TRACE(dout << KYEL << "Evidence:" << endl);
@@ -573,7 +552,7 @@ void prover::unittest() {
 	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
 	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
 	prover &p = *new prover(kb, false);
-//	substs s1, s2;
+//	subs s1, s2;
 //	termid xx = p.make(x, p.make(x,0,0), p.make(x,0,0));
 //	termid aa = p.make(a, p.make(x,0,0), p.make(x,0,0));
 //	for (uint n = 0; n < 2; ++n) {
@@ -591,14 +570,14 @@ int prover::do_query(const termid goal)
 {
 	termset query;
 	query.emplace_back(goal);
-	substs s;
+	subs s;
 	return do_query(query, &s);
 }
 
-int prover::do_query(const termset& goal, substs * s) {
+int prover::do_query(const termset& goal, subs * s) {
 //	setproc(L"do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
-	if (s) p->s = make_shared<substs>(*s);
+	if (s) p->s = *s;
 	queue.push(p);
 	
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
@@ -669,7 +648,7 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 	do_query(query);
 	prover::termids r;
 	int count=0;
-	for (auto x : substss) {
+	for (auto x : subss) {
 		auto binding_it = x.find(var->p);
 		if (binding_it != x.end()) {
 			r.push_back((*binding_it).second);
@@ -678,7 +657,7 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 			if(stop_at && stop_at == count++) break;
 		}
 	}
-	substss.clear();
+	subss.clear();
 	e.clear();
 	return r;
 }
