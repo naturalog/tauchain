@@ -82,7 +82,7 @@ public:
 	prover ( string filename );
 	prover ( const prover& p );
 	termset qdb2termset(const qdb &q_);
-	int do_query(const termid goal);
+	int do_query(const termid goal, subs* s = 0);
 	int  do_query(const termset& goal, subs* s = 0);
 	void do_query(const qdb& goal, subs * s = 0);
 	void query(const termset& goal, subs * s = 0);
@@ -92,7 +92,6 @@ public:
 	typedef std::list<std::pair<ruleid, subs>> ground;
 	typedef std::map<nodeid, std::list<std::pair<termid, ground>>> evidence;
 	evidence e;
-	std::vector<subs> subss;
 	termid tmpvar();
 	termid make(pnode p, termid s = 0, termid o = 0);
 	termid make(nodeid p, termid s = 0, termid o = 0);
@@ -125,13 +124,14 @@ public:
 	typedef std::vector <termid> termids;
 
 	nodeids get_list(nodeid head);
-	termids askts(termid var, termid s, pnode p, termid o, int stop_at=0);
-	nodeids askns(termid var, termid s, pnode p, termid o, int stop_at=0);
-	nodeids ask4ss(pnode p, pnode o, int stop_at = 0);
-	nodeids ask4os(pnode s, pnode p, int stop_at = 0);
-	nodeid ask1o(pnode s, pnode p);
-	nodeid ask1s(pnode p, pnode o);
-	termid ask1ot(pnode s, pnode p);
+	bool ask(termid s, nodeid p, termid o);
+	termids askt(termid s, nodeid p, termid o, size_t stop_at=0);
+	nodeids askn(termid s, nodeid p, termid o, size_t stop_at=0);
+	nodeids askns(nodeid p, nodeid o, size_t stop_at = 0);
+	nodeids askno(nodeid s, nodeid p, size_t stop_at = 0);
+	nodeid askn1o(nodeid s, nodeid p);
+	nodeid askn1s(nodeid p, nodeid o);
+	termid askt1o(nodeid s, nodeid p);
 	nodeid force_one_n(nodeids r);
 	termid force_one_t(termids r);
 
