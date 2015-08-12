@@ -310,12 +310,10 @@ void prover::pushev(shared_ptr<proof> p) {
 
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
-#define CONT(x) { _p = (x).next; if (!_p) return 0; goto begin; }
-begin:
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
+	if (euler_path(_p)) return _p->next;
 	const proof& frame = *_p;
-	if (euler_path(_p)) CONT(frame);//
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto body = bodies[frame.rule];
 	size_t src = 0;
@@ -324,11 +322,27 @@ begin:
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
-		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) CONT(frame);// return frame.next;
-		for (auto rule : rit->second) {
-			if (unify(t, frame.s, heads[rule], termsub))
-				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+#ifdef PREDVARS
+		if (t->p < 0)//ISVAR
+			for(auto rulelst: kb.r2id)
+				step_in(src, rulelst.second, _p, t);
+		else {
+#else
+		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
+		if (!frame.s.empty()) {
+			for (auto rule : rit->second) {
+				if (unify(t, frame.s, heads[rule], termsub))
+					queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+			}
 		}
+		else for (auto rule : rit->second) {
+			if (unify(t, heads[rule], termsub)) 
+				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+			}
+#endif
+#ifdef PREDVARS
+		}
+#endif
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
@@ -340,8 +354,7 @@ begin:
 		++r->term_idx;
 		step(r);
 	}
-	CONT(frame);//return frame.next;
-//	return 0;
+	return frame.next;
 }
 
 #ifdef PREDVARS
