@@ -302,7 +302,6 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
-		MARPA(subs.push_back(*p->s));
 		if (!(t = (EVALPS(r, p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
@@ -567,12 +566,11 @@ void prover::unittest() {
 	delete &p;
 }
 
-int prover::do_query(const termid goal)
+int prover::do_query(const termid goal, subs * s)
 {
 	termset query;
 	query.emplace_back(goal);
-	subs s;
-	return do_query(query, &s);
+	return do_query(query, s);
 }
 
 int prover::do_query(const termset& goal, subs * s) {
@@ -639,33 +637,58 @@ prover::ruleid prover::ruleset::add(termid t) {
 	return add(t, ts);
 }
 
+
+bool prover::ask(termid s, nodeid p, termid o) {
+	return askt(s, p, o, 1).size();
+}
+
 /*query, return termids*/
-prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_at) {
-	assert(var);assert(s);assert(p);assert(o);
+prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
+	prover::termids r;
+	assert(s);assert(p);assert(o);
 	setproc(L"ask");
+
 	termid question = make(p, s, o);
 	termset query;
 	query.emplace_back(question);
-	do_query(query);
-	prover::termids r;
-	int count=0;
-	for (auto x : subss) {
-		auto binding_it = x.find(var->p);
-		if (binding_it != x.end()) {
-			r.push_back((*binding_it).second);
-			TRACE(dout << " result:")
-			TRACE(prints(x);)
-			if(stop_at && stop_at == count++) break;
+
+	subs dummy;
+	do_query(query, &dummy);
+
+	std::vector<termid> vars;
+	if (s->p < 0) vars.push_back(s);
+	if (o->p < 1) vars.push_back(o);
+	//ISVAR
+
+	for (auto ei  : e)
+	{
+		for (auto x: ei.second)
+		{
+			for (auto g: x.second)
+			{
+				subs s = g.second;
+				for (auto var:vars) {
+					if (s.at(var->p)) {
+						auto v = s[var->p];
+						TRACE(dout << " match:");
+						TRACE(dout << v << " ");
+						r.push_back(v);
+						if (stop_at && r.size() >= stop_at) {
+							e.clear();
+							return r;
+						}
+					}
+				}
+			}
 		}
 	}
-	subss.clear();
+
 	e.clear();
 	return r;
 }
 
-/*askts wrapper*/
-prover::nodeids prover::askns(termid var, termid s, pnode p, termid o, int stop_at) {
-	auto r = askts(var, s, p, o, stop_at);
+prover::nodeids prover::askn(termid s, nodeid p, termid o, size_t stop_at) {
+	auto r = askt(s, p, o, stop_at);
 	prover::nodeids rr;
 	for (auto rrr:r)
 		rr.push_back(rrr->p);
@@ -673,44 +696,44 @@ prover::nodeids prover::askns(termid var, termid s, pnode p, termid o, int stop_
 }
 
 /*query for subjects*/
-prover::nodeids prover::ask4ss(pnode p, pnode o, int stop_at) {
+prover::nodeids prover::askns(nodeid p, nodeid o, size_t stop_at) {
     assert(p && o);
     auto ot = make(o);
     assert (ot);
     termid s_var = tmpvar();
 	assert(s_var);
-	return askns(s_var, s_var, p, ot, stop_at);
+	return askn(s_var, p, ot, stop_at);
 }
 
 /*query for objects*/
-prover::nodeids prover::ask4os(pnode s, pnode p, int stop_at) {
+prover::nodeids prover::askno(nodeid s, nodeid p, size_t stop_at) {
     assert(s && p);
     auto st = make(s);
     assert (st);
     termid o_var = tmpvar();
 	assert(o_var);
-	return askns(o_var, st, p, o_var, stop_at);
+	return askn(st, p, o_var, stop_at);
 }
 
 /*query for one object*/
-nodeid prover::ask1o(pnode s, pnode p) {
-    return force_one_n(ask4os(s, p, 1));
+nodeid prover::askn1o(nodeid s, nodeid p) {
+    return force_one_n(askno(s, p, 1));
 }
 
 /*query for one subject*/
-nodeid prover::ask1s(pnode p, pnode o) {
-	return force_one_n(ask4ss(p, o, 1));
+nodeid prover::askn1s(nodeid p, nodeid o) {
+	return force_one_n(askns(p, o, 1));
 }
 
 /*query for one object term*/
-termid prover::ask1ot(pnode s, pnode p) {
+termid prover::askt1o(nodeid s, nodeid p) {
     assert(s);
     assert(p);
-    termid o_var = tmpvar();
-    assert(o_var);
-    auto xxs = make(s);
+    termid xxs = make(s);
+	termid o_var = tmpvar();
     assert (xxs);
-    return force_one_t(askts(o_var, xxs, p, o_var, 1));
+    assert(o_var);
+    return force_one_t(askt(xxs, p, o_var, 1));
 }
 
 nodeid prover::force_one_n(nodeids r) {

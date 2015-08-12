@@ -1,8 +1,6 @@
 /*
 http://www.w3.org/2000/10/swap/grammar/bnf
 http://www.w3.org/2000/10/swap/grammar/n3.n3
-
-doesnt do proofs.
 */
 
 #include <iostream>
