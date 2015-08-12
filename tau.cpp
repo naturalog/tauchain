@@ -27,7 +27,26 @@ std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 
 
-/*return value same as parse_xxx: 0: error, 1: incomplete input, 2: success*/
+/*
+ *
+ * return value of parse functions: 0: error, 1: incomplete input, 2: success
+ *
+ * */
+
+
+#ifndef NOPARSER
+int parse_nq(qdb &kb, qdb &q, istream &f)
+	try {
+		(readqdb(is));
+	} catch (std::exception& ex) {
+		derr << L"Error reading quads: " << ex.what() << std::endl;
+	}
+	return nullptr;
+}
+#endif
+
+
+
 void parse(qdb &kb, qdb &q, istream &f , std::string fn, std::string fmt)
 {
 	boost::algorithm::to_lower(fmt);
@@ -127,7 +146,7 @@ int main ( int argc, char** argv ) {
 	std::vector<std::string> args;
 
 	try {
-		TCLAP::CmdLine cmd("Tau command line", ' ', "0.0");
+		TCLAP::CmdLine cmd("Tau-Chain by http://idni.org. ", ' ', "0.0");
 
 		TCLAP::ValueArg <int> tc_level("l", "level", "level", false, 1, "", cmd);
 
