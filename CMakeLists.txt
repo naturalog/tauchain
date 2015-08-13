@@ -36,14 +36,12 @@ find_package(Boost REQUIRED regex)
 add_executable(tau ${SOURCE_FILES})
 add_executable(m-tau ${MARPA_FILES})
 
-set(COMMON_FLAGS "${TCLAP} -I${Boost_INCLUDE_DIRS} -DPREDVARS")#
+set(COMMON_FLAGS "${TCLAP} -I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS} -ggdb -DDEBUG -O3 -DPREDVARS")#
 
 SET_TARGET_PROPERTIES(tau   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}" )
-SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -I${Boost_INCLUDE_DIRS} -I${MARPA_DIST}")
+SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "-DPREDVARS ${COMMON_FLAGS} -I${Boost_INCLUDE_DIRS} -I${MARPA_DIST} -Dwith_marpa ")
 
-SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -I${MARPA_DIST} -DDEBUG -Dwith_marpa -ggdb")
 target_link_libraries(m-tau PRIVATE "-L${MARPA_DIST}/.libs -lmarpa")
-
 target_link_libraries(m-tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_link_libraries(  tau PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 #target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS} ${MARPA_DIST})

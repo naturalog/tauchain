@@ -5,7 +5,9 @@
     Created on: Apr 28, 2015
         Author: Ohad Asor
 */
+#ifdef TIMER
 #include <chrono>
+#endif
 #include <deque>
 #include <queue>
 #include <climits>

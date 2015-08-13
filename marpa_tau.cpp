@@ -49,43 +49,55 @@ public:
 typedef std::shared_ptr <terminal> pterminal;
 
 struct MarpaIris{
-    pnode iri(const std::string s)
+    nodeid iri(const std::string s)
     {
-        return mkiri(pstr(prefix + ws(s)));
+        return dict[mkiri(pstr(prefix + ws(s)))];
     }
     string prefix = L"http://idni.org/marpa#";
-    const pnode has_value = iri("has_value");
-    const pnode is_parse_of = iri("is_parse_of");
-    const pnode list_of = iri("list_of");
-    const pnode separator = iri("separator");
-    const pnode arg0 = iri("arg0");
-    const pnode arg1 = iri("arg1");
-    const pnode arg2 = iri("arg2");
+    const nodeid has_value = iri("has_value");
+    const nodeid is_parse_of = iri("is_parse_of");
+    const nodeid list_of = iri("list_of");
+    const nodeid separator = iri("separator");
+    const nodeid arg0 = iri("arg0");
+    const nodeid arg1 = iri("arg1");
+    const nodeid arg2 = iri("arg2");
 };
 
 MarpaIris *marpa = 0;
 
+const string RDFS = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+const string BNF  = L"http://www.w3.org/2000/10/swap/grammar/bnf#";
+
+nodeid iri(const string prefix, const string s)
+{
+    return dict[mkiri(pstr(prefix + s))];
+}
+
 struct Marpa {
     Marpa_Grammar g;
     bool precomputed = false;
-    // everything in the grammar is either a terminal, defined by a regex, a "literal" - a simple string, or a rule
+    // everything in the grammar is either a terminal, defined by a regex
     map <sym, pterminal> terminals;
+    //, a "literal" - a simple string,
     map <sym, string> literals;
-    map <nodeid, sym> done;//tracks rules and terminals..i might rework this
+    ///or a rule
     map <rule, sym> rules;
-    prover *prvr, *prvr2;/*prvr is the one we are called from. we will use prvr2 for querying the grammar, so that prvr doesnt get messed up*/
-    string whitespace = L""; // i use this for comment regex, comments are processed kinda specially so they dont have to pollute the grammar
+    //done tracks both rules and terminals
+    map <nodeid, sym> done;
+    /*prvr is the one we are called from. we will use prvr2 for querying the grammar, so that prvr doesnt get messed up*/
+    prover *prvr, *prvr2;
+    // i use this for comment regex, comments are processed kinda specially so they dont have to pollute the grammar
+    string whitespace = L"";
     const nodeid pcomma = dict[mkliteral(pstr(L","), 0, 0)];
-    const pnode rdfs_nil = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#nil"));
-    const pnode rdfs_rest = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#rest"));
-    const pnode rdfs_first = mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#first"));
-    const pnode bnf_matches = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#matches"));
-    const pnode bnf_document = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#document"));
-    const pnode bnf_whitespace = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace"));
-    const pnode bnf_zeroormore = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#zeroOrMore"));
-    const pnode bnf_mustBeOneSequence = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence"));
-    const pnode bnf_commaSeparatedListOf = mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf"));
-
+    const nodeid rdfs_nil = iri(RDFS, L"nil");
+    const nodeid rdfs_rest = iri(RDFS, L"rest"));
+    const nodeid rdfs_first = iri(RDFS, L"first"));
+    const nodeid bnf_matches = iri(BNF, L"matches"));
+    const nodeid bnf_document = iri(BNF, L"document"));
+    const nodeid bnf_whitespace = iri(BNF, L"whiteSpace"));
+    const nodeid bnf_zeroormore = iri(BNF, L"zeroOrMore"));
+    const nodeid bnf_mustBeOneSequence = iri(BNF, L"mustBeOneSequence"));
+    const nodeid bnf_commaSeparatedListOf = iri(BNF, L"commaSeparatedListOf"));
 
     nodeid sym2resid(sym s) {
         for (auto it = done.begin(); it != done.end(); it++)
@@ -146,7 +158,7 @@ struct Marpa {
         prvr = prvr_;
         prvr2 = new prover(*prvr);
         /*bnf:whitespace is a property of bnf:language*/
-        nodeid whitespace_ = prvr2->ask1o(language, bnf_whitespace);
+        nodeid whitespace_ = prvr2->askn1(language, bnf_whitespace);
         if (whitespace_) {
             whitespace = value(whitespace_);
             TRACE(dout << L"whitespace:" << whitespace <<std::endl);
@@ -557,34 +569,34 @@ struct Marpa {
 class N3 {
 public:
 
-    pnode uri(std::string s) {
+    nodeid uri(std::string s) {
         return mkiri(pstr(ws("http://www.w3.org/2000/10/swap/grammar/n3#" + s)));
     }
 
-    pnode n3symbol = uri("symbol");
-    pnode n3subject = uri("subject");
-    pnode n3object = uri("object");
-    pnode n3objecttail = uri("objecttail");
-    pnode n3explicituri = uri("explicituri");
-    pnode n3propertylist = uri("propertylist");
-    pnode n3propertylisttail = uri("propertylisttail");
-    pnode n3expression = uri("expression");
-    pnode n3pathitem = uri("pathitem");
-    pnode n3predicate = uri("predicate");
-    //pnode n3statement_with_dot = uri("statement_with_dot");
-    pnode n3statement = uri("statement");
-    pnode n3declaration = uri("declaration");
-    pnode n3simpleStatement = uri("simpleStatement");
-    pnode n3prefix = uri("prefix");
-    pnode n3qname = uri("qname");
-    pnode n3literal = uri("literal");
-    pnode n3numericliteral = uri("numericliteral");
-    pnode n3string = uri("string");
-    pnode n3boolean = uri("boolean");
-    pnode n3integer = uri("integer");
-    //pnode n3dtlang = uri("dtlang");
-    pnode n3quickvariable= uri("quickvariable");
-    pnode n3formulacontent = uri("formulacontent");
+    nodeid n3symbol = uri("symbol");
+    nodeid n3subject = uri("subject");
+    nodeid n3object = uri("object");
+    nodeid n3objecttail = uri("objecttail");
+    nodeid n3explicituri = uri("explicituri");
+    nodeid n3propertylist = uri("propertylist");
+    nodeid n3propertylisttail = uri("propertylisttail");
+    nodeid n3expression = uri("expression");
+    nodeid n3pathitem = uri("pathitem");
+    nodeid n3predicate = uri("predicate");
+    //nodeid n3statement_with_dot = uri("statement_with_dot");
+    nodeid n3statement = uri("statement");
+    nodeid n3declaration = uri("declaration");
+    nodeid n3simpleStatement = uri("simpleStatement");
+    nodeid n3prefix = uri("prefix");
+    nodeid n3qname = uri("qname");
+    nodeid n3literal = uri("literal");
+    nodeid n3numericliteral = uri("numericliteral");
+    nodeid n3string = uri("string");
+    nodeid n3boolean = uri("boolean");
+    nodeid n3integer = uri("integer");
+    //nodeid n3dtlang = uri("dtlang");
+    nodeid n3quickvariable= uri("quickvariable");
+    nodeid n3formulacontent = uri("formulacontent");
 
     prover *prvr;
     qdb *dest;
@@ -627,7 +639,7 @@ public:
         if (!marpa)marpa=new MarpaIris();
     }
 
-    nodeid q(nodeid s, pnode p)
+    nodeid q(nodeid s, nodeid p)
     {
         return ask1(prvr, s, p);
     }
@@ -905,7 +917,7 @@ public:
 
 
 
-int parse_natural3(qdb kb&, qdb &q, std::istream &f)
+int parse_natural3(qdb kb&, qdb &q, std::wistream &f)
 {
     setproc(L"N3");
     strtic prover prvr(*load_quads(L"n3-grammar.nq", false));
