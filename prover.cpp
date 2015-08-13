@@ -262,7 +262,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		if (t0->p > 0) throw std::runtime_error("must be called with variable subject.");
 		void* handle = marpa_parser(this, t1->p, p);
 		pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
-		(*p->s)[t0->p] = make(dict.set(n), 0, 0);
+		p->s[t0->p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
 	else if (t.p == file_contents_iri) {
@@ -272,7 +272,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	    std::ifstream f(fnn);
 	    if (f.is_open())
 		{
-			(*p->s)[t0->p] = make(mkliteral(pstr(load_file(f)), 0, 0));
+			p->s[t0->p] = make(mkliteral(pstr(load_file(f)), 0, 0));
 			r = 1;
 		}
 	}
@@ -284,7 +284,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		string input = *dict[xxx->p].value;
 		string marpa = *dict[xxx2->p].value;
 		termid result = marpa_parse((void*)std::stol(marpa), input);
-		(*p->s)[t0->p] = result;
+		p->s[t0->p] = result;
 		r = 1;
 	}
 	#endif
@@ -322,7 +322,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	// if we still have some terms in rule body to process
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
-		MARPA(if (builtin(t, _p, queue) != -1) return);
+		MARPA(if (builtin(t, _p, queue) != -1) return frame.next);//????
 #ifdef PREDVARS
 		if (t->p < 0)//ISVAR
 			for(auto rulelst: kb.r2id)
@@ -572,9 +572,11 @@ int prover::do_query(const termset& goal, subs * s) {
 		TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	}
 
+#ifdef TIMER
 	using namespace std;
 	using namespace std::chrono;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+#endif
 	lastp = p;
 	while ((p = step(p)));
 //	do {
@@ -583,9 +585,13 @@ int prover::do_query(const termset& goal, subs * s) {
 //		printq(queue);
 //		step(q);
 //	} while (!queue.empty());// && steps < 2e+7);
-
+#ifdef TIMER
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
+#else
+	int duration = 0;
+#endif
+
 	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
 	TRACE(dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
 //	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
