@@ -7,13 +7,13 @@
 */
 #ifdef TIMER
 #include <chrono>
+#include <future>
 #endif
 #include <deque>
 #include <queue>
 #include <climits>
 #include "rdf.h"
 #include "misc.h"
-#include <future>
 #include <functional>
 #include <forward_list>
 //#include <malloc.h>
