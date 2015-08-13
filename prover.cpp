@@ -635,6 +635,10 @@ bool prover::ask(termid s, nodeid p, termid o) {
 	return askt(s, p, o, 1).size();
 }
 
+bool prover::ask(nodeid s, nodeid p, nodeid o) {
+	return askt(make(s, 0, 0), p, make(o, 0, 0), 1).size();
+}
+
 /*query, return termids*/
 prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	prover::termids r;

@@ -127,6 +127,7 @@ public:
 
 	nodeids get_list(nodeid head);
 	bool ask(termid s, nodeid p, termid o);
+	bool ask(nodeid s, nodeid p, nodeid o);
 	termids askt(termid s, nodeid p, termid o, size_t stop_at=0);
 	nodeids askn(termid s, nodeid p, termid o, size_t stop_at=0);
 	nodeids askns(nodeid p, nodeid o, size_t stop_at = 0);
