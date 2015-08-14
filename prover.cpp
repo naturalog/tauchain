@@ -224,8 +224,8 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
 	else if ((
-					 t.p == A // parser kludge
-					 || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
+		 t.p == A // parser kludge
+		 || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		//termset ts(2,0,*alloc);
 		termset ts(2);
 		termid va = tmpvar();
@@ -234,21 +234,14 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
 	}
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
-		subs s;
-		termset ts(1);
-		termid p = tmpvar();
-		termid o = tmpvar();
-		ts[0] = make(rdfsdomain, p, t.o);
 		prover copy(*this); //(Does this copy correctly?)
-		copy.do_query(ts, &s);
-		if (copy.e.size()) {
-			termid np = evaluate(*p, s);
+		auto ps = copy.askt(tmpvar(), rdfsdomain, t.o);
+		for(termid p: ps)
+		{
 			std::cout << "\n\nYAY!!\n\n";
-			ts[0] = make(np, t.s, o);
 			copy.e.clear();
-			subs s;
-			copy.do_query(ts, &s);
-			if (copy.e.size() > 0) {
+			auto xx = copy.askt(t.s, p->p, tmpvar());
+			if (xx.size() > 0) {
 				std::cout << "\n\nYay even more\n\n";
 				//TODO: correctly, so that subqery proof trace not opaque?
 				return 1;
@@ -308,6 +301,7 @@ void prover::pushev(shared_ptr<proof> p) {
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
 }
+	#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src;
 
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
@@ -322,16 +316,19 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return frame.next);//????
-#ifdef PREDVARS
-		if (t->p < 0)//ISVAR
-			for(auto rulelst: kb.r2id)
-				step_in(src, rulelst.second, _p, t);
-		else
-#endif
-		{
-			if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-			step_in(src, kb.r2id[t->p], _p, t);
-		}
+
+                if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
+                if (!frame.s.empty()) {
+                        for (auto rule : rit->second) {
+                                if (unify(t, frame.s, heads[rule], termsub))
+                                        queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+                        }
+                }
+                else for (auto rule : rit->second) {
+                        if (unify(t, heads[rule], termsub))
+                                queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+                        }
+
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
@@ -348,7 +345,6 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 
 void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
 {
-	#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src;
 	proof& frame = *_p;
 	if (!frame.s.empty()) {
 		for (auto rule : candidates) {
