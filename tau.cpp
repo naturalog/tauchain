@@ -92,8 +92,6 @@ typedef std::pair<std::string, std::string> fn_fmt;
 
 int process_args(std::vector<std::string> args)
 {
-	if (args.size() == 0)
-		{}//do interactive quads
 
 	std::vector<fn_fmt>  inputs;
 
@@ -112,7 +110,7 @@ int process_args(std::vector<std::string> args)
 	//now that we have optionally collected a format
 
 	if (inputs.size() == 0)
-	{
+	{//do interactive quads
 		qdb kb, query;
 		parse(kb, query, std::wcin, "", fmt);
 		prover prvr(kb);

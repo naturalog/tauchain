@@ -290,10 +290,12 @@ string prover::fsubs(const prover::ground& g) {
 void prover::printe() {
 	for (auto y : e)
 		for (auto x : y.second) {
-			dout << indent() << format(x.first) << " under subst: " << fsubs(x.second) << L" <= " << endl;
-			TRACE(
-				MARPA(if (x.second.size() > 1))
-				printg(x.second);
+			dout << indent() << format(x.first) << " under subst: " << fsubs(x.second);
+			TRACE(MARPA(if (x.second.size() > 1))
+				  {
+						  dout << L" <= " << endl;
+						  printg(x.second);
+				  }
 				dout << endl
 			);
 		}

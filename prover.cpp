@@ -654,6 +654,8 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	if (o->p < 1) vars.push_back(o);
 	//ISVAR
 
+	printe();
+
 	for (auto ei  : e)
 	{
 		for (auto x: ei.second)
@@ -662,6 +664,7 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 			{
 				subs env = g.second;
 				for (auto var:vars) {
+					dout << var << " " << var->p << " " << env.size();
 					if (env.find(var->p) != env.end()) {
 						auto v = env[var->p];
 						TRACE(dout << " match:");
