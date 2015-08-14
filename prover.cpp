@@ -309,8 +309,6 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src;
-
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
@@ -328,14 +326,12 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		if (t->p < 0)//ISVAR
 			for(auto rulelst: kb.r2id)
 				step_in(src, rulelst.second, _p, t);
-		else {
-#else
-		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-		step_in(src, rit.second, _p, t);
+		else
 #endif
-#ifdef PREDVARS
+		{
+			if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
+			step_in(src, kb.r2id[t->p], _p, t);
 		}
-#endif
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
@@ -350,22 +346,22 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	return frame.next;
 }
 
-#ifdef PREDVARS
 void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
 {
+	#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src;
 	proof& frame = *_p;
 	if (!frame.s.empty()) {
-		for (auto rule : rit->second) {
+		for (auto rule : candidates) {
 			if (unify(t, frame.s, heads[rule], termsub))
 				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
 		}
 	}
-	else for (auto rule : rit->second) {
+	else for (auto rule : candidates) {
 		if (unify(t, heads[rule], termsub))
 			queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
 		}
 }
-#endif
+
 prover::ground prover::proof::g(prover* p) const {
 	if (!creator) return ground();
 	ground r = creator->g(p);
@@ -664,10 +660,10 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 		{
 			for (auto g: x.second)
 			{
-				subs s = g.second;
+				subs env = g.second;
 				for (auto var:vars) {
-					if (s.at(var->p)) {
-						auto v = s[var->p];
+					if (env.find(var->p) != env.end()) {
+						auto v = env[var->p];
 						TRACE(dout << " match:");
 						TRACE(dout << v << " ");
 						r.push_back(v);
