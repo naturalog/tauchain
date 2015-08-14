@@ -139,6 +139,8 @@ struct Marpa {
     }
 
     Marpa(prover *prvr_, nodeid language) {
+        assert(language);
+        assert(prvr_);
         /*init marpa*/
         if (marpa_check_version(MARPA_MAJOR_VERSION, MARPA_MINOR_VERSION, MARPA_MICRO_VERSION) != MARPA_ERR_NONE)
             throw std::runtime_error("marpa version...");
@@ -165,6 +167,7 @@ struct Marpa {
         }
         /*so is bnf:document, the root rule*/
         nodeid root = prvr2->askn1o(language, bnf_document);
+        assert(root);
         sym start = add(root);
         start_symbol_set(start);
         delete prvr2;
@@ -172,7 +175,7 @@ struct Marpa {
 
     //create marpa symbols and rules from grammar description in rdf
     sym add(nodeid thing) {
-
+        assert(thing);
 		//what we are adding
         string thingv = value(thing);
         TRACE(dout << "thingv:" << thingv << std::endl);
@@ -942,6 +945,7 @@ int parse_natural3(qdb &kb, qdb &q, std::wistream &f, string base)
 
         static prover grmr(gkb);
         TRACE(dout << "grammar loaded." << std::endl);
+        TRACE(dout << std::endl << std::endl << "grmr:" << std::endl << grmr.formatkb());
         parser = new Marpa(&grmr, dict[mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"))]);
     }
 
@@ -969,7 +973,7 @@ int parse_natural3(qdb &kb, qdb &q, std::wistream &f, string base)
 
 
 /*builtins*/
-
+/*
 void *marpa_parser(prover *p, nodeid language) {
     return (void*)new Marpa(p, language);
 }
@@ -984,8 +988,7 @@ string load_file(std::ifstream &f) {
     std::string str((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     return ws(str);
 }
-
-
+*/
 
 
 /*

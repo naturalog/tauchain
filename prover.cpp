@@ -256,8 +256,9 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 	}
 	#ifdef with_marpa
+		/*
 	else if (t.p == marpa_parser_iri && t.s && t.o)
-	/* ?X is a parser created from grammar */
+	// ?X is a parser created from grammar
 	{
 		if (t0->p > 0) throw std::runtime_error("must be called with variable subject.");
 		void* handle = marpa_parser(this, t1->p, p);
@@ -277,7 +278,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}
 	}
 	else if (t.p == marpa_parse_iri) {
-	/* ?X is a parse of (input with parser) */
+	// ?X is a parse of (input with parser)
 		if (t0->p > 0) throw std::runtime_error("marpa_parse must be called with variable subject.");
 		termid xxx = t1->s;
 		termid xxx2 = t1->o;
@@ -286,7 +287,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid result = marpa_parse((void*)std::stol(marpa), input);
 		p->s[t0->p] = result;
 		r = 1;
-	}
+	}*/
 	#endif
 	if (r == 1) 
 		queue.push([p, id, this](){

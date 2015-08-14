@@ -29,7 +29,7 @@ set(SOURCE_FILES
 )
 
 set(MARPA_FILES ${SOURCE_FILES} marpa_tau.cpp)
-set(MARPA_DIST ${CMAKE_SOURCE_DIR}/libmarpa-dist/dist/)
+set(MARPA_DIST ${CMAKE_SOURCE_DIR}/libmarpa/dist/)
 set(TCLAP "-I${CMAKE_SOURCE_DIR}/tclap/include")
 find_package(Boost REQUIRED regex)
 
