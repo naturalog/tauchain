@@ -1,0 +1,24 @@
+before_script:
+  - apt-get update -qq
+  - git submodule init
+  - git submodule update
+  - ls
+  - cat .gitmodules
+  - apt-get install  -y build-essential autoconf automake libtool
+  - cd libmarpa/dist; rm ./configure; autoreconf; ./configure; make
+  - cd ../..
+  - apt-get install -y -qq valgrind cmake
+  - apt-get install -y -qq libboost-regex-dev libboost-dev 
+
+
+make_tau:
+  script:
+    - make ; valgrind ./tau --nq examples/einstein.n3
+
+cmake_tau:
+  script:
+    - mkdir build; cd build; cmake ..; make tau ; valgrind ./tau --nq ../examples/einstein.n3
+
+cmake_m-tau:
+  script:
+    - mkdir build; cd build; cmake ..; make m-tau ; cd ..; LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so valgrind build/m-tau --nq examples/einstein.n3
