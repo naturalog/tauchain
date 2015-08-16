@@ -16,7 +16,10 @@
 
 
 #define ever ;;
-
+/*
+boost::interprocess::managed_heap_memory* segment;
+allocator_t* alloc;
+*/
 std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 std::wistream& din = std::wcin;
@@ -38,6 +41,7 @@ std::vector<string> tauFormats = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"}
 
 qdb merge_qdbs(const std::vector<qdb> qdbs)
 {
+	//std::cout << "merge_qdbs()" << std::endl;
         if (qdbs.size() > 1)
                 dout << L"warning, bnode renaming not implemented";
         qdb r;
@@ -49,13 +53,17 @@ qdb merge_qdbs(const std::vector<qdb> qdbs)
 }
 
 std::vector<qdb> kbs;
-prover *tauProver;
+prover *tauProver;//i think this wont work; yea im trying to figure out the correct way // create it later, in a func
+/*
+btw, do you still have the credentials to your vps? i can get them
+i would try to set up the CI there, CI?tests automatic ah cool, yea ill get the creds in just a bit yea no hurry; now the reason i have it a global like this is because we add to an existing kb, like "kb add file" doesnt clear the kb and make a new, it just appends filewell, if you want a global, make it a just a pointer.. hmm ok, like how?
+*/
 
 #ifndef NOPARSER
 int parse_nq(qdb &r, std::wistream &f)
 {
         try {
-                readqdb(r, f);
+                readqdb(r, f);//this?
         } catch (std::exception& ex) {
                 derr << L"Error reading quads: " << ex.what() << endl;
                 return 0;
@@ -65,11 +73,17 @@ int parse_nq(qdb &r, std::wistream &f)
 #endif
 
 
+//the improtant bit here is that the called parse functions and this too should return,
+//as i wrote, 0 on fail, 1 on incomplete input, 2 on success, and either put something
+//into kb and q or not...thats one way, to report failure.
+
+//ok i need to change this up just a bit, thats why i held it off til now//sure
+//just remember that n3 parser should handle the fins itself
+//sure i was just going to have fin. be part of the parsing anyway (as opposed to parsing it up here)ok
 int parse(qdb &r, std::wistream &f, string fmt)
 {
 #ifdef with_marpa
         if(fmt == L"natural3" || fmt == L"n3")
-		dout << "There's actually no such thing as natural3" << endl;
                 return parse_natural3(r, f);
         else
 #endif
@@ -80,6 +94,8 @@ int parse(qdb &r, std::wistream &f, string fmt)
 		dout << L"Cannot read JSON-LD format" << endl;
 		return 0;
 	}
+/*              else
+                jsonld*/
  
        else
                 throw std::runtime_error("unknown format");
@@ -161,6 +177,7 @@ bool _checkOption(string s){
 		dash = 2;
 	}
 
+//ah thats it
 	string _option = s.substr(dash,s.length()-dash);
 
 	for( std::pair<string,bool*> x : tauFlags){
@@ -362,6 +379,7 @@ void tauShell(){
 void tauHelp(string token){
 	dout << L"No command '" << token << L"'." << endl;
 }
+//  function_name()  int  f(int x, int y)
 int main ( int argc, char** argv) {
 	dict.init();
 
