@@ -69,9 +69,10 @@ int parse_nq(qdb &r, std::wistream &f)
 int parse(qdb &r, std::wistream &f, string fmt)
 {
 #ifdef with_marpa
-        if(fmt == L"natural3" || fmt == L"n3")
-		dout << "There's actually no such thing as natural3" << endl;
-                return parse_natural3(r, f);
+        if(fmt == L"natural3" || fmt == L"n3") {
+			dout << "Supported is a subset of n3 with our fin notation" << endl;
+			return parse_natural3(r, f);
+		}
         else
 #endif
         if(fmt == L"natq" || fmt == L"nq" || fmt == L"nquads")
@@ -350,7 +351,7 @@ void tau_shell(){
 	dout << L"Tau> ";
 	string in;
 
-	if (std::wcin.rdstate() && std::wcin.eofbit) assert(false); 
+	if (std::wcin.rdstate() && std::wcin.eofbit) std::exit(0);
 	getline(std::wcin, in);
 	std::wistringstream i(in);
 

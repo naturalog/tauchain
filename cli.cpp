@@ -4,8 +4,8 @@
 
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
 
-jsonld_options opts;
 #ifdef JSON
+jsonld_options opts;
 #include "json_spirit.h"
 pobj convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );

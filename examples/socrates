@@ -1,6 +1,8 @@
+kb
 :socrates :a :man .
 { ?x :a :man } => { ?x :a :mortal } .
 fin.
+query
 ?Y :a :mortal .
 fin.
 
