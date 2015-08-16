@@ -304,13 +304,16 @@ void _mode_kb(){
 	}else{
 		string token = readArg();
 		if(dashArg(token,L"clear")){
+			dout << L"clear kb" << endl;
 			clear_kb();
 			return;
 		}
 		else if(dashArg(token,L"set")){
+			dout << L"set kb" << endl;
 			clear_kb();
 		}
 		else if(dashArg(token,L"add")){
+			dout << L"add to kb" << endl;		
 		}else{
 			_argstream.push_front(token);
 			clear_kb();
