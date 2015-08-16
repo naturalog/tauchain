@@ -22,7 +22,7 @@ std::wostream& derr = std::wcerr;
 std::wistream& din = std::wcin;
 
 std::deque<string> _argstream;
-std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
+std::vector<string> _commands = {L"kb", L"query",L"help",L"quit"};
 string _def_format = L"nq";
 
 std::map<string,bool*> _flags = {
@@ -346,7 +346,7 @@ void mode_kb(){
 
 
 
-void tau_shell(){
+void _shell(){
 	dout << L"Tau> ";
 	string in;
 
@@ -360,9 +360,35 @@ void tau_shell(){
 	}
 }
 
-void tau_help(string token){
-	dout << L"No command '" << token << L"'." << endl;
+
+void help(string token){
+	if(L""){
+		dout << L"Help -- commands: help, kb, query, quit." << endl;
+	}else{
+		string help_msg = L"";
+		if(token == L"kb"){
+			help_msg  = L"command 'kb': parse quads into knowledge-base."; 
+		}
+		if(token == L"query"){
+			help_msg = L"command 'query': parse quads into query and run it.";
+		}
+		if(token == L"quit"){
+			help_msg =   L"command 'quit': exit Tau back to shell.";
+		}
+		if(token == L"help"){
+			help_msg = L"command 'help': print commands list with 'help' and get more detailed information with 'help <command>'";
+		}	
+		
+		
+		dout << L"Help -- " << help_msg << endl;
+	}
 }
+
+void no_command(string token){
+	dout << L"No command '" << token << L"'." << endl;
+	help(L"");
+}
+
 int main ( int argc, char** argv) {
 	dict.init();
 
@@ -372,11 +398,20 @@ int main ( int argc, char** argv) {
 
 	for(ever){
 		if(_argstream.size() == 0){
-			tau_shell();
+			_shell();
 		}else{
 			string token = read_arg();
 			if(check_option(token)){
 				continue;
+			}
+			if(token == L"help"){
+				string help_arg = L"";
+				if(_argstream.size() > 0){
+					help_arg = read_arg();
+			
+				}
+				help(help_arg);
+				continue;			
 			}
 			if(token == L"kb"){
 				mode_kb();
@@ -391,7 +426,7 @@ int main ( int argc, char** argv) {
 				break;
 			}
 
-			tau_help(token);
+			no_command(token);
 		}
 		
 	}
