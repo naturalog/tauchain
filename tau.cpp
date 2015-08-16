@@ -360,9 +360,33 @@ void tau_shell(){
 	}
 }
 
-void tau_help(string token){
-	dout << L"No command '" << token << L"'." << endl;
+void help(string help_arg){
+	if(help_arg == L""){
+		dout << L"Help -- commands: kb, query, help, quit; use \"help <command>\" for more detail." << endl;
+	}else{
+		string help_str = L"";
+		if(help_arg == L"kb"){
+			help_str = L"command 'kb': load a knowledge-base.";
+		}
+		else if(help_arg == L"query"){
+			help_str = L"command 'query': load a query and run.";
+		}
+		else if(help_arg == L"help"){
+			help_str = L"command 'help': Tau will help you solve all your problems.";
+		}
+		else if(help_arg == L"quit"){
+			help_str = L"command 'quit': exit Tau back to terminal";
+		}else{
+			dout << "No command \"" << help_arg << "\"." << endl;
+			return;
+		}
+		dout << "Help -- " << help_str << endl;
+		
+		
+	}
 }
+
+
 int main ( int argc, char** argv) {
 	dict.init();
 
@@ -378,6 +402,16 @@ int main ( int argc, char** argv) {
 			if(check_option(token)){
 				continue;
 			}
+			
+			if(token == L"help"){
+				string help_arg = L"";
+				if(_argstream.size() > 0){
+					help_arg = read_arg();
+				}
+				help(help_arg);
+				continue;	
+			}
+			
 			if(token == L"kb"){
 				mode_kb();
 				continue;
@@ -391,7 +425,7 @@ int main ( int argc, char** argv) {
 				break;
 			}
 
-			tau_help(token);
+			dout << "No command \"" << token << "\"." << endl;
 		}
 		
 	}
