@@ -22,19 +22,20 @@ std::wostream& derr = std::wcerr;
 std::wistream& din = std::wcin;
 
 std::deque<string> _argstream;
-std::vector<string> tauCommands = {L"kb", L"query",L"run",L"quit"};
+std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
 string _def_format = L"nq";
 
-std::map<string,bool*> tauFlags = {
+std::map<string,bool*> _flags = {
 	{L"nocolor",&nocolor},
 	{L"deref",&deref},
+	//this one.
 	{L"shorten",&tau_shorten},
 	{L"base",&fnamebase},
 	{L"quads",&quad_in},
 	{L"pause",&_pause}
 };
 
-std::vector<string> tauFormats = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
+std::vector<string> _formats = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
 
 qdb merge_qdbs(const std::vector<qdb> qdbs)
 {
@@ -85,11 +86,11 @@ int parse(qdb &r, std::wistream &f, string fmt)
                 throw std::runtime_error("unknown format");
 }
 
-string _getFormat(string fn){
+string get_format(string fn){
         string fn_lc(fn);
         boost::algorithm::to_lower(fn_lc);
 
-	for (auto x:tauFormats)
+	for (auto x:_formats)
 		if (boost::ends_with(fn_lc, x))
 			return x;
         
@@ -97,11 +98,11 @@ string _getFormat(string fn){
 
 }
 
-bool dashArg(string token, string pattern){
+bool dash_arg(string token, string pattern){
 	return (token == pattern) || (token == L"-" + pattern) || (token == L"--" + pattern);
 }
 
-string readArg(){
+string read_arg(){
 	string ret;
 	if(_argstream.size() != 0){
 		ret = _argstream.at(0);
@@ -112,13 +113,13 @@ string readArg(){
 	return ret;	
 }
 
-bool _isCommand(string s){
+bool is_command(string s){
 	if(s.length() == 0) return false;
 	if(s.at(0) == '-') s = s.substr(1,s.length()-1);
 	if(s.length() == 0) return false;
 	if(s.at(0) == '-') s = s.substr(1,s.length()-1);
 	if(s.length() == 0) return false;
-	for( string x : tauCommands){
+	for( string x : _commands){
 		if(x == s){
 			return true;
 		}
@@ -127,7 +128,7 @@ bool _isCommand(string s){
 	
 }
 
-void switchColor(){
+void switch_color(){
 	if(nocolor){
                 KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
 	}else{
@@ -142,7 +143,7 @@ void switchColor(){
 	}
 }
 
-bool _checkOption(string s){
+bool check_option(string s){
 	if(s.length() == 0){
 		return false;
 	}
@@ -163,15 +164,15 @@ bool _checkOption(string s){
 
 	string _option = s.substr(dash,s.length()-dash);
 
-	for( std::pair<string,bool*> x : tauFlags){
+	for( std::pair<string,bool*> x : _flags){
 		if(x.first == _option){
 			*x.second = !(*x.second);
-			if(x.first == L"nocolor") switchColor();
+			if(x.first == L"nocolor") switch_color();
 			return true;
 		}
 	}
 	
-	for(string x : tauFormats){
+	for(string x : _formats){
 		if(x == _option){
 			_def_format == x;
 			return true;
@@ -180,7 +181,7 @@ bool _checkOption(string s){
 
 	if(_option == L"level"){
 		if(_argstream.size() != 0){
-			string token = readArg();
+			string token = read_arg();
 			int tmpLevel = level;
 			try{
 				tmpLevel = std::stoi(token);
@@ -203,7 +204,7 @@ bool _checkOption(string s){
 }
 
       
-int getTauCode(qdb &kb, string fname){
+int get_qdb(qdb &kb, string fname){
 	try {
                 std::wistream* pis = &std::wcin;
                 if (fname != L"")
@@ -212,7 +213,7 @@ int getTauCode(qdb &kb, string fname){
 		
 		int read_attempt = parse(kb,is,_def_format);
 		if(read_attempt != 2){
-			string fmt = _getFormat(fname);
+			string fmt = get_format(fname);
 			if(fmt != _def_format){
 				return parse(kb,is,fmt);
 			}
@@ -225,41 +226,41 @@ int getTauCode(qdb &kb, string fname){
         }
 }
 
-void _mode_query(){
+void mode_query(){
 	if(kbs.size() == 0){
 		dout << L"No kb; cannot query." << endl;
 	}else{
 		if(_argstream.size() == 0){
                 	qdb q_in;
-                	int r = getTauCode(q_in,L"");
+                	int r = get_qdb(q_in,L"");
                 	if(r == 2){
                         	(*tauProver).query(q_in);
 				(*tauProver).e.clear();
                 	}else if(r == 1 || r == 0){
                 	        dout << L"Error parsing query input." << endl;
                 	}else{
-                	        dout << L"Return code from getTauCode(): '" << r << L"', is unrecognized. Exiting." << endl;
+                	        dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
                         	assert(false);
 			}
 		}else{
 			while(_argstream.size() > 0){
-				string token = readArg();
-				if(_isCommand(token)){
+				string token = read_arg();
+				if(is_command(token)){
 					_argstream.push_front(token);
 					break;
 				}
-				if(_checkOption(token)){
+				if(check_option(token)){
 					continue;
 				}
 				qdb q_in;
-				int r = getTauCode(q_in,token);
+				int r = get_qdb(q_in,token);
 				if(r == 2){
                          	       (*tauProver).query(q_in);
 				       (*tauProver).e.clear();	
                         	}else if(r == 1 || r == 0){
                         	       dout << L"Error parsing query file \"" << token << "\"" << endl;
                         	}else{
-                        	        dout << L"Return code from getTauCode(): '" << r << L"', is unrecognized. Exiting." << endl;
+                        	        dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
                         	        assert(false);
                         	}
 			}
@@ -273,31 +274,31 @@ void clear_kb(){
 }
 
 
-void _mode_kb(){
+void mode_kb(){
 	if(_argstream.size() == 0){
 		clear_kb();
 		qdb kb_in;
-		int r = getTauCode(kb_in,L"");
+		int r = get_qdb(kb_in,L"");
 		if(r == 2){
 			kbs.push_back(kb_in);
 			tauProver = new prover(merge_qdbs(kbs));
 		}else if(r == 1 || r == 0){
 			dout << L"Error parsing kb input." << endl;
 		}else{
-			dout << L"Return code from getTauCode(): '" << r << L"', is unrecognized. Exiting." << endl;
+			dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
 			assert(false);
 		}
 		
 	}else{
-		string token = readArg();
-		if(dashArg(token,L"clear")){
+		string token = read_arg();
+		if(dash_arg(token,L"clear")){
 			clear_kb();
 			return;
 		}
-		else if(dashArg(token,L"set")){
+		else if(dash_arg(token,L"set")){
 			clear_kb();
 		}
-		else if(dashArg(token,L"add")){
+		else if(dash_arg(token,L"add")){
 		}else{
 			_argstream.push_front(token);
 			clear_kb();
@@ -305,37 +306,37 @@ void _mode_kb(){
 	
 		if(_argstream.size() == 0){
 			qdb kb_in;
-			int r = getTauCode(kb_in,L"");
+			int r = get_qdb(kb_in,L"");
 			if(r == 2){
 				kbs.push_back(kb_in);
 				tauProver = new prover(merge_qdbs(kbs));
 			}else if(r == 1 || r==0){
 				dout << L"Error parsing kb input." << endl;
 			}else{
-				dout << L"Return value, '" << r << L"', of getTauCode not recognized. Exiting." << endl;
+				dout << L"Return value, '" << r << L"', of get_qdb() not recognized. Exiting." << endl;
 				assert(false);
 			}
 		}else{
 			while(_argstream.size() > 0){
-				string token = readArg();
-				if(_isCommand(token)){
+				string token = read_arg();
+				if(is_command(token)){
 					_argstream.push_front(token);
 					break;
 				}
-				if(_checkOption(token)){
+				if(check_option(token)){
 					continue;
 				}
 				
 			
 				qdb kb_in;
-				int r = getTauCode(kb_in, token);	
+				int r = get_qdb(kb_in, token);	
 				if(r == 2){
 					kbs.push_back(kb_in);
 					tauProver = new prover(merge_qdbs(kbs));
 				}else if(r == 1 || r == 0){
 					dout<< L"Error parsing kb file: \"" << token << L"\"" << endl;
 				}else{
-					dout << L"Return value, '" << r << L"', of getTauCode not recognized. Exiting." << endl;
+					dout << L"Return value, '" << r << L"', of get_qdb() not recognized. Exiting." << endl;
 					assert(false);
 				}
 			}
@@ -345,7 +346,7 @@ void _mode_kb(){
 
 
 
-void tauShell(){
+void tau_shell(){
 	dout << L"Tau> ";
 	string in;
 
@@ -359,7 +360,7 @@ void tauShell(){
 	}
 }
 
-void tauHelp(string token){
+void tau_help(string token){
 	dout << L"No command '" << token << L"'." << endl;
 }
 int main ( int argc, char** argv) {
@@ -371,26 +372,26 @@ int main ( int argc, char** argv) {
 
 	for(ever){
 		if(_argstream.size() == 0){
-			tauShell();
+			tau_shell();
 		}else{
-			string token = readArg();
-			if(_checkOption(token)){
+			string token = read_arg();
+			if(check_option(token)){
 				continue;
 			}
 			if(token == L"kb"){
-				_mode_kb();
+				mode_kb();
 				continue;
 			}
 
 			if(token == L"query"){
-				_mode_query();
+				mode_query();
 				continue;
 			}
 			if(token == L"quit"){
 				break;
 			}
 
-			tauHelp(token);
+			tau_help(token);
 		}
 		
 	}
