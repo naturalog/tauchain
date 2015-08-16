@@ -68,7 +68,9 @@ int parse_nq(qdb &r, std::wistream &f)
 
 int parse(qdb &r, std::wistream &f, string fmt)
 {
+	dout << "parse " << fmt << std::endl;
 #ifdef with_marpa
+	dout << "with" << std::endl;
         if(fmt == L"natural3" || fmt == L"n3") {
 			dout << "Supported is a subset of n3 with our fin notation" << endl;
 			return parse_natural3(r, f);
@@ -206,14 +208,14 @@ bool check_option(string s){
 
       
 int get_qdb(qdb &kb, string fname){
-	try {
-                std::wistream* pis = &std::wcin;
-                if (fname != L"")
-                        pis = new std::wifstream(ws(fname));
-                std::wistream& is = *pis;
+	//try {
+        std::wistream* pis = &std::wcin;
+        if (fname != L"")
+           pis = new std::wifstream(ws(fname));
+        std::wistream& is = *pis;
 		
-		int read_attempt = parse(kb,is,_def_format);
-		if(read_attempt != 2){
+		return parse(kb,is,get_format(fname));
+		/*if(read_attempt != 2){
 			string fmt = get_format(fname);
 			if(fmt != _def_format){
 				return parse(kb,is,fmt);
@@ -224,7 +226,7 @@ int get_qdb(qdb &kb, string fname){
 		return 2;
         } catch (std::exception& ex) {
 		return 1;
-        }
+        }*/
 }
 
 void mode_query(){
