@@ -1,365 +1,398 @@
 #include <stdio.h>
 #include "cli.h"
 #include <sstream>
+#include <tuple>
+#include <iostream>
+#include <queue>
 #include "prover.h"
+#include <stdexcept>
 #ifdef with_marpa
 #include "marpa_tau.h"
 #endif
-#include <tclap/CmdLine.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
-extern int level;
-bool autobt = false, _pause = false, __printkb = false, fnamebase = true, nocolor = false;
 
-#ifdef DEBUG
-auto dummy = []() {
-	return ( bool ) std::cin.tie ( &std::clog );
-}();
-#endif
-#ifdef JSON
-jsonld_options opts;
-#endif
 
+#define ever ;;
 
 std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
+std::wistream& din = std::wcin;
 
+std::deque<string> _argstream;
+std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
+string _def_format = L"nq";
 
-/*
- *
- * return value of parse functions: 0: error, 1: incomplete input, 2: success
- *
- * */
+std::map<string,bool*> _flags = {
+	{L"nocolor",&nocolor},
+	{L"deref",&deref},
+	//this one.
+	{L"shorten",&tau_shorten},
+	{L"base",&fnamebase},
+	{L"quads",&quad_in},
+	{L"pause",&_pause}
+};
 
+std::vector<string> _formats = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
+
+qdb merge_qdbs(const std::vector<qdb> qdbs)
+{
+        if (qdbs.size() > 1)
+                dout << L"warning, bnode renaming not implemented";
+        qdb r;
+        for (auto x:qdbs) {
+                r.first.insert(x.first.begin(), x.first.end());
+                r.second.insert(x.second.begin(), x.second.end());
+        }
+        return r;
+}
+
+std::vector<qdb> kbs;
+prover *tauProver;
 
 #ifndef NOPARSER
-int parse_nq(qdb &kb, qdb &q, std::wistream &f)
+int parse_nq(qdb &r, std::wistream &f)
 {
-	try {
-		readqdb(kb, f);
-	} catch (std::exception& ex) {
-		derr << L"Error reading quads: " << ex.what() << std::endl;
-		return 0;
-	}
-	try {
-		readqdb(q, f);
-	} catch (std::exception& ex) {
-		derr << L"Error reading quads: " << ex.what() << std::endl;
-		return 0;
-	}
-	return 2;
+        try {
+                readqdb(r, f);
+        } catch (std::exception& ex) {
+                derr << L"Error reading quads: " << ex.what() << endl;
+                return 0;
+        }
+        return 2;
 }
 #endif
 
 
-
-void parse(qdb &kb, qdb &q, std::wistream &f , std::string fn, std::string fmt)
+int parse(qdb &r, std::wistream &f, string fmt)
 {
-	boost::algorithm::to_lower(fmt);
-
-	std::vector<std::string> exts({"jsonld", "natural3", "natq", "n3", "nq"});
-
-	std::string fnl(fn);
-	boost::algorithm::to_lower(fnl);
-
-	if (fmt == "") // try to guess from file extension
-	{
-		for (auto x:exts)
-			if (boost::ends_with(fnl, x))
-				fmt = x;
-	}
-
-	if (fmt == "") // default
-		fmt = "natq";
-
 #ifdef with_marpa
-	if(fmt == "natural3" || fmt == "n3")
-		parse_natural3(kb, q, f);
-	else
+        if(fmt == L"natural3" || fmt == L"n3")
+		dout << "There's actually no such thing as natural3" << endl;
+                return parse_natural3(r, f);
+        else
 #endif
-	if(fmt == "natq" || fmt == "nq" || fmt == "nquads")
-		parse_nq(kb, q, f);
+        if(fmt == L"natq" || fmt == L"nq" || fmt == L"nquads")
+                return parse_nq(r, f);
 
-/*		else
-		jsonld*/
-	else
-		throw std::runtime_error("unknown format");
-}
-
-typedef std::pair<std::string, std::string> fn_fmt;
-
-int process_args(std::vector<std::string> args)
-{
-
-	std::vector<fn_fmt>  inputs;
-
-	std::string fmt, fn;
-
-	for (std::string x: args) {
-		if (boost::starts_with(x, "--"))
-			fmt = std::string(x.begin() + 2, x.end());
-		else
-			fn = x;
-		if (fn != "") {
-			inputs.push_back(fn_fmt(fn, fmt));
-			fn = "";
-		}
-	}
-	//now that we have optionally collected a format
-
-	if (inputs.size() == 0)
-	{//do interactive quads
-		qdb kb, query;
-		parse(kb, query, std::wcin, "", fmt);
-		prover prvr(kb);
-		TRACE(dout << "QUERYING" << std::endl);
-		prvr.query(query);
+	if(fmt == L"jsonld"){
+		dout << L"Cannot read JSON-LD format" << endl;
 		return 0;
 	}
-
-	uint pos = 0;
-	std::vector<qdb> kbs;
-	for (auto x: inputs) {
-		std::string fn = x.first;
-		std::string fmt = x.second;
-		qdb kb;
-		qdb query;
-
-		std::wifstream f(fn);
-		if (!f.is_open())
-			throw std::runtime_error("couldnt open file \"" + fn + "\"");
-
-		parse(kb, query, f, fn, fmt);
-
-		if(++pos == inputs.size())
-		{
-			if(query.first.size()) {
-				kbs.push_back(kb);
-				prover prvr(merge_qdbs(kbs));
-				TRACE(dout << "QUERYING" << std::endl);
-				prvr.query(query);
-			}
-			else {
-				if (kbs.size() == 0)
-					throw std::runtime_error("would use last file as query, but have no kb");
-				prover prvr(merge_qdbs(kbs));
-				TRACE(dout << "QUERYING" << std::endl);
-				prvr.query(kb);
-			}
-		}
-		else {
-			kbs.push_back(kb);
-			if (query.first.size())
-				dout << L"ignoring query in " << ws(fn) << std::endl;
-		}
-	}
-	return 0;
+ 
+       else
+                throw std::runtime_error("unknown format");
 }
 
+string get_format(string fn){
+        string fn_lc(fn);
+        boost::algorithm::to_lower(fn_lc);
 
-typedef std::map<TCLAP::SwitchArg*,bool*> tcFlags;
+	for (auto x:_formats)
+		if (boost::ends_with(fn_lc, x))
+			return x;
+        
+	return _def_format;
 
-int main ( int argc, char** argv ) {
-	dict.init();
-	std::vector<std::string> args;
+}
 
+bool dash_arg(string token, string pattern){
+	return (token == pattern) || (token == L"-" + pattern) || (token == L"--" + pattern);
+}
+
+string read_arg(){
+	string ret;
+	if(_argstream.size() != 0){
+		ret = _argstream.at(0);
+		_argstream.pop_front();
+	}else{
+		dout << L"_argstream is empty." << endl;
+	}
+	return ret;	
+}
+
+bool is_command(string s){
+	if(s.length() == 0) return false;
+	if(s.at(0) == '-') s = s.substr(1,s.length()-1);
+	if(s.length() == 0) return false;
+	if(s.at(0) == '-') s = s.substr(1,s.length()-1);
+	if(s.length() == 0) return false;
+	for( string x : _commands){
+		if(x == s){
+			return true;
+		}
+	}	
+	return false;
+	
+}
+
+void switch_color(){
+	if(nocolor){
+                KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
+	}else{
+		KNRM = L"\x1B[0m";
+		KRED = L"\x1B[31m";
+		KGRN = L"\x1B[32m";
+		KYEL = L"\x1B[33m";
+		KBLU = L"\x1B[34m";
+		KMAG = L"\x1B[35m";
+		KCYN = L"\x1B[36m";
+		KWHT = L"\x1B[37m";
+	}
+}
+
+bool check_option(string s){
+	if(s.length() == 0){
+		return false;
+	}
+	if(s.at(0) != L'-' || s.length() < 2){
+		return false;
+	}
+	int dash = 1;
+	if(s == L"-" || s == L"--"){
+		return false;
+	}
+	
+	if(s.at(1) == L'-'){
+		if(s.length() == 2){
+			return false;
+		}
+		dash = 2;
+	}
+
+	string _option = s.substr(dash,s.length()-dash);
+
+	for( std::pair<string,bool*> x : _flags){
+		if(x.first == _option){
+			*x.second = !(*x.second);
+			if(x.first == L"nocolor") switch_color();
+			return true;
+		}
+	}
+	
+	for(string x : _formats){
+		if(x == _option){
+			_def_format == x;
+			return true;
+		}
+	}
+
+	if(_option == L"level"){
+		if(_argstream.size() != 0){
+			string token = read_arg();
+			int tmpLevel = level;
+			try{
+				tmpLevel = std::stoi(token);
+			}catch(const std::invalid_argument& e){
+				_argstream.push_front(token);
+				return true;
+			}
+	
+			if(tmpLevel < 1) 
+				level = 1;
+			else if(tmpLevel > 100) 
+				level = 100;
+			else
+				level = tmpLevel;
+			
+		}
+		return true;
+	}
+	return false;
+}
+
+      
+int get_qdb(qdb &kb, string fname){
 	try {
-		TCLAP::CmdLine cmd("Tau-Chain by http://idni.org. ", ' ', "0.0");
-
-		TCLAP::ValueArg <int> tc_level("l", "level", "debug level", false, 1, "", cmd);
-
-		TCLAP::SwitchArg
-				tc_deref("d", "no-deref", "show integers only instead of strings", cmd, true),
-				tc_pause("P", "pause",
-						 "pause on each trace and offer showing the backtrace. available under -DDEBUG only.", cmd,
-						 false),
-				tc_shorten("s", "shorten", "on IRIs containing # show only what's after #", cmd, false),
-				tc_base("b", "base", "set file://<filename> as base in JsonLDOptions", cmd, true),
-				tc_nocolor("n", "nocolor", "disable color output", cmd, false);
-
-		TCLAP::UnlabeledMultiArg<std::string> multi("stuff", "file names, optionally prefixed with formats", false, "typedesc", cmd);
-
-		cmd.parse(argc, argv);
-
-		level = tc_level.getValue();
-		deref = tc_deref.getValue();
-		_pause = tc_pause.getValue();
-		shorten = tc_shorten.getValue();
-		fnamebase = tc_base.getValue();
-		nocolor = tc_nocolor.getValue();
-		//sorry stoopkid
-
-		args = multi.getValue();
-
-	} catch (TCLAP::ArgException &e) {
-		derr << "TCLAP error: " << e.what() << std::endl;
-	}
-
-	if (nocolor)
-		KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
-
-	return process_args(args);
-}
-
-
-#ifdef xxxxxxxxxxxxxxxxxxxxxxxxxxBLIMP
-
-
-int process_args(args)
-{
-	int pos = 0;
-	prover prvr;
-	for (std::string x: args) {
-		blimp(prvr, x, ++pos = args.size());
-	}
-}
-
-void blimp(prover &prvr, std::string x, int togo) {
-	static std::string fmt;
-	std::string fn;
-	static std::string block;
-
-	const int COMMANDS = 0;
-	const int KB = 1;
-	const int QUERY = 2;
-	const int WORK = 3;
-	static int phase = 0;
-
-	if (boost::starts_with(x, "--"))
-	{
-		/*
-		if (x == "--pass")
-		 {
-		 if(!togo)
-		 dump
-		 else error
-		 } else
-		 */
-		fmt = std::string(x.begin() + 2, x.end());
-	}
-
-	else {
-		fn = x;
-		//try to load file, return
-	}
-	if (x == "fin." || x == "fin .") {
-		phase = phase + 1;
-		if (phase== WORK) { }
-	}
-	block += x + "\n";
-	if (fmt != "")
-	{
-		int r = parse(x, fmt);
-	}
-/*
-	{
-		qdb xx = ;
-		prvr.add_qdb(load_file(x, fmt));
-		else {
-			qdb query;
-			if
-				load_file(query, query_format, query_fn);
-
-		}
-		fmt = "";
-	}
-*/
-		/*
-		if (name=="-"// or name == "")
-			std::wistream* pis = &std::wcin;
-		else.
-			pis = new std::wifstream(ws(fname));
-		std::wistream& is = *pis;
-		ifstream blabla f(file.first);
-		load_file(kb,..
-		 */
-}
-
-/*
-	}
-	else
-		print_qdb(kb)
-
-	return rval;
- *//*
-}
-			} catch (std::exception& ex) { dout<<ex.what()<<std::endl; }
-			catch (...) { dout<<"generic exception."<<std::endl; }
-			sleep(1);
+                std::wistream* pis = &std::wcin;
+                if (fname != L"")
+                        pis = new std::wifstream(ws(fname));
+                std::wistream& is = *pis;
+		
+		int read_attempt = parse(kb,is,_def_format);
+		if(read_attempt != 2){
+			string fmt = get_format(fname);
+			if(fmt != _def_format){
+				return parse(kb,is,fmt);
 			}
-*/
+			return read_attempt;
+			
+		}
+		return 2;
+        } catch (std::exception& ex) {
+		return 1;
+        }
+}
 
-/*
- *
- *
- * chat
- *
- *
- *
- *
-
-//exactly, if the rest of the command line logic were set up over this it would be
-//what i described below. because from here i imagine something like a 'batch file'
-//which would just be a really long command line line..stuck into a file and
-//interpreted with some option like --batch
-//i mean as far as simplicity and consistency goes i think its pretty solid,
-//"everything works the same wherever you're doing it... basically"
-
-//yeah it sounds good
-//this will definitely be good when its more complete and we get to bigger more serious
-//testing, especially the batch files. two commands :) i'm thinking of is --kb and
-//--kb_append and maybe 3 with a --kb_clear or something
-//also in interpeter mode what happens if you enter a bad line? does it fail out or
-//does it just give you a warning and give you a new line? ofc if we have the
-//integration between command line, interpreter and batch files then in some cases
-//we'd want one, and in some cases we'd want the other, sounds like a command line option
-//--fail_on_error or --continue_on_error or something like that
-//also, what about merging multiple files into a single kb?
-//--kb file.n3 file.json file.nq  --query qfile1 qfile2 --kb-append file.n3 --query qfile3
-// --kb-clear --kb_fail_on_error true  --kb file.n3  file2.n3 and etc.......
-// ^ supposed to all be one command line
-//and the -- options are just what you would do in between "fin."s and starting the
-//next 'activity' (--kb, --kb-append, --query) etc. etc.
-
-//these 'activities' not really any different whether its cli, batch file, interpreter
-//mode or IRC bot (and especially these last two are identical)
-
-	//ok, now i need to think it thru a bit more, so it will work more or less
-	//like now.................
-	//one thing i was thinking is that load_quads has it set up so that it will
-	//work over both files and stdin in the interpreter mode (which i've got
-	//prefixed with 'Tau>' now btw), was thinking whatever we set up the same things
-	//could be done in interpreter mode and it would be essentially the same interface
-	//command line commands essentially the same commands you'll give inside the
-	//interpreter to direct the course of things. like say i want to run another query
-	//after i'm done with my first one. right now Tau just exits.. but why?
-	//is essentially the same as just reading the next file and doing something with it
-	//from the commandline
-
-	//also brings up the idea of "quit" command :) which could actually have use
-	//already when i get into interpreter and didn't mean to.. it's cleaner and more
-	//considerate than making them Ctrl+Z, even though i personally have no problems
-	//with Ctrl+Z it's the thought that counts :) and could be a bigger thing later
-	//if we need more graceful tau shutdown, which i'm sure we would down the road.
-	//i agree down the road some sort of interpreter mode could be handy
-	//i figure that's already what we have and if we expanded the command line like
-	//we're talking about but kept it like it is now where it handles both files
-	//and 'interpreter', i.e. plain './tau', then that's exactly what we'd get :)
-	//tangential: we should bring back the IRC bot
-	//actually not completely tangential :)
-	//well..i will let you think about it:)
-	//command line commands, interpreter mode, irc mode(?), im not sure how
-	//to really approach any of it now
-	//basically just like we are now in the code except with the revisions of the command
-	//line like we've been talking about, and making these command line commands accessible
-	//in the interpreter
-	//basically, yeah
-	//basically an interpreter and the command line is no different except one has input
-	//from the user from the terminal and the other has input from files, and the commands/flags
-	//are all the same, and it all works exactly the same either way you do it
-*/
+void mode_query(){
+	if(kbs.size() == 0){
+		dout << L"No kb; cannot query." << endl;
+	}else{
+		if(_argstream.size() == 0){
+                	qdb q_in;
+                	int r = get_qdb(q_in,L"");
+                	if(r == 2){
+                        	(*tauProver).query(q_in);
+				(*tauProver).e.clear();
+                	}else if(r == 1 || r == 0){
+                	        dout << L"Error parsing query input." << endl;
+                	}else{
+                	        dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
+                        	assert(false);
+			}
+		}else{
+			while(_argstream.size() > 0){
+				string token = read_arg();
+				if(is_command(token)){
+					_argstream.push_front(token);
+					break;
+				}
+				if(check_option(token)){
+					continue;
+				}
+				qdb q_in;
+				int r = get_qdb(q_in,token);
+				if(r == 2){
+                         	       (*tauProver).query(q_in);
+				       (*tauProver).e.clear();	
+                        	}else if(r == 1 || r == 0){
+                        	       dout << L"Error parsing query file \"" << token << "\"" << endl;
+                        	}else{
+                        	        dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
+                        	        assert(false);
+                        	}
+			}
+		}
+	}
+}
 
 
-#endif
+void clear_kb(){
+	kbs.clear();
+}
+
+
+void mode_kb(){
+	if(_argstream.size() == 0){
+		clear_kb();
+		qdb kb_in;
+		int r = get_qdb(kb_in,L"");
+		if(r == 2){
+			kbs.push_back(kb_in);
+			tauProver = new prover(merge_qdbs(kbs));
+		}else if(r == 1 || r == 0){
+			dout << L"Error parsing kb input." << endl;
+		}else{
+			dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
+			assert(false);
+		}
+		
+	}else{
+		string token = read_arg();
+		if(dash_arg(token,L"clear")){
+			clear_kb();
+			return;
+		}
+		else if(dash_arg(token,L"set")){
+			clear_kb();
+		}
+		else if(dash_arg(token,L"add")){
+		}else{
+			_argstream.push_front(token);
+			clear_kb();
+		}
+	
+		if(_argstream.size() == 0){
+			qdb kb_in;
+			int r = get_qdb(kb_in,L"");
+			if(r == 2){
+				kbs.push_back(kb_in);
+				tauProver = new prover(merge_qdbs(kbs));
+			}else if(r == 1 || r==0){
+				dout << L"Error parsing kb input." << endl;
+			}else{
+				dout << L"Return value, '" << r << L"', of get_qdb() not recognized. Exiting." << endl;
+				assert(false);
+			}
+		}else{
+			while(_argstream.size() > 0){
+				string token = read_arg();
+				if(is_command(token)){
+					_argstream.push_front(token);
+					break;
+				}
+				if(check_option(token)){
+					continue;
+				}
+				
+			
+				qdb kb_in;
+				int r = get_qdb(kb_in, token);	
+				if(r == 2){
+					kbs.push_back(kb_in);
+					tauProver = new prover(merge_qdbs(kbs));
+				}else if(r == 1 || r == 0){
+					dout<< L"Error parsing kb file: \"" << token << L"\"" << endl;
+				}else{
+					dout << L"Return value, '" << r << L"', of get_qdb() not recognized. Exiting." << endl;
+					assert(false);
+				}
+			}
+		}	
+	}
+}
+
+
+
+void tau_shell(){
+	dout << L"Tau> ";
+	string in;
+
+	if (std::wcin.rdstate() && std::wcin.eofbit) assert(false); 
+	getline(std::wcin, in);
+	std::wistringstream i(in);
+
+	string tmp;
+	while(std::getline(i,tmp,L' ')){
+		_argstream.push_back(tmp);
+	}
+}
+
+void tau_help(string token){
+	dout << L"No command '" << token << L"'." << endl;
+}
+int main ( int argc, char** argv) {
+	dict.init();
+
+	for(int i=1;i<argc;i++){
+		_argstream.push_back(ws(argv[i]));
+	}
+
+	for(ever){
+		if(_argstream.size() == 0){
+			tau_shell();
+		}else{
+			string token = read_arg();
+			if(check_option(token)){
+				continue;
+			}
+			if(token == L"kb"){
+				mode_kb();
+				continue;
+			}
+
+			if(token == L"query"){
+				mode_query();
+				continue;
+			}
+			if(token == L"quit"){
+				break;
+			}
+
+			tau_help(token);
+		}
+		
+	}
+}

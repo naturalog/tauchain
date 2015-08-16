@@ -14,7 +14,7 @@
 #include "strings.h"
 #include <iostream>
 #include <list>
-extern bool deref, shorten;
+extern bool deref, tau_shorten;
 typedef std::nullptr_t null;
 typedef std::shared_ptr<bool> pbool;
 

@@ -254,11 +254,11 @@ quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
 
 string quad::tostring ( ) const {
 	std::wstringstream ss;
-	bool _shorten = shorten;
-	auto f = [_shorten] ( pnode n ) {
+	bool tmp_shorten = tau_shorten;
+	auto f = [tmp_shorten] ( pnode n ) {
 		if ( n ) {
 			string s = n->tostring();
-			if ( !shorten ) return s;
+			if ( !tau_shorten ) return s;
 			if ( s.find ( L"#" ) == string::npos ) return s;
 			return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 		}
@@ -273,7 +273,7 @@ string quad::tostring ( ) const {
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 #ifndef NOPARSER
-void readqdb (qdb &r, std::wistream& is) {
+void readqdb (qdb& r, std::wistream& is) {
 	string s;
 	string c;
 	quad q;
@@ -321,14 +321,3 @@ int convert_cmd::operator() ( const strings& args ) {
 }
 #endif
 
-qdb merge_qdbs(const std::vector<qdb> qdbs)
-{
-	if (qdbs.size() > 1)
-		dout << "warning, bnode renaming not implemented";
-	qdb r;
-	for (auto x:qdbs) {
-		r.first.insert(x.first.begin(), x.first.end());
-		r.second.insert(x.second.begin(), x.second.end());
-	}
-	return r;
-}

@@ -305,7 +305,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
-	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
+	if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
 	++steps;
 	if (euler_path(_p)) return _p->next;
 	const proof& frame = *_p;
@@ -461,8 +461,12 @@ void prover::addrules(pquad q, qdb& quads) {
 
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	auto it = qkb.first.find(str_default);
-	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
-	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
+	if (it == qkb.first.end()){
+		 //throw std::runtime_error("Error: @default graph is empty.");
+		qkb.first[L"@default"] = mk_qlist();
+		it = qkb.first.find(str_default);
+	}
+	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = mk_qlist();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
 	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
