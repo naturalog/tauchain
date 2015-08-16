@@ -254,11 +254,11 @@ quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
 
 string quad::tostring ( ) const {
 	std::wstringstream ss;
-	bool _shorten = shorten;
-	auto f = [_shorten] ( pnode n ) {
+	bool tmp_shorten = tau_shorten;
+	auto f = [tmp_shorten] ( pnode n ) {
 		if ( n ) {
 			string s = n->tostring();
-			if ( !shorten ) return s;
+			if ( !tau_shorten ) return s;
 			if ( s.find ( L"#" ) == string::npos ) return s;
 			return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 		}
@@ -273,11 +273,10 @@ string quad::tostring ( ) const {
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 #ifndef NOPARSER
-qdb readqdb ( std::wistream& is) {
+void readqdb (qdb& r, std::wistream& is) {
 	string s;
 	string c;
 	quad q;
-	qdb r;
 	nqparser p;
 	std::wstringstream ss;
 	while (getline(is, s)) {
@@ -294,7 +293,6 @@ qdb readqdb ( std::wistream& is) {
 		if (r.first.find(c) == r.first.end()) r.first[c] = make_shared<qlist>();
 		r.first[c]->push_back(make_shared<quad>(q));
 	}
-	return r;
 }
 #endif
 #ifdef JSON

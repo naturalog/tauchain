@@ -5,6 +5,9 @@
 #include "jsonld.h"
 #include "cli.h"
 
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
+
+jsonld_options opts;
 #ifdef JSON
 #include "json_spirit.h"
 pobj convert ( const json_spirit::wmValue& v );
@@ -12,6 +15,7 @@ json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
 #endif
 #ifndef NOPARSER
+/*
 std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool ) {
 	try {
 		qdb r;
@@ -24,6 +28,7 @@ std::shared_ptr<qdb> cmd_t::load_quads ( string fname, bool ) {
 	}
 	return nullptr;
 }
+*/
 #endif
 #ifdef JSON
 pobj cmd_t::load_json ( string fname, bool print ) {

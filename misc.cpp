@@ -5,7 +5,7 @@
 using namespace boost::algorithm;
 
 bidict& dict = *new bidict;
-bool deref = true, shorten = false;
+bool deref = true, tau_shorten = false;
 int level = 1;
 
 extern int _indent;
@@ -93,7 +93,7 @@ string dstr ( nodeid p, bool escape ) {
 		replace_all(s, L"\"", L"\\\"");
 		replace_all(s, L"'", L"\\'");
 	}
-	if ( !shorten ) return s;
+	if ( !tau_shorten ) return s;
 	if ( s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 }
