@@ -60,7 +60,7 @@ pqlist mk_qlist();
 std::wostream& operator<< ( std::wostream& o, const qdb& );
 std::wostream& operator<< ( std::wostream& o, const qlist& );
 #ifndef NOPARSER
-void readqdb (qdb& r, std::wistream& is );
+qdb readqdb ( std::wistream& is );
 #endif
 #ifdef JSON
 class jsonld_api;
