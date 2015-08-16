@@ -29,7 +29,7 @@ std::map<string,bool*> _flags = {
 	{L"nocolor",&nocolor},
 	{L"deref",&deref},
 	//this one.
-	{L"shorten",&tau_shorten},
+	{L"shorten",&shorten},
 	{L"base",&fnamebase},
 	{L"quads",&quad_in},
 	{L"pause",&_pause}

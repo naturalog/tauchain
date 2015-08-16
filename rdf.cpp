@@ -254,11 +254,11 @@ quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
 
 string quad::tostring ( ) const {
 	std::wstringstream ss;
-	bool tmp_shorten = tau_shorten;
-	auto f = [tmp_shorten] ( pnode n ) {
+	bool _shorten = shorten;
+	auto f = [_shorten] ( pnode n ) {
 		if ( n ) {
 			string s = n->tostring();
-			if ( !tau_shorten ) return s;
+			if ( !shorten ) return s;
 			if ( s.find ( L"#" ) == string::npos ) return s;
 			return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 		}
