@@ -103,15 +103,15 @@ public:
 		ruleid rule = 0;
 		uint term_idx, level = 0;
 		shared_ptr<proof> prev = 0, creator = 0, next = 0;
-//		shared_ptr<substs> s = 0;//make_shared<substs>();
-		substs s;
+		shared_ptr<substs> s = 0;//make_shared<substs>();
+//		substs s;
 		ground g(prover*) const;
 		termid btterm = 0;
 		uint src = 0;
 		/*bool predvar = false;*/
 //		proof(){}// : s(make_shared<substs>()) {}
 		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const substs&  _s = substs(), uint _src = 0)
-			: rule(r), term_idx(l), prev(p), creator(c), s(/*make_shared<substs>*/(_s)), src(_src) { }
+			: rule(r), term_idx(l), prev(p), creator(c), s(make_shared<substs>(_s)), src(_src) { }
 		proof(shared_ptr<proof> c, const proof& p) 
 			: proof(c, p.rule, p.term_idx, p.prev) { if (prev) level = prev->level + 1; }
 	};
@@ -185,7 +185,7 @@ private:
 	substs::const_iterator evvit;
 	#define EVAL(id) ((id) ? evaluate(*id) : 0)
 	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
-	#define EVALPS(id, s) ((EVALS(id, s)) )
+	#define EVALPS(id, s) ((s) ? (EVALS(id, *s)) : ((EVAL(id))))
 	termid evalvar(const term& x, const substs& s) {
 		PROFILE(++evals);
 		setproc(L"evalvar");
@@ -218,8 +218,7 @@ private:
 		return r;
 	}
 
-	bool unify(termid _s, const substs& ssub, termid _d, substs& dsub) { return unify_bind(_s,ssub,_d,dsub); }
-	bool unify_bind(termid _s, const substs& ssub, termid _d, substs& dsub);
+	bool unify(termid _s, const substs& ssub, termid _d, substs& dsub);
 //	bool unify(termid _s, const substs& ssub, termid _d);
 //	bool unify(termid _s, termid _d);
 	bool unify(termid _s, termid _d, substs& dsub);
