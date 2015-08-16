@@ -1,7 +1,8 @@
 before_script:
-  - apt-get update -qq
+  - git checkout master
   - git submodule init
   - git submodule update
+  - apt-get update -qq
   - ls
   - cat .gitmodules
   - apt-get install  -y build-essential autoconf automake libtool
@@ -13,12 +14,12 @@ before_script:
 
 make_tau:
   script:
-    - make ; valgrind ./tau --nq examples/einstein.n3
+    - make ; valgrind ./tau kb --nq examples/einstein.n3
 
 cmake_tau:
   script:
-    - mkdir build; cd build; cmake ..; make tau ; valgrind ./tau --nq ../examples/einstein.n3
+    - mkdir build; cd build; cmake ..; make tau ; valgrind ./tau kb --nq ../examples/einstein.n3
 
 cmake_m-tau:
   script:
-    - mkdir build; cd build; cmake ..; make m-tau ; cd ..; LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so valgrind build/m-tau --nq examples/einstein.n3
+    - mkdir build; cd build; cmake ..; make m-tau ; cd ..; LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so valgrind build/m-tau kb --nq examples/einstein.n3

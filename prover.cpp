@@ -296,7 +296,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
-		if (!(t = (EVALPS(r, p->s)))) continue;
+		if (!(t = (EVALS(r, p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
