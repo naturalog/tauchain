@@ -143,21 +143,6 @@ bool _isCommand(string s){
 	
 }
 
-void switchColor(){
-	if(nocolor){
-                KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
-	}else{
-		KNRM = L"\x1B[0m";
-		KRED = L"\x1B[31m";
-		KGRN = L"\x1B[32m";
-		KYEL = L"\x1B[33m";
-		KBLU = L"\x1B[34m";
-		KMAG = L"\x1B[35m";
-		KCYN = L"\x1B[36m";
-		KWHT = L"\x1B[37m";
-	}
-}
-
 bool _checkOption(string s){
 	if(s.length() == 0){
 		return false;
@@ -177,15 +162,26 @@ bool _checkOption(string s){
 		dash = 2;
 	}
 
-//ah thats it
+
 	string _option = s.substr(dash,s.length()-dash);
 
 	for( std::pair<string,bool*> x : tauFlags){
 		if(x.first == _option){
 			*x.second = !(*x.second);
-			if(x.first == L"nocolor") switchColor();
 			return true;
 		}
+	}
+	if(nocolor){
+                KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
+	}else{
+		KNRM = L"\x1B[0m";
+		KRED = L"\x1B[31m";
+		KGRN = L"\x1B[32m";
+		KYEL = L"\x1B[33m";
+		KBLU = L"\x1B[34m";
+		KMAG = L"\x1B[35m";
+		KCYN = L"\x1B[36m";
+		KWHT = L"\x1B[37m";
 	}
 	
 	for(string x : tauFormats){
