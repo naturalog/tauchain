@@ -58,6 +58,8 @@ pnode nqparser::readlist() {
 pnode nqparser::readiri() {
 	setproc(L"readiri");
 	while (iswspace(*s)) ++s;
+	if (*s == 0)
+		throw std::exception("iri expected");
 	if (*s == L'<') {
 		while (*++s != L'>') t[pos++] = *s;
 		t[pos] = 0; pos = 0;

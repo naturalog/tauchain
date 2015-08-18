@@ -212,6 +212,7 @@ string read_arg(){
 	string ret;
 	if(_argstream.size() != 0){
 		ret = _argstream.at(0);
+		boost::algorithm::trim(ret);
 		_argstream.pop_front();
 	}else{
 		dout << L"_argstream is empty." << endl;
@@ -418,8 +419,11 @@ int main ( int argc, char** argv) {
 		dout << L"data buffer: \"" << data_buffer << "\"" << std::endl;
 		dout << L"mode: \"" << mode << "\"" << std::endl;
 
+		string trimmed = data_buffer;
+		boost::algorithm::trim(trimmed);
+
 		string token;
-		if (mode == COMMANDS) {
+		if (mode == COMMANDS && trimmed == L"") {
 
 			string _t;
 			std::wstringstream liness(line);
@@ -428,6 +432,9 @@ int main ( int argc, char** argv) {
 				}
 
 			token = read_arg();
+
+			dout << L"token: \"" << token << "\"" << std::endl;
+
 			if (check_option(token)) {
 				continue;
 			}
@@ -472,11 +479,13 @@ int main ( int argc, char** argv) {
 				kbs.push_back(kb);
 				tauProver = new prover(merge_qdbs(kbs));
 				data_buffer=L"";
+				set_mode(COMMANDS);
 			}
 			if (mode == QUERY && fins > 0) {
 				(*tauProver).query(kb);
 				(*tauProver).e.clear();
 				data_buffer=L"";
+				set_mode(COMMANDS);
 			}
 			else if(mode == COMMANDS && fins == 2) {
 				dout << "querying" << std::endl;
@@ -487,8 +496,11 @@ int main ( int argc, char** argv) {
 				data_buffer=L"";
 			}
 		}
-		else if (pr == FAIL && mode == COMMANDS){
-			dout << "No such command: \"" << token << "\"." << endl;
+		else if (pr == FAIL)
+		{
+			dout << "that doesnt parse, try again" << std::endl;
+			if (mode == COMMANDS && trimmed == L"")
+				dout << "and theres no such command: \"" << token << "\"." << endl;
 		}
 	}
 }
