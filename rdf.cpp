@@ -273,16 +273,21 @@ string quad::tostring ( ) const {
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 #ifndef NOPARSER
-void readqdb (qdb& r, std::wistream& is) {
+int readqdb (qdb& r, std::wistream& is) {
+	int fins = 0;
 	string s;
 	string c;
 	quad q;
 	nqparser p;
 	std::wstringstream ss;
 	while (getline(is, s)) {
+		dout << "line:\"" << s << "\"" << std::endl;
 		trim(s);
 		if (s[0] == '#') continue;
-		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".") break;
+		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L"."){
+			fins++;
+			break;
+		}
 //		dout << s << endl;
 		ss << ' ' << s << ' ';
 	}
@@ -293,6 +298,7 @@ void readqdb (qdb& r, std::wistream& is) {
 		if (r.first.find(c) == r.first.end()) r.first[c] = make_shared<qlist>();
 		r.first[c]->push_back(make_shared<quad>(q));
 	}
+	return fins;
 }
 #endif
 #ifdef JSON

@@ -930,9 +930,8 @@ string load_file(std::wistream &f) {
 }
 
 
-int parse_natural3(qdb &kb, /*qdb &q, */std::wistream &f, string base)
+int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base)
 {
-    qdb q;
     setproc(L"N3");
     static Marpa* parser = 0;
     if (!parser) {

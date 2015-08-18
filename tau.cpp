@@ -23,7 +23,17 @@ std::wistream& din = std::wcin;
 
 std::deque<string> _argstream;
 
+int mode = 0;
+const int COMMANDS = 0;
+const int KB = 1;
+const int QUERY = 2;
+
+const int FAIL = 0;
+const int INCOMPLETE = 1;
+const int COMPLETE = 2;
+
 string format = L"";
+string base = L"";
 
 std::map<string,bool*> _flags = {
 	{L"nocolor",&nocolor},
@@ -37,10 +47,17 @@ std::map<string,bool*> _flags = {
 
 std::vector<string> extensions = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
 std::vector<string> _formats = {L"nq", L"n3", L"jsonld"};
+std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
 
 std::vector<qdb> kbs;
 prover *tauProver;
 
+
+void set_mode(int m)
+{
+	dout << L"mode = " << m << std::endl;
+	mode = m;
+}
 
 void help(string help_arg){
 	if(help_arg == L""){
@@ -67,6 +84,23 @@ void help(string help_arg){
 
 	}
 }
+
+
+bool is_command(string s){
+       if(s.length() == 0) return false;
+       if(s.at(0) == '-') s = s.substr(1,s.length()-1);
+       if(s.length() == 0) return false;
+       if(s.at(0) == '-') s = s.substr(1,s.length()-1);
+       if(s.length() == 0) return false;
+       for( string x : _commands){
+               if(x == s){
+                       return true;
+               }
+       }
+       return false;
+
+}
+
 
 void switch_color(){
 	if(nocolor){
@@ -96,38 +130,44 @@ qdb merge_qdbs(const std::vector<qdb> qdbs)
 }
 
 #ifndef NOPARSER
-int parse_nq(qdb &r, std::wistream &f)
+int parse_nq(qdb &kb, qdb &query, std::wistream &f, int &fins)
 {
+		fins = 0;
         try {
-                readqdb(r, f);
+                fins = readqdb(kb, f);
         } catch (std::exception& ex) {
                 derr << L"Error reading quads: " << ex.what() << endl;
                 return 0;
+        }
+        try {
+                fins += readqdb(query, f);
+        } catch (std::exception& ex) {
+                derr << L"Error reading quads: " << ex.what() << endl;
+                return 2;
         }
         return 2;
 }
 #endif
 
 
-int parse(qdb &kb, qdb &query, std::wistream &f, string fmt)
+int _parse(qdb &kb, qdb &query, std::wistream &f, string fmt, int &fins)
 {
-	dout << L"parse " << fmt << endl;
+	dout << L"parse fmt: " << fmt << endl;
 #ifdef with_marpa
     if(fmt == L"natural3" || fmt == L"n3") {
 		dout << L"Supported is a subset of n3 with our fin notation" << endl;
-		return parse_natural3(kb, query, f);
+		return parse_natural3(kb, query, f, fins, base);
 	}
     else
 #endif
 	if(fmt == L"natq" || fmt == L"nq" || fmt == L"nquads")
-                return parse_nq(kb, query, f);
-
+		return parse_nq(kb, query, f, fins);
 	else if(fmt == L"jsonld"){
 		dout << L"Cannot yet read JSON-LD format" << endl;
-		return 0;
+		return FAIL;
 	}
     else
-		return 0;
+		return FAIL;
 }
 
 string fmt_from_ext(string fn){
@@ -141,24 +181,28 @@ string fmt_from_ext(string fn){
 	return L"";
 }
 
-int try_parse(qdb &kb, qdb &query, std::wistream &f, string fn) {
+int parse(qdb &kb, qdb &query, std::wistream &f, string fn, int &fins) {
 	string fmt;
 	if (format == L"")
 		fmt = fmt_from_ext(fn);
-		return parse(kb, query, f, format);
+	if (format != L"")
+		return _parse(kb, query, f, format, fins);
 	else
 	{
 		int best = 0;
 		for (auto x : _formats) {
-			int r = parse(kb, query, f, x);
+			int r = _parse(kb, query, f, x, fins);
 			if (r > best)
+			{
+				if (r==COMPLETE)
+					return r;
 				best = r;
+			}
 		}
 		return best;
 	}
 	return 0;
 }
-
 
 bool dash_arg(string token, string pattern){
 	return (token == pattern) || (token == L"-" + pattern) || (token == L"--" + pattern);
@@ -236,13 +280,11 @@ bool check_option(string s){
 	return false;
 }
 
-      
 int get_qdb(qdb &kb, string fname){
-        std::wistream* pis = &std::wcin;
-        if (fname != L"")
-           pis = new std::wifstream(ws(fname));
-        std::wistream& is = *pis;
-	return parse(kb,is,get_format(fname));
+	std::wifstream is(ws(fname));
+	qdb dummy_query;
+	int dummy_fins;
+	return parse(kb, dummy_query, is, fname, dummy_fins);
 }
 
 void mode_query(){
@@ -250,17 +292,7 @@ void mode_query(){
 		dout << L"No kb; cannot query." << endl;
 	}else{
 		if(_argstream.size() == 0){
-                	qdb q_in;
-                	int r = get_qdb(q_in,L"");
-                	if(r == 2){
-                        	(*tauProver).query(q_in);
-				(*tauProver).e.clear();
-                	}else if(r == 1 || r == 0){
-                	        dout << L"Error parsing query input." << endl;
-                	}else{
-                	        dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
-                        	assert(false);
-			}
+			set_mode(QUERY);
 		}else{
 			while(_argstream.size() > 0){
 				string token = read_arg();
@@ -274,13 +306,13 @@ void mode_query(){
 				qdb q_in;
 				int r = get_qdb(q_in,token);
 				if(r == 2){
-                         	       (*tauProver).query(q_in);
-				       (*tauProver).e.clear();	
-                        	}else if(r == 1 || r == 0){
-                        	       dout << L"Error parsing query file \"" << token << "\"" << endl;
-                        	}else{
-                        	        dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
-                        	        assert(false);
+					(*tauProver).query(q_in);
+					(*tauProver).e.clear();
+				}else if(r == 1 || r == 0){
+					dout << L"Error parsing query file \"" << token << "\"" << endl;
+				}else{
+					dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
+					assert(false);
                         	}
 			}
 		}
@@ -296,18 +328,7 @@ void clear_kb(){
 void mode_kb(){
 	if(_argstream.size() == 0){
 		clear_kb();
-		qdb kb_in;
-		int r = get_qdb(kb_in,L"");
-		if(r == 2){
-			kbs.push_back(kb_in);
-			tauProver = new prover(merge_qdbs(kbs));
-		}else if(r == 1 || r == 0){
-			dout << L"Error parsing kb input." << endl;
-		}else{
-			dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
-			assert(false);
-		}
-		
+		set_mode(KB);
 	}else{
 		string token = read_arg();
 		if(dash_arg(token,L"clear")){
@@ -338,6 +359,7 @@ void mode_kb(){
 		}else{
 			while(_argstream.size() > 0){
 				string token = read_arg();
+
 				if(is_command(token)){
 					_argstream.push_front(token);
 					break;
@@ -345,8 +367,7 @@ void mode_kb(){
 				if(check_option(token)){
 					continue;
 				}
-				
-			
+
 				qdb kb_in;
 				int r = get_qdb(kb_in, token);	
 				if(r == 2){
@@ -368,36 +389,41 @@ void mode_kb(){
 int main ( int argc, char** argv) {
 	dict.init();
 	string input_buffer, data_buffer;
-	int mode;
-	const int DATA = 1;
-	const int COMMANDS = 0;
 
 	for(int i=1;i<argc;i++){
-		input_buffer += ws(argv[i]) + " ";
+		input_buffer += ws(argv[i]) + L" ";
 	}
 
 	for(ever){
-		if (isatty(fileno(stdin))
+		if (isatty(fileno(stdin)))
 			std::wcout << L"Tau> ";
-		if (input_buffer.size() == 0);
+		if (input_buffer.size() == 0)
 		{
 			if (std::wcin.eof())
 				exit(0);
 			else
-				input_buffer << std::cin << L"\n"/*?*/;
+			{
+				string line;
+				std::getline(std::wcin, line);
+				input_buffer += line + L"\n";
+			}
 		}
 
-		size_t end = input_buffer.find("\n");
+		size_t end = input_buffer.find(L"\n") + 1;
+		if (end == input_buffer.npos) end = input_buffer.size();
 		string line = string(input_buffer.begin(), input_buffer.begin() + end);
 		input_buffer = string(input_buffer.begin() + end, input_buffer.end());
 		dout << L"line is \"" << line << "\"" << std::endl;
-
+		dout << L"input buffer: \"" << input_buffer << "\"" << std::endl;
+		dout << L"data buffer: \"" << data_buffer << "\"" << std::endl;
+		dout << L"mode: \"" << mode << "\"" << std::endl;
 
 		string token;
 		if (mode == COMMANDS) {
 
 			string _t;
-			while (std::getline(line, _t, L' ')) {//split on spaces
+			std::wstringstream liness(line);
+			while (std::getline(liness, _t, L' ')) {//split on spaces
 					_argstream.push_back(_t);
 				}
 
@@ -431,21 +457,37 @@ int main ( int argc, char** argv) {
 		}
 
 		string new_buffer = data_buffer + line;
+
 		int fins;
-		int pr = try_parse(new_buffer, fins);
+		qdb kb, query;
+		std::wstringstream ss(new_buffer);
+		int pr = parse(kb, query, ss, L"", fins);
+		dout << "parsing result:"<<pr<<std::endl;
+		dout << "fins:"<<fins<<std::endl;
+		if (pr)
+			data_buffer += line;
 		if(pr == COMPLETE)
 		{
-			if (mode == KB || mode == QUERY && fins == 1) {
-				//add kb or execute query
+			if (mode == KB && fins > 0) {
+				kbs.push_back(kb);
+				tauProver = new prover(merge_qdbs(kbs));
+				data_buffer=L"";
+			}
+			if (mode == QUERY && fins > 0) {
+				(*tauProver).query(kb);
+				(*tauProver).e.clear();
+				data_buffer=L"";
 			}
 			else if(mode == COMMANDS && fins == 2) {
-				//do both
+				dout << "querying" << std::endl;
+				kbs.push_back(kb);
+				tauProver = new prover(merge_qdbs(kbs));
+				(*tauProver).query(query);
+				(*tauProver).e.clear();
+				data_buffer=L"";
 			}
 		}
-		else if (pr == INCOMPLETE) {
-			data_buffer += line;
-		}
-		else if (pr == FAIL && mode == COMMANDS)
+		else if (pr == FAIL && mode == COMMANDS){
 			dout << "No such command: \"" << token << "\"." << endl;
 		}
 	}
