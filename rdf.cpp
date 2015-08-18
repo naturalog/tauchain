@@ -283,7 +283,7 @@ int readqdb (qdb& r, std::wistream& is) {
 	while (getline(is, s)) {
 		dout << "line:\"" << s << "\"" << std::endl;
 		trim(s);
-		if (s[0] == '#') continue;
+		if (!s.size() || s[0] == '#') continue;
 		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L"."){
 			fins++;
 			break;
