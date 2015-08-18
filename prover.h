@@ -254,7 +254,7 @@ private:
 		return dsub ? unify_ep(_s, _d, *dsub) : unify_ep(_s, _d);
 	}
 
-	inline bool euler_path(shared_ptr<proof>&);
+	inline bool euler_path(shared_ptr<proof>);
 	int builtin(termid, shared_ptr<proof>, queue_t&);
 	termid quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
