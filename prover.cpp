@@ -23,9 +23,8 @@ int _indent = 0;
 
 term::term() : p(0), s(0), o(0) {}
 
-bool prover::euler_path(shared_ptr<proof>& _p) {
+bool prover::euler_path(shared_ptr<proof> _p) {
 	setproc(L"euler_path");
-	if (_p) return false;
 	auto& ep = _p;
 	proof& p = *_p;
 	termid t = heads[p.rule];
@@ -326,6 +325,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
+	if (!_p) return 0;
 	if (steps % 1000000 == 0) (dout << "step: " << steps << endl);
 	++steps;
 	if (euler_path(_p)) return _p->next;
