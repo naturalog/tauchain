@@ -361,10 +361,13 @@ void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proo
 prover::ground prover::proof::g(prover* p) const {
 	if (!creator) return ground();
 	ground r = creator->g(p);
-	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), subs());
+	if (btterm)
+		r.emplace_back(p->kb.add(btterm, termset()), subs());
 	else if (creator->term_idx != p->bodies[creator->rule].size()) {
-		if (p->bodies[rule].empty()) r.emplace_back(rule, subs());
-	} else if (!p->bodies[creator->rule].empty()) r.emplace_back(creator->rule, creator->s);
+		if (p->bodies[rule].empty())
+			r.emplace_back(rule, subs());
+	} else if (!p->bodies[creator->rule].empty())
+		r.emplace_back(creator->rule, creator->s);
 	return r;	
 }
 

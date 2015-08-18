@@ -46,7 +46,11 @@ std::map<string,bool*> _flags = {
 };
 
 std::vector<string> extensions = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
-std::vector<string> _formats = {L"nq", L"n3", L"jsonld"};
+std::vector<string> _formats = {L"nq",
+								#ifdef with_marpa
+								L"n3",
+								#endif
+								L"jsonld"};
 std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
 
 std::vector<qdb> kbs;
@@ -253,6 +257,7 @@ bool check_option(string s){
 	for(string x : _formats){
 		if(x == _option){
 			format = x;
+			dout << "format:"<<format<<std::endl;
 			return true;
 		}
 	}
@@ -274,7 +279,7 @@ bool check_option(string s){
 				level = 100;
 			else
 				level = tmpLevel;
-			
+			dout << "level:" << level << std::endl;
 		}
 		return true;
 	}
@@ -398,20 +403,22 @@ int main ( int argc, char** argv) {
 	for(ever){
 		if (isatty(fileno(stdin)))
 			std::wcout << L"Tau> ";
-		if (input_buffer.size() == 0)
+		if (input_buffer.size() == 0 && _argstream.size() == 0)
 		{
 			if (std::wcin.eof())
 				exit(0);
-			else
-			{
-				string line;
-				std::getline(std::wcin, line);
-				input_buffer += line + L"\n";
-			}
+			string line;
+			std::getline(std::wcin, line);
+			input_buffer += line + L"\n";
 		}
 
-		size_t end = input_buffer.find(L"\n") + 1;
-		if (end == input_buffer.npos) end = input_buffer.size();
+		size_t nlpos = input_buffer.find(L"\n");
+		size_t end;
+		if (nlpos == input_buffer.npos)
+			end = input_buffer.size();
+		else
+			end = nlpos + 1;
+		dout << L"nlpos=" << nlpos << " end=" << end << std::endl;
 		string line = string(input_buffer.begin(), input_buffer.begin() + end);
 		input_buffer = string(input_buffer.begin() + end, input_buffer.end());
 		dout << L"line is \"" << line << "\"" << std::endl;
@@ -419,17 +426,21 @@ int main ( int argc, char** argv) {
 		dout << L"data buffer: \"" << data_buffer << "\"" << std::endl;
 		dout << L"mode: \"" << mode << "\"" << std::endl;
 
-		string trimmed = data_buffer;
-		boost::algorithm::trim(trimmed);
+		string trimmed_data = data_buffer;
+		boost::algorithm::trim(trimmed_data);
 
 		string token;
-		if (mode == COMMANDS && trimmed == L"") {
+		if (mode == COMMANDS && trimmed_data == L"") {
 
 			string _t;
 			std::wstringstream liness(line);
 			while (std::getline(liness, _t, L' ')) {//split on spaces
 					_argstream.push_back(_t);
 				}
+			dout << "argstream:[";
+			for (auto a:_argstream)
+				dout << a << ", ";
+			dout << "]" << std::endl;
 
 			token = read_arg();
 
@@ -499,7 +510,7 @@ int main ( int argc, char** argv) {
 		else if (pr == FAIL)
 		{
 			dout << "that doesnt parse, try again" << std::endl;
-			if (mode == COMMANDS && trimmed == L"")
+			if (mode == COMMANDS && trimmed_data == L"")
 				dout << "and theres no such command: \"" << token << "\"." << endl;
 		}
 	}
