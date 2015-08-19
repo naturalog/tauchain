@@ -1,8 +1,9 @@
 #include "prover.h"
 
 bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
-	PROFILE(++unifs);
+//	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
+	return _s->unify(ssub, _d, dsub);
 	setproc(L"unify_bind");
 	termid v;
 	bool r, ns = false;

@@ -22,46 +22,6 @@ using namespace boost::algorithm;
 int _indent = 0;
 prover::termdb prover::_terms;
 
-/*
-struct term;
-struct res {
-	const wchar_t *value, *datatype, *lang;
-	enum etype { IRI, BNODE, LITERAL };
-	etype type;
-	struct sub {
-		const term* t;
-		sub* next;
-	} *subs;
-	void spush(const term* t) {
-		sub* s = new sub;
-		s->next = subs;
-		s->t = t;
-	}
-	void spop() {
-		sub* s = subs->next;
-		delete subs;
-		subs = s;
-	}
-	bool isvar() {
-		return *value != L'?' || (subs && subs->
-	}
-};
-
-struct term {
-	res* p;
-	term *s, *o;
-	resid evaled;
-	bool evaluate(subs& s) {
-		
-		auto it = begin(t), eit = end(t);
-		for (; it != eit; ++it)
-			if (ISVAR(*it)) {
-				auto sit = s.find(*it);
-				if (sit != s.end())
-			}
-	}
-};
-*/
 term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	auto evvar = [this](const subs& ss) {
 		PROFILE(++evals);
@@ -82,6 +42,47 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	else if (!s && !o) evaluate = evpred;
 	else if (!s || !o) throw 0;
 	else evaluate = ev;
+
+	auto unifvar = [this](const subs& ssub, termid _d, subs& dsub) {
+		PROFILE(++unifs);
+		if (!_d) return false;
+		setproc(L"unify_bind");
+		termid v;
+		return (v = evaluate(ssub)) ? v->unify(ssub, _d, dsub) : true;
+	};
+
+	auto unif = [this](const subs& ssub, termid _d, subs& dsub) {
+		PROFILE(++unifs);
+		if (!_d) return false;
+		setproc(L"unify_bind");
+		termid v;
+		const term& d = *_d;
+		if (ISVAR(d)) {
+			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
+			dsub.emplace(d.p, evaluate(ssub));
+			return true;
+		}
+		if (!d.s || p != d.p) return false;
+		if (!s->unify(ssub, d.s, dsub)) return false;
+		return o->unify(ssub, d.o, dsub);
+	};
+
+	auto unifpred = [this](const subs& ssub, termid _d, subs& dsub) {
+		PROFILE(++unifs);
+		if (!_d) return false;
+		setproc(L"unify_bind");
+		termid v;
+		const term& d = *_d;
+		if (ISVAR(d)) {
+			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
+			dsub.emplace(d.p, evaluate(ssub));
+			return true;
+		}
+		return p == d.p && !d.s;
+	};
+	if (p < 0) unify = unifvar;
+	else if (!s) unify = unifpred;
+	else unify = unif;
 }
 
 bool prover::euler_path(shared_ptr<proof> _p) {

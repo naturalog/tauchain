@@ -40,6 +40,7 @@ struct term {
 	resid p;
 	termid s, o;
 	std::function<termid(const subs&)> evaluate;
+	std::function<bool(const subs&, termid, subs&)> unify;
 	term(resid _p, termid _s = 0, termid _o = 0);
 #ifdef JSON
 	pobj json(const prover&) const;
