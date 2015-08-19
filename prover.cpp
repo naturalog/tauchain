@@ -17,6 +17,7 @@
 #include "marpa_tau.h"
 #include <fstream>
 #endif
+#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
 
 using namespace boost::algorithm;
 int _indent = 0;
@@ -127,7 +128,7 @@ void* testfunc(void* p) {
 //	return 0;
 }
 
-int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
+int prover::builtin(termid id, shared_ptr<proof> p) {
 	setproc(L"builtin");
 	const term& t = *id;
 	int r = -1;
@@ -230,7 +231,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
+		queuepush(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
 	}
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		prover copy(*this); //(Does this copy correctly?)
@@ -281,14 +282,12 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		r = 1;
 	}*/
 	#endif
-	if (r == 1) 
-		queue.push([p, id, this](){
-			shared_ptr<proof> r = make_shared<proof>(p, *p);
-			r->btterm = EVALPS(id, p->s);
-			++r->term_idx;
-			r->src = p->src;
-			return r;
-		}());
+	if (r == 1) {
+		shared_ptr<proof> r = make_shared<proof>(p, *p);
+		r->btterm = EVALPS(id, p->s);
+		++r->term_idx;
+		queuepush(r);
+	}
 	return r;
 }
 
@@ -305,7 +304,6 @@ void prover::pushev(shared_ptr<proof> p) {
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
 }
-	#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; } termsub.clear(); ++src;
 
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	if (!_p) return 0;
@@ -316,49 +314,44 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	const proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto body = bodies[frame.rule];
-	size_t src = 0;
 	// if we still have some terms in rule body to process
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
-		if (builtin(t, _p, queue) != -1) return frame.next;
-#ifdef PREDVARS
-		if (t->p < 0)//ISVAR
-			for(auto rulelst: kb.r2id) {
-				step_in(src, rulelst.second, _p, t);
-			//	dout << "PREDVAR";
-			}
-		else
-#endif
+		if (builtin(t, _p) != -1) return frame.next;
 		{
 			if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-			step_in(src, kb.r2id[t->p], _p, t);
+			step_in(kb.r2id[t->p], _p, t);
 		}
 	}
-	else if (!frame.prev) gnd.push(_p);
+	else if (!frame.prev) gnd.push_back(_p);
 	else {
 		proof& ppr = *frame.prev;
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
 		ruleid rl = frame.rule;
-		r->src = ppr.src;
-		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s = ppr.s);
+		r->s = ppr.s;
+		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s);
 		++r->term_idx;
 		step(r);
 	}
 	return frame.next;
 }
 
-void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
+void prover::step_in(ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
 {
 	proof& frame = *_p;
 	if (!frame.s.empty()) {
 		for (auto rule : candidates) {
 			if (unify(t, frame.s, heads[rule], termsub))
-				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub));
+			termsub.clear();
+
 		}
 	}
 	else for (auto rule : candidates) {
 		if (unify(t, heads[rule], termsub))
-			queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+			queuepush(make_shared<proof>(_p, rule, 0, _p, termsub));
+			termsub.clear();
+
 		}
 }
 
@@ -568,8 +561,7 @@ int prover::do_query(const termset& goal, subs * s) {
 	setproc(L"do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = *s;
-	queue.push(p);
-	
+
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	{
 		setproc(L"rules");
@@ -583,12 +575,6 @@ int prover::do_query(const termset& goal, subs * s) {
 #endif
 	lastp = p;
 	while ((p = step(p)));
-//	do {
-//		q = queue.top();//.get();
-//		queue.pop();
-//		printq(queue);
-//		step(q);
-//	} while (!queue.empty());// && steps < 2e+7);
 #ifdef TIMER
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
@@ -596,11 +582,9 @@ int prover::do_query(const termset& goal, subs * s) {
 	int duration = 0;
 #endif
 
-	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
+	for (auto x : gnd) pushev(x);
 	TRACE(dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM);
-//	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
 	return duration/1000.;
-	//for (auto x : gnd) pushev(x);
 }
 
 term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
