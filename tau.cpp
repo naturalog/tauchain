@@ -13,7 +13,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
-
+#define CLI_TRACE(x)
+//#define CLI_TRACE(x) TRACE(x)
 
 #define ever ;;
 
@@ -412,7 +413,7 @@ int main ( int argc, char** argv) {
 	}
 
 	for(ever){
-		dout << "argstream.size=" << _argstream.size() << std::endl;
+		CLI_TRACE(dout << "argstream.size=" << _argstream.size() << std::endl;)
 
 		if (isatty(fileno(stdin))) {
 			string prompt;
@@ -442,14 +443,15 @@ int main ( int argc, char** argv) {
 			end = input_buffer.size();
 		else
 			end = nlpos + 1;
-		dout << L"nlpos=" << nlpos << " end=" << end << std::endl;
+		CLI_TRACE(dout << L"nlpos=" << nlpos << " end=" << end << std::endl;)
 		string line = string(input_buffer.begin(), input_buffer.begin() + end);
 		input_buffer = string(input_buffer.begin() + end, input_buffer.end());
+		CLI_TRACE(
 		dout << L"line is \"" << line << "\"" << std::endl;
 		dout << L"input buffer: \"" << input_buffer << "\"" << std::endl;
 		dout << L"data buffer: \"" << data_buffer << "\"" << std::endl;
 		dout << L"mode: \"" << mode << "\"" << std::endl;
-
+		)
 		string trimmed_data = data_buffer;
 		boost::algorithm::trim(trimmed_data);
 
@@ -462,14 +464,16 @@ int main ( int argc, char** argv) {
 					_argstream.push_back(_t);
 				}
 
+			CLI_TRACE(
 			dout << "argstream:[";
 			for (auto a:_argstream)
 				dout << a << ", ";
 			dout << "]" << std::endl;
+			)
 
 			token = read_arg();
 
-			dout << L"token: \"" << token << "\"" << std::endl;
+			CLI_TRACE(dout << L"token: \"" << token << "\"" << std::endl);
 
 			if (check_option(token)) {
 				continue;
@@ -510,10 +514,10 @@ int main ( int argc, char** argv) {
 		qdb kb, query;
 		std::wstringstream ss(new_buffer);
 		int pr = parse(kb, query, ss, L"", fins);
-		dout << "parsing result:"<<pr<<std::endl;
+		CLI_TRACE(dout << "parsing result:"<<pr<<std::endl);
 		if (pr) {
 			data_buffer += line;
-			dout << "fins:" << fins << std::endl;
+			CLI_TRACE(dout << "fins:" << fins << std::endl);
 		}
 		if(pr == COMPLETE)
 		{

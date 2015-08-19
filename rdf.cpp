@@ -281,7 +281,7 @@ int readqdb (qdb& r, std::wistream& is) {
 	nqparser p;
 	std::wstringstream ss;
 	while (getline(is, s)) {
-		dout << "line:\"" << s << "\"" << std::endl;
+		//dout << "line:\"" << s << "\"" << std::endl;
 		trim(s);
 		if (!s.size() || s[0] == '#') continue;
 		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L"."){
