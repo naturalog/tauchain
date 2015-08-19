@@ -5,7 +5,7 @@
 
 typedef std::vector<string> strings;
 
-extern bool fnamebase, quad_in, nocolor;
+extern bool fnamebase, quad_in, nocolor, irc;
 
 class cmd_t {
 protected:

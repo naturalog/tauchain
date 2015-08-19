@@ -39,7 +39,7 @@ string base = L"";
 std::map<string,bool*> _flags = {
 	{L"nocolor",&nocolor},
 	{L"deref",&deref},
-	//this one.
+	{L"irc",&irc},
 	{L"shorten",&shorten},
 	{L"base",&fnamebase},
 	{L"quads",&quad_in},
@@ -157,7 +157,7 @@ int parse_nq(qdb &kb, qdb &query, std::wistream &f, int &fins)
 
 int _parse(qdb &kb, qdb &query, std::wistream &f, string fmt, int &fins)
 {
-	dout << L"parse fmt: " << fmt << endl;
+	CLI_TRACE(dout << L"parse fmt: " << fmt << endl;)
 #ifdef with_marpa
     if(fmt == L"natural3" || fmt == L"n3") {
 		//dout << L"Supported is a subset of n3 with our fin notation" << endl;

@@ -448,13 +448,13 @@ struct Marpa {
 //                        dout << L"..\"" << string(pre, pos-1) << L"<HERE>" << string(pos, post) << L"\"..." << std::endl;
 
 
-                dout << "[n3]expecting:" << std::endl;
+                dout << "[n3]expecting:";
+                if(!irc) dout << std::endl;
                 for (int i = 0; i < num_expected; i++) {
                     sym e = expected[i];
-                    dout << sym2str(e) << std::endl;
+                    dout << sym2str(e)<< "   ";
+                    if(!irc) dout << std::endl;
                 }
-
-
                 return 0;
             }
         }

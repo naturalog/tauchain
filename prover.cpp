@@ -531,7 +531,7 @@ void prover::query(const termset& goal, subs * s) {
 	auto duration = do_query(goal, s);
 	TRACE(dout << KYEL << "Evidence:" << endl);
 	printe();/* << ejson()->toString()*/ dout << KNRM;
-	dout << "elapsed: " << duration << "ms steps: " << steps << " unifs: " << unifs << " evals: " << evals << endl;
+	TRACE(dout << "elapsed: " << duration << "ms steps: " << steps << " unifs: " << unifs << " evals: " << evals << endl);
 }
 
 void prover::unittest() {
