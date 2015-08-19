@@ -86,17 +86,24 @@ string bidict::tostr() {
 }
 
 string dstr ( nodeid p, bool escape ) {
-	if ( !deref ) return *tostr ( p );
+	if (!deref) return *tostr(p);
 	string s = dict[p].tostring();
 	if (escape) {
 		replace_all(s, L"\\", L"\\\\");
 		replace_all(s, L"\"", L"\\\"");
 		replace_all(s, L"'", L"\\'");
 	}
-	if ( !shorten ) return s;
-	if ( s.find ( L"#" ) == string::npos ) return s;
+	if (dict[p]._type == node::IRI)
+		return maybe_shorten_uri(s);
+	else
+		return s;
+}
+string maybe_shorten_uri(string s)
+{
+	if ( !shorten ||  s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 }
+
 bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
 }

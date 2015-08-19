@@ -119,15 +119,17 @@ struct Marpa {
 
     string sym2str_(sym s) {
         if (literals.find(s) != literals.end())
-            return L": \"" + literals[s] + L"\"";
+            return L"\"" + literals[s] + L"\"";
         if (terminals.find(s) != terminals.end())
-            return terminals[s]->name + L" - " + terminals[s]->regex_string;
-        return *dict[sym2resid(s)].value;
+            return maybe_shorten_uri(terminals[s]->name) + L" - " + terminals[s]->regex_string;
+        return maybe_shorten_uri(*dict[sym2resid(s)].value);
     }
 
     string sym2str(sym s) {
         std::wstringstream sss;
-        sss << L"(" << s << L")" << sym2str_(s);
+        if (! irc)
+            sss << L"(" << s << L")";
+        sss << sym2str_(s);
         return sss.str();
     }
 
@@ -452,7 +454,7 @@ struct Marpa {
                 if(!irc) dout << std::endl;
                 for (int i = 0; i < num_expected; i++) {
                     sym e = expected[i];
-                    dout << sym2str(e)<< "   ";
+                    dout << sym2str(e)<< ", ";
                     if(!irc) dout << std::endl;
                 }
                 return 0;

@@ -418,7 +418,7 @@ int main ( int argc, char** argv) {
 	for(ever){
 		CLI_TRACE(dout << "argstream.size=" << _argstream.size() << std::endl;)
 
-		if (isatty(fileno(stdin))) {
+		if (irc || isatty(fileno(stdin))) {
 			string prompt;
 			if (mode == COMMANDS)
 				prompt = L"Tau";

@@ -220,7 +220,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, subs(), 0, true));
 	}
 	*/
-	else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
+	/*else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
 	else if ((
 		 t.p == A // parser kludge
@@ -246,7 +246,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 				return 1;
 			}
 		}
-	}
+	}*/
 	#ifdef with_marpa
 		/*
 	else if (t.p == marpa_parser_iri && t.s && t.o)
@@ -325,7 +325,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		if (t->p < 0)//ISVAR
 			for(auto rulelst: kb.r2id) {
 				step_in(src, rulelst.second, _p, t);
-				dout << "PREDVAR";
+			//	dout << "PREDVAR";
 			}
 		else
 #endif
