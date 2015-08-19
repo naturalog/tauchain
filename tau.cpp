@@ -78,8 +78,11 @@ void help(string help_arg){
 		else if(help_arg == L"help"){
 			help_str = L"command 'help': Tau will help you solve all your problems.";
 		}
-		else if(help_arg == L"quit"){
+		else if(help_arg == L"quit") {
 			help_str = L"command 'quit': exit Tau back to terminal";
+		}
+		else if(help_arg == L"fin"){
+			help_str = L"fin is part of the kb/query-loading, it denotes the end of your rule-base";
 		}else{
 			dout << "No command \"" << help_arg << "\"." << endl;
 			return;
