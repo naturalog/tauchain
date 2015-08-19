@@ -41,7 +41,7 @@ bool prover::unify_ep(termid _s, const subs& ssub, const term& d, const subs& ds
 	PROFILE(++unifs);
 	if (!_s) return false;
 	setproc(L"unify_ep");
-	return _s->unify_ep(ssub, d, dsub);
+	return _s->unify_ep(ssub, &d, dsub);
 /*	const term& s = *_s;
 	termid v;
 	bool r;

@@ -95,13 +95,15 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 		return true;
 	};*/
 
-	auto unifvar = [this](const subs& ssub, termid _d, subs& dsub) {
-		PROFILE(++unifs);
-		if (!_d) return false;
-		setproc(L"unify_bind");
-		static termid v;
-		return (v = evaluate(ssub)) ? v->unify(ssub, _d, dsub) : true;
-	};
+#define UNIFVAR(x) { \
+		PROFILE(++unifs); \
+		if (!_d) return false; \
+		setproc(L"unify_var"); \
+		static termid v; \
+		return (v = evaluate(ssub)) ? v->x(ssub, _d, dsub) : true; \
+	}
+	auto unifvar = [this](const subs& ssub, termid _d, subs& dsub) UNIFVAR(unify);
+	auto unifvar_ep = [this](const subs& ssub, termid _d, const subs& dsub) UNIFVAR(unify_ep);
 
 	auto unif = [this](const subs& ssub, termid _d, subs& dsub) {
 		PROFILE(++unifs);
@@ -134,14 +136,41 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 		}
 		return p == d.p;
 	};
-	if (p < 0) unify = unifvar;
-	else if (!s) unify = unifpred;
-	else unify = unif;
+	auto unif_ep = [this](const subs& ssub, termid _d, const subs& dsub) {
+		PROFILE(++unifs);
+		if (!_d) return false;
+		setproc(L"unify_ep");
+		static termid v;
+		const term& d = *_d;
+		if (!d.s) return false;
+		if (ISVAR(d)) {
+			if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
+			return true;
+		}
+		return p == d.p && s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub);
+	};
+
+	auto unifpred_ep = [this](const subs& ssub, termid _d, const subs& dsub) {
+		PROFILE(++unifs);
+		if (!_d) return false;
+		setproc(L"unify_ep");
+		static termid v;
+		const term& d = *_d;
+		if (d.s) return false;
+		if (ISVAR(d)) {
+			if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
+			return true;
+		}
+		return p == d.p;
+	};
+	if (p < 0) { unify = unifvar; unify_ep = unifvar_ep; }
+	else if (!s) { unify = unifpred; unify_ep = unifpred_ep; }
+	else { unify = unif; unify_ep = unif_ep; }
 }
 
 bool prover::euler_path(shared_ptr<proof> _p) {
 	setproc(L"euler_path");
-	auto& ep = _p;
+	auto ep = _p;
 	proof& p = *_p;
 	termid t = heads[p.rule];
 	if (!t) return false;
@@ -414,6 +443,12 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
+struct match_heads {
+	uint entry;
+	bool unify(termid t, const subs& s) {
+	}
+};
+
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
 	if (!_p) return 0;
@@ -422,7 +457,8 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	if (euler_path(_p)) return _p->next;
 	const proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
-	auto body = bodies[frame.rule];
+	auto& body = bodies[frame.rule];
+//	match_head mh(t,
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p) != -1) return);

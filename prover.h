@@ -83,7 +83,7 @@ struct term {
 	termid s, o;
 	std::function<termid(const subs&)> evaluate, dosub;
 	std::function<bool(const subs&, termid, subs&)> unify;
-	std::function<bool(const subs&, const term&, const subs&)> unify_ep;
+	std::function<bool(const subs&, termid, const subs&)> unify_ep;
 	term(resid _p, termid _s = 0, termid _o = 0);
 #ifdef JSON
 	pobj json(const prover&) const;
