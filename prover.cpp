@@ -220,9 +220,9 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, subs(), 0, true));
 	}
 	*/
-	/*else if (t.p == rdfsType && t0 && t0->p == rdfsResource)  //rdfs:Resource(?x)
+	else if (t.p == rdfsType && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
-	else if ((
+	/*else if ((
 		 t.p == A // parser kludge
 		 || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		//termset ts(2,0,*alloc);
@@ -675,7 +675,7 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 
 	std::vector<termid> vars;
 	if (s->p < 0) vars.push_back(s);
-	if (o->p < 1) vars.push_back(o);
+	if (o->p < 0) vars.push_back(o);
 	//ISVAR
 
 	//printe();

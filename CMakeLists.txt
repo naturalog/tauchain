@@ -37,16 +37,14 @@ add_executable(tau ${SOURCE_FILES})
 add_executable(m-tau ${MARPA_FILES})
 add_executable(m-tau3 ${MARPA_FILES})
 
-set(XXX "YYY")
-MESSAGE( STATUS "${XXX}")
-
-set(COMMON_FLAGS "-DJSON -I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS} -g -ggdb -DDEBUG -O3 -DPREDVARS")
+set(COMMON_FLAGS "-DJSON -I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS} -g -ggdb -DDEBUG -O0")# -DPREDVARS")
 
 SET_TARGET_PROPERTIES(tau   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}" )
 SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -I${MARPA_DIST} -Dwith_marpa ")
 SET_TARGET_PROPERTIES(m-tau3 PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -I${MARPA_DIST} -Dwith_marpa -O3")
 
 target_link_libraries(m-tau3 PRIVATE "-L${MARPA_DIST}/.libs -lmarpa")
+target_link_libraries(m-tau3  PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_link_libraries(m-tau  PRIVATE "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(m-tau  PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
 target_link_libraries(  tau  PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS})
