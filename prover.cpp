@@ -36,7 +36,7 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	};
 	auto ev = [this](const subs& ss) {
 		termid a = s->evaluate(ss), b = o->evaluate(ss);
-		return prover::make(p, a ? a : prover::make(s->p), b ? b : prover::make(o->p));
+		return prover::make(p, a ? a : s, b ? b : o);
 	};
 	if (p < 0) evaluate = evvar;
 	else if (!s && !o) evaluate = evpred;
@@ -47,7 +47,7 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 		PROFILE(++unifs);
 		if (!_d) return false;
 		setproc(L"unify_bind");
-		termid v;
+		static termid v;
 		return (v = evaluate(ssub)) ? v->unify(ssub, _d, dsub) : true;
 	};
 
@@ -55,30 +55,32 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 		PROFILE(++unifs);
 		if (!_d) return false;
 		setproc(L"unify_bind");
-		termid v;
+		static termid v;
 		const term& d = *_d;
+		if (!d.s) return false;
 		if (ISVAR(d)) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
 			dsub.emplace(d.p, evaluate(ssub));
+			if (dsub[d.p]->s) throw 0;
 			return true;
 		}
-		if (!d.s || p != d.p) return false;
-		if (!s->unify(ssub, d.s, dsub)) return false;
-		return o->unify(ssub, d.o, dsub);
+		return p == d.p && s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub);
 	};
 
 	auto unifpred = [this](const subs& ssub, termid _d, subs& dsub) {
 		PROFILE(++unifs);
 		if (!_d) return false;
 		setproc(L"unify_bind");
-		termid v;
+		static termid v;
 		const term& d = *_d;
+		if (d.s) return false;
 		if (ISVAR(d)) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
 			dsub.emplace(d.p, evaluate(ssub));
+			if (dsub[d.p]->s) throw 0;
 			return true;
 		}
-		return p == d.p && !d.s;
+		return p == d.p;
 	};
 	if (p < 0) unify = unifvar;
 	else if (!s) unify = unifpred;
@@ -570,12 +572,13 @@ void prover::query(const termset& goal, subs * s) {
 
 void prover::unittest() {
 	pnode x = mkiri(pstr(L"x"));
+	pnode y = mkiri(pstr(L"y"));
 	pnode a = mkiri(pstr(L"?a"));
 	qdb &kb = *new qdb, &q = *new qdb;
 	kb.first[str_default] = mk_qlist();
 	q.first[str_default] = mk_qlist();
-	kb.first[str_default]->push_back(make_shared<quad>(x, x, x));
-	q.first[str_default]->push_back(make_shared<quad>(a, x, x));
+	kb.first[str_default]->push_back(make_shared<quad>(x, x, y));
+	q.first[str_default]->push_back(make_shared<quad>(a, x, a));
 	prover &p = *new prover(kb, false);
 //	subs s1, s2;
 //	termid xx = p.make(x, p.make(x,0,0), p.make(x,0,0));
