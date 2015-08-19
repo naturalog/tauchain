@@ -288,9 +288,15 @@ bool check_option(string s){
 
 int get_qdb(qdb &kb, string fname){
 	std::wifstream is(ws(fname));
+	if (!is.is_open()) {
+		dout << "failed to open file." << std::endl;
+		return 0;
+	}
 	qdb dummy_query;
 	int dummy_fins;
-	return parse(kb, dummy_query, is, fname, dummy_fins);
+	int r = parse(kb, dummy_query, is, fname, dummy_fins);
+	dout << "qdb size:"<< kb.first.size() << std::endl;
+	return r;
 }
 
 void mode_query(){
@@ -312,6 +318,7 @@ void mode_query(){
 				qdb q_in;
 				int r = get_qdb(q_in,token);
 				if(r == 2){
+					dout << "query size: " << q_in.first.size() << std::endl;
 					(*tauProver).query(q_in);
 					(*tauProver).e.clear();
 				}else if(r == 1 || r == 0){

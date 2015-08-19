@@ -333,8 +333,10 @@ struct Marpa {
 
 
     int parse(const string inp, termid &raw) {
-        if (!precomputed)
+        if (!precomputed) {
             check_int(marpa_g_precompute(g));
+            precomputed = true;
+        }
 
         print_events();
 
@@ -455,7 +457,7 @@ struct Marpa {
             }
         }
 
-        TRACE(dout << "evaluating.." << std::endl);
+        TRACE(dout << "retrieving parse tree.." << std::endl);
 
         //marpa allows variously ordered lists of ambiguous parses, we just grab the default
         Marpa_Bocage b = marpa_b_new(r, -1);
@@ -945,7 +947,7 @@ int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base)
 
         static prover grmr(gkb);
         TRACE(dout << "grammar loaded." << std::endl);
-        TRACE(dout << std::endl << std::endl << "grmr:" << std::endl << grmr.formatkb());
+        //TRACE(dout << std::endl << std::endl << "grmr:" << std::endl << grmr.formatkb());
         parser = new Marpa(&grmr, dict[mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"))]);
     }
 
@@ -955,7 +957,7 @@ int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base)
 
     if (success == 2)
     {
-        TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << parser->prvr->formatkb());
+        //TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << parser->prvr->formatkb());
 
         if (!raw)
             return 0;

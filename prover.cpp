@@ -662,7 +662,7 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	if (o->p < 1) vars.push_back(o);
 	//ISVAR
 
-	printe();
+	//printe();
 
 	for (auto ei  : e)
 	{
@@ -673,24 +673,24 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 				subs env = g.second;
 				env = subs_workardound;
 				for (auto var:vars) {
-					dout << var << " " << var->p << " " << env.size();
+					TRACE(dout << var << " " << var->p << " " << env.size()) ;
 					if (env.find(var->p) != env.end()) {
 						auto v = env[var->p];
 						TRACE(dout << " match:");
 						TRACE(dout << v << " ");
 						r.push_back(v);
 						if (stop_at && r.size() >= stop_at) {
-							e.clear();
-							return r;
+							goto end;
 						}
 					}
 				}
 			}
 		}
 	}
-
-	e.clear();
-	return r;
+	end:
+		subs_workardound.clear();
+		e.clear();
+		return r;
 }
 
 prover::nodeids prover::askn(termid s, nodeid p, termid o, size_t stop_at) {
