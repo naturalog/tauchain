@@ -58,6 +58,7 @@ struct MarpaIris{
     const nodeid is_parse_of = iri("is_parse_of");
     const nodeid list_of = iri("list_of");
     const nodeid separator = iri("separator");
+    const nodeid proper = iri("proper");
     const nodeid arg0 = iri("arg0");
     const nodeid arg1 = iri("arg1");
     const nodeid arg2 = iri("arg2");
@@ -230,7 +231,8 @@ struct Marpa {
         }
         else if ((bind = prvr2->askn1o(thing, marpa->list_of))) {
             auto sep = prvr2->askn1o(thing, marpa->separator);
-            seq_new(symbol, add(bind), sep?add(sep):-1, 0, 0);
+			auto proper = prvr2->askn1o(thing, marpa->proper);
+            seq_new(symbol, add(bind), sep?add(sep):-1, 0, proper ? MARPA_PROPER_SEPARATION : 0);
         }
         else if ((bind = prvr2->askn1o(thing, bnf_zeroormore))) {
             seq_new(symbol, add(bind), -1, 0, 0);
@@ -461,8 +463,10 @@ struct Marpa {
 
         //marpa allows variously ordered lists of ambiguous parses, we just grab the default
         Marpa_Bocage b = marpa_b_new(r, -1);
-        if (!b)
-            return 0;
+        if (!b) {
+			dout << "failed to create bocage" << std::endl;
+			return 0;
+		}
         Marpa_Order o = marpa_o_new(b);
         check_null(o);
         Marpa_Tree t = marpa_t_new(o);

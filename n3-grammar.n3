@@ -46,8 +46,8 @@ language a cfg:Language;
 
 
 document marpa:list_of statement;
-	marpa:separator ".";
-	marpa:proper true. 
+	marpa:separator ".".
+	#we need the inverse of proper, a trailing separator is required
 
 # for statements, separator after last item isnt optional
 # Formula does NOT need period on last statement

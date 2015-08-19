@@ -408,8 +408,11 @@ int main ( int argc, char** argv) {
 	}
 
 	for(ever){
+		dout << "argstream.size=" << _argstream.size() << std::endl;
+
 		if (isatty(fileno(stdin)))
 			std::wcout << L"Tau> ";
+
 		if (input_buffer.size() == 0 && _argstream.size() == 0)
 		{
 			if (std::wcin.eof())
@@ -444,6 +447,7 @@ int main ( int argc, char** argv) {
 			while (std::getline(liness, _t, L' ')) {//split on spaces
 					_argstream.push_back(_t);
 				}
+
 			dout << "argstream:[";
 			for (auto a:_argstream)
 				dout << a << ", ";
@@ -476,6 +480,11 @@ int main ( int argc, char** argv) {
 				continue;
 			}
 
+			/*
+			if (token == L"fin.") {
+				if (mode == KB || mode == QUERY)//mode isnt kb fin query fin, we arent waiting for
+			}
+			*/
 			if (token == L"quit") {
 				break;
 			}
@@ -517,10 +526,16 @@ int main ( int argc, char** argv) {
 		}
 		else if (pr == FAIL)
 		{
+			if (line == L"fin.\n")
+			{
+				data_buffer=L"";
+				set_mode(COMMANDS);
+			}
 			dout << "that doesnt parse, try again" << std::endl;
 			if (mode == COMMANDS && trimmed_data == L"")
 				dout << "and theres no such command: \"" << token << "\"." << endl;
 		}
+		_argstream.clear();
 	}
 }
 

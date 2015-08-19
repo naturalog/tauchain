@@ -320,20 +320,19 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	// if we still have some terms in rule body to process
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
-		MARPA(if (builtin(t, _p, queue) != -1) return frame.next);//????
-
-                if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-                if (!frame.s.empty()) {
-                        for (auto rule : rit->second) {
-                                if (unify(t, frame.s, heads[rule], termsub))
-                                        queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-                        }
-                }
-                else for (auto rule : rit->second) {
-                        if (unify(t, heads[rule], termsub))
-                                queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-                        }
-
+		if (builtin(t, _p, queue) != -1) return frame.next;
+#ifdef PREDVARS
+		if (t->p < 0)//ISVAR
+			for(auto rulelst: kb.r2id) {
+				step_in(src, rulelst.second, _p, t);
+				dout << "PREDVAR";
+			}
+		else
+#endif
+		{
+			if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
+			step_in(src, kb.r2id[t->p], _p, t);
+		}
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
