@@ -929,7 +929,7 @@ N3 parse(std::ifstream &f, prover& grammar, bool single_file_mode = false)
     TRACE(dout << "query done.");
 
     termid raw = 0;
-    for (auto x : prvr.substs) {
+    for (auto x : prvr.subs) {
         TRACE(dout << "subst:");
         TRACE(prvr.prints(x));
         TRACE(dout << std::endl);
@@ -941,7 +941,7 @@ N3 parse(std::ifstream &f, prover& grammar, bool single_file_mode = false)
             }
         }
     }
-    prvr.substs.clear();
+    prvr.subs.clear();
     prvr.e.clear();
 
     TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << prvr.formatkb());
