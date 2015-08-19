@@ -9,8 +9,8 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, rdfnil, False, rdfsResource, rdfsdomain;
-//nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, rdfnil, False, rdfsResource, rdfsdomain;
+//resid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
 #ifdef with_marpa
@@ -43,7 +43,7 @@ void bidict::set ( const std::vector<node>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
-nodeid bidict::set ( node v ) {
+resid bidict::set ( node v ) {
 	if (!v.value) throw std::runtime_error("bidict::set called with a node containing null value");
 	auto it = pi.find ( v );
 	if ( it != pi.end() )
@@ -51,27 +51,27 @@ nodeid bidict::set ( node v ) {
 		assert (v._type == it->first._type);
 		return it->second;
 	}
-	nodeid k = pi.size() + 1;
+	resid k = pi.size() + 1;
 	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;
 }
 
-node bidict::operator[] ( nodeid k ) {
+node bidict::operator[] ( resid k ) {
 //	if (!has(k)) set(::tostr(k));
 #ifdef DEBUG
-	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting nodeid");
+	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting resid");
 #endif
 //	dout << k << ' ' << ip[k] << endl;
 	return ip[k];
 }
 
-nodeid bidict::operator[] ( node v ) {
+resid bidict::operator[] ( node v ) {
 	return pi[v];
 }
 
-bool bidict::has ( nodeid k ) const {
+bool bidict::has ( resid k ) const {
 	return ip.find ( k ) != ip.end();
 }
 
@@ -85,7 +85,7 @@ string bidict::tostr() {
 	return s.str();
 }
 
-string dstr ( nodeid p, bool escape ) {
+string dstr ( resid p, bool escape ) {
 	if ( !deref ) return *tostr ( p );
 	string s = dict[p].tostring();
 	if (escape) {

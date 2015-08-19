@@ -22,7 +22,18 @@ using namespace boost::algorithm;
 int _indent = 0;
 
 term::term() : p(0), s(0), o(0) {}
-
+/*
+struct term {
+	term evaluate(term& t, subs& s) {
+		auto it = begin(t), eit = end(t);
+		for (; it != eit; ++it)
+			if (ISVAR(*it)) {
+				auto sit = s.find(*it);
+				if (sit != s.end())
+			}
+	}
+};
+*/
 
 termid prover::evaluate(const term& p, const subs& s) {
 	PROFILE(++evals);
@@ -125,7 +136,7 @@ std::vector<termid> prover::get_list(termid head, proof* _p) {
 	return r;
 }
 
-void prover::get_dotstyle_list(termid id, std::list<nodeid> &list) {
+void prover::get_dotstyle_list(termid id, std::list<resid> &list) {
 	auto s = id->s;
 	if (!s) return;
 	list.push_back(s->p);
@@ -586,13 +597,13 @@ int prover::do_query(const termset& goal, subs * s) {
 	//for (auto x : gnd) pushev(x);
 }
 
-term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
+term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 termid prover::make(pnode p, termid s, termid o) { 
 	return make(dict.set(*p), s, o); 
 }
 
-termid prover::make(nodeid p, termid s, termid o) {
+termid prover::make(resid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif
@@ -642,16 +653,16 @@ prover::termids prover::askts(termid var, termid s, pnode p, termid o, int stop_
 }
 
 /*askts wrapper*/
-prover::nodeids prover::askns(termid var, termid s, pnode p, termid o, int stop_at) {
+prover::resids prover::askns(termid var, termid s, pnode p, termid o, int stop_at) {
 	auto r = askts(var, s, p, o, stop_at);
-	prover::nodeids rr;
+	prover::resids rr;
 	for (auto rrr:r)
 		rr.push_back(rrr->p);
 	return rr;
 }
 
 /*query for subjects*/
-prover::nodeids prover::ask4ss(pnode p, pnode o, int stop_at) {
+prover::resids prover::ask4ss(pnode p, pnode o, int stop_at) {
     assert(p && o);
     auto ot = make(o);
     assert (ot);
@@ -661,7 +672,7 @@ prover::nodeids prover::ask4ss(pnode p, pnode o, int stop_at) {
 }
 
 /*query for objects*/
-prover::nodeids prover::ask4os(pnode s, pnode p, int stop_at) {
+prover::resids prover::ask4os(pnode s, pnode p, int stop_at) {
     assert(s && p);
     auto st = make(s);
     assert (st);
@@ -671,12 +682,12 @@ prover::nodeids prover::ask4os(pnode s, pnode p, int stop_at) {
 }
 
 /*query for one object*/
-nodeid prover::ask1o(pnode s, pnode p) {
+resid prover::ask1o(pnode s, pnode p) {
     return force_one_n(ask4os(s, p, 1));
 }
 
 /*query for one subject*/
-nodeid prover::ask1s(pnode p, pnode o) {
+resid prover::ask1s(pnode p, pnode o) {
 	return force_one_n(ask4ss(p, o, 1));
 }
 
@@ -691,7 +702,7 @@ termid prover::ask1ot(pnode s, pnode p) {
     return force_one_t(askts(o_var, xxs, p, o_var, 1));
 }
 
-nodeid prover::force_one_n(nodeids r) {
+resid prover::force_one_n(resids r) {
     /*#ifdef debug
      * if (r.size() > 1)
     {
@@ -716,10 +727,10 @@ termid prover::force_one_t(termids r) {
 }
 
 /*get_list wrapper useful in marpa*/
-prover::nodeids prover::get_list(nodeid head)
+prover::resids prover::get_list(resid head)
 {
     auto r = get_list(make(head), nullptr);
-    nodeids rr;
+    resids rr;
     for (auto rrr: r)
         rr.push_back(rrr->p);
     return rr;

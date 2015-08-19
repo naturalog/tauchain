@@ -16,31 +16,31 @@
 #define MARPA(x)
 #endif
 
-typedef i64 nodeid;
+typedef i64 resid;
 
 extern std::list<string>& proc;
 class bidict {
-	std::map<nodeid, node> ip;
-	std::map<node, nodeid> pi;
+	std::map<resid, node> ip;
+	std::map<node, resid> pi;
 public:
 	void init();
-	nodeid set ( node v );
-	nodeid set ( pnode v ) { return set (*v); }
+	resid set ( node v );
+	resid set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
-	node operator[] ( nodeid);
+	node operator[] ( resid);
 	node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
-	nodeid operator[] ( node );
-	nodeid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
-	bool has ( nodeid k ) const;
+	resid operator[] ( node );
+	resid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
+	bool has ( resid k ) const;
 	bool has ( node v ) const;
 	string tostr();
 	std::map<string, pnode> nodes;
 };
 
 extern bidict& dict;
-extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain;
-//extern nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke;
-string dstr ( nodeid p, bool json = false );
+extern resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain;
+//extern resid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke;
+string dstr ( resid p, bool json = false );
 string indent();
 
 struct _setproc {

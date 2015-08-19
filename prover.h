@@ -36,17 +36,17 @@ class prover;
 typedef const term* termid;
 struct term {
 	term();
-	term(nodeid _p, termid _s, termid _o);
-	nodeid p;
+	term(resid _p, termid _s, termid _o);
+	resid p;
 	termid s, o;
 #ifdef JSON
 	pobj json(const prover&) const;
 #endif
 };
 
-//struct subcmp { bool operator()( const std::pair<nodeid, termid>& x, const std::pair<nodeid, termid>& y) const { return x.first < y.first; } };
-//typedef std::set<std::pair<nodeid, termid>, subcmp> subs;
-typedef std::map<nodeid, termid> subs;
+//struct subcmp { bool operator()( const std::pair<resid, termid>& x, const std::pair<resid, termid>& y) const { return x.first < y.first; } };
+//typedef std::set<std::pair<resid, termid>, subcmp> subs;
+typedef std::map<resid, termid> subs;
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
@@ -70,9 +70,9 @@ public:
 		void mark();
 		void revert();
 		typedef std::vector<ruleid> rulelist;
-		typedef std::map<nodeid, rulelist> r2id_t;
+		typedef std::map<resid, rulelist> r2id_t;
 		string format() const;
-		inline const rulelist& operator[](nodeid id) const { return r2id.at(id); }
+		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
 	const termset&heads = kb.head();
@@ -90,14 +90,14 @@ public:
 	~prover();
 
 	typedef std::list<std::pair<ruleid, shared_ptr<subs>>> ground;
-	typedef std::map<nodeid, std::list<std::pair<termid, ground>>> evidence;
+	typedef std::map<resid, std::list<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subs> subss;
 	termid tmpvar();
 	termid make(pnode p, termid s = 0, termid o = 0);
-	termid make(nodeid p, termid s = 0, termid o = 0);
-	termid make(termid) { throw std::runtime_error("called make(pnode/nodeid) with termid"); }
-	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/nodeid) with termid"); }
+	termid make(resid p, termid s = 0, termid o = 0);
+	termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 
 	struct proof {
 		ruleid rule = 0;
@@ -122,33 +122,33 @@ public:
 	std::vector<termid> get_list(termid head, proof*);
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
-	void get_dotstyle_list(termid, std::list<nodeid>&);
+	void get_dotstyle_list(termid, std::list<resid>&);
 
-	typedef std::vector <nodeid> nodeids;
+	typedef std::vector <resid> resids;
 	typedef std::vector <termid> termids;
 
-	nodeids get_list(nodeid head);
+	resids get_list(resid head);
 	termids askts(termid var, termid s, pnode p, termid o, int stop_at=0);
-	nodeids askns(termid var, termid s, pnode p, termid o, int stop_at=0);
-	nodeids ask4ss(pnode p, pnode o, int stop_at = 0);
-	nodeids ask4os(pnode s, pnode p, int stop_at = 0);
-	nodeid ask1o(pnode s, pnode p);
-	nodeid ask1s(pnode p, pnode o);
+	resids askns(termid var, termid s, pnode p, termid o, int stop_at=0);
+	resids ask4ss(pnode p, pnode o, int stop_at = 0);
+	resids ask4os(pnode s, pnode p, int stop_at = 0);
+	resid ask1o(pnode s, pnode p);
+	resid ask1s(pnode p, pnode o);
 	termid ask1ot(pnode s, pnode p);
-	nodeid force_one_n(nodeids r);
+	resid force_one_n(resids r);
 	termid force_one_t(termids r);
 
 private:
 	class termdb {
 	public:
-		typedef std::map<nodeid, termset> p2id_t;
-		inline const termset& operator[](nodeid id) const { return p2id.at(id); }
+		typedef std::map<resid, termset> p2id_t;
+		inline const termset& operator[](resid id) const { return p2id.at(id); }
 		bool equals(termid x, termid y) {
 			if (!x || !y) return !x == !y;
 			if (x->p == y->p) return equals(x->s, y->s) && equals(x->o, y->o);
 			return false;
 		}
-		inline termid add(nodeid p, termid s, termid o) {
+		inline termid add(resid p, termid s, termid o) {
 			auto& pp = p2id[p];
 			term t(p, s, o);
 			for (auto x : pp) if (equals(x, &t)) return x;
@@ -225,8 +225,8 @@ public:
 	string format(const termset& l, bool json = false);
 	void prints(const subs&  s);
 	void prints(shared_ptr<subs> s) { prints(*s); }
-	string format(nodeid) { throw std::runtime_error("called format(termid) with nodeid"); }
-	string format(nodeid, bool) { throw std::runtime_error("called format(termid) with nodeid"); }
+	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
+	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
