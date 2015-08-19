@@ -441,14 +441,14 @@ struct Marpa {
                 while (post != inp.end() && *post != '\n')
                     post += 1;
                 //post += 10;
-                dout << L"at line " << 1 + std::count(inp.begin(), pos, '\n') << L", char " << charnum << L":" << std::endl;
+                dout << L"[n3]at line " << 1 + std::count(inp.begin(), pos, '\n') << L", char " << charnum << L":" << std::endl;
                 auto poss(pos);
                 //if (poss != inp.begin()) poss--;
                 dout << string(pre, poss) << L"<HERE>" << string(pos, post) << std::endl;
 //                        dout << L"..\"" << string(pre, pos-1) << L"<HERE>" << string(pos, post) << L"\"..." << std::endl;
 
 
-                dout << "expecting:" << std::endl;
+                dout << "[n3]expecting:" << std::endl;
                 for (int i = 0; i < num_expected; i++) {
                     sym e = expected[i];
                     dout << sym2str(e) << std::endl;
@@ -464,7 +464,7 @@ struct Marpa {
         //marpa allows variously ordered lists of ambiguous parses, we just grab the default
         Marpa_Bocage b = marpa_b_new(r, -1);
         if (!b) {
-			dout << "failed to create bocage" << std::endl;
+			TRACE(dout << "[n3]parsing failed, failed to create bocage" << std::endl);
 			return 0;
 		}
         Marpa_Order o = marpa_o_new(b);

@@ -141,13 +141,13 @@ int parse_nq(qdb &kb, qdb &query, std::wistream &f, int &fins)
         try {
                 fins = readqdb(kb, f);
         } catch (std::exception& ex) {
-                derr << L"Error reading quads: " << ex.what() << endl;
+                derr << L"[nq]Error reading quads: " << ex.what() << endl;
                 return 0;
         }
         try {
                 fins += readqdb(query, f);
         } catch (std::exception& ex) {
-                derr << L"Error reading quads: " << ex.what() << endl;
+                derr << L"[nq]Error reading quads: " << ex.what() << endl;
                 return 2;
         }
         return 2;
@@ -160,7 +160,7 @@ int _parse(qdb &kb, qdb &query, std::wistream &f, string fmt, int &fins)
 	dout << L"parse fmt: " << fmt << endl;
 #ifdef with_marpa
     if(fmt == L"natural3" || fmt == L"n3") {
-		dout << L"Supported is a subset of n3 with our fin notation" << endl;
+		//dout << L"Supported is a subset of n3 with our fin notation" << endl;
 		return parse_natural3(kb, query, f, fins, base);
 	}
     else
@@ -168,7 +168,7 @@ int _parse(qdb &kb, qdb &query, std::wistream &f, string fmt, int &fins)
 	if(fmt == L"natq" || fmt == L"nq" || fmt == L"nquads")
 		return parse_nq(kb, query, f, fins);
 	else if(fmt == L"jsonld"){
-		dout << L"Cannot yet read JSON-LD format" << endl;
+		dout << L"[jsonld]Cannot yet read JSON-LD format" << endl;
 		return FAIL;
 	}
     else
@@ -418,14 +418,18 @@ int main ( int argc, char** argv) {
 		if (isatty(fileno(stdin))) {
 			string prompt;
 			if (mode == COMMANDS)
-				prompt = L"Tau> ";
+				prompt = L"Tau";
 			else if (mode == KB)
-				prompt = L"kb> ";
+				prompt = L"kb";
 			else if (mode == QUERY)
-				prompt = L"query> ";
+				prompt = L"query";
 			else
 				assert(false);
 			std::wcout << prompt;
+			if (format != L"")
+				std::wcout << L"["<<format<<L"]";
+			std::wcout << L"> ";
+
 		}
 
 		if (input_buffer.size() == 0 && _argstream.size() == 0)
