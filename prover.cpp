@@ -636,12 +636,29 @@ prover::ruleid prover::ruleset::add(termid t) {
 }
 
 
-bool prover::ask(termid s, nodeid p, termid o) {
-	return askt(s, p, o, 1).size();
+bool prover::ask(nodeid s, nodeid p, nodeid o) {
+	termid sn = make(s, 0, 0);
+	termid on = make(o, 0, 0);
+	return ask(sn, p, on);
 }
 
-bool prover::ask(nodeid s, nodeid p, nodeid o) {
-	return askt(make(s, 0, 0), p, make(o, 0, 0), 1).size();
+bool prover::ask(termid s, nodeid p, termid o) {
+	assert(s);assert(p);assert(o);
+	setproc(L"ask");
+
+	termid question = make(p, s, o);
+	termset query;
+	query.emplace_back(question);
+
+	subs dummy;
+	do_query(query, &dummy);
+
+	bool r = e.size();
+
+	subs_workardound.clear();
+	e.clear();
+
+	return r;
 }
 
 /*query, return termids*/
