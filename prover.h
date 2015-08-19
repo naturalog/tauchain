@@ -183,75 +183,27 @@ private:
 	inline shared_ptr<proof> step(shared_ptr<proof>);
 	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t);
 	substs::const_iterator evvit;
-	#define EVAL(id) ((id) ? evaluate(*id) : 0)
-	#define EVALS(id, s) ((id) ? evaluate(*id, s) : 0)
-	#define EVALPS(id, s) ((s) ? (EVALS(id, *s)) : ((EVAL(id))))
-	termid evalvar(const term& x, const substs& s) {
-		PROFILE(++evals);
-		setproc(L"evalvar");
-		termid r = ((evvit = s.find(x.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
-		TRACE(dout<<format(x) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
-		return r;
+	termid evaluate(const term& p, const substs& s);
+	termid evaluate(const term& p, const shared_ptr<substs> s) {
+		static substs dummy;
+		return evaluate(p, s ? *s : dummy);
 	}
-	inline termid evaluate(const term& p) {
-		PROFILE(++evals);
-		setproc(L"evaluate");
-		if (ISVAR(p)) return 0;
-		if (!p.s && !p.o) return &p;
-		termid a = evaluate(*p.s), b = evaluate(*p.o);
-		return make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
+	termid evaluate(termid t, const shared_ptr<substs> s) {
+		return t ? evaluate(*t, s) : 0;
 	}
-
-	inline termid evaluate(const term& p, const substs&  s) {
-		PROFILE(++evals);
-		setproc(L"evaluate");
-//		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
-		termid r;
-		if (ISVAR(p)) r = ((evvit = s.find(p.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
-		else if (!p.s && !p.o) r = &p;
-		else if (!p.s != !p.o) throw 0;
-		else {
-			termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
-			r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
-		}
-		TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl);
-		return r;
-	}
-
 	bool unify(termid _s, const substs& ssub, termid _d, substs& dsub);
-//	bool unify(termid _s, const substs& ssub, termid _d);
-//	bool unify(termid _s, termid _d);
-	bool unify(termid _s, termid _d, substs& dsub);
-	bool unify_snovar(const term& s, const substs& ssub, termid _d, substs& dsub);
-	bool unify_dnovar(termid _s, const substs& ssub, const term& _d, substs& dsub);
-	bool unify_dnovar(termid _s, const term& d, substs& dsub);
-	bool unify_sdnovar(const term& s, const substs& ssub, const term& d, substs& dsub);
-	bool unify_sdnovar(const term& s, const term& d, substs& dsub);
-	bool unify_snovar_dvar(const term& s, const substs& ssub, const term& d, substs& dsub);
-	bool unify_dnovar_ep(termid _s, const substs& ssub, const term& d, const substs& dsub);
-	bool unify_snovar_dvar_ep(const term& s, const substs& ssub, const term& d, const substs& dsub);
+	bool unify(termid _s, const shared_ptr<substs> ssub, termid _d, const shared_ptr<substs> dsub) {
+		static substs dummy1, dummy2;
+		bool r = unify(_s, ssub ? *ssub : dummy1, _d, dsub ? *dsub : dummy2);
+		dummy1.clear(); dummy2.clear();
+		return r;
+	}
 	bool unify_ep(termid _s, const substs& ssub, const term& d, const substs& dsub);
-	bool unify_ep(termid _s, const substs& ssub, const term& d);
-	bool unify_ep(termid _s, const term& d, const substs& dsub);
-	bool unify_ep(termid _s, const term& d);
-	bool unify_snovar_ep(const term& s, const substs& ssub, const term& d);
-	bool unify_sdnovar_ep(const term& s, const substs& ssub, const term& d);
-	bool unify_sdnovar_ep(const term& s, const term& d, const substs& dsub);
-	bool unify_sdnovar_ep(const term& s, const substs& ssub, const term& d, const substs& dsub);
-	bool unify(termid _s, const shared_ptr<substs>& ssub, termid _d, substs& dsub) {
-		return ssub ? unify(_s, *ssub, _d, dsub) : unify(_s, _d, dsub);
-	}
-	bool unify(termid _s, const shared_ptr<substs>& ssub, termid _d, shared_ptr<substs>& dsub) {
-		return ssub ? unify(_s, *ssub, _d, *dsub) : unify(_s, _d, *dsub);
-	}
-	bool unify_ep(termid _s, const shared_ptr<substs>& ssub, const term& _d, const shared_ptr<substs>& dsub) {
-		return ssub ? unify_ep(_s, *ssub, _d, dsub) : unify_ep(_s, _d, dsub);
-	}
-	bool unify_ep(termid _s, const substs& ssub, const term& _d, const shared_ptr<substs>& dsub) {
-		return dsub ? unify_ep(_s, ssub, _d, *dsub) : unify_ep(_s, ssub, _d);
-	}
-	bool unify_ep(termid _s, const term& _d, const shared_ptr<substs>& dsub) {
-		return dsub ? unify_ep(_s, _d, *dsub) : unify_ep(_s, _d);
+	bool unify_ep(termid _s, const shared_ptr<substs> ssub, const term& d, const shared_ptr<substs> dsub) {
+		static substs dummy;
+		bool r = unify_ep(_s, ssub ? *ssub : dummy, d, dsub ? *dsub : dummy);
+		dummy.clear();
+		return r;
 	}
 
 	inline bool euler_path(shared_ptr<proof>);

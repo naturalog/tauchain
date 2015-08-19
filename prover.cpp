@@ -23,6 +23,21 @@ int _indent = 0;
 
 term::term() : p(0), s(0), o(0) {}
 
+termid prover::evaluate(const term& p, const substs& s) {
+	PROFILE(++evals);
+	setproc(L"evaluate");
+	termid r;
+	if (ISVAR(p)) r = ((evvit = s.find(p.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
+	else if (!p.s && !p.o) r = &p;
+	else if (!p.s != !p.o) throw 0;
+	else {
+		termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
+		r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
+	}
+	TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl);
+	return r;
+}
+
 bool prover::euler_path(shared_ptr<proof> _p) {
 	setproc(L"euler_path");
 	auto& ep = _p;
@@ -30,29 +45,9 @@ bool prover::euler_path(shared_ptr<proof> _p) {
 	termid t = heads[p.rule];
 	if (!t) return false;
 	const term& rt = *t;
-//	while ((ep = ep->prev))
-//			if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
-//				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-	if (p.s) {
-		substs& ps = *p.s;
-		while ((ep = ep->prev))
-			if (ep->s) {
-				if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt, ps))
-					{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-			} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt, ps))
-				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-	} else while ((ep = ep->prev))
-		if (ep->s) {
-			if (ep->rule == p.rule && unify_ep(heads[ep->rule], *ep->s, rt))
-				{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-		} else if (ep->rule == p.rule && unify_ep(heads[ep->rule], rt))
+	while ((ep = ep->prev))
+		if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
 			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
-
-//	ep = _p;
-//	while (ep->prev) ep = ep->prev;
-//	for (auto x : bodies[ep->rule])
-//		if (evaluate(*x, ps))
-//			return true;
 	return false;
 }
 
@@ -147,11 +142,11 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term& t = *id;
 	int r = -1;
-	termid i0 = t.s ? EVALPS(t.s, p->s) : 0;
-	termid i1 = t.o ? EVALPS(t.o, p->s) : 0;
+	termid i0 = t.s ? evaluate(t.s, p->s) : 0;
+	termid i1 = t.o ? evaluate(t.o, p->s) : 0;
 	term r1, r2;
-	const term *t0 = i0 ? &(r1=*(i0=EVALPS(t.s, p->s))) : 0;
-	const term* t1 = i1 ? &(r2=*(i1=EVALPS(t.o, p->s))) : 0;
+	const term *t0 = i0 ? &(r1=*(i0=evaluate(t.s, p->s))) : 0;
+	const term* t1 = i1 ? &(r2=*(i1=evaluate(t.o, p->s))) : 0;
 	TRACE(	dout<<"called with term " << format(id); 
 		if (t0) dout << " subject = " << format(i0);
 		if (t1) dout << " object = " << format(i1);
@@ -305,7 +300,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	if (r == 1) 
 		queue.push([p, id, this](){
 			shared_ptr<proof> r = make_shared<proof>(p, *p);
-			r->btterm = EVALPS(id, p->s);
+			r->btterm = evaluate(id, p->s);
 			++r->term_idx;
 			r->src = p->src;
 			return r;
@@ -317,7 +312,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
 		MARPA(substs.push_back(*p->s));
-		if (!(t = (EVALPS(r, p->s)))) continue;
+		if (!(t = (evaluate(r, p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
@@ -338,32 +333,14 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
 		MARPA(if (builtin(t, _p, queue) != -1) return);
-#ifdef PREDVARS
-		if (t->p < 0)//ISVAR
-			for(auto rulelst: kb.r2id)
-				step_in(src, rulelst.second, _p, t);
-		else {
-#else
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-		if (frame.s) {
-			substs& ps = *frame.s;
-			for (auto rule : rit->second) {
-				if (unify(t, ps, heads[rule], termsub))
-					queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-				termsub.clear();
-				++src; 
-			}
-		}
-		else for (auto rule : rit->second)
-			if (unify(t, heads[rule], termsub)) {
+		static substs dummy;
+		for (auto rule : rit->second) {
+			if (unify(t, frame.s ? *frame.s : dummy, heads[rule], termsub))
 				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-				termsub.clear();
-				++src; 
-			}
-#endif
-#ifdef PREDVARS
+			termsub.clear();
+			++src; 
 		}
-#endif
 	}
 	else if (!frame.prev) gnd.push(_p);
 	else {
@@ -377,26 +354,6 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		step(r);
 	}
 	return frame.next;
-}
-
-void prover::step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t)
-{
-	proof& frame = *_p;
-	if (frame.s) {
-		substs& ps = *frame.s;
-		for (auto rule : candidates) {
-			if (unify(t, ps, heads[rule], termsub))
-				queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-			termsub.clear();
-			++src;
-		}
-	}
-	else for (auto rule : rit->second)
-		if (unify(t, heads[rule], termsub)) {
-			queue.push(make_shared<proof>(_p, rule, 0, _p, termsub, src));
-			termsub.clear();
-			++src;
-		}
 }
 
 prover::ground prover::proof::g(prover* p) const {
