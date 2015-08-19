@@ -21,7 +21,7 @@
 using namespace boost::algorithm;
 int _indent = 0;
 prover::termdb prover::_terms;
-
+term::term(){}
 term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	auto evvar = [this](const subs& ss) {
 		PROFILE(++evals);
@@ -42,6 +42,57 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	else if (!s && !o) evaluate = evpred;
 	else if (!s || !o) throw 0;
 	else evaluate = ev;
+
+/*
+	evaluate = [this](const subs& ss) {
+		static subs::const_iterator it;
+		static resid rs, ro;
+		if (s < 0) { 
+			if ((it = ss.find(s)) == ss.end()) return (termid)0;
+			rs = it->second;
+		} else rs = s;
+		if (o < 0) { 
+			if ((it = ss.find(o)) == ss.end()) return (termid)0;
+			ro = it->second;
+		} else ro = o;
+		return (termid)prover::make(p, rs, ro);
+	};
+	dosub = [this](const subs& ss) {
+		static subs::const_iterator it;
+		static resid rs, ro;
+		if (s > 0 && o > 0) return (termid)this;
+		if (s < 0) {
+			if ((it = ss.find(s)) != ss.end())
+				rs = it->second;
+		} else rs = s;
+		if (o < 0) { 
+			if ((it = ss.find(o)) != ss.end())
+				ro = it->second;
+		} else ro = o;
+		return (termid)prover::make(p, rs, ro);
+	};
+	unify = [this](const subs& ssub, termid _d, subs& dsub) {
+		static subs::const_iterator it;
+		if (!_d) return false;
+		const term& d = *_d;
+		if (p != d.p) return false;
+		const term& ss = *dosub(ssub);
+		const term& sd = *d.dosub(dsub);
+		if (ss.s > 0 && sd.s > 0 && ss.s != sd.s) return false;
+		if (ss.o > 0 && sd.o > 0 && ss.o != sd.o) return false;
+		if (ss.s > 0 && sd.s < 0) { dsub[sd.s] = ss.s; return ss.unify(ssub, &sd, dsub); }
+		if (ss.o > 0 && sd.o < 0) { dsub[sd.o] = ss.o; return ss.unify(ssub, &sd, dsub); }
+		return true;
+	};
+	unify_ep = [this](const subs& ssub, const term& d, const subs& dsub) {
+		static subs::const_iterator it;
+		if (p != d.p) return false;
+		const term& ss = *dosub(ssub);
+		const term& sd = *d.dosub(dsub);
+		if (ss.s > 0 && sd.s > 0 && ss.s != sd.s) return false;
+		if (ss.o > 0 && sd.o > 0 && ss.o != sd.o) return false;
+		return true;
+	};*/
 
 	auto unifvar = [this](const subs& ssub, termid _d, subs& dsub) {
 		PROFILE(++unifs);
@@ -104,7 +155,6 @@ termid prover::tmpvar() {
 	static int last = 1;
 	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
 }
-
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
 	setproc(L"list_next");
@@ -155,7 +205,6 @@ uint64_t dlparam(const node& n) {
 	}
 	return p;
 }
-
 std::vector<termid> prover::get_list(termid head, proof* _p) {
 	setproc(L"get_list");
 	assert(_p);
@@ -187,7 +236,6 @@ void* testfunc(void* p) {
 //	return 0;
 }
 
-#ifdef BUILTIN
 int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term& t = *id;
@@ -357,7 +405,6 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}());
 	return r;
 }
-#endif
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {

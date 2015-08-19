@@ -4,7 +4,7 @@ bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 //	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
 	return _s->unify(ssub, _d, dsub);
-	setproc(L"unify_bind");
+/*	setproc(L"unify_bind");
 	termid v;
 	bool r, ns = false;
 	const term& d = *_d, &s = *_s;
@@ -34,13 +34,15 @@ bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 		} else dout << "failed";
 		dout << endl);
 	return r;
+	*/
 }
 
 bool prover::unify_ep(termid _s, const subs& ssub, const term& d, const subs& dsub) {
 	PROFILE(++unifs);
 	if (!_s) return false;
 	setproc(L"unify_ep");
-	const term& s = *_s;
+	return _s->unify_ep(ssub, d, dsub);
+/*	const term& s = *_s;
 	termid v;
 	bool r;
 	if (ISVAR(s)) {
@@ -60,4 +62,6 @@ bool prover::unify_ep(termid _s, const subs& ssub, const term& d, const subs& ds
 		if (r) dout << "passed"; else dout << "failed";
 		dout << endl);
 	return r;
+	*/
 }
+

@@ -35,12 +35,55 @@ struct term;
 class prover;
 typedef const term* termid;
 typedef std::map<resid, termid> subs;
+/*
+template<typename T>
+struct list {
+	T item;
+	list<T>* next;
+};
+
+typedef list<const wchar_t*> res;
+
+struct res {
+	size_t sz;
+	union {
+		const wchar_t* value;
+		res* list;
+	};
+};
+
+struct res {
+	const wchar_t* const* values;
+	size_t sz;
+	res() : values(0), sz(0) {}
+	bool isvar() { return first == L'?'; }
+	bool islist() { return first == '.'; }
+	void init(pnode n) { value = n->value.c_str(); }
+	void init(std::list<pnode>& l, const qdb& quads) {
+		first = L'.';
+		if (l.empty()) return 0;
+		res* r = list = new res[l.size()];
+		for (auto x : l) {
+			auto it = quads.second.find(*x->value);
+			if (it == quads.second.end()) r->init(x);
+			else r->init(it->second, quads);
+			++r;
+		}
+	}
+
+	~res() {
+		if (list) delete[] list;
+		list = 0;
+	}
+};
+*/
 struct term {
-//	term()
-	resid p;
+	term();
+	resid p;//, s, o;
 	termid s, o;
-	std::function<termid(const subs&)> evaluate;
+	std::function<termid(const subs&)> evaluate, dosub;
 	std::function<bool(const subs&, termid, subs&)> unify;
+	std::function<bool(const subs&, const term&, const subs&)> unify_ep;
 	term(resid _p, termid _s = 0, termid _o = 0);
 #ifdef JSON
 	pobj json(const prover&) const;
@@ -98,6 +141,7 @@ public:
 	termid tmpvar();
 	static termid make(pnode p, termid s = 0, termid o = 0);
 	static termid make(resid p, termid s = 0, termid o = 0);
+//	static termid make(resid p, resid s, resid o);
 	static termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 	static termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 
@@ -146,6 +190,9 @@ private:
 		typedef std::map<resid, termset> p2id_t;
 		inline const termset& operator[](resid id) const { return p2id.at(id); }
 		bool equals(termid x, termid y) {
+//			return x->p == y->p && 
+//				x->s == y->s && 
+//				x->o == y->o;
 			if (!x || !y) return !x == !y;
 			if (x->p == y->p) return equals(x->s, y->s) && equals(x->o, y->o);
 			return false;
@@ -228,8 +275,8 @@ public:
 	string format(const termset& l, bool json = false);
 	void prints(const subs&  s);
 	void prints(shared_ptr<subs> s) { prints(*s); }
-	string format(resid) { throw std::runtime_error("called format(termid) with resid"); }
-	string format(resid, bool) { throw std::runtime_error("called format(termid) with resid"); }
+	static string format(resid r) { return dstr(r); } // { throw std::runtime_error("called format(termid) with resid"); }
+	static string format(resid r, bool) { return dstr(r); }// { throw std::runtime_error("called format(termid) with resid"); }
 	string formatr(ruleid r, bool json = false);
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
