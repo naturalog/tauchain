@@ -153,16 +153,16 @@ public:
 //		subs s;
 		ground g(prover*) const;
 		termid btterm = 0;
-		uint src = 0;
+//		uint src = 0;
 		/*bool predvar = false;*/
 //		proof(){}// : s(make_shared<subs>()) {}
-		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subs&  _s = subs(), uint _src = 0)
-			: rule(r), term_idx(l), prev(p), creator(c), s(make_shared<subs>(_s)), src(_src) { }
+		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subs&  _s = subs())
+			: rule(r), term_idx(l), prev(p), creator(c), s(make_shared<subs>(_s)) { }
 		proof(shared_ptr<proof> c, const proof& p) 
 			: proof(c, p.rule, p.term_idx, p.prev) { if (prev) level = prev->level + 1; }
 	};
-	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->term_idx < y->term_idx; }};
-	typedef std::priority_queue<shared_ptr<proof>, std::vector<shared_ptr<proof>>, proofcmp> queue_t;
+//	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->term_idx < y->term_idx; }};
+//	typedef std::priority_queue<shared_ptr<proof>, std::vector<shared_ptr<proof>>, proofcmp> queue_t;
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof*);
@@ -257,7 +257,7 @@ private:
 	}
 
 	inline bool euler_path(shared_ptr<proof>);
-	int builtin(termid, shared_ptr<proof>, queue_t&);
+	int builtin(termid, shared_ptr<proof>);
 	termid quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
@@ -295,7 +295,8 @@ public:
 	pobj ejson() const;
 #endif
 	string fsubs(const ground& g);
-	queue_t queue, gnd;
+	//queue_t queue, gnd;
+	std::list<shared_ptr<proof>> gnd;
 	static void unittest();
 	subs termsub;
 	ruleset::r2id_t::const_iterator rit;

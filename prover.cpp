@@ -17,6 +17,7 @@
 #include "marpa_tau.h"
 #include <fstream>
 #endif
+#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
 
 using namespace boost::algorithm;
 int _indent = 0;
@@ -236,7 +237,7 @@ void* testfunc(void* p) {
 //	return 0;
 }
 
-int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
+int prover::builtin(termid id, shared_ptr<proof> p) {
 	setproc(L"builtin");
 	const term& t = *id;
 	int r = -1;
@@ -339,7 +340,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queue.push(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
+		queuepush(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
 	}
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		subs s;
@@ -395,14 +396,12 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		r = 1;
 	}
 	#endif
-	if (r == 1) 
-		queue.push([p, id, this](){
-			shared_ptr<proof> r = make_shared<proof>(p, *p);
-			r->btterm = evaluate(id, p->s);
-			++r->term_idx;
-			r->src = p->src;
-			return r;
-		}());
+	if (r == 1) {
+		shared_ptr<proof> r = make_shared<proof>(p, *p);
+		r->btterm = evaluate(id, p->s);
+		++r->term_idx;
+		queuepush(r);
+	}
 	return r;
 }
 void prover::pushev(shared_ptr<proof> p) {
@@ -424,26 +423,22 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	const proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto body = bodies[frame.rule];
-	size_t src = 0;
-#define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
-		MARPA(if (builtin(t, _p, queue) != -1) return);
+		MARPA(if (builtin(t, _p) != -1) return);
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
 		static subs dummy;
 		for (auto rule : rit->second) {
-			if (unify(t, frame.s ? *frame.s : dummy, heads[rule], termsub))
-				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub, src));
+			if (t->unify(frame.s ? *frame.s : dummy, heads[rule], termsub))
+				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub));
 			termsub.clear();
-			++src; 
 		}
 	}
-	else if (!frame.prev) gnd.push(_p);
+	else if (!frame.prev) gnd.push_back(_p);
 	else {
 		proof& ppr = *frame.prev;
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
 		ruleid rl = frame.rule;
-		r->src = ppr.src;
 		r->s = make_shared<subs>(*ppr.s);
 		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s);
 		++r->term_idx;
@@ -653,7 +648,7 @@ int prover::do_query(const termset& goal, subs * s) {
 //	setproc(L"do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = make_shared<subs>(*s);
-	queue.push(p);
+//	queue.push(p);
 	
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	{
@@ -675,7 +670,7 @@ int prover::do_query(const termset& goal, subs * s) {
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	auto duration = duration_cast<microseconds>( t2 - t1 ).count();
-	while (!gnd.empty()) { auto x = gnd.top(); gnd.pop(); pushev(x); }
+	for (auto x : gnd) pushev(x);
 	dout << KMAG << "Evidence:" << endl;printe();/* << ejson()->toString()*/ dout << KNRM;
 //	TRACE(dout << "elapsed: " << (duration / 1000.) << "ms steps: " << steps << " evaluations: " << evals << " unifications: " << unifs << endl);
 	return duration/1000.;
