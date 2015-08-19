@@ -488,9 +488,10 @@ int main ( int argc, char** argv) {
 		std::wstringstream ss(new_buffer);
 		int pr = parse(kb, query, ss, L"", fins);
 		dout << "parsing result:"<<pr<<std::endl;
-		dout << "fins:"<<fins<<std::endl;
-		if (pr)
+		if (pr) {
 			data_buffer += line;
+			dout << "fins:" << fins << std::endl;
+		}
 		if(pr == COMPLETE)
 		{
 			if (mode == KB && fins > 0) {

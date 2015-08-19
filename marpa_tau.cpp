@@ -608,7 +608,8 @@ public:
     qdb &query;
 
     qdb *dest;
-    bool single_file_mode;
+    bool finfin_mode;
+	int fins = 0;
 
     string base;
     map<string, string> prefixes;
@@ -641,7 +642,7 @@ public:
         return *s;
     }
 
-    N3(prover &prvr_, qdb &kb_, qdb &query_, bool single_file_mode_ = false):prvr(&prvr_), kb(kb_), query(query_), dest(&kb), single_file_mode(single_file_mode_)
+    N3(prover &prvr_, qdb &kb_, qdb &query_, bool single_file_mode_ = false):prvr(&prvr_), kb(kb_), query(query_), dest(&kb), finfin_mode(single_file_mode_)
     {
         if (!marpa)marpa=new MarpaIris();
     }
@@ -883,10 +884,13 @@ public:
                 }
             }
         }
-        else if (single_file_mode && *subject->value == L"fin" && graph == L"@default") {
-            single_file_mode = false;//ignore further fins
-            dout <<  kb.first.size() << " rules loaded." << std::endl;
-            dest = &query;
+        else if (finfin_mode && *subject->value == L"fin" && graph == L"@default") {
+            finfin_mode = false;//ignore further fins
+			fins ++;
+			if (fins == 1) {
+				dout << kb.first.size() << " rules loaded." << std::endl;
+				dest = &query;
+			}
         }
     }
 
@@ -967,6 +971,7 @@ int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base)
         N3 n3(*parser->prvr, kb, q, true);
         n3.base = base;
         n3.add_statements(raw, L"@default");
+		fins = n3.fins;
     }
 
     return success;
