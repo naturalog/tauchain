@@ -34,11 +34,13 @@
 struct term;
 class prover;
 typedef const term* termid;
+typedef std::map<resid, termid> subs;
 struct term {
-	term();
-	term(resid _p, termid _s, termid _o);
+//	term()
 	resid p;
 	termid s, o;
+	std::function<termid(const subs&)> evaluate;
+	term(resid _p, termid _s = 0, termid _o = 0);
 #ifdef JSON
 	pobj json(const prover&) const;
 #endif
@@ -46,7 +48,6 @@ struct term {
 
 //struct subcmp { bool operator()( const std::pair<resid, termid>& x, const std::pair<resid, termid>& y) const { return x.first < y.first; } };
 //typedef std::set<std::pair<resid, termid>, subcmp> subs;
-typedef std::map<resid, termid> subs;
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
@@ -94,10 +95,10 @@ public:
 	evidence e;
 	std::vector<subs> subss;
 	termid tmpvar();
-	termid make(pnode p, termid s = 0, termid o = 0);
-	termid make(resid p, termid s = 0, termid o = 0);
-	termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
-	termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	static termid make(pnode p, termid s = 0, termid o = 0);
+	static termid make(resid p, termid s = 0, termid o = 0);
+	static termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	static termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 
 	struct proof {
 		ruleid rule = 0;
@@ -173,7 +174,8 @@ private:
 //	                }
 //        	}
 //	        void unlock() { mprotect(data, pagesize * pages, PROT_READ | PROT_WRITE); }
-	} _terms;
+	};
+	static termdb _terms;
 	friend ruleset;
 	friend proof;
 	int steps = 0;
@@ -183,7 +185,7 @@ private:
 	inline shared_ptr<proof> step(shared_ptr<proof>);
 	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t);
 	subs::const_iterator evvit;
-	termid evaluate(const term& p, const subs& s);
+	termid evaluate(const term& p, const subs& s) { return p.evaluate(s); }
 	termid evaluate(const term& p, const shared_ptr<subs> s) {
 		static subs dummy;
 		return evaluate(p, s ? *s : dummy);

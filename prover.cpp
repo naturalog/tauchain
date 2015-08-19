@@ -20,11 +20,39 @@
 
 using namespace boost::algorithm;
 int _indent = 0;
+prover::termdb prover::_terms;
 
-term::term() : p(0), s(0), o(0) {}
 /*
+struct term;
+struct res {
+	const wchar_t *value, *datatype, *lang;
+	enum etype { IRI, BNODE, LITERAL };
+	etype type;
+	struct sub {
+		const term* t;
+		sub* next;
+	} *subs;
+	void spush(const term* t) {
+		sub* s = new sub;
+		s->next = subs;
+		s->t = t;
+	}
+	void spop() {
+		sub* s = subs->next;
+		delete subs;
+		subs = s;
+	}
+	bool isvar() {
+		return *value != L'?' || (subs && subs->
+	}
+};
+
 struct term {
-	term evaluate(term& t, subs& s) {
+	res* p;
+	term *s, *o;
+	resid evaled;
+	bool evaluate(subs& s) {
+		
 		auto it = begin(t), eit = end(t);
 		for (; it != eit; ++it)
 			if (ISVAR(*it)) {
@@ -34,20 +62,26 @@ struct term {
 	}
 };
 */
-
-termid prover::evaluate(const term& p, const subs& s) {
-	PROFILE(++evals);
-	setproc(L"evaluate");
-	termid r;
-	if (ISVAR(p)) r = ((evvit = s.find(p.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
-	else if (!p.s && !p.o) r = &p;
-	else if (!p.s != !p.o) throw 0;
-	else {
-		termid a = evaluate(*p.s, s), b = evaluate(*p.o, s);
-		r = make(p.p, a ? a : make(p.s->p), b ? b : make(p.o->p));
-	}
-	TRACE(dout<<format(p) << ' ' << formats(s)<< " = " << format(r) << endl);
-	return r;
+term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
+	auto evvar = [this](const subs& ss) {
+		PROFILE(++evals);
+		setproc(L"evaluate");
+		static subs::const_iterator it;
+		return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->evaluate(ss);
+	};
+	auto evpred = [this](const subs&) {
+		PROFILE(++evals);
+		setproc(L"evaluate");
+		return this;
+	};
+	auto ev = [this](const subs& ss) {
+		termid a = s->evaluate(ss), b = o->evaluate(ss);
+		return prover::make(p, a ? a : prover::make(s->p), b ? b : prover::make(o->p));
+	};
+	if (p < 0) evaluate = evvar;
+	else if (!s && !o) evaluate = evpred;
+	else if (!s || !o) throw 0;
+	else evaluate = ev;
 }
 
 bool prover::euler_path(shared_ptr<proof> _p) {
@@ -150,6 +184,7 @@ void* testfunc(void* p) {
 //	return 0;
 }
 
+#ifdef BUILTIN
 int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 	setproc(L"builtin");
 	const term& t = *id;
@@ -319,7 +354,7 @@ int prover::builtin(termid id, shared_ptr<proof> p, queue_t& queue) {
 		}());
 	return r;
 }
-
+#endif
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
@@ -340,7 +375,6 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto body = bodies[frame.rule];
 	size_t src = 0;
-	// if we still have some terms in rule body to process
 #define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
@@ -445,7 +479,7 @@ qlist merge ( const qdb& q ) {
 }
 
 prover::~prover() { }
-prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) { kb.p = this; } 
+prover::prover(const prover& q) : kb(q.kb) { kb.p = this; } 
 
 void prover::addrules(pquad q, qdb& quads) {
 	setproc(L"addrules");
@@ -596,8 +630,6 @@ int prover::do_query(const termset& goal, subs * s) {
 	return duration/1000.;
 	//for (auto x : gnd) pushev(x);
 }
-
-term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
 termid prover::make(pnode p, termid s, termid o) { 
 	return make(dict.set(*p), s, o); 
