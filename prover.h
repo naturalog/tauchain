@@ -138,6 +138,8 @@ public:
 	nodeid force_one_n(nodeids r);
 	termid force_one_t(termids r);
 
+	subs subs_workardound;
+
 private:
 	class termdb {
 	public:

@@ -296,6 +296,11 @@ void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
 		if (!(t = (EVALS(r, p->s)))) continue;
+
+		//dout << "XXX"; prints(p->s);
+		for (auto x: p->s)
+			subs_workardound[x.first] = x.second;
+
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
@@ -666,6 +671,7 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 			for (auto g: x.second)
 			{
 				subs env = g.second;
+				env = subs_workardound;
 				for (auto var:vars) {
 					dout << var << " " << var->p << " " << env.size();
 					if (env.find(var->p) != env.end()) {
@@ -763,7 +769,8 @@ termid prover::force_one_t(termids r) {
 /*get_list wrapper useful in marpa*/
 prover::nodeids prover::get_list(nodeid head)
 {
-    auto r = get_list(make(head), nullptr);
+	proof* hack = new proof(nullptr, 0);
+    auto r = get_list(make(head), hack);
     nodeids rr;
     for (auto rrr: r)
         rr.push_back(rrr->p);
