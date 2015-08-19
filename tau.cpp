@@ -295,7 +295,11 @@ int get_qdb(qdb &kb, string fname){
 	qdb dummy_query;
 	int dummy_fins;
 	int r = parse(kb, dummy_query, is, fname, dummy_fins);
-	dout << "qdb size:"<< kb.first.size() << std::endl;
+	dout << "qdb graphs count:"<< kb.first.size() << std::endl;
+	int nrules = 0;
+	for ( pquad quad :*kb.first[L"@default"])
+		nrules++;
+	dout << "rules:" << nrules << std::endl;
 	return r;
 }
 
@@ -410,8 +414,18 @@ int main ( int argc, char** argv) {
 	for(ever){
 		dout << "argstream.size=" << _argstream.size() << std::endl;
 
-		if (isatty(fileno(stdin)))
-			std::wcout << L"Tau> ";
+		if (isatty(fileno(stdin))) {
+			string prompt;
+			if (mode == COMMANDS)
+				prompt = L"Tau> ";
+			else if (mode == KB)
+				prompt = L"kb> ";
+			else if (mode == QUERY)
+				prompt = L"query> ";
+			else
+				assert(false);
+			std::wcout << prompt;
+		}
 
 		if (input_buffer.size() == 0 && _argstream.size() == 0)
 		{
