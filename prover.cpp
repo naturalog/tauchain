@@ -141,17 +141,29 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		if (t0) dout << " subject = " << format(i0);
 		if (t1) dout << " object = " << format(i1);
 		dout << endl);
+
+	//?
+
 	if (t.p == GND) r = 1;
+
+		//??
+
 	else if (t.p == logequalTo)
 		r = t0 && t1 && t0->p == t1->p ? 1 : 0;
 	else if (t.p == lognotEqualTo)
 		r = t0 && t1 && t0->p != t1->p ? 1 : 0;
+
+		//internalized lists
+
 	else if (t.p == rdffirst && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->s, p->s, t.o, p->s) ? 1 : -1;
 		// returning -1 here because plz also look into the kb,
 		// dont assume that if this builtin didnt succeed, the kb cant contain such fact
 	else if (t.p == rdfrest && t0 && t0->p == Dot && (t0->s || t0->o))
 		r = unify(t0->o, p->s, t.o, p->s) ? 1 : -1;
+
+		//FFI
+
 /*	else if (t.p == _dlopen) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlopen must be called with variable object.");
 		std::vector<termid> params = get_list(t.s, *p);
@@ -211,6 +223,9 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		}
 		r = 1;
 	}*/
+
+	////RDFS
+
 	/*
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		termset ts(2);
@@ -220,10 +235,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		ts[1] = make(p, t.s, o);
 		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, subs(), 0, true));
 	}
-	*/
-	else if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
-		r = 1;
-	/*else if ((
+	else if ((
 		 t.p == A // parser kludge
 		 || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
 		//termset ts(2,0,*alloc);
@@ -232,8 +244,10 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
 		queuepush(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
-	}
-	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	}*/
+	else if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
+		r = 1;
+	else if (t.p == A || t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		prover copy(*this); //(Does this copy correctly?)
 		auto ps = copy.askt(tmpvar(), rdfsdomain, t.o);
 		for(termid p: ps)
@@ -244,10 +258,13 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 			if (xx.size() > 0) {
 				std::cout << "\n\nYay even more\n\n";
 				//TODO: correctly, so that subqery proof trace not opaque?
-				return 1;
+				r = 1;
 			}
 		}
-	}*/
+		r = 0;
+	}
+
+
 	#ifdef with_marpa
 		/*
 	else if (t.p == marpa_parser_iri && t.s && t.o)

@@ -25,7 +25,7 @@ void bidict::init() {
 	rdfrest = set(mkiri(RDF_REST/*pstr(L"rdf:rest")*/));
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	A = set(mkiri(pstr(L"a")));
-	rdfsResource = set(mkiri(pstr(L"rdfs:Resource")));
+	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr(L"rdfs:domain")));
 //	rdfList = set(mkiri(pstr(L"rdf:List")));
 	Dot = set(mkiri(pstr(L".")));

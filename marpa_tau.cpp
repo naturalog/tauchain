@@ -706,7 +706,10 @@ public:
         {
             nodeid val = q(uri, marpa->has_value);
             assert(val);
-            return mkiri(dict[val].value);
+			string uri_s = *dict[val].value;
+			assert(uri_s.size() > 1);
+			string expluri = string(uri_s.begin() + 1, uri_s.end() - 1);
+            return mkiri(pstr(expluri));
         }
         nodeid qname = q(x, n3qname);
         if (qname)
@@ -717,6 +720,10 @@ public:
             if (pos != string::npos)
             {
                 string pref = string(v.begin(), v.begin() + pos);
+				dout << L"comparing " << pref << L" with ";
+				for (auto it: prefixes)
+					dout << it.first << L" ";
+				dout << std::endl;
                 if (prefixes.find(pref) != prefixes.end())
                 {
                     string rest = string(v.begin() + pos + 1, v.end());
@@ -900,31 +907,35 @@ public:
         }
     }
 
+	void parse_declaration(nodeid decl) {
+		nodeid a0 = q(decl, marpa->arg0);
+		assert(a0);
+		TRACE(dout << L"DECLARATION:" << *dict[a0].value << std::endl;)
+		if (*dict[a0].value == L"@prefix") {
+			nodeid p = q(decl, n3prefix);
+			nodeid uri = q(decl, n3explicituri);
+			string uri_s = get_value(uri);
+			string p_s = get_value(p);
+			assert(p_s.size());
+			assert(string(p_s.end() - 1, p_s.end()) == L":");
+			string prefix = string(p_s.begin(), p_s.end() - 1);
+			assert(uri_s.size() > 1);
+			string expluri = string(uri_s.begin() + 1, uri_s.end() - 1);
+			prefixes[prefix] = expluri;
+			dout << "@prefix\"" << p_s << "\": \"" << uri_s << "\"" << std::endl;
+		}
+		//else if(*dict[a0].value == L"@keywords")
+	}
+
     void add_statements(termid list, string graph) {
-        prover::nodeids statements = get_dotstyle_list(list);
+        prover::nodeids statements_and_dots = get_dotstyle_list(list);
         TRACE(dout << std::endl << graph << ":" << std::endl);
-
-        for (auto s: statements) {
-            if (prvr->ask(s, marpa->is_parse_of, n3statement)) {
-                nodeid sim = q(s, n3simpleStatement);
-                if (sim)
-                    add_simpleStatement(sim, graph);
-            }else if (prvr->ask(s, marpa->is_parse_of, n3declaration)) {
-                nodeid decl = q(s, n3declaration);
-                nodeid a0 = q(decl, marpa->arg0);
-                assert(a0);
-                if(*dict[a0].value == L"@prefix")
-                {
-                    nodeid p = q(decl, n3prefix);
-                    nodeid uri = q(decl, n3explicituri);
-                    string uri_s = get_value(uri);
-                    string p_s = get_value(p);
-                    prefixes[p_s] = uri_s;
-                }
-
-
-            }
-
+        for (auto s: statements_and_dots) {
+			nodeid x = q(s, n3simpleStatement);
+			if (x)
+				add_simpleStatement(x, graph);
+            else if ((x = q(s, n3declaration)))
+				parse_declaration(x);
         }
     }
 };
@@ -967,7 +978,7 @@ int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base)
 
     if (success == 2)
     {
-        //TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << parser->prvr->formatkb());
+        TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << parser->prvr->formatkb());
 
         if (!raw)
             return 0;
