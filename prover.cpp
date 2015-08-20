@@ -24,6 +24,7 @@ int _indent = 0;
 prover::termdb prover::_terms;
 term::term(){}
 term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
+#ifdef LAMBDA
 	auto evvar = [this](const subs& ss) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
@@ -43,57 +44,6 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	else if (!s && !o) evaluate = evpred;
 	else if (!s || !o) throw 0;
 	else evaluate = ev;
-
-/*
-	evaluate = [this](const subs& ss) {
-		static subs::const_iterator it;
-		static resid rs, ro;
-		if (s < 0) { 
-			if ((it = ss.find(s)) == ss.end()) return (termid)0;
-			rs = it->second;
-		} else rs = s;
-		if (o < 0) { 
-			if ((it = ss.find(o)) == ss.end()) return (termid)0;
-			ro = it->second;
-		} else ro = o;
-		return (termid)prover::make(p, rs, ro);
-	};
-	dosub = [this](const subs& ss) {
-		static subs::const_iterator it;
-		static resid rs, ro;
-		if (s > 0 && o > 0) return (termid)this;
-		if (s < 0) {
-			if ((it = ss.find(s)) != ss.end())
-				rs = it->second;
-		} else rs = s;
-		if (o < 0) { 
-			if ((it = ss.find(o)) != ss.end())
-				ro = it->second;
-		} else ro = o;
-		return (termid)prover::make(p, rs, ro);
-	};
-	unify = [this](const subs& ssub, termid _d, subs& dsub) {
-		static subs::const_iterator it;
-		if (!_d) return false;
-		const term& d = *_d;
-		if (p != d.p) return false;
-		const term& ss = *dosub(ssub);
-		const term& sd = *d.dosub(dsub);
-		if (ss.s > 0 && sd.s > 0 && ss.s != sd.s) return false;
-		if (ss.o > 0 && sd.o > 0 && ss.o != sd.o) return false;
-		if (ss.s > 0 && sd.s < 0) { dsub[sd.s] = ss.s; return ss.unify(ssub, &sd, dsub); }
-		if (ss.o > 0 && sd.o < 0) { dsub[sd.o] = ss.o; return ss.unify(ssub, &sd, dsub); }
-		return true;
-	};
-	unify_ep = [this](const subs& ssub, const term& d, const subs& dsub) {
-		static subs::const_iterator it;
-		if (p != d.p) return false;
-		const term& ss = *dosub(ssub);
-		const term& sd = *d.dosub(dsub);
-		if (ss.s > 0 && sd.s > 0 && ss.s != sd.s) return false;
-		if (ss.o > 0 && sd.o > 0 && ss.o != sd.o) return false;
-		return true;
-	};*/
 
 #define UNIFVAR(x) { \
 		PROFILE(++unifs); \
@@ -166,7 +116,15 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	if (p < 0) { unify = unifvar; unify_ep = unifvar_ep; }
 	else if (!s) { unify = unifpred; unify_ep = unifpred_ep; }
 	else { unify = unif; unify_ep = unif_ep; }
+#endif	
 }
+
+#ifndef LAMBDA
+termid term::ev(const subs& ss) const {
+	termid a = s->evaluate(ss), b = o->evaluate(ss);
+	return prover::make(p, a ? a : s, b ? b : o);
+}
+#endif
 
 bool prover::euler_path(shared_ptr<proof> _p) {
 	setproc(L"euler_path");
@@ -455,15 +413,15 @@ struct match_heads {
 
 	bool operator()() {
 		while (rule != rl.end())
-//		switch (state) {
-//			case 0:
+		switch (state) {
+			case 0:
 				while (!t.unify(s, heads[*rule], dsub)) {
 					dsub.clear();
 					if (++rule == rl.end()) return false;
-				} return true;
-//				return (state = 1);
-//			case 1: state = 0;
-//		}
+				} 
+				return (state = 1);
+			case 1: ++rule; state = 0;
+		}
 		return false;
 //		switch (state) {
 //		case 0: 
@@ -489,7 +447,8 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		if (!t) return frame.next;
 		MARPA(if (builtin(t, _p) != -1) return frame.next);
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-		match_heads mh(*t, frame.s ? *frame.s : subs(), rit->second, heads);
+		static subs dummy;
+		match_heads mh(*t, frame.s ? *frame.s : dummy, rit->second, heads);
 //		for (auto rule : rit->second) {
 		while (mh())
 			queuepush(make_shared<proof>(_p, *mh.rule, 0, _p, mh.dsub));
