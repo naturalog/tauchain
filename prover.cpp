@@ -420,8 +420,9 @@ struct match_heads {
 					if (++rule == rl.end()) return false;
 				} 
 				return (state = 1);
-			case 1: ++rule; state = 0;
+			case 1: ++rule; dsub.clear(); state = 0;
 		}
+		dsub.clear();
 		return false;
 //		switch (state) {
 //		case 0: 
