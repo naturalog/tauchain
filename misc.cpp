@@ -19,18 +19,18 @@ void bidict::init() {
 	marpa_parse_iri = set(mkiri(pstr(L"http://idni.org/marpa#parse")));
 #endif
 	GND = set (mkiri(pstr( L"GND" )));
-	logequalTo = set (mkiri(pstr( L"log:equalTo")));
-	lognotEqualTo = set (mkiri(pstr(L"log:notEqualTo")));
+	logequalTo = set (mkiri(pstr( L"http://www.w3.org/2000/10/swap/log#equalTo")));
+	lognotEqualTo = set (mkiri(pstr(L"http://www.w3.org/2000/10/swap/log#notEqualTo")));
 	rdffirst = set(mkiri(RDF_FIRST/*Tpstr(L"rdf:first")*/));
 	rdfrest = set(mkiri(RDF_REST/*pstr(L"rdf:rest")*/));
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	A = set(mkiri(pstr(L"a")));
 	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
-	rdfsdomain = set(mkiri(pstr(L"rdfs:domain")));
+	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
 //	rdfList = set(mkiri(pstr(L"rdf:List")));
 	Dot = set(mkiri(pstr(L".")));
 	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
-	rdfssubClassOf = set(mkiri(pstr(L"rdfs:subClassOf")));
+	rdfssubClassOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subClassOf")));
 //	_dlopen = set(mkiri(pstr(L"dlfcn:dlopen")));
 //	_dlerror = set(mkiri(pstr(L"dlfcn:dlerror")));
 //	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));

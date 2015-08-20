@@ -190,11 +190,11 @@ string fmt_from_ext(string fn){
 }
 
 int parse(qdb &kb, qdb &query, std::wistream &f, string fn, int &fins) {
-	string fmt;
-	if (format == L"")
+	string fmt = format;
+	if (fmt == L"")
 		fmt = fmt_from_ext(fn);
-	if (format != L"")
-		return _parse(kb, query, f, format, fins);
+	if (fmt != L"")
+		return _parse(kb, query, f, fmt, fins);
 	else
 	{
 		int best = 0;

@@ -225,7 +225,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 	}*/
 
 	////RDFS
-
+		//first some old stuff
 	/*
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		termset ts(2);
@@ -245,23 +245,26 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		ts[1] = make ( A, t.s, va );
 		queuepush(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
 	}*/
+		// check the outputs of your parsers when working on this
+		// check the definitions of the uri constants, some are right, some are just "xxx:yyy"
+		// see we rely on the == A kludge...
+
 	else if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
 	else if (t.p == A || t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+		r = 0;
+		dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;
 		prover copy(*this); //(Does this copy correctly?)
-		auto ps = copy.askt(tmpvar(), rdfsdomain, t.o);
+		auto ps = copy.askt(tmpvar(), rdfsdomain, make(i1->p, 0, 0)); //TODO: correctly, so that subqery proof trace not opaque?
 		for(termid p: ps)
 		{
-			std::cout << "\n\nYAY!!\n\n";
-			copy.e.clear();
-			auto xx = copy.askt(t.s, p->p, tmpvar());
+			dout << "\n\nYAY!!\n\n"<<std::endl;
+			auto xx = copy.askt(i0, p->p, tmpvar());
 			if (xx.size() > 0) {
-				std::cout << "\n\nYay even more\n\n";
-				//TODO: correctly, so that subqery proof trace not opaque?
+				dout << "\n\nYay even more\n\n" << std::endl;
 				r = 1;
 			}
 		}
-		r = 0;
 	}
 
 
@@ -694,10 +697,10 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 
 
 				for (auto var:vars) {
-					//TRACE(dout << var << " " << var->p << " " << env.size()) ;
+					dout << var << " " << var->p << " " << subs_workardound.size() ;
 					if (subs_workardound.find(var->p) != subs_workardound.end()) {
 						auto v = subs_workardound[var->p];
-						//TRACE(dout << "match: " << v << " ");
+						dout << "match: " << v << " ";
 						r.push_back(v);
 						if (stop_at && r.size() >= stop_at) {
 							goto end;

@@ -1,14 +1,5 @@
-<> <#rcsid> "$Id: rdfs-rules.n3 2865 2009-05-21 18:28:02Z josd $".
-
-@prefix log: <http://www.w3.org/2000/10/swap/log#>.
-@prefix str: <http://www.w3.org/2000/10/swap/string#>.
-@prefix owl: <http://www.w3.org/2002/07/owl#>.
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
-@prefix e: <http://eulersharp.sourceforge.net/2003/03swap/log-rules#>.
-@prefix : <http://eulersharp.sourceforge.net/2003/03swap/rdfs-rules#>.
-
 
 ### Resource Description Framework RDF(S)
 
@@ -41,30 +32,30 @@ rdf:nil a rdf:List.
 
 ### inference rules for RDF(S)
 
-{?S ?P ?O} => {?P a rdf:Property}.
+#{?S ?P ?O} => {?P a rdf:Property}.
 
-{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+#{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 
-{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+#{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
 
-{?S ?P ?O} => {?S a rdfs:Resource}.
-{?S ?P ?O} => {?O a rdfs:Resource}.
+#{?S ?P ?O} => {?S a rdfs:Resource}.
+#{?S ?P ?O} => {?O a rdfs:Resource}.
 
-{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
 
-{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
 
-{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+#{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
 
-{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
 
-{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
+#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
 
-{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
+#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
 
-{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
+#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
 
 
 ### inconsistency detections @@
 
-{?S a rdf:XMLLiteral; e:clashesWith rdf:XMLLiteral} => false.
+#{?S a rdf:XMLLiteral; e:clashesWith rdf:XMLLiteral} => false.
