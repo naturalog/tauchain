@@ -221,7 +221,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		//queue.push(make_shared<proof>(nullptr, kb.add(make(A, t.s, t.o), ts), 0, p, subs(), 0, true));
 	}
 	*/
-	else if (t.p == rdfsType && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
+	else if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
 		r = 1;
 	/*else if ((
 		 t.p == A // parser kludge
@@ -650,45 +650,46 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	assert(s);assert(p);assert(o);
 	setproc(L"ask");
 
-	termid question = make(p, s, o);
-	termset query;
-	query.emplace_back(question);
-
-	subs dummy;
-	do_query(query, &dummy);
 
 	std::vector<termid> vars;
 	if (s->p < 0) vars.push_back(s);
 	if (o->p < 0) vars.push_back(o);
 	//ISVAR
 
-	//printe();
 
+	termid question = make(p, s, o);
+	termset query;
+	query.emplace_back(question);
+
+
+	subs dummy;
+	do_query(query, &dummy);
+/*
 	for (auto ei  : e)
 	{
 		for (auto x: ei.second)
 		{
 			for (auto g: x.second)
 			{
+
 				subs env = g.second;
-				env = subs_workardound;
+*/
+
+
 				for (auto var:vars) {
-					TRACE(dout << var << " " << var->p << " " << env.size()) ;
-					if (env.find(var->p) != env.end()) {
-						auto v = env[var->p];
-						TRACE(dout << " match:");
-						TRACE(dout << v << " ");
+					//TRACE(dout << var << " " << var->p << " " << env.size()) ;
+					if (subs_workardound.find(var->p) != subs_workardound.end()) {
+						auto v = subs_workardound[var->p];
+						//TRACE(dout << "match: " << v << " ");
 						r.push_back(v);
 						if (stop_at && r.size() >= stop_at) {
 							goto end;
 						}
 					}
 				}
-			}
-		}
-	}
 	end:
 		subs_workardound.clear();
+		gnd.clear();
 		e.clear();
 		return r;
 }
