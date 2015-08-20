@@ -444,8 +444,34 @@ void prover::pushev(shared_ptr<proof> p) {
 }
 
 struct match_heads {
-	uint entry;
-	bool unify(termid t, const subs& s) {
+	uint state = 0;
+	const term& t;
+	const subs& s;
+	const rulelist& rl;
+	const termset& heads;
+	rulelist::const_iterator rule;
+	subs dsub;
+	match_heads(const term& _t, const subs& _s, const rulelist& _rl, const termset& _heads) : t(_t), s(_s), rl(_rl), heads(_heads), rule(rl.begin()) {}
+
+	bool operator()() {
+		while (rule != rl.end())
+//		switch (state) {
+//			case 0:
+				while (!t.unify(s, heads[*rule], dsub)) {
+					dsub.clear();
+					if (++rule == rl.end()) return false;
+				} return true;
+//				return (state = 1);
+//			case 1: state = 0;
+//		}
+		return false;
+//		switch (state) {
+//		case 0: 
+//		case 1:
+//				return state = 1;
+//			}
+//		}
+//		return false;
 	}
 };
 
@@ -458,17 +484,15 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	const proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto& body = bodies[frame.rule];
-//	match_head mh(t,
 	if (frame.term_idx != body.size()) {
 		termid t = body[frame.term_idx];
-		MARPA(if (builtin(t, _p) != -1) return);
+		if (!t) return frame.next;
+		MARPA(if (builtin(t, _p) != -1) return frame.next);
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-		static subs dummy;
-		for (auto rule : rit->second) {
-			if (t->unify(frame.s ? *frame.s : dummy, heads[rule], termsub))
-				queuepush(make_shared<proof>(_p, rule, 0, _p, termsub));
-			termsub.clear();
-		}
+		match_heads mh(*t, frame.s ? *frame.s : subs(), rit->second, heads);
+//		for (auto rule : rit->second) {
+		while (mh())
+			queuepush(make_shared<proof>(_p, *mh.rule, 0, _p, mh.dsub));
 	}
 	else if (!frame.prev) gnd.push_back(_p);
 	else {
@@ -618,7 +642,7 @@ bool prover::consistency(const qdb& quads) {
 	return c;
 }
 
-prover::termset prover::qdb2termset(const qdb &q_) {
+termset prover::qdb2termset(const qdb &q_) {
 	termset goal = termset();
 	termid t;
 	for (auto q : merge(q_))
@@ -728,7 +752,7 @@ termid prover::make(resid p, termid s, termid o) {
 	return _terms.add(p, s, o);
 }
 
-prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
+ruleid prover::ruleset::add(termid t, const termset& ts) {
 	setproc(L"ruleset::add");
 	ruleid r =  _head.size();
 	_head.push_back(t);
@@ -737,7 +761,7 @@ prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
 	return r;
 }
 
-prover::ruleid prover::ruleset::add(termid t) {
+ruleid prover::ruleset::add(termid t) {
 	termset ts = termset();
 	return add(t, ts);
 }

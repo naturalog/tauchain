@@ -35,6 +35,10 @@ struct term;
 class prover;
 typedef const term* termid;
 typedef std::map<resid, termid> subs;
+typedef u64 ruleid;
+typedef std::vector<ruleid> rulelist;
+typedef std::map<resid, rulelist> r2id_t;
+typedef std::vector<termid> termset;
 /*
 template<typename T>
 struct list {
@@ -95,8 +99,6 @@ struct term {
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
-	typedef u64 ruleid;
-	typedef std::vector<termid> termset;
 	class ruleset {
 	public:
 		typedef std::vector<termset> btype;
@@ -114,14 +116,12 @@ public:
 		size_t size()			{ return _head.size(); }
 		void mark();
 		void revert();
-		typedef std::vector<ruleid> rulelist;
-		typedef std::map<resid, rulelist> r2id_t;
 		string format() const;
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
-	const termset&heads = kb.head();
-	const std::vector<termset>&bodies = kb.body();
+	const termset& heads = kb.head();
+	const std::vector<termset>& bodies = kb.body();
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
@@ -231,7 +231,7 @@ private:
 
 	inline void pushev(shared_ptr<proof>);
 	inline shared_ptr<proof> step(shared_ptr<proof>);
-	inline void step_in(size_t &src, ruleset::rulelist &candidates, shared_ptr<proof> _p, termid t);
+	inline void step_in(size_t &src, rulelist &candidates, shared_ptr<proof> _p, termid t);
 	subs::const_iterator evvit;
 	termid evaluate(const term& p, const subs& s) { return p.evaluate(s); }
 	termid evaluate(const term& p, const shared_ptr<subs> s) {
@@ -299,7 +299,7 @@ public:
 	std::list<shared_ptr<proof>> gnd;
 	static void unittest();
 	subs termsub;
-	ruleset::r2id_t::const_iterator rit;
+	r2id_t::const_iterator rit;
 	shared_ptr<proof> lastp = 0;
 };
 #endif
