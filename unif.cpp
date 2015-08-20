@@ -20,12 +20,10 @@ bool unify(i64* _s, i64* _d, size_t sz, subs& ssub, subs& dsub) {
 	subs::const_iterator it;
 
 	auto dosub = [&](i64 x, i64 y, bool loop = true) {
-		cout << "begin " << x << ' ' << y << endl; print(__s,5); print(__d,5);
 		for (size_t n = 0; n < sz; ++n) {
 			if (__s[n] == x) __s[n] = y;
 			if (__d[n] == x) __d[n] = y;
 		}
-		cout << "end" << endl; print(__s,5); print(__d,5);
 	};
 
 	auto sub = [&](i64 x, i64 y) {
@@ -34,7 +32,6 @@ bool unify(i64* _s, i64* _d, size_t sz, subs& ssub, subs& dsub) {
 			return false;
 		ssub.emplace(x, y);
 		dsub.emplace(x, y);
-		cout << "ssub: "; for (auto x : ssub) cout << x.first << ' ' << x.second << endl;
 		dosub(x, y, false);
 		return true;
 	};
@@ -45,7 +42,6 @@ bool unify(i64* _s, i64* _d, size_t sz, subs& ssub, subs& dsub) {
 		if (*s < 0 && *s > *d && !sub(*s, *d)) return false;
 		if ((*s < 0 || *d < 0) && !sub(*d, *s)) return false;
 		if (*s++ != *d++) return false;
-		cout << "***" << endl;print(__s,5); print(__d,5);
 	}
 
 	return true;
@@ -57,6 +53,8 @@ int main() {
 	subs s,d;
 	if (unify(t1, t2, 5, s, d)) cout << "passed" << endl;
 	else cout << "failed" << endl;
+	print(t1,5);
+	print(t2,5);
 	cout << "S:" << endl;
 	for (auto x : s) cout << x.first << ' ' << x.second << endl;
 	cout << "D:" << endl;
