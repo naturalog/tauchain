@@ -697,10 +697,10 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 
 
 				for (auto var:vars) {
-					dout << var << " " << var->p << " " << subs_workardound.size() ;
+					//dout << var << " " << var->p << " " << subs_workardound.size() ;
 					if (subs_workardound.find(var->p) != subs_workardound.end()) {
 						auto v = subs_workardound[var->p];
-						dout << "match: " << v << " ";
+						TRACE(dout << "match: " << v << std::endl;)
 						r.push_back(v);
 						if (stop_at && r.size() >= stop_at) {
 							goto end;

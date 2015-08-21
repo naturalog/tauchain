@@ -13,8 +13,11 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
+#ifdef debug_cli
+#define CLI_TRACE(x) TRACE(x)
+#else
 #define CLI_TRACE(x)
-//#define CLI_TRACE(x) TRACE(x)
+#endif
 
 #define ever ;;
 
@@ -128,12 +131,28 @@ void switch_color(){
 qdb merge_qdbs(const std::vector<qdb> qdbs)
 {
         if (qdbs.size() > 1)
-                dout << L"warning, bnode renaming not implemented";
+                dout << L"warning, kb merging is half-assed";
         qdb r;
         for (auto x:qdbs) {
-                r.first.insert(x.first.begin(), x.first.end());
-                r.second.insert(x.second.begin(), x.second.end());
-        }
+			for (auto graph: x.first) {
+				string name = graph.first;
+				qlist contents = *graph.second;
+
+				if (r.first.find(name) == r.first.end())
+					r.first[name] = make_shared<qlist>(*new qlist());
+
+				for (pquad c: contents) {
+					r.first[name]->push_back(c);
+				}
+			}
+			for (auto list: x.second) {
+				string name = list.first;
+				auto val = list.second;
+				r.second[name] = val;
+				dout << L"warning, lists may get overwritten";
+			}
+		}
+
         return r;
 }
 
@@ -362,7 +381,7 @@ void mode_kb(){
 		else if(dash_arg(token,L"add")){
 		}else{
 			_argstream.push_front(token);
-			clear_kb();
+			//clear_kb();
 		}
 	
 		if(_argstream.size() == 0){

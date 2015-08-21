@@ -6,4 +6,4 @@
 
 :x rdf:subject "banana". 
 
-rdf:subject rdfs:domain rdf:Statement.
+#rdf:subject rdfs:domain rdf:Statement.
