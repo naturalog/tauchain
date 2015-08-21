@@ -25,11 +25,11 @@ prover::termdb prover::_terms;
 term::term(){}
 term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 #ifdef LAMBDA
-	auto evvar = [this](const subs& ss) {
+	auto evvar = [_p](const subs& ss) {
 		PROFILE(++evals);
 		setproc(L"evaluate");
 		static subs::const_iterator it;
-		return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->evaluate(ss);
+		return ((it = ss.find(_p)) == ss.end()) ? 0 : it->second->evaluate(ss);
 	};
 	auto evpred = [this](const subs&) {
 		PROFILE(++evals);
@@ -50,10 +50,13 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 		if (!_d) return false; \
 		setproc(L"unify_var"); \
 		static termid v; \
-		return (v = evaluate(ssub)) ? v->x(ssub, _d, dsub) : true; \
+		return (v = e(ssub)) ? v->x(ssub, _d, dsub) : true; \
 	}
-	auto unifvar = [this](const subs& ssub, termid _d, subs& dsub) UNIFVAR(unify);
-	auto unifvar_ep = [this](const subs& ssub, termid _d, const subs& dsub) UNIFVAR(unify_ep);
+	auto &e = evaluate;
+	auto &u = unify;
+	auto &ue = unify_ep;
+	auto unifvar = [&e](const subs& ssub, termid _d, subs& dsub) UNIFVAR(unify);
+	auto unifvar_ep = [&e](const subs& ssub, termid _d, const subs& dsub) UNIFVAR(unify_ep);
 
 	auto unif = [this](const subs& ssub, termid _d, subs& dsub) {
 		PROFILE(++unifs);
