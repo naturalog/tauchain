@@ -1,5 +1,91 @@
 #include "prover.h"
 
+termid term::evvar(const subs& ss) const {
+	static subs::const_iterator it;
+	return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->evaluate(ss);
+}
+termid term::evpred(const subs&) const {
+	return this;
+}
+termid term::evaluate(const subs& ss) const {
+	if (p < 0) return evvar(ss);
+	if (!s && !o) return evpred(ss);
+	if (!s || !o) throw 0;
+	return ev(ss);
+}
+
+#define UNIFVAR(x) { \
+		PROFILE(++unifs); \
+		if (!_d) return false; \
+		setproc(L"unify_var"); \
+		static termid v; \
+		return (v = evaluate(ssub)) ? v->x(ssub, _d, dsub) : true; \
+	}
+bool term::unifvar(const subs& ssub, termid _d, subs& dsub) const UNIFVAR(unify);
+bool term::unifvar_ep(const subs& ssub, termid _d, const subs& dsub) const UNIFVAR(unify_ep);
+
+bool term::unif(const subs& ssub, termid _d, subs& dsub) const {
+	if (!_d) return false;
+	static termid v;
+	const term& d = *_d;
+	if (!d.s) return false;
+	if (ISVAR(d)) {
+		if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
+		dsub.emplace(d.p, evaluate(ssub));
+		if (dsub[d.p]->s) throw 0;
+		return true;
+	}
+	return p == d.p && s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub);
+};
+
+bool term::unifpred(const subs& ssub, termid _d, subs& dsub) const {
+	if (!_d) return false;
+	static termid v;
+	const term& d = *_d;
+	if (d.s) return false;
+	if (ISVAR(d)) {
+		if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
+		dsub.emplace(d.p, evaluate(ssub));
+		if (dsub[d.p]->s) throw 0;
+		return true;
+	}
+	return p == d.p;
+}
+
+bool term::unif_ep(const subs& ssub, termid _d, const subs& dsub) const {
+	if (!_d) return false;
+	static termid v;
+	const term& d = *_d;
+	if (!d.s) return false;
+	if (ISVAR(d)) {
+		if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
+		return true;
+	}
+	return p == d.p && s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub);
+}
+
+bool term::unifpred_ep(const subs& ssub, termid _d, const subs& dsub) const {
+	if (!_d) return false;
+	static termid v;
+	const term& d = *_d;
+	if (d.s) return false;
+	if (ISVAR(d)) {
+		if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
+		return true;
+	}
+	return p == d.p;
+}
+bool term::unify_ep(const subs& ssub, termid _d, const subs& dsub) const {
+	if (p < 0) return unifvar_ep(ssub, _d, dsub);
+	if (!s) return unifpred_ep(ssub, _d, dsub);
+	return unif_ep(ssub, _d, dsub);
+}
+bool term::unify(const subs& ssub, termid _d, subs& dsub) const {
+	if (p < 0) return unifvar(ssub, _d, dsub);
+	if (!s) return unifpred(ssub, _d, dsub);
+	return unif(ssub, _d, dsub);
+}
+
 bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 //	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;

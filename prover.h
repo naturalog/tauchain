@@ -94,104 +94,18 @@ struct term {
 	std::function<bool(const subs&, termid, subs&)> unify;
 	std::function<bool(const subs&, termid, const subs&)> unify_ep;
 #else
-	termid evvar(const subs& ss) const {
-		PROFILE(++evals);
-		setproc(L"evaluate");
-		static subs::const_iterator it;
-		return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->evaluate(ss);
-	};
-	termid evpred(const subs&) const {
-		PROFILE(++evals);
-		setproc(L"evaluate");
-		return this;
-	};
+	termid evvar(const subs& ss) const;
+	termid evpred(const subs&) const;
 	termid ev(const subs& ss) const;
-	termid evaluate(const subs& ss) const {
-		if (p < 0) return evvar(ss);
-		if (!s && !o) return evpred(ss);
-		if (!s || !o) throw 0;
-		return ev(ss);
-	}
-
-#define UNIFVAR(x) { \
-		PROFILE(++unifs); \
-		if (!_d) return false; \
-		setproc(L"unify_var"); \
-		static termid v; \
-		return (v = evaluate(ssub)) ? v->x(ssub, _d, dsub) : true; \
-	}
-	bool unifvar(const subs& ssub, termid _d, subs& dsub) const UNIFVAR(unify);
-	bool unifvar_ep(const subs& ssub, termid _d, const subs& dsub) const UNIFVAR(unify_ep);
-
-	bool unif(const subs& ssub, termid _d, subs& dsub) const {
-		PROFILE(++unifs);
-		if (!_d) return false;
-		setproc(L"unify_bind");
-		static termid v;
-		const term& d = *_d;
-		if (!d.s) return false;
-		if (ISVAR(d)) {
-			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-			dsub.emplace(d.p, evaluate(ssub));
-			if (dsub[d.p]->s) throw 0;
-			return true;
-		}
-		return p == d.p && s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub);
-	};
-
-	bool unifpred(const subs& ssub, termid _d, subs& dsub) const {
-		PROFILE(++unifs);
-		if (!_d) return false;
-		setproc(L"unify_bind");
-		static termid v;
-		const term& d = *_d;
-		if (d.s) return false;
-		if (ISVAR(d)) {
-			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-			dsub.emplace(d.p, evaluate(ssub));
-			if (dsub[d.p]->s) throw 0;
-			return true;
-		}
-		return p == d.p;
-	};
-
-	bool unif_ep(const subs& ssub, termid _d, const subs& dsub) const {
-		PROFILE(++unifs);
-		if (!_d) return false;
-		setproc(L"unify_ep");
-		static termid v;
-		const term& d = *_d;
-		if (!d.s) return false;
-		if (ISVAR(d)) {
-			if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
-			return true;
-		}
-		return p == d.p && s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub);
-	};
-
-	bool unifpred_ep(const subs& ssub, termid _d, const subs& dsub) const {
-		PROFILE(++unifs);
-		if (!_d) return false;
-		setproc(L"unify_ep");
-		static termid v;
-		const term& d = *_d;
-		if (d.s) return false;
-		if (ISVAR(d)) {
-			if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
-			return true;
-		}
-		return p == d.p;
-	};
-	bool unify_ep(const subs& ssub, termid _d, const subs& dsub) const {
-		if (p < 0) return unifvar_ep(ssub, _d, dsub);
-		if (!s) return unifpred_ep(ssub, _d, dsub);
-		return unif_ep(ssub, _d, dsub);
-	}
-	bool unify(const subs& ssub, termid _d, subs& dsub) const {
-		if (p < 0) return unifvar(ssub, _d, dsub);
-		if (!s) return unifpred(ssub, _d, dsub);
-		return unif(ssub, _d, dsub);
-	}
+	termid evaluate(const subs& ss) const;
+	bool unifvar(const subs& ssub, termid _d, subs& dsub) const;
+	bool unifvar_ep(const subs& ssub, termid _d, const subs& dsub) const;
+	bool unif(const subs& ssub, termid _d, subs& dsub) const;
+	bool unifpred(const subs& ssub, termid _d, subs& dsub) const;
+	bool unif_ep(const subs& ssub, termid _d, const subs& dsub) const;
+	bool unifpred_ep(const subs& ssub, termid _d, const subs& dsub) const;
+	bool unify_ep(const subs& ssub, termid _d, const subs& dsub) const;
+	bool unify(const subs& ssub, termid _d, subs& dsub) const;
 #endif
 };
 
