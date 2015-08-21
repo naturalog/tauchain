@@ -1,6 +1,6 @@
 #ifndef __PROVER_H__
 #define __PROVER_H__
-
+#define LAMBDA
 /*
     Created on: Apr 28, 2015
         Author: Ohad Asor

@@ -1,12 +1,29 @@
 #include "prover.h"
-
+/*
+string prover::emit(ruleid r) {
+	std::wstringstream ss;
+	std::wostream& os = ss; // dout;
+//	termid _t = heads[r];
+//	if (!_t) {
+//		os << L"#define match" << r << "(x, y) false" << endl;
+//		return ss.str();
+//	}
+	const term& t = heads[r];
+	os << L"match" << r << L"(const term& t, const subs& s) {" << endl;
+	
+	os << L"}" << endl;
+}
+*/
+#ifndef LAMBDA
 termid term::evvar(const subs& ss) const {
 	static subs::const_iterator it;
 	return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->evaluate(ss);
 }
+
 termid term::evpred(const subs&) const {
 	return this;
 }
+
 termid term::evaluate(const subs& ss) const {
 	if (p < 0) return evvar(ss);
 	if (!s && !o) return evpred(ss);
@@ -85,7 +102,7 @@ bool term::unify(const subs& ssub, termid _d, subs& dsub) const {
 	if (!s) return unifpred(ssub, _d, dsub);
 	return unif(ssub, _d, dsub);
 }
-
+#endif
 bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 //	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
