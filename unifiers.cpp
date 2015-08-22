@@ -38,8 +38,8 @@ termid term::evaluate(const subs& ss) const {
 		static termid v; \
 		return (v = evaluate(ssub)) ? v->x(ssub, _d, dsub) : true; \
 	}
-bool term::unifvar(const subs& ssub, termid _d, subs& dsub) const UNIFVAR(unify);
-bool term::unifvar_ep(const subs& ssub, termid _d, const subs& dsub) const UNIFVAR(unify_ep);
+bool term::unifvar(const subs& ssub, termid _d, subs& dsub) const UNIFVAR(unify)
+bool term::unifvar_ep(const subs& ssub, termid _d, const subs& dsub) const UNIFVAR(unify_ep)
 
 bool term::unif(const subs& ssub, termid _d, subs& dsub) const {
 	if (!_d) return false;
@@ -53,7 +53,7 @@ bool term::unif(const subs& ssub, termid _d, subs& dsub) const {
 		return true;
 	}
 	return p == d.p && s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub);
-};
+}
 
 bool term::unifpred(const subs& ssub, termid _d, subs& dsub) const {
 	if (!_d) return false;
@@ -98,9 +98,18 @@ bool term::unify_ep(const subs& ssub, termid _d, const subs& dsub) const {
 	return unif_ep(ssub, _d, dsub);
 }
 bool term::unify(const subs& ssub, termid _d, subs& dsub) const {
-	if (p < 0) return unifvar(ssub, _d, dsub);
-	if (!s) return unifpred(ssub, _d, dsub);
-	return unif(ssub, _d, dsub);
+	setproc(L"unify_bind");
+	bool r;
+	TRACE(dout << "Trying to unify " << prover::format(this) << " sub: " << prover::formats(ssub) << " with " << prover::format(_d) << " sub: " << prover::formats(dsub) << endl);
+	if (p < 0) r = unifvar(ssub, _d, dsub);
+	else if (!s) r = unifpred(ssub, _d, dsub);
+	else r = unif(ssub, _d, dsub);
+	TRACE(
+		dout << "Trial to unify " << prover::format(this) << " sub: " << prover::formats(ssub) << " with " << prover::format(_d) << " sub: " << prover::formats(dsub) << " : ";
+		if (r) dout << "passed";
+		else dout << "failed";
+		dout << endl);
+	return r;
 }
 #endif
 bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {

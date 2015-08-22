@@ -1,6 +1,6 @@
 #ifndef __PROVER_H__
 #define __PROVER_H__
-#define LAMBDA
+//#define LAMBDA
 /*
     Created on: Apr 28, 2015
         Author: Ohad Asor
@@ -39,6 +39,7 @@ typedef u64 ruleid;
 typedef std::vector<ruleid> rulelist;
 typedef std::map<resid, rulelist> r2id_t;
 typedef std::vector<termid> termset;
+#define TRACEUNIF2 TRACE( dout << "Trial to unify " << format(s) << " sub: " << formats(ssub) << " with " << format(d) << " sub: " << formats(dsub) << " : "; if (r) { dout << "passed"; if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]); } else dout << "failed"; dout << endl);
 /*
 template<typename T>
 struct list {
@@ -136,31 +137,18 @@ public:
 		const btype& body() const	{ return _body; }
 		size_t size() const		{ return _head.size(); }
 		string format() const;
-		void mkconds() {
-			subs s;
-			for (size_t n = 0; n < size(); ++n)
-				for (auto b : _body[n]) {
-					termid t = b.first;
-					conds& c = b.second;
-					for (size_t h = 0; h < size(); ++h) {
-						if (t->unify(subs(), _head[h], s)) c[h] = s;
-						s.clear();
-					}
-				}
-		}
+		void mkconds(prover* p);
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
-	static string format(const ruleset::conds& c) {
+	string format(const ruleset::conds& c) {
 		std::wstringstream ss;
 		for (auto& y : c) {
-			ss << format(y.first) << L' ';
-			for (auto& x : y.second)
-				ss << dstr(x.first) << L'\\' << format(x.second) << L';';
+			ss << formatr(y.first) << L':' << formats(y.second);
 		}
 		return ss.str();
 	}
-	static string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false) {
+	string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false) {
 		std::wstringstream ss;
 		for (auto& x : v)
 			ss << format(x.first, r) << L' ' << format(x.second) << L';';
@@ -322,13 +310,15 @@ public:
 	void prints(const subs&  s);
 	void prints(shared_ptr<subs> s) { prints(*s); }
 	static string format(resid r) { return dstr(r); } // { throw std::runtime_error("called format(termid) with resid"); }
-	static string format(resid r, bool) { return dstr(r); }// { throw std::runtime_error("called format(termid) with resid"); }
+	static string format(resid r, bool) { return dstr(r); }// 
 	string formatr(ruleid r, bool json = false);
+	static string formatr(termid){ throw std::runtime_error("called formatr(ruleid) with termid"); }
+	static string formatr(termid, bool) { throw std::runtime_error("called formatr(ruleid) with termid"); }
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
 	string formatp(shared_ptr<proof> p);
-	string formats(const subs&  s, bool json = false);// { return s.format(json); }
-	string formats(shared_ptr<subs>& s, bool json = false) { return s ? formats(*s, json) : string(); }
+	static string formats(const subs&  s, bool json = false);// { return s.format(json); }
+	static string formats(shared_ptr<subs>& s, bool json = false) { return s ? formats(*s, json) : string(); }
 	void printterm_subs(termid id, const subs&  s);
 	void printl_subs(const termset& l, const subs&  s);
 	void printr_subs(ruleid r, const subs&  s);

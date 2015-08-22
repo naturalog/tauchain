@@ -48,7 +48,6 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 #define UNIFVAR(x) { \
 		PROFILE(++unifs); \
 		if (!_d) return false; \
-		setproc(L"unify_var"); \
 		static termid v; \
 		return (v = e(ssub)) ? v->x(ssub, _d, dsub) : true; \
 	}
@@ -59,7 +58,6 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	auto unif = [this](const subs& ssub, termid _d, subs& dsub) {
 		PROFILE(++unifs);
 		if (!_d) return false;
-		setproc(L"unify_bind");
 		static termid v;
 		const term& d = *_d;
 		if (!d.s) return false;
@@ -75,7 +73,6 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 	auto unifpred = [this](const subs& ssub, termid _d, subs& dsub) {
 		PROFILE(++unifs);
 		if (!_d) return false;
-		setproc(L"unify_bind");
 		static termid v;
 		const term& d = *_d;
 		if (d.s) return false;
@@ -406,17 +403,17 @@ struct match_heads {
 	uint state = 0;
 	const term& t;
 	const subs& s;
-	const rulelist& rl;
+	const prover::ruleset::conds& rl;
 	const termset& heads;
-	rulelist::const_iterator rule;
+	prover::ruleset::conds::const_iterator rule;
 	subs dsub;
-	match_heads(const term& _t, const subs& _s, const rulelist& _rl, const termset& _heads) : t(_t), s(_s), rl(_rl), heads(_heads), rule(rl.begin()) {}
+	match_heads(const term& _t, const subs& _s, const prover::ruleset::conds& _rl, const termset& _heads) : t(_t), s(_s), rl(_rl), heads(_heads), rule(rl.begin()) {}
 
 	bool operator()() {
 		while (rule != rl.end())
 		switch (state) {
 			case 0:
-				while (!t.unify(s, heads[*rule], dsub)) {
+				while (!t.unify(s, heads[rule->first], dsub)) {
 					dsub.clear();
 					if (++rule == rl.end()) return false;
 				} 
@@ -445,15 +442,16 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto& body = bodies[frame.rule];
 	if (frame.term_idx != body.size()) {
-		termid t = body[frame.term_idx].first;
+		auto& b = body[frame.term_idx];
+		termid t = b.first;
 		if (!t) return frame.next;
 		MARPA(if (builtin(t, _p) != -1) return frame.next);
-		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
+//		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
 		static subs dummy;
-		match_heads mh(*t, frame.s ? *frame.s : dummy, rit->second, heads);
+		match_heads mh(*t, frame.s ? *frame.s : dummy, /*rit->*/b.second, heads);
 //		for (auto rule : rit->second) {
 		while (mh())
-			queuepush(make_shared<proof>(_p, *mh.rule, 0, _p, mh.dsub));
+			queuepush(make_shared<proof>(_p, mh.rule->first, 0, _p, mh.dsub));
 	}
 	else if (!frame.prev) gnd.push_back(_p);
 	else {
@@ -574,7 +572,6 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
-	kb.mkconds();
 	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
@@ -677,6 +674,7 @@ int prover::do_query(const termset& goal, subs * s) {
 		setproc(L"rules");
 		TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	}
+	kb.mkconds(this);
 
 	using namespace std;
 	using namespace std::chrono;
@@ -836,4 +834,23 @@ prover::resids prover::get_list(resid head)
     for (auto rrr: r)
         rr.push_back(rrr->p);
     return rr;
+}
+
+void prover::ruleset::mkconds(prover* p) {
+	setproc(L"mkconds");
+	subs s;
+	for (size_t n = 0; n < size(); ++n) {
+		for (auto& b : _body[n]) {
+			termid t = b.first;
+			conds& c = b.second;
+			for (size_t h = 0; h < size(); ++h) {
+				if (t->unify(subs(), _head[h], s)) {
+					c[h] = s;
+					TRACE(dout<<"c["<<prover::format(_head[h])<<"] = "<<prover::formats(s)<<endl);
+					TRACE(dout<<"n: " << n << " h: " << h << " s: " << prover::formats(s) << " t: " << prover::format(t) << " h[n]: " << prover::format(_head[h]) << endl); } 
+				s.clear();
+			}
+			TRACE(dout<<"conds: " << p->format(c) << endl);
+		}
+	}
 }
