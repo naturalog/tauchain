@@ -122,7 +122,7 @@ class prover {
 public:
 	class ruleset {
 	public:
-		typedef map<ruleid, subs> conds;
+		typedef vector<ruleid> conds;//map<ruleid, subs> conds;
 		typedef vector<vector<pair<termid, conds>>> btype;
 	private:
 		termset _head;
@@ -144,7 +144,7 @@ public:
 	string format(const ruleset::conds& c) {
 		std::wstringstream ss;
 		for (auto& y : c) {
-			ss << formatr(y.first) << L':' << formats(y.second);
+			ss << formatr(y) << ',';//.first) << L':' << formats(y.second);
 		}
 		return ss.str();
 	}

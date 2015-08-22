@@ -413,7 +413,7 @@ struct match_heads {
 		while (rule != rl.end())
 		switch (state) {
 			case 0:
-				while (!t.unify(s, heads[rule->first], dsub)) {
+				while (!t.unify(s, heads[*rule], dsub)) {
 					dsub.clear();
 					if (++rule == rl.end()) return false;
 				} 
@@ -451,7 +451,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		match_heads mh(*t, frame.s ? *frame.s : dummy, /*rit->*/b.second, heads);
 //		for (auto rule : rit->second) {
 		while (mh())
-			queuepush(make_shared<proof>(_p, mh.rule->first, 0, _p, mh.dsub));
+			queuepush(make_shared<proof>(_p, *mh.rule, 0, _p, mh.dsub));
 	}
 	else if (!frame.prev) gnd.push_back(_p);
 	else {
@@ -718,7 +718,7 @@ ruleid prover::ruleset::add(termid t, const termset& ts) {
 	_head.push_back(t);
 	_body.emplace_back();
 	for (auto x : ts)
-		_body.back().emplace_back(x, conds());
+		_body.back().emplace_back(x, prover::ruleset::conds());
 	r2id[t ? t->p : 0].push_back(r);
 	return r;
 }
@@ -845,7 +845,8 @@ void prover::ruleset::mkconds(prover* p) {
 			conds& c = b.second;
 			for (size_t h = 0; h < size(); ++h) {
 				if (t->unify(subs(), _head[h], s)) {
-					c[h] = s;
+					//c[h] = s;
+					c.push_back(h);
 					TRACE(dout<<"c["<<prover::format(_head[h])<<"] = "<<prover::formats(s)<<endl);
 					TRACE(dout<<"n: " << n << " h: " << h << " s: " << prover::formats(s) << " t: " << prover::format(t) << " h[n]: " << prover::format(_head[h]) << endl); } 
 				s.clear();
