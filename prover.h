@@ -257,6 +257,7 @@ private:
 
 	inline bool euler_path(shared_ptr<proof>);
 	int builtin(termid, shared_ptr<proof>);
+	int rdfs_builtin(const term& t, const term *t0, const term *t1);
 	termid quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);

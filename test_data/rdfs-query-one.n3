@@ -1,13 +1,8 @@
-@prefix log: <http://www.w3.org/2000/10/swap/log#>.
-@prefix str: <http://www.w3.org/2000/10/swap/string#>.
 @prefix owl: <http://www.w3.org/2002/07/owl#>.
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 
-#:x rdf:subject "banana". 
-:x a rdf:Statement.
+#:x a rdf:Statement.
+:z a rdfs:Literal.
 
-#rdf:subject a rdfs:Class
-#rdf:Alt a rdfs:Resource.
-#<http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt> a <http://www.w3.org/2000/01/rdf-schema#Resource>.

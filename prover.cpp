@@ -128,6 +128,48 @@ void* testfunc(void* p) {
 //	return 0;
 }
 
+
+
+int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
+	int r = -1;
+	if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
+		return 1;
+	else if (t.p == A || t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+		r = 0;
+		//TODO: correctly, so that subqery proof trace not opaque?
+		{
+			prover copy(*this);
+			//TRACE(dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;)
+			auto ps = copy.askt(tmpvar(), rdfsdomain, t1);
+			for (termid p: ps) {
+				dout << "\n\nYAYdomain!!\n\n" << std::endl;
+				auto xx = copy.askt(t0, p->p, tmpvar());
+				if (xx.size() > 0) {
+					dout << "\n\nYay even mor\n\n" << std::endl;
+					return 1;
+				}
+			}
+		}
+		{
+			prover copy(*this);
+			//{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+			auto ps = copy.askt(tmpvar(), rdfsrange, t1);
+			for (termid p: ps) {
+				dout << "\n\nYAYrange!!\n\n" << std::endl;
+				auto xx = copy.askt(tmpvar(), p->p, t0);
+				if (xx.size() > 0) {
+					dout << "\n\nYay even mor\n\n" << std::endl;
+					return 1;
+				}
+			}
+		}
+	}
+
+	return r;
+}
+
+
+
 int prover::builtin(termid id, shared_ptr<proof> p) {
 	setproc(L"builtin");
 	const term& t = *id;
@@ -249,24 +291,8 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		// check the definitions of the uri constants, some are right, some are just "xxx:yyy"
 		// see we rely on the == A kludge...
 
-	else if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
-		r = 1;
-	else if (t.p == A || t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
-		r = 0;
-		dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;
-		prover copy(*this); //(Does this copy correctly?)
-		auto ps = copy.askt(tmpvar(), rdfsdomain, make(i1->p, 0, 0)); //TODO: correctly, so that subqery proof trace not opaque?
-		for(termid p: ps)
-		{
-			dout << "\n\nYAY!!\n\n"<<std::endl;
-			auto xx = copy.askt(i0, p->p, tmpvar());
-			if (xx.size() > 0) {
-				dout << "\n\nYay even more\n\n" << std::endl;
-				r = 1;
-			}
-		}
-	}
-
+	else if ((r = rdfs_builtin(t, t0, t1)) != -1)
+	{}
 
 	#ifdef with_marpa
 		/*
@@ -681,6 +707,9 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	termset query;
 	query.emplace_back(question);
 
+	subs_workardound.clear();
+	gnd.clear();
+	e.clear();
 
 	subs dummy;
 	do_query(query, &dummy);

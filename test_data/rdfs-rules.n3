@@ -1,7 +1,33 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
 
+### Resource Description Framework RDF(S)
+
+rdf:Alt rdfs:subClassOf rdfs:Container.
+rdf:Bag rdfs:subClassOf rdfs:Container.
+rdfs:ContainerMembershipProperty rdfs:subClassOf rdf:Property.
+rdfs:Datatype rdfs:subClassOf rdfs:Class.
+rdf:Seq rdfs:subClassOf rdfs:Container.
+rdf:XMLLiteral rdfs:subClassOf rdfs:Literal; a rdfs:Datatype.
+
+rdfs:comment rdfs:domain rdfs:Resource; rdfs:range rdfs:Literal.
+rdfs:domain rdfs:domain rdf:Property; rdfs:range rdfs:Class.
+rdf:first rdfs:domain rdf:List; rdfs:range rdfs:Resource; a owl:FunctionalProperty.
+rdfs:isDefinedBy rdfs:domain rdfs:Resource; rdfs:range rdfs:Resource; rdfs:subPropertyOf rdfs:seeAlso.
+rdfs:label rdfs:domain rdfs:Resource; rdfs:range rdfs:Literal.
+rdfs:member rdfs:domain rdfs:Container; rdfs:range rdfs:Resource.
+rdf:object rdfs:domain rdf:Statement; rdfs:range rdfs:Resource.
+rdf:predicate rdfs:domain rdf:Statement; rdfs:range rdf:Property.
+rdfs:range rdfs:domain rdf:Property; rdfs:range rdfs:Class.
+rdf:rest rdfs:domain rdf:List; rdfs:range rdf:List; a owl:FunctionalProperty.
+rdfs:seeAlso rdfs:domain rdfs:Resource; rdfs:range rdfs:Resource.
+rdfs:subClassOf rdfs:domain rdfs:Class; rdfs:range rdfs:Class.
+rdfs:subPropertyOf rdfs:domain rdf:Property; rdfs:range rdf:Property.
 rdf:subject rdfs:domain rdf:Statement; rdfs:range rdfs:Resource.
+rdf:type rdfs:domain rdfs:Resource; rdfs:range rdfs:Class.
+rdf:value rdfs:domain rdfs:Resource; rdfs:range rdfs:Resource.
+
+rdf:nil a rdf:List.
 
 
 ### inference rules for RDF(S)

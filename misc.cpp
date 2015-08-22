@@ -9,7 +9,8 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, rdfnil, False, rdfsResource, rdfsdomain;
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfnil, False;
+nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
 //nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 void bidict::init() {
@@ -19,24 +20,36 @@ void bidict::init() {
 	marpa_parse_iri = set(mkiri(pstr(L"http://idni.org/marpa#parse")));
 #endif
 	GND = set (mkiri(pstr( L"GND" )));
+	A = set(mkiri(pstr(L"a")));
+
 	logequalTo = set (mkiri(pstr( L"http://www.w3.org/2000/10/swap/log#equalTo")));
 	lognotEqualTo = set (mkiri(pstr(L"http://www.w3.org/2000/10/swap/log#notEqualTo")));
+	False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
+
 	rdffirst = set(mkiri(RDF_FIRST/*Tpstr(L"rdf:first")*/));
 	rdfrest = set(mkiri(RDF_REST/*pstr(L"rdf:rest")*/));
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
-	A = set(mkiri(pstr(L"a")));
+	Dot = set(mkiri(pstr(L".")));
+
+	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
 	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
-//	rdfList = set(mkiri(pstr(L"rdf:List")));
-	Dot = set(mkiri(pstr(L".")));
-	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
+	rdfsClass = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Class")));
 	rdfssubClassOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subClassOf")));
+	rdfssubPropertyOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
+	rdfsContainerMembershipProperty = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
+	rdfsmember = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#member")));
+	rdfsDatatype = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Datatype")));
+	rdfsLiteral = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Literal")));
+	rdfProperty = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
+
+//	rdfList = set(mkiri(pstr(L"rdf:List")));
 //	_dlopen = set(mkiri(pstr(L"dlfcn:dlopen")));
 //	_dlerror = set(mkiri(pstr(L"dlfcn:dlerror")));
 //	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
 //	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
 //	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
-	False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
