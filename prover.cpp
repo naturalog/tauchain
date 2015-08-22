@@ -53,8 +53,6 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 		return (v = e(ssub)) ? v->x(ssub, _d, dsub) : true; \
 	}
 	auto &e = evaluate;
-	auto &u = unify;
-	auto &ue = unify_ep;
 	auto unifvar = [&e](const subs& ssub, termid _d, subs& dsub) UNIFVAR(unify);
 	auto unifvar_ep = [&e](const subs& ssub, termid _d, const subs& dsub) UNIFVAR(unify_ep);
 
@@ -398,7 +396,7 @@ void prover::pushev(shared_ptr<proof> p) {
 	termid t;
 	for (auto r : bodies[p->rule]) {
 		MARPA(subs.push_back(*p->s));
-		if (!(t = (evaluate(r, p->s)))) continue;
+		if (!(t = (evaluate(r.first, p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
@@ -447,7 +445,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	auto& body = bodies[frame.rule];
 	if (frame.term_idx != body.size()) {
-		termid t = body[frame.term_idx];
+		termid t = body[frame.term_idx].first;
 		if (!t) return frame.next;
 		MARPA(if (builtin(t, _p) != -1) return frame.next);
 		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
@@ -463,7 +461,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
 		ruleid rl = frame.rule;
 		r->s = make_shared<subs>(*ppr.s);
-		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx], r->s);
+		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx].first, r->s);
 		++r->term_idx;
 		step(r);
 	}
@@ -719,7 +717,9 @@ ruleid prover::ruleset::add(termid t, const termset& ts) {
 	setproc(L"ruleset::add");
 	ruleid r =  _head.size();
 	_head.push_back(t);
-	_body.push_back(ts);
+	_body.emplace_back();
+	for (auto x : ts)
+		_body.back().emplace_back(x, conds());
 	r2id[t ? t->p : 0].push_back(r);
 	return r;
 }

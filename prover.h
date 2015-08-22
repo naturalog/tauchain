@@ -111,12 +111,18 @@ struct term {
 
 //struct subcmp { bool operator()( const std::pair<resid, termid>& x, const std::pair<resid, termid>& y) const { return x.first < y.first; } };
 //typedef std::set<std::pair<resid, termid>, subcmp> subs;
+using std::pair;
+using std::set;
+using std::map;
+using std::vector;
+
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
 	class ruleset {
 	public:
-		typedef std::vector<termset> btype;
+		typedef set<pair<resid, termid>> conds;
+		typedef vector<vector<pair<termid, conds>>> btype;
 	private:
 		termset _head;
 		btype  _body;
@@ -129,14 +135,24 @@ public:
 		const termset& head() const	{ return _head; }
 		const btype& body() const	{ return _body; }
 		size_t size()			{ return _head.size(); }
-		void mark();
-		void revert();
 		string format() const;
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
+	static string format(const ruleset::conds& c) {
+		std::wstringstream ss;
+		for (auto& x : c)
+			ss << dstr(x.first) << L'\\' << format(x.second) << L';';
+		return ss.str();
+	}
+	static string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false) {
+		std::wstringstream ss;
+		for (auto& x : v)
+			ss << format(x.first, r) << L' ' << format(x.second) << L';';
+		return ss.str();
+	}
 	const termset& heads = kb.head();
-	const std::vector<termset>& bodies = kb.body();
+	const ruleset::btype& bodies = kb.body();
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
