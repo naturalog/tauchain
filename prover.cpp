@@ -140,10 +140,10 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		{
 			prover copy(*this);
 			//TRACE(dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;)
-			auto ps = copy.askt(tmpvar(), rdfsdomain, t1);
+			auto ps = copy.askt(copy.tmpvar(), rdfsdomain, t1);
 			for (termid p: ps) {
 				dout << "\n\nYAYdomain!!\n\n" << std::endl;
-				auto xx = copy.askt(t0, p->p, tmpvar());
+				auto xx = copy.askt(t0, p->p, copy.tmpvar());
 				if (xx.size() > 0) {
 					dout << "\n\nYay even mor\n\n" << std::endl;
 					return 1;
@@ -153,10 +153,10 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		{
 			prover copy(*this);
 			//{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
-			auto ps = copy.askt(tmpvar(), rdfsrange, t1);
+			auto ps = copy.askt(copy.tmpvar(), rdfsrange, t1);
 			for (termid p: ps) {
 				dout << "\n\nYAYrange!!\n\n" << std::endl;
-				auto xx = copy.askt(tmpvar(), p->p, t0);
+				auto xx = copy.askt(copy.tmpvar(), p->p, t0);
 				if (xx.size() > 0) {
 					dout << "\n\nYay even mor\n\n" << std::endl;
 					return 1;
