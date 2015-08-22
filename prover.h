@@ -121,7 +121,7 @@ class prover {
 public:
 	class ruleset {
 	public:
-		typedef set<pair<resid, termid>> conds;
+		typedef map<ruleid, subs> conds;
 		typedef vector<vector<pair<termid, conds>>> btype;
 	private:
 		termset _head;
@@ -134,15 +134,30 @@ public:
 		ruleid add(termid t);
 		const termset& head() const	{ return _head; }
 		const btype& body() const	{ return _body; }
-		size_t size()			{ return _head.size(); }
+		size_t size() const		{ return _head.size(); }
 		string format() const;
+		void mkconds() {
+			subs s;
+			for (size_t n = 0; n < size(); ++n)
+				for (auto b : _body[n]) {
+					termid t = b.first;
+					conds& c = b.second;
+					for (size_t h = 0; h < size(); ++h) {
+						if (t->unify(subs(), _head[h], s)) c[h] = s;
+						s.clear();
+					}
+				}
+		}
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
 	static string format(const ruleset::conds& c) {
 		std::wstringstream ss;
-		for (auto& x : c)
-			ss << dstr(x.first) << L'\\' << format(x.second) << L';';
+		for (auto& y : c) {
+			ss << format(y.first) << L' ';
+			for (auto& x : y.second)
+				ss << dstr(x.first) << L'\\' << format(x.second) << L';';
+		}
 		return ss.str();
 	}
 	static string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false) {
