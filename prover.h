@@ -144,7 +144,7 @@ public:
 	string format(const ruleset::conds& c) {
 		std::wstringstream ss;
 		for (auto& y : c) {
-			ss << formatr(y) << ',';//.first) << L':' << formats(y.second);
+			ss << format(heads[y]) << ',';//.first) << L':' << formats(y.second);
 		}
 		return ss.str();
 	}
