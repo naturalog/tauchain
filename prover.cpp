@@ -399,9 +399,13 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
-bool caseof(const subs& c, const subs& s) {
+bool caseof(const subs& c, const subs& s, subs& d) {
 	static subs::const_iterator it;
-	for (auto x : c) if ((it = s.find(x.first)) != s.end() && it->second->p != x.second->p && it->second->p > 0 && x.second->p > 0) return false;
+	for (auto x : c) {
+		if ((it = s.find(x.first)) != s.end() && it->second->p != x.second->p && it->second->p > 0 && x.second->p > 0) 
+			return false;
+//		d.emplace(x.first, x.second);
+	}
 	return true;
 }
 
@@ -419,7 +423,7 @@ struct match_heads {
 		while (rule != rl.end())
 		switch (state) {
 			case 0:
-				while (!(caseof(rule->second, s) && t.unify(s, heads[rule->first], dsub))) {
+				while (!(caseof(rule->second, s, dsub) && t.unify(s, heads[rule->first], dsub))) {
 					dsub.clear();
 					if (++rule == rl.end()) return false;
 				} 
@@ -835,6 +839,21 @@ prover::resids prover::get_list(resid head)
     return rr;
 }
 
+bool mksubs(termid x, termid y, subs& s) {
+	static subs::const_iterator it;
+	if (!x != !y) return false;
+	if (!x && !y) return true;
+	if (x->p < 0 && y->p > 0) {
+		if ((it = s.find(x->p)) == s.end()) s[x->p] = y;
+		else if (it->second != y) return false;
+	}
+	else if (y->p < 0 && x->p > 0) {
+		if ((it = s.find(y->p)) == s.end()) s[y->p] = x;
+		else if (it->second != x) return false;
+	}
+	return mksubs(x->s, y->s, s) && mksubs(x->o, y->o, s);
+}
+
 void prover::ruleset::mkconds(prover* p) {
 	setproc(L"mkconds");
 	subs s;
@@ -843,7 +862,8 @@ void prover::ruleset::mkconds(prover* p) {
 			termid t = b.first;
 			conds& c = b.second;
 			for (size_t h = 0; h < size(); ++h) {
-				if (t->unify(subs(), _head[h], s)) {
+//				if (t->unify(subs(), _head[h], s)) {
+				if (mksubs(t, _head[h], s)) {
 					c[h] = s;
 //					c.push_back(h);
 					TRACE(dout<<"c["<<prover::format(_head[h])<<"] = "<<prover::formats(s)<<endl);
