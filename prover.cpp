@@ -399,6 +399,12 @@ void prover::pushev(shared_ptr<proof> p) {
 	}
 }
 
+bool caseof(const subs& c, const subs& s) {
+	static subs::const_iterator it;
+	for (auto x : c) if ((it = s.find(x.first)) != s.end() && it->second->p != x.second->p && it->second->p > 0 && x.second->p > 0) return false;
+	return true;
+}
+
 struct match_heads {
 	uint state = 0;
 	const term& t;
@@ -413,7 +419,7 @@ struct match_heads {
 		while (rule != rl.end())
 		switch (state) {
 			case 0:
-				while (!t.unify(s, heads[rule->first], dsub)) {
+				while (!(caseof(rule->second, s) && t.unify(s, heads[rule->first], dsub))) {
 					dsub.clear();
 					if (++rule == rl.end()) return false;
 				} 
@@ -422,13 +428,6 @@ struct match_heads {
 		}
 		dsub.clear();
 		return false;
-//		switch (state) {
-//		case 0: 
-//		case 1:
-//				return state = 1;
-//			}
-//		}
-//		return false;
 	}
 };
 
