@@ -122,7 +122,8 @@ class prover {
 public:
 	class ruleset {
 	public:
-		typedef vector<ruleid> conds;//map<ruleid, subs> conds;
+//		typedef vector<ruleid> conds;
+		typedef map<ruleid, subs> conds;
 		typedef vector<vector<pair<termid, conds>>> btype;
 	private:
 		termset _head;
@@ -141,19 +142,8 @@ public:
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
-	string format(const ruleset::conds& c) {
-		std::wstringstream ss;
-		for (auto& y : c) {
-			ss << format(heads[y]) << ',';//.first) << L':' << formats(y.second);
-		}
-		return ss.str();
-	}
-	string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false) {
-		std::wstringstream ss;
-		for (auto& x : v)
-			ss << format(x.first, r) << L' ' << format(x.second) << L';';
-		return ss.str();
-	}
+	string format(const ruleset::conds& c);
+	string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false);
 	const termset& heads = kb.head();
 	const ruleset::btype& bodies = kb.body();
 	prover ( qdb, bool check_consistency = true);

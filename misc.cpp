@@ -222,6 +222,20 @@ void prover::printr_subs(ruleid r, const subs  & s) {
 	printterm_subs(kb.head()[r], s);
 }
 */
+string prover::format(const ruleset::conds& c) {
+	std::wstringstream ss;
+	for (auto& y : c) {
+		//ss << format(heads[y]) << ',';
+		ss << formatr(y.first) << L':' << formats(y.second);
+	}
+	return ss.str();
+}
+string prover::format(const vector<pair<termid, ruleset::conds>>& v, bool r) {
+	std::wstringstream ss;
+	for (auto& x : v)
+		ss << format(x.first, r) << L' ' << format(x.second) << L';';
+	return ss.str();
+}
 string prover::formatr(ruleid r, bool json) {
 	std::wstringstream ss;
 	if (!json) {
