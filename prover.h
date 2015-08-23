@@ -39,7 +39,6 @@ typedef u64 ruleid;
 typedef std::vector<ruleid> rulelist;
 typedef std::map<resid, rulelist> r2id_t;
 typedef std::vector<term*> termset;
-#define TRACEUNIF2 TRACE( dout << "Trial to unify " << format(s) << " sub: " << formats(ssub) << " with " << format(d) << " sub: " << formats(dsub) << " : "; if (r) { dout << "passed"; if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]); } else dout << "failed"; dout << endl);
 using std::pair;
 using std::set;
 using std::map;
@@ -76,9 +75,7 @@ struct term {
 	resid p;//, s, o;
 	term *s, *o;
 	term(resid _p, term* _s = 0, term* _o = 0);
-	~term() {
-		if (body) delete[] body;
-	}
+	~term() { if (body) delete[] body; }
 #ifdef JSON
 	pobj json(const prover&) const;
 #endif

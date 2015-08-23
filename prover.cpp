@@ -423,7 +423,7 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
 	if (frame.term_idx != frame.rule->end()) {
 		while (frame.term_idx->t->match(*frame.s))
-			queuepush(make_shared<proof>(_p, frame.term_idx->t->it->t, 0, _p, make_shared<subs>(frame.term_idx->t->ds)));
+			queuepush(make_shared<proof>(_p, frame.term_idx->t->it->t, nullptr, _p, frame.term_idx->t->ds));
 	}
 	else if (!frame.prev) gnd.push_back(_p);
 	else {
@@ -639,7 +639,9 @@ int prover::do_query(const termid goal)
 
 int prover::do_query(termset& goal, subs * s) {
 //	setproc(L"do_query");
-	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
+	term *h = new term(0);
+	kb.add(h, goal);
+	shared_ptr<proof> p = make_shared<proof>(nullptr, h), q;
 	if (s) p->s = make_shared<subs>(*s);
 //	queue.push(p);
 	

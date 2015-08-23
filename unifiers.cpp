@@ -101,6 +101,7 @@ bool term::unif_ep(const subs& ssub, term* _d, const subs& dsub) {
 }
 
 bool term::unifpred_ep(const subs& ssub, term* _d, const subs& dsub) {
+	if (!p) return false;
 	if (!_d) return false;
 	static termid v;
 	term& d = *_d;
@@ -113,6 +114,7 @@ bool term::unifpred_ep(const subs& ssub, term* _d, const subs& dsub) {
 	return p == d.p;
 }
 bool term::unify_ep(const subs& ssub, term* _d, const subs& dsub) {
+	if (!p) return false;
 	if (p < 0) return unifvar_ep(ssub, _d, dsub);
 	if (!s) return unifpred_ep(ssub, _d, dsub);
 	return unif_ep(ssub, _d, dsub);
