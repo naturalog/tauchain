@@ -229,6 +229,12 @@ public:
 } dict;
 
 #define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
+#define SKIPWS while (iswspace(*s)) ++s
+#define RETIF(x) if (*s == x) return 0
+#define RETIFN(x) if (*s != x) return 0
+#define PROCEED1 while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')')
+#define PROCEED PROCEED1 t[pos++] = *s++; t[pos] = 0; pos = 0
+#define TILL(x) do { t[pos++] = *s++; } while (x)
 class nqparser {
 private:
 	wchar_t *t;
@@ -284,13 +290,11 @@ public:
 		} while (iswspace(*s));
 		return head;
 	}
-#define PROCEED while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++; t[pos] = 0; pos = 0
 	term* readiri() {
 		while (iswspace(*s)) ++s;
 		if (*s == L'<') {
 			while (*++s != L'>') t[pos++] = *s;
-			t[pos] = 0;
-			pos = 0; ++s;
+			t[pos] = 0; pos = 0; ++s;
 			return new term(dict[t]);
 		}
 		if (*s == L'=' && *(s+1) == L'>') {
@@ -303,45 +307,33 @@ public:
 		if (lower(*iri) == L"false") return new term(dict[L"false"]);
 		return new term(dict[iri]);
 	}
-
 	term* readbnode() {
-		while (iswspace(*s)) ++s;
+		SKIPWS;
 		if (*s != L'_' || *(s+1) != L':') return 0;
 		PROCEED;
 		return new term(dict[wstrim(t)]);
 	}
 
 	term* readvar() {
-		while (iswspace(*s)) ++s;
-		if (*s != L'?') return 0;
-		PROCEED;
+		SKIPWS; RETIFN(L'?'); PROCEED;
 		return new term(dict[wstrim(t)]);
 	}
-
 	term* readlit() {
-		while (iswspace(*s)) ++s;
-		if (*s != L'\"') return 0;
+		SKIPWS; RETIFN(L'\"');
 		++s;
-		do {
-			t[pos++] = *s++;
-		} while (!(*(s-1) != L'\\' && *s == L'\"'));
+		TILL(!(*(s-1) != L'\\' && *s == L'\"'));
 		string dt, lang;
 		++s;
-		while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') {
+		PROCEED1 {
 			if (*s == L'^' && *++s == L'^') {
 				if (*++s == L'<') {
-					++s;
-					while (*s != L'>') dt += *s++;
-					++s;
-					break;
+					++s; while (*s != L'>') dt += *s++;
+					++s; break;
 				}
-			} else if (*s == L'@') {
-				while (!iswspace(*s)) lang += *s++;
-				break;
-			} else EPARSE(L"expected langtag or iri:");
+			} else if (*s == L'@') { while (!iswspace(*s)) lang += *s++; break; }
+			else EPARSE(L"expected langtag or iri:");
 		}
-		t[pos] = 0;
-		pos = 0;
+		t[pos] = 0; pos = 0;
 		string t1 = t;
 		boost::replace_all(t1, L"\\\\", L"\\");
 		return new term(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
@@ -350,9 +342,8 @@ public:
 	term* readany(bool lit = true) {
 		term* pn;
 		termset ts;
-		if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !readcurly(ts) && !(pn = readiri()) )
-			return (term*)0;
-		return pn;
+		return (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !readcurly(ts) && !(pn = readiri()) )
+			? 0 : pn;
 	}
 
 	termset operator()(const wchar_t* _s, string ctx = L"@default") {
@@ -360,8 +351,7 @@ public:
 		s = _s;
 		string graph;
 		term *subject, *pn;
-		termset subjs;
-		termset ts, heads;
+		termset subjs, ts, heads;
 		pos = 0;
 		auto pos1 = preds.rbegin();
 
@@ -370,33 +360,27 @@ public:
 			do {
 				while (iswspace(*s) || *s == L';') ++s;
 				if (*s == L'.' || *s == L'}') break;
-				if ((pn = readiri()) || (readcurly(ts))) {
+				if ((pn = readiri())) {
 					preds.emplace_back(pn, termset());
 					pos1 = preds.rbegin();
-				} if (readcurly(subjs)) subject = 0;
+				} else if (readcurly(subjs)) subject = 0;
 				else EPARSE(L"expected iri predicate:");
 				do {
 					while (iswspace(*s) || *s == L',') ++s;
 					if (*s == L'.' || *s == L'}') break;
-					if ((pn = readany(true))) {
-						pos1->second.push_back(pn);
-					} else EPARSE(L"expected iri or bnode or literal object:");
-					while (iswspace(*s)) ++s;
+					if ((pn = readany(true))) pos1->second.push_back(pn);
+					else EPARSE(L"expected iri or bnode or literal object:");
+					SKIPWS;
 				} while (*s == L',');
-				while (iswspace(*s)) ++s;
+				SKIPWS;
 			} while (*s == L';');
 			if (*s != L'.' && *s != L'}' && *s) {
-				if (!(pn = readbnode()) && !(pn = readiri())) EPARSE(L"expected iri or bnode graph:");
+				if (!(pn = readbnode()) && !(pn = readiri()))
+					EPARSE(L"expected iri or bnode graph:");
 				graph = dict[pn->p];
-			} else
-				graph = ctx;
-			while (iswspace(*s)) ++s;
-			while (*s == '.') ++s;
-			while (iswspace(*s)) ++s;
-			if (*s == L'}') {
-				++s;
-				return heads;
-			}
+			} else graph = ctx;
+			SKIPWS; while (*s == '.') ++s; SKIPWS;
+			if (*s == L'}') { ++s; return heads; }
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
 		}
 		for (auto x : preds)
