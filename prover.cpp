@@ -145,7 +145,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 				dout << "\n\nYAYdomain!!\n\n" << std::endl;
 				auto xx = copy.askt(t0, p->p, copy.tmpvar());
 				if (xx.size() > 0) {
-					dout << "\n\nYay even mor\n\n" << std::endl;
+					dout << "\n\nYay even more\n\n" << std::endl;
 					return 1;
 				}
 			}
@@ -153,12 +153,14 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		{
 			prover copy(*this);
 			//{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
-			auto ps = copy.askt(copy.tmpvar(), rdfsrange, t1);
+			auto ps = copy.askt(copy.tmpvar(), rdfsrange, make(t1->p, 0, 0));
+			dout << "yays:" << ps.size() << std::endl;
 			for (termid p: ps) {
+				dout << "p:" << p << std::endl;
 				dout << "\n\nYAYrange!!\n\n" << std::endl;
-				auto xx = copy.askt(copy.tmpvar(), p->p, t0);
+				auto xx = copy.askt(copy.tmpvar(), p->p, make(t0->p, 0, 0));
 				if (xx.size() > 0) {
-					dout << "\n\nYay even mor\n\n" << std::endl;
+					dout << "\n\nYay even more\n\n" << std::endl;
 					return 1;
 				}
 			}
@@ -344,7 +346,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 		//dout << "XXX"; prints(p->s);
 		for (auto x: p->s)
-			subs_workardound[x.first] = x.second;
+			subs_workardound[x.first].push_back(x.second);
 
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
@@ -701,7 +703,7 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	if (s->p < 0) vars.push_back(s);
 	if (o->p < 0) vars.push_back(o);
 	//ISVAR
-
+	assert(vars.size() < 2);//i guess you could want to run a query with both s and o variables, and get the results in one array, but hmm
 
 	termid question = make(p, s, o);
 	termset query;
@@ -728,11 +730,13 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 				for (auto var:vars) {
 					//dout << var << " " << var->p << " " << subs_workardound.size() ;
 					if (subs_workardound.find(var->p) != subs_workardound.end()) {
-						auto v = subs_workardound[var->p];
-						TRACE(dout << "match: " << v << std::endl;)
-						r.push_back(v);
-						if (stop_at && r.size() >= stop_at) {
-							goto end;
+						for (auto v:subs_workardound[var->p])
+						{
+							TRACE(dout << "match: " << v << std::endl;)
+							r.push_back(v);
+							if (stop_at && (r.size() >= stop_at)) {
+								goto end;
+							}
 						}
 					}
 				}
