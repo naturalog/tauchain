@@ -29,6 +29,7 @@ pstring wstrim(string s) { trim(s); return pstr(s); }
 pstring wstrim(const wchar_t* s) { return wstrim(string(s)); }
 string _gen_bnode_id() { static int id = 0; std::wstringstream ss; ss << "_:b" << id; return ss.str(); }
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
+resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;
 
 struct term {
 	struct body_t {
@@ -84,16 +85,17 @@ struct term {
 		}
 		return state = false;
 	}
-	void addbody(term* t) {
+	term* addbody(term* t) {
 		if (!body) {
 			(body = new body_t[++nbody])->t = t;
-			return;
+			return this;
 		}
 		body_t *b = new body_t[1+nbody];
 		memcpy(b, body, sizeof(body_t*)*nbody);
 		delete[] body;
 		body = b;
 		body[nbody++].t = t;
+		return this;
 	}
 	size_t szbody() const { return nbody; }
 	const body_t& getbody(int n) const { return body[n]; }
@@ -178,25 +180,17 @@ private:
 
 term* term::v;
 
-string format(const term* t);
+string format(const term* t, bool body = true);
 string format(const termset& t);
-
-resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain;
 
 class bidict {
 	std::map<resid, string> ip;
 	std::map<string, resid> pi;
 public:
-	resid operator[] ( pstring s ) {
-		return (*this)[*s];
-	}
+	resid operator[] ( pstring s ) { return (*this)[*s]; }
 	void init() {
-#ifdef with_marpa
-		file_contents_iri = set(L"http://idni.org/marpa#file_contents");
-		marpa_parser_iri = set(L"http://idni.org/marpa#parser");
-		marpa_parse_iri = set(L"http://idni.org/marpa#parse");
-#endif
 		GND = set( L"GND" );
+		implies = set(L"=>");
 		logequalTo = set( L"log:equalTo");
 		lognotEqualTo = set(L"log:notEqualTo");
 		rdffirst = set(*RDF_FIRST/*Tpstr(L"rdf:first")*/);
@@ -243,9 +237,7 @@ private:
 	term* dotterm;
 public:
 	nqparser() : t(new wchar_t[4096*4096]), dotterm(new term(Dot)) {}
-	~nqparser() {
-		delete[] t;
-	}
+	~nqparser() { delete[] t; }
 
 	bool readcurly(termset& ts) {
 		while (iswspace(*s)) ++s;
@@ -266,28 +258,20 @@ public:
 			return ss.str();
 		};
 		term *head = new term(Dot), *pn = head;
-		++s;
-		while (iswspace(*s)) ++s;
+		++s; while (iswspace(*s)) ++s;
 		while (*s != L')') {
 			while (iswspace(*s)) ++s;
 			if (*s == L')') break;
-//		if (!(pn = readany(true)))
-//			throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
-//		lists.emplace_back(cons, mkiri(RDF_FIRST), pn);
-//		qlists[head].push_back(pn);
 			++lpos;
 			pn->o = readany(true);
 			pn->s = dotterm;
 			pn = pn->o;
 			while (iswspace(*s)) ++s;
-			if (*s == L')') pn->o = pn->s = 0;//lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));
-//		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(id())));
+			if (*s == L')') pn->o = pn->s = 0;
 			if (*s == L'.') while (iswspace(*s++));
 			if (*s == L'}') EPARSE(L"expected { inside list: ");
 		};
-		do {
-			++s;
-		} while (iswspace(*s));
+		do { ++s; } while (iswspace(*s));
 		return head;
 	}
 	term* readiri() {
@@ -299,7 +283,7 @@ public:
 		}
 		if (*s == L'=' && *(s+1) == L'>') {
 			++++s;
-			return new term(dict[*pimplication]);
+			return new term(implies);
 		}
 		PROCEED;
 		pstring iri = wstrim(t);
@@ -341,52 +325,52 @@ public:
 
 	term* readany(bool lit = true) {
 		term* pn;
-		termset ts;
-		return (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !readcurly(ts) && !(pn = readiri()) )
-			? 0 : pn;
+		return ((pn = readbnode()) || (pn = readvar()) || (lit && (pn = readlit())) || (pn = readlist()) || (pn = readiri()) ) ? pn : 0;
 	}
 
 	termset operator()(const wchar_t* _s, string ctx = L"@default") {
 		std::list<std::pair<term*, termset>> preds;
 		s = _s;
-		string graph;
+//		string graph;
 		term *subject, *pn;
-		termset subjs, ts, heads;
+		termset subjs, ts, heads, objs;
 		pos = 0;
 		auto pos1 = preds.rbegin();
 
 		while(*s) {
-			if (!(subject = readany(false))) EPARSE(L"expected iri or bnode subject:");
-			do {
+			if (readcurly(subjs)) subject = 0;
+			else if (!(subject = readany(false))) EPARSE(L"expected iri or bnode subject:"); // read subject
+			do { // read predicates
 				while (iswspace(*s) || *s == L';') ++s;
 				if (*s == L'.' || *s == L'}') break;
-				if ((pn = readiri())) {
+				if ((pn = readiri())) { // read predicate
 					preds.emplace_back(pn, termset());
 					pos1 = preds.rbegin();
-				} else if (readcurly(subjs)) subject = 0;
-				else EPARSE(L"expected iri predicate:");
-				do {
+				} else EPARSE(L"expected iri predicate:");
+				do { // read objects
 					while (iswspace(*s) || *s == L',') ++s;
 					if (*s == L'.' || *s == L'}') break;
-					if ((pn = readany(true))) pos1->second.push_back(pn);
+					if (readcurly(objs)) pos1->second = objs;
+					else if ((pn = readany(true))) pos1->second.push_back(pn); // read object
 					else EPARSE(L"expected iri or bnode or literal object:");
 					SKIPWS;
-				} while (*s == L',');
+				} while (*s == L','); // end predicates
 				SKIPWS;
-			} while (*s == L';');
-			if (*s != L'.' && *s != L'}' && *s) {
-				if (!(pn = readbnode()) && !(pn = readiri()))
-					EPARSE(L"expected iri or bnode graph:");
-				graph = dict[pn->p];
-			} else graph = ctx;
+			} while (*s == L';'); // end objects
+//			if (*s != L'.' && *s != L'}' && *s) { // read graph
+//				if (!(pn = readbnode()) && !(pn = readiri()))
+//					EPARSE(L"expected iri or bnode graph:");
+//				graph = dict[pn->p];
+//			} else graph = ctx;
 			SKIPWS; while (*s == '.') ++s; SKIPWS;
 			if (*s == L'}') { ++s; return heads; }
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
+			for (auto x : preds)
+				for (term* o : x.second)
+					if (subject) heads.emplace_back(new term(x.first->p, subject, o));
+					else for (term* y : subjs) heads.emplace_back((new term(x.first->p, subject, o))->addbody(y));
+			preds.clear();
 		}
-		for (auto x : preds)
-			for (term* o : x.second)
-				heads.emplace_back(new term(x.first->p, subject, o));
-		preds.clear();
 		return heads;
 	}
 };
@@ -404,10 +388,16 @@ termset readqdb ( std::wistream& is) {
 	return p((wchar_t*)ss.str().c_str());
 }
 
-string format(const term* t) {
+string format(const term* t, bool body) {
 	if (!t) return L"";
 	std::wstringstream ss;
-	ss << dict[t->p] << L'(' << format(t->s) << L',' << format(t->o) << L')';
+	if (body && t->p == implies) {
+		ss << L'{';
+		for (auto x : *t) ss << format(x.t) << L';';
+		ss << L'}';
+		ss << L" => " << format(t, false);
+	}
+	else ss << dict[t->p] << L'(' << format(t->s) << L',' << format(t->o) << L')';
 	return ss.str();
 }
 
