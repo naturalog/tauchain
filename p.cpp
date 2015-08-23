@@ -214,8 +214,7 @@ public:
 	resid set ( string v ) {
 		if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
 		auto it = pi.find ( v );
-		if ( it != pi.end() )
-			return it->second;
+		if ( it != pi.end() ) return it->second;
 		resid k = pi.size() + 1;
 		if ( v[0] == L'?' ) k = -k;
 		pi[v] = k;
@@ -229,6 +228,7 @@ public:
 	bool has ( string v ) const { return pi.find ( v ) != pi.end(); }
 } dict;
 
+#define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
 class nqparser {
 private:
 	wchar_t *t;
@@ -244,8 +244,7 @@ public:
 	bool readcurly(termset& ts) {
 		while (iswspace(*s)) ++s;
 		if (*s != L'{') return false;
-		++s;
-		while (iswspace(*s)) ++s;
+		do { ++s; } while (iswspace(*s));
 		if (*s == L'}') ++s;
 		ts = (*this)(s, _gen_bnode_id());
 		return true;
@@ -260,8 +259,7 @@ public:
 			ss << L"_:list" << curid << '.' << lpos;
 			return ss.str();
 		};
-		term* head = new term(Dot);
-		term* pn = head;
+		term *head = new term(Dot), *pn = head;
 		++s;
 		while (iswspace(*s)) ++s;
 		while (*s != L')') {
@@ -279,53 +277,44 @@ public:
 			if (*s == L')') pn->o = pn->s = 0;//lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));
 //		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(id())));
 			if (*s == L'.') while (iswspace(*s++));
-			if (*s == L'}') throw wruntime_error(string(L"expected { inside list: ") + string(s,0,48));
+			if (*s == L'}') EPARSE(L"expected { inside list: ");
 		};
 		do {
 			++s;
 		} while (iswspace(*s));
 		return head;
 	}
-
+#define PROCEED while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++; t[pos] = 0; pos = 0
 	term* readiri() {
 		while (iswspace(*s)) ++s;
 		if (*s == L'<') {
 			while (*++s != L'>') t[pos++] = *s;
 			t[pos] = 0;
-			pos = 0;
-			++s;
+			pos = 0; ++s;
 			return new term(dict[t]);
 		}
 		if (*s == L'=' && *(s+1) == L'>') {
 			++++s;
 			return new term(dict[*pimplication]);
 		}
-		while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
-		t[pos] = 0;
-		pos = 0;
+		PROCEED;
 		pstring iri = wstrim(t);
-		if (lower(*iri) == L"true")
-			return new term(dict[L"true"]);
-		if (lower(*iri) == L"false")
-			return new term(dict[L"false"]);
+		if (lower(*iri) == L"true") return new term(dict[L"true"]);
+		if (lower(*iri) == L"false") return new term(dict[L"false"]);
 		return new term(dict[iri]);
 	}
 
 	term* readbnode() {
 		while (iswspace(*s)) ++s;
 		if (*s != L'_' || *(s+1) != L':') return 0;
-		while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
-		t[pos] = 0;
-		pos = 0;
+		PROCEED;
 		return new term(dict[wstrim(t)]);
 	}
 
 	term* readvar() {
 		while (iswspace(*s)) ++s;
 		if (*s != L'?') return 0;
-		while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
-		t[pos] = 0;
-		pos = 0;
+		PROCEED;
 		return new term(dict[wstrim(t)]);
 	}
 
@@ -349,7 +338,7 @@ public:
 			} else if (*s == L'@') {
 				while (!iswspace(*s)) lang += *s++;
 				break;
-			} else throw wruntime_error(string(L"expected langtag or iri:") + string(s,0,48));
+			} else EPARSE(L"expected langtag or iri:");
 		}
 		t[pos] = 0;
 		pos = 0;
@@ -371,33 +360,33 @@ public:
 		s = _s;
 		string graph;
 		term *subject, *pn;
+		termset subjs;
 		termset ts, heads;
 		pos = 0;
 		auto pos1 = preds.rbegin();
 
 		while(*s) {
-			if (!(subject = readany(false)))
-				throw wruntime_error(string(L"expected iri or bnode subject:") + string(s,0,48));
+			if (!(subject = readany(false))) EPARSE(L"expected iri or bnode subject:");
 			do {
 				while (iswspace(*s) || *s == L';') ++s;
 				if (*s == L'.' || *s == L'}') break;
 				if ((pn = readiri()) || (readcurly(ts))) {
 					preds.emplace_back(pn, termset());
 					pos1 = preds.rbegin();
-				} else throw wruntime_error(string(L"expected iri predicate:") + string(s,0,48));
+				} if (readcurly(subjs)) subject = 0;
+				else EPARSE(L"expected iri predicate:");
 				do {
 					while (iswspace(*s) || *s == L',') ++s;
 					if (*s == L'.' || *s == L'}') break;
 					if ((pn = readany(true))) {
 						pos1->second.push_back(pn);
-					} else throw wruntime_error(string(L"expected iri or bnode or literal object:") + string(s,0,48));
+					} else EPARSE(L"expected iri or bnode or literal object:");
 					while (iswspace(*s)) ++s;
 				} while (*s == L',');
 				while (iswspace(*s)) ++s;
 			} while (*s == L';');
 			if (*s != L'.' && *s != L'}' && *s) {
-				if (!(pn = readbnode()) && !(pn = readiri()))
-					throw wruntime_error(string(L"expected iri or bnode graph:") + string(s,0,48));
+				if (!(pn = readbnode()) && !(pn = readiri())) EPARSE(L"expected iri or bnode graph:");
 				graph = dict[pn->p];
 			} else
 				graph = ctx;
@@ -408,7 +397,7 @@ public:
 				++s;
 				return heads;
 			}
-			if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
+			if (*s == L')') EPARSE(L"expected ) outside list: ");
 		}
 		for (auto x : preds)
 			for (term* o : x.second)
