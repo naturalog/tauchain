@@ -145,11 +145,11 @@ public:
 	class ruleset {
 	public:
 //		typedef vector<ruleid> conds;
-		typedef map<ruleid, subs> conds;
-		typedef vector<vector<pair<termid, conds>>> btype;
+//		typedef map<ruleid, subs> conds;
+//		typedef vector<vector<pair<termid, conds>>> btype;
 	private:
 		termset _head;
-		btype  _body;
+//		btype  _body;
 		size_t m = 0;
 	public:
 		prover* p;
@@ -157,17 +157,17 @@ public:
 		ruleid add(term* t, termset& ts);
 		ruleid add(term* t);
 		const termset& head() const	{ return _head; }
-		const btype& body() const	{ return _body; }
+//		const btype& body() const	{ return _body; }
 		size_t size() const		{ return _head.size(); }
 		string format() const;
 		void mkconds() { for (auto t : _head) t->trymatch(_head); }
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
-	string format(const ruleset::conds& c);
-	string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false);
+//	string format(const ruleset::conds& c);
+//	string format(const vector<pair<termid, ruleset::conds>>& v, bool r = false);
 	const termset& heads = kb.head();
-	const ruleset::btype& bodies = kb.body();
+//	const ruleset::btype& bodies = kb.body();
 	prover ( qdb, bool check_consistency = true);
 	prover ( ruleset* kb = 0 );
 	prover ( string filename );
@@ -325,9 +325,9 @@ public:
 	void prints(shared_ptr<subs> s) { prints(*s); }
 	static string format(resid r) { return dstr(r); } // { throw std::runtime_error("called format(termid) with resid"); }
 	static string format(resid r, bool) { return dstr(r); }// 
-	string formatr(ruleid r, bool json = false);
-	static string formatr(termid){ throw std::runtime_error("called formatr(ruleid) with termid"); }
-	static string formatr(termid, bool) { throw std::runtime_error("called formatr(ruleid) with termid"); }
+	string formatr(termid r, bool json = false);
+//	static string formatr(termid){ throw std::runtime_error("called formatr(ruleid) with termid"); }
+//	static string formatr(termid, bool) { throw std::runtime_error("called formatr(ruleid) with termid"); }
 	string formatg(const ground& g, bool json = false);
 	void printp(shared_ptr<proof> p);
 	string formatp(shared_ptr<proof> p);

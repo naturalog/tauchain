@@ -692,9 +692,10 @@ ruleid prover::ruleset::add(term* t, termset& ts) {
 	setproc(L"ruleset::add");
 	ruleid r =  _head.size();
 	_head.push_back(t);
-	_body.emplace_back();
+//	_body.emplace_back();
 	for (auto x : ts)
-		_body.back().emplace_back(x, prover::ruleset::conds());
+		t->addbody(x);
+//		_body.back().emplace_back(x, prover::ruleset::conds());
 	r2id[t ? t->p : 0].push_back(r);
 	return r;
 }

@@ -151,7 +151,7 @@ string prover::formatp(shared_ptr<proof> p) {
 	return ss.str();
 }
 void prover::printp(shared_ptr<proof> p) {
-	dout << KCYN /*<< indent()*/ << L"rule:   " << formatr(p->rule) <<endl<<indent();
+	dout << KCYN /*<< indent()*/ << L"rule:   " << formatr(p->rule, false) <<endl<<indent();
 	if (p->prev) dout << L"prev:   " << p->prev <<endl<<indent()<< L"subst:  ";
 	else dout << L"prev:   (null)"<<endl<<indent()<<"subst:  ";
 	prints(p->s);
@@ -221,7 +221,7 @@ void prover::printr_subs(ruleid r, const subs  & s) {
 	dout << L" => ";
 	printterm_subs(kb.head()[r], s);
 }
-*/
+
 string prover::format(const ruleset::conds& c) {
 	std::wstringstream ss;
 	for (auto& y : c) {
@@ -236,22 +236,25 @@ string prover::format(const vector<pair<termid, ruleset::conds>>& v, bool r) {
 		ss << format(x.first, r) << L' ' << format(x.second) << L';';
 	return ss.str();
 }
-string prover::formatr(ruleid r, bool json) {
+*/
+string prover::formatr(termid r, bool json) {
 	std::wstringstream ss;
 	if (!json) {
 		ss << L"{ ";
-		if (!kb.body()[r].empty()) ss << format(kb.body()[r]);
+		if (r->szbody())
+			for (auto& b : *r)
+				ss << format(b.t) << L';';
 		ss  << L"} => ";
-		if (kb.head()[r]) ss << format(kb.head()[r]);
+		if (r->p) ss << format(r);
 	 	ss << L".";
 		return ss.str();
 	}
-	ss << L"{head:" << format(kb.head()[r],true) << L",body:";
+/*	ss << L"{head:" << format(r,true) << L",body:";
 //	for (size_t n = 0; n < kb.bodies().size(); ++n) {
 		ss << format(kb.body()[r], true);
 //		if (n != (kb.bodies().size()-1)) ss << L',';
 //	}
- 	ss << L"}";
+ 	ss << L"}";*/
 	return ss.str();
 }
 
@@ -259,7 +262,7 @@ string prover::formatkb(bool json) {
 	std::wstringstream ss;
 	if (json) ss << L'[';
 	for (uint n = 0; n < kb.size(); ++n) {
-		ss << formatr(n, json);
+		ss << formatr(heads[n], json);
 		if (json && n != (kb.size()-1)) ss << L',';
 		ss << endl;
 	}
@@ -416,7 +419,7 @@ pobj prover::ejson() const {
 	}
 	return o;
 }
-*/
+
 string prover::ruleset::format() const {
 	setproc(L"ruleset::format");
 	std::wstringstream ss;
@@ -424,7 +427,7 @@ string prover::ruleset::format() const {
 	for (auto it = r2id.begin(); it != r2id.end();) {
 		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
-			ss << p->formatr(*iit, true);
+			ss << p->formatr(heads[*iit], true);
 			if (++iit != it->second.end()) ss << L',';
 			ss << endl;
 		}
@@ -433,4 +436,4 @@ string prover::ruleset::format() const {
 	}
 	ss << L']';
 	return ss.str();
-}
+}*/
