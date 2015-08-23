@@ -363,12 +363,12 @@ public:
 //				graph = dict[pn->p];
 //			} else graph = ctx;
 			SKIPWS; while (*s == '.') ++s; SKIPWS;
-			if (*s == L'}') { ++s; return heads; }
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
 			for (auto x : preds)
 				for (term* o : x.second)
 					if (subject) heads.emplace_back(new term(x.first->p, subject, o));
 					else for (term* y : subjs) heads.emplace_back((new term(x.first->p, subject, o))->addbody(y));
+			if (*s == L'}') { ++s; return heads; }
 			preds.clear();
 		}
 		return heads;
@@ -395,7 +395,7 @@ string format(const term* t, bool body) {
 		ss << L'{';
 		for (auto x : *t) ss << format(x.t) << L';';
 		ss << L'}';
-		ss << L" => " << format(t, false);
+		ss << format(t, false);
 	}
 	else ss << dict[t->p] << L'(' << format(t->s) << L',' << format(t->o) << L')';
 	return ss.str();
@@ -403,7 +403,7 @@ string format(const term* t, bool body) {
 
 string format(const termset& t) {
 	std::wstringstream ss;
-	for (auto x : t) ss << format(x) << endl;
+	for (auto x : t) ss << format(x, true) << endl;
 	return ss.str();
 }
 
