@@ -112,97 +112,72 @@ struct term {
 		termid a = s->evaluate(ss), b = o->evaluate(ss);
 		return new term(p, a ? a : s, b ? b : o);
 	}
+	static termid v; // temp var for unifiers
 
-#define UNIFVAR(x) { \
-		if (!_d) return false; \
-		static termid v; \
-		if ((v = evaluate(ssub))) \
-			return v->x(ssub, _d, dsub); \
-		static subs::const_iterator it; \
-		if ((it = dsub.find(p)) != dsub.end() && it->second != _d && it->second->p > 0) return false; \
-		dsub[p] = _d; \
-		return true; \
-	}
-#define UNIFVAREP(x) { \
-		if (!_d) return false; \
-		static termid v; \
-		if ((v = evaluate(ssub))) return v->x(ssub, _d, dsub); \
-		return true; \
-	}
-	bool unifvar(const subs& ssub, term* _d, subs& dsub) UNIFVAR(unify)
-	bool unifvar_ep(const subs& ssub, term* _d, const subs& dsub) UNIFVAREP(unify_ep)
-
-	bool unif(const subs& ssub, term* _d, subs& dsub) {
+	bool unifvar(const subs& ssub, term* _d, subs& dsub) {
 		if (!_d) return false;
-		static termid v;
-		term& d = *_d;
+		static subs::const_iterator it;
+		if ((v = evaluate(ssub))) return v->unify(ssub, _d, dsub);
+		if ((it = dsub.find(p)) != dsub.end() && it->second != _d && it->second->p > 0) return false;
+		dsub[p] = _d;
+		return true;
+	}
+	bool unifvar_ep(const subs& ssub, term* _d, const subs& dsub) {
+		return _d && ((v = evaluate(ssub)) ? v->unify_ep(ssub, _d, dsub) : true);
+	}
+
+	bool unif(const subs& ssub, term& d, subs& dsub) {
 		if (!d.s) return false;
 		if (d.p < 0) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-//		if ((v = d.evaluate(ssub))) return unify(ssub, v, dsub);
 			dsub.emplace(d.p, evaluate(ssub));
-			if (dsub[d.p]->s) throw 0;
 			return true;
 		}
 		return p == d.p && s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub);
 	}
 
-	bool unifpred(const subs& ssub, term* _d, subs& dsub) {
-		if (!_d) return false;
-		static termid v;
-		term& d = *_d;
+	bool unifpred(const subs& ssub, term& d, subs& dsub) {
 		if (d.s) return false;
 		if (d.p < 0) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
 			dsub.emplace(d.p, evaluate(ssub));
-			if (dsub[d.p]->s) throw 0;
 			return true;
 		}
 		return p == d.p;
 	}
 
-	bool unif_ep(const subs& ssub, term* _d, const subs& dsub) {
-		if (!_d) return false;
-		static termid v;
-		term& d = *_d;
+	bool unif_ep(const subs& ssub, term& d, const subs& dsub) {
 		if (!d.s) return false;
-		if (d.p < 0) {
-			if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
-			return true;
-		}
+		if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
 		return p == d.p && s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub);
 	}
 
-	bool unifpred_ep(const subs& ssub, term* _d, const subs& dsub) {
-		if (!p) return false;
-		if (!_d) return false;
-		static termid v;
-		term& d = *_d;
-		if (d.s) return false;
-		if (d.p < 0) {
-			if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
-			return true;
-		}
+	bool unifpred_ep(const subs& ssub, term& d, const subs& dsub) {
+		if (!p /* || d.s*/) return false;
+		if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
 		return p == d.p;
 	}
 	bool unify_ep(const subs& ssub, term* _d, const subs& dsub) {
-		if (!p) return false;
+		if (!p || !_d || !_d->p) return false;
 		if (p < 0) return unifvar_ep(ssub, _d, dsub);
-		if (!s) return unifpred_ep(ssub, _d, dsub);
-		return unif_ep(ssub, _d, dsub);
+		if (!s) return unifpred_ep(ssub, *_d, dsub);
+		return unif_ep(ssub, *_d, dsub);
 	}
 	bool unify(const subs& ssub, term* _d, subs& dsub) {
 		bool r;
-		if (!p) return false;
+		if (!p || !_d || !_d->p) return false;
 		if (p < 0) r = unifvar(ssub, _d, dsub);
-		else if (!s) r = unifpred(ssub, _d, dsub);
-		else r = unif(ssub, _d, dsub);
+		else if (!s) r = unifpred(ssub, *_d, dsub);
+		else r = unif(ssub, *_d, dsub);
 		return r;
 	}
 private:
 	body_t *body = 0;
 	size_t nbody = 0;
 };
+
+term* term::v;
+
 string format(const term* t);
 string format(const termset& t);
 
