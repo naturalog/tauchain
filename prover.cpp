@@ -132,13 +132,33 @@ void* testfunc(void* p) {
 
 int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 	int r = -1;
-	if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)  //rdfs:Resource(?x)
+	//rdfs:Resource(?x)
+	if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)
 		return 1;
-	else if (t.p == A || t.p == rdfsType) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+	else if (t.p == rdfssubClassOf && t1->p == rdfsResource) {
 		r = 0;
-		//TODO: correctly, so that subqery proof trace not opaque?
 		{
 			prover copy(*this);
+			auto ps = copy.askt(t0, rdfsType, make(rdfsClass, 0,0));
+			if (ps.size())
+				return 1;
+		}
+	}
+	else if (t.p == rdfssubClassOf && t1->p == rdfsLiteral) {
+		r = 0;
+		{
+			prover copy(*this);
+			auto ps = copy.askt(t0, rdfsType, make(rdfsDatatype, 0, 0));
+			if (ps.size())
+				return 1;
+		}
+	}
+	else if (t.p == A || t.p == rdfsType) {
+		r = 0;
+		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+		{
+			prover copy(*this);//TODO: correctly, so that subqery proof trace not opaque?
 			//TRACE(dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;)
 			auto ps = copy.askt(copy.tmpvar(), rdfsdomain, t1);
 			for (termid p: ps) {
@@ -150,9 +170,9 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 				}
 			}
 		}
+		//{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
 		{
 			prover copy(*this);
-			//{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
 			auto ps = copy.askt(copy.tmpvar(), rdfsrange, make(t1->p, 0, 0));
 			dout << "yays:" << ps.size() << std::endl;
 			for (termid p: ps) {
@@ -166,7 +186,24 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 			}
 		}
 	}
-
+	else if (t.p == rdfssubPropertyOf) {
+		r = 0;
+		//#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
+		if (t1 && t1->p == rdfsmember) {
+			prover copy(*this);
+			auto ps = copy.askt(copy.tmpvar(), rdfsType, make(rdfsContainerMembershipProperty, 0, 0));
+			if (ps.size())
+				return 1;
+		}
+		//#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+		prover copy(*this);
+		auto qs = copy.askt(copy.tmpvar(), rdfssubPropertyOf, t1);
+		for (termid q: qs) {
+			auto ps = copy.askt(t0, rdfssubPropertyOf, q);
+			if (ps.size())
+				return 1;
+		}
+	}
 	return r;
 }
 

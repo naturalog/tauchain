@@ -1,5 +1,6 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
 
 ### Resource Description Framework RDF(S)
 
@@ -32,30 +33,29 @@ rdf:nil a rdf:List.
 
 ### inference rules for RDF(S)
 
-#{?S ?P ?O} => {?P a rdf:Property}.
+#done
 
 #{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
-
 #{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+
 
 #{?S ?P ?O} => {?S a rdfs:Resource}.
 #{?S ?P ?O} => {?O a rdfs:Resource}.
+#{?S ?P ?O} => {?P a rdf:Property}.
 
-#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
-
-#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
 
 #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
-
-#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
-
-#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
-
-#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
-
 #{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
 
 
-### inconsistency detections @@
+#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
 
-#{?S a rdf:XMLLiteral; e:clashesWith rdf:XMLLiteral} => false.
+#todo
+
+#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
+
+
+

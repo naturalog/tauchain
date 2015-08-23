@@ -720,10 +720,10 @@ public:
             if (pos != string::npos)
             {
                 string pref = string(v.begin(), v.begin() + pos);
-				dout << L"comparing " << pref << L" with ";
+				TRACE(dout << L"comparing " << pref << L" with ";
 				for (auto it: prefixes)
 					dout << it.first << L" ";
-				dout << std::endl;
+				dout << std::endl;)
                 if (prefixes.find(pref) != prefixes.end())
                 {
                     string rest = string(v.begin() + pos + 1, v.end());
@@ -922,7 +922,7 @@ public:
 			assert(uri_s.size() > 1);
 			string expluri = string(uri_s.begin() + 1, uri_s.end() - 1);
 			prefixes[prefix] = expluri;
-			dout << "@prefix\"" << p_s << "\": \"" << uri_s << "\"" << std::endl;
+			TRACE(dout << "@prefix\"" << p_s << "\": \"" << uri_s << "\"" << std::endl;)
 		}
 		//else if(*dict[a0].value == L"@keywords")
 	}
