@@ -149,8 +149,14 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		r = 0;
 		//#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
 		{
-
-			
+			prover copy(*this);
+			auto bs = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
+			for (auto b: bs) {
+				prover copy(*this);
+				auto xs = copy.askt(t0, rdfssubClassOf, b);
+				if (xs.size())
+					return 1;
+			}
 		}
 		//#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
 		if (t1->p == rdfsLiteral) {
@@ -233,7 +239,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		prover copy(*this);
 		auto ps = copy.askt(copy.tmpvar(), rdfssubPropertyOf, make(t.p, 0, 0));
 		for (termid p: ps) {
-			auto xs = copy.askt(t0, p, t1);
+			auto xs = copy.askt(t0, p->p, t1);
 			if (ps.size())
 				return 1;
 		}
