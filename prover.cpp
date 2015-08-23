@@ -140,18 +140,26 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		r = 0;
 		{
 			prover copy(*this);
-			auto ps = copy.askt(t0, rdfsType, make(rdfsClass, 0,0));
+			auto ps = copy.askt(t0, rdfsType, make(rdfsClass, 0, 0));
 			if (ps.size())
 				return 1;
 		}
 	}
-	else if (t.p == rdfssubClassOf && t1->p == rdfsLiteral) {
+	else if (t.p == rdfssubClassOf) {
 		r = 0;
+		//#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
 		{
-			prover copy(*this);
-			auto ps = copy.askt(t0, rdfsType, make(rdfsDatatype, 0, 0));
-			if (ps.size())
-				return 1;
+
+			
+		}
+		//#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
+		if (t1->p == rdfsLiteral) {
+			{
+				prover copy(*this);
+				auto ps = copy.askt(t0, rdfsType, make(rdfsDatatype, 0, 0));
+				if (ps.size())
+					return 1;
+			}
 		}
 	}
 	else if (t.p == A || t.p == rdfsType) {
@@ -185,6 +193,20 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 				}
 			}
 		}
+		//#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+		{
+			prover copy(*this);
+			auto as = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
+			for (termid a: as) {
+				auto xx = copy.askt(t0, rdfsType, a);
+				if (xx.size() > 0) {
+					dout << "\n\nYay even more\n\n" << std::endl;
+					return 1;
+				}
+			}
+		}
+
+
 	}
 	else if (t.p == rdfssubPropertyOf) {
 		r = 0;
@@ -196,10 +218,22 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 				return 1;
 		}
 		//#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+		{
+			prover copy(*this);
+			auto qs = copy.askt(copy.tmpvar(), rdfssubPropertyOf, t1);
+			for (termid q: qs) {
+				auto ps = copy.askt(t0, rdfssubPropertyOf, q);
+				if (ps.size())
+					return 1;
+			}
+		}
+	}
+	//#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+	{
 		prover copy(*this);
-		auto qs = copy.askt(copy.tmpvar(), rdfssubPropertyOf, t1);
-		for (termid q: qs) {
-			auto ps = copy.askt(t0, rdfssubPropertyOf, q);
+		auto ps = copy.askt(copy.tmpvar(), rdfssubPropertyOf, make(t.p, 0, 0));
+		for (termid p: ps) {
+			auto xs = copy.askt(t0, p, t1);
 			if (ps.size())
 				return 1;
 		}
