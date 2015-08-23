@@ -22,27 +22,12 @@ typedef vector<term*> termset;
 typedef int resid;
 typedef term* termid;
 typedef std::map<resid, termid> subs;
-string lower ( const string& s_ ) {
-	string s = s_;
-	std::transform ( s.begin(), s.end(), s.begin(), ::towlower );
-	return s;
-}
-pstring pstr ( const string& s ) {
-	return std::make_shared<string>(s);
-}
-pstring wstrim(string s) {
-	trim(s);
-	return pstr(s);
-}
-pstring wstrim(const wchar_t* s) {
-	return wstrim(string(s));
-}
-string _gen_bnode_id() {
-	static int id = 0;
-	std::wstringstream ss;
-	ss << "_:b" << id;
-	return ss.str();
-}
+
+string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
+pstring pstr ( const string& s ) { return std::make_shared<string>(s); }
+pstring wstrim(string s) { trim(s); return pstr(s); }
+pstring wstrim(const wchar_t* s) { return wstrim(string(s)); }
+string _gen_bnode_id() { static int id = 0; std::wstringstream ss; ss << "_:b" << id; return ss.str(); }
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 
 struct term {
@@ -52,12 +37,8 @@ struct term {
 			termid t;
 			subs s;
 		}* matches = 0;
-		match* begin() {
-			return matches;
-		}
-		match* end() {
-			return matches ? &matches[nmatches] : 0;
-		}
+		match* begin() { return matches; }
+		match* end() { return matches ? &matches[nmatches] : 0; }
 		void addmatch(termid t, const subs& s) {
 			if (!matches) {
 				*(matches = new match[1]) = { t, s };
@@ -70,30 +51,18 @@ struct term {
 			matches[nmatches++] = { t, s };
 		}
 		size_t nmatches = 0;
-		~body_t() {
-			if (matches) delete[] matches;
-		}
+		~body_t() { if (matches) delete[] matches; }
 	};
-	body_t* begin() {
-		return body;
-	}
-	body_t* end() {
-		return body ? &body[nbody] : 0;
-	}
-	const body_t* begin() const {
-		return body;
-	}
-	const body_t* end() const {
-		return body ? &body[nbody] : 0;
-	}
+	body_t* begin() { return body; }
+	body_t* end() { return body ? &body[nbody] : 0; }
+	const body_t* begin() const { return body; }
+	const body_t* end() const { return body ? &body[nbody] : 0; }
 	term();
 	resid p;//, s, o;
 	term *s, *o;
 	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
-	~term() {
-		if (body) delete[] body;
-	}
-	bool state = 0;
+	~term() { if (body) delete[] body; }
+	bool state = false;
 	body_t *it = 0;
 	subs ds;
 	bool match(const subs& s) {
@@ -126,41 +95,22 @@ struct term {
 		body = b;
 		body[nbody++].t = t;
 	}
-	size_t szbody() const {
-		return nbody;
-	}
-	const body_t& getbody(int n) const {
-		return body[n];
-	}
+	size_t szbody() const { return nbody; }
+	const body_t& getbody(int n) const { return body[n]; }
 	void trymatch(uint b, term* t) {
 		static subs d;
-		if (body[b].t->unify(subs(), t, d))
-			body[b].addmatch(t, d);
+		if (body[b].t->unify(subs(), t, d)) body[b].addmatch(t, d);
 		d.clear();
 	}
-	void trymatch(termset& t) {
-		for (uint b = 0; b < nbody; ++b)
-			for (termid x : t)
-				trymatch(b, x);
-	}
-	termid evvar(const subs& ss) {
-		static subs::const_iterator it;
-		return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->p < 0 ? 0 : it->second->evaluate(ss);
-	}
-	term* ev(const subs& ss) {
-		termid a = s->evaluate(ss), b = o->evaluate(ss);
-		return new term(p, a ? a : s, b ? b : o);
-	}
-
-	termid evpred(const subs&) {
-		return this;
-	}
+	void trymatch(termset& t) { for (uint b = 0; b < nbody; ++b) for (termid x : t) trymatch(b, x); }
 
 	termid evaluate(const subs& ss) {
-		if (p < 0) return evvar(ss);
-		if (!s && !o) return evpred(ss);
+		static subs::const_iterator it;
+		if (p < 0) return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->p < 0 ? 0 : it->second->evaluate(ss);
+		if (!s && !o) return this;
 		if (!s || !o) throw 0;
-		return ev(ss);
+		termid a = s->evaluate(ss), b = o->evaluate(ss);
+		return new term(p, a ? a : s, b ? b : o);
 	}
 
 #define UNIFVAR(x) { \
@@ -284,12 +234,6 @@ public:
 		Dot = set(L".");
 		rdfsType = set(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 		rdfssubClassOf = set(L"rdfs:subClassOf");
-		//	_dlopen = set(L"dlfcn:dlopen")));
-		//	_dlerror = set(L"dlfcn:dlerror")));
-		//	_dlsym = set(L"dlfcn:dlsym")));
-		//	_dlclose = set(L"dlfcn:dlclose")));
-		//	_invoke = set(L"dlfcn:invoke")));
-		//	False = set(new term(dict[L"false"), XSD_BOOLEAN, 0));
 	}
 
 	resid set ( string v ) {
@@ -304,18 +248,10 @@ public:
 		return k;
 	}
 
-	string operator[] ( resid k ) {
-		return ip[k];
-	}
-	resid operator[] ( string v ) {
-		return set(v);
-	}
-	bool has ( resid k ) const {
-		return ip.find ( k ) != ip.end();
-	}
-	bool has ( string v ) const {
-		return pi.find ( v ) != pi.end();
-	}
+	string operator[] ( resid k ) { return ip[k]; }
+	resid operator[] ( string v ) { return set(v); }
+	bool has ( resid k ) const { return ip.find ( k ) != ip.end(); }
+	bool has ( string v ) const { return pi.find ( v ) != pi.end(); }
 } dict;
 
 class nqparser {
