@@ -4,16 +4,28 @@
 #include <cstring>
 #include <string>
 #include <sstream>
+#include <stdexcept>
+#include "strings.h"
 using std::vector;
 using std::map;
+using std::wstringstream;
 typedef std::wstring string;
+/*class wruntime_error : public std::exception {
+	string msg;
+public:
+	using std::exception::exception;
+	wruntime_error(string s) : msg(s){}
+	virtual const char* what() const noexcept {
+		return std::string(msg.begin(), msg.end()).c_str();
+	}
+};*/
 struct term;
 typedef vector<term*> termset;
 typedef int resid;
 typedef term* termid;
 typedef std::map<resid, termid> subs;
 
-string gen_bnode_id() {
+string _gen_bnode_id() {
 	static int id = 0;
 	std::wstringstream ss;
 	ss << "_:b" << id;
@@ -50,7 +62,7 @@ struct term {
 	term();
 	resid p;//, s, o;
 	term *s, *o;
-	term(resid _p, term* _s = 0, term* _o = 0);
+	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
 	~term() { if (body) delete[] body; }
 	term* evvar(const subs& ss);
 	term* evpred(const subs&);
@@ -117,21 +129,96 @@ private:
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 
+class bidict {
+	std::map<resid, string> ip;
+	std::map<string, resid> pi;
+public:
+	void init();
+	resid set ( string v );
+	string operator[] ( resid);
+	resid operator[] ( string );
+	resid operator[] ( pstring s ) { return (*this)[*s]; }
+	bool has ( resid k ) const;
+	bool has ( string v ) const;
+};
+
+resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain;
+
+bidict& dict = *new bidict;
+
+void bidict::init() {
+#ifdef with_marpa
+	file_contents_iri = set(L"http://idni.org/marpa#file_contents");
+	marpa_parser_iri = set(L"http://idni.org/marpa#parser");
+	marpa_parse_iri = set(L"http://idni.org/marpa#parse");
+#endif
+	GND = set( L"GND" );
+	logequalTo = set( L"log:equalTo");
+	lognotEqualTo = set(L"log:notEqualTo");
+	rdffirst = set(*RDF_FIRST/*Tpstr(L"rdf:first")*/);
+	rdfrest = set(*RDF_REST/*pstr(L"rdf:rest")*/);
+	rdfnil = set(*RDF_NIL/*Tpstr(L"rdf:nil")*/);
+	A = set(L"a");
+	rdfsResource = set(L"rdfs:Resource");
+	rdfsdomain = set(L"rdfs:domain");
+//	rdfList = set(L"rdf:List")));
+	Dot = set(L".");
+	rdfsType = set(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
+	rdfssubClassOf = set(L"rdfs:subClassOf");
+//	_dlopen = set(L"dlfcn:dlopen")));
+//	_dlerror = set(L"dlfcn:dlerror")));
+//	_dlsym = set(L"dlfcn:dlsym")));
+//	_dlclose = set(L"dlfcn:dlclose")));
+//	_invoke = set(L"dlfcn:invoke")));
+//	False = set(new term(dict[L"false"), XSD_BOOLEAN, 0));
+}
+
+resid bidict::set ( string v ) {
+	if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
+	auto it = pi.find ( v );
+	if ( it != pi.end() )
+		return it->second;
+	resid k = pi.size() + 1;
+	if ( v[0] == L'?' ) k = -k;
+	pi[v] = k;
+	ip[k] = v;
+	return k;
+}
+
+string bidict::operator[] ( resid k ) {
+//	if (!has(k)) set(::tostr(k));
+#ifdef DEBUG
+	if (ip.find(k) == ip.end()) throw std::runtime_error("bidict[] called with nonexisting resid");
+#endif
+//	dout << k << ' ' << ip[k] << endl;
+	return ip[k];
+}
+
+resid bidict::operator[] ( string v ) {
+	return pi[v];
+}
+
+bool bidict::has ( resid k ) const {
+	return ip.find ( k ) != ip.end();
+}
+
+bool bidict::has ( string v ) const {
+	return pi.find ( v ) != pi.end();
+}
+
+term* dotterm = new term(Dot);
 class nqparser {
 private:
 	wchar_t *t;
 	const wchar_t *s;
 	int pos;
-	term* readcurly();
+	bool readcurly(termset& ts);
 	term* readlist();
 	term* readany(bool lit = true);
 	term* readiri();
 	term* readlit();
 	term* readvar();
 	term* readbnode();
-	void readprefix();
-	std::map<string, term*> prefixes;
-	std::map<string, std::list<term*>> qlists;
 public:
 	nqparser();
 	~nqparser();
@@ -141,15 +228,14 @@ public:
 nqparser::nqparser() : t(new wchar_t[4096*4096]) { }
 nqparser::~nqparser() { delete[] t; }
 
-term* nqparser::readcurly() {
+bool nqparser::readcurly(termset& ts) {
 	while (iswspace(*s)) ++s;
-	if (*s != L'{') return (term*)0;
+	if (*s != L'{') return false;
 	++s;
 	while (iswspace(*s)) ++s;
-	auto r = gen_bnode_id();
-	if (*s == L'}') { ++s; return mkbnode(r); }
-	auto t = (*this)(s, *r);
-	return mkbnode(r);
+	if (*s == L'}') ++s;
+	ts = (*this)(s, _gen_bnode_id());
+	return true;
 }
 
 term* nqparser::readlist() {
@@ -157,29 +243,29 @@ term* nqparser::readlist() {
 	static int lastid = 0;
 	int lpos = 0, curid = lastid++;
 	auto id = [&]() { std::wstringstream ss; ss << L"_:list" << curid << '.' << lpos; return ss.str(); };
-	const string head = id();
-	term* pn;
+	term* head = new term(Dot);
+	term* pn = head;
 	++s;
 	while (iswspace(*s)) ++s;
-	if (*s == L')') { ++s; return mkiri(RDF_NIL); }
-	do {
+	while (*s != L')') {
 		while (iswspace(*s)) ++s;
 		if (*s == L')') break;
-		if (!(pn = readany(true)))
-			throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
-		term* cons = mkbnode(pstr(id()));
-		lists.emplace_back(cons, mkiri(RDF_FIRST), pn);
-		qlists[head].push_back(pn);
+//		if (!(pn = readany(true)))
+//			throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
+//		lists.emplace_back(cons, mkiri(RDF_FIRST), pn);
+//		qlists[head].push_back(pn);
 		++lpos;
+		pn->o = readany(true);
+		pn->s = dotterm;
+		pn = pn->o;
 		while (iswspace(*s)) ++s;
-		if (*s == L')') lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));
-		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(id())));
+		if (*s == L')') pn->o = pn->s = 0;//lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));
+//		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(id())));
 		if (*s == L'.') while (iswspace(*s++));
 		if (*s == L'}') throw wruntime_error(string(L"expected { inside list: ") + string(s,0,48));
-	}
-	while (*s != L')');
+	};
 	do { ++s; } while (iswspace(*s));
-	return mkbnode(pstr(head));
+	return head;
 }
 
 term* nqparser::readiri() {
@@ -188,65 +274,43 @@ term* nqparser::readiri() {
 		while (*++s != L'>') t[pos++] = *s;
 		t[pos] = 0; pos = 0;
 		++s;
-		return mkiri(wstrim(t));
+		return new term(dict[t]);
 	}
-	if (*s == L'=' && *(s+1) == L'>') { ++++s; return mkiri(pimplication); }
+	if (*s == L'=' && *(s+1) == L'>') { ++++s; return new term(dict[*pimplication]); }
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	pstring iri = wstrim(t);
 	if (lower(*iri) == L"true")
-		return mkliteral(pstr(L"true"), XSD_BOOLEAN, 0);
+		return new term(dict[L"true"]);
 	if (lower(*iri) == L"false")
-		return mkliteral(pstr(L"false"), XSD_BOOLEAN, 0);
+		return new term(dict[L"false"]);
 	if (std::atoi(ws(*iri).c_str()))
-		return mkliteral(iri, XSD_INTEGER, 0);
+		return new term(dict[iri]);
 	if (std::atof(ws(*iri).c_str()))
-		return mkliteral(iri, XSD_DOUBLE, 0);
-	if (*iri == L"0") return mkliteral(iri, XSD_INTEGER, 0);
-	auto i = iri->find(L':');
-	if (i == string::npos) return mkiri(iri);
-	string p = iri->substr(0, ++i);
-	auto it = prefixes.find(p);
-	if (it != prefixes.end()) {
-		iri = pstr(*it->second->value + iri->substr(i));
-	}
-	return mkiri(iri);
+		return new term(dict[iri]);
+	if (*iri == L"0") return new term(dict[iri]);
+	return new term(dict[iri]);
 }
 
 term* nqparser::readbnode() {
 	while (iswspace(*s)) ++s;
-	if (*s != L'_' || *(s+1) != L':') return term*(0);
+	if (*s != L'_' || *(s+1) != L':') return 0;
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
-	return mkbnode(wstrim(t));
-}
-
-void nqparser::readprefix() {
-	while (iswspace(*s)) ++s;
-	if (*s != L'@') return;
-	if (memcmp(s, L"@prefix ", 8*sizeof(*s)))
-			throw wruntime_error(string(L"@prefix expected: ") + string(s,0,48));
-	s += 8;
-	while (*s != L':') t[pos++] = *s++;
-	t[pos++] = *s++;
-	t[pos] = 0; pos = 0;
-	pstring tt = wstrim(t);
-	prefixes[*tt] = readiri();
-	while (*s != '.') ++s;
-	++s;
+	return new term(dict[wstrim(t)]);
 }
 
 term* nqparser::readvar() {
 	while (iswspace(*s)) ++s;
-	if (*s != L'?') return term*(0);
+	if (*s != L'?') return 0;
 	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
-	return mkiri(wstrim(t));
+	return new term(dict[wstrim(t)]);
 }
 
 term* nqparser::readlit() {
 	while (iswspace(*s)) ++s;
-	if (*s != L'\"') return term*(0);
+	if (*s != L'\"') return 0;
 	++s;
 	do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
 	string dt, lang;
@@ -268,23 +332,23 @@ term* nqparser::readlit() {
 	t[pos] = 0; pos = 0;
 	string t1 = t;
 	boost::replace_all(t1, L"\\\\", L"\\");
-	return mkliteral(wstrim(t1), pstrtrim(dt), pstrtrim(lang));
+	return new term(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
 }
 
 term* nqparser::readany(bool lit){
 	term* pn;
-	readprefix();
-	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !(pn = readcurly()) && !(pn = readiri()) )
+	termset ts;
+	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !readcurly(ts) && !(pn = readiri()) )
 		return (term*)0;
 	return pn;
 }
 
-
-termset nqparser::operator()(const wchar_t* _s, string ctx = L"@default") {
-	std::list<std::pair<term*, plist>> preds;
+termset nqparser::operator()(const wchar_t* _s, string ctx) {
+	std::list<std::pair<term*, termset>> preds;
 	s = _s;
 	string graph;
-	term* subject, pn;
+	term *subject, *pn;
+	termset ts, heads;
 	pos = 0;
 	auto pos1 = preds.rbegin();
 
@@ -294,8 +358,8 @@ termset nqparser::operator()(const wchar_t* _s, string ctx = L"@default") {
 		do {
 			while (iswspace(*s) || *s == L';') ++s;
 			if (*s == L'.' || *s == L'}') break;
-			if ((pn = readiri()) || (pn = readcurly())) {
-				preds.emplace_back(pn, plist());
+			if ((pn = readiri()) || (readcurly(ts))) {
+				preds.emplace_back(pn, termset());
 				pos1 = preds.rbegin();
 			}
 			else throw wruntime_error(string(L"expected iri predicate:") + string(s,0,48));
@@ -313,23 +377,17 @@ termset nqparser::operator()(const wchar_t* _s, string ctx = L"@default") {
 		if (*s != L'.' && *s != L'}' && *s) {
 			if (!(pn = readbnode()) && !(pn = readiri()))
 				throw wruntime_error(string(L"expected iri or bnode graph:") + string(s,0,48));
-			graph = *pn->value;
+			graph = dict[pn->p];
 		} else
 			graph = ctx;
-		for (auto d : lists)
-				r.emplace_back(std::get<0>(d), std::get<1>(d), std::get<2>(d), graph);
-		for (auto x : preds)
-			for (term* object : x.second)
-				r.emplace_back(subject, x.first, object, graph);
-		lists.clear();
 		preds.clear();
 		while (iswspace(*s)) ++s;
 		while (*s == '.') ++s;
 		while (iswspace(*s)) ++s;
-		if (*s == L'}') { ++s; return { r, qlists }; }
+		if (*s == L'}') { ++s; return heads; }
 		if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
 	}
-	return { r, qlists };
+	return heads;
 }
 termid term::evvar(const subs& ss) {
 	static subs::const_iterator it;
@@ -348,26 +406,21 @@ termid term::evaluate(const subs& ss) {
 }
 
 #define UNIFVAR(x) { \
-		PROFILE(++unifs); \
 		if (!_d) return false; \
 		static termid v; \
-		if ((v = evaluate(ssub))) { \
+		if ((v = evaluate(ssub))) \
 			return v->x(ssub, _d, dsub); \
-		} \
 		static subs::const_iterator it; \
 		if ((it = dsub.find(p)) != dsub.end() && it->second != _d && it->second->p > 0) return false; \
 		dsub[p] = _d; \
 		return true; \
 	}
-//			(v = evaluate(dsub)) ? v->x(ssub, _d, dsub) : true; 
 #define UNIFVAREP(x) { \
-		PROFILE(++unifs); \
 		if (!_d) return false; \
 		static termid v; \
 		if ((v = evaluate(ssub))) return v->x(ssub, _d, dsub); \
 		return true; \
 	}
-//			(v = evaluate(dsub)) ? v->x(ssub, _d, dsub) : true; 
 bool term::unifvar(const subs& ssub, term* _d, subs& dsub) UNIFVAR(unify)
 bool term::unifvar_ep(const subs& ssub, term* _d, const subs& dsub) UNIFVAREP(unify_ep)
 
@@ -376,7 +429,7 @@ bool term::unif(const subs& ssub, term* _d, subs& dsub) {
 	static termid v;
 	term& d = *_d;
 	if (!d.s) return false;
-	if (ISVAR(d)) {
+	if (d.p < 0) {
 		if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
 //		if ((v = d.evaluate(ssub))) return unify(ssub, v, dsub);
 		dsub.emplace(d.p, evaluate(ssub));
@@ -391,9 +444,8 @@ bool term::unifpred(const subs& ssub, term* _d, subs& dsub) {
 	static termid v;
 	term& d = *_d;
 	if (d.s) return false;
-	if (ISVAR(d)) {
+	if (d.p < 0) {
 		if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-//		if ((v = d.evaluate(ssub))) return unify(ssub, v, dsub);
 		dsub.emplace(d.p, evaluate(ssub));
 		if (dsub[d.p]->s) throw 0;
 		return true;
@@ -406,9 +458,8 @@ bool term::unif_ep(const subs& ssub, term* _d, const subs& dsub) {
 	static termid v;
 	term& d = *_d;
 	if (!d.s) return false;
-	if (ISVAR(d)) {
+	if (d.p < 0) {
 		if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
-//		if ((v = d.evaluate(ssub))) return unify_ep(ssub, v, dsub);
 		return true;
 	}
 	return p == d.p && s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub);
@@ -420,9 +471,8 @@ bool term::unifpred_ep(const subs& ssub, term* _d, const subs& dsub) {
 	static termid v;
 	term& d = *_d;
 	if (d.s) return false;
-	if (ISVAR(d)) {
+	if (d.p < 0) {
 		if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
-//		if ((v = d.evaluate(ssub))) return unify_ep(ssub, v, dsub);
 		return true;
 	}
 	return p == d.p;
