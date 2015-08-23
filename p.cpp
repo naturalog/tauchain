@@ -6,6 +6,8 @@
 #include <sstream>
 #include <stdexcept>
 #include "strings.h"
+#include <boost/algorithm/string.hpp>
+using namespace boost::algorithm;
 using std::vector;
 using std::map;
 using std::wstringstream;
@@ -24,7 +26,17 @@ typedef vector<term*> termset;
 typedef int resid;
 typedef term* termid;
 typedef std::map<resid, termid> subs;
-
+string lower ( const string& s_ ) {
+	string s = s_;
+	std::transform ( s.begin(), s.end(), s.begin(), ::towlower );
+	return s;
+}
+pstring pstr ( const string& s ) { return std::make_shared<string>(s); }
+pstring wstrim(string s) {
+	trim(s);
+	return pstr(s);
+}
+pstring wstrim(const wchar_t* s) { return wstrim(string(s)); }
 string _gen_bnode_id() {
 	static int id = 0;
 	std::wstringstream ss;
@@ -126,8 +138,6 @@ private:
 #include <iostream>
 #include <set>
 #include <stdexcept>
-#include <boost/algorithm/string.hpp>
-using namespace boost::algorithm;
 
 class bidict {
 	std::map<resid, string> ip;
@@ -284,11 +294,6 @@ term* nqparser::readiri() {
 		return new term(dict[L"true"]);
 	if (lower(*iri) == L"false")
 		return new term(dict[L"false"]);
-	if (std::atoi(ws(*iri).c_str()))
-		return new term(dict[iri]);
-	if (std::atof(ws(*iri).c_str()))
-		return new term(dict[iri]);
-	if (*iri == L"0") return new term(dict[iri]);
 	return new term(dict[iri]);
 }
 
@@ -392,6 +397,10 @@ termset nqparser::operator()(const wchar_t* _s, string ctx) {
 termid term::evvar(const subs& ss) {
 	static subs::const_iterator it;
 	return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->p < 0 ? 0 : it->second->evaluate(ss);
+}
+term* term::ev(const subs& ss) {
+	termid a = s->evaluate(ss), b = o->evaluate(ss);
+	return new term(p, a ? a : s, b ? b : o);
 }
 
 termid term::evpred(const subs&) {
