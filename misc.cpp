@@ -122,7 +122,7 @@ string KWHT = L"\x1B[37m";
 
 string prover::format(termid id, bool json) {
 	if (!id) return L"{}";
-	if (!id->p) throw 0;
+	if (!id->p) return L"";
 	return format(*id,json);
 }
 
@@ -144,7 +144,7 @@ string prover::format(term& p, bool json) {
 
 string prover::formatp(shared_ptr<proof> p) {
 	std::wstringstream ss;
-	ss 	<< L"rule:   " << formatr(p->rule) << endl
+	ss 	<< L"rule:   " << format(p->rule) << endl
 		<< L"prev:   " << p->prev << endl
 		<< L"subst:  " << formats(p->s) << endl
 		<< L"ground: " << endl << formatg(p->g(this)) << endl;
