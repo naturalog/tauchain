@@ -13,6 +13,9 @@ using namespace boost::algorithm;
 using std::vector;
 using std::map;
 using std::wstringstream;
+using std::endl;
+auto &din = std::wcin;
+auto &dout = std::wcout;
 typedef std::wstring string;
 struct term;
 typedef vector<term*> termset;
@@ -40,6 +43,7 @@ string _gen_bnode_id() {
 	ss << "_:b" << id;
 	return ss.str();
 }
+bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 
 struct term {
 	struct body_t {
@@ -249,6 +253,8 @@ private:
 	body_t *body = 0;
 	size_t nbody = 0;
 };
+string format(const term* t);
+string format(const termset& t);
 
 resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain;
 
@@ -302,7 +308,7 @@ public:
 		return ip[k];
 	}
 	resid operator[] ( string v ) {
-		return pi[v];
+		return set(v);
 	}
 	bool has ( resid k ) const {
 		return ip.find ( k ) != ip.end();
@@ -312,14 +318,14 @@ public:
 	}
 } dict;
 
-term* dotterm = new term(Dot);
 class nqparser {
 private:
 	wchar_t *t;
 	const wchar_t *s;
 	int pos;
+	term* dotterm;
 public:
-	nqparser() : t(new wchar_t[4096*4096]) { }
+	nqparser() : t(new wchar_t[4096*4096]), dotterm(new term(Dot)) {}
 	~nqparser() {
 		delete[] t;
 	}
@@ -484,7 +490,6 @@ public:
 				graph = dict[pn->p];
 			} else
 				graph = ctx;
-			preds.clear();
 			while (iswspace(*s)) ++s;
 			while (*s == '.') ++s;
 			while (iswspace(*s)) ++s;
@@ -494,10 +499,42 @@ public:
 			}
 			if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
 		}
+		for (auto x : preds)
+			for (term* o : x.second)
+				heads.emplace_back(new term(x.first->p, subject, o));
+		preds.clear();
 		return heads;
 	}
 };
 
+termset readqdb ( std::wistream& is) {
+	string s, c;
+	nqparser p;
+	std::wstringstream ss;
+	while (getline(is, s)) {
+		trim(s);
+		if (s[0] == '#') continue;
+		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".") break;
+		ss << ' ' << s << ' ';
+	}
+	return p((wchar_t*)ss.str().c_str());
+}
+
+string format(const term* t) {
+	if (!t) return L"";
+	std::wstringstream ss;
+	ss << dict[t->p] << L'(' << format(t->s) << L',' << format(t->o) << L')';
+	return ss.str();
+}
+
+string format(const termset& t) {
+	std::wstringstream ss;
+	for (auto x : t) ss << format(x) << endl;
+	return ss.str();
+}
+
 int main() {
+	dict.init();
+	dout << format(readqdb(din)) << endl;
 	return 0;
 }
