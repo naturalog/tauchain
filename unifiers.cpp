@@ -8,23 +8,23 @@ string prover::emit(ruleid r) {
 //		os << L"#define match" << r << "(x, y) false" << endl;
 //		return ss.str();
 //	}
-	const term& t = heads[r];
-	os << L"match" << r << L"(const term& t, const subs& s) {" << endl;
+	term& t = heads[r];
+	os << L"match" << r << L"(term& t, const subs& s) {" << endl;
 	
 	os << L"}" << endl;
 }
 */
 #ifndef LAMBDA
-termid term::evvar(const subs& ss) const {
+termid term::evvar(const subs& ss) {
 	static subs::const_iterator it;
 	return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->p < 0 ? 0 : it->second->evaluate(ss);
 }
 
-termid term::evpred(const subs&) const {
+termid term::evpred(const subs&) {
 	return this;
 }
 
-termid term::evaluate(const subs& ss) const {
+termid term::evaluate(const subs& ss) {
 	if (p < 0) return evvar(ss);
 	if (!s && !o) return evpred(ss);
 	if (!s || !o) throw 0;
@@ -54,13 +54,13 @@ termid term::evaluate(const subs& ss) const {
 		return true; \
 	}
 //			(v = evaluate(dsub)) ? v->x(ssub, _d, dsub) : true; 
-bool term::unifvar(const subs& ssub, termid _d, subs& dsub) const UNIFVAR(unify)
-bool term::unifvar_ep(const subs& ssub, termid _d, const subs& dsub) const UNIFVAREP(unify_ep)
+bool term::unifvar(const subs& ssub, term* _d, subs& dsub) UNIFVAR(unify)
+bool term::unifvar_ep(const subs& ssub, term* _d, const subs& dsub) UNIFVAREP(unify_ep)
 
-bool term::unif(const subs& ssub, termid _d, subs& dsub) const {
+bool term::unif(const subs& ssub, term* _d, subs& dsub) {
 	if (!_d) return false;
 	static termid v;
-	const term& d = *_d;
+	term& d = *_d;
 	if (!d.s) return false;
 	if (ISVAR(d)) {
 		if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
@@ -72,10 +72,10 @@ bool term::unif(const subs& ssub, termid _d, subs& dsub) const {
 	return p == d.p && s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub);
 }
 
-bool term::unifpred(const subs& ssub, termid _d, subs& dsub) const {
+bool term::unifpred(const subs& ssub, term* _d, subs& dsub) {
 	if (!_d) return false;
 	static termid v;
-	const term& d = *_d;
+	term& d = *_d;
 	if (d.s) return false;
 	if (ISVAR(d)) {
 		if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
@@ -87,10 +87,10 @@ bool term::unifpred(const subs& ssub, termid _d, subs& dsub) const {
 	return p == d.p;
 }
 
-bool term::unif_ep(const subs& ssub, termid _d, const subs& dsub) const {
+bool term::unif_ep(const subs& ssub, term* _d, const subs& dsub) {
 	if (!_d) return false;
 	static termid v;
-	const term& d = *_d;
+	term& d = *_d;
 	if (!d.s) return false;
 	if (ISVAR(d)) {
 		if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
@@ -100,10 +100,10 @@ bool term::unif_ep(const subs& ssub, termid _d, const subs& dsub) const {
 	return p == d.p && s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub);
 }
 
-bool term::unifpred_ep(const subs& ssub, termid _d, const subs& dsub) const {
+bool term::unifpred_ep(const subs& ssub, term* _d, const subs& dsub) {
 	if (!_d) return false;
 	static termid v;
-	const term& d = *_d;
+	term& d = *_d;
 	if (d.s) return false;
 	if (ISVAR(d)) {
 		if ((v = d.evaluate(dsub))) return unify_ep(ssub, v, dsub);
@@ -112,12 +112,12 @@ bool term::unifpred_ep(const subs& ssub, termid _d, const subs& dsub) const {
 	}
 	return p == d.p;
 }
-bool term::unify_ep(const subs& ssub, termid _d, const subs& dsub) const {
+bool term::unify_ep(const subs& ssub, term* _d, const subs& dsub) {
 	if (p < 0) return unifvar_ep(ssub, _d, dsub);
 	if (!s) return unifpred_ep(ssub, _d, dsub);
 	return unif_ep(ssub, _d, dsub);
 }
-bool term::unify(const subs& ssub, termid _d, subs& dsub) const {
+bool term::unify(const subs& ssub, term* _d, subs& dsub) {
 	setproc(L"unify_bind");
 	bool r;
 	TRACE(dout << "Trying to unify " << prover::format(this) << " sub: " << prover::formats(ssub) << " with " << prover::format(_d) << " sub: " << prover::formats(dsub) << endl);
@@ -132,14 +132,14 @@ bool term::unify(const subs& ssub, termid _d, subs& dsub) const {
 	return r;
 }
 #endif
-bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
+bool prover::unify(termid _s, const subs& ssub, term* _d, subs& dsub) {
 //	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
 	return _s->unify(ssub, _d, dsub);
 /*	setproc(L"unify_bind");
 	termid v;
 	bool r, ns = false;
-	const term& d = *_d, &s = *_s;
+	term& d = *_d, &s = *_s;
 	TRACE(dout << "Trying to unify " << format(_s) << " sub: " << formats(ssub) << " with " << format(_d) << " sub: " << formats(dsub) << endl);
 	if (ISVAR(s)) {
 		v = evaluate(s, ssub);
@@ -169,17 +169,17 @@ bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 	*/
 }
 
-bool prover::unify_ep(termid _s, const subs& ssub, const term& d, const subs& dsub) {
+bool prover::unify_ep(term* _s, const subs& ssub, term& _d, const subs& dsub) {
 	PROFILE(++unifs);
 	if (!_s) return false;
 	setproc(L"unify_ep");
-	return _s->unify_ep(ssub, &d, dsub);
-/*	const term& s = *_s;
+	return _s->unify_ep(ssub, &_d, dsub);
+/*	term& s = *_s;
 	termid v;
 	bool r;
 	if (ISVAR(s)) {
 		v = evaluate(s, ssub);
-		r = v ? unify_ep(v, ssub, d, dsub) : true;
+		r = v ? unify_ep(v, ssub, _d, dsub) : true;
 	}
 	else if (ISVAR(d)) {
 		v = evaluate(d, dsub);

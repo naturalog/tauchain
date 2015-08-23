@@ -23,7 +23,7 @@ using namespace boost::algorithm;
 int _indent = 0;
 prover::termdb prover::_terms;
 term::term(){}
-term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
+term::term(resid _p, term* _s, term* _o) : p(_p), s(_s), o(_o) {
 #ifdef LAMBDA
 	auto evvar = [_p](const subs& ss) {
 		PROFILE(++evals);
@@ -118,7 +118,7 @@ term::term(resid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {
 }
 
 #ifndef LAMBDA
-termid term::ev(const subs& ss) const {
+term* term::ev(const subs& ss) {
 	termid a = s->evaluate(ss), b = o->evaluate(ss);
 	return prover::make(p, a ? a : s, b ? b : o);
 }
@@ -128,11 +128,11 @@ bool prover::euler_path(shared_ptr<proof> _p) {
 	setproc(L"euler_path");
 	auto ep = _p;
 	proof& p = *_p;
-	termid t = heads[p.rule];
+	termid t = p.rule;//heads[p.rule];
 	if (!t) return false;
-	const term& rt = *t;
+	term& rt = *t;
 	while ((ep = ep->prev))
-		if (ep->rule == p.rule && unify_ep(heads[ep->rule], ep->s, rt, p.s))
+		if (ep->rule == p.rule && ep->rule->unify_ep(*ep->s, &rt, *p.s))
 			{ TRACE(dout<<"Euler path detected"<<endl); return true; }
 	return false;
 }
@@ -325,7 +325,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		termid va = tmpvar();
 		ts[0] = make ( rdfssubClassOf, va, t.o );
 		ts[1] = make ( A, t.s, va );
-		queuepush(make_shared<proof>(nullptr, kb.add(make ( A, t.s, t.o ), ts), 0, p, subs()));
+//		queuepush(make_shared<proof>(nullptr, make ( A, t.s, t.o ), 0, p, subs()));
 	}
 	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		subs s;
@@ -391,15 +391,15 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 }
 void prover::pushev(shared_ptr<proof> p) {
 	termid t;
-	for (auto r : bodies[p->rule]) {
+	for (auto r : *p->rule) {
 		MARPA(subs.push_back(*p->s));
-		if (!(t = (evaluate(r.first, p->s)))) continue;
+		if (!(t = (r.t->evaluate(*p->s)))) continue;
 		e[t->p].emplace_back(t, p->g(this));
 		if (level > 10) dout << "proved: " << format(t) << endl;
 	}
 }
 
-bool caseof(const subs& c, const subs& s, subs& d) {
+bool caseof(const subs& c, const subs& s, subs&) {
 	static subs::const_iterator it;
 	static termid t, xt;
 	for (auto x : c) {
@@ -413,32 +413,6 @@ bool caseof(const subs& c, const subs& s, subs& d) {
 	return true;
 }
 
-struct match_heads {
-	uint state = 0;
-	const term& t;
-	const subs& s;
-	const prover::ruleset::conds& rl;
-	const termset& heads;
-	prover::ruleset::conds::const_iterator rule;
-	subs dsub;
-	match_heads(const term& _t, const subs& _s, const prover::ruleset::conds& _rl, const termset& _heads) : t(_t), s(_s), rl(_rl), heads(_heads), rule(rl.begin()) {}
-
-	bool operator()() {
-		while (rule != rl.end())
-		switch (state) {
-			case 0:
-				while (!(caseof(rule->second, s, dsub) && t.unify(s, heads[rule->first], dsub))) {
-					dsub.clear();
-					if (++rule == rl.end()) return false;
-				} 
-				return (state = 1);
-			case 1: ++rule; dsub.clear(); state = 0;
-		}
-		dsub.clear();
-		return false;
-	}
-};
-
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	setproc(L"step");
 	if (!_p) return 0;
@@ -447,26 +421,17 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	if (euler_path(_p)) return _p->next;
 	const proof& frame = *_p;
 	TRACE(dout<<"popped frame: " << formatp(_p) << endl);
-	auto& body = bodies[frame.rule];
-	if (frame.term_idx != body.size()) {
-		auto& b = body[frame.term_idx];
-		termid t = b.first;
-		if (!t) return frame.next;
-		MARPA(if (builtin(t, _p) != -1) return frame.next);
-//		if ((rit = kb.r2id.find(t->p)) == kb.r2id.end()) return frame.next;
-		static subs dummy;
-		match_heads mh(*t, frame.s ? *frame.s : dummy, /*rit->*/b.second, heads);
-//		for (auto rule : rit->second) {
-		while (mh())
-			queuepush(make_shared<proof>(_p, mh.rule->first, 0, _p, mh.dsub));
+	if (frame.term_idx != frame.rule->end()) {
+		while (frame.term_idx->t->match(*frame.s))
+			queuepush(make_shared<proof>(_p, frame.term_idx->t->it->t, 0, _p, make_shared<subs>(frame.term_idx->t->ds)));
 	}
 	else if (!frame.prev) gnd.push_back(_p);
 	else {
 		proof& ppr = *frame.prev;
 		shared_ptr<proof> r = make_shared<proof>(_p, ppr);
-		ruleid rl = frame.rule;
+		auto rl = frame.rule;
 		r->s = make_shared<subs>(*ppr.s);
-		unify(heads[rl], frame.s, bodies[r->rule][r->term_idx].first, r->s);
+		unify(rl, frame.s, r->term_idx->t, r->s);
 		++r->term_idx;
 		step(r);
 	}
@@ -476,16 +441,17 @@ shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 prover::ground prover::proof::g(prover* p) const {
 	if (!creator) return ground();
 	ground r = creator->g(p);
-	if (btterm) r.emplace_back(p->kb.add(btterm, termset()), nullptr);
-	else if (creator->term_idx != p->bodies[creator->rule].size()) {
-		if (p->bodies[rule].empty()) r.emplace_back(rule, nullptr);
-	} else if (!p->bodies[creator->rule].empty()) r.emplace_back(creator->rule, creator->s);
+	termset empty;
+	if (btterm) r.emplace_back(btterm, nullptr);
+	else if (creator->term_idx != creator->rule->end()) {
+		if (!rule->szbody()) r.emplace_back(rule, nullptr);
+	} else if (creator->rule->szbody()) r.emplace_back(creator->rule, creator->s);
 	return r;	
 }
 
-termid prover::list2term_simple(std::list<termid>& l) {
+term* prover::list2term_simple(std::list<termid>& l) {
 	setproc(L"list2term_simple");
-	termid t;
+	term* t;
 	if (l.empty())
 		t = make(Dot, 0, 0);
 	else {
@@ -497,9 +463,9 @@ termid prover::list2term_simple(std::list<termid>& l) {
 	return t;
 }
 
-termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
+term* prover::list2term(std::list<pnode>& l, const qdb& quads) {
 	setproc(L"list2term");
-	termid t;
+	term* t;
 	if (l.empty()) t = make(Dot, 0, 0);
 	else {
 		pnode x = l.front();
@@ -518,10 +484,10 @@ termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 	return t;
 }
 
-termid prover::quad2term(const quad& p, const qdb& quads) {
+term* prover::quad2term(const quad& p, const qdb& quads) {
 	setproc(L"quad2term");
 	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
-	termid t, s, o;
+	term *t, *s, *o;
 	#ifndef with_marpa
 	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
 	#endif
@@ -556,7 +522,7 @@ void prover::addrules(pquad q, qdb& quads) {
 	setproc(L"addrules");
 	TRACE(dout<<q->tostring()<<endl);
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
-	termid t;
+	term* t;
 	TRACE(dout<<"called with " << q->tostring()<<endl);
 	if (p == implication) {
 		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
@@ -571,7 +537,8 @@ void prover::addrules(pquad q, qdb& quads) {
 			if ((t = quad2term(*y, quads))) kb.add(t, ts);
 		}
 	}// else
-	if ((t = quad2term(*q, quads))) kb.add(t, termset()); // remarking the 'else' is essential for consistency checker
+	static termset empty;
+	if ((t = quad2term(*q, quads))) kb.add(t, empty); // remarking the 'else' is essential for consistency checker
 }
 
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
@@ -586,7 +553,7 @@ bool prover::consistency(const qdb& quads) {
 	setproc(L"consistency");
 	bool c = true;
 	prover p(*this);
-	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
+	term *t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
 	termset g = termset();
 	g.push_back(t);
 	p.query(g);
@@ -610,7 +577,7 @@ bool prover::consistency(const qdb& quads) {
 
 termset prover::qdb2termset(const qdb &q_) {
 	termset goal = termset();
-	termid t;
+	term* t;
 	for (auto q : merge(q_))
 		if (dict[q->pred] != rdffirst && //wat
 			dict[q->pred] != rdfrest &&
@@ -621,7 +588,7 @@ termset prover::qdb2termset(const qdb &q_) {
 
 
 void prover::query(const qdb& q_, subs * s) {
-	const termset t = qdb2termset(q_);
+	termset t = qdb2termset(q_);
 	query(t, s);
 }
 
@@ -630,7 +597,7 @@ void prover::do_query(const qdb& q_, subs * s) {
 	do_query(t, s);
 }
 
-void prover::query(const termset& goal, subs * s) {
+void prover::query(termset& goal, subs * s) {
 	TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	auto duration = do_query(goal, s);
 //	TRACE(dout << KYEL << "Evidence:" << endl);
@@ -670,7 +637,7 @@ int prover::do_query(const termid goal)
 	return do_query(query, &s);
 }
 
-int prover::do_query(const termset& goal, subs * s) {
+int prover::do_query(termset& goal, subs * s) {
 //	setproc(L"do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = make_shared<subs>(*s);
@@ -681,7 +648,7 @@ int prover::do_query(const termset& goal, subs * s) {
 		setproc(L"rules");
 		TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	}
-	kb.mkconds(this);
+	kb.mkconds();
 
 	using namespace std;
 	using namespace std::chrono;
@@ -704,11 +671,11 @@ int prover::do_query(const termset& goal, subs * s) {
 	//for (auto x : gnd) pushev(x);
 }
 
-termid prover::make(pnode p, termid s, termid o) { 
+term* prover::make(pnode p, termid s, termid o) { 
 	return make(dict.set(*p), s, o); 
 }
 
-termid prover::make(resid p, termid s, termid o) {
+term* prover::make(resid p, termid s, termid o) {
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif
@@ -719,7 +686,7 @@ termid prover::make(resid p, termid s, termid o) {
 	return _terms.add(p, s, o);
 }
 
-ruleid prover::ruleset::add(termid t, const termset& ts) {
+ruleid prover::ruleset::add(term* t, termset& ts) {
 	setproc(L"ruleset::add");
 	ruleid r =  _head.size();
 	_head.push_back(t);
@@ -730,7 +697,7 @@ ruleid prover::ruleset::add(termid t, const termset& ts) {
 	return r;
 }
 
-ruleid prover::ruleset::add(termid t) {
+ruleid prover::ruleset::add(term* t) {
 	termset ts = termset();
 	return add(t, ts);
 }
@@ -878,23 +845,3 @@ bool unify(termid _x, const subs& s, termid _y, subs& d) {
 	return mksubs(x->s, y->s, s) && mksubs(x->o, y->o, s);
 }
 */
-void prover::ruleset::mkconds(prover* p) {
-	setproc(L"mkconds");
-	subs s;
-	for (size_t n = 0; n < size(); ++n) {
-		for (auto& b : _body[n]) {
-			termid t = b.first;
-			conds& c = b.second;
-			for (size_t h = 0; h < size(); ++h) {
-//				if (t->unify(subs(), _head[h], s)) {
-				if (mksubs(t, _head[h], s)) {
-					c[h] = s;
-//					c.push_back(h);
-					TRACE(dout<<"c["<<prover::format(_head[h])<<"] = "<<prover::formats(s)<<endl);
-					TRACE(dout<<"n: " << n << " h: " << h << " s: " << prover::formats(s) << " t: " << prover::format(t) << " h[n]: " << prover::format(_head[h]) << endl); } 
-				s.clear();
-			}
-			TRACE(dout<<"conds: " << p->format(c) << endl);
-		}
-	}
-}

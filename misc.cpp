@@ -126,7 +126,7 @@ string prover::format(termid id, bool json) {
 	return format(*id,json);
 }
 
-string prover::format(const term& p, bool json) {
+string prover::format(term& p, bool json) {
 	if (!json) {
 		std::wstringstream ss;
 		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
@@ -178,7 +178,7 @@ void prover::prints(const subs  & s) {
 //		dout << dstr(x.first) << L" / " << format(x.second) << ' ';
 }
 
-string prover::format(const termset& l, bool json) {
+string prover::format(termset& l, bool json) {
 	std::wstringstream ss;
 	auto x = l.begin();
 	if (json) ss << L'[';
@@ -191,7 +191,7 @@ string prover::format(const termset& l, bool json) {
 }
 /*
 void prover::printterm_subs(termid id, const subs  & s) {
-	const term& p = *id;
+	term& p = *id;
 	dout << dstr(p.p) << L'(';
 	if (p.s) {
 		printterm_subs(p.s, s);
@@ -207,7 +207,7 @@ void prover::printterm_subs(termid id, const subs  & s) {
 	dout << L')';
 }
 
-void prover::printl_subs(const termset& l, const subs  & s) {
+void prover::printl_subs(termset& l, const subs  & s) {
 	auto x = l.begin();
 	while (x != l.end()) {
 		printterm_subs(*x, s);
@@ -369,7 +369,7 @@ pstring pstr ( const string& s ) {
 	return ps;
 } 
 #ifdef JSON
-pobj prover::json(const termset& ts) const {
+pobj prover::json(termset& ts) const {
 	polist_obj l = mk_olist_obj(); 
 	for (termid t : ts) l->LIST()->push_back(t->json(*this));
 	return l;

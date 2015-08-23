@@ -33,60 +33,52 @@
 
 struct term;
 class prover;
-typedef const term* termid;
+typedef term* termid;
 typedef std::map<resid, termid> subs;
 typedef u64 ruleid;
 typedef std::vector<ruleid> rulelist;
 typedef std::map<resid, rulelist> r2id_t;
-typedef std::vector<termid> termset;
+typedef std::vector<term*> termset;
 #define TRACEUNIF2 TRACE( dout << "Trial to unify " << format(s) << " sub: " << formats(ssub) << " with " << format(d) << " sub: " << formats(dsub) << " : "; if (r) { dout << "passed"; if (ns) dout << " with new substitution: " << dstr(d.p) << " / " << format(dsub[d.p]); } else dout << "failed"; dout << endl);
-/*
-template<typename T>
-struct list {
-	T item;
-	list<T>* next;
-};
-
-typedef list<const wchar_t*> res;
-
-struct res {
-	size_t sz;
-	union {
-		const wchar_t* value;
-		res* list;
-	};
-};
-
-struct res {
-	const wchar_t* const* values;
-	size_t sz;
-	res() : values(0), sz(0) {}
-	bool isvar() { return first == L'?'; }
-	bool islist() { return first == '.'; }
-	void init(pnode n) { value = n->value.c_str(); }
-	void init(std::list<pnode>& l, const qdb& quads) {
-		first = L'.';
-		if (l.empty()) return 0;
-		res* r = list = new res[l.size()];
-		for (auto x : l) {
-			auto it = quads.second.find(*x->value);
-			if (it == quads.second.end()) r->init(x);
-			else r->init(it->second, quads);
-			++r;
-		}
-	}
-
-	~res() {
-		if (list) delete[] list;
-		list = 0;
-	}
-};
-*/
+using std::pair;
+using std::set;
+using std::map;
+using std::vector;
+#include <cstring>
 struct term {
+	struct body_t {
+		term* t;
+		struct match {
+			termid t;
+			subs s;
+		}* matches = 0;
+		match* begin() { return matches; }
+		match* end() { return matches ? &matches[nmatches] : 0; }
+		void addmatch(termid t, const subs& s) {
+			if (!matches) {
+				*(matches = new match[1]) = { t, s };
+				return;
+			}
+			match* m = new match[1+nmatches];
+			memcpy(m, matches, sizeof(match*)*nmatches);
+			delete[] matches;
+			matches = m;
+			matches[nmatches++] = { t, s };
+		}
+		size_t nmatches = 0;
+		~body_t() { if (matches) delete[] matches; }
+	};
+	body_t* begin() { return body; }
+	body_t* end() { return body ? &body[nbody] : 0; }
+	const body_t* begin() const { return body; }
+	const body_t* end() const { return body ? &body[nbody] : 0; }
 	term();
 	resid p;//, s, o;
-	termid s, o;
-	term(resid _p, termid _s = 0, termid _o = 0);
+	term *s, *o;
+	term(resid _p, term* _s = 0, term* _o = 0);
+	~term() {
+		if (body) delete[] body;
+	}
 #ifdef JSON
 	pobj json(const prover&) const;
 #endif
@@ -95,28 +87,61 @@ struct term {
 	std::function<bool(const subs&, termid, subs&)> unify;
 	std::function<bool(const subs&, termid, const subs&)> unify_ep;
 #else
-	termid evvar(const subs& ss) const;
-	termid evpred(const subs&) const;
-	termid ev(const subs& ss) const;
-	termid evaluate(const subs& ss) const;
-	bool unifvar(const subs& ssub, termid _d, subs& dsub) const;
-	bool unifvar_ep(const subs& ssub, termid _d, const subs& dsub) const;
-	bool unif(const subs& ssub, termid _d, subs& dsub) const;
-	bool unifpred(const subs& ssub, termid _d, subs& dsub) const;
-	bool unif_ep(const subs& ssub, termid _d, const subs& dsub) const;
-	bool unifpred_ep(const subs& ssub, termid _d, const subs& dsub) const;
-	bool unify_ep(const subs& ssub, termid _d, const subs& dsub) const;
-	bool unify(const subs& ssub, termid _d, subs& dsub) const;
+	term* evvar(const subs& ss);
+	term* evpred(const subs&);
+	term* ev(const subs& ss);
+	term* evaluate(const subs& ss);
+	bool unifvar(const subs& ssub, term* _d, subs& dsub);
+	bool unifvar_ep(const subs& ssub, term* _d, const subs& dsub);
+	bool unif(const subs& ssub, term* _d, subs& dsub);
+	bool unifpred(const subs& ssub, term* _d, subs& dsub);
+	bool unif_ep(const subs& ssub, term* _d, const subs& dsub);
+	bool unifpred_ep(const subs& ssub, term* _d, const subs& dsub);
+	bool unify_ep(const subs& ssub, term* _d, const subs& dsub);
+	bool unify(const subs& ssub, term* _d, subs& dsub);
 #endif
+	uint state = 0;
+	body_t *it = 0;
+	subs ds;
+	bool match(const subs& s) {
+		switch (state) {
+			case 0: it = body; state = 1; while (it) {
+			case 1: if (unify(s, it++->t, ds)) return (state = 1); else { ds.clear(); continue; }
+			}
+		}
+		return (state = 0);
+	}
+	void addbody(term* t) {
+		if (!body) {
+			(body = new body_t[++nbody])->t = t;
+			return;
+		}
+		body_t *b = new body_t[1+nbody];
+		memcpy(b, body, sizeof(body_t*)*nbody);
+		delete[] body;
+		body = b;
+		body[nbody++].t = t;
+	}
+	size_t szbody() const { return nbody; }
+	const body_t& getbody(int n) const { return body[n]; }
+	void trymatch(uint b, term* t) {
+		static subs d;
+		if (body[b].t->unify(subs(), t, d))
+			body[b].addmatch(t, d);
+		d.clear();
+	}
+	void trymatch(termset& t) {
+		for (uint b = 0; b < nbody; ++b)
+			for (termid x : t)
+				trymatch(b, x);
+	}
+private:
+	body_t *body = 0;
+	size_t nbody = 0;
 };
 
 //struct subcmp { bool operator()( const std::pair<resid, termid>& x, const std::pair<resid, termid>& y) const { return x.first < y.first; } };
 //typedef std::set<std::pair<resid, termid>, subcmp> subs;
-using std::pair;
-using std::set;
-using std::map;
-using std::vector;
-
 class prover {
 	size_t evals = 0, unifs = 0;
 public:
@@ -132,13 +157,13 @@ public:
 	public:
 		prover* p;
 		ruleset(prover* _p) : p(_p) {}
-		ruleid add(termid t, const termset& ts);
-		ruleid add(termid t);
+		ruleid add(term* t, termset& ts);
+		ruleid add(term* t);
 		const termset& head() const	{ return _head; }
 		const btype& body() const	{ return _body; }
 		size_t size() const		{ return _head.size(); }
 		string format() const;
-		void mkconds(prover* p);
+		void mkconds() { for (auto t : _head) t->trymatch(_head); }
 		inline const rulelist& operator[](resid id) const { return r2id.at(id); }
 		r2id_t r2id;
 	} kb;
@@ -151,38 +176,40 @@ public:
 	prover ( string filename );
 	prover ( const prover& p );
 	termset qdb2termset(const qdb &q_);
-	int do_query(const termid goal);
-	int  do_query(const termset& goal, subs* s = 0);
+	int do_query(termid goal);
+	int  do_query(termset& goal, subs* s = 0);
 	void do_query(const qdb& goal, subs * s = 0);
-	void query(const termset& goal, subs * s = 0);
+	void query(termset& goal, subs * s = 0);
 	void query(const qdb& goal, subs * s = 0);
 	~prover();
 
-	typedef std::list<std::pair<ruleid, shared_ptr<subs>>> ground;
+	typedef std::list<std::pair<termid, shared_ptr<subs>>> ground;
 	typedef std::map<resid, std::list<std::pair<termid, ground>>> evidence;
 	evidence e;
 	std::vector<subs> subss;
 	termid tmpvar();
-	static termid make(pnode p, termid s = 0, termid o = 0);
-	static termid make(resid p, termid s = 0, termid o = 0);
+	static term* make(pnode p, termid s = 0, termid o = 0);
+	static term* make(resid p, termid s = 0, termid o = 0);
 //	static termid make(resid p, resid s, resid o);
-	static termid make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
-	static termid make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	static term* make(termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
+	static term* make(termid, termid, termid) { throw std::runtime_error("called make(pnode/resid) with termid"); }
 
 	struct proof {
-		ruleid rule = 0;
-		uint term_idx, level = 0;
+//		ruleid rule = 0;
+		term* rule = 0;
+		uint level = 0;
+		term::body_t* term_idx;
 		shared_ptr<proof> prev = 0, creator = 0, next = 0;
-		shared_ptr<subs> s = 0;//make_shared<subs>();
+		shared_ptr<subs> s = make_shared<subs>();
 //		subs s;
 		ground g(prover*) const;
-		termid btterm = 0;
+		term* btterm = 0;
 //		uint src = 0;
 		/*bool predvar = false;*/
 //		proof(){}// : s(make_shared<subs>()) {}
-		proof(shared_ptr<proof> c, ruleid r, uint l = 0, shared_ptr<proof> p = 0, const subs&  _s = subs())
-			: rule(r), term_idx(l), prev(p), creator(c), s(make_shared<subs>(_s)) { }
-		proof(shared_ptr<proof> c, const proof& p) 
+		proof(shared_ptr<proof> c, term* r, term::body_t* l = 0, shared_ptr<proof> p = 0, const subs&  _s = subs())
+			: rule(r), term_idx(l ? l : rule->begin()), prev(p), creator(c), s(make_shared<subs>(_s)) { }
+		proof(shared_ptr<proof> c, proof& p) 
 			: proof(c, p.rule, p.term_idx, p.prev) { if (prev) level = prev->level + 1; }
 	};
 //	struct proofcmp { bool operator()(const shared_ptr<proof>& x, const shared_ptr<proof>& y) const { return x->level < y->level || x->src < y->src || x->term_idx < y->term_idx; }};
@@ -190,8 +217,8 @@ public:
 
 	void addrules(pquad q, qdb& quads);
 	std::vector<termid> get_list(termid head, proof*);
-	termid list2term(std::list<pnode>& l, const qdb& quads);
-	termid list2term_simple(std::list<termid>& l);
+	term* list2term(std::list<pnode>& l, const qdb& quads);
+	term* list2term_simple(std::list<termid>& l);
 	void get_dotstyle_list(termid, std::list<resid>&);
 
 	typedef std::vector <resid> resids;
@@ -221,7 +248,7 @@ private:
 			if (x->p == y->p) return equals(x->s, y->s) && equals(x->o, y->o);
 			return false;
 		}
-		inline termid add(resid p, termid s, termid o) {
+		inline termid add(resid p, term* s, term* o) {
 			auto& pp = p2id[p];
 			term t(p, s, o);
 			for (auto x : pp) if (equals(x, &t)) return x;
@@ -229,7 +256,7 @@ private:
 //			unlock();
 //			termid r = &(data[sz++] = t);
 //			lock();
-			termid r = new term(p, s, o);
+			term* r = new term(p, s, o);
 			pp.push_back(r);
 			return r;
 		}
@@ -257,32 +284,32 @@ private:
 	inline shared_ptr<proof> step(shared_ptr<proof>);
 	inline void step_in(size_t &src, rulelist &candidates, shared_ptr<proof> _p, termid t);
 	subs::const_iterator evvit;
-	termid evaluate(const term& p, const subs& s) { return p.evaluate(s); }
-	termid evaluate(const term& p, const shared_ptr<subs> s) {
+	termid evaluate(term& p, const subs& s) { return p.evaluate(s); }
+	termid evaluate(term& p, const shared_ptr<subs> s) {
 		static subs dummy;
 		return evaluate(p, s ? *s : dummy);
 	}
 	termid evaluate(termid t, const shared_ptr<subs> s) {
 		return t ? evaluate(*t, s) : 0;
 	}
-	bool unify(termid _s, const subs& ssub, termid _d, subs& dsub);
-	bool unify(termid _s, const shared_ptr<subs> ssub, termid _d, const shared_ptr<subs> dsub) {
+	bool unify(term* _s, const subs& ssub, term* _d, subs& dsub);
+	bool unify(term* _s, const shared_ptr<subs> ssub, term* _d, const shared_ptr<subs> dsub) {
 		static subs dummy1, dummy2;
 		bool r = unify(_s, ssub ? *ssub : dummy1, _d, dsub ? *dsub : dummy2);
 		dummy1.clear(); dummy2.clear();
 		return r;
 	}
-	bool unify_ep(termid _s, const subs& ssub, const term& d, const subs& dsub);
-	bool unify_ep(termid _s, const shared_ptr<subs> ssub, const term& d, const shared_ptr<subs> dsub) {
+	bool unify_ep(termid _s, const subs& ssub, term& _d, const subs& dsub);
+	bool unify_ep(termid _s, const shared_ptr<subs> ssub, term& _d, const shared_ptr<subs> dsub) {
 		static subs dummy;
-		bool r = unify_ep(_s, ssub ? *ssub : dummy, d, dsub ? *dsub : dummy);
+		bool r = unify_ep(_s, ssub ? *ssub : dummy, _d, dsub ? *dsub : dummy);
 		dummy.clear();
 		return r;
 	}
 
 	inline bool euler_path(shared_ptr<proof>);
 	int builtin(termid, shared_ptr<proof>);
-	termid quad2term(const quad& p, const qdb& quads);
+	term* quad2term(const quad& p, const qdb& quads);
 	termid list_next(termid t, proof&);
 	termid list_first(termid t, proof&);
 	bool islist(termid);
@@ -291,12 +318,12 @@ private:
 	// formatters
 public:
 	static string format(termid id, bool json = false);
-	static string format(const term&, bool json = false);
+	static string format(term&, bool json = false);
 	string formatkb(bool json = false);
 	void printg(const ground& g);
 	void printg(shared_ptr<ground> g) { printg(*g); }
 	void printe();
-	string format(const termset& l, bool json = false);
+	string format(termset& l, bool json = false);
 	void prints(const subs&  s);
 	void prints(shared_ptr<subs> s) { prints(*s); }
 	static string format(resid r) { return dstr(r); } // { throw std::runtime_error("called format(termid) with resid"); }
@@ -310,11 +337,11 @@ public:
 	static string formats(const subs&  s, bool json = false);// { return s.format(json); }
 	static string formats(shared_ptr<subs>& s, bool json = false) { return s ? formats(*s, json) : string(); }
 	void printterm_subs(termid id, const subs&  s);
-	void printl_subs(const termset& l, const subs&  s);
+	void printl_subs(termset& l, const subs&  s);
 	void printr_subs(ruleid r, const subs&  s);
 #ifdef JSON
 	void jprinte();
-	pobj json(const termset& ts) const;
+	pobj json(termset& ts) const;
 	pobj json(const subs&  ts) const;
 	pobj json(const ground& g) const;
 	pobj json(ruleid rl) const;
