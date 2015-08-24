@@ -50,25 +50,24 @@ term* mkterm(termset& kb, termset& query);
 term* mkterm(resid _p, term* _s = 0, term* _o = 0);
 
 struct subs {
+private:
 	struct sub { resid r; term* t; sub(resid _r = 0, term* _t = 0) : r(_r), t(_t) {}  } *s;
 	size_t sz;
+public:	
 	subs() : s(0), sz(0) {}
-	subs(const subs& _s) : s(0), sz(0) { copyfrom(_s); }
-	subs& operator=(const subs& _s) { copyfrom(_s); return *this; }
 	void set(resid r, term* t) {
-//		dout << "before set: " << format() << std::endl;
+		sub* z = _get(r);
+		if (z) { z->t = t; return; }
 		if (!(s = (sub*)realloc(s, sizeof(sub) * ++sz))) throw std::runtime_error("Allocation failed.");
-		s[sz - 1].r = r;
-		s[sz - 1].t = t;
+		s[sz - 1].r = r; s[sz - 1].t = t;
 		qsort(s, sz, sizeof(sub), compare);
-//		dout << "after set: " << format() << std::endl;
 	}
 	term* get(resid r) const {
-		sub k(r);
-		sub* z = (sub*)bsearch(&k, s, sz, sizeof(sub), compare);
-		if (!z) return 0;
-		return z->t;
+		sub* z = _get(r);
+		return z ? z->t : 0;
 	}
+	subs(const subs& _s) : s(0), sz(0) { copyfrom(_s); }
+	subs& operator=(const subs& _s) { copyfrom(_s); return *this; }
 	term* operator[](resid r) const { return get(r); };
 	void clear() {
 		if (!sz) return;
@@ -85,6 +84,11 @@ private:
 		if (!_s.sz) return; 
 		s = (sub*)realloc(s, sizeof(sub) * (sz = _s.sz));
 		memcpy(s, _s.s, sizeof(sub) * sz);
+	}
+	sub* _get(resid r) const {
+		sub k(r);
+		sub* z = (sub*)bsearch(&k, s, sz, sizeof(sub), compare);
+		return z;
 	}
 };
 
