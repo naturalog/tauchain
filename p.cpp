@@ -36,10 +36,9 @@ public:
 	}
 protected:	
 	void copyfrom(const vector<T>& t) {
-		if (a) clear();
-		if (!t.n) return; 
-		a = (T*)realloc(a, sizeof(T) * (n = t.n));
-		memcpy(a, t.a, sizeof(T) * n);
+		clear();
+		if (!(n = t.n)) return; 
+		memcpy(a = (T*)realloc(a, sizeof(T) * n), t.a, sizeof(T) * n);
 	}
 };
 
@@ -53,7 +52,7 @@ struct map : protected vector<mapelem<K, V> > {
 public:
 	map() : base() {}
 	map(const map<K, V>& _s) : base()      	{ base::copyfrom(_s); }
-	V get(const K& k) const			{ mapelem<K, V>* z = find(k); if (!z) return 0; return z->second; }
+	V get(const K& k) const			{ return find(k)->second; }
 	map<K, V>& operator=(const map<K, V>& m){ base::copyfrom(m); return *this; }
 	V operator[](const K& k) const		{ return get(k); }
 	void clear()				{ base::clear(); }
@@ -66,7 +65,7 @@ public:
 	}
 	typedef vtype* iterator;
 	iterator find(const K& k) const {
-		vtype v(k, 0);
+		vtype v(k, V());
 		vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare);
 		return z;
 	}
@@ -470,8 +469,8 @@ string format(const termset& t, int dep) {
 	return ss.str();
 }
 
-typedef std::vector<std::pair<term*, subs> > ground;
-typedef std::map<resid, std::list<std::pair<term*, ground> > > evidence;
+typedef vector<std::pair<term*, subs> > ground;
+typedef map<resid, vector<std::pair<term*, ground> > > evidence;
 
 typedef boost::shared_ptr<struct proof> sp_proof;
 struct proof {
