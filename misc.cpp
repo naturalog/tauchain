@@ -97,13 +97,8 @@ string dstr ( resid p, bool escape ) {
 	if ( s.find ( L"#" ) == string::npos ) return s;
 	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
 }
-bool endsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;
-}
-
-bool startsWith ( const string& x, const string& y ) {
-	return x.size() >= y.size() && x.substr ( 0, y.size() ) == y;
-}
+bool endsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y; } 
+bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 
 string lower ( const string& s_ ) {
 	string s = s_;

@@ -122,6 +122,7 @@ bool term::unify_ep(const subs& ssub, term* _d, const subs& dsub) {
 bool term::unify(const subs& ssub, term* _d, subs& dsub) {
 	setproc(L"unify_bind");
 	bool r;
+	if (!p) return false;
 	TRACE(dout << "Trying to unify " << prover::format(this) << " sub: " << prover::formats(ssub) << " with " << prover::format(_d) << " sub: " << prover::formats(dsub) << endl);
 	if (p < 0) r = unifvar(ssub, _d, dsub);
 	else if (!s) r = unifpred(ssub, _d, dsub);

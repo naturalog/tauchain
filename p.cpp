@@ -43,21 +43,26 @@ struct term {
 	struct body_t {
 		friend term;
 		term* t;
-		size_t nmatches = 0;
+//		size_t nmatches = 0;
 		body_t(term* _t) : t(_t) {}
-		struct match 	{ termid t; subs s; }* matches = 0;
-		~body_t() 	{ if (matches) delete[] matches; }
-		match* begin() 	{ return matches; }
-		match* end() 	{ return matches ? &matches[nmatches] : 0; }
+		struct match 	{ match(term* _t, const subs& _s):t(_t),s(_s){} term* t; subs s; };//* matches = 0;
+		typedef vector<match*> mvec;
+		mvec matches;
+//		~body_t() 	{ if (matches) delete[] matches; }
+		//match* begin() 	{ return matches; }
+		//match* end() 	{ return matches ? &matches[nmatches] : 0; }
+		mvec::iterator begin() 	{ return matches.begin(); }
+		mvec::iterator end() 	{ return matches.end(); }
 	private:
 		void addmatch(termid x, const subs& s) {
 			dout << "added match " << format(x) << " to " << format(t) << endl;
-			if (!matches) { *(matches = new match[1]) = { x, s }; return; }
-			match* m = new match[1+nmatches];
-			memcpy(m, matches, sizeof(match*)*nmatches);
-			delete[] matches;
-			matches = m;
-			matches[nmatches++] = { x, s };
+			matches.push_back(new match(x, s));
+//			if (!matches) { *(matches = new match[1]) = { x, s }; return; }
+//			match* m = new match[1+nmatches];
+//			memcpy(m, matches, sizeof(match*)*nmatches);
+//			delete[] matches;
+//			matches = m;
+//			matches[nmatches++] = { x, s };
 		}
 	};
 	typedef vector<body_t*> bvec;
@@ -81,9 +86,9 @@ struct term {
 		if (!state) { it = body.begin(); state = true; }
 		else { ++it; ds.clear(); }
 		while (it != body.end()) {
-			dout << "matchig " << format(this) << " with " << format((*it)->t) << "... ";
+			dout << "matching " << format(this, true) << " with " << format((*it)->t, true) << "... ";
 			if (it != body.end() && unify(s, (*it)->t, ds)) { dout << " passed" << endl; return state = true; }
-			else { ds.clear(); ++it; continue; dout << " failed"<<endl; }
+			else { ds.clear(); ++it; dout << " failed" << endl; continue; }
 		}
 		return state = false;
 	}
@@ -392,7 +397,7 @@ string format(const termset& t, int dep) {
 			ss << L"\t" << format(y->t, true) << L" matches to heads:" << endl;
 			for (auto& z : *y) {
 				IDENT;
-				ss << L"\t\t" << format(z.t, true) << endl;
+				ss << L"\t\t" << format(z->t, true) << endl;
 			}
 		}
 	}

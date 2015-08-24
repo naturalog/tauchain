@@ -97,16 +97,22 @@ struct term {
 	bool unify_ep(const subs& ssub, term* _d, const subs& dsub);
 	bool unify(const subs& ssub, term* _d, subs& dsub);
 #endif
-	uint state = 0;
+	bool state = 0;
 	body_t *it = 0;
 	subs ds;
 	bool match(const subs& s) {
-		switch (state) {
-			case 0: it = body; state = 1; while (it) {
-			case 1: if (unify(s, it++->t, ds)) return (state = 1); else { ds.clear(); continue; }
+		if (!state) {it = body; state = true;}
+		else { ++it; ds.clear(); }
+		while (it) {
+			if (it && unify(s, it->t, ds))
+				return state = true; 
+			else { 
+				ds.clear();
+				++it;
+				continue; 
 			}
 		}
-		return (state = 0);
+		return state = false;
 	}
 	void addbody(term* t) {
 		if (!body) {
