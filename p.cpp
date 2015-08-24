@@ -95,11 +95,11 @@ typedef int resid;
 struct term;
 typedef map<resid, term*> subs;
 typedef vector<term*> termset;
-typedef boost::shared_ptr<string> pstring;
+//typedef boost::shared_ptr<string> pstring;
 string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
-pstring pstr ( const string& s ) { return pstring(new string(s)); }
-pstring wstrim(string s) { trim(s); return pstr(s); }
-pstring wstrim(const wchar_t* s) { return wstrim(string(s)); }
+//pstring pstr ( const string& s ) { return pstring(new string(s)); }
+string wstrim(string s) { trim(s); return s; }
+//pstring wstrim(const wchar_t* s) { return wstrim(string(s)); }
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
@@ -235,7 +235,6 @@ class bidict {
 	std::map<resid, string> ip;
 	std::map<string, resid> pi;
 public:
-	resid operator[] ( pstring s ) { return (*this)[*s]; }
 	void init() {
 		GND = set( L"GND" );
 		implies = set(L"=>");
@@ -313,9 +312,9 @@ public:
 			return mkterm(implies);
 		}
 		PROCEED;
-		pstring iri = wstrim(t);
-		if (lower(*iri) == L"true") return mkterm(dict[L"true"]);
-		if (lower(*iri) == L"false") return mkterm(dict[L"false"]);
+		string iri = wstrim(t);
+		if (lower(iri) == L"true") return mkterm(dict[L"true"]);
+		if (lower(iri) == L"false") return mkterm(dict[L"false"]);
 		return mkterm(dict[iri]);
 	}
 
@@ -413,7 +412,7 @@ termset readqdb ( std::wistream& is) {
 	while (getline(is, s)) {
 		trim(s);
 		if (s[0] == '#') continue;
-		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".") break;
+		if (startsWith(s, L"fin") && wstrim(s.c_str() + 3) == L".") break;
 		ss << ' ' << s << ' ';
 	}
 	return p((wchar_t*)ss.str().c_str());
