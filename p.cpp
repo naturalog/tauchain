@@ -1,16 +1,12 @@
-//#include <cstdlib>
-#include "stdlib.h"
+#include <cstdlib>
 #include <map>
 #include <iostream>
-#include <set>
 #include <cstring>
 #include <string>
-#include <vector>
 #include <sstream>
 #include <stdexcept>
 #include <memory>
 #include <list>
-//#include <boost/shared_ptr.hpp>
 #include <ctime>
 #include <algorithm>
 
@@ -477,8 +473,8 @@ string format(const termset& t, int dep) {
 	return ss.str();
 }
 
-typedef std::vector<mapelem<term*, subs> > ground;
-typedef map<resid, std::vector<mapelem<term*, ground> > > evidence;
+typedef std::list<mapelem<term*, subs> > ground;
+typedef map<resid, std::list<mapelem<term*, ground> > > evidence;
 
 template<typename T>
 struct sp {
