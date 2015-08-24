@@ -56,7 +56,7 @@ struct term {
 		term* t;
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
-		struct match 	{ match(term* _t, const subs& _s):t(_t),s(_s){} term* t; subs s; };//* matches = 0;
+		struct match { match(term* _t) : t(_t) {} term* t; };
 		typedef std::vector<match*> mvec;
 		mvec matches;
 		mvec::iterator begin() 	{ return matches.begin(); }
@@ -74,9 +74,9 @@ struct term {
 			return state = false;
 		}
 	private:
-		void addmatch(term* x, const subs& s) {
+		void addmatch(term* x) {
 			dout << "added match " << format(x) << " to " << format(t) << std::endl;
-			matches.push_back(new match(x, s));
+			matches.push_back(new match(x));
 		}
 	};
 	typedef std::vector<body_t*> bvec;
@@ -125,7 +125,7 @@ private:
 	//	b.addmatch(t, subs()); return;
 		dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl;
 		static subs d;
-		if (b.t->unify(subs(), t, d)) b.addmatch(t, d);
+		if (b.t->unify(subs(), t, d)) b.addmatch(t);
 		d.clear();
 	}
 
