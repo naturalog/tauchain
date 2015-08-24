@@ -1,4 +1,4 @@
-#include <cstdlib>
+//#include <cstdlib>
 #include <vector>
 #include <map>
 #include <iostream>
@@ -208,7 +208,7 @@ public:
 		ts.clear();
 		do { ++s; } while (iswspace(*s));
 		if (*s == L'}') ++s;
-		ts = (*this)(s);
+		else ts = (*this)(s);
 		return true;
 	}
 
@@ -307,11 +307,11 @@ public:
 				} while (*s == L','); // end predicates
 				SKIPWS;
 			} while (*s == L';'); // end objects
-//			if (*s != L'.' && *s != L'}' && *s) { // read graph
-//				if (!(pn = readbnode()) && !(pn = readiri()))
-//					EPARSE(L"expected iri or bnode graph:");
+			if (*s != L'.' && *s != L'}' && *s) { // read graph
+				if (!(pn = readbnode()) && !(pn = readiri()))
+					EPARSE(L"expected iri or bnode graph:");
 //				graph = dict[pn->p];
-//			} else graph = ctx;
+			} //else graph = ctx;
 			SKIPWS; while (*s == '.') ++s; SKIPWS;
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
 			if (subject)
@@ -351,7 +351,7 @@ string formatlist(const term* t, bool in = false) {
 }
 
 string format(const term* t, bool body) {
-	if (!t) return L"";
+	if (!t || !t->p) return L"";
 	std::wstringstream ss;
 	if (body && t->p == implies) {
 		ss << L'{';
@@ -375,7 +375,12 @@ string format(const termset& t, int dep) {
 	for (termset::const_iterator x = t.begin(); x != t.end(); ++x) {
 		if (!*x) continue;
 		IDENT;
-		ss << format(*x, true) << ((*x)->body.size() ? L" implied by: " : L" a fact.") << std::endl;
+		ss << format(*x, true);
+		if ((*x)->body.size()) 
+			ss << L" implied by: ";
+		else
+			ss <<  L" a fact.";
+		ss << std::endl;
 		for (term::bveccit y = (*x)->begin(); y != (*x)->end(); ++y) {
 			IDENT;
 			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
