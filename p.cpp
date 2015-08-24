@@ -52,7 +52,7 @@ struct term {
 	resid p;
 	term *s, *o;
 	struct body_t {
-		friend term;
+		friend struct term;
 		term* t;
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
@@ -148,13 +148,13 @@ private:
 			dsub[d.p] = evaluate(ssub);
 			return true;
 		}
-		return p == d.p && (pred || s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) );
+		return p == d.p && (pred || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
 	}
 
 	bool unif_ep(const subs& ssub, term& d, const subs& dsub, bool pred) {
 		if (!d.p || d.p == implies) return false;
 		if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
-		return p == d.p && (pred || s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub));
+		return p == d.p && (pred || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
 	}
 };
 
@@ -435,6 +435,7 @@ struct proof {
 void step(boost::shared_ptr<proof> _p) {
 	size_t steps = 0;
 	boost::shared_ptr<proof> lastp = _p;
+	_p->next = boost::shared_ptr<proof>();
 	evidence e;
 	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
@@ -454,16 +455,16 @@ void step(boost::shared_ptr<proof> _p) {
 			term::body_t& pb = **p.b;
 			while (pb(p.s)) {
 				boost::shared_ptr<proof> r(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
-				if (lastp) lastp->next = r;
+				lastp->next = r;
 				lastp = r;
 			}
 		}
 		else if (!p.prev) {
-			term* t;
+			term* _t;
 			for (term::bvecit r = p.rule->begin(); r != p.rule->end(); ++r) {
-				if (!(t = ((*r)->t->evaluate(p.s)))) continue;
-				e[t->p].push_back(std::make_pair(t, p.g()));
-				dout << "proved: " << format(t) << std::endl;
+				if (!(_t = ((*r)->t->evaluate(p.s)))) continue;
+				e[_t->p].push_back(std::make_pair(_t, p.g()));
+				dout << "proved: " << format(_t) << std::endl;
 			}
 		}
 		else {
@@ -478,7 +479,7 @@ void step(boost::shared_ptr<proof> _p) {
 		_p = p.next;
 	}
 	dout << "steps: " << steps << std::endl;
-};
+}
 int main() {
 	dict.init();
 	termset kb = readqdb(din);
