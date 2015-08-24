@@ -7,42 +7,56 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
-#include "strings.h"
+#include <memory>
 #include <boost/algorithm/string.hpp>
+#include <boost/shared_ptr.hpp>
 using namespace boost::algorithm;
-using std::vector;
-using std::map;
+/*using std::std::vector;
+using std::std::map;
 using std::wstringstream;
-using std::endl;
-auto &din = std::wcin;
-auto &dout = std::wcout;
+using std::std::endl;
+using boost::shared_ptr;*/
+//using namespace std;
+//using namespace boost;
+std::wistream &din = std::wcin;
+std::wostream &dout = std::wcout;
 typedef std::wstring string;
 struct term;
-typedef vector<term*> termset;
+typedef std::vector<term*> termset;
 typedef int resid;
 typedef std::map<resid, term*> subs;
-
+typedef boost::shared_ptr<string> pstring;
 string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
-pstring pstr ( const string& s ) { return std::make_shared<string>(s); }
+pstring pstr ( const string& s ) { return pstring(new string(s)); }
 pstring wstrim(string s) { trim(s); return pstr(s); }
 pstring wstrim(const wchar_t* s) { return wstrim(string(s)); }
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;
+class wruntime_error : public std::exception {
+	string msg;
+public:
+	wruntime_error(string s) : msg(s){}
+	virtual const char* what() const _GLIBCXX_USE_NOEXCEPT {
+		return std::string(msg.begin(), msg.end()).c_str();
+	}
+	virtual ~wruntime_error() _GLIBCXX_USE_NOEXCEPT {}
+};
 
 struct term {
-	term() : term(0,0,0) {}
-	term(termset& kb, termset& query) : term() { addbody(query); trymatch(kb); }
+	term() : p(0), s(0), o(0) {}
+	term(termset& kb, termset& query)  : p(0), s(0), o(0) { addbody(query); trymatch(kb); }
 	resid p;
 	term *s, *o;
 	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
 	struct body_t {
 		friend term;
 		term* t;
-		body_t(term* _t) : t(_t) {}
+		bool state;
+		body_t(term* _t) : t(_t), state(false) {}
 		struct match 	{ match(term* _t, const subs& _s):t(_t),s(_s){} term* t; subs s; };//* matches = 0;
-		typedef vector<match*> mvec;
+		typedef std::vector<match*> mvec;
 		mvec matches;
 		mvec::iterator begin() 	{ return matches.begin(); }
 		mvec::iterator end() 	{ return matches.end(); }
@@ -53,19 +67,18 @@ struct term {
 			else { ++it; ds.clear(); }
 			while (it != end()) {
 				dout << "matching " << format(t, true) << " with " << format((*it)->t, true) << "... ";
-				if (it != end() && t->unify(s, (*it)->t, ds)) { dout << " passed" << endl; return state = true; }
-				else { ds.clear(); ++it; dout << " failed" << endl; continue; }
+				if (it != end() && t->unify(s, (*it)->t, ds)) { dout << " passed" << std::endl; return state = true; }
+				else { ds.clear(); ++it; dout << " failed" << std::endl; continue; }
 			}
 			return state = false;
 		}
 	private:
 		void addmatch(term* x, const subs& s) {
-			dout << "added match " << format(x) << " to " << format(t) << endl;
+			dout << "added match " << format(x) << " to " << format(t) << std::endl;
 			matches.push_back(new match(x, s));
 		}
-		bool state = false;
 	};
-	typedef vector<body_t*> bvec;
+	typedef std::vector<body_t*> bvec;
 	bvec body;
 	typedef bvec::iterator bvecit;
 	typedef bvec::const_iterator bveccit;
@@ -76,13 +89,18 @@ struct term {
 //	size_t szbody() const 		{ return body.size(); }
 //	const body_t& getbody(int n) const { return *body[n]; }
 
-	term* addbody(const termset& t) { for (term* x : t) addbody(x); }
+	term* addbody(const termset& t) { for (termset::const_iterator it = t.begin(); it != t.end(); ++it) addbody(*it); }
 	term* addbody(term* t) {
+		dout << "added body " << format(t) << " to " << format(this) << std::endl;
 		body.push_back(new body_t(t));
 		return this;
 	}
 
-	void trymatch(termset& t) { for (auto& b : *this) for (term* x : t) trymatch(*b, x); }
+	void trymatch(termset& t) {
+		for (bvecit b = begin(); b != end(); ++b)
+			for (termset::iterator it = t.begin(); it != t.end(); ++it)
+				trymatch(**b, *it);
+	}
 
 	term* evaluate(const subs& ss) {
 		static subs::const_iterator it;
@@ -103,7 +121,7 @@ private:
 
 	void trymatch(body_t& b, term* t) {
 		if (t == this) return;
-		dout << "trying to match " << format(b.t) << " with " << format(t) << endl;
+		dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl;
 		static subs d;
 		if (b.t->unify(subs(), t, d)) b.addmatch(t, d);
 		d.clear();
@@ -125,7 +143,7 @@ private:
 		if (!d.p || d.p == implies) return false;
 		if (d.p < 0) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-			dsub.emplace(d.p, evaluate(ssub));
+			dsub[d.p] = evaluate(ssub);
 			return true;
 		}
 		return p == d.p && (pred || s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) );
@@ -153,7 +171,7 @@ public:
 
 	resid set ( string v ) {
 		if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
-		auto it = pi.find ( v );
+		std::map<string, resid>::iterator it = pi.find ( v );
 		if ( it != pi.end() ) return it->second;
 		resid k = pi.size() + 1;
 		if ( v[0] == L'?' ) k = -k;
@@ -260,13 +278,14 @@ public:
 	}
 
 	termset operator()(const wchar_t* _s) {
-		std::list<std::pair<term*, termset>> preds;
+		typedef std::list<std::pair<term*, termset> > preds_t;
+		preds_t preds;
 		s = _s;
 //		string graph;
 		term *subject, *pn;
 		termset subjs, ts, heads, objs;
 		pos = 0;
-		auto pos1 = preds.rbegin();
+		preds_t::reverse_iterator pos1 = preds.rbegin();
 
 		while(*s) {
 			if (readcurly(subjs)) subject = 0;
@@ -275,7 +294,7 @@ public:
 				while (iswspace(*s) || *s == L';') ++s;
 				if (*s == L'.' || *s == L'}') break;
 				if ((pn = readiri())) { // read predicate
-					preds.emplace_back(pn, termset());
+					preds.push_back(std::make_pair(pn, termset()));
 					pos1 = preds.rbegin();
 				} else EPARSE(L"expected iri predicate:");
 				do { // read objects
@@ -296,10 +315,10 @@ public:
 			SKIPWS; while (*s == '.') ++s; SKIPWS;
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
 			if (subject)
-				for (auto x : preds)
-					for (term* o : x.second)
-						heads.emplace_back(new term(x.first->p, subject, o));
-			else for (auto o : objs) heads.emplace_back(o->addbody(subjs));
+				for (preds_t::iterator x = preds.begin(); x != preds.end(); ++x)
+					for (termset::iterator o = x->second.begin(); o != x->second.end(); ++o)
+						heads.push_back(new term(x->first->p, subject, *o));
+			else for (termset::iterator o = objs.begin(); o != objs.end(); ++o) heads.push_back((*o)->addbody(subjs));
 			if (*s == L'}') { ++s; return heads; }
 			preds.clear();
 		}
@@ -336,7 +355,7 @@ string format(const term* t, bool body) {
 	std::wstringstream ss;
 	if (body && t->p == implies) {
 		ss << L'{';
-		for (auto x : *t) ss << format(x->t) << L';';
+		for (term::bveccit x = t->begin(); x != t->end(); ++x) ss << format((*x)->t) << L';';
 		ss << L'}';
 		ss << format(t, false);
 	}
@@ -353,54 +372,54 @@ string format(const term* t, bool body) {
 
 string format(const termset& t, int dep) {
 	std::wstringstream ss;
-	for (term* x : t) {
-		if (!x) continue;
+	for (termset::const_iterator x = t.begin(); x != t.end(); ++x) {
+		if (!*x) continue;
 		IDENT;
-		ss << format(x, true) << (x->body.size() ? L" implied by: " : L" a fact.") << endl;
-		for (term::body_t* y : *x) {
+		ss << format(*x, true) << ((*x)->body.size() ? L" implied by: " : L" a fact.") << std::endl;
+		for (term::bveccit y = (*x)->begin(); y != (*x)->end(); ++y) {
 			IDENT;
-			ss << L"\t" << format(y->t, true) << L" matches to heads:" << endl;
-			for (term::body_t::match* z : *y) {
+			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
+			for (std::vector<term::body_t::match*>::iterator z = (*y)->begin(); z != (*y)->end(); ++z) {
 				IDENT;
-				ss << L"\t\t" << format(z->t, true) << endl;
+				ss << L"\t\t" << format((*z)->t, true) << std::endl;
 			}
 		}
 	}
 	return ss.str();
 }
 
-typedef std::list<std::pair<term*, subs>> ground;
-typedef std::map<resid, std::list<std::pair<term*, ground>>> evidence;
+typedef std::list<std::pair<term*, subs> > ground;
+typedef std::map<resid, std::list<std::pair<term*, ground> > > evidence;
 
 struct proof {
-	term* rule = 0;
+	term* rule;
 	term::bvecit b;
-	shared_ptr<proof> prev = 0, creator = 0, next = 0;
+	boost::shared_ptr<proof> prev, creator, next;
 	subs s;
 	ground g() const {
 		if (!creator) return ground();
 		ground r = creator->g();
 		termset empty;
-		if (btterm) r.emplace_back(btterm, subs());
+		if (btterm) r.push_back(std::make_pair(btterm, subs()));
 		else if (creator->b != creator->rule->end()) {
-			if (!rule->body.size()) r.emplace_back(rule, subs());
-		} else if (creator->rule->body.size()) r.emplace_back(creator->rule, creator->s);
+			if (!rule->body.size()) r.push_back(std::make_pair(rule, subs()));
+		} else if (creator->rule->body.size()) r.push_back(std::make_pair(creator->rule, creator->s));
 		return r;	
 	}
-	term* btterm = 0;
-	proof(shared_ptr<proof> c, term* r, term::bvecit* l = 0, shared_ptr<proof> p = 0, const subs&  _s = subs())
-		: rule(r), b(l ? *l : rule->begin()), prev(p), creator(c), s(_s) { }
-	proof(shared_ptr<proof> c, proof& p) 
-		: proof(c, p.rule, &p.b, p.prev) { }
+	term* btterm;
+	proof(boost::shared_ptr<proof> c, term* r, term::bvecit* l, boost::shared_ptr<proof> p, const subs&  _s = subs())
+		: rule(r), b(l ? *l : rule->begin()), prev(p), creator(c), s(_s), btterm(0) { }
+	proof(boost::shared_ptr<proof> c, proof& p) 
+		: rule(p.rule), b(p.b), prev(p.prev), creator(c), btterm(0) { }
 };
 
-void step(shared_ptr<proof> _p) {
+void step(boost::shared_ptr<proof> _p) {
 	size_t steps = 0;
-	shared_ptr<proof> lastp = _p;
+	boost::shared_ptr<proof> lastp = _p;
 	evidence e;
 	while (_p) {
-		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
-		auto ep = _p;
+		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
+		boost::shared_ptr<proof> ep = _p;
 		proof& p = *_p;
 		term* t = p.rule;
 		if (t) {
@@ -414,23 +433,23 @@ void step(shared_ptr<proof> _p) {
 		if (p.b != p.rule->end()) {
 			term::body_t& pb = **p.b;
 			while (pb(p.s)) {
-				auto r = make_shared<proof>(_p, (*pb.it)->t, nullptr, _p, pb.ds);
+				boost::shared_ptr<proof> r(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
 				if (lastp) lastp->next = r;
 				lastp = r;
 			}
 		}
 		else if (!p.prev) {
 			term* t;
-			for (auto r : *p.rule) {
-			if (!(t = (r->t->evaluate(p.s)))) continue;
-				e[t->p].emplace_back(t, p.g());
-				dout << "proved: " << format(t) << endl;
+			for (term::bvecit r = p.rule->begin(); r != p.rule->end(); ++r) {
+				if (!(t = ((*r)->t->evaluate(p.s)))) continue;
+				e[t->p].push_back(std::make_pair(t, p.g()));
+				dout << "proved: " << format(t) << std::endl;
 			}
 		}
 		else {
 			proof& ppr = *p.prev;
-			shared_ptr<proof> r = make_shared<proof>(_p, ppr);
-			auto rl = p.rule;
+			boost::shared_ptr<proof> r(new proof(_p, ppr));
+			term* rl = p.rule;
 			r->s = ppr.s;
 			rl->unify(p.s, (*r->b)->t, r->s);
 			++r->b;
@@ -442,15 +461,15 @@ void step(shared_ptr<proof> _p) {
 int main() {
 	dict.init();
 	termset kb = readqdb(din);
-	dout << "kb:" << endl << format(kb) << endl;
+	dout << "kb:" << std::endl << format(kb) << std::endl;
 	termset query = readqdb(din);
 
 	term* q = new term(kb, query);
 
 	kb.push_back(q);
-	dout << "kb:" << endl << format(kb) << endl;
+	dout << "kb:" << std::endl << format(kb) << std::endl;
 
-	step(make_shared<proof>(nullptr, q));
+	step(boost::shared_ptr<proof>(new proof(boost::shared_ptr<proof>(), q, 0, boost::shared_ptr<proof>(), subs())));
 
 	return 0;
 }
