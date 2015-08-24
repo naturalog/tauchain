@@ -1,4 +1,5 @@
-#include <cstdlib>
+//#include <cstdlib>
+#include "stdlib.h"
 #include <map>
 #include <iostream>
 #include <set>
@@ -8,7 +9,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <memory>
-#include <boost/algorithm/string.hpp>
+#include <list>
+//#include <boost/algorithm/string.hpp>
 #include <boost/shared_ptr.hpp>
 #include <ctime>
 
@@ -28,7 +30,7 @@ public:
 	T* begin() const	{ return a; }
 	T* end() const		{ return a ? &a[n] : 0; }
 	void clear()		{ if (!a) return; free(a); a = 0; n = 0; }
-	~vector()		{ free(a); }
+	~vector()		{ clear(); }
 
 	void push_back(const T& t) {
 		if (!(a = (T*)realloc(a, sizeof(T) * ++n))) throw std::runtime_error("Allocation failed.");
@@ -52,7 +54,7 @@ struct map : protected vector<mapelem<K, V> > {
 public:
 	map() : base() {}
 	map(const map<K, V>& _s) : base()      	{ base::copyfrom(_s); }
-	V get(const K& k) const			{ return find(k)->second; }
+	V get(const K& k) const			{ mapelem<K, V>* z = find(k); if (!z) return V(); return z->second; }
 	map<K, V>& operator=(const map<K, V>& m){ base::copyfrom(m); return *this; }
 	V operator[](const K& k) const		{ return get(k); }
 	void clear()				{ base::clear(); }
@@ -73,10 +75,23 @@ private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
 
-using namespace boost::algorithm;
 std::wistream &din = std::wcin;
 std::wostream &dout = std::wcout;
 typedef std::wstring string;
+void trim(string& s) {
+	dout << "trim " << s;
+	string::iterator i = s.begin();
+	while (iswspace(*i)) {
+		s.erase(i);
+		i = s.begin();
+	}
+	size_t n = s.size();
+	while (iswspace(s[--n]));
+	s = s.substr(0, ++n);
+	dout << " returned " << s << std::endl;
+}
+
+//using namespace boost::algorithm;
 typedef int resid;
 struct term;
 typedef map<resid, term*> subs;
@@ -325,7 +340,7 @@ public:
 		}
 		t[pos] = 0; pos = 0;
 		string t1 = t;
-		boost::replace_all(t1, L"\\\\", L"\\");
+//boost::replace_all(t1, L"\\\\", L"\\");
 		return mkterm(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
 	}
 
@@ -457,8 +472,6 @@ string format(const termset& t, int dep) {
 		ss << std::endl;
 		for (term::bvec::iterator y = x->body.begin(); y != x->body.end(); ++y) {
 			IDENT;
-			const term::body_t* bt = *y;
-			//dout << format(bt->t) << std::endl;
 			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
 			for (vector<term::body_t::match*>::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
 				IDENT;
@@ -469,8 +482,8 @@ string format(const termset& t, int dep) {
 	return ss.str();
 }
 
-typedef vector<std::pair<term*, subs> > ground;
-typedef map<resid, vector<std::pair<term*, ground> > > evidence;
+typedef std::vector<mapelem<term*, subs> > ground;
+typedef map<resid, std::vector<mapelem<term*, ground> > > evidence;
 
 typedef boost::shared_ptr<struct proof> sp_proof;
 struct proof {
@@ -482,10 +495,10 @@ struct proof {
 		if (!creator) return ground();
 		ground r = creator->g();
 		termset empty;
-		if (btterm) r.push_back(std::make_pair(btterm, subs()));
+		if (btterm) r.push_back(mapelem<term*, subs>(btterm, subs()));
 		else if (creator->b != creator->rule->body.end()) {
-			if (!rule->body.size()) r.push_back(std::make_pair(rule, subs()));
-		} else if (creator->rule->body.size()) r.push_back(std::make_pair(creator->rule, creator->s));
+			if (!rule->body.size()) r.push_back(mapelem<term*, subs>(rule, subs()));
+		} else if (creator->rule->body.size()) r.push_back(mapelem<term*, subs>(creator->rule, creator->s));
 		return r;	
 	}
 	term* btterm;
@@ -522,7 +535,7 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 			term* _t;
 			for (term::bvec::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
 				if (!(_t = ((*r)->t->evaluate(p.s)))) continue;
-				e[_t->p].push_back(std::make_pair(_t, p.g()));
+				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
 				dout << "proved: " << format(_t) << std::endl;
 			}
 			#endif
