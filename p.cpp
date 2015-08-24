@@ -39,30 +39,19 @@ struct term {
 	resid p;
 	term *s, *o;
 	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
-//	~term() { if (body) delete[] body; }
 	struct body_t {
 		friend term;
 		term* t;
-//		size_t nmatches = 0;
 		body_t(term* _t) : t(_t) {}
 		struct match 	{ match(term* _t, const subs& _s):t(_t),s(_s){} term* t; subs s; };//* matches = 0;
 		typedef vector<match*> mvec;
 		mvec matches;
-//		~body_t() 	{ if (matches) delete[] matches; }
-		//match* begin() 	{ return matches; }
-		//match* end() 	{ return matches ? &matches[nmatches] : 0; }
 		mvec::iterator begin() 	{ return matches.begin(); }
 		mvec::iterator end() 	{ return matches.end(); }
 	private:
 		void addmatch(termid x, const subs& s) {
 			dout << "added match " << format(x) << " to " << format(t) << endl;
 			matches.push_back(new match(x, s));
-//			if (!matches) { *(matches = new match[1]) = { x, s }; return; }
-//			match* m = new match[1+nmatches];
-//			memcpy(m, matches, sizeof(match*)*nmatches);
-//			delete[] matches;
-//			matches = m;
-//			matches[nmatches++] = { x, s };
 		}
 	};
 	typedef vector<body_t*> bvec;
@@ -74,11 +63,6 @@ struct term {
 	bvecit end() 		{ return body.end(); }
 	bveccit begin() const 	{ return body.begin(); }
 	bveccit end() const 	{ return body.end(); }
-//	body_t* begin() 		{ return body; }
-//	body_t* end() 			{ return body ? &body[nbody] : 0; }
-//	const body_t* begin() const 	{ return body; }
-//	const body_t* end() const 	{ return body ? &body[nbody] : 0; }
-//	size_t szbody() const 		{ return nbody; }
 	size_t szbody() const 		{ return body.size(); }
 	const body_t& getbody(int n) const { return *body[n]; }
 
@@ -96,12 +80,6 @@ struct term {
 	term* addbody(termset t) { for (term* x : t) addbody(x); }
 	term* addbody(term* t) {
 		body.push_back(new body_t(t));
-//		if (!body) { (body = new body_t[++nbody])->t = t; return this; }
-//		body_t *b = new body_t[1+nbody];
-//		memcpy(b, body, sizeof(body_t*)*nbody);
-//		delete[] body;
-//		body = b;
-//		body[nbody++].t = t;
 		return this;
 	}
 
@@ -159,8 +137,6 @@ private:
 	}
 
 	bvec body;
-//	body_t *body = 0;
-//	size_t nbody = 0;
 	bool state = false;
 };
 
@@ -174,18 +150,7 @@ public:
 	void init() {
 		GND = set( L"GND" );
 		implies = set(L"=>");
-		logequalTo = set( L"log:equalTo");
-		lognotEqualTo = set(L"log:notEqualTo");
-		rdffirst = set(*RDF_FIRST/*Tpstr(L"rdf:first")*/);
-		rdfrest = set(*RDF_REST/*pstr(L"rdf:rest")*/);
-		rdfnil = set(*RDF_NIL/*Tpstr(L"rdf:nil")*/);
-		A = set(L"a");
-		rdfsResource = set(L"rdfs:Resource");
-		rdfsdomain = set(L"rdfs:domain");
-		//	rdfList = set(L"rdf:List")));
 		Dot = set(L".");
-		rdfsType = set(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-		rdfssubClassOf = set(L"rdfs:subClassOf");
 	}
 
 	resid set ( string v ) {
@@ -217,9 +182,8 @@ private:
 	wchar_t *t;
 	const wchar_t *s;
 	int pos;
-	term* dotterm;
 public:
-	nqparser() : t(new wchar_t[4096*4096]), dotterm(new term(Dot)) {}
+	nqparser() : t(new wchar_t[4096*4096]) {}
 	~nqparser() { delete[] t; }
 
 	bool readcurly(termset& ts) {
@@ -233,30 +197,22 @@ public:
 
 	term* readlist() {
 		if (*s != L'(') return (term*)0;
-		static int lastid = 0;
-		int lpos = 0, curid = lastid++;
-		auto id = [&]() {
-			std::wstringstream ss;
-			ss << L"_:list" << curid << '.' << lpos;
-			return ss.str();
-		};
+		++s; 
 		term *head = new term(Dot), *pn = head;
-		++s; while (iswspace(*s)) ++s;
 		while (*s != L')') {
-			while (iswspace(*s)) ++s;
+			SKIPWS;
 			if (*s == L')') break;
-			++lpos;
-			pn->o = readany(true);
-			pn->s = dotterm;
-			pn = pn->o;
-			while (iswspace(*s)) ++s;
-			if (*s == L')') pn->o = pn->s = 0;
+			if (!(pn->s = readany(true)))
+				EPARSE(L"couldn't read next list item: ");
+			SKIPWS;
+			pn = pn->o = new term(Dot);
 			if (*s == L'.') while (iswspace(*s++));
 			if (*s == L'}') EPARSE(L"expected { inside list: ");
 		};
 		do { ++s; } while (iswspace(*s));
 		return head;
 	}
+
 	term* readiri() {
 		while (iswspace(*s)) ++s;
 		if (*s == L'<') {
@@ -274,17 +230,10 @@ public:
 		if (lower(*iri) == L"false") return new term(dict[L"false"]);
 		return new term(dict[iri]);
 	}
-	term* readbnode() {
-		SKIPWS;
-		if (*s != L'_' || *(s+1) != L':') return 0;
-		PROCEED;
-		return new term(dict[wstrim(t)]);
-	}
 
-	term* readvar() {
-		SKIPWS; RETIFN(L'?'); PROCEED;
-		return new term(dict[wstrim(t)]);
-	}
+	term* readbnode() { SKIPWS; if (*s != L'_' || *(s+1) != L':') return 0; PROCEED; return new term(dict[wstrim(t)]); } 
+	term* readvar() { SKIPWS; RETIFN(L'?'); PROCEED; return new term(dict[wstrim(t)]); }
+
 	term* readlit() {
 		SKIPWS; RETIFN(L'\"');
 		++s;
@@ -371,6 +320,17 @@ termset readqdb ( std::wistream& is) {
 	return p((wchar_t*)ss.str().c_str());
 }
 
+string formatlist(const term* t, bool in = false) {
+	if (!t || !t->s || !t->o) return L"";
+	if (t->p != Dot)
+		throw 0;
+	std::wstringstream ss;
+	if (!in) ss << L'(';
+	ss << formatlist(t->o, true) << L' ' << format(t->s) << L' ';
+	if (!in) ss << L')';
+	return ss.str();
+}
+
 string format(const term* t, bool body) {
 	if (!t) return L"";
 	std::wstringstream ss;
@@ -381,7 +341,9 @@ string format(const term* t, bool body) {
 		ss << format(t, false);
 	}
 	else if (!t->p) return L"";
-	else ss << dict[t->p] << L'(' << format(t->s) << L',' << format(t->o) << L')';
+	else if (t->p != Dot)
+		ss << format(t->s) << L' ' << dict[t->p] << L' ' << format(t->o) << L'.';
+	else return formatlist(t);
 	return ss.str();
 }
 
