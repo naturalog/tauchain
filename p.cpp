@@ -44,6 +44,10 @@ public:
 #define TRACE(x)
 #endif
 
+term* mkterm();
+term* mkterm(termset& kb, termset& query);
+term* mkterm(resid _p, term* _s = 0, term* _o = 0);
+
 struct term {
 	term() : p(0), s(0), o(0) { throw 0; }
 	term(termset& kb, termset& query) : p(0), s(0), o(0) { addbody(query); trymatch(kb); }
@@ -107,7 +111,7 @@ struct term {
 		if (!s && !o) return this;
 		TRACE(if (!s || !o) throw 0);
 		term *a = s->evaluate(ss), *b = o->evaluate(ss);
-		return new term(p, a ? a : s, b ? b : o);
+		return mkterm(p, a ? a : s, b ? b : o);
 	}
 	bool unify_ep(const subs& ssub, term* _d, const subs& dsub) {
 		return (!(!p || !_d || !_d->p)) && ((p < 0) ? unifvar_ep(ssub, _d, dsub) : unif_ep(ssub, *_d, dsub, !s));
@@ -155,6 +159,10 @@ private:
 		return p == d.p && (pred || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
 	}
 };
+
+term* mkterm() { return new term; }
+term* mkterm(termset& kb, termset& query) { return new term(kb, query); }
+term* mkterm(resid _p, term* _s, term* _o) { return new term(_p, _s, _o); }
 
 term* term::v;
 
@@ -215,14 +223,14 @@ public:
 	term* readlist() {
 		if (*s != L'(') return (term*)0;
 		++s; 
-		term *head = new term(Dot), *pn = head;
+		term *head = mkterm(Dot), *pn = head;
 		while (*s != L')') {
 			SKIPWS;
 			if (*s == L')') break;
 			if (!(pn->s = readany(true)))
 				EPARSE(L"couldn't read next list item: ");
 			SKIPWS;
-			pn = pn->o = new term(Dot);
+			pn = pn->o = mkterm(Dot);
 			if (*s == L'.') while (iswspace(*s++));
 			if (*s == L'}') EPARSE(L"expected { inside list: ");
 		};
@@ -235,21 +243,21 @@ public:
 		if (*s == L'<') {
 			while (*++s != L'>') t[pos++] = *s;
 			t[pos] = 0; pos = 0; ++s;
-			return new term(dict[t]);
+			return mkterm(dict[t]);
 		}
 		if (*s == L'=' && *(s+1) == L'>') {
 			++++s;
-			return new term(implies);
+			return mkterm(implies);
 		}
 		PROCEED;
 		pstring iri = wstrim(t);
-		if (lower(*iri) == L"true") return new term(dict[L"true"]);
-		if (lower(*iri) == L"false") return new term(dict[L"false"]);
-		return new term(dict[iri]);
+		if (lower(*iri) == L"true") return mkterm(dict[L"true"]);
+		if (lower(*iri) == L"false") return mkterm(dict[L"false"]);
+		return mkterm(dict[iri]);
 	}
 
-	term* readbnode() { SKIPWS; if (*s != L'_' || *(s+1) != L':') return 0; PROCEED; return new term(dict[wstrim(t)]); } 
-	term* readvar() { SKIPWS; RETIFN(L'?'); PROCEED; return new term(dict[wstrim(t)]); }
+	term* readbnode() { SKIPWS; if (*s != L'_' || *(s+1) != L':') return 0; PROCEED; return mkterm(dict[wstrim(t)]); } 
+	term* readvar() { SKIPWS; RETIFN(L'?'); PROCEED; return mkterm(dict[wstrim(t)]); }
 
 	term* readlit() {
 		SKIPWS; RETIFN(L'\"');
@@ -269,7 +277,7 @@ public:
 		t[pos] = 0; pos = 0;
 		string t1 = t;
 		boost::replace_all(t1, L"\\\\", L"\\");
-		return new term(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
+		return mkterm(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
 	}
 
 	term* readany(bool lit = true) {
@@ -324,7 +332,7 @@ public:
 			if (subject)
 				for (preds_t::const_iterator x = preds.begin(); x != preds.end(); ++x)
 					for (termset::const_iterator o = x->second.begin(); o != x->second.end(); ++o)
-						addhead(heads, new term(x->first->p, subject, *o));
+						addhead(heads, mkterm(x->first->p, subject, *o));
 			else for (termset::const_iterator o = objs.begin(); o != objs.end(); ++o) addhead(heads, (*o)->addbody(subjs));
 			if (*s == L'}') { ++s; return heads; }
 			preds.clear();
@@ -482,7 +490,7 @@ int main() {
 	termset kb = readqdb(din);
 	termset query = readqdb(din);
 
-	term* q = new term(kb, query);
+	term* q = mkterm(kb, query);
 	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 		(*it)->trymatch(kb);
 	kb.push_back(q);
