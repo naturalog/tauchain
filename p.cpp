@@ -433,7 +433,7 @@ struct proof {
 		: rule(p.rule), b(p.b), prev(p.prev), creator(c), btterm(0) { }
 };
 
-sp_proof step(sp_proof _p, sp_proof lastp) {
+sp_proof step(sp_proof _p, sp_proof& lastp) {
 	size_t steps = 0;
 	if (!lastp) lastp = _p;
 //	_p->next = sp_proof();
