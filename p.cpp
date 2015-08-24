@@ -410,10 +410,11 @@ string format(const termset& t, int dep) {
 typedef std::list<std::pair<term*, subs> > ground;
 typedef std::map<resid, std::list<std::pair<term*, ground> > > evidence;
 
+typedef boost::shared_ptr<struct proof> sp_proof;
 struct proof {
 	term* rule;
 	term::bvecit b;
-	boost::shared_ptr<proof> prev, creator, next;
+	sp_proof prev, creator, next;
 	subs s;
 	ground g() const {
 		if (!creator) return ground();
@@ -426,20 +427,20 @@ struct proof {
 		return r;	
 	}
 	term* btterm;
-	proof(boost::shared_ptr<proof> c, term* r, term::bvecit* l, boost::shared_ptr<proof> p, const subs&  _s = subs())
+	proof(sp_proof c, term* r, term::bvecit* l, sp_proof p, const subs&  _s = subs())
 		: rule(r), b(l ? *l : rule->begin()), prev(p), creator(c), s(_s), btterm(0) { }
-	proof(boost::shared_ptr<proof> c, proof& p) 
+	proof(sp_proof c, proof& p) 
 		: rule(p.rule), b(p.b), prev(p.prev), creator(c), btterm(0) { }
 };
 
-void step(boost::shared_ptr<proof> _p) {
+sp_proof step(sp_proof _p, sp_proof lastp) {
 	size_t steps = 0;
-	boost::shared_ptr<proof> lastp = _p;
-	_p->next = boost::shared_ptr<proof>();
+	if (!lastp) lastp = _p;
+//	_p->next = sp_proof();
 	evidence e;
-	while (_p) {
+//	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
-		boost::shared_ptr<proof> ep = _p;
+		sp_proof ep = _p;
 		proof& p = *_p;
 		term* t = p.rule;
 		if (t) {
@@ -449,15 +450,16 @@ void step(boost::shared_ptr<proof> _p) {
 					t = 0;
 					break;
 				}
-			if (!t) continue;
+			if (!t) return p.next;
 		}
 		if (p.b != p.rule->end()) {
 			term::body_t& pb = **p.b;
 			while (pb(p.s)) {
-				boost::shared_ptr<proof> r(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
+				sp_proof r(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
 				lastp->next = r;
 				lastp = r;
 			}
+			return p.next;
 		}
 		else if (!p.prev) {
 			term* _t;
@@ -466,19 +468,21 @@ void step(boost::shared_ptr<proof> _p) {
 				e[_t->p].push_back(std::make_pair(_t, p.g()));
 				dout << "proved: " << format(_t) << std::endl;
 			}
+			return p.next;
 		}
-		else {
+//		else {
 			proof& ppr = *p.prev;
-			boost::shared_ptr<proof> r(new proof(_p, ppr));
+			sp_proof r(new proof(_p, ppr));
 			r->s = ppr.s;
 			p.rule->unify(p.s, (*r->b)->t, r->s);
 			++r->b;
-			_p = r;
-			continue;
-		}
-		_p = p.next;
-	}
+			step(r, lastp);
+			return p.next;
+//		}
+//		_p = p.next;
+//	}
 	dout << "steps: " << steps << std::endl;
+	return sp_proof();
 }
 int main() {
 	dict.init();
@@ -491,7 +495,8 @@ int main() {
 	kb.push_back(q);
 	dout << "kb:" << std::endl << format(kb) << std::endl;
 
-	step(boost::shared_ptr<proof>(new proof(boost::shared_ptr<proof>(), q, 0, boost::shared_ptr<proof>(), subs())));
+	sp_proof p = sp_proof(new proof(sp_proof(), q, 0, sp_proof(), subs())), lastp;
+	while ((p = step(p, lastp)));
 
 	return 0;
 }
