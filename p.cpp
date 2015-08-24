@@ -71,7 +71,7 @@ public:
 	term* operator[](resid r) const { return get(r); };
 	void clear() {
 		if (!sz) return;
-//		delete[] s;
+		free(s);
 		s = 0;
 		sz = 0;
 	}
