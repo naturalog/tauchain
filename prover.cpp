@@ -123,7 +123,7 @@ void prover::get_dotstyle_list(termid id, std::list<nodeid> &list) {
 }
 
 void* testfunc(void* p) {
-	derr <<std::endl<< "***** Test func called ****** " << p << std::endl;
+	derr <<std::endl<< "***** Test func calleued ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());
 //	return 0;
 }
@@ -131,6 +131,7 @@ void* testfunc(void* p) {
 
 
 int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
+	//TODO: correctly, so that subqery proof trace not opaque?
 	int r = -1;
 	//rdfs:Resource(?x)
 	if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)
@@ -172,7 +173,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		r = 0;
 		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		{
-			prover copy(*this);//TODO: correctly, so that subqery proof trace not opaque?
+			prover copy(*this);
 			//TRACE(dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;)
 			auto ps = copy.askt(copy.tmpvar(), rdfsdomain, t1);
 			for (termid p: ps) {
@@ -593,7 +594,7 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	}
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = mk_qlist();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
-	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
+	//if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
 bool prover::consistency(const qdb& quads) {

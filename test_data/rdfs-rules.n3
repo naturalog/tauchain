@@ -33,7 +33,6 @@ rdf:nil a rdf:List.
 
 ### inference rules for RDF(S)
 
-#done
 
 #{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 #{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
@@ -51,11 +50,12 @@ rdf:nil a rdf:List.
 #{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
 #{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
 
-#todo
 
 #{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
 #{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
 #{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
+
+
 
 
 
