@@ -372,17 +372,20 @@ string format(const term* t, bool body) {
 
 string format(const termset& t, int dep) {
 	std::wstringstream ss;
-	for (termset::const_iterator x = t.begin(); x != t.end(); ++x) {
-		if (!*x) continue;
+	for (termset::const_iterator _x = t.begin(); _x != t.end(); ++_x) {
+		term* x = *_x;
+		if (!x || !x->p) continue;
 		IDENT;
-		ss << format(*x, true);
-		if ((*x)->body.size()) 
+		ss << format(x, true);
+		if (x->body.size()) 
 			ss << L" implied by: ";
 		else
 			ss <<  L" a fact.";
 		ss << std::endl;
-		for (term::bveccit y = (*x)->begin(); y != (*x)->end(); ++y) {
+		for (term::bveccit y = x->begin(); y != x->end(); ++y) {
 			IDENT;
+			const term::body_t* bt = *y;
+			dout << format(bt->t) << std::endl;
 			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
 			for (std::vector<term::body_t::match*>::iterator z = (*y)->begin(); z != (*y)->end(); ++z) {
 				IDENT;
