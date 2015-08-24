@@ -32,64 +32,50 @@ bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size
 resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;
 
 struct term {
+	term();
+	resid p;
+	term *s, *o;
+	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
+	~term() { if (body) delete[] body; }
 	struct body_t {
+		friend term;
 		term* t;
-		struct match {
-			termid t;
-			subs s;
-		}* matches = 0;
-		match* begin() { return matches; }
-		match* end() { return matches ? &matches[nmatches] : 0; }
+		size_t nmatches = 0;
+		struct match 	{ termid t; subs s; }* matches = 0;
+		~body_t() 	{ if (matches) delete[] matches; }
+		match* begin() 	{ return matches; }
+		match* end() 	{ return matches ? &matches[nmatches] : 0; }
+	private:
 		void addmatch(termid t, const subs& s) {
-			if (!matches) {
-				*(matches = new match[1]) = { t, s };
-				return;
-			}
+			if (!matches) { *(matches = new match[1]) = { t, s }; return; }
 			match* m = new match[1+nmatches];
 			memcpy(m, matches, sizeof(match*)*nmatches);
 			delete[] matches;
 			matches = m;
 			matches[nmatches++] = { t, s };
 		}
-		size_t nmatches = 0;
-		~body_t() { if (matches) delete[] matches; }
 	};
-	body_t* begin() { return body; }
-	body_t* end() { return body ? &body[nbody] : 0; }
-	const body_t* begin() const { return body; }
-	const body_t* end() const { return body ? &body[nbody] : 0; }
-	term();
-	resid p;//, s, o;
-	term *s, *o;
-	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
-	~term() { if (body) delete[] body; }
-	bool state = false;
 	body_t *it = 0;
 	subs ds;
+	body_t* begin() 		{ return body; }
+	body_t* end() 			{ return body ? &body[nbody] : 0; }
+	const body_t* begin() const 	{ return body; }
+	const body_t* end() const 	{ return body ? &body[nbody] : 0; }
+	size_t szbody() const 		{ return nbody; }
+	const body_t& getbody(int n) const { return body[n]; }
+
 	bool match(const subs& s) {
-		if (!state) {
-			it = body;
-			state = true;
-		} else {
-			++it;
-			ds.clear();
-		}
+		if (!state) { it = body; state = true; }
+		else { ++it; ds.clear(); }
 		while (it) {
-			if (it && unify(s, it->t, ds))
-				return state = true;
-			else {
-				ds.clear();
-				++it;
-				continue;
-			}
+			if (it && unify(s, it->t, ds)) return state = true;
+			else { ds.clear(); ++it; continue; }
 		}
 		return state = false;
 	}
+
 	term* addbody(term* t) {
-		if (!body) {
-			(body = new body_t[++nbody])->t = t;
-			return this;
-		}
+		if (!body) { (body = new body_t[++nbody])->t = t; return this; }
 		body_t *b = new body_t[1+nbody];
 		memcpy(b, body, sizeof(body_t*)*nbody);
 		delete[] body;
@@ -97,13 +83,7 @@ struct term {
 		body[nbody++].t = t;
 		return this;
 	}
-	size_t szbody() const { return nbody; }
-	const body_t& getbody(int n) const { return body[n]; }
-	void trymatch(uint b, term* t) {
-		static subs d;
-		if (body[b].t->unify(subs(), t, d)) body[b].addmatch(t, d);
-		d.clear();
-	}
+
 	void trymatch(termset& t) { for (uint b = 0; b < nbody; ++b) for (termid x : t) trymatch(b, x); }
 
 	termid evaluate(const subs& ss) {
@@ -114,7 +94,20 @@ struct term {
 		termid a = s->evaluate(ss), b = o->evaluate(ss);
 		return new term(p, a ? a : s, b ? b : o);
 	}
+	bool unify_ep(const subs& ssub, term* _d, const subs& dsub) {
+		return !(!p || !_d || !_d->p) && (p < 0) ? unifvar_ep(ssub, _d, dsub) : unif_ep(ssub, *_d, dsub, !s);
+	}
+	bool unify(const subs& ssub, term* _d, subs& dsub) {
+		return !(!p || !_d || !_d->p) && (p < 0) ? unifvar(ssub, _d, dsub) : unif(ssub, *_d, dsub, !s);
+	}
+private:
 	static termid v; // temp var for unifiers
+
+	void trymatch(uint b, term* t) {
+		static subs d;
+		if (body[b].t->unify(subs(), t, d)) body[b].addmatch(t, d);
+		d.clear();
+	}
 
 	bool unifvar(const subs& ssub, term* _d, subs& dsub) {
 		if (!_d) return false;
@@ -128,54 +121,25 @@ struct term {
 		return _d && ((v = evaluate(ssub)) ? v->unify_ep(ssub, _d, dsub) : true);
 	}
 
-	bool unif(const subs& ssub, term& d, subs& dsub) {
-		if (!d.s) return false;
+	bool unif(const subs& ssub, term& d, subs& dsub, bool pred) {
+		if (!d.p) return false;
 		if (d.p < 0) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
 			dsub.emplace(d.p, evaluate(ssub));
 			return true;
 		}
-		return p == d.p && s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub);
+		return p == d.p && (pred || s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) );
 	}
 
-	bool unifpred(const subs& ssub, term& d, subs& dsub) {
-		if (d.s) return false;
-		if (d.p < 0) {
-			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-			dsub.emplace(d.p, evaluate(ssub));
-			return true;
-		}
-		return p == d.p;
-	}
-
-	bool unif_ep(const subs& ssub, term& d, const subs& dsub) {
-		if (!d.s) return false;
+	bool unif_ep(const subs& ssub, term& d, const subs& dsub, bool pred) {
+		if (!d.p) return false;
 		if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
-		return p == d.p && s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub);
+		return p == d.p && (pred || s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub));
 	}
 
-	bool unifpred_ep(const subs& ssub, term& d, const subs& dsub) {
-		if (!p /* || d.s*/) return false;
-		if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
-		return p == d.p;
-	}
-	bool unify_ep(const subs& ssub, term* _d, const subs& dsub) {
-		if (!p || !_d || !_d->p) return false;
-		if (p < 0) return unifvar_ep(ssub, _d, dsub);
-		if (!s) return unifpred_ep(ssub, *_d, dsub);
-		return unif_ep(ssub, *_d, dsub);
-	}
-	bool unify(const subs& ssub, term* _d, subs& dsub) {
-		bool r;
-		if (!p || !_d || !_d->p) return false;
-		if (p < 0) r = unifvar(ssub, _d, dsub);
-		else if (!s) r = unifpred(ssub, *_d, dsub);
-		else r = unif(ssub, *_d, dsub);
-		return r;
-	}
-private:
 	body_t *body = 0;
 	size_t nbody = 0;
+	bool state = false;
 };
 
 term* term::v;
@@ -409,6 +373,13 @@ string format(const termset& t) {
 
 int main() {
 	dict.init();
-	dout << format(readqdb(din)) << endl;
+	termset kb = readqdb(din);
+	dout << format(kb) << endl;
+	termset query = readqdb(din);
+	dout << format(query) << endl;
+	for (term* t : kb) t->trymatch(kb);
+	for (term* t : query) t->trymatch(kb);
+	subs s;
+	for (term* t : query) while (t->match(s)) dout << format(t->it->t) << endl;
 	return 0;
 }
