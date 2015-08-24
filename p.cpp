@@ -45,11 +45,12 @@ public:
 };
 
 struct term {
-	term() : p(0), s(0), o(0) {}
-	term(termset& kb, termset& query)  : p(0), s(0), o(0) { addbody(query); trymatch(kb); }
+	term() : p(0), s(0), o(0) { throw 0; }
+	term(termset& kb, termset& query) : p(0), s(0), o(0) { addbody(query); trymatch(kb); }
+	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) { if (!p) throw 0;  }
+
 	resid p;
 	term *s, *o;
-	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) {}
 	struct body_t {
 		friend term;
 		term* t;
@@ -89,7 +90,7 @@ struct term {
 //	size_t szbody() const 		{ return body.size(); }
 //	const body_t& getbody(int n) const { return *body[n]; }
 
-	term* addbody(const termset& t) { for (termset::const_iterator it = t.begin(); it != t.end(); ++it) addbody(*it); }
+	term* addbody(const termset& t) { for (termset::const_iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
 	term* addbody(term* t) {
 		dout << "added body " << format(t) << " to " << format(this) << std::endl;
 		body.push_back(new body_t(t));
@@ -277,13 +278,20 @@ public:
 		return ((pn = readbnode()) || (pn = readvar()) || (lit && (pn = readlit())) || (pn = readlist()) || (pn = readiri()) ) ? pn : 0;
 	}
 
+	void addhead(termset& ts, term* t) {
+		if (!t) throw 0;
+		if (!t->p) throw 0;
+		if (!t->s != !t->p) throw 0;
+		ts.push_back(t);
+	}
+
 	termset operator()(const wchar_t* _s) {
 		typedef std::list<std::pair<term*, termset> > preds_t;
 		preds_t preds;
 		s = _s;
 //		string graph;
 		term *subject, *pn;
-		termset subjs, ts, heads, objs;
+		termset subjs, objs, heads;
 		pos = 0;
 		preds_t::reverse_iterator pos1 = preds.rbegin();
 
@@ -315,12 +323,14 @@ public:
 			SKIPWS; while (*s == '.') ++s; SKIPWS;
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
 			if (subject)
-				for (preds_t::iterator x = preds.begin(); x != preds.end(); ++x)
-					for (termset::iterator o = x->second.begin(); o != x->second.end(); ++o)
-						heads.push_back(new term(x->first->p, subject, *o));
-			else for (termset::iterator o = objs.begin(); o != objs.end(); ++o) heads.push_back((*o)->addbody(subjs));
+				for (preds_t::const_iterator x = preds.begin(); x != preds.end(); ++x)
+					for (termset::const_iterator o = x->second.begin(); o != x->second.end(); ++o)
+						addhead(heads, new term(x->first->p, subject, *o));
+			else for (termset::const_iterator o = objs.begin(); o != objs.end(); ++o) addhead(heads, (*o)->addbody(subjs));
 			if (*s == L'}') { ++s; return heads; }
 			preds.clear();
+			subjs.clear();
+			objs.clear();
 		}
 		return heads;
 	}
