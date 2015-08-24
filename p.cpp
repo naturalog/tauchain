@@ -441,10 +441,11 @@ void step(boost::shared_ptr<proof> _p) {
 		proof& p = *_p;
 		term* t = p.rule;
 		if (t) {
-			while (t && (ep = ep->prev))
+			while ((ep = ep->prev))
 				if (ep->rule == p.rule && ep->rule->unify_ep(ep->s, t, p.s)) {
 					_p = _p->next;
 					t = 0;
+					break;
 				}
 			if (!t) continue;
 		}
@@ -467,11 +468,11 @@ void step(boost::shared_ptr<proof> _p) {
 		else {
 			proof& ppr = *p.prev;
 			boost::shared_ptr<proof> r(new proof(_p, ppr));
-			term* rl = p.rule;
 			r->s = ppr.s;
-			rl->unify(p.s, (*r->b)->t, r->s);
+			p.rule->unify(p.s, (*r->b)->t, r->s);
 			++r->b;
-			step(r);
+			_p = r;
+			continue;
 		}
 		_p = p.next;
 	}
@@ -483,7 +484,8 @@ int main() {
 	termset query = readqdb(din);
 
 	term* q = new term(kb, query);
-
+	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
+		(*it)->trymatch(kb);
 	kb.push_back(q);
 	dout << "kb:" << std::endl << format(kb) << std::endl;
 
