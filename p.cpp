@@ -10,9 +10,9 @@
 #include <stdexcept>
 #include <memory>
 #include <list>
-//#include <boost/algorithm/string.hpp>
-#include <boost/shared_ptr.hpp>
+//#include <boost/shared_ptr.hpp>
 #include <ctime>
+#include <algorithm>
 
 template<typename T>
 class vector {
@@ -95,11 +95,8 @@ typedef int resid;
 struct term;
 typedef map<resid, term*> subs;
 typedef vector<term*> termset;
-//typedef boost::shared_ptr<string> pstring;
 string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
-//pstring pstr ( const string& s ) { return pstring(new string(s)); }
 string wstrim(string s) { trim(s); return s; }
-//pstring wstrim(const wchar_t* s) { return wstrim(string(s)); }
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
@@ -483,20 +480,42 @@ string format(const termset& t, int dep) {
 typedef std::vector<mapelem<term*, subs> > ground;
 typedef map<resid, std::vector<mapelem<term*, ground> > > evidence;
 
-typedef boost::shared_ptr<struct proof> sp_proof;
+template<typename T>
+struct sp {
+	T* p;
+	struct ref { size_t r; ref() : r(0) {} void inc() { ++r; } size_t dec() { return --r; } } *r;
+	sp() : p(0) 				{ (r = new ref)->inc(); }
+	sp(T* v) : p(v) 			{ (r = new ref)->inc(); }
+	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ r->inc(); }
+
+	~sp() { if (!r->dec()) delete p , delete r; }
+
+	T& operator* ()  { return *p; } 
+	T* operator-> () { return p; }
+    
+	sp<T>& operator=(const sp<T>& s) {
+		if (this == &s) return *this;
+		if(!r->dec()) delete p , delete r;
+		p = s.p;
+		(r = s.r)->inc();
+		return *this;
+	}
+};
+
+typedef /*boost::shared_ptr<struct proof>*/sp<struct proof> sp_proof;
 struct proof {
 	term* rule;
 	term::bvec::iterator b;
 	sp_proof prev, creator, next;
 	subs s;
 	ground g() const {
-		if (!creator) return ground();
-		ground r = creator->g();
+		if (!creator.p) return ground();
+		ground r = creator.p->g();
 		termset empty;
 		if (btterm) r.push_back(mapelem<term*, subs>(btterm, subs()));
-		else if (creator->b != creator->rule->body.end()) {
+		else if (creator.p->b != creator.p->rule->body.end()) {
 			if (!rule->body.size()) r.push_back(mapelem<term*, subs>(rule, subs()));
-		} else if (creator->rule->body.size()) r.push_back(mapelem<term*, subs>(creator->rule, creator->s));
+		} else if (creator.p->rule->body.size()) r.push_back(mapelem<term*, subs>(creator.p->rule, creator.p->s));
 		return r;	
 	}
 	term* btterm;
@@ -508,15 +527,15 @@ struct proof {
 size_t steps = 0;
 
 sp_proof step(sp_proof _p, sp_proof& lastp) {
-	if (!lastp) lastp = _p;
+	if (!lastp.p) lastp = _p;
 	evidence e;
-	while (_p) {
+	while (_p.p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
 		sp_proof ep = _p;
-		proof& p = *_p;
+		proof& p = *_p.p;
 		term* t = p.rule;
 		if (t) {
-			while ((ep = ep->prev))
+			while ((ep = ep.p->prev).p)
 				if (ep->rule == p.rule && ep->rule->unify_ep(ep->s, t, p.s)) {
 					_p = _p->next;
 					t = 0;
@@ -528,7 +547,7 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 			term::body_t& pb = **p.b;
 			while (pb(p.s)) lastp = lastp->next = sp_proof(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
 		}
-		else if (!p.prev) {
+		else if (!p.prev.p) {
 			#ifndef NOTRACE
 			term* _t;
 			for (term::bvec::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
