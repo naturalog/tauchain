@@ -128,23 +128,33 @@ struct term {
 		term* t;
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
-		struct match { match(term* _t) : t(_t) {} term* t; };
+		struct match { match(term* _t) : t(_t) {} term* t; }; // hold rule's head that can match this body item
 		typedef vector<match*> mvec;
 		mvec matches;
 		mvec::iterator it;
 		subs ds;
+		// a small coroutine that returns all indexed head that match also given a subst.
+		// this process is what happens during inference rather index.
 		bool operator()(const subs& s) {
 			if (!state) { it = matches.begin(); state = true; }
 			else { ++it; ds.clear(); }
 			while (it != matches.end()) {
 				TRACE(dout << "matching " << format(t, true) << " with " << format((*it)->t, true) << "... ");
-				if (it != matches.end() && t->unify(s, (*it)->t, ds)) { TRACE(dout << " passed" << std::endl); return state = true; }
-				else { ds.clear(); ++it; TRACE(dout << " failed" << std::endl); continue; }
+
+				if (it != matches.end() && t->unify(s, (*it)->t, ds)) { 
+					TRACE(dout << " passed" << std::endl); 
+					return state = true; 
+				}
+				else { 
+					ds.clear(), ++it; 
+					TRACE(dout << " failed" << std::endl); 
+					continue; 
+				}
 			}
 			return state = false;
 		}
 	private:
-		void addmatch(term* x) {
+		void addmatch(term* x) { // indexer: add matching rule's head
 			TRACE(dout << "added match " << format(x) << " to " << format(t) << std::endl);
 			matches.push_back(new match(x));
 		}
@@ -152,6 +162,7 @@ struct term {
 	typedef vector<body_t*> bvec;
 	bvec body;
 
+	// add term(s) to body
 	term* addbody(const termset& t) { for (termset::iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
 	term* addbody(term* t) {
 		TRACE(dout << "added body " << format(t) << " to " << format(this) << std::endl);
@@ -159,9 +170,10 @@ struct term {
 		return this;
 	}
 
-	void trymatch(termset& t) {
+	// indexer: given rule's heads, see which can match to each body
+	void trymatch(termset& heads) {
 		for (bvec::iterator b = body.begin(); b != body.end(); ++b)
-			for (termset::iterator it = t.begin(); it != t.end(); ++it)
+			for (termset::iterator it = heads.begin(); it != heads.end(); ++it)
 				trymatch(**b, *it);
 	}
 
@@ -181,9 +193,12 @@ struct term {
 private:
 	static term* v; // temp var for unifiers
 
+	// indexer: match a term (head) to a body's term by trying to unify them.
+	// if they cannot unify without subs, then they will not be able to
+	// unify also during inference.
 	void trymatch(body_t& b, term* t) {
-		if (t == this) return; 
-	//	b.addmatch(t, subs()); return; // unremark to disable indexing
+		if (t == this) return;
+		//b.addmatch(t, subs()); return; // unremark to disable indexing
 		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
 		static subs d;
 		if (b.t->unify(subs(), t, d)) b.addmatch(t);
@@ -398,7 +413,7 @@ public:
 	}
 };
 
-termset readqdb ( std::wistream& is) {
+termset readterms ( std::wistream& is) {
 	string s, c;
 	nqparser p;
 	std::wstringstream ss;
@@ -477,7 +492,7 @@ typedef std::list<mapelem<term*, subs> > ground;
 typedef map<resid, std::list<mapelem<term*, ground> > > evidence;
 
 template<typename T>
-struct sp {
+struct sp { // smart pointer
 	T* p;
 	struct ref { size_t r; ref() : r(0) {} void inc() { ++r; } size_t dec() { return --r; } } *r;
 	sp() : p(0) 				{ (r = new ref)->inc(); }
@@ -498,39 +513,44 @@ struct sp {
 	}
 };
 
-typedef /*boost::shared_ptr<struct proof>*/sp<struct proof> sp_proof;
-struct proof {
+typedef sp<struct frame> sp_frame;
+struct frame {
 	term* rule;
 	term::bvec::iterator b;
-	sp_proof prev, creator, next;
+	sp_frame prev, creator, next;
 	subs s;
-	ground g() const {
+	ground g() const { // calculate the ground
 		if (!creator.p) return ground();
 		ground r = creator.p->g();
 		termset empty;
-		if (btterm) r.push_back(mapelem<term*, subs>(btterm, subs()));
-		else if (creator.p->b != creator.p->rule->body.end()) {
-			if (!rule->body.size()) r.push_back(mapelem<term*, subs>(rule, subs()));
-		} else if (creator.p->rule->body.size()) r.push_back(mapelem<term*, subs>(creator.p->rule, creator.p->s));
+		frame& cp = *creator.p;
+		typedef mapelem<term*, subs> elem;
+		if (btterm)
+			r.push_back(elem(btterm, subs()));
+		else if (cp.b != cp.rule->body.end()) {
+			if (!rule->body.size())
+				r.push_back(elem(rule, subs()));
+		} else if (cp.rule->body.size())
+			r.push_back(elem(creator.p->rule, creator.p->s));
 		return r;	
 	}
 	term* btterm;
-	proof(sp_proof c, term* r, term::bvec::iterator* l, sp_proof p, const subs&  _s = subs())
+	frame(sp_frame c, term* r, term::bvec::iterator* l, sp_frame p, const subs&  _s = subs())
 		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), s(_s), btterm(0) { }
-	proof(sp_proof c, proof& p) 
+	frame(sp_frame c, frame& p) 
 		: rule(p.rule), b(p.b), prev(p.prev), creator(c), btterm(0) { }
 };
 size_t steps = 0;
 
-sp_proof step(sp_proof _p, sp_proof& lastp) {
+sp_frame prove(sp_frame _p, sp_frame& lastp) {
 	if (!lastp.p) lastp = _p;
 	evidence e;
 	while (_p.p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
-		sp_proof ep = _p;
-		proof& p = *_p.p;
+		sp_frame ep = _p;
+		frame& p = *_p.p;
 		term* t = p.rule;
-		if (t) {
+		if (t) { // check for euler path
 			while ((ep = ep.p->prev).p)
 				if (ep->rule == p.rule && ep->rule->unify_ep(ep->s, t, p.s)) {
 					_p = _p->next;
@@ -541,11 +561,13 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 		}
 		if (p.b != p.rule->body.end()) {
 			term::body_t& pb = **p.b;
-			while (pb(p.s)) lastp = lastp->next = sp_proof(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
+			// ask the body item's term to try to match to its indexed heads
+			while (pb(p.s))
+				lastp = lastp->next = sp_frame(new frame(_p, (*pb.it)->t, 0, _p, pb.ds));
 		}
 		else if (!p.prev.p) {
 			#ifndef NOTRACE
-			term* _t;
+			term* _t; // push evidence
 			for (term::bvec::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
 				if (!(_t = ((*r)->t->evaluate(p.s)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
@@ -553,40 +575,39 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 			}
 			#endif
 		}
-		else {
-			proof& ppr = *p.prev;
-			sp_proof r(new proof(_p, ppr));
+		else { // if body is done, go up the tree
+			frame& ppr = *p.prev;
+			sp_frame r(new frame(_p, ppr));
 			r->s = ppr.s;
 			p.rule->unify(p.s, (*r->b)->t, r->s);
 			++r->b;
-			step(r, lastp);
+			prove(r, lastp);
 		}
 		_p = p.next;
 	}
 //	dout << "steps: " << steps << std::endl;
-	return sp_proof();
+	return sp_frame();
 }
 
 int main() {
 	dict.init();
-	termset kb = readqdb(din);
-	termset query = readqdb(din);
+	termset kb = readterms(din);
+	termset query = readterms(din);
 
+	// create the query term and index it wrt the kb
 	term* q = mkterm(kb, query);
+	// now index the kb itself wrt itself
 	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 		(*it)->trymatch(kb);
 	kb.push_back(q);
 	TRACE(dout << "kb:" << std::endl << format(kb) << std::endl);
 
-	sp_proof p = sp_proof(new proof(sp_proof(), q, 0, sp_proof(), subs())), lastp;
-//	while ((p = step(p, lastp)));
-	using namespace std;
-	clock_t begin = clock();
-	step(p,lastp);
-	clock_t end = clock();
- 	double ms = 1000. * double(end - begin) / CLOCKS_PER_SEC;
-	dout << "steps: " << steps << std::endl;
-	dout << "elapsed: " << ms << "ms" << std::endl;
+	// create the initial frame with the query term as the frame's rule
+	sp_frame p(new frame(sp_frame(), q, 0, sp_frame(), subs())), lastp;
+	clock_t begin = clock(), end;
+	prove(p, lastp); // the main loop
+	end = clock();
+	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << std::endl;
 
 	return 0;
 }
