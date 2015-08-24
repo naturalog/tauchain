@@ -10,14 +10,9 @@
 #include <memory>
 #include <boost/algorithm/string.hpp>
 #include <boost/shared_ptr.hpp>
+#include <ctime>
+
 using namespace boost::algorithm;
-/*using std::std::vector;
-using std::std::map;
-using std::wstringstream;
-using std::std::endl;
-using boost::shared_ptr;*/
-//using namespace std;
-//using namespace boost;
 std::wistream &din = std::wcin;
 std::wostream &dout = std::wcout;
 typedef std::wstring string;
@@ -34,13 +29,12 @@ string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;
+
 class wruntime_error : public std::exception {
 	string msg;
 public:
 	wruntime_error(string s) : msg(s){}
-	virtual const char* what() const _GLIBCXX_USE_NOEXCEPT {
-		return std::string(msg.begin(), msg.end()).c_str();
-	}
+	virtual const char* what() const _GLIBCXX_USE_NOEXCEPT { return std::string(msg.begin(), msg.end()).c_str(); }
 	virtual ~wruntime_error() _GLIBCXX_USE_NOEXCEPT {}
 };
 
@@ -93,8 +87,6 @@ struct term {
 	bvecit end() 		{ return body.end(); }
 	bveccit begin() const 	{ return body.begin(); }
 	bveccit end() const 	{ return body.end(); }
-//	size_t szbody() const 		{ return body.size(); }
-//	const body_t& getbody(int n) const { return *body[n]; }
 
 	term* addbody(const termset& t) { for (termset::const_iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
 	term* addbody(term* t) {
@@ -459,12 +451,7 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 		}
 		if (p.b != p.rule->end()) {
 			term::body_t& pb = **p.b;
-			while (pb(p.s)) {
-				sp_proof r(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
-				lastp->next = r;
-				lastp = r;
-			}
-			_p = p.next;
+			while (pb(p.s)) lastp = lastp->next = sp_proof(new proof(_p, (*pb.it)->t, 0, _p, pb.ds));
 		}
 		else if (!p.prev) {
 			#ifndef NOTRACE
@@ -475,7 +462,6 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 				dout << "proved: " << format(_t) << std::endl;
 			}
 			#endif
-			_p = p.next;
 		}
 		else {
 			proof& ppr = *p.prev;
@@ -484,14 +470,13 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 			p.rule->unify(p.s, (*r->b)->t, r->s);
 			++r->b;
 			step(r, lastp);
-			_p = p.next;
 		}
-//		_p = p.next;
+		_p = p.next;
 	}
 //	dout << "steps: " << steps << std::endl;
 	return sp_proof();
 }
-#include <ctime>
+
 int main() {
 	dict.init();
 	termset kb = readqdb(din);
