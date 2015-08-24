@@ -84,7 +84,7 @@ struct term {
 		return this;
 	}
 
-	void trymatch(termset& t) { for (uint b = 0; b < nbody; ++b) for (termid x : t) trymatch(b, x); }
+	void trymatch(termset& t) { for (auto& b : *this) for (term* x : t) trymatch(b, x); }
 
 	termid evaluate(const subs& ss) {
 		static subs::const_iterator it;
@@ -103,9 +103,9 @@ struct term {
 private:
 	static termid v; // temp var for unifiers
 
-	void trymatch(uint b, term* t) {
+	void trymatch(body_t& b, term* t) {
 		static subs d;
-		if (body[b].t->unify(subs(), t, d)) body[b].addmatch(t, d);
+		if (b.t->unify(subs(), t, d)) b.addmatch(t, d);
 		d.clear();
 	}
 
@@ -379,7 +379,80 @@ int main() {
 	dout << format(query) << endl;
 	for (term* t : kb) t->trymatch(kb);
 	for (term* t : query) t->trymatch(kb);
-	subs s;
-	for (term* t : query) while (t->match(s)) dout << format(t->it->t) << endl;
+
+	typedef std::list<std::pair<termid, subs>> ground;
+	typedef std::map<resid, std::list<std::pair<termid, ground>>> evidence;
+
+	struct proof {
+		term* rule = 0;
+		term::body_t* b;
+		shared_ptr<proof> prev = 0, creator = 0, next = 0;
+		subs s;
+		ground g() const {
+			if (!creator) return ground();
+			ground r = creator->g();
+			termset empty;
+			if (btterm) r.emplace_back(btterm, subs());
+			else if (creator->b != creator->rule->end()) {
+				if (!rule->szbody()) r.emplace_back(rule, subs());
+			} else if (creator->rule->szbody()) r.emplace_back(creator->rule, creator->s);
+			return r;	
+		}
+		term* btterm = 0;
+		proof(shared_ptr<proof> c, term* r, term::body_t* l = 0, shared_ptr<proof> p = 0, const subs&  _s = subs())
+			: rule(r), b(l ? l : rule->begin()), prev(p), creator(c), s(_s) { }
+		proof(shared_ptr<proof> c, proof& p) 
+			: proof(c, p.rule, p.b, p.prev) { }
+	};
+	auto euler_path = [](shared_ptr<proof> _p) {
+		auto ep = _p;
+		proof& p = *_p;
+		termid t = p.rule;
+		if (!t) return false;
+		term& rt = *t;
+		while ((ep = ep->prev))
+			if (ep->rule == p.rule && ep->rule->unify_ep(ep->s, &rt, p.s))
+				return true;
+		return false;
+	};
+
+	std::function<void(shared_ptr<proof>)> step = [step, euler_path](shared_ptr<proof> _p) {
+		size_t steps = 0;
+		shared_ptr<proof> lastp = _p;
+		evidence e;
+		while (!_p) {
+			if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
+			if (euler_path(_p)) return _p->next;
+			const proof& p = *_p;
+			if (p.b != p.rule->end()) {
+				while (p.b->t->match(p.s)) {
+					auto r = make_shared<proof>(_p, p.b->t->it->t, nullptr, _p, p.b->t->ds);
+					if (lastp) lastp->next = r;
+					lastp = r;
+				}
+			}
+			else if (!p.prev) {
+				termid t;
+				for (auto r : *p.rule) {
+					if (!(t = (r.t->evaluate(p.s)))) continue;
+					e[t->p].emplace_back(t, p.g());
+					dout << "proved: " << format(t) << endl;
+				}
+			}
+			else {
+				proof& ppr = *p.prev;
+				shared_ptr<proof> r = make_shared<proof>(_p, ppr);
+				auto rl = p.rule;
+				r->s = ppr.s;
+				rl->unify(p.s, r->b->t, r->s);
+				++r->b;
+				step(r);
+			}
+			_p = p.next;
+		}
+	};
+	for (term* t : query) step(make_shared<proof>(nullptr, t));
+//	subs s;
+//	for (term* t : query) while (t->match(s)) dout << format(t->it->t) << endl;
 	return 0;
 }
