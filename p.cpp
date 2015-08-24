@@ -368,10 +368,16 @@ string format(const term* t, bool body) {
 
 string format(const termset& t) {
 	std::wstringstream ss;
-	for (auto x : t) ss << format(x, true) << endl;
+	for (auto x : t) {
+		ss << format(x, true) << L":" << endl;
+		for (auto y : *x) {
+			ss << L"\t" << format(y.t, true) << L":" << endl;
+			for (auto z : y)
+				ss << L"\t\t" << format(z.t, true) << L":" << endl;
+		}
+	}
 	return ss.str();
 }
-
 
 typedef std::list<std::pair<termid, subs>> ground;
 typedef std::map<resid, std::list<std::pair<termid, ground>>> evidence;
@@ -445,11 +451,14 @@ void step(shared_ptr<proof> _p) {
 int main() {
 	dict.init();
 	termset kb = readqdb(din);
-	dout <<"kb: " <<endl<< format(kb) << endl;
+//	dout <<"kb: " <<endl<< format(kb) << endl;
 	termset query = readqdb(din);
-	dout <<"query: " <<endl<< format(query) << endl;
+//	dout <<"query: " <<endl<< format(query) << endl;
 	term* q = new term(0);
 	q->addbody(query);
+	query.clear();
+	query.push_back(q);
+	dout << format(query) << endl;
 	for (term* t : kb) t->trymatch(kb);
 	q->trymatch(kb);
 	step(make_shared<proof>(nullptr, q));
