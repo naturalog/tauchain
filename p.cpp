@@ -1,4 +1,4 @@
-//#include <cstdlib>
+#include <cstdlib>
 #include <vector>
 #include <map>
 #include <iostream>
@@ -19,7 +19,8 @@ typedef std::wstring string;
 struct term;
 typedef std::vector<term*> termset;
 typedef int resid;
-typedef std::map<resid, term*> subs;
+//typedef std::map<resid, term*> subs;
+struct subs;
 typedef boost::shared_ptr<string> pstring;
 string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
 pstring pstr ( const string& s ) { return pstring(new string(s)); }
@@ -47,6 +48,45 @@ public:
 term* mkterm();
 term* mkterm(termset& kb, termset& query);
 term* mkterm(resid _p, term* _s = 0, term* _o = 0);
+
+struct subs {
+	struct sub { resid r; term* t; sub(resid _r = 0, term* _t = 0) : r(_r), t(_t) {}  } *s;
+	size_t sz;
+	subs() : s(0), sz(0) {}
+	subs(const subs& _s) : s(0), sz(0) { copyfrom(_s); }
+	subs& operator=(const subs& _s) { copyfrom(_s); return *this; }
+	void set(resid r, term* t) {
+//		dout << "before set: " << format() << std::endl;
+		if (!(s = (sub*)realloc(s, sizeof(sub) * ++sz))) throw std::runtime_error("Allocation failed.");
+		s[sz - 1].r = r;
+		s[sz - 1].t = t;
+		qsort(s, sz, sizeof(sub), compare);
+//		dout << "after set: " << format() << std::endl;
+	}
+	term* get(resid r) const {
+		sub k(r);
+		sub* z = (sub*)bsearch(&k, s, sz, sizeof(sub), compare);
+		if (!z) return 0;
+		return z->t;
+	}
+	term* operator[](resid r) const { return get(r); };
+	void clear() {
+		if (!sz) return;
+//		delete[] s;
+		s = 0;
+		sz = 0;
+	}
+	string format();
+	~subs() { clear(); }
+private:
+	static int compare(const void* x, const void* y) { return ((sub*)x)->r - ((sub*)y)->r; }
+	void copyfrom(const subs& _s) {
+		clear();
+		if (!_s.sz) return; 
+		s = (sub*)realloc(s, sizeof(sub) * (sz = _s.sz));
+		memcpy(s, _s.s, sizeof(sub) * sz);
+	}
+};
 
 struct term {
 	term() : p(0), s(0), o(0) { throw 0; }
@@ -106,8 +146,7 @@ struct term {
 	}
 
 	term* evaluate(const subs& ss) {
-		static subs::const_iterator it;
-		if (p < 0) return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->p < 0 ? 0 : it->second->evaluate(ss);
+		if (p < 0) return ((v = ss[p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0;
 		if (!s && !o) return this;
 		TRACE(if (!s || !o) throw 0);
 		term *a = s->evaluate(ss), *b = o->evaluate(ss);
@@ -133,10 +172,9 @@ private:
 
 	bool unifvar(const subs& ssub, term* _d, subs& dsub) {
 		if (!_d) return false;
-		static subs::const_iterator it;
 		if ((v = evaluate(ssub))) return v->unify(ssub, _d, dsub);
-		if ((it = dsub.find(p)) != dsub.end() && it->second != _d && it->second->p > 0) return false;
-		dsub[p] = _d;
+		if ((v = dsub[p]) && v != _d && v->p > 0) return false;
+		dsub.set(p, _d);
 		return true;
 	}
 	bool unifvar_ep(const subs& ssub, term* _d, const subs& dsub) {
@@ -147,7 +185,7 @@ private:
 		if (!d.p || d.p == implies) return false;
 		if (d.p < 0) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-			dsub[d.p] = evaluate(ssub);
+			dsub.set(d.p, evaluate(ssub));
 			return true;
 		}
 		return p == d.p && (pred || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
@@ -483,6 +521,13 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 	}
 //	dout << "steps: " << steps << std::endl;
 	return sp_proof();
+}
+
+string subs::format() {
+	std::wstringstream ss;
+	for (size_t n = 0; n < sz; ++n)
+		ss << dict[s[n].r] << L'\\' << ::format(s[n].t) << L' ';
+	return ss.str();
 }
 
 int main() {
