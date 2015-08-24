@@ -121,7 +121,8 @@ private:
 	static term* v; // temp var for unifiers
 
 	void trymatch(body_t& b, term* t) {
-		if (t == this) return;
+		if (t == this) return; 
+	//	b.addmatch(t, subs()); return;
 		dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl;
 		static subs d;
 		if (b.t->unify(subs(), t, d)) b.addmatch(t, d);
@@ -476,11 +477,11 @@ void step(boost::shared_ptr<proof> _p) {
 		}
 		_p = p.next;
 	}
+	dout << "steps: " << steps << std::endl;
 };
 int main() {
 	dict.init();
 	termset kb = readqdb(din);
-	dout << "kb:" << std::endl << format(kb) << std::endl;
 	termset query = readqdb(din);
 
 	term* q = new term(kb, query);

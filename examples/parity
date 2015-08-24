@@ -1,0 +1,9 @@
+{ ?x a odd. ?y a odd. (?x ?y) add ?z } => { ?z a even }.
+{ ?x a even. ?y a even. (?x ?y) add ?z } => { ?z a even }.
+{ ?x a even. ?y a odd. (?x ?y) add ?z } => { ?z a odd }.
+{ (?x ?y) add ?z } => { (?y ?x) add ?z }.
+one a odd.
+two a even.
+fin.
+(?a ?b) add ?c.
+fin.
