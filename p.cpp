@@ -75,23 +75,22 @@ private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
 
-std::wistream &din = std::wcin;
-std::wostream &dout = std::wcout;
 typedef std::wstring string;
 void trim(string& s) {
-	dout << "trim " << s;
 	string::iterator i = s.begin();
 	while (iswspace(*i)) {
 		s.erase(i);
 		i = s.begin();
 	}
 	size_t n = s.size();
-	while (iswspace(s[--n]));
-	s = s.substr(0, ++n);
-	dout << " returned " << s << std::endl;
+	if (n) {
+		while (iswspace(s[--n]));
+		s = s.substr(0, ++n);
+	}
 }
 
-//using namespace boost::algorithm;
+std::wistream &din = std::wcin;
+std::wostream &dout = std::wcout;
 typedef int resid;
 struct term;
 typedef map<resid, term*> subs;
