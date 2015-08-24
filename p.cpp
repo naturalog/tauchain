@@ -44,6 +44,12 @@ public:
 	virtual ~wruntime_error() _GLIBCXX_USE_NOEXCEPT {}
 };
 
+#ifdef DEBUG
+#define TRACE(x) x
+#else
+#define TRACE(x)
+#endif
+
 struct term {
 	term() : p(0), s(0), o(0) { throw 0; }
 	term(termset& kb, termset& query) : p(0), s(0), o(0) { addbody(query); trymatch(kb); }
@@ -67,15 +73,15 @@ struct term {
 			if (!state) { it = begin(); state = true; }
 			else { ++it; ds.clear(); }
 			while (it != end()) {
-				dout << "matching " << format(t, true) << " with " << format((*it)->t, true) << "... ";
-				if (it != end() && t->unify(s, (*it)->t, ds)) { dout << " passed" << std::endl; return state = true; }
-				else { ds.clear(); ++it; dout << " failed" << std::endl; continue; }
+				TRACE(dout << "matching " << format(t, true) << " with " << format((*it)->t, true) << "... ");
+				if (it != end() && t->unify(s, (*it)->t, ds)) { TRACE(dout << " passed" << std::endl); return state = true; }
+				else { ds.clear(); ++it; TRACE(dout << " failed" << std::endl); continue; }
 			}
 			return state = false;
 		}
 	private:
 		void addmatch(term* x) {
-			dout << "added match " << format(x) << " to " << format(t) << std::endl;
+			TRACE(dout << "added match " << format(x) << " to " << format(t) << std::endl);
 			matches.push_back(new match(x));
 		}
 	};
@@ -92,7 +98,7 @@ struct term {
 
 	term* addbody(const termset& t) { for (termset::const_iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
 	term* addbody(term* t) {
-		dout << "added body " << format(t) << " to " << format(this) << std::endl;
+		TRACE(dout << "added body " << format(t) << " to " << format(this) << std::endl);
 		body.push_back(new body_t(t));
 		return this;
 	}
@@ -107,7 +113,7 @@ struct term {
 		static subs::const_iterator it;
 		if (p < 0) return ((it = ss.find(p)) == ss.end()) ? 0 : it->second->p < 0 ? 0 : it->second->evaluate(ss);
 		if (!s && !o) return this;
-		if (!s || !o) throw 0;
+		TRACE(if (!s || !o) throw 0);
 		term *a = s->evaluate(ss), *b = o->evaluate(ss);
 		return new term(p, a ? a : s, b ? b : o);
 	}
@@ -123,7 +129,7 @@ private:
 	void trymatch(body_t& b, term* t) {
 		if (t == this) return; 
 	//	b.addmatch(t, subs()); return;
-		dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl;
+		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
 		static subs d;
 		if (b.t->unify(subs(), t, d)) b.addmatch(t);
 		d.clear();
@@ -396,7 +402,7 @@ string format(const termset& t, int dep) {
 		for (term::bveccit y = x->begin(); y != x->end(); ++y) {
 			IDENT;
 			const term::body_t* bt = *y;
-			dout << format(bt->t) << std::endl;
+			//dout << format(bt->t) << std::endl;
 			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
 			for (std::vector<term::body_t::match*>::iterator z = (*y)->begin(); z != (*y)->end(); ++z) {
 				IDENT;
@@ -432,13 +438,12 @@ struct proof {
 	proof(sp_proof c, proof& p) 
 		: rule(p.rule), b(p.b), prev(p.prev), creator(c), btterm(0) { }
 };
+size_t steps = 0;
 
 sp_proof step(sp_proof _p, sp_proof& lastp) {
-	size_t steps = 0;
 	if (!lastp) lastp = _p;
-//	_p->next = sp_proof();
 	evidence e;
-//	while (_p) {
+	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
 		sp_proof ep = _p;
 		proof& p = *_p;
@@ -450,7 +455,7 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 					t = 0;
 					break;
 				}
-			if (!t) return p.next;
+			if (!t) { _p = p.next; continue; }
 		}
 		if (p.b != p.rule->end()) {
 			term::body_t& pb = **p.b;
@@ -459,31 +464,34 @@ sp_proof step(sp_proof _p, sp_proof& lastp) {
 				lastp->next = r;
 				lastp = r;
 			}
-			return p.next;
+			_p = p.next;
 		}
 		else if (!p.prev) {
+			#ifndef NOTRACE
 			term* _t;
 			for (term::bvecit r = p.rule->begin(); r != p.rule->end(); ++r) {
 				if (!(_t = ((*r)->t->evaluate(p.s)))) continue;
 				e[_t->p].push_back(std::make_pair(_t, p.g()));
 				dout << "proved: " << format(_t) << std::endl;
 			}
-			return p.next;
+			#endif
+			_p = p.next;
 		}
-//		else {
+		else {
 			proof& ppr = *p.prev;
 			sp_proof r(new proof(_p, ppr));
 			r->s = ppr.s;
 			p.rule->unify(p.s, (*r->b)->t, r->s);
 			++r->b;
 			step(r, lastp);
-			return p.next;
-//		}
+			_p = p.next;
+		}
 //		_p = p.next;
-//	}
-	dout << "steps: " << steps << std::endl;
+	}
+//	dout << "steps: " << steps << std::endl;
 	return sp_proof();
 }
+#include <ctime>
 int main() {
 	dict.init();
 	termset kb = readqdb(din);
@@ -493,10 +501,17 @@ int main() {
 	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 		(*it)->trymatch(kb);
 	kb.push_back(q);
-	dout << "kb:" << std::endl << format(kb) << std::endl;
+	TRACE(dout << "kb:" << std::endl << format(kb) << std::endl);
 
 	sp_proof p = sp_proof(new proof(sp_proof(), q, 0, sp_proof(), subs())), lastp;
-	while ((p = step(p, lastp)));
+//	while ((p = step(p, lastp)));
+	using namespace std;
+	clock_t begin = clock();
+	step(p,lastp);
+	clock_t end = clock();
+ 	double ms = 1000. * double(end - begin) / CLOCKS_PER_SEC;
+	dout << "steps: " << steps << std::endl;
+	dout << "elapsed: " << ms << "ms" << std::endl;
 
 	return 0;
 }
