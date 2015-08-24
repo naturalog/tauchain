@@ -4,6 +4,11 @@
 { (?x ?y) add ?z } => { (?y ?x) add ?z }.
 one a odd.
 two a even.
+three a odd.
+four a even.
+(one one) add two.
+(one two) add three.
+(two two) add four.
 fin.
 (?a ?b) add ?c.
 fin.
