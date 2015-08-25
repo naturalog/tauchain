@@ -45,7 +45,7 @@ template<typename K, typename V>
 struct mapelem { K first; V second; mapelem(const K& _k, const V& _v) : first(_k), second(_v) {} };
 
 template<typename K, typename V>
-struct map : protected vector<mapelem<K, V> > {
+struct map : public vector<mapelem<K, V> > {
 	typedef mapelem<K, V> vtype;
 	typedef vector<mapelem<K, V> > base;
 public:
@@ -86,9 +86,9 @@ void trim(string& s) {
 	}
 }
 
+typedef int resid;
 std::wistream &din = std::wcin;
 std::wostream &dout = std::wcout;
-typedef int resid;
 struct term;
 typedef map<resid, term*> subs;
 typedef vector<term*> termset;
@@ -96,6 +96,7 @@ string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s
 string wstrim(string s) { trim(s); return s; }
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
+string format(const subs& s);
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;
 
@@ -112,6 +113,31 @@ public:
 #else
 #define TRACE(x)
 #endif
+
+class bidict {
+	std::map<resid, string> ip;
+	std::map<string, resid> pi;
+public:
+	void init() {
+		GND = set( L"GND" );
+		implies = set(L"=>");
+		Dot = set(L".");
+	}
+
+	resid set ( string v ) {
+		if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
+		std::map<string, resid>::iterator it = pi.find ( v );
+		if ( it != pi.end() ) return it->second;
+		resid k = pi.size() + 1;
+		if ( v[0] == L'?' ) k = -k;
+		pi[v] = k;
+		ip[k] = v;
+		return k;
+	}
+
+	string operator[] ( resid k ) { return ip[k]; }
+	resid operator[] ( string v ) { return set(v); }
+} dict;
 
 term* mkterm();
 term* mkterm(termset& kb, termset& query);
@@ -179,48 +205,46 @@ struct term {
 	}
 #ifdef DEBUG
 	term* evaluate(const subs& ss) {
+		static term *v, *r;
 		if (p < 0) {
-		return ((v = ss[p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0;
-		}
-	};
-	std::function<bool(const subs& ssub, term& d, subs& dsub)> _unify;
-	std::function<bool(const subs& ssub, term& d, const subs& dsub)> _unify_ep;
-
-	void init() {
-		if (p < 0) {
-			evaluate = [this](const subs& ss) { return ((v = ss[p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0; };
-			_unify = [this](const subs& ssub, term& _d, subs& dsub) {
-				if ((v = evaluate(ssub))) return v->unify(ssub, &_d, dsub);
-				if ((v = dsub[p]) && v != &_d && v->p > 0) return false;
-				dsub.set(p, &_d);
-				return true;
-			};
-			_unify_ep = [this](const subs& ssub, term& _d, const subs& dsub) {
-				return (v = evaluate(ssub)) ? v->unify_ep(ssub, &_d, dsub) : true;
-			};
-		}
+			v = ss[p];
+			if (v)
+				r = v->evaluate(ss);
+			else
+				r = 0;
+		} else if (!s && !o)
+			r = this;
 		else {
-			_unify = [this](const subs& ssub, term& d, subs& dsub) {
-				if (d.p < 0) {
-					if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-					dsub.set(d.p, evaluate(ssub));
-					return true;
-				}
-				return p == d.p && (!s || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
-			};
-
-			_unify_ep = [this](const subs& ssub, term& d, const subs& dsub) {
-				if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
-				return p == d.p && (!s || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
-			};
-
-			if (!s && !o) evaluate = [this](const subs&) { return this; };
-			else evaluate = [this](const subs& ss) {
-				term *a = s->evaluate(ss), *b = o->evaluate(ss);
-				return (!a && !b) ? this : mkterm(p, a ? a : s, b ? b : o);
-			};
+			term *a = s->evaluate(ss), *b = o->evaluate(ss);
+			r = mkterm(p, a ? a : mkterm(s->p), b ? b : mkterm(o->p));
 		}
+		TRACE(dout<<"evaluate " << format(this) << " under " << format(ss) << " returned " << format(r) << std::endl);
+		return r;
+	};
+	bool _unify(const subs& ssub, term& d, subs& dsub) {
+		static term* v;
+		if (p < 0) {
+			if ((v = evaluate(ssub))) return v->unify(ssub, &d, dsub);
+			if ((v = dsub[p]) && v != &d && v->p > 0) return false;
+			dsub.set(p, &d);
+			return true;
+		} else if (d.p < 0) {
+			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
+			dsub.set(d.p, v = evaluate(ssub));
+			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+			return true;
+		}
+		return p == d.p && (!s || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
 	}
+	bool _unify_ep(const subs& ssub, term& d, const subs& dsub) {
+		static term* v;
+		if (p < 0) {
+			return (v = evaluate(ssub)) ? v->unify_ep(ssub, &d, dsub) : true;
+		}
+		if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
+		return p == d.p && (!s || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
+	}
+	void init() {}
 #else
 	std::function<term*(const subs& ss)> evaluate;
 	std::function<bool(const subs& ssub, term& d, subs& dsub)> _unify;
@@ -294,31 +318,6 @@ private:
 term* mkterm() { return new term; }
 term* mkterm(termset& kb, termset& query) { return new term(kb, query); }
 term* mkterm(resid _p, term* _s, term* _o) { return new term(_p, _s, _o); }
-
-class bidict {
-	std::map<resid, string> ip;
-	std::map<string, resid> pi;
-public:
-	void init() {
-		GND = set( L"GND" );
-		implies = set(L"=>");
-		Dot = set(L".");
-	}
-
-	resid set ( string v ) {
-		if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
-		std::map<string, resid>::iterator it = pi.find ( v );
-		if ( it != pi.end() ) return it->second;
-		resid k = pi.size() + 1;
-		if ( v[0] == L'?' ) k = -k;
-		pi[v] = k;
-		ip[k] = v;
-		return k;
-	}
-
-	string operator[] ( resid k ) { return ip[k]; }
-	resid operator[] ( string v ) { return set(v); }
-} dict;
 
 #define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
 #define SKIPWS while (iswspace(*s)) ++s
@@ -510,14 +509,15 @@ string format(const term* t, bool body) {
 	else return formatlist(t);
 	return ss.str();
 }
-/*
+
 string format(const subs& s) {
 	std::wstringstream ss;
+	vector<mapelem<resid, term*> > v(s);
 	for (size_t n = 0; n < s.size(); ++n)
-		ss << dict[s[n].first] << L'\\' << format(s[n].second) << L' ';
+		ss << dict[v[n].first] << L'\\' << format(v[n].second) << L' ';
 	return ss.str();
 }
-*/
+
 #define IDENT for (int n = 0; n < dep; ++n) ss << L'\t'
 
 string format(const termset& t, int dep) {
