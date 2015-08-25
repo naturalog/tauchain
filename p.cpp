@@ -177,7 +177,12 @@ struct term {
 			for (termset::iterator it = heads.begin(); it != heads.end(); ++it)
 				trymatch(**b, *it);
 	}
-	std::function<term*(const subs& ss)> evaluate;
+#ifdef DEBUG
+	term* evaluate(const subs& ss) {
+		if (p < 0) {
+		return ((v = ss[p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0;
+		}
+	};
 	std::function<bool(const subs& ssub, term& d, subs& dsub)> _unify;
 	std::function<bool(const subs& ssub, term& d, const subs& dsub)> _unify_ep;
 
@@ -216,6 +221,54 @@ struct term {
 			};
 		}
 	}
+#else
+	std::function<term*(const subs& ss)> evaluate;
+	std::function<bool(const subs& ssub, term& d, subs& dsub)> _unify;
+	std::function<bool(const subs& ssub, term& d, const subs& dsub)> _unify_ep;
+
+	void init() {
+		if (p < 0) {
+			evaluate = [this](const subs& ss) {
+				static term* v;
+				return ((v = ss[p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0; 
+			};
+			_unify = [this](const subs& ssub, term& _d, subs& dsub) {
+				static term* v;
+				if ((v = evaluate(ssub))) return v->unify(ssub, &_d, dsub);
+				if ((v = dsub[p]) && v != &_d && v->p > 0) return false;
+				dsub.set(p, &_d);
+				return true;
+			};
+			_unify_ep = [this](const subs& ssub, term& _d, const subs& dsub) {
+				static term* v;
+				return (v = evaluate(ssub)) ? v->unify_ep(ssub, &_d, dsub) : true;
+			};
+		}
+		else {
+			_unify = [this](const subs& ssub, term& d, subs& dsub) {
+				static term* v;
+				if (d.p < 0) {
+					if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
+					dsub.set(d.p, evaluate(ssub));
+					return true;
+				}
+				return p == d.p && (!s || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
+			};
+
+			_unify_ep = [this](const subs& ssub, term& d, const subs& dsub) {
+				static term* v;
+				if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
+				return p == d.p && (!s || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
+			};
+
+			if (!s && !o) evaluate = [this](const subs&) { return this; };
+			else evaluate = [this](const subs& ss) {
+				term *a = s->evaluate(ss), *b = o->evaluate(ss);
+				return (!a && !b) ? this : mkterm(p, a ? a : s, b ? b : o);
+			};
+		}
+	}
+#endif	
 	bool unify_ep(const subs& ssub, term* _d, const subs& dsub) {
 		return !(!_d || !_d->p || _d->p == implies) && _unify_ep(ssub, *_d, dsub);
 	}
@@ -223,7 +276,7 @@ struct term {
 		return !(!_d || !_d->p || _d->p == implies) && _unify(ssub, *_d, dsub);
 	}
 private:
-	static term* v; // temp var for unifiers
+//	static term* v; // temp var for unifiers
 
 	// indexer: match a term (head) to a body's term by trying to unify them.
 	// if they cannot unify without subs, then they will not be able to
@@ -241,8 +294,6 @@ private:
 term* mkterm() { return new term; }
 term* mkterm(termset& kb, termset& query) { return new term(kb, query); }
 term* mkterm(resid _p, term* _s, term* _o) { return new term(_p, _s, _o); }
-
-term* term::v;
 
 class bidict {
 	std::map<resid, string> ip;
