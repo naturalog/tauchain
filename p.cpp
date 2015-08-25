@@ -31,6 +31,7 @@ public:
 
 	void push_back(const T& t) {
 		if (!(a = (T*)realloc(a, sizeof(T) * ++n))) throw std::runtime_error("Allocation failed.");
+		new (&a[n-1]) (T);
 		a[n-1] = t;
 	}
 protected:	
@@ -42,7 +43,12 @@ protected:
 };
 
 template<typename K, typename V>
-struct mapelem { K first; V second; mapelem(const K& _k, const V& _v) : first(_k), second(_v) {} };
+struct mapelem {
+	K first;
+	V second;
+	mapelem(){}
+	mapelem(const K& _k, const V& _v) : first(_k), second(_v) {} 
+};
 
 template<typename K, typename V>
 struct map : public vector<mapelem<K, V> > {
@@ -545,13 +551,17 @@ string format(const termset& t, int dep) {
 	return ss.str();
 }
 
-typedef std::list<mapelem<term*, subs> > ground;
-typedef map<resid, std::list<mapelem<term*, ground> > > evidence;
+typedef vector<mapelem<term*, subs> > ground;
+typedef map<resid, vector<mapelem<term*, ground> > > evidence;
 
 template<typename T>
 struct sp { // smart pointer
 	T* p;
-	struct ref { size_t r; ref() : r(0) {} void inc() { ++r; } size_t dec() { return --r; } } *r;
+	struct ref {
+		size_t r; ref() : r(0) {}
+		void inc() { ++r; }
+		size_t dec() { return --r; }
+	} *r;
 	sp() : p(0) 				{ (r = new ref)->inc(); }
 	sp(T* v) : p(v) 			{ (r = new ref)->inc(); }
 	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ r->inc(); }
