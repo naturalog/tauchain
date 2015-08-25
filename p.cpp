@@ -225,8 +225,8 @@ struct term {
 		static term* v;
 		if (p < 0) {
 			if ((v = evaluate(ssub))) return v->unify(ssub, &d, dsub);
-			if ((v = dsub[p]) && v != &d && v->p > 0) return false;
-			dsub.set(p, &d);
+//			if ((v = dsub[p]) && v != &d && v->p < 0) return false;
+//			dsub.set(p, &d);
 			return true;
 		} else if (d.p < 0) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
