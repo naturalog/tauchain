@@ -52,4 +52,4 @@ ppjson: ppjson.cpp
 dimacs2tau: dimacs2tau.cpp
 	$(CC) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb
 pcpp: p.cpp
-	g++ p.cpp -opcpp -g -W -Wall -Wextra -Wpedantic -std=c++11
+	g++ p.cpp -opcpp -g -W -Wall -Wextra -Wpedantic -std=c++11 -DDEBUG
