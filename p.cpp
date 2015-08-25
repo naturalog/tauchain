@@ -216,7 +216,8 @@ struct term {
 			r = this;
 		else {
 			term *a = s->evaluate(ss), *b = o->evaluate(ss);
-			r = mkterm(p, a ? a : mkterm(s->p), b ? b : mkterm(o->p));
+			if (!a || !b) r = 0;
+			else r = mkterm(p, a ? a : mkterm(s->p), b ? b : mkterm(o->p));
 		}
 		TRACE(dout<<"evaluate " << format(this) << " under " << format(ss) << " returned " << format(r) << std::endl);
 		return r;
