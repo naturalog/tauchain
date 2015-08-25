@@ -177,50 +177,62 @@ struct term {
 			for (termset::iterator it = heads.begin(); it != heads.end(); ++it)
 				trymatch(**b, *it);
 	}
-	std::function<term*(const subs& ss)> evaluate;
-	std::function<bool(const subs& ssub, term& d, subs& dsub)> _unify;
-	std::function<bool(const subs& ssub, term& d, const subs& dsub)> _unify_ep;
+	std::function<term*(term&,const subs& ss)> *_evaluate;
+	std::function<bool(term&,const subs& ssub, term& d, subs& dsub)> *_unify;
+	std::function<bool(term&,const subs& ssub, term& d, const subs& dsub)> *_unify_ep;
 
 	void init() {
-		if (p < 0) {
-			evaluate = [this](const subs& ss) { return ((v = ss[p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0; };
-			_unify = [this](const subs& ssub, term& _d, subs& dsub) {
-				if ((v = evaluate(ssub))) return v->unify(ssub, &_d, dsub);
-				if ((v = dsub[p]) && v != &_d && v->p > 0) return false;
-				dsub.set(p, &_d);
+		static std::function<term*(term&,const subs& ss)> e1 = [](term& t, const subs& ss) { 
+			return ((v = ss[t.p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0;
+		};
+		static std::function<term*(term&,const subs& ss)> e2 = [](term& t,const subs&) { return &t; };
+		static std::function<term*(term&,const subs& ss)> e3 = [](term& t,const subs& ss) { 
+			term *a = t.s->evaluate(ss), *b = t.o->evaluate(ss);
+			return (!a && !b) ? &t : mkterm(t.p, a ? a : t.s, b ? b : t.o);
+		};
+		static std::function<bool(term&,const subs& ssub, term& d, subs& dsub)> u1 = [](term& t, const subs& ssub, term& _d, subs& dsub) {
+			if ((v = t.evaluate(ssub))) return v->unify(ssub, &_d, dsub);
+			if ((v = dsub[t.p]) && v != &_d && v->p > 0) return false;
+			dsub.set(t.p, &_d);
+			return true;
+		};
+		static std::function<bool(term&,const subs& ssub, term& d, const subs& dsub)> u2 = [](term& t, const subs& ssub, term& _d, const subs& dsub) {
+			return (v = t.evaluate(ssub)) ? v->unify_ep(ssub, &_d, dsub) : true;
+		};
+		static std::function<bool(term&,const subs& ssub, term& d, subs& dsub)> u3 = [](term& t, const subs& ssub, term& d, subs& dsub) {
+			if (d.p < 0) {
+				if ((v = d.evaluate(dsub))) return t.unify(ssub, v, dsub);
+				dsub.set(d.p, t.evaluate(ssub));
 				return true;
-			};
-			_unify_ep = [this](const subs& ssub, term& _d, const subs& dsub) {
-				return (v = evaluate(ssub)) ? v->unify_ep(ssub, &_d, dsub) : true;
-			};
+			}
+			return t.p == d.p && (!t.s || (t.s->unify(ssub, d.s, dsub) && t.o->unify(ssub, d.o, dsub) ));
+		};
+
+		static std::function<bool(term&,const subs& ssub, term& d, const subs& dsub)> u4 = [](term& t, const subs& ssub, term& d, const subs& dsub) {
+			if (d.p < 0) return ((v = d.evaluate(dsub))) ? t.unify_ep(ssub, v, dsub) : true;
+			return t.p == d.p && (!t.s || (t.s->unify_ep(ssub, d.s, dsub) && t.o->unify_ep(ssub, d.o, dsub)));
+		};
+		if (p < 0) {
+			_evaluate = &e1;
+			_unify = &u1;
+			_unify_ep = &u2;
 		}
 		else {
-			_unify = [this](const subs& ssub, term& d, subs& dsub) {
-				if (d.p < 0) {
-					if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-					dsub.set(d.p, evaluate(ssub));
-					return true;
-				}
-				return p == d.p && (!s || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
-			};
-
-			_unify_ep = [this](const subs& ssub, term& d, const subs& dsub) {
-				if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
-				return p == d.p && (!s || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
-			};
-
-			if (!s && !o) evaluate = [this](const subs&) { return this; };
-			else evaluate = [this](const subs& ss) {
-				term *a = s->evaluate(ss), *b = o->evaluate(ss);
-				return (!a && !b) ? this : mkterm(p, a ? a : s, b ? b : o);
-			};
+			_unify = &u3;
+			_unify_ep = &u4;
+			if (!s && !o) _evaluate = &e2;
+			else _evaluate = &e2;
 		}
 	}
+	term* evaluate(const subs& ssub) {
+		if (!p) throw 0;
+		return (*_evaluate)(*this, ssub);
+	}
 	bool unify_ep(const subs& ssub, term* _d, const subs& dsub) {
-		return !(!_d || !_d->p || _d->p == implies) && _unify_ep(ssub, *_d, dsub);
+		return !(!_d || !_d->p || _d->p == implies) && (*_unify_ep)(*this, ssub, *_d, dsub);
 	}
 	bool unify(const subs& ssub, term* _d, subs& dsub) {
-		return !(!_d || !_d->p || _d->p == implies) && _unify(ssub, *_d, dsub);
+		return !(!_d || !_d->p || _d->p == implies) && (*_unify)(*this, ssub, *_d, dsub);
 	}
 private:
 	static term* v; // temp var for unifiers
