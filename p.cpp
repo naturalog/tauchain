@@ -104,7 +104,6 @@ string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
 string format(const subs& s);
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
-resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;
 
 class wruntime_error : public std::exception {
 	string msg;
@@ -125,9 +124,6 @@ class bidict {
 	std::map<string, resid> pi;
 public:
 	void init() {
-		GND = set( L"GND" );
-		implies = set(L"=>");
-		Dot = set(L".");
 	}
 
 	resid set ( string v ) {
@@ -144,6 +140,11 @@ public:
 	string operator[] ( resid k ) { return ip[k]; }
 	resid operator[] ( string v ) { return set(v); }
 } dict;
+
+/*resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;*/
+const resid GND = dict.set( L"GND" );
+const resid implies = dict.set(L"=>");
+const resid Dot = dict.set(L".");
 
 term* mkterm();
 term* mkterm(termset& kb, termset& query);
