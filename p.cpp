@@ -58,7 +58,8 @@ public:
 	void push_back(const T& t) {
 		if (!(n % chunk))
 			a = (T*)realloc(a, ++c * szchunk);
-		a[n++] = t;
+		new (&a[n++])(T)(t);
+//		a[n++] = t;
 	}
 protected:	
 	void copyfrom(const vector<T>& t) {
@@ -588,8 +589,8 @@ string format(const termset& t, int dep) {
 	return ss.str();
 }
 
-typedef vector<mapelem<term*, subs> > ground;
-typedef map<resid, vector<mapelem<term*, ground> > > evidence;
+typedef std::list<mapelem<term*, subs> > ground;
+typedef std::map<resid, std::list<mapelem<term*, ground> > > evidence;
 
 struct frame {
 	term* rule;
@@ -667,6 +668,7 @@ void term::_unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
 	size_t n;
 	for (term* _d : ts)  {
 		term& d = *_d;
+		if (args.size() != d.args.size()) continue;
 		termset::iterator it = args.begin(), end = args.end(), dit = d.args.begin();
 		while (it != end) {
 			term& x = **it++;
