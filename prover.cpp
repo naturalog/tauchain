@@ -135,10 +135,10 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 	int r = -1;
 	//rdfs:Resource(?x)
 	if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)
-		return 1;
-	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+		r = 1;
 	else if (t.p == rdfssubClassOf && t1->p == rdfsResource) {
 		r = 0;
+		// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
 		{
 			prover copy(*this);
 			auto ps = copy.askt(t0, rdfsType, make(rdfsClass, 0, 0));
@@ -594,7 +594,7 @@ prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
 	}
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = mk_qlist();
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
-	//if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
+	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
 bool prover::consistency(const qdb& quads) {
@@ -744,6 +744,11 @@ prover::ruleid prover::ruleset::add(termid t) {
 	return add(t, ts);
 }
 
+void prover::clear() {
+	subs_workardound.clear();
+	gnd.clear();
+	e.clear();
+}
 
 bool prover::ask(nodeid s, nodeid p, nodeid o) {
 	termid sn = make(s, 0, 0);
@@ -755,6 +760,8 @@ bool prover::ask(termid s, nodeid p, termid o) {
 	assert(s);assert(p);assert(o);
 	setproc(L"ask");
 
+	clear();
+
 	termid question = make(p, s, o);
 	termset query;
 	query.emplace_back(question);
@@ -763,10 +770,6 @@ bool prover::ask(termid s, nodeid p, termid o) {
 	do_query(query, &dummy);
 
 	bool r = e.size();
-
-	subs_workardound.clear();
-	e.clear();
-
 	return r;
 }
 
@@ -776,6 +779,7 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	assert(s);assert(p);assert(o);
 	setproc(L"ask");
 
+	clear();
 
 	std::vector<termid> vars;
 	if (s->p < 0) vars.push_back(s);
@@ -786,10 +790,6 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	termid question = make(p, s, o);
 	termset query;
 	query.emplace_back(question);
-
-	subs_workardound.clear();
-	gnd.clear();
-	e.clear();
 
 	subs dummy;
 	do_query(query, &dummy);
@@ -819,9 +819,6 @@ prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 					}
 				}
 	end:
-		subs_workardound.clear();
-		gnd.clear();
-		e.clear();
 		return r;
 }
 

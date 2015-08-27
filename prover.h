@@ -139,6 +139,8 @@ public:
 
 	std::map<nodeid, std::vector<termid>> subs_workardound;
 
+	void clear();
+
 private:
 	class termdb {
 	public:
