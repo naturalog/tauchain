@@ -56,14 +56,8 @@ public:
 	~vector()		{ clear(); }
 
 	void push_back(const T& t) {
-//		if (!(a = (T*)realloc(a, sizeof(T) * ++n))) throw std::runtime_error("Allocation failed.");
-//		if (!n)//
-//			a = (T*)realloc(a, ++c * szchunk);
-//		else 
 		if (!(n % chunk))
 			a = (T*)realloc(a, ++c * szchunk);
-		new (&a[n]) (T);
-//		memset(&a[n], 0, sizeof(T));
 		a[n++] = t;
 	}
 protected:	
@@ -72,7 +66,6 @@ protected:
 		if (!(n = t.n)) return; 
 		c = t.c;
 		memcpy(a = (T*)malloc(c * szchunk), t.a, c * szchunk);
-		//memcpy(a = (T*)malloc(n * sizeof(T)), t.a, n * sizeof(T));
 	}
 };
 
@@ -196,8 +189,8 @@ struct term {
 			static term *v;
 			termset ts;
 			for (term* a : t.args) {
-				if ((v = a->evaluate(*a, ss))) ts.push_back(v);
-				else ts.push_back(mkterm(a->p));
+				term& b = *a;
+				ts.push_back(((v = b.evaluate(b, ss))) ? v : mkterm(b.p));
 			}
 			return mkterm(t.p, ts);
 		};
@@ -262,11 +255,6 @@ struct term {
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
 		termset matches;
-	private:
-		void addmatch(term* x) { // indexer: add matching rule's head
-			TRACE(dout << "added match " << format(x) << " to " << format(t) << std::endl);
-			matches.push_back(x);
-		}
 	};
 	typedef vector<body_t*> bvec;
 	bvec body;
@@ -341,7 +329,10 @@ private:
 		//b.addmatch(t, subs()); return; // unremark to disable indexing
 		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
 		static subs d;
-		if (b.t->unify(*b.t, subs(), *t, d)) b.addmatch(t);
+		if (b.t->unify(*b.t, subs(), *t, d)) {
+			TRACE(dout << "added match " << format(t) << " to " << format(b.t) << std::endl);
+			b.matches.push_back(t);
+		}
 		d.clear();
 	}
 };
@@ -623,8 +614,8 @@ struct frame {
 	term* btterm;
 	frame(sp_frame c, term* r, term::bvec::iterator* l, sp_frame p, const subs&  _s = subs())
 		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), s(_s), btterm(0) { }
-	frame(sp_frame c, frame& p) 
-		: rule(p.rule), b(p.b), prev(p.prev), creator(c), btterm(0) { }
+	frame(sp_frame c, frame& p, const subs& _s) 
+		: rule(p.rule), b(p.b), prev(p.prev), creator(c), s(_s), btterm(0) { }
 };
 size_t steps = 0;
 
@@ -660,10 +651,8 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 		}
 		else { // if body is done, go up the tree
 			frame& ppr = *p.prev;
-			sp_frame r(new frame(_p, ppr));
-			r->s = ppr.s;
-			p.rule->unify(*p.rule, p.s, *(*r->b)->t, r->s);
-			++r->b;
+			sp_frame r(new frame(_p, ppr, ppr.s));
+			p.rule->unify(*p.rule, p.s, *(*((r->b)++))->t, r->s);
 			prove(r, lastp);
 		}
 		_p = p.next;
