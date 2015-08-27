@@ -50,7 +50,7 @@ public:
 	T* begin() const	{ return a; }
 	T* end() const		{ return a ? &a[n] : 0; }
 	void clear()		{ if (!a) return; free(a); a = 0; n = 0; }
-	bool empty()		{ return !a; }
+	bool empty() const	{ return !a; }
 	~vector()		{ clear(); }
 
 	void push_back(const T& t) {
@@ -178,8 +178,8 @@ struct term {
 	term(termset& kb, termset& query) : p(0) { addbody(query); trymatch(kb); }
 	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) { if (!p) throw 0; }
 
-	resid p;
-	termset args;
+	const resid p;
+	const termset args;
 //	term *s, *o;
 	struct body_t {
 		friend struct term;
@@ -187,28 +187,6 @@ struct term {
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
 		termset matches;
-		termset::iterator it;
-		subs ds;
-		// a small coroutine that returns all indexed head that match also given a subst.
-		// this process is what happens during inference rather index.
-		bool operator()(const subs& s) {
-			if (!state) { it = matches.begin(); state = true; }
-			else { ++it; ds.clear(); }
-			while (it != matches.end()) {
-				TRACE(dout << "matching " << format(t, true) << " with " << format(*it, true) << "... ");
-
-				if (it != matches.end() && t->unify(s, **it, ds)) { 
-					TRACE(dout << " passed" << std::endl); 
-					return state = true; 
-				}
-				else { 
-					ds.clear(), ++it; 
-					TRACE(dout << " failed" << std::endl); 
-					continue; 
-				}
-			}
-			return state = false;
-		}
 	private:
 		void addmatch(term* x) { // indexer: add matching rule's head
 			TRACE(dout << "added match " << format(x) << " to " << format(t) << std::endl);
@@ -329,20 +307,21 @@ public:
 	term* readlist() {
 		if (*s != L'(') return (term*)0;
 		++s;
-		term *head = mkterm(Dot), *pn = head;
+		termset items;
+		term* pn;
 		while (*s != L')') {
 			SKIPWS;
 			if (*s == L')') break;
 			if (!(pn = readany(true)))
 				EPARSE(L"couldn't read next list item: ");
-			head->args.push_back(pn);
+			items.push_back(pn);
 			SKIPWS;
 //			pn = pn->o = mkterm(Dot);
 			if (*s == L'.') while (iswspace(*s++));
 			if (*s == L'}') EPARSE(L"expected { inside list: ");
 		};
 		do { ++s; } while (iswspace(*s));
-		return head;
+		return mkterm(Dot, items);
 	}
 
 	term* readiri() {
