@@ -213,10 +213,8 @@ struct term {
 		static term *v, *r;
 		if (p < 0) {
 			v = ss[p];
-			if (v)
-				r = v->evaluate(ss);
-			else
-				r = 0;
+			if (v) r = v->evaluate(ss);
+			else r = 0;
 		} else if (args.empty())
 			r = this;
 		else {
@@ -233,10 +231,12 @@ struct term {
 	bool _unify(const subs& ssub, term& d, subs& dsub) {
 		static term* v;
 		if (p < 0) {
-			if ((v = evaluate(ssub))) return v->unify(ssub, &d, dsub);
+			v = ssub[p];
+			if (v && (v = v->evaluate(ssub))) return v->unify(ssub, &d, dsub);
 			return true;
 		} else if (d.p < 0) {
-			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
+			v = dsub[p];
+			if (v && (v = d.evaluate(dsub))) return unify(ssub, v, dsub);
 			dsub.set(d.p, v = evaluate(ssub));
 			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
 			return true;
