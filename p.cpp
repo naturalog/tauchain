@@ -176,10 +176,28 @@ term* mkterm(resid p, const termset& args);
 struct term {
 	term() : p(0) { throw 0; }
 	term(termset& kb, termset& query) : p(0) { addbody(query); trymatch(kb); }
-	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) { if (!p) throw 0; }
-
+	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) {
+		TRACE(if (!p) throw 0);
+		static auto evvar = [](term& t, const subs& ss) { static term* v; return (v = ss[t.p]) ? v->evaluate(*v, ss) : (term*)0; };
+		static auto evnoargs = [](term& t, const subs&) { return &t; };
+		static auto ev = [](term& t, const subs& ss) {
+			static term *v;
+			termset ts;
+			for (term* a : t.args) {
+				if ((v = a->evaluate(*a, ss))) ts.push_back(v);
+				else ts.push_back(mkterm(a->p));
+			}
+			return mkterm(t.p, ts);
+		};
+		if (p < 0) evaluate = evvar;
+		else if (args.empty()) evaluate = evnoargs;
+		else evaluate = ev;
+	}
 	const resid p;
 	const termset args;
+	term* (*evaluate)(term&, const subs&);
+//	bool (*unify)(const subs& ssub, term& d, subs& dsub);
+//	bool (*unify_ep)(const subs& ssub, term& d, const subs& dsub);
 //	term *s, *o;
 	struct body_t {
 		friend struct term;
@@ -209,33 +227,31 @@ struct term {
 		for (bvec::iterator b = body.begin(); b != body.end(); ++b)
 			for (termset::iterator it = heads.begin(); it != heads.end(); ++it)
 				trymatch(**b, *it);
-	}
-	term* evaluate(const subs& ss) {
+	}/*
+	static term* evaluate(term* _t, const subs& ss) {
 		static term *v, *r;
-		if (p < 0) {
-			v = ss[p];
-			if (v) r = v->evaluate(ss);
-			else r = 0;
-		} else if (args.empty())
-			r = this;
-		else {
-			termset ts;
-			for (term* a : args) {
-				if ((v = a->evaluate(ss))) ts.push_back(v);
-				else ts.push_back(mkterm(a->p));
-			}
-			return mkterm(p, ts);
+		if (!_t) throw 0;
+		term& t = *_t;
+		if (t.p < 0)
+			return (v = ss[t.p]) ? r = v->evaluate(v, ss) : 0;
+		if (t.args.empty())
+			return &t;
+		termset ts;
+		for (term* a : t.args) {
+			if ((v = a->evaluate(a, ss))) ts.push_back(v);
+			else ts.push_back(mkterm(a->p));
 		}
-		TRACE(dout<<"evaluate " << format(this) << " under " << format(ss) << " returned " << format(r) << std::endl);
+		return mkterm(t.p, ts);
+		TRACE(dout<<"evaluate " << format(&t) << " under " << format(ss) << " returned " << format(r) << std::endl);
 		return r;
-	};
+	};*/
 	bool unify(const subs& ssub, term& d, subs& dsub) {
-		static term* v;
-		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(ssub))) ? v->unify(ssub, d, dsub) : true;
+		term* v;
+		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(*v, ssub))) ? v->unify(ssub, d, dsub) : true;
 		if (d.p < 0) {
-			if ((v = dsub[d.p]) && (v = d.evaluate(dsub))) return unify(ssub, *v, dsub);
-			dsub.set(d.p, v = evaluate(ssub));
-			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+			if ((v = dsub[d.p]) && (v = d.evaluate(d, dsub))) return unify(ssub, *v, dsub);
+			dsub.set(d.p, v = evaluate(*this, ssub));
+//			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
 			return true;
 		}
 		size_t sz = args.size();
@@ -248,8 +264,8 @@ struct term {
 	void unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
 	bool unify_ep(const subs& ssub, term& d, const subs& dsub) {
 		static term* v;
-		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(ssub))) ? v->unify_ep(ssub, d, dsub) : true;
-		if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(dsub))) ? unify_ep(ssub, *v, dsub) : true;
+		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(*v, ssub))) ? v->unify_ep(ssub, d, dsub) : true;
+		if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(*v, dsub))) ? unify_ep(ssub, *v, dsub) : true;
 		size_t sz = args.size();
 		if (p != d.p || sz != d.args.size()) return false;
 		for (size_t n = 0; n < sz; ++n)
@@ -566,7 +582,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 			#ifndef NOTRACE
 			term* _t; // push evidence
 			for (term::bvec::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
-				if (!(_t = ((*r)->t->evaluate(p.s)))) continue;
+				if (!(_t = ((*r)->t->evaluate(*(*r)->t, p.s)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
 				dout << "proved: " << format(_t) << std::endl;
 			}
