@@ -27,6 +27,7 @@ public:
 	T* begin() const	{ return a; }
 	T* end() const		{ return a ? &a[n] : 0; }
 	void clear()		{ if (!a) return; free(a); a = 0; n = 0; }
+	bool empty()		{ return !a; }
 	~vector()		{ clear(); }
 
 	void push_back(const T& t) {
@@ -141,22 +142,22 @@ public:
 	resid operator[] ( string v ) { return set(v); }
 } dict;
 
-/*resid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfssubClassOf, False, rdfnil, rdfsResource, rdfsdomain, implies;*/
-const resid GND = dict.set( L"GND" );
 const resid implies = dict.set(L"=>");
 const resid Dot = dict.set(L".");
 
 term* mkterm();
 term* mkterm(termset& kb, termset& query);
-term* mkterm(resid _p, term* _s = 0, term* _o = 0);
+term* mkterm(resid p);
+term* mkterm(resid p, const termset& args);
 
 struct term {
-	term() : p(0), s(0), o(0) { throw 0; }
-	term(termset& kb, termset& query) : p(0), s(0), o(0) { addbody(query); trymatch(kb); }
-	term(resid _p, term* _s = 0, term* _o = 0) : p(_p), s(_s), o(_o) { if (!p) throw 0; init();  }
+	term() : p(0) { throw 0; }
+	term(termset& kb, termset& query) : p(0) { addbody(query); trymatch(kb); }
+	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) { if (!p) throw 0; init();  }
 
 	resid p;
-	term *s, *o;
+	termset args;
+//	term *s, *o;
 	struct body_t {
 		friend struct term;
 		term* t;
@@ -208,7 +209,6 @@ struct term {
 			for (termset::iterator it = heads.begin(); it != heads.end(); ++it)
 				trymatch(**b, *it);
 	}
-#ifdef DEBUG
 	term* evaluate(const subs& ss) {
 		static term *v, *r;
 		if (p < 0) {
@@ -217,12 +217,15 @@ struct term {
 				r = v->evaluate(ss);
 			else
 				r = 0;
-		} else if (!s && !o)
+		} else if (args.empty())
 			r = this;
 		else {
-			term *a = s->evaluate(ss), *b = o->evaluate(ss);
-			if (!a || !b) r = 0;
-			else r = mkterm(p, a ? a : mkterm(s->p), b ? b : mkterm(o->p));
+			termset ts;
+			for (term* a : args) {
+				if ((v = a->evaluate(ss))) ts.push_back(v);
+				else ts.push_back(mkterm(a->p));
+			}
+			return mkterm(p, ts);
 		}
 		TRACE(dout<<"evaluate " << format(this) << " under " << format(ss) << " returned " << format(r) << std::endl);
 		return r;
@@ -231,8 +234,6 @@ struct term {
 		static term* v;
 		if (p < 0) {
 			if ((v = evaluate(ssub))) return v->unify(ssub, &d, dsub);
-//			if ((v = dsub[p]) && v != &d && v->p < 0) return false;
-//			dsub.set(p, &d);
 			return true;
 		} else if (d.p < 0) {
 			if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
@@ -240,65 +241,25 @@ struct term {
 			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
 			return true;
 		}
-		return p == d.p && (!s || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
+		size_t sz = args.size();
+		if (p != d.p || sz != d.args.size()) return false;
+		for (size_t n = 0; n < sz; ++n)
+			if (!args[n]->unify(ssub, d.args[n], dsub)) 
+				return false;
+		return true;
 	}
 	bool _unify_ep(const subs& ssub, term& d, const subs& dsub) {
 		static term* v;
-		if (p < 0) {
-			return (v = evaluate(ssub)) ? v->unify_ep(ssub, &d, dsub) : true;
-		}
-		if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
-		return p == d.p && (!s || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
+		if (p < 0) 	return (v = evaluate(ssub)) ? v->unify_ep(ssub, &d, dsub) : true;
+		if (d.p < 0) 	return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
+		size_t sz = args.size();
+		if (p != d.p || sz != d.args.size()) return false;
+		for (size_t n = 0; n < sz; ++n)
+			if (!args[n]->unify_ep(ssub, d.args[n], dsub)) 
+				return false;
+		return true;
 	}
 	void init() {}
-#else
-	std::function<term*(const subs& ss)> evaluate;
-	std::function<bool(const subs& ssub, term& d, subs& dsub)> _unify;
-	std::function<bool(const subs& ssub, term& d, const subs& dsub)> _unify_ep;
-
-	void init() {
-		if (p < 0) {
-			evaluate = [this](const subs& ss) {
-				static term* v;
-				return ((v = ss[p])) ? v->p < 0 ? 0 : v->evaluate(ss) : 0; 
-			};
-			_unify = [this](const subs& ssub, term& _d, subs& dsub) {
-				static term* v;
-				if ((v = evaluate(ssub))) return v->unify(ssub, &_d, dsub);
-				if ((v = dsub[p]) && v != &_d && v->p > 0) return false;
-				dsub.set(p, &_d);
-				return true;
-			};
-			_unify_ep = [this](const subs& ssub, term& _d, const subs& dsub) {
-				static term* v;
-				return (v = evaluate(ssub)) ? v->unify_ep(ssub, &_d, dsub) : true;
-			};
-		}
-		else {
-			_unify = [this](const subs& ssub, term& d, subs& dsub) {
-				static term* v;
-				if (d.p < 0) {
-					if ((v = d.evaluate(dsub))) return unify(ssub, v, dsub);
-					dsub.set(d.p, evaluate(ssub));
-					return true;
-				}
-				return p == d.p && (!s || (s->unify(ssub, d.s, dsub) && o->unify(ssub, d.o, dsub) ));
-			};
-
-			_unify_ep = [this](const subs& ssub, term& d, const subs& dsub) {
-				static term* v;
-				if (d.p < 0) return ((v = d.evaluate(dsub))) ? unify_ep(ssub, v, dsub) : true;
-				return p == d.p && (!s || (s->unify_ep(ssub, d.s, dsub) && o->unify_ep(ssub, d.o, dsub)));
-			};
-
-			if (!s && !o) evaluate = [this](const subs&) { return this; };
-			else evaluate = [this](const subs& ss) {
-				term *a = s->evaluate(ss), *b = o->evaluate(ss);
-				return (!a && !b) ? this : mkterm(p, a ? a : s, b ? b : o);
-			};
-		}
-	}
-#endif	
 	bool unify_ep(const subs& ssub, term* _d, const subs& dsub) {
 		return !(!_d || !_d->p || _d->p == implies) && _unify_ep(ssub, *_d, dsub);
 	}
@@ -323,7 +284,8 @@ private:
 
 term* mkterm() { return new term; }
 term* mkterm(termset& kb, termset& query) { return new term(kb, query); }
-term* mkterm(resid _p, term* _s, term* _o) { return new term(_p, _s, _o); }
+term* mkterm(resid p, const termset& args) { return new term(p, args); }
+term* mkterm(resid p) { return new term(p); }
 
 #define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
 #define SKIPWS while (iswspace(*s)) ++s
@@ -353,15 +315,16 @@ public:
 
 	term* readlist() {
 		if (*s != L'(') return (term*)0;
-		++s; 
+		++s;
 		term *head = mkterm(Dot), *pn = head;
 		while (*s != L')') {
 			SKIPWS;
 			if (*s == L')') break;
-			if (!(pn->s = readany(true)))
+			if (!(pn = readany(true)))
 				EPARSE(L"couldn't read next list item: ");
+			head->args.push_back(pn);
 			SKIPWS;
-			pn = pn->o = mkterm(Dot);
+//			pn = pn->o = mkterm(Dot);
 			if (*s == L'.') while (iswspace(*s++));
 			if (*s == L'}') EPARSE(L"expected { inside list: ");
 		};
@@ -419,7 +382,7 @@ public:
 	void addhead(termset& ts, term* t) {
 		if (!t) throw 0;
 		if (!t->p) throw 0;
-		if (!t->s != !t->p) throw 0;
+//		if (!t->s != !t->p) throw 0;
 		ts.push_back(t);
 	}
 
@@ -462,8 +425,12 @@ public:
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
 			if (subject)
 				for (preds_t::const_iterator x = preds.begin(); x != preds.end(); ++x)
-					for (termset::iterator o = x->second.begin(); o != x->second.end(); ++o)
-						addhead(heads, mkterm(x->first->p, subject, *o));
+					for (termset::iterator o = x->second.begin(); o != x->second.end(); ++o) {
+						termset ts;
+						ts.push_back(subject);
+						ts.push_back(*o);
+						addhead(heads, mkterm(x->first->p, ts));
+					}
 			else for (termset::iterator o = objs.begin(); o != objs.end(); ++o) addhead(heads, (*o)->addbody(subjs));
 			if (*s == L'}') { ++s; return heads; }
 			preds.clear();
@@ -488,12 +455,12 @@ termset readterms ( std::wistream& is) {
 }
 
 string formatlist(const term* t, bool in = false) {
-	if (!t || !t->s || !t->o) return L"";
+	if (!t) return L"";
 	if (t->p != Dot)
 		throw 0;
 	std::wstringstream ss;
 	if (!in) ss << L'(';
-	ss << formatlist(t->o, true) << L' ' << format(t->s) << L' ';
+	ss << format(t->args, true);// << L' ' << format(t->s) << L' ';
 	if (!in) ss << L')';
 	return ss.str();
 }
@@ -508,11 +475,15 @@ string format(const term* t, bool body) {
 		ss << format(t, false);
 	}
 	else if (!t->p) return L"";
-	else if (t->p != Dot) {
-		if (t->s) ss << format(t->s) << L' ' << dict[t->p] << L' ' << format(t->o) << L'.';
-		else ss << dict[t->p];
-	}
-	else return formatlist(t);
+//	else if (t->p != Dot) {
+		ss << dict[t->p];
+		if (t->args.size()) {
+			ss << L'(';
+			for (term* y : t->args) ss << format(y) << L' ';
+			ss << L") ";
+		}
+//	}
+//	else return formatlist(t);
 	return ss.str();
 }
 
