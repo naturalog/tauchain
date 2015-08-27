@@ -12,6 +12,29 @@
 #include <functional>
 
 template<typename T>
+struct sp { // smart pointer
+	T* p = 0;
+	int* r = 0;
+	sp(){}// : p(0) 				{ ++(r = new int); }
+	sp(T* v) : p(v) 			{ *(r = new int) = 1; }
+	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ if (r) ++*r; }
+
+	~sp() { if (r && !--*r) delete p , delete r; }
+
+	T& operator* ()  { return *p; } 
+	T* operator-> () { return p; }
+    
+	sp<T>& operator=(const sp<T>& s) {
+		if (this == &s) return *this;
+		if (r && !--*r) delete p , delete r;
+		p = s.p;
+		if ((r = s.r)) ++*r;
+		return *this;
+	}
+};
+
+typedef sp<struct frame> sp_frame;
+template<typename T>
 class vector {
 protected:
 	T* a;
@@ -230,12 +253,9 @@ struct term {
 	};
 	bool _unify(const subs& ssub, term& d, subs& dsub) {
 		static term* v;
-		if (p < 0) {
-			v = ssub[p];
-			if (v && (v = v->evaluate(ssub))) return v->unify(ssub, &d, dsub);
-			return true;
-		} else if (d.p < 0) {
-			v = dsub[p];
+		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(ssub))) ? v->unify(ssub, &d, dsub) : true;
+		if (d.p < 0) {
+			v = dsub[d.p];
 			if (v && (v = d.evaluate(dsub))) return unify(ssub, v, dsub);
 			dsub.set(d.p, v = evaluate(ssub));
 			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
@@ -248,6 +268,7 @@ struct term {
 				return false;
 		return true;
 	}
+	void unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
 	bool _unify_ep(const subs& ssub, term& d, const subs& dsub) {
 		static term* v;
 		if (p < 0) 	return (v = evaluate(ssub)) ? v->unify_ep(ssub, &d, dsub) : true;
@@ -524,33 +545,6 @@ string format(const termset& t, int dep) {
 typedef vector<mapelem<term*, subs> > ground;
 typedef map<resid, vector<mapelem<term*, ground> > > evidence;
 
-template<typename T>
-struct sp { // smart pointer
-	T* p;
-	struct ref {
-		size_t r; ref() : r(0) {}
-		void inc() { ++r; }
-		size_t dec() { return --r; }
-	} *r;
-	sp() : p(0) 				{ (r = new ref)->inc(); }
-	sp(T* v) : p(v) 			{ (r = new ref)->inc(); }
-	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ r->inc(); }
-
-	~sp() { if (!r->dec()) delete p , delete r; }
-
-	T& operator* ()  { return *p; } 
-	T* operator-> () { return p; }
-    
-	sp<T>& operator=(const sp<T>& s) {
-		if (this == &s) return *this;
-		if(!r->dec()) delete p , delete r;
-		p = s.p;
-		(r = s.r)->inc();
-		return *this;
-	}
-};
-
-typedef sp<struct frame> sp_frame;
 struct frame {
 	term* rule;
 	term::bvec::iterator b;
@@ -599,6 +593,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 		if (p.b != p.rule->body.end()) {
 			term::body_t& pb = **p.b;
 			// ask the body item's term to try to match to its indexed heads
+//			pb.t->unify(p.s, pb.matches, _p, lastp);
 			while (pb(p.s))
 				lastp = lastp->next = sp_frame(new frame(_p, *pb.it, 0, _p, pb.ds));
 		}
@@ -624,6 +619,21 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 	}
 //	dout << "steps: " << steps << std::endl;
 	return sp_frame();
+}
+
+void term::unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
+	const size_t sz = args.size();
+	subs dsub;
+	size_t n;
+	for (term* _d : ts)  {
+		term& d = *_d;
+		for (n = 0; n < sz; ++n) 
+			if (!args[n]->unify(ssub, d.args[n], dsub)) 
+				break;
+		if (n == sz) 
+			lastp = lastp->next = sp_frame(new frame(f, _d, 0, f, dsub));
+		dsub.clear();
+	}
 }
 
 int main() {
