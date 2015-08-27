@@ -83,9 +83,13 @@ struct map : public vector<mapelem<K, V> > {
 	typedef mapelem<K, V> vtype;
 	typedef vector<mapelem<K, V> > base;
 public:
-	using base::vector;
-	using base::clear;
-	using base::size;
+	map(const vector<vtype>& t) { copyfrom(t); }
+//	size_t size() const	{ return base::n; }
+//	void clear()		{ if (!base::a) return; free(base::a); base::a = 0; base::n = 0; base::c = 0; }
+//	bool empty() const	{ return !base::a; }
+//	using base::vector;
+//	using base::clear;
+//	using base::size;
 	map() : base() {}
 	map(const map<K, V>& _s) : base()      	{ base::copyfrom(_s); }
 	map<K, V>& operator=(const map<K, V>& m){ base::copyfrom(m); return *this; }
@@ -557,7 +561,7 @@ string format(const term* t, bool body) {
 
 string format(const subs& s) {
 	std::wstringstream ss;
-	vector<mapelem<resid, term*> > v(s);
+	vector<mapelem<resid, term*> > v((const vector<mapelem<resid, term*> >&)s);
 	for (size_t n = 0; n < s.size(); ++n)
 		ss << dict[v[n].first] << L'\\' << format(v[n].second) << L' ';
 	return ss.str();
@@ -663,9 +667,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 }
 
 void term::_unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
-	const size_t sz = args.size();
 	subs dsub;
-	size_t n;
 	for (term* _d : ts)  {
 		term& d = *_d;
 		if (args.size() != d.args.size()) continue;
