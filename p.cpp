@@ -593,9 +593,9 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 		if (p.b != p.rule->body.end()) {
 			term::body_t& pb = **p.b;
 			// ask the body item's term to try to match to its indexed heads
-//			pb.t->unify(p.s, pb.matches, _p, lastp);
-			while (pb(p.s))
-				lastp = lastp->next = sp_frame(new frame(_p, *pb.it, 0, _p, pb.ds));
+			pb.t->unify(p.s, pb.matches, _p, lastp);
+//			while (pb(p.s))
+//				lastp = lastp->next = sp_frame(new frame(_p, *pb.it, 0, _p, pb.ds));
 		}
 		else if (!p.prev.p) {
 			#ifndef NOTRACE
