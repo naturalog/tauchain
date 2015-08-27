@@ -225,7 +225,6 @@ struct term {
 			auto& ar = s.args;
 			size_t sz = ar.size();
 			if (sz != d.args.size()) return false;
-			size_t n = 0;
 			termset::iterator dit = d.args.begin();
 			for (term* t : ar)
 				if (!t->unify_ep(*t, ssub, **dit++, dsub)) 
@@ -668,10 +667,15 @@ void term::_unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
 	size_t n;
 	for (term* _d : ts)  {
 		term& d = *_d;
-		for (n = 0; n < sz; ++n) 
-			if (!args[n]->unify(*args[n], ssub, *d.args[n], dsub)) 
+		termset::iterator it = args.begin(), end = args.end(), dit = d.args.begin();
+		while (it != end) {
+			term& x = **it++;
+			if (!x.unify(x, ssub, **dit++, dsub)) {
+				--it;
 				break;
-		if (n == sz) 
+			}
+		}
+		if (it == end) 
 			lastp = lastp->next = sp_frame(new frame(f, _d, 0, f, dsub));
 		dsub.clear();
 	}
