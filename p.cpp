@@ -162,10 +162,8 @@ struct term {
 		term* t;
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
-		struct match { match(term* _t) : t(_t) {} term* t; }; // hold rule's head that can match this body item
-		typedef vector<match*> mvec;
-		mvec matches;
-		mvec::iterator it;
+		termset matches;
+		termset::iterator it;
 		subs ds;
 		// a small coroutine that returns all indexed head that match also given a subst.
 		// this process is what happens during inference rather index.
@@ -173,9 +171,9 @@ struct term {
 			if (!state) { it = matches.begin(); state = true; }
 			else { ++it; ds.clear(); }
 			while (it != matches.end()) {
-				TRACE(dout << "matching " << format(t, true) << " with " << format((*it)->t, true) << "... ");
+				TRACE(dout << "matching " << format(t, true) << " with " << format(*it, true) << "... ");
 
-				if (it != matches.end() && t->unify(s, (*it)->t, ds)) { 
+				if (it != matches.end() && t->unify(s, *it, ds)) { 
 					TRACE(dout << " passed" << std::endl); 
 					return state = true; 
 				}
@@ -190,7 +188,7 @@ struct term {
 	private:
 		void addmatch(term* x) { // indexer: add matching rule's head
 			TRACE(dout << "added match " << format(x) << " to " << format(t) << std::endl);
-			matches.push_back(new match(x));
+			matches.push_back(x);
 		}
 	};
 	typedef vector<body_t*> bvec;
@@ -543,9 +541,9 @@ string format(const termset& t, int dep) {
 		for (term::bvec::iterator y = x->body.begin(); y != x->body.end(); ++y) {
 			IDENT;
 			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
-			for (vector<term::body_t::match*>::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
+			for (termset::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
 				IDENT;
-				ss << L"\t\t" << format((*z)->t, true) << std::endl;
+				ss << L"\t\t" << format(*z, true) << std::endl;
 			}
 		}
 	}
@@ -631,7 +629,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 			term::body_t& pb = **p.b;
 			// ask the body item's term to try to match to its indexed heads
 			while (pb(p.s))
-				lastp = lastp->next = sp_frame(new frame(_p, (*pb.it)->t, 0, _p, pb.ds));
+				lastp = lastp->next = sp_frame(new frame(_p, *pb.it, 0, _p, pb.ds));
 		}
 		else if (!p.prev.p) {
 			#ifndef NOTRACE
