@@ -212,9 +212,9 @@ struct term {
 			auto& ar = s.args;
 			size_t sz = ar.size();
 			if (sz != d.args.size()) return false;
-			size_t n = 0;
+			termset::iterator dit = d.args.begin();
 			for (term* t : ar)
-				if (!t->unify(*t, ssub, *d.args[n++], dsub)) 
+				if (!t->unify(*t, ssub, **dit++, dsub)) 
 					return false;
 			return true;
 		};
@@ -226,8 +226,9 @@ struct term {
 			size_t sz = ar.size();
 			if (sz != d.args.size()) return false;
 			size_t n = 0;
+			termset::iterator dit = d.args.begin();
 			for (term* t : ar)
-				if (!t->unify_ep(*t, ssub, *d.args[n++], dsub)) 
+				if (!t->unify_ep(*t, ssub, **dit++, dsub)) 
 					return false;
 			return true;
 		};
