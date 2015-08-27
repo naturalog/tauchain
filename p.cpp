@@ -189,46 +189,51 @@ struct term {
 			}
 			return mkterm(t.p, ts);
 		};
+		static auto u1 = [](term& s, const subs& ssub, term& d, subs& dsub) {
+			static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify(*v, ssub, d, dsub) : true;
+		};
+		static auto u2 = [](term& s, const subs& ssub, term& d, const subs& dsub) { 
+			static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify_ep(*v, ssub, d, dsub) : true; 
+		};
+		static auto u3 = [](term& s, const subs& ssub, term& d, subs& dsub) {
+			static term* v;
+			if (d.p < 0) {
+				if ((v = dsub[d.p]) && (v = d.evaluate(d, dsub))) return s.unify(s, ssub, *v, dsub);
+				dsub.set(d.p, v = s.evaluate(s, ssub));
+//				TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+				return true;
+			}
+			if (s.p != d.p) return false;
+			auto& ar = s.args;
+			size_t sz = ar.size();
+			if (sz != d.args.size()) return false;
+			size_t n = 0;
+			for (term* t : ar)
+				if (!t->unify(*t, ssub, *d.args[n++], dsub)) 
+					return false;
+			return true;
+		};
+		static auto u4 = [](term& s, const subs& ssub, term& d, const subs& dsub) {
+			static term* v;
+			if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(*v, dsub))) ? s.unify_ep(s, ssub, *v, dsub) : true;
+			if (s.p != d.p) return false;
+			auto& ar = s.args;
+			size_t sz = ar.size();
+			for (size_t n = 0; n < sz; ++n)
+				if (!ar[n]->unify_ep(*ar[n], ssub, *d.args[n], dsub)) 
+					return false;
+			return true;
+		};
 		if (p < 0) {
 			evaluate = evvar;
-			unify = [](term& s, const subs& ssub, term& d, subs& dsub) {
-				static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify(*v, ssub, d, dsub) : true;
-			};
-			unify_ep = [](term& s, const subs& ssub, term& d, const subs& dsub) { 
-				static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify_ep(*v, ssub, d, dsub) : true; 
-			};
+			unify = u1;
+			unify_ep = u2;
 		}
-		else if (args.empty()) evaluate = evnoargs;
-		else evaluate = ev;
-		if (p > 0) {
-			unify = [](term& s, const subs& ssub, term& d, subs& dsub) {
-				static term* v;
-				if (d.p < 0) {
-					if ((v = dsub[d.p]) && (v = d.evaluate(d, dsub))) return s.unify(s, ssub, *v, dsub);
-					dsub.set(d.p, v = s.evaluate(s, ssub));
-//					TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
-					return true;
-				}
-				if (s.p != d.p) return false;
-				auto& ar = s.args;
-				size_t sz = ar.size();
-				if (sz != d.args.size()) return false;
-				for (size_t n = 0; n < sz; ++n)
-					if (!ar[n]->unify(*ar[n], ssub, *d.args[n], dsub)) 
-						return false;
-				return true;
-			};
-			unify_ep = [](term& s, const subs& ssub, term& d, const subs& dsub) {
-				static term* v;
-				if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(*v, dsub))) ? s.unify_ep(s, ssub, *v, dsub) : true;
-				if (s.p != d.p) return false;
-				auto& ar = s.args;
-				size_t sz = ar.size();
-				for (size_t n = 0; n < sz; ++n)
-					if (!ar[n]->unify_ep(*ar[n], ssub, *d.args[n], dsub)) 
-						return false;
-				return true;
-			};
+		else {
+			if (args.empty()) evaluate = evnoargs;
+			else evaluate = ev;
+			unify = u3;
+			unify_ep = u4;
 		}
 	}
 	const resid p;
