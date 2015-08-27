@@ -189,15 +189,53 @@ struct term {
 			}
 			return mkterm(t.p, ts);
 		};
-		if (p < 0) evaluate = evvar;
+		if (p < 0) {
+			evaluate = evvar;
+			unify = [](term& s, const subs& ssub, term& d, subs& dsub) {
+				static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify(*v, ssub, d, dsub) : true;
+			};
+			unify_ep = [](term& s, const subs& ssub, term& d, const subs& dsub) { 
+				static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify_ep(*v, ssub, d, dsub) : true; 
+			};
+		}
 		else if (args.empty()) evaluate = evnoargs;
 		else evaluate = ev;
+		if (p > 0) {
+			unify = [](term& s, const subs& ssub, term& d, subs& dsub) {
+				static term* v;
+				if (d.p < 0) {
+					if ((v = dsub[d.p]) && (v = d.evaluate(d, dsub))) return s.unify(s, ssub, *v, dsub);
+					dsub.set(d.p, v = s.evaluate(s, ssub));
+//					TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+					return true;
+				}
+				if (s.p != d.p) return false;
+				auto& ar = s.args;
+				size_t sz = ar.size();
+				if (sz != d.args.size()) return false;
+				for (size_t n = 0; n < sz; ++n)
+					if (!ar[n]->unify(*ar[n], ssub, *d.args[n], dsub)) 
+						return false;
+				return true;
+			};
+			unify_ep = [](term& s, const subs& ssub, term& d, const subs& dsub) {
+				static term* v;
+				if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(*v, dsub))) ? s.unify_ep(s, ssub, *v, dsub) : true;
+				if (s.p != d.p) return false;
+				auto& ar = s.args;
+				size_t sz = ar.size();
+				for (size_t n = 0; n < sz; ++n)
+					if (!ar[n]->unify_ep(*ar[n], ssub, *d.args[n], dsub)) 
+						return false;
+				return true;
+			};
+		}
 	}
 	const resid p;
 	const termset args;
 	term* (*evaluate)(term&, const subs&);
-//	bool (*unify)(const subs& ssub, term& d, subs& dsub);
-//	bool (*unify_ep)(const subs& ssub, term& d, const subs& dsub);
+	bool (*unify)(term& s, const subs& ssub, term& d, subs& dsub);
+	bool (*unify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
 //	term *s, *o;
 	struct body_t {
 		friend struct term;
@@ -244,7 +282,7 @@ struct term {
 		return mkterm(t.p, ts);
 		TRACE(dout<<"evaluate " << format(&t) << " under " << format(ss) << " returned " << format(r) << std::endl);
 		return r;
-	};*/
+	};
 	bool unify(const subs& ssub, term& d, subs& dsub) {
 		term* v;
 		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(*v, ssub))) ? v->unify(ssub, d, dsub) : true;
@@ -261,7 +299,6 @@ struct term {
 				return false;
 		return true;
 	}
-	void unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
 	bool unify_ep(const subs& ssub, term& d, const subs& dsub) {
 		static term* v;
 		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(*v, ssub))) ? v->unify_ep(ssub, d, dsub) : true;
@@ -272,7 +309,8 @@ struct term {
 			if (!args[n]->unify_ep(ssub, *d.args[n], dsub)) 
 				return false;
 		return true;
-	}
+	}*/
+	void _unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
 private:
 //	static term* v; // temp var for unifiers
 
@@ -284,7 +322,7 @@ private:
 		//b.addmatch(t, subs()); return; // unremark to disable indexing
 		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
 		static subs d;
-		if (b.t->unify(subs(), *t, d)) b.addmatch(t);
+		if (b.t->unify(*b.t, subs(), *t, d)) b.addmatch(t);
 		d.clear();
 	}
 };
@@ -567,17 +605,19 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
 		sp_frame ep = _p;
 		frame& p = *_p.p;
-		term* t = p.rule;
+		term* t = p.rule, *epr;
 		if (t) { // check for euler path
-			while ((ep = ep.p->prev).p)
-				if (ep->rule == p.rule && ep->rule->unify_ep(ep->s, *t, p.s)) {
+			while ((ep = ep.p->prev).p) {
+				epr = ep->rule;
+				if (epr == p.rule && epr->unify_ep(*epr, ep->s, *t, p.s)) {
 					_p = _p->next;
 					t = 0;
 					break;
 				}
+			}
 			if (!t) { _p = p.next; continue; }
 		}
-		if (p.b != p.rule->body.end()) (*p.b)->t->unify(p.s, (*p.b)->matches, _p, lastp);
+		if (p.b != p.rule->body.end()) (*p.b)->t->_unify(p.s, (*p.b)->matches, _p, lastp);
 		else if (!p.prev.p) {
 			#ifndef NOTRACE
 			term* _t; // push evidence
@@ -592,7 +632,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 			frame& ppr = *p.prev;
 			sp_frame r(new frame(_p, ppr));
 			r->s = ppr.s;
-			p.rule->unify(p.s, *(*r->b)->t, r->s);
+			p.rule->unify(*p.rule, p.s, *(*r->b)->t, r->s);
 			++r->b;
 			prove(r, lastp);
 		}
@@ -602,14 +642,14 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 	return sp_frame();
 }
 
-void term::unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
+void term::_unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
 	const size_t sz = args.size();
 	subs dsub;
 	size_t n;
 	for (term* _d : ts)  {
 		term& d = *_d;
 		for (n = 0; n < sz; ++n) 
-			if (!args[n]->unify(ssub, *d.args[n], dsub)) 
+			if (!args[n]->unify(*args[n], ssub, *d.args[n], dsub)) 
 				break;
 		if (n == sz) 
 			lastp = lastp->next = sp_frame(new frame(f, _d, 0, f, dsub));
