@@ -15,14 +15,14 @@ template<typename T>
 struct sp { // smart pointer
 	T* p = 0;
 	int* r = 0;
-	sp(){}// : p(0) 				{ ++(r = new int); }
+	sp() {}
 	sp(T* v) : p(v) 			{ *(r = new int) = 1; }
 	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ if (r) ++*r; }
 
 	~sp() { if (r && !--*r) delete p , delete r; }
 
-	T& operator* ()  { return *p; } 
-	T* operator-> () { return p; }
+	T& operator*()  { return *p; } 
+	T* operator->() { return p; }
     
 	sp<T>& operator=(const sp<T>& s) {
 		if (this == &s) return *this;
@@ -37,11 +37,13 @@ typedef sp<struct frame> sp_frame;
 template<typename T>
 class vector {
 protected:
-	T* a;
-	size_t n;
+	T* a = 0;
+	const size_t chunk = 4;
+	const size_t szchunk = chunk * sizeof(T);
+	size_t n = 0, c = 0;
 public:
-	vector() : a(0), n(0) {}
-	vector(const vector<T>& t) : a(0), n(0) { copyfrom(t); }
+	vector() {}
+	vector(const vector<T>& t) { copyfrom(t); }
 	vector<T>& operator=(const vector<T>& t) { copyfrom(t); return *this; }
 
 	typedef T* iterator;
@@ -49,20 +51,28 @@ public:
 	size_t size() const	{ return n; }
 	T* begin() const	{ return a; }
 	T* end() const		{ return a ? &a[n] : 0; }
-	void clear()		{ if (!a) return; free(a); a = 0; n = 0; }
+	void clear()		{ if (!a) return; free(a); a = 0; n = 0; c = 0; }
 	bool empty() const	{ return !a; }
 	~vector()		{ clear(); }
 
 	void push_back(const T& t) {
-		if (!(a = (T*)realloc(a, sizeof(T) * ++n))) throw std::runtime_error("Allocation failed.");
-		new (&a[n-1]) (T);
-		a[n-1] = t;
+//		if (!(a = (T*)realloc(a, sizeof(T) * ++n))) throw std::runtime_error("Allocation failed.");
+//		if (!n)//
+//			a = (T*)realloc(a, ++c * szchunk);
+//		else 
+		if (!(n % chunk))
+			a = (T*)realloc(a, ++c * szchunk);
+		new (&a[n]) (T);
+//		memset(&a[n], 0, sizeof(T));
+		a[n++] = t;
 	}
 protected:	
 	void copyfrom(const vector<T>& t) {
 		clear();
 		if (!(n = t.n)) return; 
-		memcpy(a = (T*)realloc(a, sizeof(T) * n), t.a, sizeof(T) * n);
+		c = t.c;
+		memcpy(a = (T*)malloc(c * szchunk), t.a, c * szchunk);
+		//memcpy(a = (T*)malloc(n * sizeof(T)), t.a, n * sizeof(T));
 	}
 };
 
@@ -79,13 +89,13 @@ struct map : public vector<mapelem<K, V> > {
 	typedef mapelem<K, V> vtype;
 	typedef vector<mapelem<K, V> > base;
 public:
+	using base::vector;
+	using base::clear;
+	using base::size;
 	map() : base() {}
 	map(const map<K, V>& _s) : base()      	{ base::copyfrom(_s); }
-	V get(const K& k) const			{ mapelem<K, V>* z = find(k); if (!z) return V(); return z->second; }
 	map<K, V>& operator=(const map<K, V>& m){ base::copyfrom(m); return *this; }
-	V operator[](const K& k) const		{ return get(k); }
-	void clear()				{ base::clear(); }
-	size_t size() const			{ return base::size(); }
+	V operator[](const K& k) const		{ mapelem<K, V>* z = find(k); if (!z) return V(); return z->second; }
 	void set(const K& k, const V& v) {
 		vtype* z = find(k);
 		if (z) { z->second = v; return; }
