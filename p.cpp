@@ -219,8 +219,10 @@ struct term {
 			if (s.p != d.p) return false;
 			auto& ar = s.args;
 			size_t sz = ar.size();
-			for (size_t n = 0; n < sz; ++n)
-				if (!ar[n]->unify_ep(*ar[n], ssub, *d.args[n], dsub)) 
+			if (sz != d.args.size()) return false;
+			size_t n = 0;
+			for (term* t : ar)
+				if (!t->unify_ep(*t, ssub, *d.args[n++], dsub)) 
 					return false;
 			return true;
 		};
@@ -332,10 +334,21 @@ private:
 	}
 };
 
-term* mkterm() { return new term; }
-term* mkterm(termset& kb, termset& query) { return new term(kb, query); }
-term* mkterm(resid p, const termset& args) { return new term(p, args); }
-term* mkterm(resid p) { return new term(p); }
+const size_t chunk = 8192, nch = chunk / sizeof(term);
+size_t bufpos = 0;
+char* buf = (char*)malloc(chunk);
+
+#define MKTERM if (bufpos == nch) { buf = (char*)malloc(chunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term); return &((term*)buf)[bufpos++];
+#define MKTERM1(x) if (bufpos == nch) { buf = (char*)malloc(chunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x); return &((term*)buf)[bufpos++];
+#define MKTERM2(x, y) if (bufpos == nch) { buf = (char*)malloc(chunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x, y); return &((term*)buf)[bufpos++];
+
+term* mkterm() { MKTERM }
+term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
+//	return new term(kb, query); }
+term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
+//	return new term(p, args); }
+term* mkterm(resid p) { MKTERM1(p); }
+//	return new term(p); }
 
 #define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
 #define SKIPWS while (iswspace(*s)) ++s
