@@ -90,13 +90,15 @@ public:
 		vtype* z = find(k);
 		if (z) { z->second = v; return; }
 		base::push_back(vtype(k, v));
-		qsort(base::a, base::n, sizeof(vtype), compare);
+//		qsort(base::a, base::n, sizeof(vtype), compare);
 	}
 	typedef vtype* iterator;
 	iterator find(const K& k) const {
-		vtype v(k, V());
-		vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare);
-		return z;
+		for (vtype& x : *this) if (x.first == k) return &x;
+		return 0;
+//		vtype v(k, V());
+//		vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare);
+//		return z;
 	}
 private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
