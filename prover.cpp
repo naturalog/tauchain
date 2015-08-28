@@ -371,8 +371,8 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 		// check the definitions of the uri constants, some are right, some are just "xxx:yyy"
 		// see we rely on the == A kludge...
 
-	else if ((r = rdfs_builtin(t, t0, t1)) != -1)
-	{}
+	//else if ((r = rdfs_builtin(t, t0, t1)) != -1)
+	//{}
 
 	#ifdef with_marpa
 		/*
