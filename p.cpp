@@ -219,8 +219,18 @@ size_t bufpos = 0;
 char* buf = (char*)malloc(tchunk);
 
 #define MKTERM
-#define MKTERM1(x) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x); return &((term*)buf)[bufpos++];
-#define MKTERM2(x, y) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x, y); return &((term*)buf)[bufpos++];
+#define MKTERM1(x)
+#define MKTERM2(x, y) \
+	if (bufpos == nch) { \
+		buf = (char*)malloc(tchunk); \
+		bufpos = 0; \
+	} \
+	new (&((term*)buf)[bufpos])(term)(x, y); \
+	term* r = &((term*)buf)[bufpos]; \
+	std::set<term*>::iterator it = terms.find(r); \
+	if (it != terms.end()) return *it; \
+	bufpos++; \
+	return r; 
 
 term* mkterm() {
 	if (bufpos == nch) {
@@ -228,11 +238,28 @@ term* mkterm() {
 		bufpos = 0;
 	}
 	new (&((term*)buf)[bufpos])(term);
-	return &((term*)buf)[bufpos++];
+	term* r = &((term*)buf)[bufpos];
+	std::set<term*>::iterator it = terms.find(r);
+	if (it != terms.end()) return *it;
+	bufpos++;
+	terms.insert(r);
+	return r;
 }
 term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
 term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
-term* mkterm(resid p) { MKTERM1(p); }
+term* mkterm(resid p) {
+	if (bufpos == nch) {
+		buf = (char*)malloc(tchunk);
+		bufpos = 0;
+	}
+	new (&((term*)buf)[bufpos])(term)(p);
+	term* r = &((term*)buf)[bufpos];
+	std::set<term*>::iterator it = terms.find(r);
+	if (it != terms.end()) return *it;
+	bufpos++;
+	terms.insert(r);
+	return r;
+}
 
 #define EPARSE(x) dout << (string(x) + string(s,0,48)) << endl, throw 0
 #define SKIPWS while (iswspace(*s)) ++s
@@ -379,7 +406,7 @@ termset nqparser::operator()(const wchar_t* _s) {
 	return heads;
 }
 
-termset readterms ( std::wistream& is) {
+termset readterms(std::wistream& is) {
 	string s, c;
 	nqparser p;
 	string ss, space = L" ";

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstring>
 #include <string>
+#include <set>
 
 typedef struct frame* pframe;
 const size_t chunk = 4;
@@ -122,6 +123,18 @@ struct term {
 	void trymatch(termset& heads);
 	void _unify(pframe f, pframe& lastp);
 };
+
+struct tcmp {
+	bool operator()(term* _x, term* _y) const {
+		term &x = *_x, &y = *_y;
+		if (x.szargs != y.szargs) return x.szargs < y.szargs;
+		if (x.p != y.p) return x.p < y.p;
+		for (termset::iterator i = x.args.begin(), e = x.args.end(), j = y.args.begin(); i != e; ++i, ++j) 
+			if ((*i)->p != (*j)->p) return (*i)->p < (*j)->p;
+		return false;
+	}
+};
+std::set<term*, tcmp> terms;
 
 const size_t tchunk = 8192, nch = tchunk / sizeof(term);
 
