@@ -123,7 +123,7 @@ void term::trymatch(termset& heads) {
 }
 
 term* evvar(term& t) {
-	subs::vtype* v = ssub.find(t.p);
+	subs::vtype* v = ssub.find(&t);
 	return v ? v->second->evaluate(*v->second) : (term*)0; 
 }
 
@@ -139,7 +139,7 @@ term* ev(term& t) {
 }
 
 term* evvars(term& t, const subs& ss) {
-	subs::vtype* v = ss.find(t.p);
+	subs::vtype* v = ss.find(&t);
 	return v ? v->second->evaluates(*v->second, ss) : (term*)0; 
 }
 
@@ -164,7 +164,7 @@ bool u1(term& s, term& d, subs& dsub) {
 	static subs::vtype *v;
 	static term *e;
 	//return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second))) ? e->unify(*e, d, dsub) : true : true;
-	if ((v = ssub.find(s.p))) {
+	if ((v = ssub.find(&s))) {
 		term& vs = *v->second;
 		if ((e = FASTEVAL(vs))) return e->unify(*e, d, dsub);
 		return true;
@@ -175,15 +175,15 @@ bool u1(term& s, term& d, subs& dsub) {
 bool u2(term& s, term& d, const subs& dsub) { 
 	static subs::vtype *v;
 	static term *e;
-	return ((v = ssub.find(s.p))) ? ((e = FASTEVAL(*v->second))) ? e->unify_ep(*e, d, dsub) : true : true;
+	return ((v = ssub.find(&s))) ? ((e = FASTEVAL(*v->second))) ? e->unify_ep(*e, d, dsub) : true : true;
 }
 
 bool u3(term& s, term& d, subs& dsub) {
 	if (d.p < 0) {
-		subs::vtype* v = dsub.find(d.p);
+		subs::vtype* v = dsub.find(&d);
 		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
 		if (e) return s.unify(s, *e, dsub);
-		dsub.set(d.p, FASTEVAL(s));
+		dsub.set(&d, FASTEVAL(s));
 //		TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << endl);
 		return true;
 	}
@@ -200,7 +200,7 @@ bool u3(term& s, term& d, subs& dsub) {
 
 bool u4(term& s, term& d, const subs& dsub) {
 	if (d.p < 0) {
-		subs::vtype* v = dsub.find(d.p);
+		subs::vtype* v = dsub.find(&d);
 		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
 		return e ? s.unify_ep(s, *e, dsub) : true;
 	}

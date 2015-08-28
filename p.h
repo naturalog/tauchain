@@ -70,7 +70,7 @@ private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
 
-typedef map<resid, term*, true> subs;
+typedef map<term*, term*, true> subs;
 typedef vector<term*, true> termset;
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
