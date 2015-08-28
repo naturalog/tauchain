@@ -221,95 +221,20 @@ struct term {
 	fevaluate evaluate;
 	funify unify;
 	funify_ep unify_ep;
-//	bool (*unify)(term& s, const subs& ssub, term& d, subs& dsub);
-//	bool (*unify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
-//	term *s, *o;
-	struct body_t {
-		friend struct term;
-		term* t;
-		bool state;
-		body_t(term* _t) : t(_t), state(false) {}
-		termset matches;
-	};
-	typedef vector<body_t*, true> bvec;
-	bvec body;
+	termset matches, body;
 
-	// add term(s) to body
-	term* addbody(const termset& t) { for (termset::iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
-	term* addbody(term* t) {
-		TRACE(dout << "added body " << format(t) << " to " << format(this) << std::endl);
-		body.push_back(new body_t(t));
-		return this;
-	}
+	term* addbody(const termset& t) { for (termset::iterator it = t.begin(); it != t.end(); ++it) body.push_back(*it); return this; }
 
-	// indexer: given rule's heads, see which can match to each body
 	void trymatch(termset& heads) {
-		for (bvec::iterator b = body.begin(); b != body.end(); ++b)
-			for (termset::iterator it = heads.begin(); it != heads.end(); ++it)
-				trymatch(**b, *it);
-	}/*
-	static term* evaluate(term* _t, const subs& ss) {
-		static term *v, *r;
-		if (!_t) throw 0;
-		term& t = *_t;
-		if (t.p < 0)
-			return (v = ss[t.p]) ? r = v->evaluate(v, ss) : 0;
-		if (t.args.empty())
-			return &t;
-		termset ts;
-		for (term* a : t.args) {
-			if ((v = a->evaluate(a, ss))) ts.push_back(v);
-			else ts.push_back(mkterm(a->p));
-		}
-		return mkterm(t.p, ts);
-		TRACE(dout<<"evaluate " << format(&t) << " under " << format(ss) << " returned " << format(r) << std::endl);
-		return r;
-	};
-	bool unify(const subs& ssub, term& d, subs& dsub) {
-		term* v;
-		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(*v, ssub))) ? v->unify(ssub, d, dsub) : true;
-		if (d.p < 0) {
-			if ((v = dsub[d.p]) && (v = d.evaluate(d, dsub))) return unify(ssub, *v, dsub);
-			dsub.set(d.p, v = evaluate(*this, ssub));
-//			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
-			return true;
-		}
-		size_t sz = args.size();
-		if (p != d.p || sz != d.args.size()) return false;
-		for (size_t n = 0; n < sz; ++n)
-			if (!args[n]->unify(ssub, *d.args[n], dsub)) 
-				return false;
-		return true;
+		subs d, e;
+		for (termset::iterator _b = body.begin(); _b != body.end(); ++_b)
+			for (termset::iterator it = heads.begin(); it != heads.end(); ++it) {
+				term& b = **_b;
+				if (b.unify(b, e, **it, d)) b.matches.push_back(*it);
+				d.clear();
+			}
 	}
-	bool unify_ep(const subs& ssub, term& d, const subs& dsub) {
-		static term* v;
-		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(*v, ssub))) ? v->unify_ep(ssub, d, dsub) : true;
-		if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(*v, dsub))) ? unify_ep(ssub, *v, dsub) : true;
-		size_t sz = args.size();
-		if (p != d.p || sz != d.args.size()) return false;
-		for (size_t n = 0; n < sz; ++n)
-			if (!args[n]->unify_ep(ssub, *d.args[n], dsub)) 
-				return false;
-		return true;
-	}*/
 	void _unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
-private:
-//	static term* v; // temp var for unifiers
-
-	// indexer: match a term (head) to a body's term by trying to unify them.
-	// if they cannot unify without subs, then they will not be able to
-	// unify also during inference.
-	void trymatch(body_t& b, term* t) {
-		if (t == this) return;
-		//b.addmatch(t, subs()); return; // unremark to disable indexing
-		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
-		static subs d;
-		if (b.t->unify(*b.t, subs(), *t, d)) {
-			TRACE(dout << "added match " << format(t) << " to " << format(b.t) << std::endl);
-			b.matches.push_back(t);
-		}
-		d.clear();
-	}
 };
 
 term* evvar(term& t, const subs& ss) {
@@ -579,7 +504,7 @@ string format(const term* t, bool body) {
 	std::wstringstream ss;
 	if (body && t->p == implies) {
 		ss << L'{';
-		for (term::bvec::iterator x = t->body.begin(); x != t->body.end(); ++x) ss << format((*x)->t) << L';';
+		for (termset::iterator x = t->body.begin(); x != t->body.end(); ++x) ss << format(*x) << L';';
 		ss << L'}';
 		ss << format(t, false);
 	}
@@ -618,9 +543,9 @@ string format(const termset& t, int dep) {
 		else
 			ss <<  L" a fact.";
 		ss << std::endl;
-		for (term::bvec::iterator y = x->body.begin(); y != x->body.end(); ++y) {
+		for (termset::iterator y = x->body.begin(); y != x->body.end(); ++y) {
 			IDENT;
-			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
+			ss << L"\t" << format(*y, true) << L" matches to heads:" << std::endl;
 			for (termset::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
 				IDENT;
 				ss << L"\t\t" << format(*z, true) << std::endl;
@@ -635,7 +560,7 @@ typedef map<resid, vector<mapelem<term*, ground>, false >, false > evidence;
 
 struct frame {
 	term* rule;
-	term::bvec::iterator b;
+	termset::iterator b;
 	sp_frame prev, creator, next;
 	subs s;
 	ground g() const { // calculate the ground
@@ -654,7 +579,7 @@ struct frame {
 		return r;	
 	}
 	term* btterm;
-	frame(sp_frame c, term* r, term::bvec::iterator* l, sp_frame p, const subs&  _s = subs())
+	frame(sp_frame c, term* r, termset::iterator* l, sp_frame p, const subs&  _s = subs())
 		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), s(_s), btterm(0) { }
 	frame(sp_frame c, frame& p, const subs& _s) 
 		: rule(p.rule), b(p.b), prev(p.prev), creator(c), s(_s), btterm(0) { }
@@ -680,12 +605,12 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 			}
 			if (!t) { _p = p.next; continue; }
 		}
-		if (p.b != p.rule->body.end()) (*p.b)->t->_unify(p.s, (*p.b)->matches, _p, lastp);
+		if (p.b != p.rule->body.end()) (*p.b)->_unify(p.s, (*p.b)->matches, _p, lastp);
 		else if (!p.prev.p) {
 			#ifndef NOTRACE
 			term* _t; // push evidence
-			for (term::bvec::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
-				if (!(_t = ((*r)->t->evaluate(*(*r)->t, p.s)))) continue;
+			for (termset::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
+				if (!(_t = ((*r)->evaluate(**r, p.s)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
 				dout << "proved: " << format(_t) << std::endl;
 			}
@@ -694,7 +619,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 		else { // if body is done, go up the tree
 			frame& ppr = *p.prev;
 			sp_frame r(new frame(_p, ppr, ppr.s));
-			p.rule->unify(*p.rule, p.s, *(*((r->b)++))->t, r->s);
+			p.rule->unify(*p.rule, p.s, **r->b++, r->s);
 			prove(r, lastp);
 		}
 		_p = p.next;
