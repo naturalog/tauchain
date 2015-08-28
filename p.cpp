@@ -2,7 +2,6 @@
 #include <iostream>
 #include <cstring>
 #include <string>
-#include <stdexcept>
 #include <ctime>
 
 typedef struct frame* pframe;
@@ -113,14 +112,6 @@ string format(const termset& t, int dep = 0);
 string format(const subs& s);
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 
-class wruntime_error : public std::exception {
-	string msg;
-public:
-	wruntime_error(string s) : msg(s){}
-	virtual const char* what() const _GLIBCXX_USE_NOEXCEPT { return std::string(msg.begin(), msg.end()).c_str(); }
-	virtual ~wruntime_error() _GLIBCXX_USE_NOEXCEPT {}
-};
-
 #ifdef DEBUG
 #define TRACE(x) x
 #else
@@ -135,7 +126,7 @@ public:
 	}
 
 	resid set ( string v ) {
-		if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
+		if (!v.size()) throw "bidict::set called with a node containing null value";
 		map<string, resid, false>::iterator it = pi.find ( v );
 		if ( it ) return it->second;
 		resid k = pi.size() + 1;
@@ -280,7 +271,7 @@ term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
 term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
 term* mkterm(resid p) { MKTERM1(p); }
 
-#define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
+#define EPARSE(x) dout << (string(x) + string(s,0,48)) << endl, throw 0
 #define SKIPWS while (iswspace(*s)) ++s
 #define RETIF(x) if (*s == x) return 0
 #define RETIFN(x) if (*s != x) return 0
