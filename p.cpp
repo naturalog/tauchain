@@ -5,26 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <ctime>
-/*
-template<typename T>
-struct sp { // smart pointer
-	T* p;
-	int* r;
-	sp() : p(0), r(0) {}
-	sp(T* v) : p(v) 			{ *(r = new int) = 1; }
-	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ if (r) ++*r; }
-	~sp() { if (r && !--*r) delete p , delete r; }
-	T& operator*()  { return *p; } 
-	T* operator->() { return p; }
-	sp<T>& operator=(const sp<T>& s) {
-		if (this == &s) return *this;
-		if (r && !--*r) delete p , delete r;
-		p = s.p;
-		if ((r = s.r)) ++*r;
-		return *this;
-	}
-};
-*/
+
 typedef struct frame* pframe;
 const size_t chunk = 4;
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
@@ -174,8 +155,6 @@ term* mkterm();
 term* mkterm(termset& kb, termset& query);
 term* mkterm(resid p);
 term* mkterm(resid p, const termset& args);
-
-
 typedef term* (*fevaluate)(term&, const subs&);
 typedef bool (*funify)(term& s, const subs& ssub, term& d, subs& dsub);
 typedef bool (*funify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
@@ -547,17 +526,13 @@ struct frame {
 	frame(pframe c, frame& p, const subs& _s) 
 		: rule(p.rule), b(p.b), prev(p.prev), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref; if(prev)++prev->ref; }
 	void decref() { if (ref--) return; if(creator)creator->decref();if(prev)prev->decref(); delete this; }
-//	~frame() { dout<<"DDDDDDDDDDDDDD"<<std::endl; }
 };
-size_t steps = 0;
 
-//#define NEXT
-//; if (p.creator && !p.creator->ref) delete p.creator
+size_t steps = 0;
 
 void prove(pframe _p, pframe& lastp) {
 	if (!lastp) lastp = _p;
 	evidence e;
-	pframe ll;
 	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
 		pframe ep = _p;
@@ -574,13 +549,7 @@ void prove(pframe _p, pframe& lastp) {
 			continue; 
 		}
 		if (p.b != p.rule->body.end()) {
-			ll = lastp;
 			(*p.b)->_unify(p.s, _p, lastp); 
-//			if (ll == lastp) {
-//				ll = _p;
-//				if (!(_p = p.next)) return;
-//				delete ll;
-//			} else
 			pframe pf = _p; _p = p.next; pf->decref();
 			continue; 
 		}
