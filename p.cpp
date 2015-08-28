@@ -1,10 +1,12 @@
 #include <stdlib.h>
 #include <iostream>
 #include <cstring>
-#include <string>
-#include <sstream>
+//#include <string>
+//#include <sstream>
 #include <stdexcept>
 #include <ctime>
+
+const wchar_t endl[3] = L"\r\n";
 
 template<typename T>
 struct sp { // smart pointer
@@ -43,6 +45,7 @@ public:
 
 	typedef T* iterator;
 	T operator[](size_t k) const { return a[k]; }
+	bool operator==(const vector<T, ispod>& t) const { if (n != t.n) return false; if (!n) return true; for (size_t k = 0; k < n; ++k) if (a[k] != t.a[k]) return false; return true; }
 	size_t size() const	{ return n; }
 	T* begin() const	{ return a; }
 	T* end() const		{ return a ? &a[n] : 0; }
@@ -62,18 +65,50 @@ public:
 		else new (&a[n])(T)(t);
 		return a[n++];
 	}
+	vector<T, ispod> operator+=(const vector<T, ispod>& t) { for (T* c = t.begin(); c != t.end(); ++c) push_back(c); return *this; }
 protected:	
 	void copyfrom(const vector<T, ispod>& t) {
 		clear();
 		if (!(n = t.n)) return; 
 		memcpy(a = (T*)malloc(t.c * szchunk), t.a, (c = t.c) * szchunk);
-//		if (!ispod)
-//			for (size_t k = 0; k < n; ++k)
-//				new (&a[k])(T);
 	}
 };
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
 const size_t vector<T, ispod>::szchunk = chunk * sizeof(T);
+
+struct string : public vector<wchar_t, true> {
+	typedef vector<wchar_t, true> base;
+	void trim() {
+		size_t ls = base::n;
+		while (iswspace(a[--ls]));
+		++ls;
+		base::n = 0;
+		wchar_t *x = base::a, *y = base::a;
+		while (iswspace(*x)) ++x;
+		do { *y++ = *x++, base::n++; } while (ls--);
+		*y = 0;
+	}
+	string substr(size_t n, size_t k) const {
+		string s;
+		while (n != k) s.push_back(base::a[n++]);
+		return s;
+	}
+	operator const wchar_t*() const { return base::a; }
+	const wchar_t* c_str() const { return base::a; }
+	string operator+(const string& t) const { string r(*this); for (size_t k = 0; k < t.size() && t.a[k]; ++k) r.push_back(t.a[k]); r.push_back(0); return r; }
+	string operator+=(const wchar_t& t) { push_back(t); return *this; }
+	string operator+=(const string& t)  { for (const wchar_t* c = t.begin(); c != t.end() && *c; ++c) push_back(*c); push_back(0); return *this; }
+	string() : base() {}
+	string(const string& s) : base(s) {}
+	string(const wchar_t* s) : base() { do { push_back(*s); } while (*s++); }
+	string(const wchar_t* s, size_t f, size_t t) : base() { s += f; while (*s && --t) push_back(*s++); push_back(0); }
+};
+
+struct stringstream : public string {
+	stringstream operator<<(const string& s) { *((string*)this) += s; return *this; }
+	stringstream operator<<(const wchar_t& s) { *((string*)this) += s; return *this; }
+	string& str() { return *this; }
+};
 
 template<typename K, typename V>
 struct mapelem {
@@ -82,6 +117,8 @@ struct mapelem {
 	mapelem(){}
 	mapelem(const mapelem& m) : first(m.first), second(m.second) {}
 	mapelem(const K& _k, const V& _v) : first(_k), second(_v) {} 
+	bool operator==(const mapelem<K, V>& t) const { return first == t.first/* && second == t.second*/; }
+	bool operator!=(const mapelem<K, V>& t) const { return first != t.first/* || second != t.second*/; }
 };
 
 template<typename K, typename V, bool ispod>
@@ -115,19 +152,7 @@ private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
 
-typedef std::wstring string;
-void trim(string& s) {
-	string::iterator i = s.begin();
-	while (iswspace(*i)) {
-		s.erase(i);
-		i = s.begin();
-	}
-	size_t n = s.size();
-	if (n) {
-		while (iswspace(s[--n]));
-		s = s.substr(0, ++n);
-	}
-}
+void trim(string& s) { s.trim(); }
 
 typedef int resid;
 std::wistream &din = std::wcin;
@@ -135,7 +160,6 @@ std::wostream &dout = std::wcout;
 struct term;
 typedef map<resid, term*, true> subs;
 typedef vector<term*, true> termset;
-//string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
 string wstrim(string s) { trim(s); return s; }
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
@@ -237,7 +261,7 @@ struct term {
 	// add term(s) to body
 	term* addbody(const termset& t) { for (termset::iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
 	term* addbody(term* t) {
-		TRACE(dout << "added body " << format(t) << " to " << format(this) << std::endl);
+		TRACE(dout << "added body " << format(t) << " to " << format(this) << endl);
 		body.push_back(new body_t(t));
 		return this;
 	}
@@ -262,7 +286,7 @@ struct term {
 			else ts.push_back(mkterm(a->p));
 		}
 		return mkterm(t.p, ts);
-		TRACE(dout<<"evaluate " << format(&t) << " under " << format(ss) << " returned " << format(r) << std::endl);
+		TRACE(dout<<"evaluate " << format(&t) << " under " << format(ss) << " returned " << format(r) << endl);
 		return r;
 	};
 	bool unify(const subs& ssub, term& d, subs& dsub) {
@@ -271,7 +295,7 @@ struct term {
 		if (d.p < 0) {
 			if ((v = dsub[d.p]) && (v = d.evaluate(d, dsub))) return unify(ssub, *v, dsub);
 			dsub.set(d.p, v = evaluate(*this, ssub));
-//			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+//			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << endl);
 			return true;
 		}
 		size_t sz = args.size();
@@ -302,10 +326,10 @@ private:
 	void trymatch(body_t& b, term* t) {
 		if (t == this) return;
 		//b.addmatch(t, subs()); return; // unremark to disable indexing
-		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
+		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << endl);
 		static subs d;
 		if (b.t->unify(*b.t, subs(), *t, d)) {
-			TRACE(dout << "added match " << format(t) << " to " << format(b.t) << std::endl);
+			TRACE(dout << "added match " << format(t) << " to " << format(b.t) << endl);
 			b.matches.push_back(t);
 		}
 		d.clear();
@@ -348,7 +372,7 @@ bool u3(term& s, const subs& ssub, term& d, subs& dsub) {
 		term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
 		if (e) return s.unify(s, ssub, *e, dsub);
 		dsub.set(d.p, s.evaluate(s, ssub));
-//		TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+//		TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << endl);
 		return true;
 	}
 	if (s.p != d.p) return false;
@@ -551,14 +575,16 @@ public:
 };
 
 termset readterms ( std::wistream& is) {
-	string s, c;
+	string c;
 	nqparser p;
-	std::wstringstream ss;
-	while (getline(is, s)) {
-		trim(s);
+	stringstream ss;
+	wchar_t _s[2560];
+	while (is.getline(_s, 2550)) {
+		string s(_s);
+		s.trim();
 		if (s[0] == '#') continue;
-		if (startsWith(s, L"fin") && wstrim(s.c_str() + 3) == L".") break;
-		ss << ' ' << s << ' ';
+		if (startsWith(s, L"fin") && wstrim(s.c_str() + 3) == string(L".")) break;
+		ss << L' ' << s << L' ';
 	}
 	return p((wchar_t*)ss.str().c_str());
 }
@@ -567,7 +593,7 @@ string formatlist(const term* t, bool in = false) {
 	if (!t) return L"";
 	if (t->p != Dot)
 		throw 0;
-	std::wstringstream ss;
+	stringstream ss;
 	if (!in) ss << L'(';
 	ss << format(t->args, true);// << L' ' << format(t->s) << L' ';
 	if (!in) ss << L')';
@@ -576,7 +602,7 @@ string formatlist(const term* t, bool in = false) {
 
 string format(const term* t, bool body) {
 	if (!t || !t->p) return L"";
-	std::wstringstream ss;
+	stringstream ss;
 	if (body && t->p == implies) {
 		ss << L'{';
 		for (term::bvec::iterator x = t->body.begin(); x != t->body.end(); ++x) ss << format((*x)->t) << L';';
@@ -597,7 +623,7 @@ string format(const term* t, bool body) {
 }
 
 string format(const subs& s) {
-	std::wstringstream ss;
+	stringstream ss;
 	vector<mapelem<resid, term*>, true > v((const vector<mapelem<resid, term*>, true >&)s);
 	for (size_t n = 0; n < s.size(); ++n)
 		ss << dict[v[n].first] << L'\\' << format(v[n].second) << L' ';
@@ -607,7 +633,7 @@ string format(const subs& s) {
 #define IDENT for (int n = 0; n < dep; ++n) ss << L'\t'
 
 string format(const termset& t, int dep) {
-	std::wstringstream ss;
+	stringstream ss;
 	for (termset::iterator _x = t.begin(); _x != t.end(); ++_x) {
 		term* x = *_x;
 		if (!x || !x->p) continue;
@@ -617,13 +643,13 @@ string format(const termset& t, int dep) {
 			ss << L" implied by: ";
 		else
 			ss <<  L" a fact.";
-		ss << std::endl;
+		ss << endl;
 		for (term::bvec::iterator y = x->body.begin(); y != x->body.end(); ++y) {
 			IDENT;
-			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
+			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << endl;
 			for (termset::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
 				IDENT;
-				ss << L"\t\t" << format(*z, true) << std::endl;
+				ss << L"\t\t" << format(*z, true) << endl;
 			}
 		}
 	}
@@ -665,7 +691,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 	if (!lastp.p) lastp = _p;
 	evidence e;
 	while (_p.p) {
-		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
+		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
 		sp_frame ep = _p;
 		frame& p = *_p.p;
 		term* t = p.rule, *epr;
@@ -687,7 +713,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 			for (term::bvec::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
 				if (!(_t = ((*r)->t->evaluate(*(*r)->t, p.s)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
-				dout << "proved: " << format(_t) << std::endl;
+				dout << "proved: " << format(_t) << endl;
 			}
 			#endif
 		}
@@ -699,7 +725,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 		}
 		_p = p.next;
 	}
-//	dout << "steps: " << steps << std::endl;
+//	dout << "steps: " << steps << endl;
 	return sp_frame();
 }
 
@@ -733,14 +759,14 @@ int main() {
 	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 		(*it)->trymatch(kb);
 	kb.push_back(q);
-	TRACE(dout << "kb:" << std::endl << format(kb) << std::endl);
+	TRACE(dout << "kb:" << endl << format(kb) << endl);
 
 	// create the initial frame with the query term as the frame's rule
 	sp_frame p(new frame(sp_frame(), q, 0, sp_frame(), subs())), lastp;
 	clock_t begin = clock(), end;
 	prove(p, lastp); // the main loop
 	end = clock();
-	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << std::endl;
+	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << endl;
 
 	return 0;
 }
