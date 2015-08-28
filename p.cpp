@@ -2,7 +2,6 @@
 #include <iostream>
 #include <cstring>
 #include <string>
-#include <ctime>
 
 typedef struct frame* pframe;
 const size_t chunk = 4;
