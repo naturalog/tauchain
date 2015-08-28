@@ -1,13 +1,9 @@
-#include <cstdlib>
 #include <iostream>
 #include <cstring>
 #include <string>
 #include <sstream>
 #include <stdexcept>
-#include <memory>
 #include <ctime>
-#include <algorithm>
-#include <functional>
 
 template<typename T>
 struct sp { // smart pointer
@@ -135,7 +131,7 @@ std::wostream &dout = std::wcout;
 struct term;
 typedef map<resid, term*> subs;
 typedef vector<term*> termset;
-string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
+//string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
 string wstrim(string s) { trim(s); return s; }
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
@@ -439,8 +435,6 @@ public:
 		}
 		PROCEED;
 		string iri = wstrim(t);
-		if (lower(iri) == L"true") return mkterm(dict[L"true"]);
-		if (lower(iri) == L"false") return mkterm(dict[L"false"]);
 		return mkterm(dict[iri]);
 	}
 
