@@ -51,5 +51,5 @@ ppjson: ppjson.cpp
 	$(CC) -std=c++11 ppjson.cpp -oppjson -Wall -ggdb
 dimacs2tau: dimacs2tau.cpp
 	$(CC) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb
-pcpp: p.cpp
+pcpp: p.cpp p.h
 	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG p.cpp -opcpp -g
