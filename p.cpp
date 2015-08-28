@@ -2,12 +2,12 @@
 #include <iostream>
 #include <cstring>
 #include <string>
-#include <sstream>
 #include <stdexcept>
 #include <ctime>
 
 typedef struct frame* pframe;
 const size_t chunk = 4;
+const wchar_t endl[] = L"\r\n";
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
 class vector {
 protected:
@@ -239,7 +239,7 @@ bool u3(term& s, const subs& ssub, term& d, subs& dsub) {
 		term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
 		if (e) return s.unify(s, ssub, *e, dsub);
 		dsub.set(d.p, s.evaluate(s, ssub));
-//		TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+//		TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << endl);
 		return true;
 	}
 	if (s.p != d.p) return false;
@@ -434,67 +434,67 @@ public:
 termset readterms ( std::wistream& is) {
 	string s, c;
 	nqparser p;
-	std::wstringstream ss;
+	string ss, space = L" ";
 	while (getline(is, s)) {
 		trim(s);
 		if (s[0] == '#') continue;
 		if (startsWith(s, L"fin") && wstrim(s.c_str() + 3) == L".") break;
-		ss << ' ' << s << ' ';
+		ss += space + s + space;
 	}
-	return p((wchar_t*)ss.str().c_str());
+	return p((wchar_t*)ss.c_str());
 }
 
 string format(const term* t, bool body) {
 	if (!t || !t->p) return L"";
-	std::wstringstream ss;
+	string ss;
 	if (body && t->p == implies) {
-		ss << L'{';
-		for (termset::iterator x = t->body.begin(); x != t->body.end(); ++x) ss << format(*x) << L';';
-		ss << L'}';
-		ss << format(t, false);
+		ss += L'{';
+		for (termset::iterator x = t->body.begin(); x != t->body.end(); ++x) ss += format(*x) + L';';
+		ss += L'}';
+		ss += format(t, false);
 	}
 	else if (!t->p) return L"";
-	ss << dict[t->p];
+	ss += dict[t->p];
 	if (t->args.size()) {
-		ss << L'(';
-		for (term** y = t->args.begin(); y != t->args.end(); ++y) ss << format(*y) << L' ';
-		ss << L") ";
+		ss += L'(';
+		for (term** y = t->args.begin(); y != t->args.end(); ++y) ss += format(*y) += L' ';
+		ss += L") ";
 	}
-	return ss.str();
+	return ss;
 }
 
 string format(const subs& s) {
-	std::wstringstream ss;
+	string ss;
 	vector<mapelem<resid, term*>, true > v((const vector<mapelem<resid, term*>, true >&)s);
 	for (size_t n = 0; n < s.size(); ++n)
-		ss << dict[v[n].first] << L'\\' << format(v[n].second) << L' ';
-	return ss.str();
+		ss += dict[v[n].first] += L'\\' + format(v[n].second) += L' ';
+	return ss;
 }
 
-#define IDENT for (int n = 0; n < dep; ++n) ss << L'\t'
+#define IDENT for (int n = 0; n < dep; ++n) ss += L'\t'
 
 string format(const termset& t, int dep) {
-	std::wstringstream ss;
+	string ss;
 	for (termset::iterator _x = t.begin(); _x != t.end(); ++_x) {
 		term* x = *_x;
 		if (!x || !x->p) continue;
 		IDENT;
-		ss << format(x, true);
+		ss += format(x, true);
 		if (x->body.size()) 
-			ss << L" implied by: ";
+			ss += L" implied by: ";
 		else
-			ss <<  L" a fact.";
-		ss << std::endl;
+			ss +=  L" a fact.";
+		ss += endl;
 		for (termset::iterator y = x->body.begin(); y != x->body.end(); ++y) {
 			IDENT;
-			ss << L"\t" << format(*y, true) << L" matches to heads:" << std::endl;
+			((ss += L"\t") += format(*y, true) += L" matches to heads:") += endl;
 			for (termset::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
 				IDENT;
-				ss << L"\t\t" << format(*z, true) << std::endl;
+				ss += L"\t\t" + format(*z, true) + endl;
 			}
 		}
 	}
-	return ss.str();
+	return ss;
 }
 
 typedef vector<mapelem<term*, subs>, false > ground;
@@ -534,7 +534,7 @@ void prove(pframe _p, pframe& lastp) {
 	if (!lastp) lastp = _p;
 	evidence e;
 	while (_p) {
-		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
+		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
 		pframe ep = _p;
 		frame& p = *_p;
 		term* t = p.rule, *epr;
@@ -565,7 +565,7 @@ void prove(pframe _p, pframe& lastp) {
 			for (termset::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
 				if (!(_t = ((*r)->evaluate(**r, p.s)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
-				dout << "proved: " << format(_t) << std::endl;
+				dout << "proved: " << format(_t) << endl;
 			}
 		}
 		#endif
@@ -599,14 +599,14 @@ int main() {
 	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 		(*it)->trymatch(kb);
 	kb.push_back(q);
-	TRACE(dout << "kb:" << std::endl << format(kb) << std::endl);
+	TRACE(dout << "kb:" << endl << format(kb) << endl);
 
 	// create the initial frame with the query term as the frame's rule
 	pframe p(new frame(pframe(), q, 0, pframe(), subs())), lp = 0;
 	clock_t begin = clock(), end;
 	prove(p, lp); // the main loop
 	end = clock();
-	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << std::endl;
+	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << endl;
 
 	return 0;
 }
