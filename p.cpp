@@ -13,12 +13,9 @@ struct sp { // smart pointer
 	sp() : p(0), r(0) {}
 	sp(T* v) : p(v) 			{ *(r = new int) = 1; }
 	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ if (r) ++*r; }
-
 	~sp() { if (r && !--*r) delete p , delete r; }
-
 	T& operator*()  { return *p; } 
 	T* operator->() { return p; }
-    
 	sp<T>& operator=(const sp<T>& s) {
 		if (this == &s) return *this;
 		if (r && !--*r) delete p , delete r;
@@ -67,9 +64,6 @@ protected:
 		clear();
 		if (!(n = t.n)) return; 
 		memcpy(a = (T*)malloc(t.c * szchunk), t.a, (c = t.c) * szchunk);
-//		if (!ispod)
-//			for (size_t k = 0; k < n; ++k)
-//				new (&a[k])(T);
 	}
 };
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
@@ -94,7 +88,6 @@ public:
 	map() : base() {}
 	map(const _this& _s) : base()      	{ base::copyfrom(_s); }
 	_this& operator=(const _this& m){ base::copyfrom(m); return *this; }
-//	const V& operator[](const K& k) const	{ mapelem<K, V>* z = find(k); return z->second; } // ? z->second : set(k, V()); }
 	V& operator[](const K& k)		{ mapelem<K, V>* z = find(k); return z ? z->second : set(k, V()); }
 	V& set(const K& k, const V& v) {
 		vtype* z = find(k);
@@ -107,9 +100,7 @@ public:
 		if (!base::n) return 0;
 		for (vtype* x = base::begin(); x != base::end(); ++x) if (x->first == k) return x;
 		return 0;
-//		vtype v(k, V());
-//		vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare);
-//		return z;
+//		vtype v(k, V()); vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare); return z;
 	}
 private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
@@ -135,7 +126,6 @@ std::wostream &dout = std::wcout;
 struct term;
 typedef map<resid, term*, true> subs;
 typedef vector<term*, true> termset;
-//string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
 string wstrim(string s) { trim(s); return s; }
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
@@ -169,7 +159,6 @@ public:
 		if ( it ) return it->second;
 		resid k = pi.size() + 1;
 		if ( v[0] == L'?' ) k = -k;
-//		pi.set(v, k), ip.set(k, v);
 		pi[v] = k, ip[k] = v;
 		return k;
 	}
@@ -200,9 +189,9 @@ bool u3(term& s, const subs& ssub, term& d, subs& dsub);
 bool u4(term& s, const subs& ssub, term& d, const subs& dsub);
 
 struct term {
-	term() : p(0) { throw 0; }
-	term(termset& kb, termset& query) : p(0) { addbody(query); trymatch(kb); }
-	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) {
+	term() : p(0), szargs(0) { throw 0; }
+	term(termset& kb, termset& query) : p(0), szargs(0), body(query) { trymatch(kb); }
+	term(resid _p, const termset& _args = termset()) : p(_p), args(_args), szargs(args.size()) {
 		TRACE(if (!p) throw 0);
 		if (p < 0) {
 			evaluate = evvar;
@@ -218,6 +207,7 @@ struct term {
 	}
 	const resid p;
 	const termset args;
+	const size_t szargs;
 	fevaluate evaluate;
 	funify unify;
 	funify_ep unify_ep;
@@ -234,7 +224,7 @@ struct term {
 				d.clear();
 			}
 	}
-	void _unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
+	void _unify(const subs& ssub, sp_frame f, sp_frame& lastp);
 };
 
 term* evvar(term& t, const subs& ss) {
@@ -251,22 +241,19 @@ term* ev(term& t, const subs& ss) {
 	}
 	return mkterm(t.p, ts);
 }
+
 bool u1(term& s, const subs& ssub, term& d, subs& dsub) {
-	subs::vtype* v = ssub.find(s.p);
-	if (v) {
-		term *e =  v->second->evaluate(*v->second, ssub);
-		return e ? e->unify(*e, ssub, d, dsub) : true;
-	}
-	return true;
+	static subs::vtype *v;
+	static term *e;
+	return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second, ssub))) ? e->unify(*e, ssub, d, dsub) : true : true;
 }
+
 bool u2(term& s, const subs& ssub, term& d, const subs& dsub) { 
-	subs::vtype* v = ssub.find(s.p);
-	if (v) {
-		term *e =  v->second->evaluate(*v->second, ssub);
-		return e ? e->unify_ep(*e, ssub, d, dsub) : true;
-	}
-	return true;
+	static subs::vtype *v;
+	static term *e;
+	return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second, ssub))) ? e->unify_ep(*e, ssub, d, dsub) : true : true;
 }
+
 bool u3(term& s, const subs& ssub, term& d, subs& dsub) {
 	if (d.p < 0) {
 		subs::vtype* v = dsub.find(d.p);
@@ -278,8 +265,7 @@ bool u3(term& s, const subs& ssub, term& d, subs& dsub) {
 	}
 	if (s.p != d.p) return false;
 	const termset& ar = s.args;
-	size_t sz = ar.size();
-	if (sz != d.args.size()) return false;
+	if (s.szargs != d.args.size()) return false;
 	termset::iterator dit = d.args.begin();
 	for (term** t = ar.begin(); t != ar.end(); ++t)
 		if (!(*t)->unify(**t, ssub, **dit++, dsub)) 
@@ -293,10 +279,8 @@ bool u4(term& s, const subs& ssub, term& d, const subs& dsub) {
 		return e ? s.unify_ep(s, ssub, *e, dsub) : true;
 	}
 	if (s.p != d.p) return false;
-	if (s.p != d.p) return false;
 	const termset& ar = s.args;
-	size_t sz = ar.size();
-	if (sz != d.args.size()) return false;
+	if (s.szargs != d.args.size()) return false;
 	termset::iterator dit = d.args.begin();
 	for (term** t = ar.begin(); t != ar.end(); ++t)
 		if (!(*t)->unify_ep(**t, ssub, **dit++, dsub)) 
@@ -314,11 +298,8 @@ char* buf = (char*)malloc(tchunk);
 
 term* mkterm() { MKTERM }
 term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
-//	return new term(kb, query); }
 term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
-//	return new term(p, args); }
 term* mkterm(resid p) { MKTERM1(p); }
-//	return new term(p); }
 
 #define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
 #define SKIPWS while (iswspace(*s)) ++s
@@ -358,7 +339,6 @@ public:
 				EPARSE(L"couldn't read next list item: ");
 			items.push_back(pn);
 			SKIPWS;
-//			pn = pn->o = mkterm(Dot);
 			if (*s == L'.') while (iswspace(*s++));
 			if (*s == L'}') EPARSE(L"expected { inside list: ");
 		};
@@ -414,7 +394,6 @@ public:
 	void addhead(termset& ts, term* t) {
 		if (!t) throw 0;
 		if (!t->p) throw 0;
-//		if (!t->s != !t->p) throw 0;
 		ts.push_back(t);
 	}
 
@@ -426,8 +405,6 @@ public:
 		term *subject, *pn;
 		termset subjs, objs, heads;
 		pos = 0;
-//		auto pos1 = preds.back();
-		termset dummy;
 		preds_t::iterator pos1 = 0;
 
 		while(*s) {
@@ -488,17 +465,6 @@ termset readterms ( std::wistream& is) {
 	return p((wchar_t*)ss.str().c_str());
 }
 
-string formatlist(const term* t, bool in = false) {
-	if (!t) return L"";
-	if (t->p != Dot)
-		throw 0;
-	std::wstringstream ss;
-	if (!in) ss << L'(';
-	ss << format(t->args, true);// << L' ' << format(t->s) << L' ';
-	if (!in) ss << L')';
-	return ss.str();
-}
-
 string format(const term* t, bool body) {
 	if (!t || !t->p) return L"";
 	std::wstringstream ss;
@@ -509,15 +475,12 @@ string format(const term* t, bool body) {
 		ss << format(t, false);
 	}
 	else if (!t->p) return L"";
-//	else if (t->p != Dot) {
-		ss << dict[t->p];
-		if (t->args.size()) {
-			ss << L'(';
-			for (term** y = t->args.begin(); y != t->args.end(); ++y) ss << format(*y) << L' ';
-			ss << L") ";
-		}
-//	}
-//	else return formatlist(t);
+	ss << dict[t->p];
+	if (t->args.size()) {
+		ss << L'(';
+		for (term** y = t->args.begin(); y != t->args.end(); ++y) ss << format(*y) << L' ';
+		ss << L") ";
+	}
 	return ss.str();
 }
 
@@ -605,7 +568,7 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 			}
 			if (!t) { _p = p.next; continue; }
 		}
-		if (p.b != p.rule->body.end()) (*p.b)->_unify(p.s, (*p.b)->matches, _p, lastp);
+		if (p.b != p.rule->body.end()) (*p.b)->_unify(p.s, _p, lastp);
 		else if (!p.prev.p) {
 			#ifndef NOTRACE
 			term* _t; // push evidence
@@ -628,18 +591,14 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 	return sp_frame();
 }
 
-void term::_unify(const subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
+void term::_unify(const subs& ssub, sp_frame f, sp_frame& lastp) {
 	subs dsub;
-	for (term** _d = ts.begin(); _d != ts.end(); ++_d)  {
+	termset::iterator it, end, dit;
+	for (term** _d = matches.begin(); _d != matches.end(); ++_d)  {
 		term& d = **_d;
-		if (args.size() != d.args.size()) continue;
-		termset::iterator it = args.begin(), end = args.end(), dit = d.args.begin();
-		while (it != end) {
-			term& x = **it++;
-			if (!x.unify(x, ssub, **dit++, dsub)) {
-				--it;
-				break;
-			}
+		for (it = args.begin(), end = args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
+			term& x = **it;
+			if (!x.unify(x, ssub, **dit, dsub)) break;
 		}
 		if (it == end) 
 			lastp = lastp->next = sp_frame(new frame(f, *_d, 0, f, dsub));
