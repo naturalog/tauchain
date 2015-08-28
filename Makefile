@@ -1,5 +1,5 @@
-#CC=clang++-3.6
-CC=g++
+CC=clang++-3.6
+#CC=g++
 CXXFLAGS=-c -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -DDEBUG -O0 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include -DJSON #-DPREDVARS -DNOPARSER
 #CXXFLAGS= -c -std=c++11 -Wall -Wextra -I/usr/local/include -DNDEBUG -O3 -I/usr/include -I/usr/local/linuxbrew/include -I/usr/include -I/usr/local/linuxbrew/include #-DJSON -DNOPARSER
 LDFLAGS= -L/usr/local/lib #-ldl -pthread -lrt
@@ -52,4 +52,4 @@ ppjson: ppjson.cpp
 dimacs2tau: dimacs2tau.cpp
 	$(CC) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb
 pcpp: p.cpp
-	g++ p.cpp -opcpp -g -W -Wall -Wextra -Wpedantic -std=c++11
+	$(CC) -std=c++11 -W -Wall -Wpedantic -Wextra -DDEBUG p.cpp -opcpp -g
