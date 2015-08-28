@@ -49,7 +49,8 @@ template<typename K, typename V, bool ispod> V& map<K, V, ispod>::set(const K& k
 }
 template<typename K, typename V, bool ispod> mapelem<K, V>* map<K, V, ispod>::find(const K& k) const {
 	if (!base::n) return 0;
-	for (vtype* x = base::begin(); x != base::end(); ++x) if (x->first == k) return x;
+	iterator e = base::end();
+	for (vtype* x = base::begin(); x != e; ++x) if (x->first == k) return x;
 	return 0;
 //	vtype v(k, V()); vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare); return z;
 }
@@ -127,9 +128,10 @@ term* evvar(term& t) {
 }
 
 term* ev(term& t) {
-	static term *v;
+	static term *v, **e;
 	termset ts;
-	for (term** a = t.args.begin(); a != t.args.end(); ++a) {
+	e = t.args.end();
+	for (term** a = t.args.begin(); a != e; ++a) {
 		term& b = **a;
 		ts.push_back(((v = b.evaluate(b))) ? v : mkterm(b.p));
 	}
@@ -142,9 +144,10 @@ term* evvars(term& t, const subs& ss) {
 }
 
 term* evs(term& t, const subs& ss) {
-	static term *v;
+	static term *v, **e;
 	termset ts;
-	for (term** a = t.args.begin(); a != t.args.end(); ++a) {
+	e = t.args.end();
+	for (term** a = t.args.begin(); a != e; ++a) {
 		term& b = **a;
 		ts.push_back(((v = b.evaluates(b, ss))) ? v : mkterm(b.p));
 	}
@@ -161,7 +164,12 @@ bool u1(term& s, term& d, subs& dsub) {
 	static subs::vtype *v;
 	static term *e;
 	//return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second))) ? e->unify(*e, d, dsub) : true : true;
-	return ((v = ssub.find(s.p))) ? ((e = FASTEVAL(*v->second))) ? e->unify(*e, d, dsub) : true : true;
+	if ((v = ssub.find(s.p))) {
+		term& vs = *v->second;
+		if ((e = FASTEVAL(vs))) return e->unify(*e, d, dsub);
+		return true;
+	}
+	return true;
 }
 
 bool u2(term& s, term& d, const subs& dsub) { 
@@ -183,7 +191,8 @@ bool u3(term& s, term& d, subs& dsub) {
 	const termset& ar = s.args;
 	if (s.szargs != d.args.size()) return false;
 	termset::iterator dit = d.args.begin();
-	for (term** t = ar.begin(); t != ar.end(); ++t)
+	term** e = ar.end();
+	for (term** t = ar.begin(); t != e; ++t)
 		if (!(*t)->unify(**t, **dit++, dsub)) 
 			return false;
 	return true;
@@ -199,7 +208,8 @@ bool u4(term& s, term& d, const subs& dsub) {
 	const termset& ar = s.args;
 	if (s.szargs != d.args.size()) return false;
 	termset::iterator dit = d.args.begin();
-	for (term** t = ar.begin(); t != ar.end(); ++t)
+	term** e = ar.end();
+	for (term** t = ar.begin(); t != e; ++t)
 		if (!(*t)->unify_ep(**t, **dit++, dsub)) 
 			return false;
 	return true;
@@ -208,11 +218,18 @@ bool u4(term& s, term& d, const subs& dsub) {
 size_t bufpos = 0;
 char* buf = (char*)malloc(tchunk);
 
-#define MKTERM if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term); return &((term*)buf)[bufpos++];
+#define MKTERM
 #define MKTERM1(x) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x); return &((term*)buf)[bufpos++];
 #define MKTERM2(x, y) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x, y); return &((term*)buf)[bufpos++];
 
-term* mkterm() { MKTERM }
+term* mkterm() {
+	if (bufpos == nch) {
+		buf = (char*)malloc(tchunk);
+		bufpos = 0;
+	}
+	new (&((term*)buf)[bufpos])(term);
+	return &((term*)buf)[bufpos++];
+}
 term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
 term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
 term* mkterm(resid p) { MKTERM1(p); }
@@ -500,7 +517,8 @@ void prove(pframe _p, pframe& lastp) {
 subs dsub;
 void term::_unify(pframe f, pframe& lastp) {
 	termset::iterator it, end, dit;
-	for (term** _d = matches.begin(); _d != matches.end(); ++_d)  {
+	term** e = matches.end();
+	for (term** _d = matches.begin(); _d != e; ++_d)  {
 		term& d = **_d;
 		for (it = args.begin(), end = args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
 			term& x = **it;

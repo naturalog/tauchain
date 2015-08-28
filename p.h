@@ -159,8 +159,32 @@ struct frame {
 	ground g() const; // calculate the ground
 	frame(pframe c, frame& p, const subs& _s);
 	frame(pframe c, term* r, termset::iterator* l, pframe p);
-	frame(pframe c, term* r, termset::iterator* l, pframe p, const subs&  _s = subs());
+	frame(pframe c, term* r, termset::iterator* l, pframe p, const subs&  _s);
 	void decref();
 };
+
+const size_t szf = sizeof(frame), fchunk = 32, szc = szf * fchunk;
+size_t fn = 0, fc = 0;
+frame* fbuf = 0;//(frame*)malloc(szc);
+
+frame* mkframe(pframe c, frame& p, const subs& _s) {
+	if (!(fn%fchunk)) fbuf = (frame*)realloc(fbuf, szc * ++fc);
+	new (&((frame*)fbuf)[fn])(frame)(c,p,_s);
+	return &((frame*)fbuf)[fn++];
+}
+
+frame* mkframe(pframe c, term* r, termset::iterator* l, pframe p) {
+	if (!(fn%fchunk)) fbuf = (frame*)realloc(fbuf, szc * ++fc);
+	new (&((frame*)fbuf)[fn])(frame)(c,r,l,p);
+	return &((frame*)fbuf)[fn++];
+}
+
+frame* mkframe(pframe c, term* r, termset::iterator* l, pframe p, const subs& _s) {
+	if (!(fn%fchunk)) fbuf = (frame*)realloc(fbuf, szc * ++fc);
+	new (&((frame*)fbuf)[fn])(frame)(c,r,l,p,_s);
+	return &((frame*)fbuf)[fn++];
+}
+
+
 
 void prove(pframe _p, pframe& lastp);
