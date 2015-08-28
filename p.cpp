@@ -1,12 +1,10 @@
 #include <cstdlib>
-#include <map>
 #include <iostream>
 #include <cstring>
 #include <string>
 #include <sstream>
 #include <stdexcept>
 #include <memory>
-#include <list>
 #include <ctime>
 #include <algorithm>
 #include <functional>
@@ -32,18 +30,18 @@ struct sp { // smart pointer
 		return *this;
 	}
 };
-
 typedef sp<struct frame> sp_frame;
-template<typename T>
+
+const size_t chunk = 4;
+template<typename T, bool ispod = std::is_pod<T>::value>
 class vector {
 protected:
-	T* a = 0;
-	const size_t chunk = 4;
+	T* a;
 	const size_t szchunk = chunk * sizeof(T);
-	size_t n = 0, c = 0;
+	size_t n, c;
 public:
-	vector() {}
-	vector(const vector<T>& t) { copyfrom(t); }
+	explicit vector() : a(0),n(0),c(0) {}
+	vector(const vector<T>& t) : a(0),n(0),c(0) { copyfrom(t); }
 	vector<T>& operator=(const vector<T>& t) { copyfrom(t); return *this; }
 
 	typedef T* iterator;
@@ -51,22 +49,30 @@ public:
 	size_t size() const	{ return n; }
 	T* begin() const	{ return a; }
 	T* end() const		{ return a ? &a[n] : 0; }
-	void clear()		{ if (!a) return; free(a); a = 0; n = 0; c = 0; }
+	void clear()		{
+		n = 0; c = 0;
+		if (!a) return;
+		free(a);
+		a = 0;
+	}
 	bool empty() const	{ return !a; }
 	~vector()		{ clear(); }
-
-	void push_back(const T& t) {
+	iterator back()		{ return n ? &a[n-1] : 0; }
+	T& push_back(const T& t) {
 		if (!(n % chunk))
-			a = (T*)realloc(a, ++c * szchunk);
-		new (&a[n++])(T)(t);
-//		a[n++] = t;
+			a = (T*)realloc(a, szchunk * ++c);
+		if (ispod) a[n] = t;
+		else new (&a[n])(T)(t);
+		return a[n++];
 	}
 protected:	
 	void copyfrom(const vector<T>& t) {
 		clear();
 		if (!(n = t.n)) return; 
-		c = t.c;
-		memcpy(a = (T*)malloc(c * szchunk), t.a, c * szchunk);
+		memcpy(a = (T*)malloc(t.c * szchunk), t.a, (c = t.c) * szchunk);
+//		if (!ispod)
+//			for (size_t k = 0; k < n; ++k)
+//				new (&a[k])(T);
 	}
 };
 
@@ -75,6 +81,7 @@ struct mapelem {
 	K first;
 	V second;
 	mapelem(){}
+	mapelem(const mapelem& m) : first(m.first), second(m.second) {}
 	mapelem(const K& _k, const V& _v) : first(_k), second(_v) {} 
 };
 
@@ -84,24 +91,20 @@ struct map : public vector<mapelem<K, V> > {
 	typedef vector<mapelem<K, V> > base;
 public:
 	map(const vector<vtype>& t) { copyfrom(t); }
-//	size_t size() const	{ return base::n; }
-//	void clear()		{ if (!base::a) return; free(base::a); base::a = 0; base::n = 0; base::c = 0; }
-//	bool empty() const	{ return !base::a; }
-//	using base::vector;
-//	using base::clear;
-//	using base::size;
 	map() : base() {}
 	map(const map<K, V>& _s) : base()      	{ base::copyfrom(_s); }
 	map<K, V>& operator=(const map<K, V>& m){ base::copyfrom(m); return *this; }
-	V operator[](const K& k) const		{ mapelem<K, V>* z = find(k); if (!z) return V(); return z->second; }
-	void set(const K& k, const V& v) {
+//	const V& operator[](const K& k) const	{ mapelem<K, V>* z = find(k); return z->second; } // ? z->second : set(k, V()); }
+	V& operator[](const K& k)		{ mapelem<K, V>* z = find(k); return z ? z->second : set(k, V()); }
+	V& set(const K& k, const V& v) {
 		vtype* z = find(k);
-		if (z) { z->second = v; return; }
-		base::push_back(vtype(k, v));
+		if (z) { return z->second = v; }
+		return base::push_back(vtype(k, v)).second;
 //		qsort(base::a, base::n, sizeof(vtype), compare);
 	}
 	typedef vtype* iterator;
 	iterator find(const K& k) const {
+		if (!base::n) return 0;
 		for (vtype& x : *this) if (x.first == k) return &x;
 		return 0;
 //		vtype v(k, V());
@@ -154,20 +157,20 @@ public:
 #endif
 
 class bidict {
-	std::map<resid, string> ip;
-	std::map<string, resid> pi;
+	map<resid, string> ip;
+	map<string, resid> pi;
 public:
 	void init() {
 	}
 
 	resid set ( string v ) {
 		if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
-		std::map<string, resid>::iterator it = pi.find ( v );
-		if ( it != pi.end() ) return it->second;
+		map<string, resid>::iterator it = pi.find ( v );
+		if ( it ) return it->second;
 		resid k = pi.size() + 1;
 		if ( v[0] == L'?' ) k = -k;
-		pi[v] = k;
-		ip[k] = v;
+//		pi.set(v, k), ip.set(k, v);
+		pi[v] = k, ip[k] = v;
 		return k;
 	}
 
@@ -188,7 +191,10 @@ struct term {
 	term(termset& kb, termset& query) : p(0) { addbody(query); trymatch(kb); }
 	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) {
 		TRACE(if (!p) throw 0);
-		static auto evvar = [](term& t, const subs& ss) { static term* v; return (v = ss[t.p]) ? v->evaluate(*v, ss) : (term*)0; };
+		static auto evvar = [](term& t, const subs& ss) {
+			auto v = ss.find(t.p);
+			return v ? v->second->evaluate(*v->second, ss) : (term*)0; 
+		};
 		static auto evnoargs = [](term& t, const subs&) { return &t; };
 		static auto ev = [](term& t, const subs& ss) {
 			static term *v;
@@ -200,16 +206,28 @@ struct term {
 			return mkterm(t.p, ts);
 		};
 		static auto u1 = [](term& s, const subs& ssub, term& d, subs& dsub) {
-			static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify(*v, ssub, d, dsub) : true;
+//			term* v;
+			auto v = ssub.find(s.p);
+			if (v) {
+				term *e =  v->second->evaluate(*v->second, ssub);
+				return e ? e->unify(*e, ssub, d, dsub) : true;
+			}
+			return true;
 		};
 		static auto u2 = [](term& s, const subs& ssub, term& d, const subs& dsub) { 
-			static term* v; return ((v=ssub[s.p]) && (v = v->evaluate(*v, ssub))) ? v->unify_ep(*v, ssub, d, dsub) : true; 
+			auto v = ssub.find(s.p);
+			if (v) {
+				term *e =  v->second->evaluate(*v->second, ssub);
+				return e ? e->unify_ep(*e, ssub, d, dsub) : true;
+			}
+			return true;
 		};
 		static auto u3 = [](term& s, const subs& ssub, term& d, subs& dsub) {
-			static term* v;
 			if (d.p < 0) {
-				if ((v = dsub[d.p]) && (v = d.evaluate(d, dsub))) return s.unify(s, ssub, *v, dsub);
-				dsub.set(d.p, v = s.evaluate(s, ssub));
+				auto v = dsub.find(d.p);
+				term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
+				if (e) return s.unify(s, ssub, *e, dsub);
+				dsub.set(d.p, s.evaluate(s, ssub));
 //				TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
 				return true;
 			}
@@ -224,8 +242,12 @@ struct term {
 			return true;
 		};
 		static auto u4 = [](term& s, const subs& ssub, term& d, const subs& dsub) {
-			static term* v;
-			if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(*v, dsub))) ? s.unify_ep(s, ssub, *v, dsub) : true;
+			if (d.p < 0) {
+				auto v = dsub.find(d.p);
+				term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
+				return e ? s.unify_ep(s, ssub, *e, dsub) : true;
+			}
+			if (s.p != d.p) return false;
 			if (s.p != d.p) return false;
 			auto& ar = s.args;
 			size_t sz = ar.size();
@@ -342,13 +364,13 @@ private:
 	}
 };
 
-const size_t chunk = 8192, nch = chunk / sizeof(term);
+const size_t tchunk = 8192, nch = tchunk / sizeof(term);
 size_t bufpos = 0;
-char* buf = (char*)malloc(chunk);
+char* buf = (char*)malloc(tchunk);
 
-#define MKTERM if (bufpos == nch) { buf = (char*)malloc(chunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term); return &((term*)buf)[bufpos++];
-#define MKTERM1(x) if (bufpos == nch) { buf = (char*)malloc(chunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x); return &((term*)buf)[bufpos++];
-#define MKTERM2(x, y) if (bufpos == nch) { buf = (char*)malloc(chunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x, y); return &((term*)buf)[bufpos++];
+#define MKTERM if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term); return &((term*)buf)[bufpos++];
+#define MKTERM1(x) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x); return &((term*)buf)[bufpos++];
+#define MKTERM2(x, y) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x, y); return &((term*)buf)[bufpos++];
 
 term* mkterm() { MKTERM }
 term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
@@ -459,14 +481,17 @@ public:
 	}
 
 	termset operator()(const wchar_t* _s) {
-		typedef std::list<std::pair<term*, termset> > preds_t;
+		//typedef vector<std::pair<term*, termset> > preds_t;
+		typedef map<term*, termset> preds_t;
 		preds_t preds;
 		s = _s;
 //		string graph;
 		term *subject, *pn;
 		termset subjs, objs, heads;
 		pos = 0;
-		preds_t::reverse_iterator pos1 = preds.rbegin();
+//		auto pos1 = preds.back();
+		termset dummy;
+		preds_t::iterator pos1 = 0;
 
 		while(*s) {
 			if (readcurly(subjs)) subject = 0;
@@ -475,8 +500,8 @@ public:
 				while (iswspace(*s) || *s == L';') ++s;
 				if (*s == L'.' || *s == L'}') break;
 				if ((pn = readiri())) { // read predicate
-					preds.push_back(std::make_pair(pn, termset()));
-					pos1 = preds.rbegin();
+					preds.set(pn, termset());
+					pos1 = preds.back();
 				} else EPARSE(L"expected iri predicate:");
 				do { // read objects
 					while (iswspace(*s) || *s == L',') ++s;
@@ -496,7 +521,7 @@ public:
 			SKIPWS; while (*s == '.') ++s; SKIPWS;
 			if (*s == L')') EPARSE(L"expected ) outside list: ");
 			if (subject)
-				for (preds_t::const_iterator x = preds.begin(); x != preds.end(); ++x)
+				for (auto x = preds.begin(); x != preds.end(); ++x)
 					for (termset::iterator o = x->second.begin(); o != x->second.end(); ++o) {
 						termset ts;
 						ts.push_back(subject);
@@ -593,8 +618,8 @@ string format(const termset& t, int dep) {
 	return ss.str();
 }
 
-typedef std::list<mapelem<term*, subs> > ground;
-typedef std::map<resid, std::list<mapelem<term*, ground> > > evidence;
+typedef vector<mapelem<term*, subs> > ground;
+typedef map<resid, vector<mapelem<term*, ground> > > evidence;
 
 struct frame {
 	term* rule;
