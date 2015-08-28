@@ -5,7 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <ctime>
-
+/*
 template<typename T>
 struct sp { // smart pointer
 	T* p;
@@ -24,8 +24,8 @@ struct sp { // smart pointer
 		return *this;
 	}
 };
-typedef sp<struct frame> sp_frame;
-
+*/
+typedef struct frame* pframe;
 const size_t chunk = 4;
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
 class vector {
@@ -34,7 +34,7 @@ protected:
 	static const size_t szchunk;
 	size_t n, c;
 public:
-	explicit vector() : a(0),n(0),c(0) {}
+	vector() : a(0),n(0),c(0) {}
 	vector(const vector<T, ispod>& t) : a(0),n(0),c(0) { copyfrom(t); }
 	vector<T, ispod>& operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
 
@@ -42,15 +42,16 @@ public:
 	T operator[](size_t k) const { return a[k]; }
 	size_t size() const	{ return n; }
 	T* begin() const	{ return a; }
-	T* end() const		{ return a ? &a[n] : 0; }
-	void clear()		{
-		n = 0; c = 0;
+	T* end() const		{ return n ? &a[n] : 0; }
+	void clear() {
+		n = c = 0;
 		if (!a) return;
 		free(a);
 		a = 0;
 	}
-	bool empty() const	{ return !a; }
-	~vector()		{ clear(); }
+	void clear1() { n = c = 0; }
+	bool empty() const	{ return !n; }
+	~vector()		{ if(a)free(a); }
 	iterator back()		{ return n ? &a[n-1] : 0; }
 	T& push_back(const T& t) {
 		if (!(n % chunk))
@@ -61,9 +62,8 @@ public:
 	}
 protected:	
 	void copyfrom(const vector<T, ispod>& t) {
-		clear();
-		if (!(n = t.n)) return; 
-		memcpy(a = (T*)malloc(t.c * szchunk), t.a, (c = t.c) * szchunk);
+		if (!(n = t.n)) { c = 0; return; }
+		memcpy(a = (T*)realloc(a, t.c * szchunk), t.a, (c = t.c) * szchunk);
 	}
 };
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
@@ -224,7 +224,7 @@ struct term {
 				d.clear();
 			}
 	}
-	void _unify(const subs& ssub, sp_frame f, sp_frame& lastp);
+	void _unify(const subs& ssub, pframe f, pframe& lastp);
 };
 
 term* evvar(term& t, const subs& ss) {
@@ -524,74 +524,87 @@ typedef map<resid, vector<mapelem<term*, ground>, false >, false > evidence;
 struct frame {
 	term* rule;
 	termset::iterator b;
-	sp_frame prev, creator, next;
+	pframe prev, creator, next;
 	subs s;
+	int ref;
 	ground g() const { // calculate the ground
-		if (!creator.p) return ground();
-		ground r = creator.p->g();
+		if (!creator) return ground();
+		ground r = creator->g();
 		termset empty;
-		frame& cp = *creator.p;
+		frame& cp = *creator;
 		typedef mapelem<term*, subs> elem;
-		if (btterm)
-			r.push_back(elem(btterm, subs()));
-		else if (cp.b != cp.rule->body.end()) {
+		if (cp.b != cp.rule->body.end()) {
 			if (!rule->body.size())
 				r.push_back(elem(rule, subs()));
 		} else if (cp.rule->body.size())
-			r.push_back(elem(creator.p->rule, creator.p->s));
+			r.push_back(elem(creator->rule, creator->s));
 		return r;	
 	}
-	term* btterm;
-	frame(sp_frame c, term* r, termset::iterator* l, sp_frame p, const subs&  _s = subs())
-		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), s(_s), btterm(0) { }
-	frame(sp_frame c, frame& p, const subs& _s) 
-		: rule(p.rule), b(p.b), prev(p.prev), creator(c), s(_s), btterm(0) { }
+	frame(pframe c, term* r, termset::iterator* l, pframe p, const subs&  _s = subs())
+		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref;if(p)++p->ref; }
+	frame(pframe c, term* r, termset::iterator* l, pframe p)
+		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), next(0), ref(0) { if(c)++c->ref;if(p)++p->ref; }
+	frame(pframe c, frame& p, const subs& _s) 
+		: rule(p.rule), b(p.b), prev(p.prev), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref; if(prev)++prev->ref; }
+	void decref() { if (ref--) return; if(creator)creator->decref();if(prev)prev->decref(); delete this; }
+//	~frame() { dout<<"DDDDDDDDDDDDDD"<<std::endl; }
 };
 size_t steps = 0;
 
-sp_frame prove(sp_frame _p, sp_frame& lastp) {
-	if (!lastp.p) lastp = _p;
+//#define NEXT
+//; if (p.creator && !p.creator->ref) delete p.creator
+
+void prove(pframe _p, pframe& lastp) {
+	if (!lastp) lastp = _p;
 	evidence e;
-	while (_p.p) {
+	pframe ll;
+	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
-		sp_frame ep = _p;
-		frame& p = *_p.p;
+		pframe ep = _p;
+		frame& p = *_p;
 		term* t = p.rule, *epr;
-		if (t) { // check for euler path
-			while ((ep = ep.p->prev).p) {
-				epr = ep->rule;
-				if (epr == p.rule && epr->unify_ep(*epr, ep->s, *t, p.s)) {
-					_p = _p->next;
-					t = 0;
-					break;
-				}
+		// check for euler path
+		while ((ep = ep->prev))
+			if ((epr = ep->rule) == p.rule && epr->unify_ep(*epr, ep->s, *t, p.s)) {
+				t = 0;
+				break;
 			}
-			if (!t) { _p = p.next; continue; }
+		if (!t) { 
+			pframe pf = _p; _p = p.next; pf->decref();
+			continue; 
 		}
-		if (p.b != p.rule->body.end()) (*p.b)->_unify(p.s, _p, lastp);
-		else if (!p.prev.p) {
-			#ifndef NOTRACE
+		if (p.b != p.rule->body.end()) {
+			ll = lastp;
+			(*p.b)->_unify(p.s, _p, lastp); 
+//			if (ll == lastp) {
+//				ll = _p;
+//				if (!(_p = p.next)) return;
+//				delete ll;
+//			} else
+			pframe pf = _p; _p = p.next; pf->decref();
+			continue; 
+		}
+		if (p.prev) { // if body is done, go up the tree
+			frame& ppr = *p.prev;
+			pframe r(new frame(_p, ppr, ppr.s));
+			p.rule->unify(*p.rule, p.s, **r->b++, r->s);
+			prove(r, lastp);
+		}
+		#ifndef NOTRACE
+		else {
 			term* _t; // push evidence
 			for (termset::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
 				if (!(_t = ((*r)->evaluate(**r, p.s)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
 				dout << "proved: " << format(_t) << std::endl;
 			}
-			#endif
 		}
-		else { // if body is done, go up the tree
-			frame& ppr = *p.prev;
-			sp_frame r(new frame(_p, ppr, ppr.s));
-			p.rule->unify(*p.rule, p.s, **r->b++, r->s);
-			prove(r, lastp);
-		}
-		_p = p.next;
+		#endif
+		pframe pf = _p; _p = p.next; pf->decref();
 	}
-//	dout << "steps: " << steps << std::endl;
-	return sp_frame();
 }
 
-void term::_unify(const subs& ssub, sp_frame f, sp_frame& lastp) {
+void term::_unify(const subs& ssub, pframe f, pframe& lastp) {
 	subs dsub;
 	termset::iterator it, end, dit;
 	for (term** _d = matches.begin(); _d != matches.end(); ++_d)  {
@@ -601,8 +614,8 @@ void term::_unify(const subs& ssub, sp_frame f, sp_frame& lastp) {
 			if (!x.unify(x, ssub, **dit, dsub)) break;
 		}
 		if (it == end) 
-			lastp = lastp->next = sp_frame(new frame(f, *_d, 0, f, dsub));
-		dsub.clear();
+			lastp = lastp->next = pframe(new frame(f, *_d, 0, f, dsub));
+		dsub.clear1();
 	}
 }
 
@@ -620,9 +633,9 @@ int main() {
 	TRACE(dout << "kb:" << std::endl << format(kb) << std::endl);
 
 	// create the initial frame with the query term as the frame's rule
-	sp_frame p(new frame(sp_frame(), q, 0, sp_frame(), subs())), lastp;
+	pframe p(new frame(pframe(), q, 0, pframe(), subs())), lp = 0;
 	clock_t begin = clock(), end;
-	prove(p, lastp); // the main loop
+	prove(p, lp); // the main loop
 	end = clock();
 	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << std::endl;
 
