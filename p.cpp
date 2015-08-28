@@ -104,6 +104,7 @@ std::wistream &din = std::wcin;
 std::wostream &dout = std::wcout;
 struct term;
 typedef map<resid, term*, true> subs;
+subs ssub;
 typedef vector<term*, true> termset;
 string wstrim(string s) { trim(s); return s; }
 string format(const term* t, bool body = false);
@@ -145,17 +146,21 @@ term* mkterm();
 term* mkterm(termset& kb, termset& query);
 term* mkterm(resid p);
 term* mkterm(resid p, const termset& args);
-typedef term* (*fevaluate)(term&, const subs&);
-typedef bool (*funify)(term& s, const subs& ssub, term& d, subs& dsub);
-typedef bool (*funify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
+typedef term* (*fevaluate)(term&);
+typedef term* (*fevaluates)(term&, const subs&);
+typedef bool (*funify)(term& s, term& d, subs& dsub);
+typedef bool (*funify_ep)(term& s, term& d, const subs& dsub);
 
-term* evvar(term& t, const subs& ss);
-term* evnoargs(term& t, const subs&);
-term* ev(term& t, const subs& ss);
-bool u1(term& s, const subs& ssub, term& d, subs& dsub);
-bool u2(term& s, const subs& ssub, term& d, const subs& dsub);
-bool u3(term& s, const subs& ssub, term& d, subs& dsub);
-bool u4(term& s, const subs& ssub, term& d, const subs& dsub);
+term* evvar(term&);
+term* evnoargs(term&);
+term* ev(term&);
+term* evs(term&,const subs&);
+term* evvars(term&,const subs&);
+term* evnoargss(term&,const subs&);
+bool u1(term& s, term& d, subs& dsub);
+bool u2(term& s, term& d, const subs& dsub);
+bool u3(term& s, term& d, subs& dsub);
+bool u4(term& s, term& d, const subs& dsub);
 
 struct term {
 	term() : p(0), szargs(0) { throw 0; }
@@ -164,12 +169,13 @@ struct term {
 		TRACE(if (!p) throw 0);
 		if (p < 0) {
 			evaluate = evvar;
+			evaluates = evvars;
 			unify = u1;
 			unify_ep = u2;
 		}
 		else {
-			if (args.empty()) evaluate = evnoargs;
-			else evaluate = ev;
+			if (!szargs) evaluate = evnoargs, evaluates = evnoargss;
+			else evaluate = ev, evaluates = evs;
 			unify = u3;
 			unify_ep = u4;
 		}
@@ -178,6 +184,7 @@ struct term {
 	const termset args;
 	const size_t szargs;
 	fevaluate evaluate;
+	fevaluates evaluates;
 	funify unify;
 	funify_ep unify_ep;
 	termset matches, body;
@@ -189,46 +196,69 @@ struct term {
 		for (termset::iterator _b = body.begin(); _b != body.end(); ++_b)
 			for (termset::iterator it = heads.begin(); it != heads.end(); ++it) {
 				term& b = **_b;
-				if (b.unify(b, e, **it, d)) b.matches.push_back(*it);
+				ssub = e;
+				if (b.unify(b, **it, d)) b.matches.push_back(*it);
 				d.clear();
 			}
 	}
-	void _unify(const subs& ssub, pframe f, pframe& lastp);
+	void _unify(pframe f, pframe& lastp);
 };
 
-term* evvar(term& t, const subs& ss) {
-	subs::vtype* v = ss.find(t.p);
-	return v ? v->second->evaluate(*v->second, ss) : (term*)0; 
+term* evvar(term& t) {
+	subs::vtype* v = ssub.find(t.p);
+	return v ? v->second->evaluate(*v->second) : (term*)0; 
 }
-term* evnoargs(term& t, const subs&) { return &t; }
-term* ev(term& t, const subs& ss) {
+
+term* ev(term& t) {
 	static term *v;
 	termset ts;
 	for (term** a = t.args.begin(); a != t.args.end(); ++a) {
 		term& b = **a;
-		ts.push_back(((v = b.evaluate(b, ss))) ? v : mkterm(b.p));
+		ts.push_back(((v = b.evaluate(b))) ? v : mkterm(b.p));
 	}
 	return mkterm(t.p, ts);
 }
 
-bool u1(term& s, const subs& ssub, term& d, subs& dsub) {
-	static subs::vtype *v;
-	static term *e;
-	return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second, ssub))) ? e->unify(*e, ssub, d, dsub) : true : true;
+term* evvars(term& t, const subs& ss) {
+	subs::vtype* v = ss.find(t.p);
+	return v ? v->second->evaluates(*v->second, ss) : (term*)0; 
 }
 
-bool u2(term& s, const subs& ssub, term& d, const subs& dsub) { 
-	static subs::vtype *v;
-	static term *e;
-	return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second, ssub))) ? e->unify_ep(*e, ssub, d, dsub) : true : true;
+term* evs(term& t, const subs& ss) {
+	static term *v;
+	termset ts;
+	for (term** a = t.args.begin(); a != t.args.end(); ++a) {
+		term& b = **a;
+		ts.push_back(((v = b.evaluates(b, ss))) ? v : mkterm(b.p));
+	}
+	return mkterm(t.p, ts);
 }
 
-bool u3(term& s, const subs& ssub, term& d, subs& dsub) {
+term* evnoargs(term& t) { return &t; }
+term* evnoargss(term& t, const subs&) { return &t; }
+
+#define FASTEVAL(x) (((x).p > 0 && !(x).szargs) ? (&x) : (x).evaluate(x))
+#define FASTEVALS(x,s) (((x).p > 0 && !(x).szargs) ? (&x) : (x).evaluates(x,s))
+
+bool u1(term& s, term& d, subs& dsub) {
+	static subs::vtype *v;
+	static term *e;
+	//return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second))) ? e->unify(*e, d, dsub) : true : true;
+	return ((v = ssub.find(s.p))) ? ((e = FASTEVAL(*v->second))) ? e->unify(*e, d, dsub) : true : true;
+}
+
+bool u2(term& s, term& d, const subs& dsub) { 
+	static subs::vtype *v;
+	static term *e;
+	return ((v = ssub.find(s.p))) ? ((e = FASTEVAL(*v->second))) ? e->unify_ep(*e, d, dsub) : true : true;
+}
+
+bool u3(term& s, term& d, subs& dsub) {
 	if (d.p < 0) {
 		subs::vtype* v = dsub.find(d.p);
-		term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
-		if (e) return s.unify(s, ssub, *e, dsub);
-		dsub.set(d.p, s.evaluate(s, ssub));
+		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
+		if (e) return s.unify(s, *e, dsub);
+		dsub.set(d.p, FASTEVAL(s));
 //		TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << endl);
 		return true;
 	}
@@ -237,22 +267,22 @@ bool u3(term& s, const subs& ssub, term& d, subs& dsub) {
 	if (s.szargs != d.args.size()) return false;
 	termset::iterator dit = d.args.begin();
 	for (term** t = ar.begin(); t != ar.end(); ++t)
-		if (!(*t)->unify(**t, ssub, **dit++, dsub)) 
+		if (!(*t)->unify(**t, **dit++, dsub)) 
 			return false;
 	return true;
 }
-bool u4(term& s, const subs& ssub, term& d, const subs& dsub) {
+bool u4(term& s, term& d, const subs& dsub) {
 	if (d.p < 0) {
 		subs::vtype* v = dsub.find(d.p);
-		term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
-		return e ? s.unify_ep(s, ssub, *e, dsub) : true;
+		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
+		return e ? s.unify_ep(s, *e, dsub) : true;
 	}
 	if (s.p != d.p) return false;
 	const termset& ar = s.args;
 	if (s.szargs != d.args.size()) return false;
 	termset::iterator dit = d.args.begin();
 	for (term** t = ar.begin(); t != ar.end(); ++t)
-		if (!(*t)->unify_ep(**t, ssub, **dit++, dsub)) 
+		if (!(*t)->unify_ep(**t, **dit++, dsub)) 
 			return false;
 	return true;
 }
@@ -529,31 +559,34 @@ void prove(pframe _p, pframe& lastp) {
 		frame& p = *_p;
 		term* t = p.rule, *epr;
 		// check for euler path
-		while ((ep = ep->prev))
-			if ((epr = ep->rule) == p.rule && epr->unify_ep(*epr, ep->s, *t, p.s)) {
+		ssub = p.s;
+		while ((ep = ep->prev)) {
+			if ((epr = ep->rule) == p.rule && t->unify_ep(*t, *epr, ep->s)) {
 				t = 0;
 				break;
 			}
+		}
 		if (!t) { 
 			pframe pf = _p; _p = p.next; pf->decref();
 			continue; 
 		}
 		if (p.b != p.rule->body.end()) {
-			(*p.b)->_unify(p.s, _p, lastp); 
+			(*p.b)->_unify(_p, lastp); 
 			pframe pf = _p; _p = p.next; pf->decref();
 			continue; 
 		}
 		if (p.prev) { // if body is done, go up the tree
 			frame& ppr = *p.prev;
 			pframe r(new frame(_p, ppr, ppr.s));
-			p.rule->unify(*p.rule, p.s, **r->b++, r->s);
+			p.rule->unify(*p.rule, **r->b++, r->s);
 			prove(r, lastp);
 		}
 		#ifndef NOTRACE
 		else {
 			term* _t; // push evidence
+			ssub = p.s;
 			for (termset::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
-				if (!(_t = ((*r)->evaluate(**r, p.s)))) continue;
+				if (!(_t = ((*r)->evaluate(**r)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
 				dout << "proved: " << format(_t) << endl;
 			}
@@ -563,14 +596,14 @@ void prove(pframe _p, pframe& lastp) {
 	}
 }
 
-void term::_unify(const subs& ssub, pframe f, pframe& lastp) {
-	subs dsub;
+subs dsub;
+void term::_unify(pframe f, pframe& lastp) {
 	termset::iterator it, end, dit;
 	for (term** _d = matches.begin(); _d != matches.end(); ++_d)  {
 		term& d = **_d;
 		for (it = args.begin(), end = args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
 			term& x = **it;
-			if (!x.unify(x, ssub, **dit, dsub)) break;
+			if (!x.unify(x, **dit, dsub)) break;
 		}
 		if (it == end) 
 			lastp = lastp->next = pframe(new frame(f, *_d, 0, f, dsub));
