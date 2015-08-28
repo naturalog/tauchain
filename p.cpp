@@ -182,17 +182,22 @@ term* mkterm(termset& kb, termset& query);
 term* mkterm(resid p);
 term* mkterm(resid p, const termset& args);
 
+
+typedef term* (*fevaluate)(term&, const subs&);
+typedef bool (*funify)(term& s, const subs& ssub, term& d, subs& dsub);
+typedef bool (*funify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
+
 struct term {
 	term() : p(0) { throw 0; }
 	term(termset& kb, termset& query) : p(0) { addbody(query); trymatch(kb); }
 	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) {
 		TRACE(if (!p) throw 0);
-		static auto evvar = [](term& t, const subs& ss) {
+		static fevaluate evvar = [](term& t, const subs& ss) {
 			auto v = ss.find(t.p);
 			return v ? v->second->evaluate(*v->second, ss) : (term*)0; 
 		};
-		static auto evnoargs = [](term& t, const subs&) { return &t; };
-		static auto ev = [](term& t, const subs& ss) {
+		static fevaluate evnoargs = [](term& t, const subs&) { return &t; };
+		static fevaluate ev = [](term& t, const subs& ss) {
 			static term *v;
 			termset ts;
 			for (term* a : t.args) {
@@ -201,7 +206,7 @@ struct term {
 			}
 			return mkterm(t.p, ts);
 		};
-		static auto u1 = [](term& s, const subs& ssub, term& d, subs& dsub) {
+		static funify u1 = [](term& s, const subs& ssub, term& d, subs& dsub) {
 //			term* v;
 			auto v = ssub.find(s.p);
 			if (v) {
@@ -210,7 +215,7 @@ struct term {
 			}
 			return true;
 		};
-		static auto u2 = [](term& s, const subs& ssub, term& d, const subs& dsub) { 
+		static funify_ep u2 = [](term& s, const subs& ssub, term& d, const subs& dsub) { 
 			auto v = ssub.find(s.p);
 			if (v) {
 				term *e =  v->second->evaluate(*v->second, ssub);
@@ -218,7 +223,7 @@ struct term {
 			}
 			return true;
 		};
-		static auto u3 = [](term& s, const subs& ssub, term& d, subs& dsub) {
+		static funify u3 = [](term& s, const subs& ssub, term& d, subs& dsub) {
 			if (d.p < 0) {
 				auto v = dsub.find(d.p);
 				term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
@@ -237,7 +242,7 @@ struct term {
 					return false;
 			return true;
 		};
-		static auto u4 = [](term& s, const subs& ssub, term& d, const subs& dsub) {
+		static funify_ep u4 = [](term& s, const subs& ssub, term& d, const subs& dsub) {
 			if (d.p < 0) {
 				auto v = dsub.find(d.p);
 				term* e = v ? v->second->evaluate(*v->second, dsub) : 0;
@@ -268,9 +273,11 @@ struct term {
 	}
 	const resid p;
 	const termset args;
-	term* (*evaluate)(term&, const subs&);
-	bool (*unify)(term& s, const subs& ssub, term& d, subs& dsub);
-	bool (*unify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
+	fevaluate evaluate;
+	funify unify;
+	funify_ep unify_ep;
+//	bool (*unify)(term& s, const subs& ssub, term& d, subs& dsub);
+//	bool (*unify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
 //	term *s, *o;
 	struct body_t {
 		friend struct term;
