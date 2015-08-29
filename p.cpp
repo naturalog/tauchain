@@ -4,92 +4,11 @@ std::wistream &din = std::wcin;
 std::wostream &dout = std::wcout;
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
 
-template<typename T, bool ispod> vector<T,ispod>::vector() : a(0),n(0),c(0) {}
-template<typename T, bool ispod> vector<T,ispod>::vector(const vector<T, ispod>& t) : a(0),n(0),c(0) { copyfrom(t); }
-template<typename T, bool ispod> vector<T,ispod>& vector<T, ispod>::operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
-template<typename T, bool ispod> T vector<T,ispod>::operator[](size_t k) const { return a[k]; }
-template<typename T, bool ispod> size_t vector<T,ispod>::size() const	{ return n; }
-template<typename T, bool ispod> T* vector<T,ispod>::begin() const	{ return a; }
-template<typename T, bool ispod> T* vector<T,ispod>::end() const	{ return n ? &a[n] : 0; }
-template<typename T, bool ispod> void vector<T,ispod>::clear() {
-	n = c = 0;
-	if (!a) return;
-	free(a);
-	a = 0;
-}
-template<typename T, bool ispod> void vector<T,ispod>::clear1() { n = c = 0; }
-template<typename T, bool ispod> bool vector<T,ispod>::empty() const	{ return !n; }
-template<typename T, bool ispod> vector<T,ispod>::~vector()		{ if(a)free(a); }
-template<typename T, bool ispod> T* vector<T,ispod>::back()	{ return n ? &a[n-1] : 0; }
-template<typename T, bool ispod> T& vector<T,ispod>::push_back(const T& t) {
-	if (!(n % chunk))
-		a = (T*)realloc(a, szchunk * ++c);
-	if (ispod) a[n] = t;
-	else new (&a[n])(T)(t);
-	return a[n++];
-}
-template<typename T, bool ispod> void vector<T,ispod>::copyfrom(const vector<T, ispod>& t) {
-	if (!(n = t.n)) { c = 0; return; }
-	memcpy(a = (T*)realloc(a, t.c * szchunk), t.a, (c = t.c) * szchunk);
-}
-
-template<typename T, bool ispod /*= std::is_pod<T>::value*/>
-const size_t vector<T, ispod>::szchunk = chunk * sizeof(T);
-
-template<typename K, typename V, bool ispod> map<K, V, ispod>::map(const base& t) { copyfrom(t); }
-template<typename K, typename V, bool ispod> map<K, V, ispod>::map() : base() {}
-template<typename K, typename V, bool ispod> map<K, V, ispod>::map(const _this& _s) : base() { base::copyfrom(_s); }
-template<typename K, typename V, bool ispod> map<K, V, ispod>& map<K, V, ispod>::operator=(const _this& m){ base::copyfrom(m); return *this; }
-template<typename K, typename V, bool ispod> V& map<K, V, ispod>::operator[](const K& k){ mapelem<K, V>* z = find(k); return z ? z->second : set(k, V()); }
-template<typename K, typename V, bool ispod> V& map<K, V, ispod>::set(const K& k, const V& v) {
-	vtype* z = find(k);
-	if (z) { return z->second = v; }
-	return base::push_back(vtype(k, v)).second;
-//	qsort(base::a, base::n, sizeof(vtype), compare);
-}
-template<typename K, typename V, bool ispod> mapelem<K, V>* map<K, V, ispod>::find(const K& k) const {
-	if (!base::n) return 0;
-	iterator e = base::end();
-	for (vtype* x = base::begin(); x != e; ++x) if (x->first == k) return x;
-	return 0;
-//	vtype v(k, V()); vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare); return z;
-}
-//template<typename K, typename V, bool ispod> int map<K, V, ispod>::compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
-
 subs ssub;
-
-void trim(string& s) {
-	string::iterator i = s.begin();
-	while (iswspace(*i)) {
-		s.erase(i);
-		i = s.begin();
-	}
-	size_t n = s.size();
-	if (n) {
-		while (iswspace(s[--n]));
-		s = s.substr(0, ++n);
-	}
-}
-string wstrim(string s) { trim(s); return s; }
-
-resid bidict::set ( string v ) {
-	if (!v.size()) throw "bidict::set called with a node containing null value";
-	map<string, resid, false>::iterator it = pi.find ( v );
-	if ( it ) return it->second;
-	resid k = pi.size() + 1;
-	if ( v[0] == L'?' ) k = -k;
-	pi[v] = k, ip[k] = v;
-	return k;
-}
-
-string bidict::operator[](resid k) { return ip[k]; }
-resid bidict::operator[](string v) { return set(v); }
-
 bidict dict;
 
 const resid implies = dict.set(L"=>");
 const resid Dot = dict.set(L".");
-
 
 term::term() : p(0), szargs(0) { throw 0; }
 term::term(termset& kb, termset& query) : p(0), szargs(0), body(query) { trymatch(kb); }
@@ -108,8 +27,6 @@ term::term(resid _p, const termset& _args) : p(_p), args(_args), szargs(args.siz
 		unify_ep = u4;
 	}
 }
-
-term* term::addbody(const termset& t) { for (termset::iterator it = t.begin(); it != t.end(); ++it) body.push_back(*it); return this; }
 
 void term::trymatch(termset& heads) {
 	subs d, e;
@@ -163,19 +80,17 @@ term* evnoargss(term& t, const subs&) { return &t; }
 bool u1(term& s, term& d, subs& dsub) {
 	static subs::vtype *v;
 	static term *e;
-	//return ((v = ssub.find(s.p))) ? ((e = v->second->evaluate(*v->second))) ? e->unify(*e, d, dsub) : true : true;
-	if ((v = ssub.find(&s))) {
-		term& vs = *v->second;
-		if ((e = FASTEVAL(vs))) return e->unify(*e, d, dsub);
-		return true;
-	}
-	return true;
+	if (!(v = ssub.find(&s))) return true;
+	term& vs = *v->second;
+	return ((e = FASTEVAL(vs))) ? e->unify(*e, d, dsub) : true;
 }
 
 bool u2(term& s, term& d, const subs& dsub) { 
 	static subs::vtype *v;
 	static term *e;
-	return ((v = ssub.find(&s))) ? ((e = FASTEVAL(*v->second))) ? e->unify_ep(*e, d, dsub) : true : true;
+	if (!(v = ssub.find(&s))) return true;
+	term& vs = *v->second;
+	return ((e = FASTEVAL(vs))) ? e->unify_ep(*e, d, dsub) : true;
 }
 
 bool u3(term& s, term& d, subs& dsub) {
@@ -184,12 +99,10 @@ bool u3(term& s, term& d, subs& dsub) {
 		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
 		if (e) return s.unify(s, *e, dsub);
 		dsub.set(&d, FASTEVAL(s));
-//		TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << endl);
 		return true;
 	}
-	if (s.p != d.p) return false;
+	if (s.p != d.p || s.szargs != d.args.size()) return false;
 	const termset& ar = s.args;
-	if (s.szargs != d.args.size()) return false;
 	termset::iterator dit = d.args.begin();
 	term** e = ar.end();
 	for (term** t = ar.begin(); t != e; ++t)
@@ -204,12 +117,11 @@ bool u4(term& s, term& d, const subs& dsub) {
 		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
 		return e ? s.unify_ep(s, *e, dsub) : true;
 	}
-	if (s.p != d.p) return false;
+	if (s.p != d.p || s.szargs != d.args.size()) return false;
 	const termset& ar = s.args;
-	if (s.szargs != d.args.size()) return false;
-	termset::iterator dit = d.args.begin();
-	term** e = ar.end();
-	for (term** t = ar.begin(); t != e; ++t)
+//	termset::iterator dit = d.args.begin();
+//	term** e = ar.end();
+	for (term **t = ar.begin(), **dit = d.args.begin(), **e = ar.end(); t != e; ++t)
 		if (!(*t)->unify_ep(**t, **dit++, dsub)) 
 			return false;
 	return true;
@@ -397,7 +309,10 @@ termset nqparser::operator()(const wchar_t* _s) {
 					ts.push_back(*o);
 					addhead(heads, mkterm(x->first->p, ts));
 				}
-		else for (termset::iterator o = objs.begin(); o != objs.end(); ++o) addhead(heads, (*o)->addbody(subjs));
+		else for (termset::iterator o = objs.begin(); o != objs.end(); ++o) {
+			(*o)->body = subjs;
+			addhead(heads, *o);
+		}
 		if (*s == L'}') { ++s; return heads; }
 		preds.clear();
 		subjs.clear();
@@ -406,7 +321,7 @@ termset nqparser::operator()(const wchar_t* _s) {
 	return heads;
 }
 
-termset readterms(std::wistream& is) {
+termset nqparser::readterms(std::wistream& is) {
 	string s, c;
 	nqparser p;
 	string ss, space = L" ";
@@ -498,6 +413,8 @@ size_t steps = 0;
 void prove(pframe _p, pframe& lastp) {
 	if (!lastp) lastp = _p;
 	evidence e;
+	subs dsub;
+	term **dit, **ee, **_d, **end, **it;
 	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
 		pframe ep = _p;
@@ -505,31 +422,51 @@ void prove(pframe _p, pframe& lastp) {
 		term* t = p.rule, *epr;
 		// check for euler path
 		ssub = p.s;
+/*		if (p.s.size()) {
+			tt = (term*)realloc(tt, sizeof(term) * p.s.size());
+			size_t n = 0;
+			for (subs::iterator it = p.s.begin(), e = p.s.end(); it != e; ++it) {
+				memcpy(&tt[n++], it->first, sizeof(term));
+				memcpy(it->first, it->second, sizeof(term));
+			}
+		}*/
 		while ((ep = ep->prev)) {
 			if ((epr = ep->rule) == p.rule && t->unify_ep(*t, *epr, ep->s)) {
 				t = 0;
 				break;
 			}
 		}
-		if (!t) { 
-			pframe pf = _p; _p = p.next; pf->decref();
-			continue; 
+		if (!t);
+		else if (p.b != p.rule->body.end()) {
+			term& tt = **p.b;
+			for (_d = tt.matches.begin(), ee = tt.matches.end(); _d != ee; ++_d)  {
+				term& d = **_d;
+				for (it = tt.args.begin(), end = tt.args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
+					term& x = **it;
+					if (!x.unify(x, **dit, dsub)) break;
+				}
+				if (it == end) 
+					lastp = lastp->next = pframe(new frame(_p, *_d, 0, _p, dsub));
+				dsub.clear1();
+			}
 		}
-		if (p.b != p.rule->body.end()) {
-			(*p.b)->_unify(_p, lastp); 
-			pframe pf = _p; _p = p.next; pf->decref();
-			continue; 
-		}
-		if (p.prev) { // if body is done, go up the tree
+		else if (p.prev) { // if body is done, go up the tree
 			frame& ppr = *p.prev;
 			pframe r(new frame(_p, ppr, ppr.s));
 			p.rule->unify(*p.rule, **r->b++, r->s);
+		/*	if (p.s.size()) {
+				size_t n = 0;
+				for (subs::iterator it = p.s.begin(), e = p.s.end(); it != e; ++it)
+					memcpy(it->first, &tt[n++], sizeof(term));
+			}*/
 			prove(r, lastp);
+//			pframe pf = _p; _p = p.next; pf->decref();
+//			continue;
 		}
 		#ifndef NOTRACE
 		else {
 			term* _t; // push evidence
-			ssub = p.s;
+//			ssub = p.s;
 			for (termset::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
 				if (!(_t = ((*r)->evaluate(**r)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
@@ -537,29 +474,18 @@ void prove(pframe _p, pframe& lastp) {
 			}
 		}
 		#endif
+/*		if (p.s.size()) {
+			size_t n = 0;
+			for (subs::iterator it = p.s.begin(), e = p.s.end(); it != e; ++it)
+				memcpy(it->first, &tt[n++], sizeof(term));
+		}*/
 		pframe pf = _p; _p = p.next; pf->decref();
 	}
 }
 
-subs dsub;
-void term::_unify(pframe f, pframe& lastp) {
-	termset::iterator it, end, dit;
-	term** e = matches.end();
-	for (term** _d = matches.begin(); _d != e; ++_d)  {
-		term& d = **_d;
-		for (it = args.begin(), end = args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
-			term& x = **it;
-			if (!x.unify(x, **dit, dsub)) break;
-		}
-		if (it == end) 
-			lastp = lastp->next = pframe(new frame(f, *_d, 0, f, dsub));
-		dsub.clear1();
-	}
-}
-
 int main() {
-	termset kb = readterms(din);
-	termset query = readterms(din);
+	termset kb = nqparser::readterms(din);
+	termset query = nqparser::readterms(din);
 
 	// create the query term and index it wrt the kb
 	term* q = mkterm(kb, query);
