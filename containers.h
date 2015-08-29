@@ -7,7 +7,7 @@
 const size_t chunk = 4;
 
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
-class vector {
+struct vector {
 protected:
 	T* a;
 	static const size_t szchunk;
@@ -28,9 +28,55 @@ public:
 	bool empty() const;
 	iterator back();
 	T& push_back(const T& t);
+
+	struct coro {
+		bool state;
+		iterator i, e;
+		const vector<T, ispod>& t;
+		coro(const vector<T, ispod>& _t) : state(false), i(0), e(0), t(_t) {}
+		bool operator()() {
+			switch (state) {
+			case false: 
+				i = t.begin(), e = t.end();
+				while (i != e) {
+					return state = true;
+			case true: 	++i;
+				}
+				return state = false;
+			}
+		}
+	};
+
 protected:	
 	void copyfrom(const vector<T, ispod>& t);
 };
+
+//template<typename T, bool ispod /*= std::is_pod<T>::value*/>
+/*struct tree {
+	T elem;
+	vector<tree<T, ispod>, ispod> next;
+	typedef T* iterator;
+	struct coro {
+		bool state;
+		iterator i, e;
+		coro() : s(false), i(0), e(0) {}
+		bool operator()() {
+			yield i = elem;
+			next::coro c;
+			while (c())
+				yield i = c.i
+			switch (state) {
+			case false: 
+				i = begin(), e = end;
+				while (i != e) {
+					return state = true;
+			case true: 	++i;
+				}
+				return state = false;
+			}
+		}
+	};
+};*/
 
 template<typename K, typename V>
 struct mapelem {

@@ -45,11 +45,11 @@ term* evvar(term& t) {
 }
 
 term* ev(term& t) {
-	static term *v, **e;
+	static term *v;
 	termset ts;
-	e = t.args.end();
-	for (term** a = t.args.begin(); a != e; ++a) {
-		term& b = **a;
+	termset::coro c(t.args);
+	while (c()) {
+		term& b = **c.i;
 		ts.push_back(((v = b.evaluate(b))) ? v : mkterm(b.p));
 	}
 	return mkterm(t.p, ts);
@@ -61,11 +61,11 @@ term* evvars(term& t, const subs& ss) {
 }
 
 term* evs(term& t, const subs& ss) {
-	static term *v, **e;
+	static term *v;
 	termset ts;
-	e = t.args.end();
-	for (term** a = t.args.begin(); a != e; ++a) {
-		term& b = **a;
+	termset::coro c(t.args);
+	while (c()) {
+		term& b = **c.i;
 		ts.push_back(((v = b.evaluates(b, ss))) ? v : mkterm(b.p));
 	}
 	return mkterm(t.p, ts);
@@ -104,9 +104,9 @@ bool u3(term& s, term& d, subs& dsub) {
 	if (s.p != d.p || s.szargs != d.args.size()) return false;
 	const termset& ar = s.args;
 	termset::iterator dit = d.args.begin();
-	term** e = ar.end();
-	for (term** t = ar.begin(); t != e; ++t)
-		if (!(*t)->unify(**t, **dit++, dsub)) 
+	termset::coro c(ar);
+	while (c())
+		if (!(*c.i)->unify(**c.i, **dit++, dsub)) 
 			return false;
 	return true;
 }
@@ -119,10 +119,10 @@ bool u4(term& s, term& d, const subs& dsub) {
 	}
 	if (s.p != d.p || s.szargs != d.args.size()) return false;
 	const termset& ar = s.args;
-//	termset::iterator dit = d.args.begin();
-//	term** e = ar.end();
-	for (term **t = ar.begin(), **dit = d.args.begin(), **e = ar.end(); t != e; ++t)
-		if (!(*t)->unify_ep(**t, **dit++, dsub)) 
+	termset::iterator dit = d.args.begin();
+	termset::coro c(ar);
+	while (c())
+		if (!(*c.i)->unify_ep(**c.i, **dit++, dsub)) 
 			return false;
 	return true;
 }
