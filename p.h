@@ -51,7 +51,7 @@ struct term {
 	term(resid _p, const termset& _args = termset());
 
 	const resid p;
-	const termset args;
+	termset args;
 	const size_t szargs;
 	termset matches, body;
 
@@ -63,25 +63,26 @@ struct term {
 	void trymatch(termset& heads);
 
 	struct coro {
-		const term& t;
-		termset::iterator i, dit;
-		termset::coro c1, c2, c3;
-		bool f;
+		term& t;
+		term* i;
+		termset::coro match_coro, args_coro;
 		subs dsub;
 		bool state;
-		coro(const term& _t) : t(_t), c1(t.matches), c2(t.args), state(false) {}
+		coro(term& _t) : t(_t), match_coro(t.matches), args_coro(t.args), state(false) {}
 		bool operator()() {
 			switch (state) {
 			case false:
-				while (c1()) {
-					c3 = termset::coro((*c1.i)->args);
-					while (c2() && c3())
-						if (!(*c2.i)->unify(**c2.i, **c3.i, dsub))
-							break;
-					if (!c2.state) {
-						i = c1.i;
+				while (match_coro()) {
+					{
+						termset::coro match_args_coro((*match_coro.i)->args);
+						while (args_coro() && match_args_coro())
+							if (!(*args_coro.i)->unify(**args_coro.i, **match_args_coro.i, dsub))
+								break;
+					}
+					if (!args_coro.state) {
+						i = *match_coro.i;
 						return state = true;
-					} else c2.state = false;
+					} else args_coro.state = false;
 			case true:
 					dsub.clear1();
 				}

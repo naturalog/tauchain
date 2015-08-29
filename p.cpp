@@ -12,21 +12,11 @@ const resid Dot = dict.set(L".");
 
 term::term() : p(0), szargs(0) { throw 0; }
 term::term(termset& kb, termset& query) : p(0), szargs(0), body(query) { trymatch(kb); }
-term::term(resid _p, const termset& _args) : p(_p), args(_args), szargs(args.size()) {
-	TRACE(if (!p) throw 0);
-	if (p < 0) {
-		evaluate = evvar;
-		evaluates = evvars;
-		unify = u1;
-		unify_ep = u2;
-	}
-	else {
-		if (!szargs) evaluate = evnoargs, evaluates = evnoargss;
-		else evaluate = ev, evaluates = evs;
-		unify = u3;
-		unify_ep = u4;
-	}
-}
+term::term(resid _p, const termset& _args) : p(_p), args(_args), szargs(args.size()),
+		evaluate(p < 0 ? evvar : !szargs ? evnoargs : ev),
+		evaluates(p < 0 ? evvars : !szargs ? evnoargss : evs),
+		unify(p < 0 ? u1 : u3),
+		unify_ep(p < 0 ? u2 : u4) {}
 
 void term::trymatch(termset& heads) {
 	subs d, e;
@@ -431,22 +421,9 @@ void prove(pframe _p, pframe& lastp) {
 		}
 		if (!t);
 		else if (p.b != p.rule->body.end()) {
-			term& tt = **p.b;
-			term::coro m(tt);
-//			termset::coro m(tt.matches);
-			while (m()) {
-//				term& d = **m.i;
-//				termset::coro c(tt.args);
-//				dit = d.args.begin();
-//				f = true;
-//				while (c()) {
-//					term& x = **c.i;
-//					if (!x.unify(x, **dit++, dsub)) { f = false; break; }
-//				}
-//				if (f) 
-					lastp = lastp->next = pframe(new frame(_p, *m.i, 0, _p, m.dsub));
-				//dsub.clear1();
-			}
+			term::coro m(**p.b);
+			while (m())
+				lastp = lastp->next = pframe(new frame(_p, m.i, 0, _p, m.dsub));
 		}
 		else if (p.prev) { // if body is done, go up the tree
 			frame& ppr = *p.prev;

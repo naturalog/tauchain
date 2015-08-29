@@ -33,7 +33,6 @@ public:
 		bool state;
 		iterator i, e;
 		const vector<T, ispod>* t;
-		coro() : t(0) {}
 		coro(const vector<T, ispod>& _t) : state(false), i(0), e(0), t(&_t) {}
 		bool operator()() {
 			switch (state) {
@@ -117,7 +116,7 @@ public:
 
 vec_templ vec_t::vector() : a(0),n(0),c(0) {}
 map_tmpl map<K, V, ispod>::map() : base() {}
-vec_templ vec_t::vector(const vector<T, ispod>& t) : a(0),n(0),c(0) 	{ copyfrom(t); }
+vec_templ vec_t::vector(const vector<T, ispod>& t) : a(0),n(0),c(0) { copyfrom(t); }
 vec_templ vec_t& vector<T, ispod>::operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
 vec_templ T vec_t::operator[](size_t k) const 		{ return a[k]; }
 vec_templ size_t vec_t::size() const			{ return n; }
