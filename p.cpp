@@ -40,7 +40,7 @@ void term::trymatch(termset& heads) {
 }
 
 term* evvar(term& t) {
-	subs::vtype* v = ssub.find(&t);
+	subs::vtype* v = ssub.find(t.p);
 	return v ? v->second->evaluate(*v->second) : (term*)0; 
 }
 
@@ -56,7 +56,7 @@ term* ev(term& t) {
 }
 
 term* evvars(term& t, const subs& ss) {
-	subs::vtype* v = ss.find(&t);
+	subs::vtype* v = ss.find(t.p);
 	return v ? v->second->evaluates(*v->second, ss) : (term*)0; 
 }
 
@@ -80,7 +80,7 @@ term* evnoargss(term& t, const subs&) { return &t; }
 bool u1(term& s, term& d, subs& dsub) {
 	static subs::vtype *v;
 	static term *e;
-	if (!(v = ssub.find(&s))) return true;
+	if (!(v = ssub.find(s.p))) return true;
 	term& vs = *v->second;
 	return ((e = FASTEVAL(vs))) ? e->unify(*e, d, dsub) : true;
 }
@@ -88,17 +88,17 @@ bool u1(term& s, term& d, subs& dsub) {
 bool u2(term& s, term& d, const subs& dsub) { 
 	static subs::vtype *v;
 	static term *e;
-	if (!(v = ssub.find(&s))) return true;
+	if (!(v = ssub.find(s.p))) return true;
 	term& vs = *v->second;
 	return ((e = FASTEVAL(vs))) ? e->unify_ep(*e, d, dsub) : true;
 }
 
 bool u3(term& s, term& d, subs& dsub) {
 	if (d.p < 0) {
-		subs::vtype* v = dsub.find(&d);
+		subs::vtype* v = dsub.find(d.p);
 		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
 		if (e) return s.unify(s, *e, dsub);
-		dsub.set(&d, FASTEVAL(s));
+		dsub.set(d.p, FASTEVAL(s));
 		return true;
 	}
 	if (s.p != d.p || s.szargs != d.args.size()) return false;
@@ -113,7 +113,7 @@ bool u3(term& s, term& d, subs& dsub) {
 
 bool u4(term& s, term& d, const subs& dsub) {
 	if (d.p < 0) {
-		subs::vtype* v = dsub.find(&d);
+		subs::vtype* v = dsub.find(d.p);
 		term* e = v ? FASTEVALS(*v->second, dsub) : 0;
 		return e ? s.unify_ep(s, *e, dsub) : true;
 	}
@@ -400,10 +400,10 @@ ground frame::g() const {
 		r.push_back(elem(creator->rule, creator->s));
 	return r;	
 }
-frame::frame(pframe c, term* r, termset::iterator* l, pframe p, const subs& _s)
-		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref;if(p)++p->ref; }
-frame::frame(pframe c, term* r, termset::iterator* l, pframe p)
-		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), next(0), ref(0) { if(c)++c->ref;if(p)++p->ref; }
+frame::frame(pframe c, term* r, termset::iterator l, pframe p, const subs& _s)
+		: rule(r), b(l ? l : rule->body.begin()), prev(p), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref;if(p)++p->ref; }
+frame::frame(pframe c, term* r, termset::iterator l, pframe p)
+		: rule(r), b(l ? l : rule->body.begin()), prev(p), creator(c), next(0), ref(0) { if(c)++c->ref;if(p)++p->ref; }
 frame::frame(pframe c, frame& p, const subs& _s) 
 		: rule(p.rule), b(p.b), prev(p.prev), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref; if(prev)++prev->ref; }
 void frame::decref() { if (ref--) return; if(creator)creator->decref();if(prev)prev->decref(); delete this; }
@@ -413,9 +413,9 @@ size_t steps = 0;
 void prove(pframe _p, pframe& lastp) {
 	if (!lastp) lastp = _p;
 	evidence e;
-	subs dsub;
-	term **dit;
-	bool f;
+//	subs dsub;
+//	term **dit;
+//	bool f;
 	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
 		pframe ep = _p;
@@ -432,19 +432,20 @@ void prove(pframe _p, pframe& lastp) {
 		if (!t);
 		else if (p.b != p.rule->body.end()) {
 			term& tt = **p.b;
-			termset::coro m(tt.matches);
+			term::coro m(tt);
+//			termset::coro m(tt.matches);
 			while (m()) {
-				term& d = **m.i;
-				termset::coro c(tt.args);
-				dit = d.args.begin();
-				f = true;
-				while (c()) {
-					term& x = **c.i;
-					if (!x.unify(x, **dit++, dsub)) { f = false; break; }
-				}
-				if (f) 
-					lastp = lastp->next = pframe(new frame(_p, *m.i, 0, _p, dsub));
-				dsub.clear1();
+//				term& d = **m.i;
+//				termset::coro c(tt.args);
+//				dit = d.args.begin();
+//				f = true;
+//				while (c()) {
+//					term& x = **c.i;
+//					if (!x.unify(x, **dit++, dsub)) { f = false; break; }
+//				}
+//				if (f) 
+					lastp = lastp->next = pframe(new frame(_p, *m.i, 0, _p, m.dsub));
+				//dsub.clear1();
 			}
 		}
 		else if (p.prev) { // if body is done, go up the tree

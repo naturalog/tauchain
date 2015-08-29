@@ -32,12 +32,13 @@ public:
 	struct coro {
 		bool state;
 		iterator i, e;
-		const vector<T, ispod>& t;
-		coro(const vector<T, ispod>& _t) : state(false), i(0), e(0), t(_t) {}
+		const vector<T, ispod>* t;
+		coro() : t(0) {}
+		coro(const vector<T, ispod>& _t) : state(false), i(0), e(0), t(&_t) {}
 		bool operator()() {
 			switch (state) {
 			case false: 
-				i = t.begin(), e = t.end();
+				i = t->begin(), e = t->end();
 				while (i != e) {
 					return state = true;
 			case true: 	++i;

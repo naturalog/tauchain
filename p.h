@@ -18,7 +18,7 @@ const wchar_t endl[3] = L"\r\n";
 #define TRACE(x)
 #endif
 
-typedef map<term*, term*, true> subs;
+typedef map<resid, term*, true> subs;
 typedef vector<term*, true> termset;
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
@@ -61,6 +61,35 @@ struct term {
 	funify_ep unify_ep;
 
 	void trymatch(termset& heads);
+
+	struct coro {
+		const term& t;
+		termset::iterator i, dit;
+		termset::coro c1, c2, c3;
+		bool f;
+		subs dsub;
+		bool state;
+		coro(const term& _t) : t(_t), c1(t.matches), c2(t.args), state(false) {}
+		bool operator()() {
+			switch (state) {
+			case false:
+				while (c1()) {
+					c3 = termset::coro((*c1.i)->args);
+					while (c2() && c3())
+						if (!(*c2.i)->unify(**c2.i, **c3.i, dsub))
+							break;
+					if (!c2.state) {
+						i = c1.i;
+						return state = true;
+					} else c2.state = false;
+			case true:
+					dsub.clear1();
+				}
+				return state = false;
+			}
+			return false;
+		}
+	};
 };
 
 struct tcmp {
@@ -88,8 +117,8 @@ struct frame {
 	int ref;
 	ground g() const; // calculate the ground
 	frame(pframe c, frame& p, const subs& _s);
-	frame(pframe c, term* r, termset::iterator* l, pframe p);
-	frame(pframe c, term* r, termset::iterator* l, pframe p, const subs&  _s);
+	frame(pframe c, term* r, termset::iterator l, pframe p);
+	frame(pframe c, term* r, termset::iterator l, pframe p, const subs&  _s);
 	void decref();
 };
 /*
