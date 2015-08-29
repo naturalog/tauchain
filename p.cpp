@@ -92,11 +92,9 @@ bool u3(term& s, term& d, subs& dsub) {
 		return true;
 	}
 	if (s.p != d.p || s.szargs != d.args.size()) return false;
-	const termset& ar = s.args;
-	termset::iterator dit = d.args.begin();
-	termset::coro c(ar);
-	while (c())
-		if (!(*c.i)->unify(**c.i, **dit++, dsub)) 
+	termset::coro c(s.args), dit(d.args);
+	while (c() && dit())
+		if (!(*c.i)->unify(**c.i, **dit.i, dsub)) 
 			return false;
 	return true;
 }
@@ -108,11 +106,9 @@ bool u4(term& s, term& d, const subs& dsub) {
 		return e ? s.unify_ep(s, *e, dsub) : true;
 	}
 	if (s.p != d.p || s.szargs != d.args.size()) return false;
-	const termset& ar = s.args;
-	termset::iterator dit = d.args.begin();
-	termset::coro c(ar);
-	while (c())
-		if (!(*c.i)->unify_ep(**c.i, **dit++, dsub)) 
+	termset::coro c(s.args), dit(d.args);
+	while (c() && dit())
+		if (!(*c.i)->unify_ep(**c.i, **dit.i, dsub)) 
 			return false;
 	return true;
 }
@@ -403,9 +399,6 @@ size_t steps = 0;
 void prove(pframe _p, pframe& lastp) {
 	if (!lastp) lastp = _p;
 	evidence e;
-//	subs dsub;
-//	term **dit;
-//	bool f;
 	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
 		pframe ep = _p;

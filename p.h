@@ -99,7 +99,8 @@ struct tcmp {
 		if (x.szargs != y.szargs) return x.szargs < y.szargs;
 		if (x.p != y.p) return x.p < y.p;
 		for (termset::iterator i = x.args.begin(), e = x.args.end(), j = y.args.begin(); i != e; ++i, ++j) 
-			if ((*i)->p != (*j)->p) return (*i)->p < (*j)->p;
+			if ((*i)->p != (*j)->p)
+				return (*i)->p < (*j)->p;
 		return false;
 	}
 };
