@@ -45,7 +45,7 @@ public:
 				return state = false;
 			}
 		}
-	};
+	} m;
 
 protected:	
 	void copyfrom(const vector<T, ispod>& t);
@@ -114,9 +114,9 @@ public:
 	resid operator[](string v);
 };
 
-vec_templ vec_t::vector() : a(0),n(0),c(0) {}
+vec_templ vec_t::vector() : a(0),n(0),c(0),m(*this) {}
 map_tmpl map<K, V, ispod>::map() : base() {}
-vec_templ vec_t::vector(const vector<T, ispod>& t) : a(0),n(0),c(0) { copyfrom(t); }
+vec_templ vec_t::vector(const vector<T, ispod>& t) : a(0),n(0),c(0),m(*this) { copyfrom(t); }
 vec_templ vec_t& vector<T, ispod>::operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
 vec_templ T vec_t::operator[](size_t k) const 		{ return a[k]; }
 vec_templ size_t vec_t::size() const			{ return n; }
