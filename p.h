@@ -46,7 +46,7 @@ bool u3(term& s, term& d, subs& dsub);
 bool u4(term& s, term& d, const subs& dsub);
 
 struct term {
-	term();
+//	term();
 	term(termset& kb, termset& query);
 	term(resid _p, const termset& _args = termset());
 
@@ -90,7 +90,7 @@ struct term {
 			}
 			return false;
 		}
-	};
+	} m;
 };
 
 struct tcmp {

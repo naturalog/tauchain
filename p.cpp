@@ -10,13 +10,13 @@ bidict dict;
 const resid implies = dict.set(L"=>");
 const resid Dot = dict.set(L".");
 
-term::term() : p(0), szargs(0) { throw 0; }
-term::term(termset& kb, termset& query) : p(0), szargs(0), body(query) { trymatch(kb); }
+//term::term() : p(0), szargs(0) { throw 0; }
+term::term(termset& kb, termset& query) : p(0), szargs(0), body(query),m(*this) { trymatch(kb); }
 term::term(resid _p, const termset& _args) : p(_p), args(_args), szargs(args.size()),
 		evaluate(p < 0 ? evvar : !szargs ? evnoargs : ev),
 		evaluates(p < 0 ? evvars : !szargs ? evnoargss : evs),
 		unify(p < 0 ? u1 : u3),
-		unify_ep(p < 0 ? u2 : u4) {}
+		unify_ep(p < 0 ? u2 : u4),m(*this) {}
 
 void term::trymatch(termset& heads) {
 	subs d, e;
@@ -129,7 +129,7 @@ char* buf = (char*)malloc(tchunk);
 	if (it != terms.end()) return *it; \
 	bufpos++; \
 	return r; 
-
+/*
 term* mkterm() {
 	if (bufpos == nch) {
 		buf = (char*)malloc(tchunk);
@@ -142,7 +142,7 @@ term* mkterm() {
 	bufpos++;
 	terms.insert(r);
 	return r;
-}
+}*/
 term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
 term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
 term* mkterm(resid p) {
@@ -414,7 +414,7 @@ void prove(pframe _p, pframe& lastp) {
 		}
 		if (!t);
 		else if (p.b != p.rule->body.end()) {
-			term::coro m(**p.b);
+			term::coro& m = (**p.b).m;
 			while (m())
 				lastp = lastp->next = pframe(new frame(_p, m.i, 0, _p, m.dsub));
 		}
