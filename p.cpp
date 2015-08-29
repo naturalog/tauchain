@@ -414,7 +414,7 @@ void prove(pframe _p, pframe& lastp) {
 	if (!lastp) lastp = _p;
 	evidence e;
 	subs dsub;
-	term **dit, **ee, **_d;//, **end, **it;
+	term **dit;
 	bool f;
 	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
@@ -423,14 +423,6 @@ void prove(pframe _p, pframe& lastp) {
 		term* t = p.rule, *epr;
 		// check for euler path
 		ssub = p.s;
-/*		if (p.s.size()) {
-			tt = (term*)realloc(tt, sizeof(term) * p.s.size());
-			size_t n = 0;
-			for (subs::iterator it = p.s.begin(), e = p.s.end(); it != e; ++it) {
-				memcpy(&tt[n++], it->first, sizeof(term));
-				memcpy(it->first, it->second, sizeof(term));
-			}
-		}*/
 		while ((ep = ep->prev)) {
 			if ((epr = ep->rule) == p.rule && t->unify_ep(*t, *epr, ep->s)) {
 				t = 0;
@@ -440,18 +432,18 @@ void prove(pframe _p, pframe& lastp) {
 		if (!t);
 		else if (p.b != p.rule->body.end()) {
 			term& tt = **p.b;
-			for (_d = tt.matches.begin(), ee = tt.matches.end(); _d != ee; ++_d)  {
-				term& d = **_d;
+			termset::coro m(tt.matches);
+			while (m()) {
+				term& d = **m.i;
 				termset::coro c(tt.args);
 				dit = d.args.begin();
 				f = true;
 				while (c()) {
-//				for (it = tt.args.begin(), end = tt.args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
 					term& x = **c.i;
 					if (!x.unify(x, **dit++, dsub)) { f = false; break; }
 				}
 				if (f) 
-					lastp = lastp->next = pframe(new frame(_p, *_d, 0, _p, dsub));
+					lastp = lastp->next = pframe(new frame(_p, *m.i, 0, _p, dsub));
 				dsub.clear1();
 			}
 		}
@@ -459,19 +451,11 @@ void prove(pframe _p, pframe& lastp) {
 			frame& ppr = *p.prev;
 			pframe r(new frame(_p, ppr, ppr.s));
 			p.rule->unify(*p.rule, **r->b++, r->s);
-		/*	if (p.s.size()) {
-				size_t n = 0;
-				for (subs::iterator it = p.s.begin(), e = p.s.end(); it != e; ++it)
-					memcpy(it->first, &tt[n++], sizeof(term));
-			}*/
 			prove(r, lastp);
-//			pframe pf = _p; _p = p.next; pf->decref();
-//			continue;
 		}
 		#ifndef NOTRACE
 		else {
 			term* _t; // push evidence
-//			ssub = p.s;
 			for (termset::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
 				if (!(_t = ((*r)->evaluate(**r)))) continue;
 				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
@@ -479,11 +463,6 @@ void prove(pframe _p, pframe& lastp) {
 			}
 		}
 		#endif
-/*		if (p.s.size()) {
-			size_t n = 0;
-			for (subs::iterator it = p.s.begin(), e = p.s.end(); it != e; ++it)
-				memcpy(it->first, &tt[n++], sizeof(term));
-		}*/
 		pframe pf = _p; _p = p.next; pf->decref();
 	}
 }
