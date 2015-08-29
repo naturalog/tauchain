@@ -414,7 +414,8 @@ void prove(pframe _p, pframe& lastp) {
 	if (!lastp) lastp = _p;
 	evidence e;
 	subs dsub;
-	term **dit, **ee, **_d, **end, **it;
+	term **dit, **ee, **_d;//, **end, **it;
+	bool f;
 	while (_p) {
 		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
 		pframe ep = _p;
@@ -441,11 +442,15 @@ void prove(pframe _p, pframe& lastp) {
 			term& tt = **p.b;
 			for (_d = tt.matches.begin(), ee = tt.matches.end(); _d != ee; ++_d)  {
 				term& d = **_d;
-				for (it = tt.args.begin(), end = tt.args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
-					term& x = **it;
-					if (!x.unify(x, **dit, dsub)) break;
+				termset::coro c(tt.args);
+				dit = d.args.begin();
+				f = true;
+				while (c()) {
+//				for (it = tt.args.begin(), end = tt.args.end(), dit = d.args.begin(); it != end; ++dit, ++it) {
+					term& x = **c.i;
+					if (!x.unify(x, **dit++, dsub)) { f = false; break; }
 				}
-				if (it == end) 
+				if (f) 
 					lastp = lastp->next = pframe(new frame(_p, *_d, 0, _p, dsub));
 				dsub.clear1();
 			}
