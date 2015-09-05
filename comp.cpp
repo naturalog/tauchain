@@ -25,20 +25,20 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
 
-#define E(y) ++_ind;auto env = [&](){ cout << KMAG << __LINE__ << ": ";ind();y;cout << KNRM <<endl;}; \
+#define E(x, y) ++_ind;auto env = [&](){ cout << x << ' ' << __LINE__ << ": " << KMAG;ind();y;cout << KNRM <<endl;}; \
 	struct eonexit { \
 		std::function<void()> _f; \
 		eonexit(std::function<void()> f):_f(f) {} \
-		~eonexit(){cout<<"R"; _f();--_ind;}}onexit__(env);
+		~eonexit(){cout<<"ret-"; _f();--_ind;}}onexit__(env);
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 
 //#define E(x) 
 #define EMIT(x) \
+	env(); \
 	std::cout << KGRN << #x << KNRM << endl;\
 	x
 	
 //#define EMIT(x) x
-//	env();
 
 comp* sb;
 #define PTR(x) (sb - (comp*)&x)
@@ -50,7 +50,7 @@ atom compile_atom(int p) {
 
 	if (p < 0)
 		u = [p, val, bound, state](int& x) mutable {
-			E(ENV5(p, val, bound, state, x));
+			E("unify_var", ENV5(p, val, bound, state, x));
 			EMIT(
 			switch (state) {
 			case 0: if (!bound) {
@@ -67,12 +67,12 @@ atom compile_atom(int p) {
 			);
 		};
 	else u = [p, state](int& x) mutable {
-		E(ENV3(p, state, x));
+		E("unify_res", ENV3(p, state, x));
 		EMIT(return x == p);
 	};
 
 	return [p, u, val, state](int& x, bool unify) mutable {
-		E(ENV6(p, val, state, x, unify, PTR(u)));
+		E("atom", ENV6(p, val, state, x, unify, PTR(u)));
 		EMIT(
 		if (unify)
 			return u(x);
@@ -89,23 +89,22 @@ atom compile_atom(int p) {
 comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o, bool u) mutable {
-		E(ENV5(state, _s, _o, PTR(s), PTR(o)));
-//		EMIT(
+		E("triple", ENV5(state, _s, _o, PTR(s), PTR(o)));
+		EMIT(
 		switch (state) {
 		case 0: while (s(_s, u)) {
 				while (o(_o, u)) {
-//					EMIT(
+					EMIT(
 					state = 1;
-					return true;
+					return true);
 		case 1:			;
 				}
 			}
-		//	EMIT(state = 2);
-			state = 2;
+			EMIT(state = 2);
 		}
-//		EMIT(return false);
+		EMIT(return false);
 		return false;
-//		);
+		);
 	};
 }
 
@@ -113,7 +112,7 @@ comp compile_unify(comp x, comp y) {
 	uint state = 0;
 	int ss = 0, so = 0;
 	return [x, y, state, ss, so](int& s, int& o, bool u) mutable {
-		E(ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
+		E("unify", ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
 		EMIT(
 		switch (state) {
 		case 0: while (x(ss, so, false)) {
@@ -138,7 +137,7 @@ comp compile_unify(comp x, comp y) {
 comp compile_match(comp x, comp y, int& a) {
 	uint state = 0;
 	return [x, y, a, state](int& s, int& o, bool u) mutable {
-		E(ENV6(a, s, o, state, PTR(x), PTR(y)));
+		E("match", ENV6(a, s, o, state, PTR(x), PTR(y)));
 		switch (state) {
 		case 0: while (x(a, o, u)) {
 				while (y(s, a, u)) {
@@ -157,7 +156,7 @@ comp compile_match(comp x, comp y, int& a) {
 comp compile_triples(comp f, comp r) {
 	uint state = 0;
 	return [f, r, state](int& s, int& o, bool u) mutable {
-		E(ENV5(state, s, o, PTR(f), PTR(r)));
+		E("triples", ENV5(state, s, o, PTR(f), PTR(r)));
 		EMIT(
 		switch (state) {
 		case 0: while (f(s, o, u)) {
@@ -182,7 +181,7 @@ void test() {
 	int n = 0, s = 0, o = 0;
 	for (; n < 12; ++n)
 		c = compile_triples(compile_triple(compile_atom(n), compile_atom(n+1)), c);
-	E(ENV3(n, s, o));
+	E("test",ENV3(n, s, o));
 	while (c(s, o, false)) {
 		if (s+1 != o || n != o) throw 0;
 //		cout << "##" << n << ' ' << s << ' ' << o << endl;
@@ -194,7 +193,7 @@ int main() {
 	cout << endl;
 	comp kb = nil;
 	sb = &kb;
-	test();
+//	test();
 	atom x = compile_atom(1);
 	atom y = compile_atom(2);
 	atom z = compile_atom(3);
