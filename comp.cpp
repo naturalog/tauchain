@@ -12,8 +12,12 @@ typedef std::function<bool(int&, int&)> comp;
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
-#define E(y) auto env = [=](){ cout << __LINE__ << " E: ";y;cout<<endl;};
-#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
+#define E(y) auto env = [=](){ cout << __LINE__ << ": ";y;cout<<endl;};
+//#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
+#define EMIT(x) \
+	env();\
+	std::cout << __LINE__ << ": " << #x << endl;\
+	x
 
 atom compile_atom(int p) {
 	int val = p, state = 0;
@@ -23,31 +27,34 @@ atom compile_atom(int p) {
 	if (p < 0)
 		u = [p, val, bound, state](int& x) mutable {
 			E(ENV5(p, val, bound, state, x));
+			EMIT(
 			switch (state) {
 			case 0: if (!bound) {
-					EMIT((val = x, bound = true, state = 1));
+					(val = x, bound = true, state = 1);
 					return true;
 			}
-			case 1: EMIT((bound = false, state = 2));
-				return EMIT(val == x);
+			case 1: (bound = false, state = 2);
+				return val == x;
 			}
 			return false;
+			);
 		};
 	else u = [p, state](int& x) mutable {
 		E(ENV3(p, state, x));
-		return EMIT(x == p);
+		EMIT(return x == p);
 	};
 
 	return [p, u, val, state](int& x, bool unify) mutable {
 		E(ENV6(&p, &u, val, state, x, unify));
 		cout << "atom x: " << x << " unify: " << unify << " p: " << p << " val: " << val << endl;
+		EMIT(
 		if (unify)
 			return u(x);
 		if (!state) {
-			EMIT((x = val, state = 1));
+			(x = val, state = 1);
 			return true;
 		}
-		return false;
+		return false;);
 	};
 }
 
@@ -55,21 +62,19 @@ comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o) mutable {
 		E(ENV5(&s, &o, state, _s, _o));
-		env();
+		EMIT(
 		switch (state) {
 		case 0: while (s(_s, true)) {
-				env();
 				while (o(_o, true)) {
-					EMIT(state = 1);
+					state = 1;
 					return true;
 		case 1:			;
 				}
 			}
-			env();
 			state = 2;
-			env();
 		}
 		return false;
+		);
 	};
 }
 
@@ -78,21 +83,21 @@ comp compile_unify(comp x, comp y) {
 	int ss = 0, so = 0;
 	return [x, y, state, ss, so](int& s, int& o) mutable {
 		E(ENV7(&x, &y, s, o, state, ss, so));
-		env();
+		EMIT(
 		switch (state) {
 		case 0: while (x(ss, so)) {
-				env();
 				while (y(ss, so)) {
-					EMIT(state = 1);
+					state = 1;
 					return true;
 		case 1:			;
 				}
-				EMIT(state = 2);
+				state = 2;
 				return false;
 			}
 		default:
 			return false;
 		}
+		);
 	};
 }
 
