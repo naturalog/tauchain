@@ -41,7 +41,7 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 //	env();
 
 comp* sb;
-#define PTR(x) (sb-(comp*)&x)
+#define PTR(x) (sb - (comp*)&x)
 
 atom compile_atom(int p) {
 	int val = p, state = 0;
@@ -182,11 +182,11 @@ void test() {
 	int n = 0, s = 0, o = 0;
 	for (; n < 12; ++n)
 		c = compile_triples(compile_triple(compile_atom(n), compile_atom(n+1)), c);
-	n = 0;
 	E(ENV3(n, s, o));
 	while (c(s, o, false)) {
-		cout << "##";
-		n++;
+		if (s+1 != o || n != o) throw 0;
+//		cout << "##" << n << ' ' << s << ' ' << o << endl;
+		n--;
 	}
 }
 
@@ -194,6 +194,7 @@ int main() {
 	cout << endl;
 	comp kb = nil;
 	sb = &kb;
+	test();
 	atom x = compile_atom(1);
 	atom y = compile_atom(2);
 	atom z = compile_atom(3);
