@@ -45,7 +45,6 @@ atom compile_atom(int p) {
 			return val == x;
 		}
 		return false;
-# 52 "comp.cpp"
 		;
 	};
 	else u = [p, state](int& x) mutable {
@@ -117,7 +116,6 @@ comp compile_triple(atom s, atom o) {
 			state = 2;
 		}
 		return false;
-# 88 "comp.cpp"
 		;
 	};
 }
@@ -154,7 +152,6 @@ comp compile_unify(comp x, comp y) {
 		default:
 			return false;
 		}
-# 111 "comp.cpp"
 		;
 	};
 }
@@ -219,7 +216,6 @@ comp compile_triples(comp f, comp r) {
 		default:
 			return false;
 		}
-# 152 "comp.cpp"
 	};
 }
 
