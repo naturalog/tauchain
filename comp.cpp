@@ -12,6 +12,7 @@ typedef std::function<bool(int&, int&)> comp;
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
+#define E(y) auto env = [=](){y;cout<<endl;};
 
 atom compile_atom(int p) {
 	int val = p, state = 0;
@@ -20,28 +21,36 @@ atom compile_atom(int p) {
 
 	if (p < 0)
 		u = [p, val, bound, state](int& x) mutable {
-			ENV5(p, val, bound, state, x);
+			E(ENV5(p, val, bound, state, x));
 			switch (state) {
-			case 0: if (!bound) 
-					return val = x, bound = true, (bool)(state = 1);
-			case 1: bound = false, state = 2;
+			case 0: if (!bound) {
+					env(); val = x, bound = true, state = 1; env();
+					return true;
+			}
+			case 1: env(); bound = false, state = 2; env();
 				return val == x;
 			}
 			return false;
 		};
 	else u = [p, state](int& x) mutable {
-		ENV3(p, state, x);
+		E(ENV3(p, state, x));
+		env();
 		cout << "atom unif " << x << " with " << p << endl;
 		return x == p;
 	};
 
 	return [p, u, val, state](int& x, bool unify) mutable {
-		ENV6(&p, &u, val, state, x, unify);
+		E(ENV6(&p, &u, val, state, x, unify));
+		env();
 		cout << "atom x: " << x << " unify: " << unify << " p: " << p << " val: " << val << endl;
 		if (unify)
 			return u(x);
-		if (!state)
-			return x = val, (bool)(state = 1);
+		if (!state) {
+			env();
+			x = val, state = 1;
+			env();
+			return true;
+		}
 		return false;
 	};
 }
@@ -49,18 +58,22 @@ atom compile_atom(int p) {
 comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o) mutable {
-		ENV5(&s, &o, state, _s, _o);
-		cout << "CT1 _s: " << _s << " _o: " << _o << ' ' << &_s << ' ' << &_o << endl;
+		E(ENV5(&s, &o, state, _s, _o));
+		env();
 		switch (state) {
 		case 0: while (s(_s, true)) {
-				cout << "CT2 _s: " << _s << " _o: " << _o << ' ' << &_s << ' ' << &_o << endl;
+				env();
 				while (o(_o, true)) {
-					cout << "CT3 _s: " << _s << " _o: " << _o << ' ' << &_s << ' ' << &_o << endl;
-					return (bool)(state = 1);
+					env();
+					state = 1;
+					env();
+					return true;
 		case 1:			;
 				}
 			}
+			env();
 			state = 2;
+			env();
 		}
 		return false;
 	};
@@ -70,17 +83,21 @@ comp compile_unify(comp x, comp y) {
 	uint state = 0;
 	int ss = 0, so = 0;
 	return [x, y, state, ss, so](int& s, int& o) mutable {
-		ENV7(&x, &y, s, o, state, ss, so);
-		cout << "U1 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
+		E(ENV7(&x, &y, s, o, state, ss, so));
+		env();
 		switch (state) {
 		case 0: while (x(ss, so)) {
-				cout << "U2 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
+				env();
 				while (y(ss, so)) {
-					cout << "U3 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
-					return state = 1, true;
+					env();
+					state = 1;
+					env();
+					return true;
 		case 1:			;
 				}
+				env();
 				state = 2;
+				env();
 				return false;
 			}
 		default:
@@ -92,7 +109,7 @@ comp compile_unify(comp x, comp y) {
 comp compile_match(comp x, comp y, int& a) {
 	uint state = 0;
 	return [x, y, a, state](int& s, int& o) mutable {
-		ENV6(&x, &y, a, s, o, state);
+		E(ENV6(&x, &y, a, s, o, state));
 		switch (state) {
 		case 0: while (x(a, o)) {
 				while (y(s, a)) {
@@ -111,7 +128,7 @@ comp compile_match(comp x, comp y, int& a) {
 comp compile_triples(comp f, comp r) {
 	uint state = 0;
 	return [f, r, state](int& s, int& o) mutable {
-		ENV5(&f, &r, state, s, o);
+		E(ENV5(&f, &r, state, s, o));
 		cout << "CTS1 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
 		switch (state) {
 		case 0: while (f(s, o)) {
