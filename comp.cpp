@@ -92,8 +92,8 @@ comp compile_triple(atom s, atom o) {
 		E("triple", ENV5(state, _s, _o, PTR(s), PTR(o)));
 		EMIT(
 		switch (state) {
-		case 0: while (s(_s, u)) {
-				while (o(_o, u)) {
+		case 0: while (s(_s, false)) {
+				while (o(_o, false)) {
 					EMIT(
 					state = 1;
 					return true);
@@ -115,7 +115,7 @@ comp compile_unify(comp x, comp y) {
 		E("unify", ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
 		EMIT(
 		switch (state) {
-		case 0: while (x(ss, so, false)) {
+		case 0: while (x(ss, so, true)) {
 				while (y(ss, so, true)) {
 					EMIT(
 					s = ss;
