@@ -53,5 +53,5 @@ dimacs2tau: dimacs2tau.cpp
 	$(CC) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb
 pcpp: p.cpp p.h containers.h
 	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG p.cpp -opcpp -g
-q: q.cpp
-	$(CC) -W -Wall -Wpedantic -Wextra -std=c++11 q.cpp -oq -g
+comp: comp.cpp
+	$(CC) -W -Wall -Wpedantic -Wextra -std=c++11 comp.cpp -ocomp -g -rdynamic

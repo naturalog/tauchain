@@ -169,7 +169,7 @@ comp nil = [](int&, int&) { return false; };
 void test() {
 	comp c = nil;
 	int n = 0, s, o;
-	for (; n < 2; ++n)
+	for (; n < 12; ++n)
 		c = compile_triples(compile_triple(compile_atom(n), compile_atom(n+1)), c);
 	n = 0;
 	E(ENV3(n, s, o));
