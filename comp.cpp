@@ -19,6 +19,10 @@ typedef std::function<bool(int&, int&)> comp;
 	std::cout << __LINE__ << ": " << #x << endl;\
 	x
 
+int* stackbase;
+
+#define cvp (int*)
+
 atom compile_atom(int p) {
 	int val = p, state = 0;
 	bool bound = false;
@@ -45,7 +49,7 @@ atom compile_atom(int p) {
 	};
 
 	return [p, u, val, state](int& x, bool unify) mutable {
-		E(ENV6(&p, &u, val, state, x, unify));
+		E(ENV6(stackbase - cvp &p, stackbase - cvp &u, val, state, x, unify));
 		cout << "atom x: " << x << " unify: " << unify << " p: " << p << " val: " << val << endl;
 		EMIT(
 		if (unify)
@@ -61,7 +65,7 @@ atom compile_atom(int p) {
 comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o) mutable {
-		E(ENV5(&s, &o, state, _s, _o));
+		E(ENV5(stackbase - cvp &s, stackbase - cvp &o, state, _s, _o));
 		EMIT(
 		switch (state) {
 		case 0: while (s(_s, true)) {
@@ -82,7 +86,7 @@ comp compile_unify(comp x, comp y) {
 	uint state = 0;
 	int ss = 0, so = 0;
 	return [x, y, state, ss, so](int& s, int& o) mutable {
-		E(ENV7(&x, &y, s, o, state, ss, so));
+		E(ENV7(stackbase - cvp &x, stackbase - cvp &y, s, o, state, ss, so));
 		EMIT(
 		switch (state) {
 		case 0: while (x(ss, so)) {
@@ -148,6 +152,7 @@ comp nil = [](int&, int&) { return false; };
 int main() {
 	cout << endl;
 	comp kb = nil;
+	stackbase = (int*)&kb;
 	atom x = compile_atom(1);
 	atom y = compile_atom(2);
 	atom z = compile_atom(3);
