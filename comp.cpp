@@ -24,7 +24,7 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
-#define E(y) ++_ind;auto env = [=](){ cout << KMAG << __LINE__ << ": ";ind();y;cout << KNRM <<endl;}; \
+#define E(y) ++_ind;auto env = [&](){ cout << KMAG << __LINE__ << ": ";ind();y;cout << KNRM <<endl;}; \
 	struct eonexit { \
 		std::function<void()> _f; \
 		eonexit(std::function<void()> f):_f(f) {} \
@@ -49,13 +49,16 @@ atom compile_atom(int p) {
 			EMIT(
 			switch (state) {
 			case 0: if (!bound) {
-					(val = x, bound = true, state = 1);
-					return true;
+					EMIT(val = x;
+					bound = true;
+					state = 1;
+					return true);
 			}
-			case 1: (bound = false, state = 2);
-				return val == x;
+			case 1: EMIT(bound = false;
+				state = 2;
+				return val == x);
 			}
-			return false;
+			EMIT(return false);
 			);
 		};
 	else u = [p, state](int& x) mutable {
@@ -69,10 +72,12 @@ atom compile_atom(int p) {
 		if (unify)
 			return u(x);
 		if (!state) {
-			(x = val, state = 1);
-			return true;
+			EMIT(
+			x = val;
+			state = 1;
+			return true);
 		}
-		return false;);
+		EMIT(return false;));
 	};
 }
 
@@ -84,14 +89,14 @@ comp compile_triple(atom s, atom o) {
 		switch (state) {
 		case 0: while (s(_s, false)) {
 				while (o(_o, false)) {
-					state = 1;
-					return true;
+					EMIT(state = 1;
+					return true);
 		case 1:			;
 				}
 			}
-			state = 2;
+			EMIT(state = 2);
 		}
-		return false;
+		EMIT(return false);
 		);
 	};
 }
