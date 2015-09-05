@@ -3,7 +3,7 @@
 using namespace std;
 
 typedef std::function<bool(int&, bool)> atom;
-typedef std::function<bool(int&, int&)> comp;
+typedef std::function<bool(int&, int&, bool)> comp;
 
 const char KNRM[] = "\x1B[0m";
 const char KRED[] = "\x1B[31m";
@@ -69,7 +69,7 @@ atom compile_atom(int p) {
 	return [p, u, val, state](int& x, bool unify) mutable {
 		E(ENV6(p, val, state, x, unify, PTR(u)));
 		EMIT(
-		if (unify)
+//		if (unify)
 			return u(x);
 		if (!state) {
 			EMIT(
@@ -83,12 +83,12 @@ atom compile_atom(int p) {
 
 comp compile_triple(atom s, atom o) {
 	int state = 0;
-	return [s, o, state](int& _s, int& _o) mutable {
+	return [s, o, state](int& _s, int& _o, bool u) mutable {
 		E(ENV5(state, _s, _o, PTR(s), PTR(o)));
 		EMIT(
 		switch (state) {
-		case 0: while (s(_s, false)) {
-				while (o(_o, false)) {
+		case 0: while (s(_s, u)) {
+				while (o(_o, u)) {
 					EMIT(state = 1;
 					return true);
 		case 1:			;
@@ -103,22 +103,23 @@ comp compile_triple(atom s, atom o) {
 
 comp compile_unify(comp x, comp y) {
 	uint state = 0;
-	int ss = 0, so = 0;
-	return [x, y, state, ss, so](int& s, int& o) mutable {
+	int ss, so;
+	return [x, y, state, ss, so](int& s, int& o, bool u) mutable {
 		E(ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
 		EMIT(
 		switch (state) {
-		case 0: while (x(ss, so)) {
-				while (y(ss, so)) {
+		case 0: while (x(ss, so, false)) {
+				while (y(ss, so, true)) {
+					EMIT(s = ss;
+					o = so;
 					state = 1;
-					return true;
+					return true);
 		case 1:			;
 				}
-				state = 2;
-				return false;
 			}
+			EMIT(state = 2);
 		default:
-			return false;
+			EMIT(return false);
 		}
 		);
 	};
@@ -126,11 +127,11 @@ comp compile_unify(comp x, comp y) {
 
 comp compile_match(comp x, comp y, int& a) {
 	uint state = 0;
-	return [x, y, a, state](int& s, int& o) mutable {
+	return [x, y, a, state](int& s, int& o, bool u) mutable {
 		E(ENV6(a, s, o, state, PTR(x), PTR(y)));
 		switch (state) {
-		case 0: while (x(a, o)) {
-				while (y(s, a)) {
+		case 0: while (x(a, o, u)) {
+				while (y(s, a, u)) {
 					return (bool)(state = 1);
 		case 1:			;
 				}
@@ -145,15 +146,15 @@ comp compile_match(comp x, comp y, int& a) {
 
 comp compile_triples(comp f, comp r) {
 	uint state = 0;
-	return [f, r, state](int& s, int& o) mutable {
+	return [f, r, state](int& s, int& o, bool u) mutable {
 		E(ENV5(state, s, o, PTR(f), PTR(r)));
 		EMIT(
 		switch (state) {
-		case 0: while (f(s, o)) {
+		case 0: while (f(s, o, u)) {
 				return (bool)(state = 1);
 		case 1: 	;
 			}
-			while (r(s, o)) {
+			while (r(s, o, u)) {
 				return (bool)(state = 2);
 		case 2:		;
 			}
@@ -164,7 +165,7 @@ comp compile_triples(comp f, comp r) {
 	};
 }
 
-comp nil = [](int&, int&) { return false; };
+comp nil = [](int&, int&, bool) { return false; };
 
 void test() {
 	comp c = nil;
@@ -173,7 +174,7 @@ void test() {
 		c = compile_triples(compile_triple(compile_atom(n), compile_atom(n+1)), c);
 	n = 0;
 	E(ENV3(n, s, o));
-	while (c(s, o)) {
+	while (c(s, o, false)) {
 		cout << "##";
 		env();
 		n++;
@@ -193,7 +194,7 @@ int main() {
 	comp t3 = compile_triple(z, z);
 	kb = compile_triples(t1, compile_triples(t2, compile_triples(t3, nil)));
 //	comp m = compile_match(kb, kb, ii);
-	comp m = compile_unify(t1, t2);
+	comp m = compile_unify(t2, t1);
 	int s, o;
-	while (m(s, o)) cout << s << ' ' << o << endl;
+	while (m(s, o, true)) cout << s << ' ' << o << endl;
 }
