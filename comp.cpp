@@ -24,16 +24,21 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
+
 #define E(y) ++_ind;auto env = [&](){ cout << KMAG << __LINE__ << ": ";ind();y;cout << KNRM <<endl;}; \
 	struct eonexit { \
 		std::function<void()> _f; \
 		eonexit(std::function<void()> f):_f(f) {} \
 		~eonexit(){cout<<"R"; _f();--_ind;}}onexit__(env);
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
+
+//#define E(x) 
 #define EMIT(x) \
-	env();\
 	std::cout << KGRN << #x << KNRM << endl;\
 	x
+	
+//#define EMIT(x) x
+//	env();
 
 comp* sb;
 #define PTR(x) (sb-(comp*)&x)
@@ -69,7 +74,7 @@ atom compile_atom(int p) {
 	return [p, u, val, state](int& x, bool unify) mutable {
 		E(ENV6(p, val, state, x, unify, PTR(u)));
 		EMIT(
-//		if (unify)
+		if (unify)
 			return u(x);
 		if (!state) {
 			EMIT(
@@ -85,41 +90,46 @@ comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o, bool u) mutable {
 		E(ENV5(state, _s, _o, PTR(s), PTR(o)));
-		EMIT(
+//		EMIT(
 		switch (state) {
 		case 0: while (s(_s, u)) {
 				while (o(_o, u)) {
-					EMIT(state = 1;
-					return true);
+//					EMIT(
+					state = 1;
+					return true;
 		case 1:			;
 				}
 			}
-			EMIT(state = 2);
+		//	EMIT(state = 2);
+			state = 2;
 		}
-		EMIT(return false);
-		);
+//		EMIT(return false);
+		return false;
+//		);
 	};
 }
 
 comp compile_unify(comp x, comp y) {
 	uint state = 0;
-	int ss, so;
+	int ss = 0, so = 0;
 	return [x, y, state, ss, so](int& s, int& o, bool u) mutable {
 		E(ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
 		EMIT(
 		switch (state) {
 		case 0: while (x(ss, so, false)) {
 				while (y(ss, so, true)) {
-					EMIT(s = ss;
+					EMIT(
+					s = ss;
 					o = so;
 					state = 1;
-					return true);
+					return true;
+					);
 		case 1:			;
 				}
 			}
-			EMIT(state = 2);
+			EMIT( state = 2);
 		default:
-			EMIT(return false);
+			EMIT( return false);
 		}
 		);
 	};
@@ -169,14 +179,13 @@ comp nil = [](int&, int&, bool) { return false; };
 
 void test() {
 	comp c = nil;
-	int n = 0, s, o;
+	int n = 0, s = 0, o = 0;
 	for (; n < 12; ++n)
 		c = compile_triples(compile_triple(compile_atom(n), compile_atom(n+1)), c);
 	n = 0;
 	E(ENV3(n, s, o));
 	while (c(s, o, false)) {
 		cout << "##";
-		env();
 		n++;
 	}
 }
@@ -195,6 +204,6 @@ int main() {
 	kb = compile_triples(t1, compile_triples(t2, compile_triples(t3, nil)));
 //	comp m = compile_match(kb, kb, ii);
 	comp m = compile_unify(t2, t1);
-	int s, o;
+	int s = 0, o = 0;
 	while (m(s, o, true)) cout << s << ' ' << o << endl;
 }
