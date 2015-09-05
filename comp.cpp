@@ -12,8 +12,8 @@ typedef std::function<bool(int&, int&)> comp;
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
-#define E(y) auto env = [=](){cout << __LINE__ << " E: ";y;cout<<endl;};
-#define EMIT(x) std::cout << __LINE__ << " I: " << #x << endl, x
+#define E(y) auto env = [=](){ cout << __LINE__ << " E: ";y;cout<<endl;};
+#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 
 atom compile_atom(int p) {
 	int val = p, state = 0;
@@ -25,31 +25,26 @@ atom compile_atom(int p) {
 			E(ENV5(p, val, bound, state, x));
 			switch (state) {
 			case 0: if (!bound) {
-					env(); EMIT((val = x, bound = true, state = 1)); env();
+					EMIT((val = x, bound = true, state = 1));
 					return true;
 			}
-			case 1: env(); bound = false, state = 2; env();
+			case 1: EMIT((bound = false, state = 2));
 				return EMIT(val == x);
 			}
 			return false;
 		};
 	else u = [p, state](int& x) mutable {
 		E(ENV3(p, state, x));
-		env();
-		cout << "atom unif " << x << " with " << p << endl;
 		return EMIT(x == p);
 	};
 
 	return [p, u, val, state](int& x, bool unify) mutable {
 		E(ENV6(&p, &u, val, state, x, unify));
-		env();
 		cout << "atom x: " << x << " unify: " << unify << " p: " << p << " val: " << val << endl;
 		if (unify)
 			return u(x);
 		if (!state) {
-			env();
 			EMIT((x = val, state = 1));
-			env();
 			return true;
 		}
 		return false;
@@ -65,9 +60,7 @@ comp compile_triple(atom s, atom o) {
 		case 0: while (s(_s, true)) {
 				env();
 				while (o(_o, true)) {
-					env();
 					EMIT(state = 1);
-					env();
 					return true;
 		case 1:			;
 				}
@@ -90,15 +83,11 @@ comp compile_unify(comp x, comp y) {
 		case 0: while (x(ss, so)) {
 				env();
 				while (y(ss, so)) {
-					env();
 					EMIT(state = 1);
-					env();
 					return true;
 		case 1:			;
 				}
-				env();
 				EMIT(state = 2);
-				env();
 				return false;
 			}
 		default:
