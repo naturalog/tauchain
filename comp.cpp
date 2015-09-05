@@ -14,6 +14,9 @@ const char KMAG[] = "\x1B[35m";
 const char KCYN[] = "\x1B[36m";
 const char KWHT[] = "\x1B[37m";
 
+
+int _ind = 0;
+void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 #define ENV(x) std::cout << #x" = " << (x) << '\t';
 #define ENV2(x,y) ENV(x); ENV(y);
 #define ENV3(x,y,z) ENV2(x,y); ENV(z);
@@ -21,11 +24,11 @@ const char KWHT[] = "\x1B[37m";
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
-#define E(y) auto env = [=](){ cout << KMAG << __LINE__ << ": ";y;cout << KNRM <<endl;}; \
+#define E(y) ++_ind;auto env = [=](){ cout << KMAG << __LINE__ << ": ";ind();y;cout << KNRM <<endl;}; \
 	struct eonexit { \
 		std::function<void()> _f; \
 		eonexit(std::function<void()> f):_f(f) {} \
-		~eonexit(){cout<<"env on ret: "; _f();}}onexit__(env);
+		~eonexit(){cout<<"R"; _f();--_ind;}}onexit__(env);
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 #define EMIT(x) \
 	env();\
