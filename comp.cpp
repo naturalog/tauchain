@@ -5,6 +5,15 @@ using namespace std;
 typedef std::function<bool(int&, bool)> atom;
 typedef std::function<bool(int&, int&)> comp;
 
+const char KNRM[] = "\x1B[0m";
+const char KRED[] = "\x1B[31m";
+const char KGRN[] = "\x1B[32m";
+const char KYEL[] = "\x1B[33m";
+const char KBLU[] = "\x1B[34m";
+const char KMAG[] = "\x1B[35m";
+const char KCYN[] = "\x1B[36m";
+const char KWHT[] = "\x1B[37m";
+
 #define ENV(x) std::cout << #x" = " << (x) << '\t';
 #define ENV2(x,y) ENV(x); ENV(y);
 #define ENV3(x,y,z) ENV2(x,y); ENV(z);
@@ -12,16 +21,17 @@ typedef std::function<bool(int&, int&)> comp;
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
-#define E(y) auto env = [=](){ cout << __LINE__ << ": ";y;cout<<endl;};
+#define E(y) auto env = [=](){ cout << KMAG << __LINE__ << ": ";y;cout << KNRM <<endl;};
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 #define EMIT(x) \
 	env();\
-	std::cout << #x << endl;\
+	std::cout << KGRN << #x << KNRM << endl;\
 	x
 
-int* stackbase;
-
-#define cvp (int*)
+comp* sb;
+#define PTR(x) (sb-(comp*)&x)
+#define cvp
+// (int*)
 
 atom compile_atom(int p) {
 	int val = p, state = 0;
@@ -49,7 +59,7 @@ atom compile_atom(int p) {
 	};
 
 	return [p, u, val, state](int& x, bool unify) mutable {
-		E(ENV6(stackbase - cvp &p, stackbase - cvp &u, val, state, x, unify));
+		E(ENV6(p, val, state, x, unify, PTR(u)));
 		EMIT(
 		if (unify)
 			return u(x);
@@ -64,7 +74,7 @@ atom compile_atom(int p) {
 comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o) mutable {
-		E(ENV5(stackbase - cvp &s, stackbase - cvp &o, state, _s, _o));
+		E(ENV5(state, _s, _o, PTR(s), PTR(o)));
 		EMIT(
 		switch (state) {
 		case 0: while (s(_s, true)) {
@@ -85,7 +95,7 @@ comp compile_unify(comp x, comp y) {
 	uint state = 0;
 	int ss = 0, so = 0;
 	return [x, y, state, ss, so](int& s, int& o) mutable {
-		E(ENV7(stackbase - cvp &x, stackbase - cvp &y, s, o, state, ss, so));
+		E(ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
 		EMIT(
 		switch (state) {
 		case 0: while (x(ss, so)) {
@@ -107,7 +117,7 @@ comp compile_unify(comp x, comp y) {
 comp compile_match(comp x, comp y, int& a) {
 	uint state = 0;
 	return [x, y, a, state](int& s, int& o) mutable {
-		E(ENV6(&x, &y, a, s, o, state));
+		E(ENV6(a, s, o, state, PTR(x), PTR(y)));
 		switch (state) {
 		case 0: while (x(a, o)) {
 				while (y(s, a)) {
@@ -126,7 +136,7 @@ comp compile_match(comp x, comp y, int& a) {
 comp compile_triples(comp f, comp r) {
 	uint state = 0;
 	return [f, r, state](int& s, int& o) mutable {
-		E(ENV5(&f, &r, state, s, o));
+		E(ENV5(state, s, o, PTR(f), PTR(r)));
 		cout << "CTS1 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
 		switch (state) {
 		case 0: while (f(s, o)) {
@@ -151,7 +161,7 @@ comp nil = [](int&, int&) { return false; };
 int main() {
 	cout << endl;
 	comp kb = nil;
-	stackbase = (int*)&kb;
+	sb = &kb;
 	atom x = compile_atom(1);
 	atom y = compile_atom(2);
 	atom z = compile_atom(3);
