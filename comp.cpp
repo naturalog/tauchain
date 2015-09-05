@@ -21,7 +21,11 @@ const char KWHT[] = "\x1B[37m";
 #define ENV5(x,y,z,t,a) ENV4(x,y,z,t); ENV(a);
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
-#define E(y) auto env = [=](){ cout << KMAG << __LINE__ << ": ";y;cout << KNRM <<endl;};
+#define E(y) auto env = [=](){ cout << KMAG << __LINE__ << ": ";y;cout << KNRM <<endl;}; \
+	struct eonexit { \
+		std::function<void()> _f; \
+		eonexit(std::function<void()> f):_f(f) {} \
+		~eonexit(){cout<<"env on ret: "; _f();}}onexit__(env);
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 #define EMIT(x) \
 	env();\
@@ -30,8 +34,6 @@ const char KWHT[] = "\x1B[37m";
 
 comp* sb;
 #define PTR(x) (sb-(comp*)&x)
-#define cvp
-// (int*)
 
 atom compile_atom(int p) {
 	int val = p, state = 0;
@@ -77,8 +79,8 @@ comp compile_triple(atom s, atom o) {
 		E(ENV5(state, _s, _o, PTR(s), PTR(o)));
 		EMIT(
 		switch (state) {
-		case 0: while (s(_s, true)) {
-				while (o(_o, true)) {
+		case 0: while (s(_s, false)) {
+				while (o(_o, false)) {
 					state = 1;
 					return true;
 		case 1:			;
@@ -159,7 +161,7 @@ comp nil = [](int&, int&) { return false; };
 void test() {
 	comp c = nil;
 	int n = 0, s, o;
-	for (; n < 4; ++n)
+	for (; n < 2; ++n)
 		c = compile_triples(compile_triple(compile_atom(n), compile_atom(n+1)), c);
 	n = 0;
 	E(ENV3(n, s, o));
@@ -184,7 +186,6 @@ int main() {
 	comp t2 = compile_triple(v, y);
 	comp t3 = compile_triple(z, z);
 	kb = compile_triples(t1, compile_triples(t2, compile_triples(t3, nil)));
-	int ii = 1;
 //	comp m = compile_match(kb, kb, ii);
 	comp m = compile_unify(t1, t2);
 	int s, o;
