@@ -5,7 +5,7 @@ using namespace std;
 typedef std::function<bool(int&, bool)> atom;
 typedef std::function<bool(int&, int&)> comp;
 
-#define ENV(x) std::cout << " " << #x" = " << (x) << ' ';
+#define ENV(x) std::cout << #x" = " << (x) << '\t';
 #define ENV2(x,y) ENV(x); ENV(y);
 #define ENV3(x,y,z) ENV2(x,y); ENV(z);
 #define ENV4(x,y,z,t) ENV2(x,y); ENV2(z,t);
@@ -16,7 +16,7 @@ typedef std::function<bool(int&, int&)> comp;
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 #define EMIT(x) \
 	env();\
-	std::cout << __LINE__ << ": " << #x << endl;\
+	std::cout << #x << endl;\
 	x
 
 int* stackbase;
@@ -50,7 +50,6 @@ atom compile_atom(int p) {
 
 	return [p, u, val, state](int& x, bool unify) mutable {
 		E(ENV6(stackbase - cvp &p, stackbase - cvp &u, val, state, x, unify));
-		cout << "atom x: " << x << " unify: " << unify << " p: " << p << " val: " << val << endl;
 		EMIT(
 		if (unify)
 			return u(x);
