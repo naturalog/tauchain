@@ -20,10 +20,12 @@ atom compile_atom(int p) {
 			return false;
 		};
 	else u = [p, state](int& x) mutable {
+		cout << " atom unif " << x << " with " << p << endl;
 		return x == p;
 	};
 
-	return [u, val, state](int& x, bool unify) mutable {
+	return [p, u, val, state](int& x, bool unify) mutable {
+		cout << " atom called, x: " << x << " unify: " << unify << " p: " << p << " val: " << val << endl;
 		if (unify)
 			return u(x);
 		if (!state)
@@ -36,8 +38,11 @@ comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o) mutable {
 		switch (state) {
+		cout << "CT _s: " << _s << " _o: " << _o << ' ' << &_s << ' ' << &_o << endl;
 		case 0: while (s(_s, true)) {
+		cout << "CT _s: " << _s << " _o: " << _o << ' ' << &_s << ' ' << &_o << endl;
 				while (o(_o, true)) {
+		cout << "CT _s: " << _s << " _o: " << _o << ' ' << &_s << ' ' << &_o << endl;
 					return (bool)(state = 1);
 		case 1:			;
 				}
@@ -54,11 +59,14 @@ comp compile_triples(comp f, comp r) {
 	uint state = 0;
 	return [f, r, state](int& s, int& o) mutable {
 		switch (state) {
+		cout << "CTS s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
 		case 0: while (f(s, o)) {
+				cout << "CTS s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
 				return (bool)(state = 1);
 		case 1: 	;
 			}
 			while (r(s, o)) {
+				cout << "CTS s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
 				return (bool)(state = 2);
 		case 2:		;
 			}
@@ -74,9 +82,12 @@ comp compile_unify(comp x, comp y) {
 	int ss = 0, so = 0;
 	return [x, y, state, ss, so](int& s, int& o) mutable {
 		switch (state) {
-		case 0: while (x(ss, so)) {
-				while (y(ss, so)) {
-					return s = ss, o = so, state = 1, true;
+		cout << "U s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
+		case 0: while (x(s, o)) {
+				cout << "U s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
+				while (y(s, o)) {
+					cout << "U s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
+					return state = 1, true;
 		case 1:			;
 				}
 				state = 2;
