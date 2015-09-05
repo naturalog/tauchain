@@ -137,31 +137,45 @@ comp compile_triples(comp f, comp r) {
 	uint state = 0;
 	return [f, r, state](int& s, int& o) mutable {
 		E(ENV5(state, s, o, PTR(f), PTR(r)));
-		cout << "CTS1 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
+		EMIT(
 		switch (state) {
 		case 0: while (f(s, o)) {
-				cout << "CTS2 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
 				return (bool)(state = 1);
 		case 1: 	;
 			}
 			while (r(s, o)) {
-				cout << "CTS3 s: " << s << " o: " << o << ' ' << &s << ' ' << &o << endl;
 				return (bool)(state = 2);
 		case 2:		;
 			}
 			state = 3;
 		default:
 			return false;
-		}
+		})
 	};
 }
 
 comp nil = [](int&, int&) { return false; };
 
+void test() {
+	comp c = nil;
+	int n = 0, s, o;
+	for (; n < 4; ++n)
+		c = compile_triples(compile_triple(compile_atom(n), compile_atom(n+1)), c);
+	n = 0;
+	E(ENV3(n, s, o));
+	while (c(s, o)) {
+		cout << "##";
+		env();
+		n++;
+	}
+}
+
 int main() {
 	cout << endl;
 	comp kb = nil;
 	sb = &kb;
+	test();
+	return 0;
 	atom x = compile_atom(1);
 	atom y = compile_atom(2);
 	atom z = compile_atom(3);
