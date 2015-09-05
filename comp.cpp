@@ -184,8 +184,6 @@ int main() {
 	cout << endl;
 	comp kb = nil;
 	sb = &kb;
-	test();
-	return 0;
 	atom x = compile_atom(1);
 	atom y = compile_atom(2);
 	atom z = compile_atom(3);
