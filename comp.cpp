@@ -60,7 +60,8 @@ atom compile_atom(int p) {
 		};
 	else u = [p, state](int& x) mutable {
 		E("unify_res", ENV3(p, state, x));
-		EMIT(return x == p);
+		if (!state) { EMIT(state = 1; return x == p); }
+		return false;
 	};
 
 	return [p, u, val, state](int& x, bool unify) mutable {
