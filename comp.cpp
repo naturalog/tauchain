@@ -33,84 +33,84 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 
 //#define E(x) 
-/*#define EMIT(x) \
+#define EMIT(x) \
 	env(); \
-	std::cout << __LINE__ << ' ' << KGRN << #x << KNRM << endl;\
 	x
-*/
-#define EMIT(x) x
+
+//	std::cout << __LINE__ << ' ' << KGRN << #x << KNRM << endl;
+//	x
+
+//#define EMIT(x) x
 
 comp* sb;
 #define PTR(x) ((sb - (comp*)&x)&0xFFF)
 
 atom compile_atom(int p) {
-	int val = p, state = 0;
+	int val = p, e = 0;
 	bool bound = false;
 	std::function<bool(int&)> u;
 
 	if (p < 0)
-		u = [p, val, bound, state](int& x) mutable {
-			E("unify_var", ENV5(p, val, bound, state, x));
-			switch (state) {
+		u = [p, val, bound, e](int& x) mutable {
+			E("unify_var", ENV5(p, val, bound, e, x));
+			switch (e) {
 			case 0: if (!bound && x != p)
-					{ EMIT(return (val = x, bound = (state = 1))); }
-			case 1: EMIT(return (bound = false, state = 2, val == x);)
-			case 2: state = 0; return false;
+					{ EMIT(return (val = x, bound = (e = 1))); }
+			case 1: EMIT(return (bound = false, e = 2, val == x);)
+			case 2: e = 0, val = p; return false;
 			}
 			return false;
 		};
-	else u = [p, state](int& x) mutable {
-		E("unify_res", ENV3(p, state, x));
-		if (!state) { EMIT(state = 1; return x == p); }
-		state = 0;
+	else u = [p, e](int& x) mutable {
+		E("unify_res", ENV3(p, e, x));
+		if (!e) { EMIT(e = 1; return x == p); }
+		e = 0;
 		return false;
 	};
 
-	return [p, u, val, state](int& x, bool unify) mutable {
-		E("atom", ENV6(p, val, state, x, unify, PTR(u)));
+	return [p, u, val, e](int& x, bool unify) mutable {
+		E("atom", ENV6(p, val, e, x, unify, PTR(u)));
 		if (unify)
 			return u(x);
-		if (!state)
-			{ EMIT(return (x = p, state = 1, true);); }
-		EMIT(state = 0; return false);
+		if (!e)
+			{ EMIT(return (x = p, e = 1, true);); }
+		EMIT(e = 0; return false);
 	};
 }
 
 comp compile_triple(atom s, atom o) {
-	int state = 0;
-	return [s, o, state](int& _s, int& _o, bool u) mutable {
-		E("triple", ENV5(state, _s, _o, PTR(s), PTR(o)));
-		switch (state) {
+	int e = 0;
+	return [s, o, e](int& _s, int& _o, bool u) mutable {
+		E("triple", ENV5(e, _s, _o, PTR(s), PTR(o)));
+		switch (e) {
 		case 0: while (s(_s, u)) {
 				while (o(_o, u)) {
 					EMIT(
-					state = 1;
+					e = 1;
 					return true);
 		case 1:			;
 				}
 			}
-			EMIT(state = 2);
-		case 2: state = 0; return false;
+			EMIT(e = 2);
+		case 2: e = 0; return false;
 		}
 		return false;
 	};
 }
 
 comp compile_unify(comp x, comp y) {
-	int state = 0;
-	int ss = 0, so = 0;
-	return [x, y, state, ss, so](int& s, int& o, bool) mutable {
-		E("unify", ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
-		switch (state) {
-		case 0: while (x(ss, so, false)) {
-				env();
-				while (y(ss, so, true)) {
-					EMIT( return (s = ss, o = so,	state = 1, true););
+	int ss = 0, so = 0, e = 0;
+	return [x, y, e, ss, so](int& s, int& o, bool) mutable {
+		E("unify", ENV7(s, o, e, ss, so, PTR(x), PTR(y)));
+		switch (e) {
+		case 0: while (x(s, o, false)) {
+				while (y(s, o, true)) {
+					EMIT( return (e = 1, true););
 		case 1:			;
 				}
 			}
-			EMIT(state = 2);
-		case 2: state = 0;
+			EMIT(e = 2);
+		case 2: e = ss = so = 0;
 			EMIT(return false);
 		}
 		return false;
@@ -118,16 +118,16 @@ comp compile_unify(comp x, comp y) {
 }
 
 comp compile_match(comp x, comp y, int& a) {
-	uint state = 0;
-	return [x, y, a, state](int& s, int& o, bool u) mutable {
-		E("match", ENV6(a, s, o, state, PTR(x), PTR(y)));
-		switch (state) {
+	uint e = 0;
+	return [x, y, a, e](int& s, int& o, bool u) mutable {
+		E("match", ENV6(a, s, o, e, PTR(x), PTR(y)));
+		switch (e) {
 		case 0: while (x(a, o, u)) {
 				while (y(s, a, u)) {
-					return (bool)(state = 1);
+					return (bool)(e = 1);
 		case 1:			;
 				}
-				state = 2;
+				e = 2;
 				return false;
 			}
 		default:
@@ -137,20 +137,20 @@ comp compile_match(comp x, comp y, int& a) {
 } 
 
 comp compile_triples(comp f, comp r) {
-	uint state = 0;
-	return [f, r, state](int& s, int& o, bool u) mutable {
-		E("triples", ENV5(state, s, o, PTR(f), PTR(r)));
-		switch (state) {
+	uint e = 0;
+	return [f, r, e](int& s, int& o, bool u) mutable {
+		E("triples", ENV5(e, s, o, PTR(f), PTR(r)));
+		switch (e) {
 		case 0: while (f(s, o, u)) {
-				return (bool)(state = 1);
+				return (bool)(e = 1);
 		case 1: 	;
 			}
 			while (r(s, o, u)) {
-				return (bool)(state = 2);
+				return (bool)(e = 2);
 		case 2:		;
 			}
-			state = 3;
-		case 3: state = 0; return false;
+			e = 3;
+		case 3: e = 0; return false;
 		}
 		return false;
 	};
