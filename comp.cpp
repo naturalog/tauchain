@@ -33,12 +33,12 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 //#define EMIT(x) env(), std::cout << __LINE__ << " I: " << #x << endl, x
 
 //#define E(x) 
-#define EMIT(x) \
+/*#define EMIT(x) \
 	env(); \
 	std::cout << __LINE__ << ' ' << KGRN << #x << KNRM << endl;\
 	x
-	
-//#define EMIT(x) x
+*/
+#define EMIT(x) x
 
 comp* sb;
 #define PTR(x) ((sb - (comp*)&x)&0xFFF)
@@ -55,12 +55,14 @@ atom compile_atom(int p) {
 			case 0: if (!bound && x != p)
 					{ EMIT(return (val = x, bound = (state = 1))); }
 			case 1: EMIT(return (bound = false, state = 2, val == x);)
+			case 2: state = 0; return false;
 			}
 			return false;
 		};
 	else u = [p, state](int& x) mutable {
 		E("unify_res", ENV3(p, state, x));
 		if (!state) { EMIT(state = 1; return x == p); }
+		state = 0;
 		return false;
 	};
 
@@ -68,12 +70,9 @@ atom compile_atom(int p) {
 		E("atom", ENV6(p, val, state, x, unify, PTR(u)));
 		if (unify)
 			return u(x);
-		if (!state) {
-			EMIT(state = 1);
-//			if (!x) { EMIT(x = p; return true); }
-			EMIT(return (x = p, state = 1, true););
-		}
-		EMIT(return false);
+		if (!state)
+			{ EMIT(return (x = p, state = 1, true);); }
+		EMIT(state = 0; return false);
 	};
 }
 
@@ -91,8 +90,9 @@ comp compile_triple(atom s, atom o) {
 				}
 			}
 			EMIT(state = 2);
+		case 2: state = 0; return false;
 		}
-		EMIT(return false);
+		return false;
 	};
 }
 
@@ -109,10 +109,11 @@ comp compile_unify(comp x, comp y) {
 		case 1:			;
 				}
 			}
-			EMIT( state = 2);
-		default:
-			EMIT( return false);
+			EMIT(state = 2);
+		case 2: state = 0;
+			EMIT(return false);
 		}
+		return false;
 	};
 }
 
@@ -149,6 +150,7 @@ comp compile_triples(comp f, comp r) {
 		case 2:		;
 			}
 			state = 3;
+		case 3: state = 0; return false;
 		}
 		return false;
 	};
@@ -181,9 +183,10 @@ int main() {
 	comp t1 = compile_triple(x, y);
 	comp t2 = compile_triple(v, y);
 	comp t3 = compile_triple(z, z);
-	kb = compile_triples(t1, compile_triples(t2, compile_triples(t3, nil)));
+	comp t4 = compile_triple(z, y);
+	kb = compile_triples(t1, compile_triples(t2, compile_triples(t3, compile_triples(t4, nil))));
 //	comp m = compile_match(kb, kb, ii);
-	comp m = compile_unify(t1, t2);
+	comp m = compile_unify(kb, t2);
 	int s = 0, o = 0;
-	while (m(s, o, true)) cout << "**************" << s << ' ' << o << endl;
+	while (m(s, o, true)) cout << "Result: " << s << ' ' << o << endl;
 }
