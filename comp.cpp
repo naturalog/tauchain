@@ -25,7 +25,7 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 #define ENV6(x,y,z,t,a,b) ENV4(x,y,z,t); ENV2(a,b);
 #define ENV7(x,y,z,t,a,b,c) ENV4(x,y,z,t); ENV3(a,b,c);
 
-#define E(x, y) ++_ind;auto env = [&](){ cout << x << ' ' << __LINE__ << ": " << KMAG;ind();y;cout << KNRM <<endl;}; \
+#define E(x, y) ++_ind;auto env = [&](){ cout << x << ' ' << __LINE__ << ": " << KRED;ind();y;cout << KNRM <<endl;}; \
 	struct eonexit { \
 		std::function<void()> _f; \
 		eonexit(std::function<void()> f):_f(f) {} \
@@ -35,13 +35,13 @@ void ind() { for (int n = 0; n < _ind - 1; ++n) cout << '\t'; }
 //#define E(x) 
 #define EMIT(x) \
 	env(); \
-	std::cout << KGRN << #x << KNRM << endl;\
+	std::cout << __LINE__ << ' ' << KGRN << #x << KNRM << endl;\
 	x
 	
 //#define EMIT(x) x
 
 comp* sb;
-#define PTR(x) (sb - (comp*)&x)
+#define PTR(x) ((sb - (comp*)&x)&0xFFF)
 
 atom compile_atom(int p) {
 	int val = p, state = 0;
@@ -51,20 +51,12 @@ atom compile_atom(int p) {
 	if (p < 0)
 		u = [p, val, bound, state](int& x) mutable {
 			E("unify_var", ENV5(p, val, bound, state, x));
-			EMIT(
 			switch (state) {
-			case 0: if (!bound) {
-					EMIT(val = x;
-					bound = true;
-					state = 1;
-					return true);
+			case 0: if (!bound && x != p)
+					{ EMIT(return (val = x, bound = (state = 1))); }
+			case 1: EMIT(return (bound = false, state = 2, val == x);)
 			}
-			case 1: EMIT(bound = false;
-				state = 2;
-				return val == x);
-			}
-			EMIT(return false);
-			);
+			return false;
 		};
 	else u = [p, state](int& x) mutable {
 		E("unify_res", ENV3(p, state, x));
@@ -73,16 +65,14 @@ atom compile_atom(int p) {
 
 	return [p, u, val, state](int& x, bool unify) mutable {
 		E("atom", ENV6(p, val, state, x, unify, PTR(u)));
-		EMIT(
 		if (unify)
 			return u(x);
 		if (!state) {
-			EMIT(
-			x = val;
-			state = 1;
-			return true);
+			EMIT(state = 1);
+//			if (!x) { EMIT(x = p; return true); }
+			EMIT(return (x = p, state = 1, true););
 		}
-		EMIT(return false;));
+		EMIT(return false);
 	};
 }
 
@@ -90,10 +80,9 @@ comp compile_triple(atom s, atom o) {
 	int state = 0;
 	return [s, o, state](int& _s, int& _o, bool u) mutable {
 		E("triple", ENV5(state, _s, _o, PTR(s), PTR(o)));
-		EMIT(
 		switch (state) {
-		case 0: while (s(_s, false)) {
-				while (o(_o, false)) {
+		case 0: while (s(_s, u)) {
+				while (o(_o, u)) {
 					EMIT(
 					state = 1;
 					return true);
@@ -103,26 +92,19 @@ comp compile_triple(atom s, atom o) {
 			EMIT(state = 2);
 		}
 		EMIT(return false);
-		return false;
-		);
 	};
 }
 
 comp compile_unify(comp x, comp y) {
-	uint state = 0;
+	int state = 0;
 	int ss = 0, so = 0;
-	return [x, y, state, ss, so](int& s, int& o, bool u) mutable {
+	return [x, y, state, ss, so](int& s, int& o, bool) mutable {
 		E("unify", ENV7(s, o, state, ss, so, PTR(x), PTR(y)));
-		EMIT(
 		switch (state) {
-		case 0: while (x(ss, so, true)) {
+		case 0: while (x(ss, so, false)) {
+				env();
 				while (y(ss, so, true)) {
-					EMIT(
-					s = ss;
-					o = so;
-					state = 1;
-					return true;
-					);
+					EMIT( return (s = ss, o = so,	state = 1, true););
 		case 1:			;
 				}
 			}
@@ -130,7 +112,6 @@ comp compile_unify(comp x, comp y) {
 		default:
 			EMIT( return false);
 		}
-		);
 	};
 }
 
@@ -157,7 +138,6 @@ comp compile_triples(comp f, comp r) {
 	uint state = 0;
 	return [f, r, state](int& s, int& o, bool u) mutable {
 		E("triples", ENV5(state, s, o, PTR(f), PTR(r)));
-		EMIT(
 		switch (state) {
 		case 0: while (f(s, o, u)) {
 				return (bool)(state = 1);
@@ -168,9 +148,8 @@ comp compile_triples(comp f, comp r) {
 		case 2:		;
 			}
 			state = 3;
-		default:
-			return false;
-		})
+		}
+		return false;
 	};
 }
 
@@ -203,7 +182,7 @@ int main() {
 	comp t3 = compile_triple(z, z);
 	kb = compile_triples(t1, compile_triples(t2, compile_triples(t3, nil)));
 //	comp m = compile_match(kb, kb, ii);
-	comp m = compile_unify(t2, t1);
+	comp m = compile_unify(t1, t2);
 	int s = 0, o = 0;
-	while (m(s, o, true)) cout << s << ' ' << o << endl;
+	while (m(s, o, true)) cout << "**************" << s << ' ' << o << endl;
 }
