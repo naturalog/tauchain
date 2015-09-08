@@ -620,6 +620,10 @@ public:
     string base;
     map<string, string> prefixes;
 
+    //bool has_keywords = false;
+    //std::vector<string> keywords;
+
+    //generate a hopefully unique bnode name for a new list
     string listid()
     {
         static int curid = 0;
@@ -637,7 +641,7 @@ public:
         return rr;
     }
 
-
+    //query marpa#has_value, return string
     string get_value(nodeid n)
     {
         assert(n);

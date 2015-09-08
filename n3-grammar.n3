@@ -131,7 +131,7 @@ pathitem cfg:mustBeOneSequence (
 		( quickvariable )
 		( numericliteral )
 		( literal )
-		( "[" propertylist "]"  )
+#		( "[" propertylist "]"  )
 		(  "("  pathlist ")"  )
                 ( boolean )
 #		( "@this" )	  #  Deprecated.  Was allowed for this log:forAll x
