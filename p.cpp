@@ -553,11 +553,9 @@ term* nqparser::readany(bool lit) {
 	return ((pn = readbnode()) || (pn = readvar()) || (lit && (pn = readlit())) || (pn = readlist()) || (pn = readiri()) ) ? pn : 0;
 }
 
-void nqparser::addhead(termset& ts, term* t, termset* subjs) {
-	if (!t) throw 0;
-	if (!t->p) throw 0;
-	if (subjs) t->body = *subjs;
-	ts.push_back(t);
+void nqparser::addhead(termset& heads, term* h, termset* body) {
+	if (body) t->body = *body;
+	heads.push_back(h);
 }
 
 termset nqparser::operator()(const wchar_t* _s) {
