@@ -15,28 +15,37 @@ struct term;
 
 const size_t chunk = 4;
 
-template<typename T, bool ispod /*= std::is_pod<T>::value*/>
+template<typename T, bool ispod = std::is_pod<T>::value>
 struct vector {
 protected:
 	T* a;
 	static const size_t szchunk;
 	size_t n, c;
 public:
-	vector();
-	vector(const vector<T, ispod>& t);
-	vector<T, ispod>& operator=(const vector<T, ispod>& t);
-	~vector();
-
 	typedef T* iterator;
-	T operator[](size_t k) const;
-	size_t size() const;
-	T* begin() const;
-	T* end() const;
-	void clear();
-	void clear1(); // dont free mem
-	bool empty() const;
-	iterator back();
-	T& push_back(const T& t);
+	vector() : a(0),n(0),c(0),m(*this) {}
+	vector(const vector<T, ispod>& t) : a(0),n(0),c(0),m(*this) { copyfrom(t); }
+	vec_t& operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
+	T operator[](size_t k) const 		{ return a[k]; }
+	size_t size() const			{ return n; }
+	T* begin() const			{ return a; }
+	T* end() const				{ return n ? &a[n] : 0; }
+	void clear()				{ n = c = 0; if (!a) return; free(a); a = 0; }
+	void clear1() 				{ n = c = 0; }
+	bool empty() const			{ return !n; }
+	~vector()				{ if(a)free(a); }
+	T* back()				{ return n ? &a[n-1] : 0; }
+	T& push_back(const T& t) {
+		if (!(n % chunk))
+			a = (T*)realloc(a, szchunk * ++c);
+		if (ispod) a[n] = t;
+		else new (&a[n])(T)(t);
+		return a[n++];
+	}
+	void copyfrom(const vector<T, ispod>& t) {
+		if (!(n = t.n)) { c = 0; return; }
+		memcpy(a = (T*)realloc(a, t.c * szchunk), t.a, (c = t.c) * szchunk);
+	}
 
 	struct coro {
 		bool state;
@@ -55,9 +64,6 @@ public:
 			}
 		}
 	} m;
-
-protected:	
-	void copyfrom(const vector<T, ispod>& t);
 };
 
 template<typename K, typename V>
@@ -75,14 +81,26 @@ struct map : public vector<mapelem<K, V>, ispod > {
 	typedef vector<mapelem<K, V>, ispod > base;
 	typedef map<K, V, ispod > _this;
 public:
-	map(const base& t);
-	map();
-	map(const _this& _s);
-	_this& operator=(const _this& m);
-	V& operator[](const K& k);
-	V& set(const K& k, const V& v);
+	map() : base() {}
+	map(const base& t)		{ copyfrom(t); }
+	map(const _this& _s) : base(){ base::copyfrom(_s); }
+	map<K, V, ispod>& operator=(const _this& m)	{ base::copyfrom(m); return *this; }
+	V& operator[](const K& k){ mapelem<K, V>* z = find(k); return z ? z->second : set(k, V()); }
+//	_this& operator=(const _this& m);
 	typedef vtype* iterator;
-	iterator find(const K& k) const;
+	V& set(const K& k, const V& v) {
+		vtype* z = find(k);
+		if (z) { return z->second = v; }
+		return base::push_back(vtype(k, v)).second;
+	//	qsort(base::a, base::n, sizeof(vtype), compare);
+	}
+	mapelem<K, V>* find(const K& k) const {
+		if (!base::n) return 0;
+		iterator e = base::end();
+		for (vtype* x = base::begin(); x != e; ++x) if (x->first == k) return x;
+		return 0;
+	//	vtype v(k, V()); vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare); return z;
+	}
 private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
@@ -96,53 +114,10 @@ public:
 	resid operator[](string v);
 };
 
-vec_templ vec_t::vector() : a(0),n(0),c(0),m(*this) {}
-map_tmpl map<K, V, ispod>::map() : base() {}
-vec_templ vec_t::vector(const vector<T, ispod>& t) : a(0),n(0),c(0),m(*this) { copyfrom(t); }
-vec_templ vec_t& vector<T, ispod>::operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
-vec_templ T vec_t::operator[](size_t k) const 		{ return a[k]; }
-vec_templ size_t vec_t::size() const			{ return n; }
-vec_templ T* vec_t::begin() const			{ return a; }
-vec_templ T* vec_t::end() const				{ return n ? &a[n] : 0; }
-vec_templ void vec_t::clear()				{ n = c = 0; if (!a) return; free(a); a = 0; }
-vec_templ void vec_t::clear1() 				{ n = c = 0; }
-vec_templ bool vec_t::empty() const			{ return !n; }
-vec_templ vec_t::~vector()				{ if(a)free(a); }
-vec_templ T* vec_t::back()				{ return n ? &a[n-1] : 0; }
-map_tmpl map<K, V, ispod>::map(const base& t)		{ copyfrom(t); }
-map_tmpl map<K, V, ispod>::map(const _this& _s) : base(){ base::copyfrom(_s); }
-
-map_tmpl map<K, V, ispod>& map<K, V, ispod>::operator=(const _this& m)	{ base::copyfrom(m); return *this; }
-map_tmpl V& map<K, V, ispod>::operator[](const K& k){ mapelem<K, V>* z = find(k); return z ? z->second : set(k, V()); }
-
-vec_templ T& vec_t::push_back(const T& t) {
-	if (!(n % chunk))
-		a = (T*)realloc(a, szchunk * ++c);
-	if (ispod) a[n] = t;
-	else new (&a[n])(T)(t);
-	return a[n++];
-}
-vec_templ void vec_t::copyfrom(const vector<T, ispod>& t) {
-	if (!(n = t.n)) { c = 0; return; }
-	memcpy(a = (T*)realloc(a, t.c * szchunk), t.a, (c = t.c) * szchunk);
-}
 
 template<typename T, bool ispod /*= std::is_pod<T>::value*/>
 const size_t vector<T, ispod>::szchunk = chunk * sizeof(T);
 
-map_tmpl V& map<K, V, ispod>::set(const K& k, const V& v) {
-	vtype* z = find(k);
-	if (z) { return z->second = v; }
-	return base::push_back(vtype(k, v)).second;
-//	qsort(base::a, base::n, sizeof(vtype), compare);
-}
-map_tmpl mapelem<K, V>* map<K, V, ispod>::find(const K& k) const {
-	if (!base::n) return 0;
-	iterator e = base::end();
-	for (vtype* x = base::begin(); x != e; ++x) if (x->first == k) return x;
-	return 0;
-//	vtype v(k, V()); vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare); return z;
-}
 //map_tmpl int map<K, V, ispod>::compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 typedef vector<term*, true> termset;
 
@@ -193,8 +168,6 @@ string wstrim(string s) { trim(s); return s; }
 string bidict::operator[](resid k) { return ip[k]; }
 resid bidict::operator[](string v) { return set(v); }
 
-
-typedef struct frame* pframe;
 const wchar_t endl[3] = L"\r\n";
 
 #ifdef DEBUG
