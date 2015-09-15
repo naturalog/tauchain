@@ -210,28 +210,9 @@ string format(const subs& s);
 void trim(string& s);
 string wstrim(string s);
 
-term* mkterm(termset& kb, termset& query);
-term* mkterm(resid p);
-term* mkterm(resid p, const termset& args);
-typedef term* (*fevaluate)(term&);
-typedef term* (*fevaluates)(term&, const subs&);
-typedef bool (*funify)(term& s, term& d, subs& dsub);
-typedef bool (*funify_ep)(term& s, term& d, const subs& dsub);
-
-term* evvar(term&);
-term* evnoargs(term&);
-term* ev(term&);
-term* evs(term&,const subs&);
-term* evvars(term&,const subs&);
-term* evnoargss(term&,const subs&);
-bool u1(term& s, term& d, subs& dsub);
-bool u2(term& s, term& d, const subs& dsub);
-bool u3(term& s, term& d, subs& dsub);
-bool u4(term& s, term& d, const subs& dsub);
-
 struct term {
-	term(termset& kb, termset& query);
-	term(resid _p, const termset& _args = termset());
+	term(termset& query) : p(0), szargs(0), body(query) { }
+	term(resid _p, const termset& _args = termset()) : p(_p), args(_args), szargs(args.size()) {}
 
 	const resid p;
 	termset args;
@@ -263,40 +244,8 @@ bidict dict;
 const resid implies = dict.set(L"=>");
 const resid Dot = dict.set(L".");
 
-term::term(termset& kb, termset& query) : p(0), szargs(0), body(query) { }
-term::term(resid _p, const termset& _args) : p(_p), args(_args), szargs(args.size()) {}
-
-size_t bufpos = 0;
-char* buf = (char*)malloc(tchunk);
-
-#define MKTERM
-#define MKTERM1(x)
-#define MKTERM2(x, y) \
-	if (bufpos == nch) { \
-		buf = (char*)malloc(tchunk); \
-		bufpos = 0; \
-	} \
-	new (&((term*)buf)[bufpos])(term)(x, y); \
-	term* r = &((term*)buf)[bufpos]; \
-	std::set<term*>::iterator it = terms.find(r); \
-	if (it != terms.end()) return *it; \
-	bufpos++; \
-	return r; 
-term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
-term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
-term* mkterm(resid p) {
-	if (bufpos == nch) {
-		buf = (char*)malloc(tchunk);
-		bufpos = 0;
-	}
-	new (&((term*)buf)[bufpos])(term)(p);
-	term* r = &((term*)buf)[bufpos];
-	std::set<term*>::iterator it = terms.find(r);
-	if (it != terms.end()) return *it;
-	bufpos++;
-	terms.insert(r);
-	return r;
-}
+term* mkterm(termset& query) { return new term(query); }
+term* mkterm(resid p, const termset& args = termset()) { return new term(p, args); }
 
 #define EPARSE(x) dout << (string(x) + string(s,0,48)) << endl, throw 0
 #define SKIPWS while (iswspace(*s)) ++s
@@ -516,7 +465,7 @@ int main() {
 	termset query = nqparser::readterms(din);
 
 	// create the query term and index it wrt the kb
-	term* q = mkterm(kb, query);
+	term* q = mkterm(query);
 	// now index the kb itself wrt itself
 //	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 //		(*it)->trymatch(kb);
