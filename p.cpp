@@ -452,11 +452,15 @@ bool compile(term& x, term& y, vector<comp>& _r, int n, int k) {
 	return true;
 }
 
-void compile(term& t, termset& heads, vector<comp>& r) {
-	for (term* h : heads) compile(t, *h, r);
-}
-
 vector<vector<comp>> rules; // only bodies, head are compiled inside
+
+void compile(termset& heads) {
+	for (int h = 0; h < heads.size(); ++h) {
+		for (int b = 0; b < heads[h].size(); ++b)
+			compile(heads[h], heads[h].body[b], rules[h][b]);
+		
+	}
+}
 
 struct frame {
 	int *env;
@@ -464,7 +468,7 @@ struct frame {
 	comp c; // compiled functions for that body item
 	frame(size_t nvars, int* e, int _h, int _b, comp _c, int f, int t) 
 		: env(memcpy(env, e, sizeof(int)*nvars)), h(_h), b(_b), c(rules[h][b]) {
-		for (size_t n = from; n != to; ++n) _c[n](env, true);
+		for (; from != to; ++from) _c[from](env, true);
 	}
 	~frame() { delete[] env; }
 
