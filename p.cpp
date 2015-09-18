@@ -427,7 +427,9 @@ typedef std::function<int(int*, bool)> comp;
 void printxy(int x, int y, int* env) {
 	dout << "x: " << x << " y: " << y << ' ';
 	dout << "x: " << dict[x] << " y: " << dict[y] << " env: ";
-	for (int n = 0; n < nvars; ++n) dout << dict[-n] << '=' << (env[n]?dict[env[n]]:string()) << ' ';
+	if (env) 
+		for (int n = 0; n < nvars; ++n) 
+			dout << dict[n] << '=' << (env[n]?dict[env[n]]:string()) << ' ';
 	dout << endl;
 }
 
@@ -452,7 +454,7 @@ bool match(int x, int y, comp& r) {
 	}, true;
 }
 
-bool compile(term& x, term& y, vector<comp>& _r, int n, int k) {
+bool compile(term& x, term& y, vector<comp>& _r, int n, int k, int l) {
 	if (x.args.size() != y.args.size()) return false;
 	comp c;
 	if (!match(x.p, y.p, c)) {
@@ -464,12 +466,13 @@ bool compile(term& x, term& y, vector<comp>& _r, int n, int k) {
 	r.push_back(c);
 	for (term **it1 = x.args.begin(), **it2 = y.args.begin(), **e = x.args.end(); it1 != e;)
 		if (*it1 != *it2)
-			if (!compile(**it1++, **it2++, r, -1, -1))
+			if (!compile(**it1++, **it2++, r, -1, -1, -1))
 				return false;
 	_r.copyfrom(r);
 	if (n != -1) {
 		_r.push_back([n](int*,bool){return n;}); // push head index
 		_r.push_back([k](int*,bool){return k;}); // push body index
+		_r.push_back([l](int*,bool){return l;}); // push matching head index
 	}
 	return true;
 }
@@ -482,7 +485,7 @@ void compile(termset& heads) {
 		for (int b = 0; b < (int)heads[h]->body.size(); ++b) 
 			for (int h1 = 0; h1 < (int)heads.size(); ++h1) {
 				vector<comp> c;
-				if (compile(*heads[h1], *heads[h]->body[b], c, h, b))
+				if (compile(*heads[h1], *heads[h]->body[b], c, h, b, h1))
 					r.push_back(c);
 			}
 		if (r.size())
@@ -499,12 +502,12 @@ void compile(termset& heads) {
 
 struct frame {
 	int *env;
-	int h, b; // indices of the matching head and body
+	int h, h1, b; // indices of the matching head and body
 	vector<comp> c; // compiled functions for that body item
-	frame() : env(new int[nvars]), h(0), b(0), c(rules[h][b]) { }
-	frame(int _h) : env(new int[nvars]), h(_h), b(0), c(rules[h][b]) { }
-	frame(int _h, int _b, int *e, vector<comp> _c, int from, int to)
-		: env(new int[nvars]), h(_h), b(_b), c(rules[h][b]) {
+	frame() : env(new int[nvars]), h(0), h1(0), b(0), c(rules[h][b]) { }
+	frame(int _h) : env(new int[nvars]), h(_h), h1(0), b(0), c(rules[h][b]) { }
+	frame(int _h, int _b, int _h1, int *e, vector<comp> _c, int from, int to)
+		: env(new int[nvars]), h(_h), h1(_h1), b(_b), c(rules[h1][0]) {
 		if (e) {
 			memcpy(env, e, sizeof(int)*nvars);
 			for (; from != to; ++from) _c[from](env, true);
@@ -513,18 +516,20 @@ struct frame {
 	~frame() { delete[] env; }
 
 	vector<frame*> operator()() {
-		int r, last = 0, bb;
+		int r, last = 0, bb, h1;
 		vector<frame*> ret;
+		dout << "frame..." << endl;
 		for (comp* i = c.begin(); i != c.end(); ++i) {
 			r = (*i)(env, false);
 			if (r == -1) continue; // resources match so far
 			if (r == -2) // in case of mismatch, skip till the end of the term
 				do { r = (*++i)(0, false); } while (r < 0);
-			// read body indes
-			bb = (*++i)(0, false);
 			// otherwise we successfully matched a term and create a new frame
+			
+			bb = (*++i)(0, false); // read body index
+			h1 = (*++i)(0, false); // read matching head index
 			//ret.push_back(new frame(env, r, bb, c, last, r));
-			(*new frame(r, bb, env, c, last, r))();
+			(*new frame(r, bb, h1, env, c, last, r))();
 			last = r;
 			// note that env hasn't changed since f=false
 			// since we update the env at the constructor
@@ -544,8 +549,8 @@ int main() {
 //		(*it)->trymatch(kb);
 	kb.push_back(q);
 	compile(kb);
-	for (int n = 0; n < rules.size(); ++n)
-		frame(n)();
+	int n = 0;
+	frame(rules.size()-1)();
 	
 //	vector<frame*> f = frame()();
 //	TRACE(
