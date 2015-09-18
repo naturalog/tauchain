@@ -479,12 +479,21 @@ vector<vector<vector<comp>>> rules; // only bodies, head are compiled inside
 void compile(termset& heads) {
 	for (int h = 0; h < (int)heads.size(); ++h) {
 		vector<vector<comp>> r;
-		for (int b = 0; b < (int)heads[h]->body.size(); ++b) {
-			vector<comp> c;
-			compile(*heads[h], *heads[h]->body[b], c, h, b);
-			if (c.size()) r.push_back(c);
-		}
-		if (r.size()) rules.push_back(r);
+		for (int b = 0; b < (int)heads[h]->body.size(); ++b) 
+			for (int h1 = 0; h1 < (int)heads.size(); ++h1) {
+				vector<comp> c;
+				if (compile(*heads[h1], *heads[h]->body[b], c, h, b))
+					r.push_back(c);
+			}
+		if (r.size())
+			rules.push_back(r);
+	}
+	dout << rules.size() << endl; 
+	for (auto x : rules) { 
+		dout << x.size() << ' '; 
+		for (auto y : x) 
+			dout << y.size() << ' '; 
+		dout << endl; 
 	}
 }
 
