@@ -106,6 +106,8 @@ private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
 
+int nvars = 0;
+
 class bidict {
 	map<resid, string, false> ip;
 	map<string, resid, false> pi;
@@ -115,7 +117,8 @@ public:
 		map<string, resid, false>::iterator it = pi.find ( v );
 		if ( it ) return it->second;
 		resid k = pi.size() + 1;
-		if ( v[0] == L'?' ) k = -k;
+		if ( v[0] != L'?' ) k = -k;
+		else ++nvars;
 		pi[v] = k, ip[k] = v;
 		return k;
 	}
@@ -136,7 +139,7 @@ private:
 	int pos;
 public:
 	nqparser() : t(new wchar_t[4096*4096]) {}
-	nqparser() { delete[] t; }
+	~nqparser() { delete[] t; }
 
 	bool readcurly(vector<term*, true>& ts);
 	term* readlist();
@@ -173,7 +176,6 @@ string format(const termset& t, int dep = 0);
 string format(const subs& s);
 void trim(string& s);
 string wstrim(string s);
-const size_t tchunk = 8192, nch = tchunk / sizeof(term);
 std::wistream &din = std::wcin;
 std::wostream &dout = std::wcout;
 bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
@@ -190,6 +192,7 @@ struct term {
 	const size_t szargs;
 	termset body;
 };
+const size_t tchunk = 8192, nch = tchunk / sizeof(term);
 
 struct tcmp {
 	bool operator()(term* _x, term* _y) const {
@@ -425,52 +428,58 @@ bool match(int x, int y, comp& r) {
 		if(!env) return -1;
 		return f ? env[x] = y, -1 : env[x] ? env[x] == y ? -1 : -2 : -1; 
 	}, true;
-	if (y > 0 && x < 0) return r = [x, y](int* env) {
+	if (y > 0 && x < 0) return r = [x, y](int* env, bool f) {
 		if (!env) return -1;
 		return f ? env[y] = x, -1 : env[y] ? env[y] == x ? -1 : -2 : -1; 
 	}, true;
-	if (x > 0 && y > 0)
-		return r = [x, y](int* env, bool f) {
-			if (!env) return -1;
-			if (f) return env[x] ? env[y] = env[x], -1 : env[x] = env[y], -1;
-			return (env[x] && env[y]) ? env[y] == env[x] ? -1 : -2 : -1;
+//	if (x > 0 && y > 0)
+	return r = [x, y](int* env, bool f) {
+		if (!env) return -1;
+		if (f) return env[x] ? env[y] = env[x], -1 : env[x] = env[y], -1;
+		return (env[x] && env[y]) ? env[y] == env[x] ? -1 : -2 : -1;
 	}, true;
 }
 
 bool compile(term& x, term& y, vector<comp>& _r, int n, int k) {
 	if (x.args.size() != y.args.size()) return false;
 	comp c;
-	if (!match(x.p, y.p), c) return false;
+	if (!match(x.p, y.p, c)) return false;
 	vector<comp> r = _r;
 	r.push_back(c);
-	for (term* it1 = x.args.begin(), it2 = y.args.begin(), e = x.args.end(); it1 != e;)
-		if (!compile(*it1++, *it2++, r))
+	for (term **it1 = x.args.begin(), **it2 = y.args.begin(), **e = x.args.end(); it1 != e;)
+		if (!compile(**it1++, **it2++, r, -1, -1))
 			return false;
 	_r.copyfrom(r);
-	_r.push_back([n](int*,bool){return n;}); // push head index
-	_r.push_back([n](int*,bool){return k;}); // push body index
+	if (n != -1) {
+		_r.push_back([n](int*,bool){return n;}); // push head index
+		_r.push_back([k](int*,bool){return k;}); // push body index
+	}
 	return true;
 }
 
-vector<vector<comp>> rules; // only bodies, head are compiled inside
+vector<vector<vector<comp>>> rules; // only bodies, head are compiled inside
 
 void compile(termset& heads) {
-	for (int h = 0; h < heads.size(); ++h)
-		for (int b = 0; b < heads[h].size(); ++b)
-			compile(heads[h], heads[h].body[b], rules[h][b]);
+	for (int h = 0; h < (int)heads.size(); ++h) {
+		vector<vector<comp>> r;
+		r.push_back(vector<comp>());
+		for (int b = 0; b < (int)heads[h]->body.size(); ++b) {
+			compile(*heads[h], *heads[h]->body[b], *r.back(), h, b);
+		}
+	}
 }
 
 struct frame {
 	int *env;
 	int h, b; // indiced of the matching head and body
-	comp c; // compiled functions for that body item
-	frame(size_t nvars, int* e, int _h, int _b, comp _c, int f, int t) 
-		: env(memcpy(env, e, sizeof(int)*nvars)), h(_h), b(_b), c(rules[h][b]) {
+	vector<comp> c; // compiled functions for that body item
+	frame(size_t nvars, int* e, int _h, int _b, vector<comp>& _c, int from, int to)
+		: env((int*)memcpy(env, e, sizeof(int)*nvars)), h(_h), b(_b), c(rules[h][b]) {
 		for (; from != to; ++from) _c[from](env, true);
 	}
 	~frame() { delete[] env; }
 
-	vector<frame*> operator() {
+	vector<frame*> operator()() {
 		int r, last = 0, bb;
 		vector<frame*> ret;
 		for (comp* i = c.begin(); i != c.end(); ++i) {
@@ -481,14 +490,14 @@ struct frame {
 			// read body indes
 			bb = (*++i)(0, false);
 			// otherwise we successfully matched a term and create a new frame
-			ret.push_back(new frame(nvars, env, r, bb, c, last, r);
+			ret.push_back(new frame(nvars, env, r, bb, c, last, r));
 			last = r;
 			// note that env hasn't changed since f=false
 			// since we update the env at the constructor
 		}
 		return ret;
 	}
-}
+};
 
 int main() {
 	termset kb = nqparser::readterms(din);
@@ -500,6 +509,7 @@ int main() {
 //	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 //		(*it)->trymatch(kb);
 	kb.push_back(q);
+	compile(kb);
 
 //	TRACE(
 	dout << "kb:" << endl << format(kb) << endl;
