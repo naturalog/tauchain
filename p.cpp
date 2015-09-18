@@ -4,7 +4,7 @@
 #include <string>
 #include <functional>
 #include <set>
-
+using std::endl;
 typedef std::wstring string;
 typedef int resid;
 struct term;
@@ -170,7 +170,6 @@ void trim(string& s) {
 #endif
 
 typedef map<resid, term*, true> subs;
-const wchar_t endl[3] = L"\r\n";
 string format(const term* t, bool body = false);
 string format(const termset& t, int dep = 0);
 string format(const subs& s);
@@ -397,7 +396,7 @@ string format(const termset& t, int dep) {
 		IDENT;
 		ss += format(x, true);
 		if (x->body.size()) ss += L" implied by: ";
-		ss += endl;
+		ss += L"\r\n";
 /*		for (termset::iterator y = x->body.begin(); y != x->body.end(); ++y) {
 			IDENT;
 			((ss += L"\t") += format(*y, true) += L" matches to heads:") += endl;
@@ -419,24 +418,33 @@ size_t steps = 0;
  */
 typedef std::function<int(int*, bool)> comp;
 
+#define EMIT(x) dout << #x << endl, (x);
+#define pxy printxy(x, y, env)
+void printxy(int x, int y, int* env) {
+	dout << "x: " << x << " y: " << y << ' ';
+	dout << "x: " << dict[x] << " y: " << dict[y] << " env: ";
+	for (int n = 0; n < nvars; ++n) dout << dict[-n] << '=' << (env[n]?dict[env[n]]:string()) << ' ';
+	dout << endl;
+}
+
 bool match(int x, int y, comp& r) {
 	if (x < 0 && y < 0) {
 		if (x != y) return false;
-		return r = [](int*,bool){return -1;}, true;
+		return r = [](int*,bool){return EMIT(-1);}, true;
 	}
-	if (x > 0 && y < 0) return r = [x, y](int* env, bool f) { 
-		if(!env) return -1;
-		return f ? env[x] = y, -1 : env[x] ? env[x] == y ? -1 : -2 : -1; 
+	if (x > 0 && y < 0) return r = [x, y](int* env, bool f) { pxy;
+		if(!env) return EMIT(-1);
+		return EMIT((f ? env[x] = y, -1 : env[x] ? env[x] == y ? -1 : -2 : -1));
 	}, true;
-	if (y > 0 && x < 0) return r = [x, y](int* env, bool f) {
-		if (!env) return -1;
-		return f ? env[y] = x, -1 : env[y] ? env[y] == x ? -1 : -2 : -1; 
+	if (y > 0 && x < 0) return r = [x, y](int* env, bool f) { pxy;
+		if (!env) return EMIT(-1);
+		return EMIT((f ? env[y] = x, -1 : env[y] ? env[y] == x ? -1 : -2 : -1));
 	}, true;
 //	if (x > 0 && y > 0)
-	return r = [x, y](int* env, bool f) {
-		if (!env) return -1;
-		if (f) return env[x] ? env[y] = env[x], -1 : env[x] = env[y], -1;
-		return (env[x] && env[y]) ? env[y] == env[x] ? -1 : -2 : -1;
+	return r = [x, y](int* env, bool f) { pxy;
+		if (!env) return EMIT(-1);
+		if (f) return EMIT((env[x] ? env[y] = env[x], -1 : env[x] = env[y], -1));
+		return EMIT(((env[x] && env[y]) ? env[y] == env[x] ? -1 : -2 : -1));
 	}, true;
 }
 
@@ -463,16 +471,15 @@ void compile(termset& heads) {
 	for (int h = 0; h < (int)heads.size(); ++h) {
 		vector<vector<comp>> r;
 		r.push_back(vector<comp>());
-		for (int b = 0; b < (int)heads[h]->body.size(); ++b) {
+		for (int b = 0; b < (int)heads[h]->body.size(); ++b)
 			compile(*heads[h], *heads[h]->body[b], *r.back(), h, b);
-		}
 		rules.push_back(r);
 	}
 }
 
 struct frame {
 	int *env;
-	int h, b; // indiced of the matching head and body
+	int h, b; // indices of the matching head and body
 	vector<comp> c; // compiled functions for that body item
 	frame(int* e = 0, int _h = 0, int _b = 0, vector<comp> _c = vector<comp>(), int from = 0, int to = 0)
 		: env(new int[nvars]), h(_h), b(_b), c(rules[h][b]) {
