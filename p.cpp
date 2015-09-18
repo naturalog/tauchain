@@ -466,6 +466,7 @@ void compile(termset& heads) {
 		for (int b = 0; b < (int)heads[h]->body.size(); ++b) {
 			compile(*heads[h], *heads[h]->body[b], *r.back(), h, b);
 		}
+		rules.push_back(r);
 	}
 }
 
@@ -473,9 +474,12 @@ struct frame {
 	int *env;
 	int h, b; // indiced of the matching head and body
 	vector<comp> c; // compiled functions for that body item
-	frame(size_t nvars, int* e, int _h, int _b, vector<comp>& _c, int from, int to)
-		: env((int*)memcpy(env, e, sizeof(int)*nvars)), h(_h), b(_b), c(rules[h][b]) {
-		for (; from != to; ++from) _c[from](env, true);
+	frame(int* e = 0, int _h = 0, int _b = 0, vector<comp> _c = vector<comp>(), int from = 0, int to = 0)
+		: env(new int[nvars]), h(_h), b(_b), c(rules[h][b]) {
+		if (e) {
+			memcpy(env, e, sizeof(int)*nvars);
+			for (; from != to; ++from) _c[from](env, true);
+		} else memset(env, 0, sizeof(int)*nvars);
 	}
 	~frame() { delete[] env; }
 
@@ -490,7 +494,8 @@ struct frame {
 			// read body indes
 			bb = (*++i)(0, false);
 			// otherwise we successfully matched a term and create a new frame
-			ret.push_back(new frame(nvars, env, r, bb, c, last, r));
+			//ret.push_back(new frame(env, r, bb, c, last, r));
+			(*new frame(env, r, bb, c, last, r))();
 			last = r;
 			// note that env hasn't changed since f=false
 			// since we update the env at the constructor
@@ -510,6 +515,10 @@ int main() {
 //		(*it)->trymatch(kb);
 	kb.push_back(q);
 	compile(kb);
+	frame()();
+	
+	vector<frame*> f = frame()();
+
 
 //	TRACE(
 	dout << "kb:" << endl << format(kb) << endl;
