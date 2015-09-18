@@ -455,11 +455,9 @@ bool compile(term& x, term& y, vector<comp>& _r, int n, int k) {
 vector<vector<comp>> rules; // only bodies, head are compiled inside
 
 void compile(termset& heads) {
-	for (int h = 0; h < heads.size(); ++h) {
+	for (int h = 0; h < heads.size(); ++h)
 		for (int b = 0; b < heads[h].size(); ++b)
 			compile(heads[h], heads[h].body[b], rules[h][b]);
-		
-	}
 }
 
 struct frame {
@@ -479,9 +477,9 @@ struct frame {
 			r = (*i)(env, false);
 			if (r == -1) continue; // resources match so far
 			if (r == -2) // in case of mismatch, skip till the end of the term
-				do { r = (*i)(0, false); } while (r < 0);
+				do { r = (*++i)(0, false); } while (r < 0);
 			// read body indes
-			bb = (*i)(0, false);
+			bb = (*++i)(0, false);
 			// otherwise we successfully matched a term and create a new frame
 			ret.push_back(new frame(nvars, env, r, bb, c, last, r);
 			last = r;
