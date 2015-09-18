@@ -437,7 +437,7 @@ bool match(int x, int y, comp& r) {
 	}, true;
 }
 
-bool compile(term& x, term& y, vector<comp>& _r, int n) {
+bool compile(term& x, term& y, vector<comp>& _r, int n, int k) {
 	if (x.args.size() != y.args.size()) return false;
 	comp c;
 	if (!match(x.p, y.p), c) return false;
@@ -447,7 +447,8 @@ bool compile(term& x, term& y, vector<comp>& _r, int n) {
 		if (!compile(*it1++, *it2++, r))
 			return false;
 	_r.copyfrom(r);
-	_r.push_back([n](int*,bool){return n;});
+	_r.push_back([n](int*,bool){return n;}); // push head index
+	_r.push_back([n](int*,bool){return k;}); // push body index
 	return true;
 }
 
@@ -461,23 +462,24 @@ struct frame {
 	int *env;
 	int h, b; // indiced of the matching head and body
 	comp c; // compiled functions for that body item
-	int from, to; // head code in compiled functions
 	frame(size_t nvars, int* e, int _h, int _b, comp _c, int f, int t) 
-		: env(memcpy(env, e, sizeof(int)*nvars)), h(_h), b(_b), c(rules[h][b]), from(f), to(t) {
+		: env(memcpy(env, e, sizeof(int)*nvars)), h(_h), b(_b), c(rules[h][b]) {
 		for (size_t n = from; n != to; ++n) _c[n](env, true);
 	}
 	~frame() { delete[] env; }
 
 	vector<frame*> operator() {
-		int r, last = 0;
+		int r, last = 0, bb;
 		vector<frame*> ret;
 		for (comp* i = c.begin(); i != c.end(); ++i) {
 			r = (*i)(env, false);
 			if (r == -1) continue; // resources match so far
 			if (r == -2) // in case of mismatch, skip till the end of the term
 				do { r = (*i)(0, false); } while (r < 0);
+			// read body indes
+			bb = (*i)(0, false);
 			// otherwise we successfully matched a term and create a new frame
-			ret.push_back(new frame(nvars, env, r, c, last, r);
+			ret.push_back(new frame(nvars, env, r, bb, c, last, r);
 			last = r;
 			// note that env hasn't changed since f=false
 			// since we update the env at the constructor
