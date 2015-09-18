@@ -504,14 +504,16 @@ struct frame {
 	int *env;
 	int h, h1, b; // indices of the matching head and body
 	vector<comp> c; // compiled functions for that body item
-	frame() : env(new int[nvars]), h(0), h1(0), b(0), c(rules[h][b]) { }
-	frame(int _h) : env(new int[nvars]), h(_h), h1(0), b(0), c(rules[h][b]) { }
+	frame() : env(new int[nvars]), h(0), h1(0), b(0), c(rules[h][b]) { memset(env, 0, sizeof(int) * nvars); }
+	frame(int _h) : frame() { h = _h; }
 	frame(int _h, int _b, int _h1, int *e, vector<comp> _c, int from, int to)
-		: env(new int[nvars]), h(_h), h1(_h1), b(_b), c(rules[h1][0]) {
+		: frame(_h) {
+		h1 = _h1, b = _b;
 		if (e) {
-			memcpy(env, e, sizeof(int)*nvars);
-			for (; from != to; ++from) _c[from](env, true);
-		} else memset(env, 0, sizeof(int)*nvars);
+			memcpy(env, e, sizeof(int) * nvars);
+			while (from <= to) _c[from++](env, true);
+		} else memset(env, 0, sizeof(int) * nvars);
+		dout << "new frame: h="<<h<<" h1="<<h1<<" b=" << b<<" from="<<from<<" to="<<to<<endl;
 	}
 	~frame() { delete[] env; }
 
@@ -521,11 +523,14 @@ struct frame {
 		dout << "frame..." << endl;
 		for (comp* i = c.begin(); i != c.end(); ++i) {
 			r = (*i)(env, false);
+			dout << "r: " << r << endl;
 			if (r == -1) continue; // resources match so far
 			if (r == -2) // in case of mismatch, skip till the end of the term
-				do { r = (*++i)(0, false); } while (r < 0);
+				do { 
+					r = (*++i)(0, false); 
+					dout << "r: " << r << endl;
+				} while (r < 0);
 			// otherwise we successfully matched a term and create a new frame
-			
 			bb = (*++i)(0, false); // read body index
 			h1 = (*++i)(0, false); // read matching head index
 			//ret.push_back(new frame(env, r, bb, c, last, r));
