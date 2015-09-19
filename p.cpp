@@ -117,8 +117,9 @@ public:
 		map<string, resid, false>::iterator it = pi.find ( v );
 		if ( it ) return it->second;
 		resid k = pi.size() + 1;
-		if ( v[0] != L'?' ) k = -k;
-		else ++nvars;
+		static int lastres = -1, lastvar = 1;
+		if ( v[0] != L'?' ) k = lastres--;
+		else nvars = k = lastvar++;
 		pi[v] = k, ip[k] = v;
 		return k;
 	}
@@ -423,9 +424,9 @@ size_t steps = 0;
 typedef std::function<int(int*, bool)> comp;
 
 #define EMIT(x) dout << #x << endl, (x);
-#define pxy printxy(x, y, env)
-void printxy(int x, int y, int* env) {
-	dout << "x: " << x << " y: " << y << ' ';
+#define pxy printxy(x, y, env, f)
+void printxy(int x, int y, int* env, bool f) {
+	dout << "f: " << f << " x: " << x << " y: " << y << ' ';
 	dout << "x: " << dict[x] << " y: " << dict[y] << " env: ";
 	if (env) 
 		for (int n = 0; n < nvars; ++n) 
@@ -455,7 +456,7 @@ bool match(int x, int y, comp& r) {
 }
 
 bool compile(term& x, term& y, vector<comp>& _r, int n, int k, int l) {
-	if (x.args.size() != y.args.size()) return false;
+	if (!x.p || !y.p || x.args.size() != y.args.size() || &x == &y) return false;
 	comp c;
 	if (!match(x.p, y.p, c)) {
 		dout << "unmatched " << x.p << " with " << y.p << ' ' << dict[x.p] << " " << dict[y.p] << endl;
@@ -481,12 +482,12 @@ vector<vector<vector<comp>>> rules; // only bodies, head are compiled inside
 
 void compile(termset& heads) {
 	for (int h = 0; h < (int)heads.size(); ++h) {
+		vector<comp> c;
 		vector<vector<comp>> r;
 		for (int b = 0; b < (int)heads[h]->body.size(); ++b) 
 			for (int h1 = 0; h1 < (int)heads.size(); ++h1) {
-				vector<comp> c;
 				if (compile(*heads[h1], *heads[h]->body[b], c, h, b, h1))
-					r.push_back(c);
+					r.push_back(c), c.clear();
 			}
 		if (r.size())
 			rules.push_back(r);
@@ -506,8 +507,7 @@ struct frame {
 	vector<comp> c; // compiled functions for that body item
 	frame() : env(new int[nvars]), h(0), h1(0), b(0), c(rules[h][b]) { memset(env, 0, sizeof(int) * nvars); }
 	frame(int _h) : frame() { h = _h; }
-	frame(int _h, int _b, int _h1, int *e, vector<comp> _c, int from, int to)
-		: frame(_h) {
+	frame(int _h, int _b, int _h1, int *e, vector<comp> _c, int from, int to) : frame(_h) {
 		h1 = _h1, b = _b;
 		if (e) {
 			memcpy(env, e, sizeof(int) * nvars);
@@ -546,12 +546,7 @@ struct frame {
 int main() {
 	termset kb = nqparser::readterms(din);
 	termset query = nqparser::readterms(din);
-
-	// create the query term and index it wrt the kb
 	term* q = mkterm(query);
-	// now index the kb itself wrt itself
-//	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
-//		(*it)->trymatch(kb);
 	kb.push_back(q);
 	compile(kb);
 	int n = 0;
