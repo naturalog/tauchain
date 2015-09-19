@@ -484,11 +484,13 @@ void compile(termset& heads) {
 	for (int h = 0; h < (int)heads.size(); ++h) {
 		vector<comp> c;
 		vector<vector<comp>> r;
-		for (int b = 0; b < (int)heads[h]->body.size(); ++b) 
-			for (int h1 = 0; h1 < (int)heads.size(); ++h1) {
+		int sz = heads[h]->body.size();
+		if (!sz)
+			c.push_back([](int*,bool){return -3;}), r.push_back(c), c.clear();
+		else for (int b = 0; b < sz; ++b) 
+			for (int h1 = 0; h1 < (int)heads.size(); ++h1)
 				if (compile(*heads[h1], *heads[h]->body[b], c, h, b, h1))
 					r.push_back(c), c.clear();
-			}
 		if (r.size())
 			rules.push_back(r);
 	}
@@ -524,20 +526,21 @@ struct frame {
 		for (comp* i = c.begin(); i != c.end(); ++i) {
 			r = (*i)(env, false);
 			dout << "r: " << r << endl;
-			if (r == -1) continue; // resources match so far
-			if (r == -2) // in case of mismatch, skip till the end of the term
+			if (r == -1) continue;
+			if (r == -2)
 				do { 
 					r = (*++i)(0, false); 
 					dout << "r: " << r << endl;
 				} while (r < 0);
-			// otherwise we successfully matched a term and create a new frame
+			else if (r == -3) {
+//			if (!rules[r].size()) {
+				dout << " ground! " << endl;
+				continue;
+			}
 			bb = (*++i)(0, false); // read body index
 			h1 = (*++i)(0, false); // read matching head index
-			//ret.push_back(new frame(env, r, bb, c, last, r));
-			(*new frame(r, bb, h1, env, c, last, r))();
+			ret.push_back(new frame(r, bb, h1, env, c, last, r));
 			last = r;
-			// note that env hasn't changed since f=false
-			// since we update the env at the constructor
 		}
 		return ret;
 	}
@@ -550,7 +553,9 @@ int main() {
 	kb.push_back(q);
 	compile(kb);
 	int n = 0;
-	frame(rules.size()-1)();
+	auto r = frame(rules.size()-1)();
+	dout << r.size() << endl;
+	for (frame* f : r) (*f)();
 	
 //	vector<frame*> f = frame()();
 //	TRACE(
