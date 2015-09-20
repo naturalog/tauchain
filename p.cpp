@@ -539,12 +539,86 @@ struct frame {
 			}
 			bb = (*++i)(0, false); // read body index
 			h1 = (*++i)(0, false); // read matching head index
-			ret.push_back(new frame(r, bb, h1, env, c, last, r));
+//			ret.push_back(
+					(*new frame(r, bb, h1, env, c, last, r))();
 			last = r;
 		}
 		return ret;
 	}
 };
+
+typedef vector<mapelem<term*, subs>> ground;
+typedef map<resid, vector<mapelem<term*, ground>>, false> evidence;
+
+struct frame {
+	term* rule;
+	termset::iterator b;
+	pframe prev, creator, next;
+	subs s;
+	int ref;
+	ground g() const { 
+		if (!creator) return ground();
+		ground r = creator->g();
+		termset empty;
+		frame& cp = *creator;
+		typedef mapelem<term*, subs> elem;
+		if (cp.b != cp.rule->body.end()) {
+			if (!rule->body.size())
+				r.push_back(elem(rule, subs()));
+		} else if (cp.rule->body.size())
+			r.push_back(elem(creator->rule, creator->s));
+		return r;	
+	}
+	frame(pframe c, term* r, termset::iterator l, pframe p, const subs& _s)
+			: rule(r), b(l ? l : rule->body.begin()), prev(p), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref;if(p)++p->ref; }
+	frame(pframe c, term* r, termset::iterator l, pframe p)
+			: rule(r), b(l ? l : rule->body.begin()), prev(p), creator(c), next(0), ref(0) { if(c)++c->ref;if(p)++p->ref; }
+	frame(pframe c, frame& p, const subs& _s) 
+			: rule(p.rule), b(p.b), prev(p.prev), creator(c), next(0), s(_s), ref(0) { if(c)++c->ref; if(prev)++prev->ref; }
+	void decref() { if (ref--) return; if(creator)creator->decref();if(prev)prev->decref(); delete this; }
+};
+
+void prove(pframe _p, pframe& lastp) {
+	if (!lastp) lastp = _p;
+	evidence e;
+	while (_p) {
+		if (++steps % 1000000 == 0) (dout << "step: " << steps << endl);
+		pframe ep = _p;
+		frame& p = *_p;
+		term* t = p.rule, *epr;
+		// check for euler path
+		ssub = p.s;
+		while ((ep = ep->prev)) {
+			if ((epr = ep->rule) == p.rule && t->unify_ep(*t, *epr, ep->s)) {
+				t = 0;
+				break;
+			}
+		}
+		if (!t);
+		else if (p.b != p.rule->body.end()) {
+			term::coro& m = (**p.b).m;
+			while (m())
+				lastp = lastp->next = pframe(new frame(_p, m.i, 0, _p, m.dsub));
+		}
+		else if (p.prev) { // if body is done, go up the tree
+			frame& ppr = *p.prev;
+			pframe r(new frame(_p, ppr, ppr.s));
+			p.rule->unify(*p.rule, **r->b++, r->s);
+			prove(r, lastp);
+		}
+		#ifndef NOTRACE
+		else {
+			term* _t; // push evidence
+			for (termset::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
+				if (!(_t = ((*r)->evaluate(**r)))) continue;
+				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
+				dout << "proved: " << format(_t) << endl;
+			}
+		}
+		#endif
+		pframe pf = _p; _p = p.next; pf->decref();
+	}
+}
 
 int main() {
 	termset kb = nqparser::readterms(din);
@@ -562,7 +636,7 @@ int main() {
 	dout << "kb:" << endl << format(kb) << endl;
 
 	// create the initial frame with the query term as the frame's rule
-//	pframe p(new frame(pframe(), q, 0, pframe(), subs())), lp = 0;
+//	pframe p(new frame(pframe(), q, 1, pframe(), subs())), lp = 0;
 //	clock_t begin = clock(), end;
 //	prove(p, lp); // the main loop
 //	end = clock();
