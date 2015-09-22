@@ -415,16 +415,15 @@ string format(const termset& t, int dep) {
 }
 size_t steps = 0;
 
-/*
- * retvals:
- *  -1 for success of single resource
- *  -2 for fail of single resource
- *  >=0 index in heads
- */
-typedef std::function<int(int*, bool)> comp;
+typedef std::function<void()/*int(int*, bool)*/> cres; // compiled resource
+typedef vector<cres> cterm; // compiled term
+// rules[n][k] is the k'th body of the n'th head. no need to store
+// the heads themselves since they're compiled already
+vector<vector<cterm>> rules;
 
-#define EMIT(x) dout << #x << endl, (x);
-#define pxy printxy(x, y, env, f)
+//#define dout << "x) { dout << #x << endl; x; }
+#define pxy 
+//printxy(x, y, env, f)
 void printxy(int x, int y, int* env, bool f) {
 	dout << "f: " << f << " x: " << x << " y: " << y << ' ';
 	dout << "x: " << dict[x] << " y: " << dict[y] << " env: ";
@@ -434,82 +433,77 @@ void printxy(int x, int y, int* env, bool f) {
 	dout << endl;
 }
 
-bool match(int x, int y, comp& r) {
+// returns a func that compares two given resources.
+// retval is false if x,y can't ever possibly match, and true otherwise.
+// the returned function recieves an environment and a boolean f,
+// when f is true then modifications to env are performed
+// otherwise comparison only is performed.
+// the returned function returns -1 for success and -2 for fail.
+// negatives are used in order to allow arbitrary data passed
+// by positive integers as "post" parameter to compile() below
+bool match(int x, int y, cres& r) {
 	if (x < 0 && y < 0) {
 		if (x != y) return false;
-		return r = [](int*,bool){return EMIT(-1);}, true;
+		return r = [](){dout << "return -1;";}, true;
 	}
-	if (x > 0 && y < 0) return r = [x, y](int* env, bool f) { pxy;
-		if(!env) return EMIT(-1);
-		return EMIT((f ? env[x] = y, -1 : env[x] ? env[x] == y ? -1 : -2 : -1));
+	if (x > 0 && y < 0) return r = [x, y]() {
+		dout << "return env ? (f ? env["<<x<<"] = "<<y<<", -1 : env["<<x<<"] ? env["<<x<<"] == "<<y<<" ? -1 : -2 : -1) : -1;";
 	}, true;
-	if (y > 0 && x < 0) return r = [x, y](int* env, bool f) { pxy;
-		if (!env) return EMIT(-1);
-		return EMIT((f ? env[y] = x, -1 : env[y] ? env[y] == x ? -1 : -2 : -1));
+	if (y > 0 && x < 0) return r = [x, y]() {
+		dout << "return env ? (f ? env["<<y<<"] = "<<x<<", -1 : env["<<y<<"] ? env["<<y<<"] == "<<x<<" ? -1 : -2 : -1) : -1;";
 	}, true;
 //	if (x > 0 && y > 0)
-	return r = [x, y](int* env, bool f) { pxy;
-		if (!env) return EMIT(-1);
-		if (f) return EMIT((env[x] ? env[y] = env[x], -1 : env[x] = env[y], -1));
-		return EMIT(((env[x] && env[y]) ? env[y] == env[x] ? -1 : -2 : -1));
+	return r = [x, y]() {
+		dout << "return env ? f ? (env["<<x<<"] ? env["<<y<<"] = env["<<x<<"], -1 : env["<<x<<"] = env["<<y<<"], -1) : (env["<<x<<"] && env["<<y<<"]) ? env["<<y<<"] == env["<<x<<"] ? -1 : -2 : -1 : -1;";
 	}, true;
 }
 
-bool compile(term& x, term& y, vector<comp>& _r, int n, int k, int l) {
+// returns a vector of funcs compiled by match() that includes
+// all instructions to match or unify two terms.
+// returns false if terms can't possibly match or when trying
+// to match a term to itself
+bool compile(term& x, term& y, cterm& _r/*, vector<int>& post = vector<int>()*/) {
 	if (!x.p || !y.p || x.args.size() != y.args.size() || &x == &y) return false;
-	comp c;
+	cres c;
 	if (!match(x.p, y.p, c)) {
-		dout << "unmatched " << x.p << " with " << y.p << ' ' << dict[x.p] << " " << dict[y.p] << endl;
+//		dout << "unmatched " << x.p << " with " << y.p << ' ' << dict[x.p] << " " << dict[y.p] << endl;
 		return false;
 	}
-	dout << "matched " << x.p << " with " << y.p << ' ' << dict[x.p] << " " << dict[y.p] << endl;
-	vector<comp> r = _r;
+//	dout << "matched " << x.p << " with " << y.p << ' ' << dict[x.p] << " " << dict[y.p] << endl;
+	cterm r = _r;
 	r.push_back(c);
 	for (term **it1 = x.args.begin(), **it2 = y.args.begin(), **e = x.args.end(); it1 != e;)
 		if (*it1 != *it2)
-			if (!compile(**it1++, **it2++, r, -1, -1, -1))
+			if (!compile(**it1++, **it2++, r))
 				return false;
 	_r.copyfrom(r);
-	if (n != -1) {
-		_r.push_back([n](int*,bool){return n;}); // push head index
-		_r.push_back([k](int*,bool){return k;}); // push body index
-		_r.push_back([l](int*,bool){return l;}); // push matching head index
-	}
+//	for (int n : post) _r.push_back([n](int*,bool){return n;});
 	return true;
 }
 
-vector<vector<vector<comp>>> rules; // only bodies, head are compiled inside
-
 void compile(termset& heads) {
 	for (int h = 0; h < (int)heads.size(); ++h) {
-		vector<comp> c;
-		vector<vector<comp>> r;
+		cterm c;
+		vector<cterm> r;
 		int sz = heads[h]->body.size();
 		if (!sz)
-			c.push_back([](int*,bool){return -3;}), r.push_back(c), c.clear();
+			c.push_back([](){dout<<"return -3;";}), r.push_back(c), c.clear();
 		else for (int b = 0; b < sz; ++b) 
 			for (int h1 = 0; h1 < (int)heads.size(); ++h1)
-				if (compile(*heads[h1], *heads[h]->body[b], c, h, b, h1))
+				if (compile(*heads[h1], *heads[h]->body[b], c))
 					r.push_back(c), c.clear();
 		if (r.size())
 			rules.push_back(r);
 	}
-	dout << rules.size() << endl; 
-	for (auto x : rules) { 
-		dout << x.size() << ' '; 
-		for (auto y : x) 
-			dout << y.size() << ' '; 
-		dout << endl; 
-	}
 }
-
+/*
 struct frame {
 	int *env;
 	int h, h1, b; // indices of the matching head and body
-	vector<comp> c; // compiled functions for that body item
+	cterm c; // compiled functions for that body item
 	frame() : env(new int[nvars]), h(0), h1(0), b(0), c(rules[h][b]) { memset(env, 0, sizeof(int) * nvars); }
 	frame(int _h) : frame() { h = _h; }
-	frame(int _h, int _b, int _h1, int *e, vector<comp> _c, int from, int to) : frame(_h) {
+	frame(int _h, int _b, int _h1, int *e, cterm _c, int from, int to) : frame(_h) {
 		h1 = _h1, b = _b;
 		if (e) {
 			memcpy(env, e, sizeof(int) * nvars);
@@ -619,21 +613,26 @@ void prove(pframe _p, pframe& lastp) {
 		pframe pf = _p; _p = p.next; pf->decref();
 	}
 }
-
+*/
 int main() {
 	termset kb = nqparser::readterms(din);
 	termset query = nqparser::readterms(din);
 	term* q = mkterm(query);
 	kb.push_back(q);
 	compile(kb);
+	for (uint n = 0; n < rules.size(); ++n)
+		for (uint k = 0; k < rules[n].size(); ++k)
+			for (uint m = 0; m < rules[n][k].size(); ++m)
+				dout << "int _" <<n << '_' << k << '_' << m << "(int* env, bool f) { ",
+				rules[n][k][m](), dout << " }" << endl;
 	int n = 0;
-	auto r = frame(rules.size()-1)();
-	dout << r.size() << endl;
-	for (frame* f : r) (*f)();
+//	auto r = frame(rules.size()-1)();
+//	dout << r.size() << endl;
+//	for (frame* f : r) (*f)();
 	
 //	vector<frame*> f = frame()();
 //	TRACE(
-	dout << "kb:" << endl << format(kb) << endl;
+//	dout << "kb:" << endl << format(kb) << endl;
 
 	// create the initial frame with the query term as the frame's rule
 //	pframe p(new frame(pframe(), q, 1, pframe(), subs())), lp = 0;
