@@ -16,6 +16,8 @@
 #define MARPA(x)
 #endif
 
+namespace old{
+
 typedef i64 nodeid;
 
 extern std::list<string>& proc;
@@ -57,4 +59,7 @@ struct _setproc {
 #endif
 
 extern int _indent;
+
+}
+
 #endif

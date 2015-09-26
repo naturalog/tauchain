@@ -5,6 +5,8 @@
 #include <list>
 #include <set>
 
+namespace old{
+
 typedef std::map<string, string> ssmap;
 typedef std::shared_ptr<ssmap> pssmap;
 
@@ -117,5 +119,9 @@ public:
 	std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );
+
+}
+
 #endif
 #endif
+

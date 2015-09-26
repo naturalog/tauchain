@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
+namespace old{
 
 bidict& dict = *new bidict;
 bool deref = true, shorten = false;
@@ -440,4 +441,5 @@ string prover::ruleset::format() const {
 	}
 	ss << L']';
 	return ss.str();
+}
 }

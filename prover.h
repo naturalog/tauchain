@@ -33,6 +33,8 @@
 #define PROFILE(x)
 #endif
 
+namespace old{
+
 struct term;
 class prover;
 typedef const term* termid;
@@ -305,3 +307,4 @@ public:
 	shared_ptr<proof> lastp = 0;
 };
 #endif
+}

@@ -1,14 +1,16 @@
 #include <stdio.h>
-#include "cli.h"
 #include <sstream>
 #include <tuple>
 #include <iostream>
 #include <queue>
-#include "prover.h"
+#include "univar.h"
+
+#include "cli.h"
 #include <stdexcept>
 #ifdef with_marpa
 #include "marpa_tau.h"
 #endif
+
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>

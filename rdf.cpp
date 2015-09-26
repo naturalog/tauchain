@@ -5,6 +5,8 @@
 #include <iomanip>
 #include "misc.h"
 
+namespace old{
+
 pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
@@ -327,3 +329,4 @@ int convert_cmd::operator() ( const strings& args ) {
 }
 #endif
 
+}
