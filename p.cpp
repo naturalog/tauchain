@@ -424,7 +424,7 @@ typedef map<int, term*, true> condset;
 
 bool put(int p, term* t, condset& c) {
 	static condset::iterator i;
-	return ((i = c.find(p)) == c.end()) ? (c[p] = t), true : (i->second == t);
+	return (!(i = c.find(p))) ? (c[p] = t), true : (i->second == t);
 }
 
 bool mkconds(term* h, term* b, condset& c) {
@@ -468,6 +468,7 @@ void run(termset& heads) {
 			}
 		       	conds[n][k] = [cs, n, k, last](frame* f) mutable {
 				if (f->h != n && f->b != k) throw 0;
+				frame* l = ++last;
 				for (auto x : cs) {
 					bool b = true;
 					for (auto y : x.second) {
@@ -483,12 +484,14 @@ void run(termset& heads) {
 					}
 					if (b) {
 						last->h = x.first, last->b = 0, last->prev = f;
-						for (size_t z = 0; z < f->env.size(); ++z)
+						for (size_t z = 0; z < nvars; ++z)
 							if (f->env[z])
 								last->env[z] = f->env[z];
 						++last;
-					}
+					} else 
+						*last = frame();
 				}
+				if (l == last) --last;
 			};
 		}
 	vector<size_t> q;
