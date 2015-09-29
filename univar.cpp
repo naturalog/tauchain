@@ -27,8 +27,9 @@ class Var;
 
 typedef vector<size_t> rulesindex;
 typedef function<bool(Thing*,Thing*)> comp;
+typedef function<bool()> join;
 std::unordered_map<old::nodeid, rulesindex> predskb;
-typedef std::unordered_map<old::nodeid, Var> varmap;
+typedef std::unordered_map<old::nodeid, Var*> varmap;
 std::map<old::nodeid, comp> preds;
 
 
@@ -236,12 +237,12 @@ comp seq(comp a, comp b){
 
 
 
-Var node(old::termid t){
-    Var r;
+Var* node(old::termid t){
+    Var* r = new Var();
     if (t->p>0)
     {
-	r.isBound = true;
-	r.value = new Node(t);//leak
+	r->isBound = true;
+	r->value = new Node(t);
     }
     return r;
 }
@@ -272,7 +273,7 @@ comp pred(old::nodeid x)
 
 
 
-comp joinwxyz(comp a, comp b, Thing w, Thing x, Thing y, Thing z){
+function<bool()> joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
     int entry = 0;
     return [a,b,w,x,y,z,entry]()mutable{
 	switch(entry){
@@ -308,15 +309,15 @@ comp rule(old::termid head, old::prover::termset body)
 	//sometimes we'll have literals too
 
 	//these two are just proxies for whatever input we get
-	vars[head->s->p] = Var();
-	vars[head->o->p] = Var();
+	vars[head->s->p] = new Var();
+	vars[head->o->p] = new Var();
 	size_t i;
 	for (i = 0; i < body.size(); i++)
 	{
 	    old::termid t = body[i]->s;
-	    vars[t->p] = compile_node(t);
+	    vars[t->p] = node(t);
 	    t = body[i]->o;
-	    vars[t->p] = compile_node(t);
+	    vars[t->p] = node(t);
 	}
 
 
@@ -325,18 +326,23 @@ comp rule(old::termid head, old::prover::termset body)
 	    return fact(vars[head->s->p], vars[head->o->p]);
 	}
 	if(body.size() == 1){
-	    return pred(body[0]));
+	    //need to do the var shuffle
+	    
+	    assert(false);
+
+	    //return //pred(body[0]->p));
 	}
-	else if(body.size() == 2){
-	    Var s = vars[head->s->p];
-	    Var o = vars[head->o->p];
+	else if(body.size() == 2)
+	{
+	    Var *s = vars[head->s->p];
+	    Var *o = vars[head->o->p];
 
-	    Var a = vars[body[0]->s->p];
-	    Var b = vars[body[0]->o->p];
-	    Var c = vars[body[1]->s->p];
-	    Var d = vars[body[1]->o->p];
+	    Var *a = vars[body[0]->s->p];
+	    Var *b = vars[body[0]->o->p];
+	    Var *c = vars[body[1]->s->p];
+	    Var *d = vars[body[1]->o->p];
 
-	    comp c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
+	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
 
 	    int entry;
 	    //pred proxy coro that unifies s and o with s and o vars
@@ -346,8 +352,8 @@ comp rule(old::termid head, old::prover::termset body)
 		{
 		    case 0:
 			entry++;
-	    		s.unifcoro(Ds)();
-			o.unifcoro(Do)();
+	    		s->unifcoro(Ds)();
+			o->unifcoro(Do)();
 			while( c0())//call the join
 			{
 	    		    return true;
@@ -367,7 +373,7 @@ comp rule(old::termid head, old::prover::termset body)
 	    while(k > 0){
 	        c0 = halfjoin(pred(body[k]),c0);
 	        k--;
-	    }*/
+	    */}
 	    assert("explosion happened");
 	}else{
 	    //???? ???:)
