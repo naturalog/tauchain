@@ -23,6 +23,8 @@ public:
 	virtual wstring str(){return L"wut";}
 };
 
+class Var;
+
 typedef vector<size_t> rulesindex;
 typedef function<bool(Thing*,Thing*)> comp;
 std::unordered_map<old::nodeid, rulesindex> predskb;
@@ -232,21 +234,6 @@ comp seq(comp a, comp b){
 	};
 }
 
-comp joinwxyz(comp a, comp b, Thing w, Thing x, Thing y, Thing z){
-    int entry = 0;
-    return [a,b,w,x,y,z,entry](Thing *Ds, Thing *Do){
-	switch(entry){
-	    while(a(w,x)){
-		while(b(y,z)){
-		    return true;
-	    }
-	}
-	return false;
-    };
-}
-//actually maybe only the join combinators need to do a lookup
-
-
 
 
 Var node(old::termid t){
@@ -263,19 +250,45 @@ comp pred(old::nodeid x)
 {
 	int entry = 0;
 
-	//this looks up and runs a rule
+	//this looks up and proxies a pred
 	return [entry, x](Thing *Ds, Thing *Do)mutable{
-		switch(entry){
-			...
-	    auto z = rules[x];
-	    while(z(Ds, Do))
-		return true;
-			...
-	    return false;
-			...
+		comp z;
+		switch(entry)
+		{
+			case 0:
+			    entry++;
+			    z = preds[x];
+			    while(z(Ds, Do))
+			    {
+				return true;
+			case 1:;
+			    }
+			    entry++;
 		}
+		return false;
 	};
 }
+
+
+
+
+comp joinwxyz(comp a, comp b, Thing w, Thing x, Thing y, Thing z){
+    int entry = 0;
+    return [a,b,w,x,y,z,entry](){
+	switch(entry){
+	    case 0:
+		entry++;
+		while(a(w,x)){
+		    while(b(y,z)){
+			return true;
+	    case 1:;
+		    }
+		}
+	}
+	return false;
+    };
+}
+//actually maybe only the join combinators need to do a lookup
 
 
 
@@ -307,54 +320,59 @@ comp rule(old::termid head, old::prover::termset body)
 	}
 
 
-	//simplest case, there is 1 body item
-	comp c0;
-	//this case would represent an actual kb 'fact', yes?
 	if(body.size() == 0){
-	    c0 = fact(vars[head->s->p], vars[head->o->p]);
+	    //this case would represent an actual kb 'fact'
+	    return fact(vars[head->s->p], vars[head->o->p]);
 	}
 	if(body.size() == 1){
-	    c0 = compile(term(body[0]));
+	    return pred(body[0]));
 	}
-	//this looks right
 	else if(body.size() == 2){
-	    c0 = joinwxyz(body[0],body[1]);
+	    Var s = vars[head->s->p];
+	    Var o = vars[head->o->p];
+
+	    Var a = vars[body[0]->s->p];
+	    Var b = vars[body[0]->o->p];
+	    Var c = vars[body[1]->s->p];
+	    Var d = vars[body[1]->o->p];
+
+	    comp c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
+
+	    int entry;
+	    //pred proxy coro that unifies s and o with s and o vars
+	    return [ entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
+	    {
+		switch(entry)
+		{
+		    case 0:
+			entry++;
+	    		s.unifcoro(Ds)();
+			o.unifcoro(Do)();
+			while( c0())//call the join
+			{
+	    		    return true;
+		    case 1:;
+			}
+		}
+		return false;
+	    };
 	}
-	else if(body.size() > 2){
+	else if(body.size() > 2){/*todo
     	    int k = body.size()-2;
 
 	    //i guess should just have joinwxyz as compile(term,term)
-	    //seems reasonable
+	    //seems reasonable//or not
 
-	    comp c0 = joinwxyz(body[k+1],body[k+2]);
-	    while(k >= 0){
-	        c0 = halfjoin(body[k],c0);
+	    comp c0 = joinwxyz(pred(body[k]),pred(body[k+1]));
+	    while(k > 0){
+	        c0 = halfjoin(pred(body[k]),c0);
 	        k--;
-	    }
+	    }*/
+	    assert("explosion happened");
 	}else{
 	    //???? ???:)
 	    cout << "Negative body size? What is this, American TV?" << endl;
 	}
-	/*here we are in a function that compiles rules
-	you cant unify arguments to those in-future maybe-multiple-times
- 	called rules with anything here*/
-	
-	Var a = vars[body[0]->s->p];
-	Var b = vars[body[0]->o->p];
-	Var s = vars[head->s->p];
-	Var o = vars[head->o->p];
-
-
-
-	return [ c0, a,b , s,o]   (Thing *Ds , Thing *Do) mutable
-	//rule proxy coro that unifies s and o with s and o vars
-	{
-	    s.unifcoro(Ds)();
-	    o.unifcoro(Do)();
-	    while( c0(a,b))
-	    	    return true;
-	}
-
 }
 
 
@@ -398,9 +416,10 @@ prover::prover ( old::qdb qkb, bool check_consistency)  {
 }
 
 void prover::query(const qdb& goal, subs * s){
-    auto g = goal["@default"];
+    auto g = *goal.first["@default"];//qlist
     varmap m;
-    while(join(m, (term(i) for i in g))())
+    //while(join(m, (term(i) for i in g))())
+	while(pred(g[0])())//just one for now
 	for(auto v: m)
 	    cout << v.first.str() << ": " << v.second.str();
 };
@@ -472,6 +491,9 @@ i'm trying to re-involve him
 
 
 /*
+stuuff
+
+
 b0s = body[0].s
 if isvar(b0s) vars[b0s] = Variable()...shrug
 comp c1 = compile(body[1])
