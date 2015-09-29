@@ -1,30 +1,21 @@
-//#include <iostream>
-//#include <string>
 #include <functional>
 #include <unordered_map>
-//i started integrating the old prover, putting it into namespace "old",
-#include "prover.h"
+#include "prover.h" // namespace "old"
 
 using namespace std;
 
-bool fail()
-{
-	return false;
-}
 
-function<bool()> succeed()
-{//yield once
-    int entry = 0;
-    return [entry]() mutable{
-    switch(entry){
-          case 0:
-    	      	entry = 1;
-        	return true;
-          default:
-                return false;
-	}
-    };
-}
+
+/*so it seems we have 3 variants to start with:
+ 1: parameterless joins, with extra rule lambda and unify's,
+ 2: all joins have two parameters, there are permutations,
+ 3: joins have only as many parameters as they need, there are even more permutations
+so i guess we start with 1?
+*/
+
+
+
+
 
 class Thing{
 public:
@@ -32,7 +23,18 @@ public:
 	virtual wstring str(){return L"wut";}
 };
 
+typedef vector<size_t> rulesindex;
 typedef function<bool(Thing*,Thing*)> comp;
+std::unordered_map<old::nodeid, rulesindex> predskb;
+typedef std::unordered_map<old::nodeid, Var> varmap;
+std::map<old::nodeid, comp> preds;
+
+
+
+
+
+
+
 
 class Node:public Thing
 {
@@ -119,6 +121,35 @@ public:
 		}
 	}
 };
+
+
+
+
+
+
+
+
+bool fail()
+{
+	return false;
+}
+
+function<bool()> succeed()
+{//yield once
+    int entry = 0;
+    return [entry]() mutable{
+    switch(entry){
+          case 0:
+    	      	entry = 1;
+        	return true;
+          default:
+                return false;
+	}
+    };
+}
+
+
+
 /*
     # If arg1 or arg2 is an object with a unify method (such as Variable or^M
     # Functor) then just call its unify with the other argument.  The object's^M
@@ -126,10 +157,8 @@ public:
     # Otherwise, both arguments are "normal" (atomic) values so if they^M
     # are equal then succeed (yield once), else fail (don't yield).^M
     # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
-(returns an iterator)
+    (returns an iterator)
 */
-
-
 function<bool()> generalunifycoro(Thing *a, Thing *b){
 	//cout << "u " << a << " " << b << endl;
 	a = a->getValue();
@@ -157,14 +186,16 @@ function<bool()> nodeComp(Node *n){
 	
 }
 */
-comp fact(Node *s, Node *o){
+
+
+comp fact(Thing *s, Thing *o){
 	int entry = 0;
 	function<bool()> c1;
 	function<bool()> c2;
 	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
 		switch(entry){
 		case 0:
-		 c1  = generalunifycoro(Ds,s);
+		 c1 = generalunifycoro(Ds,s);
 		 c2 = generalunifycoro(Do,o);
 			while(c1()){
 				while(c2()){
@@ -201,45 +232,24 @@ comp seq(comp a, comp b){
 	};
 }
 
-/*so it seems we have 3 variants to start with:
- 1: parameterless joins, with extra rule lambda and unify's,
- 2: all joins have two parameters, there are permutations,
- 3: joins have only as many parameters as they need, there are even more permutations
-so i guess we start with 1?
-so you have a fourth way?
-*/
-
-/*
-
 comp joinwxyz(comp a, comp b, Thing w, Thing x, Thing y, Thing z){
     int entry = 0;
-			//This should be taking Ds & Do args
-    return [a,b,w,x,y,z,entry](){
+    return [a,b,w,x,y,z,entry](Thing *Ds, Thing *Do){
 	switch(entry){
 	    while(a(w,x)){
 		while(b(y,z)){
-	    }
-    }
-}
-*/
-
-//so, going for the no permutations option now,
-
-comp compile(old::termid x)
-{
-	int entry = 0;
-	return [entry, x](Thing *Ds, Thing *Do)mutable{
-		switch(entry){
-		case 0:
 		    return true;
-		;}
-	};
+	    }
+	}
+	return false;
+    };
 }
+//actually maybe only the join combinators need to do a lookup
 
 
-typedef std::unordered_map<old::nodeid, Var> varmap;
 
-Var compile_node(old::termid t){
+
+Var node(old::termid t){
     Var r;
     if (t->p>0)
     {
@@ -249,7 +259,30 @@ Var compile_node(old::termid t){
     return r;
 }
 
-comp compile_rule(old::termid head, old::prover::termset body)
+comp pred(old::nodeid x)
+{
+	int entry = 0;
+
+	//this looks up and runs a rule
+	return [entry, x](Thing *Ds, Thing *Do)mutable{
+		switch(entry){
+			...
+	    auto z = rules[x];
+	    while(z(Ds, Do))
+		return true;
+			...
+	    return false;
+			...
+		}
+	};
+}
+
+
+
+
+
+
+comp rule(old::termid head, old::prover::termset body)
 {
 
 	varmap vars;
@@ -273,12 +306,17 @@ comp compile_rule(old::termid head, old::prover::termset body)
 	    vars[t->p] = compile_node(t);
 	}
 
-	//**JUST PSEUDO: **
+
 	//simplest case, there is 1 body item
 	comp c0;
-	if(body.size() == 1){
-	    c0 = compile(body[0]);
+	//this case would represent an actual kb 'fact', yes?
+	if(body.size() == 0){
+	    c0 = fact(vars[head->s->p], vars[head->o->p]);
 	}
+	if(body.size() == 1){
+	    c0 = compile(term(body[0]));
+	}
+	//this looks right
 	else if(body.size() == 2){
 	    c0 = joinwxyz(body[0],body[1]);
 	}
@@ -286,24 +324,16 @@ comp compile_rule(old::termid head, old::prover::termset body)
     	    int k = body.size()-2;
 
 	    //i guess should just have joinwxyz as compile(term,term)
-	    /*
-	    c0 = 
-	    joinwxyz(
-		body[k+1]->p, 
-		body[k+2]->p,
-		body[k+1]->s,
-		body[k+1]->o,
-		body[k+2]->s,
-		body[k+2]->o,
-	    );
-	    
-	*/
+	    //seems reasonable
 
 	    comp c0 = joinwxyz(body[k+1],body[k+2]);
 	    while(k >= 0){
 	        c0 = halfjoin(body[k],c0);
 	        k--;
 	    }
+	}else{
+	    //???? ???:)
+	    cout << "Negative body size? What is this, American TV?" << endl;
 	}
 	/*here we are in a function that compiles rules
 	you cant unify arguments to those in-future maybe-multiple-times
@@ -317,6 +347,7 @@ comp compile_rule(old::termid head, old::prover::termset body)
 
 
 	return [ c0, a,b , s,o]   (Thing *Ds , Thing *Do) mutable
+	//rule proxy coro that unifies s and o with s and o vars
 	{
 	    s.unifcoro(Ds)();
 	    o.unifcoro(Do)();
@@ -326,46 +357,53 @@ comp compile_rule(old::termid head, old::prover::termset body)
 
 }
 
-/*
-b0s = body[0].s
-    
-if isvar(b0s) vars[b0s] = Variable()...shrug
-comp c1 = compile(body[1])
-c0 = joinwxyz(c0, c1, b0s
-*/
 
 
-struct jo{
-	comp coro;
-	varmap vars;
-}
-
-jo jointerms(term a, term b)
+void compile_kb(old::prover::kb kb)
 {
-	varmap v;
-	v[a.s] = Variable();
-	v[a.o] = Variable();
-	v[b.s] = Variable();
-	v[b.o] = Variable();
-	comp coro = joinwxyz(fact(a.p), fact(b.p), v[a.s], v[a.o], v[b.s], v[b.o]);
-	return new jo(coro, v);
-}
-
-
-jo jointermwithjoin(term a, jo b){
-
-}
-
-rulecoro{
-	return [vars  ](Thing *headx, Thing *heady){
+    for (auto x: predkb)
+    {
+	nodeid k = x.first;
+	rulesindex rs = x.second;
+	for (size_t i: rs)
+	{
+	    comp r = rule(kb.bodies[i]);
+	    if(preds.has(k))
+		preds[k] = seq(preds[k], r);
+	    else
+		rules[k] = r;
 	}
+    }
 }
 
 
+
+void gen_pred2rules_map(prover p)
+{
+    for (i = 0; i < p.kb.heads.size(); i++)
+    {
+	nodeid pr = p.kb.heads[i]->p;
+	auto it = predskb.find(pr);
+	if it == predskb.end()
+	    predskb[pr] = new rulesindex();
+	predskb[pr].push_back(i);
+    }
+}
 
 prover::prover ( old::qdb qkb, bool check_consistency)  {
     //prover::p
     p = old::prover(qkb, false);
+    size_t i;
+    compile_kb();
+}
+
+void prover::query(const qdb& goal, subs * s){
+    auto g = goal["@default"];
+    varmap m;
+    while(join(m, (term(i) for i in g))())
+	for(auto v: m)
+	    cout << v.first.str() << ": " << v.second.str();
+};
 
 // we will simply try to use prover as a kb
 // yea im just kinda mulling it over
@@ -395,16 +433,84 @@ qdb works off integer pointers so we should write it
 into the prover.cpp there
 write what what's in this univar.cpp here and what we're going
 to make with the joins
-
 well we make a new prover class here...whats the matter about what file it
 is in, and also, we will keep the old prover for marpa
+*/
 
-well...afk
+/*ok we can try to continue where we left off yesterday i guessssss
+lets leave it for a bit, i want to consult with naturalog about
+his plans for 'real jit'ok, unless you're gung-ho to get started :)
+well, not immediately but i guess i will want to 
+btw wrt naturalog, he seems to be just reading up on lots of stuff,
+ive read a bit about jitting prolog and im certain hmc has too
+im 100% positive our version is important, and the only other
+meaningful version would be this but native emit; i haven't read
+hardly anything about it, but yea this version is important and i agree
+about native emit
+i dunno if naturalog is collecting resources to help with the native emit
+version or hes just totally lost:) what do you think i think? :) i just
+want to know if he's got anything so far
+hehe i see, from my convo with him yesterday or whenever that was it 
+didnt sound like he had much, if anything; seems to spend most of his
+time reading about stats and watching physics lectures anyway, not bad
+hobbies but they don't make a jit hehe
+ok so then maybe i should consult with HMC on that instead, but...
+i imagine a response along the lines of "where's the current jit?"
+or maybe i should just scrap this whole plan to consult in the 
+first-place lol
+it would be nice if we could actually get naturalog to be working with
+us though.. ever since we started the jit it's felt like a competition
+his fault to begin with, but, i let it get the better of me and
+now me and him are in somewhat of an adversarial relationship it seems,
+or, rival at least.. and that's my fault
+idk, maybe i just feel bad for snapping at him the other day and now
+i'm trying to re-involve him
 */
 
 
+
+
+
+/*
+b0s = body[0].s
+if isvar(b0s) vars[b0s] = Variable()...shrug
+comp c1 = compile(body[1])
+c0 = joinwxyz(c0, c1, b0s
+struct jo{
+	comp coro;
+	varmap vars;
 }
+jo jointerms(term a, term b)
+{//this was an attempt at generating joins recursively
+	varmap v;
+	v[a.s] = Variable();
+	v[a.o] = Variable();
+	v[b.s] = Variable();
+	v[b.o] = Variable();
+	
+	comp coro = joinwxyz(fact(a.p), fact(b.p), v[a.s], v[a.o], v[b.s], v[b.o]);
+	return new jo(coro, v);
+	//does jo need a constructor?i dont know
+}//it doesnt seem to do any recursion tho
+jo jointermwithjoin(term a, jo b){
+}
+rulecoro{
+	return [vars  ](Thing *headx, Thing *heady){
+	}
+}
+*/
 
-void prover::query(const qdb& goal, subs * s){
 
-};
+
+
+/*
+comp term(old::termid x)
+{
+    for(auto y:p.heads)
+	if (
+	    y->p == x->p 
+	    && node(y->s).unifcoro(node(x->s))())
+//	    && node(y->s).unifcoro(node(x->s))()	    
+		//add it to the seq
+}
+*/
