@@ -336,7 +336,7 @@ comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
 
 comp rule(old::termid head, old::prover::termset body)
 {
-
+	cout << "rule " << endl;;//head << " " << body << endl; 
 	varmap vars;
 
 	//hrmm
@@ -397,6 +397,7 @@ comp rule(old::termid head, old::prover::termset body)
 /*writes into preds*/
 void compile_kb(old::prover *p)
 {
+    cout << "compile" << endl;
     for (auto x: predskb)
     {
 	old::nodeid k = x.first;
@@ -416,6 +417,7 @@ void compile_kb(old::prover *p)
 /*writes into predskb*/
 void gen_pred2rules_map(old::prover *p)
 {
+    cout << "gen predskb" << endl;
     size_t i;
     for (i = 0; i < p->heads.size(); i++)
     {
@@ -428,6 +430,7 @@ void gen_pred2rules_map(old::prover *p)
 }
 
 yprover::yprover ( old::qdb qkb, bool check_consistency)  {
+    cout << "constructing old prover" << endl;
     p = new old::prover(qkb, false);
     gen_pred2rules_map(p);
     compile_kb(p);
@@ -436,7 +439,7 @@ yprover::yprover ( old::qdb qkb, bool check_consistency)  {
 void yprover::query(const old::qdb& goal, old::subs * s){
     //auto g = *(goal.first[L"@default"]);//qlist
     //while(join(m, (term(i) for i in g))())
-
+    cout << "query" << endl;
     const old::prover::termset g = p->qdb2termset(goal);
     varmap m;
     //just one for now
