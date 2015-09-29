@@ -13,6 +13,6 @@ for line in sys.stdin:
 	    o.write(line)
 	exit()
 
-	    
-    sys.stdout.write(line)
+    print line	    
+    #sys.stdout.write(line)
     lines.append(line)

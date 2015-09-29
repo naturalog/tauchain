@@ -4,6 +4,7 @@
 #include "jsonld.h"
 #include <iomanip>
 #include "misc.h"
+#include <boost/algorithm/string.hpp>
 
 namespace old{
 
@@ -272,7 +273,6 @@ string quad::tostring ( ) const {
 	return ss.str();
 }
 
-#include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
 #ifndef NOPARSER
 int readqdb (qdb& r, std::wistream& is) {

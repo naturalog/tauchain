@@ -1,5 +1,13 @@
 #include "json_object.h"
+
+
+namespace old{
+
+
 #ifdef JSON
+
+
+
 #ifdef DEBUG
 void bt() {
 /*	void *trace[16];
@@ -111,5 +119,11 @@ bool has ( pobj o, string s ) {
 bool has ( pobj o, pstring s ) {
 	return s && has ( o, *s );
 }
+
+
+
 #endif
 pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }
+
+
+}

@@ -2,6 +2,7 @@
 #ifndef __JSONLD_H__
 #define __JSONLD_H__
 
+
 #include <algorithm>
 #include <utility>
 #include <memory>
@@ -17,6 +18,9 @@
 #include "json_object.h"
 #include "strings.h"
 #include "rdf.h"
+
+namespace old{
+
 
 inline string resolve ( pstring base_, const string& ref ) {
 	return base_ ? *base_ + ref : ref;
@@ -179,5 +183,7 @@ public:
 
 pobj expand ( pobj input, jsonld_options opts = jsonld_options() );
 
+
+}
 #endif
 #endif

@@ -41,14 +41,16 @@ const int COMPLETE = 2;
 string format = L"";
 string base = L"";
 
+bool irc = false;
+
 std::map<string,bool*> _flags = {
 	{L"nocolor",&nocolor},
 	{L"deref",&deref},
 	{L"irc",&irc},
 	{L"shorten",&shorten},
 	{L"base",&fnamebase},
-	{L"quads",&quad_in},
-	{L"pause",&_pause}
+	{L"quads",&quad_in}
+//	{L"pause",&_pause}
 };
 
 std::vector<string> extensions = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
@@ -59,9 +61,11 @@ std::vector<string> _formats = {L"nq",
 								L"jsonld"};
 std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
 
-std::vector<qdb> kbs;
-prover *tauProver;
+yprover *tauProver;
 
+using namespace old;
+
+std::vector<qdb> kbs;
 
 void set_mode(int m)
 {
@@ -130,7 +134,7 @@ void switch_color(){
 	}
 }
 
-qdb merge_qdbs(const std::vector<qdb> qdbs)
+qdb old::merge_qdbs(const std::vector<qdb> qdbs)
 {
         if (qdbs.size() > 1)
                 dout << L"warning, kb merging is half-assed";
@@ -349,7 +353,7 @@ void mode_query(){
 				if(r == 2){
 					dout << "query size: " << q_in.first.size() << std::endl;
 					(*tauProver).query(q_in);
-					(*tauProver).e.clear();
+					//(*tauProver).e.clear();
 				}else if(r == 1 || r == 0){
 					dout << L"Error parsing query file \"" << token << "\"" << endl;
 				}else{
@@ -391,7 +395,7 @@ void mode_kb(){
 			int r = get_qdb(kb_in,L"");
 			if(r == 2){
 				kbs.push_back(kb_in);
-				tauProver = new prover(merge_qdbs(kbs));
+				tauProver = new yprover(old::merge_qdbs(kbs));
 			}else if(r == 1 || r==0){
 				dout << L"Error parsing kb input." << endl;
 			}else{
@@ -414,7 +418,7 @@ void mode_kb(){
 				int r = get_qdb(kb_in, token);	
 				if(r == 2){
 					kbs.push_back(kb_in);
-					tauProver = new prover(merge_qdbs(kbs));
+					tauProver = new yprover(old::merge_qdbs(kbs));
 				}else if(r == 1 || r == 0){
 					dout<< L"Error parsing kb file: \"" << token << L"\"" << endl;
 				}else{
@@ -551,22 +555,22 @@ int main ( int argc, char** argv) {
 		{
 			if (mode == KB && fins > 0) {
 				kbs.push_back(kb);
-				tauProver = new prover(merge_qdbs(kbs));
+				tauProver = new yprover(old::merge_qdbs(kbs));
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
 			if (mode == QUERY && fins > 0) {
 				(*tauProver).query(kb);
-				(*tauProver).e.clear();
+				//(*tauProver).e.clear();
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
 			else if(mode == COMMANDS && fins == 2) {
 				dout << "querying" << std::endl;
 				kbs.push_back(kb);
-				tauProver = new prover(merge_qdbs(kbs));
+				tauProver = new yprover(old::merge_qdbs(kbs));
 				(*tauProver).query(query);
-				(*tauProver).e.clear();
+				//(*tauProver).e.clear();
 				data_buffer=L"";
 			}
 		}

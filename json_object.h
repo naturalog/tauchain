@@ -14,7 +14,9 @@
 #include "strings.h"
 #include <iostream>
 #include <list>
-extern bool deref, shorten;
+
+using namespace old;
+
 typedef std::nullptr_t null;
 typedef std::shared_ptr<bool> pbool;
 
@@ -28,6 +30,11 @@ using std::endl;
 
 extern std::wostream& dout;
 extern std::wostream& derr;
+
+
+namespace old{
+extern bool deref, shorten;
+
 
 #ifdef JSON
 
@@ -174,4 +181,7 @@ struct jsonld_options {
 	pstring outputForm = 0;
 };
 #endif
+
+}
+
 #endif

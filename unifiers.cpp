@@ -1,5 +1,7 @@
 #include "prover.h"
 
+namespace old{
+
 bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
@@ -257,3 +259,4 @@ bool prover::unify_sdnovar(const term& s, const term& d, subs& dsub) {
 	return unify(s.o, d.o, dsub);
 }
 
+}

@@ -2,7 +2,10 @@
 #include "jsonld.h"
 #include "cli.h"
 
-bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false, irc=false;
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
+
+namespace old {
+
 
 #ifdef JSON
 jsonld_options opts;
@@ -70,5 +73,9 @@ qdb cmd_t::convert ( const string& s ) {
 	qdb r = convert ( load_json ( s ) );
 	return r;
 }
+
 #endif
+
+}
+
 

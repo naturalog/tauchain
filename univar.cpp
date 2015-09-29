@@ -1,9 +1,9 @@
 #include <functional>
 #include <unordered_map>
-#include "prover.h" // namespace "old"
+#include "univar.h"
 
 using namespace std;
-
+using namespace old;
 
 
 /*so it seems we have 3 variants to start with:
@@ -48,16 +48,16 @@ function<bool()> generalunifycoro(Thing*, Thing*);
 class Node:public Thing
 {
 public:
-	old::termid value;
+	old::nodeid value;
 	bool eq(Node *x)
 	{
 		return x->value == value;
 	}
-	Node(old::termid s)
+	Node(old::nodeid s)
 	{
 		value = s;
 	}
-	wstring str(){return *old::dict[value->p].value;}
+	wstring str(){return *old::dict[value].value;}
 };
 
 
@@ -242,12 +242,12 @@ comp seq(comp a, comp b){
 
 
 
-Var* node(old::termid t){
+Var* atom(old::nodeid n){
     Var* r = new Var();
-    if (t->p>0)
+    if (n>0)
     {
 	r->isBound = true;
-	r->value = new Node(t);
+	r->value = new Node(n);
     }
     return r;
 }
@@ -353,9 +353,9 @@ comp rule(old::termid head, old::prover::termset body)
 	for (i = 0; i < body.size(); i++)
 	{
 	    old::termid t = body[i]->s;
-	    vars[t->p] = node(t);
+	    vars[t->p] = atom(t->p);
 	    t = body[i]->o;
-	    vars[t->p] = node(t);
+	    vars[t->p] = atom(t->p);
 	}
 
 
@@ -395,7 +395,7 @@ comp rule(old::termid head, old::prover::termset body)
 
 
 /*writes into preds*/
-void compile_kb(old::prover p)
+void compile_kb(old::prover *p)
 {
     for (auto x: predskb)
     {
@@ -403,7 +403,7 @@ void compile_kb(old::prover p)
 	rulesindex rs = x.second;
 	for (size_t i: rs)
 	{
-	    comp r = rule(p.heads[i], p.bodies[i]);
+	    comp r = rule(p->heads[i], p->bodies[i]);
 	    if(preds.find(k) != preds.end())
 		preds[k] = seq(preds[k], r);
 	    else
@@ -414,144 +414,33 @@ void compile_kb(old::prover p)
 
 
 /*writes into predskb*/
-void gen_pred2rules_map(old::prover p)
+void gen_pred2rules_map(old::prover *p)
 {
     size_t i;
-    for (i = 0; i < p.heads.size(); i++)
+    for (i = 0; i < p->heads.size(); i++)
     {
-	old::nodeid pr = p.heads[i]->p;
+	old::nodeid pr = p->heads[i]->p;
 	auto it = predskb.find(pr);
 	if (it == predskb.end())
-	    predskb[pr] = new rulesindex();
+	    predskb[pr] = rulesindex();
 	predskb[pr].push_back(i);
     }
 }
 
-prover::prover ( old::qdb qkb, bool check_consistency)  {
-    //prover::p
-    p = old::prover(qkb, false);
+yprover::yprover ( old::qdb qkb, bool check_consistency)  {
+    p = new old::prover(qkb, false);
     gen_pred2rules_map(p);
-    compile_kb();
+    compile_kb(p);
 }
 
-void prover::query(const qdb& goal, subs * s){
-    auto g = *goal.first["@default"];//qlist
-    varmap m;
+void yprover::query(const old::qdb& goal, old::subs * s){
+    //auto g = *(goal.first[L"@default"]);//qlist
     //while(join(m, (term(i) for i in g))())
-	while(pred(g[0])())//just one for now
+
+    const old::prover::termset g = p->qdb2termset(goal);
+    varmap m;
+    //just one for now
+    while(pred(g[0]->p)(atom(g[0]->s->p), atom(g[0]->o->p)))
 	for(auto v: m)
-	    cout << v.first.str() << ": " << v.second.str();
+	    wcout << old::dict[v.first].value << L": " << v.second->str();
 };
-
-// we will simply try to use prover as a kb
-// yea im just kinda mulling it over
-// do we need to do work on our classes to integrate to that
-// structure or you already took care of that?
-/*
-well we use stuff like term and termid and nodeid..
-what other structure?
-well this is preliminary, i will see when it compiles if it also links and then its done i guess
-well doesn't ours operate over strings or.. you take the pointers so its the same?
-well....yes it was strings and its nodeids now i think..or termids..still have to think it thru
-its just a hack
-well, maybe since we got the basic structure down and this is mostly
-a big document of notes maybe we should just rewrite it into that
-framework? theres no framework
-hmm, i guess i mean to pull up master and 
-afaik master has : experimental lambdas in prover, unintegrated p.cpp(?),
-and i dunno if anything else (interesting?) it has the whole rest of
-the system of parsing and all that stuff? it's a complete program
-taht we add a part to,
- ambiguous cli is better ok that works :)
-its just a hack...if it doesnt work out we scrap it
-not sure what you mean just a hack
-we have the system in ambiguous_cli with the whoel
-command line, parser, and qdb generator, and that
-qdb works off integer pointers so we should write it
-into the prover.cpp there
-write what what's in this univar.cpp here and what we're going
-to make with the joins
-well we make a new prover class here...whats the matter about what file it
-is in, and also, we will keep the old prover for marpa
-*/
-
-/*ok we can try to continue where we left off yesterday i guessssss
-lets leave it for a bit, i want to consult with naturalog about
-his plans for 'real jit'ok, unless you're gung-ho to get started :)
-well, not immediately but i guess i will want to 
-btw wrt naturalog, he seems to be just reading up on lots of stuff,
-ive read a bit about jitting prolog and im certain hmc has too
-im 100% positive our version is important, and the only other
-meaningful version would be this but native emit; i haven't read
-hardly anything about it, but yea this version is important and i agree
-about native emit
-i dunno if naturalog is collecting resources to help with the native emit
-version or hes just totally lost:) what do you think i think? :) i just
-want to know if he's got anything so far
-hehe i see, from my convo with him yesterday or whenever that was it 
-didnt sound like he had much, if anything; seems to spend most of his
-time reading about stats and watching physics lectures anyway, not bad
-hobbies but they don't make a jit hehe
-ok so then maybe i should consult with HMC on that instead, but...
-i imagine a response along the lines of "where's the current jit?"
-or maybe i should just scrap this whole plan to consult in the 
-first-place lol
-it would be nice if we could actually get naturalog to be working with
-us though.. ever since we started the jit it's felt like a competition
-his fault to begin with, but, i let it get the better of me and
-now me and him are in somewhat of an adversarial relationship it seems,
-or, rival at least.. and that's my fault
-idk, maybe i just feel bad for snapping at him the other day and now
-i'm trying to re-involve him
-*/
-
-
-
-
-
-/*
-stuuff
-
-
-b0s = body[0].s
-if isvar(b0s) vars[b0s] = Variable()...shrug
-comp c1 = compile(body[1])
-c0 = joinwxyz(c0, c1, b0s
-struct jo{
-	comp coro;
-	varmap vars;
-}
-jo jointerms(term a, term b)
-{//this was an attempt at generating joins recursively
-	varmap v;
-	v[a.s] = Variable();
-	v[a.o] = Variable();
-	v[b.s] = Variable();
-	v[b.o] = Variable();
-	
-	comp coro = joinwxyz(fact(a.p), fact(b.p), v[a.s], v[a.o], v[b.s], v[b.o]);
-	return new jo(coro, v);
-	//does jo need a constructor?i dont know
-}//it doesnt seem to do any recursion tho
-jo jointermwithjoin(term a, jo b){
-}
-rulecoro{
-	return [vars  ](Thing *headx, Thing *heady){
-	}
-}
-*/
-
-
-
-
-/*
-comp term(old::termid x)
-{
-    for(auto y:p.heads)
-	if (
-	    y->p == x->p 
-	    && node(y->s).unifcoro(node(x->s))())
-//	    && node(y->s).unifcoro(node(x->s))()	    
-		//add it to the seq
-}
-*/

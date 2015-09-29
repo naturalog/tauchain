@@ -1,9 +1,10 @@
 #ifndef __RDF_DATA__
 #define __RDF_DATA__
 
-#include "json_object.h"
 #include <list>
 #include <set>
+
+#include "json_object.h"
 
 namespace old{
 
@@ -120,8 +121,11 @@ public:
 };
 qlist merge ( const qdb& q );
 
+#endif
+
+
 }
 
-#endif
+
 #endif
 

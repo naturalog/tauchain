@@ -7,11 +7,16 @@
 #include <algorithm>
 #include <memory>
 #include <fstream>
+
 using std::map;
 using std::stringstream;
 using std::shared_ptr;
 using std::make_shared;
 using std::istream;
+
+
+namespace old{
+
 
 typedef uint64_t u64;
 typedef int64_t i64;
@@ -27,6 +32,8 @@ pstring pstr ( const wchar_t* s );
 #else
 #define CL(x)
 #endif
+
+
 
 class wruntime_error : public std::exception {
 	string msg;
@@ -208,5 +215,7 @@ inline pstring gen_bnode_id ( string id = L"" ) {
 
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
 extern int level;
+
+}
 
 #endif

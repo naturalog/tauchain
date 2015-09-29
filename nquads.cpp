@@ -9,6 +9,8 @@
 #include "misc.h"
 using namespace boost::algorithm;
 
+namespace old{
+
 nqparser::nqparser() : t(new wchar_t[4096*4096]) { }
 nqparser::~nqparser() { delete[] t; }
 
@@ -214,5 +216,6 @@ std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operato
 		if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
 	}
 	return { r, qlists };
+}
 }
 #endif

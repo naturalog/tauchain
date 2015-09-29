@@ -1,7 +1,9 @@
 #ifdef JSON
 #include "jsonld.h"
 #include "rdf.h"
+
 #include "json_spirit.h"
+
 
 pobj convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
@@ -1134,4 +1136,6 @@ public:
 	std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );
+
+
 #endif
