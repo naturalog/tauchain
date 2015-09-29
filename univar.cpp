@@ -274,7 +274,7 @@ comp pred(old::nodeid x)
 
 comp joinwxyz(comp a, comp b, Thing w, Thing x, Thing y, Thing z){
     int entry = 0;
-    return [a,b,w,x,y,z,entry](){
+    return [a,b,w,x,y,z,entry]()mutable{
 	switch(entry){
 	    case 0:
 		entry++;
