@@ -5,6 +5,7 @@ lines = []
 for line in sys.stdin:
     n += 1
     if (n > int(sys.argv[1])):
+	print "meh, calling less ===================================================================================================================================================="
 	o = os.popen("less -R", "w")
 	for l in lines:
 	    o.write(l)

@@ -25,12 +25,18 @@ public:
 
 class Var;
 
-typedef vector<size_t> rulesindex;
 typedef function<bool(Thing*,Thing*)> comp;
-typedef function<bool()> join;
-std::unordered_map<old::nodeid, rulesindex> predskb;
-typedef std::unordered_map<old::nodeid, Var*> varmap;
 std::map<old::nodeid, comp> preds;
+
+
+typedef function<bool()> join;
+typedef std::unordered_map<old::nodeid, Var*> varmap;
+
+
+typedef vector<size_t> rulesindex;
+std::unordered_map<old::nodeid, rulesindex> predskb;
+
+function<bool()> generalunifycoro(Thing*, Thing*);
 
 
 
@@ -54,7 +60,6 @@ public:
 	wstring str(){return *old::dict[value->p].value;}
 };
 
-function<bool()> generalunifycoro(Thing*, Thing*);
 
 class Var:public Thing{
 public:
@@ -293,6 +298,39 @@ function<bool()> joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z
 
 
 
+comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
+{
+
+	    Var *s = vars[head->s->p];
+	    Var *o = vars[head->o->p];
+
+	    Var *a = vars[body[0]->s->p];
+	    Var *b = vars[body[0]->o->p];
+	    Var *c = vars[body[1]->s->p];
+	    Var *d = vars[body[1]->o->p];
+
+	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+
+	    int entry=0;
+	    // proxy coro that unifies s and o with s and o vars
+	    return [ entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
+	    {
+		switch(entry)
+		{
+		    case 0:
+			entry++;
+	    		s->unifcoro(Ds)();
+			o->unifcoro(Do)();
+			while( c0())//call the join
+			{
+	    		    return true;
+		    case 1:;
+			}
+		}
+		return false;
+	    };
+}
+
 
 
 
@@ -334,46 +372,20 @@ comp rule(old::termid head, old::prover::termset body)
 	}
 	else if(body.size() == 2)
 	{
-	    Var *s = vars[head->s->p];
-	    Var *o = vars[head->o->p];
-
-	    Var *a = vars[body[0]->s->p];
-	    Var *b = vars[body[0]->o->p];
-	    Var *c = vars[body[1]->s->p];
-	    Var *d = vars[body[1]->o->p];
-
-	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
-
-	    int entry;
-	    //pred proxy coro that unifies s and o with s and o vars
-	    return [ entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
-	    {
-		switch(entry)
-		{
-		    case 0:
-			entry++;
-	    		s->unifcoro(Ds)();
-			o->unifcoro(Do)();
-			while( c0())//call the join
-			{
-	    		    return true;
-		    case 1:;
-			}
-		}
-		return false;
-	    };
+	    return ruleproxy(vars, head, body);
 	}
-	else if(body.size() > 2){/*todo
+	else if(body.size() > 2){
+	    /*todo
     	    int k = body.size()-2;
 
 	    //i guess should just have joinwxyz as compile(term,term)
 	    //seems reasonable//or not
 
 	    comp c0 = joinwxyz(pred(body[k]),pred(body[k+1]));
-	    while(k > 0){
+	    while(k > 0)
 	        c0 = halfjoin(pred(body[k]),c0);
 	        k--;
-	    */}
+	    */
 	    assert("explosion happened");
 	}else{
 	    //???? ???:)
@@ -382,33 +394,34 @@ comp rule(old::termid head, old::prover::termset body)
 }
 
 
-
-void compile_kb(old::prover::kb kb)
+/*writes into preds*/
+void compile_kb(old::prover p)
 {
-    for (auto x: predkb)
+    for (auto x: predskb)
     {
-	nodeid k = x.first;
+	old::nodeid k = x.first;
 	rulesindex rs = x.second;
 	for (size_t i: rs)
 	{
-	    comp r = rule(kb.bodies[i]);
-	    if(preds.has(k))
+	    comp r = rule(p.heads[i], p.bodies[i]);
+	    if(preds.find(k) != preds.end())
 		preds[k] = seq(preds[k], r);
 	    else
-		rules[k] = r;
+		preds[k] = r;
 	}
     }
 }
 
 
-
-void gen_pred2rules_map(prover p)
+/*writes into predskb*/
+void gen_pred2rules_map(old::prover p)
 {
-    for (i = 0; i < p.kb.heads.size(); i++)
+    size_t i;
+    for (i = 0; i < p.heads.size(); i++)
     {
-	nodeid pr = p.kb.heads[i]->p;
+	old::nodeid pr = p.heads[i]->p;
 	auto it = predskb.find(pr);
-	if it == predskb.end()
+	if (it == predskb.end())
 	    predskb[pr] = new rulesindex();
 	predskb[pr].push_back(i);
     }
@@ -417,7 +430,7 @@ void gen_pred2rules_map(prover p)
 prover::prover ( old::qdb qkb, bool check_consistency)  {
     //prover::p
     p = old::prover(qkb, false);
-    size_t i;
+    gen_pred2rules_map(p);
     compile_kb();
 }
 
