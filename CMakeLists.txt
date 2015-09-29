@@ -26,6 +26,8 @@ set(SOURCE_FILES
     rdf.h
     strings.h
     tau.cpp
+    univar.cpp
+    univar.h
 )
 
 set(MARPA_FILES ${SOURCE_FILES} marpa_tau.cpp)
@@ -37,7 +39,7 @@ add_executable(tau ${SOURCE_FILES})
 add_executable(m-tau ${MARPA_FILES})
 add_executable(m-tau3 ${MARPA_FILES})
 
-set(COMMON_FLAGS "-DJSON -I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS} -g -ggdb")# -DPREDVARS")
+set(COMMON_FLAGS "-I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS} -g -ggdb")# -DPREDVARS")
 
 SET_TARGET_PROPERTIES(tau   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}  -DDEBUG -O0" )
 SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -I${MARPA_DIST} -Dwith_marpa  -DDEBUG -O0")

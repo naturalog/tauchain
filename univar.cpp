@@ -254,10 +254,12 @@ Var* atom(old::nodeid n){
 
 comp pred(old::nodeid x)
 {
+	dout << "constructing pred for nodeid " << x << endl;
 	int entry = 0;
 
 	//this looks up and proxies a pred
 	return [entry, x](Thing *Ds, Thing *Do)mutable{
+		dout << "im in ur pred, entry: " << entry << endl;
 		comp z;
 		switch(entry)
 		{
@@ -266,7 +268,8 @@ comp pred(old::nodeid x)
 			    z = preds[x];
 			    while(z(Ds, Do))
 			    {
-				return true;
+					dout << "pred coro success" << endl;
+					return true;
 			case 1:;
 			    }
 			    entry++;
@@ -443,7 +446,16 @@ void yprover::query(const old::qdb& goal, old::subs * s){
     const old::prover::termset g = p->qdb2termset(goal);
     varmap m;
     //just one for now
-    while(pred(g[0]->p)(atom(g[0]->s->p), atom(g[0]->o->p)))
-	for(auto v: m)
-	    wcout << old::dict[v.first].value << L": " << v.second->str();
+	old::nodeid pr = g[0]->p;
+	if (preds.find(pr) != preds.end()) {
+		auto as = atom(g[0]->s->p);
+		auto ao = atom(g[0]->o->p);
+		dout << "query 1" << endl;
+		while (pred(p)(as, ao)) {
+			wcout << L"results:";
+			for (auto v: m)
+				wcout << old::dict[v.first].value << L": " << v.second->str();
+			wcout << endl;
+		}
+	}
 };
