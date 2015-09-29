@@ -28,6 +28,7 @@ public:
 	vector(const vector<T, ispod>& t) : a(0),n(0),c(0),m(*this) { copyfrom(t); }
 	vec_t& operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
 	T operator[](size_t k) const 		{ return a[k]; }
+	T& operator[](size_t k) 		{ return a[k]; }
 	size_t size() const			{ return n; }
 	T* begin() const			{ return a; }
 	T* end() const				{ return n ? &a[n] : 0; }
@@ -112,10 +113,10 @@ class bidict {
 	map<resid, string, false> ip;
 	map<string, resid, false> pi;
 public:
-	resid set ( string v ) {
+	resid set(string v) {
 		if (!v.size()) throw "bidict::set called with a node containing null value";
 		map<string, resid, false>::iterator it = pi.find ( v );
-		if ( it ) return it->second;
+		if (it) return it->second;
 		resid k = pi.size() + 1;
 		static int lastres = -1, lastvar = 1;
 		if ( v[0] != L'?' ) k = lastres--;
@@ -614,25 +615,290 @@ void prove(pframe _p, pframe& lastp) {
 	}
 }
 */
+/*
+void emit(term* h) {
+	if (h->p < 0) // nonvar
+		dout << "t->p < 0 ? t->p == "<<h->p"<< : env[t->p] ? env[t->p] > 0 ? true : env[t->p] == "<<h->p"<< : true";
+}
+
+struct frame {
+	int p, h, b, *v;
+	frame* prev;
+} *frames;
+
+void *fp;
+int nf;
+
+pop frame
+if frame.b=end push clone prev newframe.b++;
+else {
+
+	for each head matching frame.b under frame.env:
+		push frame frame.b newenv
+	
+}
+
+struct atom {
+	int64_t islist:1;
+	union {
+		struct {
+			int64_t isvar:1;
+			int64_t p:62;
+		};
+		atom *list;
+	};
+};
+
+F[h0,b,h1|e0] -> F[h1,b,h2|e0+e1]
+F[h0,b|e0] -> F[h1,b|e0+e1]
+F[e0] -> F[e0+e1]
+
+struct frame {
+	int h, b, *env;
+	frame* prev;
+	frame(frame* _prev, int _h, int _b, int* _env, int* e1 = 0, int *e2 = 0, int *e3 = 0, int *e4 = 0)
+       	: prev(_prev), h(_h), b(_b) {
+		if (!_env) { env = 0; return; }
+		size_t _s = *_env, s = _s;
+		if (e1) {
+			++++s;
+			if (e3) ++++s;
+		}
+		*(env = memcpy(_env, new int[s], _s * sizeof(int))) = s;
+		if (e1) {
+			env[_s] = *e1, env[_s+1] = *e2;
+			if (e3) env[_s+2] = *e3, env[_s+3] = *e4;
+		}
+	}
+	static int last, hsz, *bsz, *gnd;
+
+	map<int, map<int, map<int, std::function<void(frame*)>>>> funcs;
+
+	void step(frame* f) {
+		funcs[h][b](f);
+	}
+}
+
+
+struct term {
+	atom p, s, o;
+};
+
+struct frame {
+	frame* prev;
+	uint h, b;
+	term *env, *curr; // never derefed
+	char trail;
+} *f_base, *f_curr, *f_last;
+
+struct head {
+	void process() {
+		if (env[4] == env[5] && env[9] == 3)
+		       *(++f_last) = { f_curr, cond1.h, 0, env, curr, cond1.trail };
+	}
+};
+
+typename<T>
+struct sa_code {
+	typedef std::queue<T*> q_t;
+	struct worker { virtual operator()(q_t&) = 0; } &w;
+	q_t q;
+	sa_code(worker* _w) : w(*_w) {}
+	void operator()() {
+		while (!q.empty()) {
+			w(q);
+			q.pop();
+		}
+	}
+};
+
+struct subgoal {
+	uint trail;
+	static term* env;
+	
+};
+
+void step() {
+	int p = *fp++;
+	int h = *fp++;
+	int b = *fp++;
+	int *v = *fp++;
+	int prev = *fp++;
+	++nf;
+	heads = rules[p];
+	body = heads[h];
+	if (body.size() == b) {
+	}
+	term t = body[b];
+	int *v1, i;
+	for (i = 0; i < heads.size(); ++i) {
+		goto heads[i];
+	loop:	;
+	}
+		
+heads[i]:	if !(t,x,v) goto loop;
+		push(x.p, x.h, 0, v1, this)
+		push(x.p, x.h, 1, v1, this)
+		push(x.p, x.h, 2, v1, this)
+		push(x.p, x.h, ..., v1, this)
+		goto loop;
+}
+
+struct pred {
+	struct head {
+	} *heads;
+} preds;
+
+
+typedef uint64_t u64;
+u64 vars[], bnodes[], literals[];
+struct term *bnodes;
+struct term {
+	enum etype { IRI, VAR, LIT, BNODE };
+	struct res {
+		u64 tag:2
+		u64 id:41;
+		bool operator==(const res& r) const {
+			if (tag == VAR || r.tag == VAR) return true;
+			if (tag != r.tag) return false;
+			if (tag == BNODE) return bnodes[id] == bnodes[r.id];
+			return id == tag.id;
+		}
+	} s, o;
+	u64 p:41;
+	void emit(bool f) {
+		switch (s.tag) {
+		case IRI:
+		case LIT:
+		case BNODE:
+		case VAR:
+		}
+	}
+};
+
+
+#define iri_iri(x, y) ((x) == (y))
+#define iri_lit(x, y) false
+#define lit_iri(x, y) false
+#define iri_bnode(x, y) false
+#define bnode_iri(x, y) false
+
+#define iri_var(x, v) (!vars[v.id] || ((x) == vars[(v).id]))
+#define iri_var_s(x, v) (vars[v.id] ? ((x) == vars[(v).id]) : (x = vars[(v).id], true) )
+#define var_iri(v, x) iri_var(x, v)
+#define var_iri_s(v, x) iri_var_s(x, v)
+
+#define unif(x, y) \
+	((x).tag == term::IRI) ? \
+		((y).tag == term::IRI) ? iri_iri(x,y) : \
+		((y).tag == term::VAR) ? iri_var(x,y) : false : \
+	((x).tag == term::BNODE && ((y).tag == term::BNODE)) ? bnode_bnode(x,y) : \
+	((x).tag == term::LIT && ((y).tag == term::LIT)) ? lit_lit(x,y) : \
+
+
+
+unifier(term t) {
+
+}
+*/
+typedef map<int, term*, true> condset;
+
+bool put(int p, term* t, condset& c) {
+	static condset::iterator i;
+	return ((i = c.find(p)) == c.end()) ? (c[p] = t), true : (i->second == t);
+}
+
+bool mkconds(term* h, term* b, condset& c) {
+	size_t s = h->args.size();
+	if (s != b->args.size()) return false;
+	if (h->p < 0) {
+		if (b->p < 0) {
+			if (h->p != b->p) return false;
+		}
+		else if (!put(b->p, h, c))
+			return false;
+	} else if (!put(h->p, b, c))
+		return false;
+	for (size_t n = 0; n < s; ++n)
+		if (!mkconds(h->args[n], b->args[n], c))
+			return false;
+	return true;
+}
+
+map<int, map<int, std::function<void(struct frame*)>, false>, false> conds;
+
+struct frame {
+	size_t h, b;
+	frame* prev;
+	termset env;
+	void run() { conds[h][b](this); }
+};
+
+void run(termset& heads) {
+	const size_t max_frames = 1e+6;
+	frame* last = new frame[max_frames];
+	for (size_t n = 0; n < heads.size(); ++n)
+		for (size_t k = 0; k < heads[n]->body.size(); ++k) {
+			map<int, condset, false> cs;
+			for (size_t m = 0; m < heads.size(); ++m) {
+				map<int, term*,true> c;
+				term *b = heads[n]->body[m], *h = heads[m];
+				if (mkconds(h, b, c))
+					cs[m] = c;
+			}
+		       	conds[n][k] = [cs, n, k, last](frame* f) mutable {
+				if (f->h != n && f->b != k) throw 0;
+				for (auto x : cs) {
+					bool b = true;
+					for (auto y : x.second) {
+						int p = y.first;
+						term *s = y.second;
+						if (f->env[p]) {
+							if (f->env[p] != s) {
+								b = false;
+								break;
+							}
+						} else
+							last->env[p] = s;
+					}
+					if (b) {
+						last->h = x.first, last->b = 0, last->prev = f;
+						for (size_t z = 0; z < f->env.size(); ++z)
+							if (f->env[z])
+								last->env[z] = f->env[z];
+						++last;
+					}
+				}
+			};
+		}
+	vector<size_t> q;
+	for (size_t n = 0; n < heads.size(); ++n)
+		if (!heads[n]->p)
+			q.push_back(n);
+	for (size_t n = 0; n < q.size(); ++n)
+		last[n].h = q[n];
+	while (last) last++->run();
+}
+
 int main() {
 	termset kb = nqparser::readterms(din);
 	termset query = nqparser::readterms(din);
 	term* q = mkterm(query);
 	kb.push_back(q);
-	compile(kb);
-	for (uint n = 0; n < rules.size(); ++n)
-		for (uint k = 0; k < rules[n].size(); ++k)
-			for (uint m = 0; m < rules[n][k].size(); ++m)
-				dout << "int _" <<n << '_' << k << '_' << m << "(int* env, bool f) { ",
-				rules[n][k][m](), dout << " }" << endl;
-	int n = 0;
+	run(kb);
+//	compile(kb);
+//	for (uint n = 0; n < rules.size(); ++n)
+//		for (uint k = 0; k < rules[n].size(); ++k)
+//			for (uint m = 0; m < rules[n][k].size(); ++m)
+//				dout << "int _" <<n << '_' << k << '_' << m << "(int* env, bool f) { ",
+//				rules[n][k][m](), dout << " }" << endl;
 //	auto r = frame(rules.size()-1)();
 //	dout << r.size() << endl;
 //	for (frame* f : r) (*f)();
 	
 //	vector<frame*> f = frame()();
 //	TRACE(
-//	dout << "kb:" << endl << format(kb) << endl;
+	dout << "kb:" << endl << format(kb) << endl;
 
 	// create the initial frame with the query term as the frame's rule
 //	pframe p(new frame(pframe(), q, 1, pframe(), subs())), lp = 0;
