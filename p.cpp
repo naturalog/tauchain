@@ -828,8 +828,8 @@ bool mkconds(term* h, term* b, condset& c) {
 map<int, map<int, std::function<void(struct frame*)>, false>, false> conds;
 
 struct frame {
-	size_t h, b;
-	frame* prev;
+	size_t h = 0, b = 0;
+	frame* prev = 0;
 	termset env;
 	void run() { conds[h][b](this); }
 };
@@ -877,7 +877,7 @@ void run(termset& heads) {
 			q.push_back(n);
 	for (size_t n = 0; n < q.size(); ++n)
 		last[n].h = q[n];
-	while (last) last++->run();
+	while (last->h) last++->run();
 }
 
 int main() {
