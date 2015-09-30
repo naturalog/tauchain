@@ -106,7 +106,7 @@ public:
 					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << endl);
 					switch(entry){
 						case 0:
-							value = argv;//??? // like, this.value?
+							//value = argv;//??? // like, this.value?
 					                entry = 1;
 							return true;
 						default:
@@ -114,6 +114,7 @@ public:
 							return false;
 	
 					}
+					
 				};
 			}
 			else
@@ -304,9 +305,9 @@ comp pred(old::nodeid x)
 			//23 is the 'a' pred-function
 			//we only have 'a' and 'not-a' in the kb right?i guess 
 			//yea don't see anything wrong off the bat here ok cool
-			    while((dout << "calling hopefully x:" << old::dict[x] << endl),z(Ds, Do))
+			    while(((dout << old::indent() << "calling hopefully x:" << old::dict[x] << endl)),z(Ds, Do))
 			    {
-					dout << "pred coro success" << endl;
+					TRACE(dout << "pred coro for " <<  old::dict[x] << " success" << endl;)
 					return true;
 			case 1:;
 			    }

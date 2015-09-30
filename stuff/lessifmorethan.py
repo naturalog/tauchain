@@ -1,22 +1,29 @@
 #!/usr/bin/env python
 import sys, os
-newin = os.fdopen(sys.stdin.fileno(), 'r', 1)
-sys.stdin = newin
+#newin = os.fdopen(sys.stdin.fileno(), 'r', 1)
+#sys.stdin = newin
 n = 0
 lines = []
-for line in sys.stdin:
+while True:
+    line = sys.stdin.readline()
+    if not line: break # EOF
+    lines.append(line)
     n += 1
     if (n > int(sys.argv[1])):
 	print "meh, calling less ===================================================================================================================================================="
 	o = os.popen("less -R", "w")
+	print "-----------"
 	for l in lines:
+	    print "X"
 	    o.write(l)
-	for line in sys.stdin:
+	while True:
+	    print "Y"
+	    line = sys.stdin.readline()
+	    if not line: break # EOF
 	    o.write(line)
 	exit()
 
     sys.stdout.write(line)
-    lines.append(line)
 
 
 
