@@ -463,8 +463,12 @@ void run(termset& heads) {
 			for (size_t m = 0; m < heads.size(); ++m) {
 				map<int, term*,true> c;
 				term *b = heads[n]->body[k], *h = heads[m];
-				if (mkconds(h, b, c))
+				if (mkconds(h, b, c)) {
+					dout << "conds for body " << format(b) << " vs head " << format(h) << " are: ";
+					for (auto x : c) dout << dict[x.first] << '=' << format(x.second) << ';';
+					dout << endl;
 					cs[m] = c;
+				}
 			}
 		       	conds[n][k] = [cs, n, k, last](frame* f) mutable {
 				if (f->h != n && f->b != k) throw 0;
