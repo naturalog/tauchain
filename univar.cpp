@@ -233,7 +233,9 @@ comp fact(Thing *s, Thing *o){
 		case 1: ;
 				}
 			}
+			entry++;
 		default:
+			entry = 0;
 			return false;
 		}
 	};
@@ -323,6 +325,7 @@ join joinOne(comp a, Thing* w, Thing *x){
 		case 1: ;
 			}
 		}
+		entry = 0;
 		return false;
 	};
 }
@@ -337,16 +340,16 @@ join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
 	TRACE(dout << "im in ur join, entry: " << entry << endl);
 	switch(entry){
 		case 0:
-		entry++;
-		while(a(w,x)){
-			while(b(y,z)){
-			return true;
+			entry++;
+			while(a(w,x)) {
+				while (b(y, z)) {
+					return true;
 		case 1:;
+				}
 			}
+			entry = 0;
+			return false;
 		}
-		entry++;
-	}
-	return false;
 	};
 }
 //actually maybe only the join combinators need to do a lookup
@@ -363,20 +366,20 @@ comp joinproxy(join c0, Var* s, Var* o){
 		switch(entry)
 		{
 			case 0:
+				entry++;
 				suc = s->unifcoro(Ds);
 				ouc = o->unifcoro(Do);
 				while(suc()) {
 					while (ouc()) {
 						while (c0()) {
-							entry++;
 							return true;
-							case 1:;
+			case 1:;
 						}
 					}
 				}
-				entry++;
+				entry = 0;
+				return false;
 		}
-		return false;
 	};
 }
 
@@ -394,14 +397,15 @@ join halfjoin(comp a, Var* w, Var* x, join b){
 			}
 			entry++;
 		}
+		entry = 0;
 		return false;
 	};
 }
 
-comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
+comp ruleproxyTwo(varmap vars, old::termid head, old::prover::termset body)
 {/*case for two body items*/
-		setproc(L"comp ruleproxy");
-		TRACE(dout << "compiling ruleproxy" << endl);
+		setproc(L"comp ruleproxyTwo");
+		TRACE(dout << "compiling ruleproxyTwo" << endl);
 
 		Var *s = vars[head->s->p];
 		Var *o = vars[head->o->p];
@@ -420,8 +424,8 @@ comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
 
 comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 
-		setproc(L"comp ruleproxy");
-		TRACE(dout << "compiling ruleproxy" << endl);
+		setproc(L"comp ruleproxyTwo");
+		TRACE(dout << "compiling ruleproxyTwo" << endl);
 
 		Var *s = vars[head->s->p];
 		Var *o = vars[head->o->p];
@@ -448,8 +452,6 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		Var *c = vars[body[k+1]->s->p];
 		Var *d = vars[body[k+1]->o->p];
 		
-//found ya :)
-//i guess we need 2 more ruleproxy's for the other 2 cases
 		join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
 		for(int i = k-1; i >= 0; i--){
 		Var *vs = vars[body[i]->s->p];
@@ -492,7 +494,7 @@ comp rule(old::termid head, old::prover::termset body)
 	}
 	else if(body.size() == 2)
 	{
-		return ruleproxy(vars, head, body);
+		return ruleproxyTwo(vars, head, body);
 	}
 	else if(body.size() > 2)
 	{
@@ -588,6 +590,12 @@ void yprover::query(const old::qdb& goal){
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
+
+	vector<function<void()>> zzz;
+	int xxx;
+	auto a = [xxx, zzz]()mutable{xxx++; dout << xxx << endl; zzz[0]();};
+	zzz.push_back(a);
+	a();
 }
 
 //i think i've got most of it, anything you wanted to show me?
