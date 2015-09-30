@@ -36,6 +36,8 @@ typedef std::unordered_map<old::nodeid, Var*> varmap;
 typedef vector<size_t> rulesindex;
 std::unordered_map<old::nodeid, rulesindex> predskb;
 
+
+
 function<bool()> generalunifycoro(Thing*, Thing*);
 
 
@@ -48,7 +50,7 @@ function<bool()> generalunifycoro(Thing*, Thing*);
 class Node:public Thing
 {
 public:
-	old::nodeid value;
+	old::nodeid value;//hmm
 	bool eq(Node *x)
 	{
 		return x->value == value;
@@ -172,7 +174,7 @@ function<bool()> generalunifycoro(Thing *a, Thing *b){
 	a = a->getValue();
 	b = b->getValue();
 	//cout << "v " << a << " " << b << endl;
-
+	//Ohad was complaining about this, any thoughts about that?that its fine
 	Var *a_var = dynamic_cast<Var*>(a);
 	//cout << "a_var" << a_var << endl;
 	if (a_var)
@@ -201,6 +203,8 @@ comp fact(Thing *s, Thing *o){
 	function<bool()> c1;
 	function<bool()> c2;
 	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
+		dout << "im in ur fact,  entry: " << entry << endl;
+
 		switch(entry){
 		case 0:
 		 c1 = generalunifycoro(Ds,s);
@@ -221,6 +225,8 @@ comp fact(Thing *s, Thing *o){
 comp seq(comp a, comp b){
 	int entry = 0;
 	return [a, b, entry](Thing *Ds, Thing *Do) mutable{	
+		dout << "im in ur seq, entry: " << entry << endl;
+
 		switch(entry){
 		case 0:
 			while(a(Ds, Do)){
@@ -241,7 +247,7 @@ comp seq(comp a, comp b){
 }
 
 
-
+//This was called something else before? node, clashed with old namespace gotcha
 Var* atom(old::nodeid n){
     Var* r = new Var();
     if (n>0)
@@ -252,20 +258,26 @@ Var* atom(old::nodeid n){
     return r;
 }
 
+//this one seems new and not right
+//any not right parts in particular?
 comp pred(old::nodeid x)
 {
 	dout << "constructing pred for nodeid " << x << endl;
 	int entry = 0;
-
+	comp z;
 	//this looks up and proxies a pred
-	return [entry, x](Thing *Ds, Thing *Do)mutable{
+	//we capture in the key
+	return [entry, z, x](Thing *Ds, Thing *Do)mutable{
 		dout << "im in ur pred, entry: " << entry << endl;
-		comp z;
+		
 		switch(entry)
 		{
 			case 0:
 			    entry++;
+			//and lookup the comp from the key
 			    z = preds[x];
+			//looks right to me, what am i missing? looks right on a second thought to me too
+			//yea don't see anything wrong off the bat here ok cool
 			    while(z(Ds, Do))
 			    {
 					dout << "pred coro success" << endl;
@@ -282,8 +294,10 @@ comp pred(old::nodeid x)
 
 
 function<bool()> joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
+    dout << "making a join" << endl;
     int entry = 0;
     return [a,b,w,x,y,z,entry]()mutable{
+	dout << "im in ur join, entry: " << entry << endl;
 	switch(entry){
 	    case 0:
 		entry++;
@@ -302,7 +316,8 @@ function<bool()> joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z
 
 
 comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
-{
+{/*case for two body items*/
+	    dout << "compiling ruleproxy" << endl;
 
 	    Var *s = vars[head->s->p];
 	    Var *o = vars[head->o->p];
@@ -318,6 +333,7 @@ comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
 	    // proxy coro that unifies s and o with s and o vars
 	    return [ entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
 	    {
+		dout << "im in ur ruleproxy, entry=" << entry << endl;
 		switch(entry)
 		{
 		    case 0:
@@ -339,7 +355,7 @@ comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
 
 comp rule(old::termid head, old::prover::termset body)
 {
-	dout << "rule " << endl;;//head << " " << body << endl; 
+	dout << "compiling rule " << endl;;//head << " " << body << endl; 
 	varmap vars;
 
 	//hrmm
@@ -398,6 +414,9 @@ comp rule(old::termid head, old::prover::termset body)
 
 
 /*writes into preds*/
+//ok so by the time we get here, we'll already have
+//predskb, a map from preds to a vector of indexes of rules with that pred
+//rules with that pred in the rule-head or anywhere in the rule?head
 void compile_kb(old::prover *p)
 {
     dout << "compile" << endl;
@@ -405,7 +424,7 @@ void compile_kb(old::prover *p)
     {
 	old::nodeid k = x.first;
 	rulesindex rs = x.second;
-	for (size_t i: rs)
+	for (size_t i: rs) // for each rule with the pred
 	{
 	    comp r = rule(p->heads[i], p->bodies[i]);
 	    if(preds.find(k) != preds.end())
@@ -415,9 +434,10 @@ void compile_kb(old::prover *p)
 	}
     }
 }
-
+//on your comp do you see what line we're on?426
 
 /*writes into predskb*/
+//i see
 void gen_pred2rules_map(old::prover *p)
 {
     dout << "gen predskb" << endl;
@@ -432,7 +452,9 @@ void gen_pred2rules_map(old::prover *p)
     }
 }
 
-yprover::yprover ( old::qdb qkb, bool check_consistency)  {
+//namespace issue here? well, not an issue here, i put the whole old codebase into "old"..
+///so why the 'y'? oh..yeah..i then added using namespace old so yeah
+yprover::yprover ( qdb qkb, bool check_consistency)  {
     dout << "constructing old prover" << endl;
     p = new old::prover(qkb, false);
     gen_pred2rules_map(p);
@@ -440,22 +462,23 @@ yprover::yprover ( old::qdb qkb, bool check_consistency)  {
 }
 
 void yprover::query(const old::qdb& goal, old::subs * s){
-    //auto g = *(goal.first[L"@default"]);//qlist
-    //while(join(m, (term(i) for i in g))())
     dout << "query" << endl;
     const old::prover::termset g = p->qdb2termset(goal);
-    varmap m;
-    //just one for now
+  
 	old::nodeid pr = g[0]->p;
 	if (preds.find(pr) != preds.end()) {
 		auto as = atom(g[0]->s->p);
 		auto ao = atom(g[0]->o->p);
 		dout << "query 1" << endl;
-		while (pred(p)(as, ao)) {
+		auto coro = pred(pr);
+		while (coro(as, ao)) {//this is weird, passing the args over and over
 			wcout << L"results:";
-			for (auto v: m)
-				wcout << old::dict[v.first].value << L": " << v.second->str();
+			wcout << old::dict[g[0]->s->p] << L": ";//well, here we will need to follow the chain of var bindings anyway...
+			//so it will be more complex <<  old::dict[as->value].value;//maybe
 			wcout << endl;
 		}
 	}
 };
+
+//i think i've got most of it, anything you wanted to show me?
+//well, i think this is all from me, its yours:)

@@ -13,6 +13,9 @@ for line in sys.stdin:
 	    o.write(line)
 	exit()
 
-    print line	    
-    #sys.stdout.write(line)
+    sys.stdout.write(line)
     lines.append(line)
+
+
+
+#i guess our input just decides to not be line-buffered since its connected to a pipe, not terminal...so the output is delayed..:|
