@@ -1,0 +1,3 @@
+:socrates :a :man .
+:socrates :not_a :superman .
+{ ?x :a :man. ?x :not_a :superman } => { ?x :a :mortal } .

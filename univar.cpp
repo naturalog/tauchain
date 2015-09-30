@@ -107,14 +107,12 @@ public:
 					switch(entry){
 						case 0:
 							//value = argv;//??? // like, this.value?
-					                entry = 1;
+							entry = 1;
 							return true;
 						default:
-							entry = 0;
+							entry = 0;//?
 							return false;
-	
 					}
-					
 				};
 			}
 			else
@@ -128,7 +126,7 @@ public:
 
 					switch(entry)
 					{
-					    
+
 
 						case 0:
 							isBound = true;
@@ -136,8 +134,6 @@ public:
 							TRACE(dout << "binding " << this << " to " << value << endl);
 							entry = 1;
 							return true;
-						case 1:
-							
 						default:
 							TRACE(dout << "unbinding " << this << endl);
 							isBound = false;
@@ -162,30 +158,32 @@ bool fail()
 	return false;
 }
 
+//yield once
 function<bool()> succeed()
-{//yield once
-    int entry = 0;
-    return [entry]() mutable{
-    switch(entry){
-          case 0:
-    	      	entry = 1;
-        	return true;
-          default:
-                return false;
-	}
-    };
+{
+	int entry = 0;
+	return [entry]() mutable{
+		switch(entry)
+		{
+			case 0:
+				entry = 1;
+				return true;
+			default:
+				return false;
+		}
+	};
 }
 
 
 
 /*
-    # If arg1 or arg2 is an object with a unify method (such as Variable or^M
-    # Functor) then just call its unify with the other argument.  The object's^M
-    # unify method will bind the values or check for equals as needed.^M
-    # Otherwise, both arguments are "normal" (atomic) values so if they^M
-    # are equal then succeed (yield once), else fail (don't yield).^M
-    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
-    (returns an iterator)
+	# If arg1 or arg2 is an object with a unify method (such as Variable or^M
+	# Functor) then just call its unify with the other argument.  The object's^M
+	# unify method will bind the values or check for equals as needed.^M
+	# Otherwise, both arguments are "normal" (atomic) values so if they^M
+	# are equal then succeed (yield once), else fail (don't yield).^M
+	# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
+	(returns an iterator)
 */
 function<bool()> generalunifycoro(Thing *a, Thing *b){
 	//cout << "u " << a << " " << b << endl;
@@ -198,8 +196,8 @@ function<bool()> generalunifycoro(Thing *a, Thing *b){
 	if (a_var)
 		return a_var->unifcoro(b);
 	Var *b_var = dynamic_cast<Var*>(b);
-        if (b_var)
-                return b_var->unifcoro(a);
+		if (b_var)
+				return b_var->unifcoro(a);
 	//# Arguments are "normal" types.
 	Node *n1 = dynamic_cast<Node*>(a);
 	Node *n2 = dynamic_cast<Node*>(b);
@@ -226,8 +224,8 @@ comp fact(Thing *s, Thing *o){
 
 		switch(entry){
 		case 0:
-		 c1 = generalunifycoro(Ds,s);
-		 c2 = generalunifycoro(Do,o);
+			c1 = generalunifycoro(Ds,s);
+			c2 = generalunifycoro(Do,o);
 			while(c1()){
 				while(c2()){
 					entry = 1;
@@ -269,49 +267,46 @@ comp seq(comp a, comp b){
 
 //This was called something else before? node, clashed with old namespace gotcha
 Var* atom(old::nodeid n){
-    Var* r = new Var();
-    if (n>0)
-    {
+	Var* r = new Var();
+	if (n>0)
+	{
 	r->isBound = true;
 	r->value = new Node(n);
-    }
-    return r;
+	}
+	return r;
 }
 
-//this one seems new and not right
-//any not right parts in particular?
+
+//this looks up and proxies a pred
+//we capture in the lambda the key into preds[]
 comp pred(old::nodeid x)
 {
 	setproc(L"comp pred");
-	TRACE(dout << "constructing pred for nodeid " << x << endl);
+	TRACE(dout << "constructing pred proxy for nodeid " << x << endl);
 	int entry = 0;
 	comp z;
-	//this looks up and proxies a pred
-	//we capture in the key
-	//this function, which would go and 
 	return [entry, z, x](Thing *Ds, Thing *Do)mutable{
 		setproc(L"pred lambda");
-		dout << "im in ur pred proxy for nodeid " << x << ", entry: " << entry << endl;
+		TRACE(dout << "im in ur pred proxy for nodeid " << x << ", entry: " << entry << endl;)
 		
 		switch(entry)
 		{
 			case 0:
-			    entry++;
-			//ah, the problem is this is the function it's looking up :)?
-			//preds[x] would beok
-			//and lookup the compok from the key
-			    z = preds[x];
-			//looks right to me, what am i missing? looks right on a second thought to me too
-			//23 is the 'a' pred-function
-			//we only have 'a' and 'not-a' in the kb right?i guess 
-			//yea don't see anything wrong off the bat here ok cool
-			    while(((dout << old::indent() << "calling hopefully x:" << old::dict[x] << endl)),z(Ds, Do))
-			    {
+				entry++;
+				z = preds[x];
+				bool r;
+				while(true)
+				{
+					TRACE((dout << old::indent() << "calling hopefully x:" << old::dict[x] << endl))
+					r = z(Ds, Do);
+					if (! r) goto out;
 					TRACE(dout << "pred coro for " <<  old::dict[x] << " success" << endl;)
 					return true;
 			case 1:;
-			    }
-			    entry++;
+
+				}
+				out:;
+				entry++;
 		}
 		return false;
 	};
@@ -334,50 +329,55 @@ join joinOne(comp a, Thing* w, Thing *x){
 
 
 join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
-    setproc(L"joinwxyz");
-    TRACE(dout << "making a join" << endl);
-    int entry = 0;
-    return [a,b,w,x,y,z,entry]()mutable{
+	setproc(L"joinwxyz");
+	TRACE(dout << "making a join" << endl);
+	int entry = 0;
+	return [a,b,w,x,y,z,entry]()mutable{
 	setproc(L"join lambda");
 	TRACE(dout << "im in ur join, entry: " << entry << endl);
 	switch(entry){
-	    case 0:
+		case 0:
 		entry++;
 		while(a(w,x)){
-		    while(b(y,z)){
+			while(b(y,z)){
 			return true;
-	    case 1:;
-		    }
+		case 1:;
+			}
 		}
+		entry++;
 	}
 	return false;
-    };
+	};
 }
 //actually maybe only the join combinators need to do a lookup
 
 
 comp joinproxy(join c0, Var* s, Var* o){
-
-	    int entry=0;
-	    // proxy coro that unifies s and o with s and o vars
-	    return [ entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
-	    {
-		setproc(L"ruleproxy lambda");
-		TRACE(dout << "im in ur ruleproxy, entry=" << entry << endl);
+	int entry=0;
+	// proxy coro that unifies s and o with s and o vars
+	function<bool()> suc, ouc;
+	return [ suc, ouc, entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
+	{
+		setproc(L"joinproxy lambda");
+		TRACE(dout << "im in ur joinproxy, entry=" << entry << endl);
 		switch(entry)
 		{
-		    case 0:
-			entry++;
-	    		s->unifcoro(Ds)();
-			o->unifcoro(Do)();
-			while( c0())//call the join
-			{
-	    		    return true;
-		    case 1: ;
-			}
+			case 0:
+				suc = s->unifcoro(Ds);
+				ouc = o->unifcoro(Do);
+				while(suc()) {
+					while (ouc()) {
+						while (c0()) {
+							entry++;
+							return true;
+							case 1:;
+						}
+					}
+				}
+				entry++;
 		}
 		return false;
-	    };
+	};
 }
 
 join halfjoin(comp a, Var* w, Var* x, join b){
@@ -392,6 +392,7 @@ join halfjoin(comp a, Var* w, Var* x, join b){
 		case 1: ;
 			  }
 			}
+			entry++;
 		}
 		return false;
 	};
@@ -399,65 +400,64 @@ join halfjoin(comp a, Var* w, Var* x, join b){
 
 comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
 {/*case for two body items*/
-	    setproc(L"comp ruleproxy");
-	    TRACE(dout << "compiling ruleproxy" << endl);
+		setproc(L"comp ruleproxy");
+		TRACE(dout << "compiling ruleproxy" << endl);
 
-	    Var *s = vars[head->s->p];
-	    Var *o = vars[head->o->p];
+		Var *s = vars[head->s->p];
+		Var *o = vars[head->o->p];
 
-	    Var *a = vars[body[0]->s->p];
-	    Var *b = vars[body[0]->o->p];
-	    Var *c = vars[body[1]->s->p];
-	    Var *d = vars[body[1]->o->p];
-//found ya :)
-//i guess we need 2 more ruleproxy's for the other 2 cases
-	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+		Var *a = vars[body[0]->s->p];
+		Var *b = vars[body[0]->o->p];
+		Var *c = vars[body[1]->s->p];
+		Var *d = vars[body[1]->o->p];
 
-	    // proxy coro that unifies s and o with s and o vars
-	    return joinproxy(c0, s, o);
+		join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+
+		// proxy coro that unifies s and o with s and o vars
+		return joinproxy(c0, s, o);
 }
 
 
 comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 
-	    setproc(L"comp ruleproxy");
-	    TRACE(dout << "compiling ruleproxy" << endl);
+		setproc(L"comp ruleproxy");
+		TRACE(dout << "compiling ruleproxy" << endl);
 
-	    Var *s = vars[head->s->p];
-	    Var *o = vars[head->o->p];
+		Var *s = vars[head->s->p];
+		Var *o = vars[head->o->p];
 
-	    Var *a = vars[body[0]->s->p];
-	    Var *b = vars[body[0]->o->p];
-	    
-	    join c0 = joinOne(pred(body[0]->p),a,b);
-	    return joinproxy(c0,s,o);
+		Var *a = vars[body[0]->s->p];
+		Var *b = vars[body[0]->o->p];
+
+		join c0 = joinOne(pred(body[0]->p),a,b);
+		return joinproxy(c0,s,o);
 }
 
 comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 	//we'll wanna do a regular join first
 
-	    setproc(L"comp ruleproxyMore");
-	    TRACE(dout << "compiling ruleproxyMore" << endl);
+		setproc(L"comp ruleproxyMore");
+		TRACE(dout << "compiling ruleproxyMore" << endl);
 
-	    Var *s = vars[head->s->p];
-	    Var *o = vars[head->o->p];
+		Var *s = vars[head->s->p];
+		Var *o = vars[head->o->p];
 
-	    int k = body.size()-2;
-	    Var *a = vars[body[k]->s->p];
-	    Var *b = vars[body[k]->o->p];
-	    Var *c = vars[body[k+1]->s->p];
-	    Var *d = vars[body[k+1]->o->p];
+		int k = body.size()-2;
+		Var *a = vars[body[k]->s->p];
+		Var *b = vars[body[k]->o->p];
+		Var *c = vars[body[k+1]->s->p];
+		Var *d = vars[body[k+1]->o->p];
 		
 //found ya :)
 //i guess we need 2 more ruleproxy's for the other 2 cases
-	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
-	    for(int i = k-1; i >= 0; i--){
+		join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+		for(int i = k-1; i >= 0; i--){
 		Var *vs = vars[body[i]->s->p];
 		Var *vo = vars[body[i]->o->p];
 		comp p = pred(body[i]->p);
 		c0 = halfjoin(p,vs,vo, c0);
-	    }
-	    return joinproxy(c0,s,o);
+		}
+		return joinproxy(c0,s,o);
 }
 
 comp rule(old::termid head, old::prover::termset body)
@@ -475,28 +475,28 @@ comp rule(old::termid head, old::prover::termset body)
 	size_t i;
 	for (i = 0; i < body.size(); i++)
 	{
-	    old::termid t = body[i]->s;
-	    vars[t->p] = atom(t->p);
-	    t = body[i]->o;
-	    vars[t->p] = atom(t->p);
+		old::termid t = body[i]->s;
+		vars[t->p] = atom(t->p);
+		t = body[i]->o;
+		vars[t->p] = atom(t->p);
 	}
 
 
 	if(body.size() == 0){
-	    //this case would represent an actual kb 'fact'
-	    return fact(vars[head->s->p], vars[head->o->p]);
+		//this case would represent an actual kb 'fact'
+		return fact(vars[head->s->p], vars[head->o->p]);
 	}
 	if(body.size() == 1)
 	{
-	    return ruleproxyOne(vars, head, body);
+		return ruleproxyOne(vars, head, body);
 	}
 	else if(body.size() == 2)
 	{
-	    return ruleproxy(vars, head, body);
+		return ruleproxy(vars, head, body);
 	}
 	else if(body.size() > 2)
 	{
-	    return ruleproxyMore(vars, head, body);
+		return ruleproxyMore(vars, head, body);
 	}
 	else
 	{
@@ -511,25 +511,24 @@ comp rule(old::termid head, old::prover::termset body)
 //rules with that pred in the rule-head or anywhere in the rule?head
 void compile_kb(old::prover *p)
 {
-    setproc(L"compile_kb");
-    dout << "compile" << endl;
-    for (auto x: predskb)
-    {
+	setproc(L"compile_kb");
+	for (auto x: predskb)
+	{
 	old::nodeid k = x.first;
 	rulesindex rs = x.second;
 	for (size_t i: rs) // for each rule with the pred
 	{
-	    comp r = rule(p->heads[i], p->bodies[i]);
-	    if(preds.find(k) != preds.end()){
+		comp r = rule(p->heads[i], p->bodies[i]);
+		if(preds.find(k) != preds.end()){
 		dout << "seq, nodeid: " << k << "(" << old::dict[k] << ")" << endl;
 		preds[k] = seq(r, preds[k]);
-	    }
-	    else{
+		}
+		else{
 		dout << "first, nodeid: " << k << "(" << old::dict[k] << ")" << endl;
 		preds[k] = r;
-	    }
+		}
 	}
-    }
+	}
 }//ok hrrrm
 //on your comp do you see what line we're on?426
 
@@ -537,19 +536,19 @@ void compile_kb(old::prover *p)
 //i see
 void gen_pred2rules_map(old::prover *p)
 {
-    setproc(L"gen_pred2rules_map");
-    TRACE(dout << "gen predskb" << endl);
+	setproc(L"gen_pred2rules_map");
+	TRACE(dout << "gen predskb" << endl);
 
-    int i;
-    //start at the end of the kb
-    for (i = p->heads.size() - 1; i >= 0; i--)
-    {
+	int i;
+	//start at the end of the kb
+	for (i = p->heads.size() - 1; i >= 0; i--)
+	{
 	old::nodeid pr = p->heads[i]->p;
 	auto it = predskb.find(pr);
 	if (it == predskb.end())
-	    predskb[pr] = rulesindex();
+		predskb[pr] = rulesindex();
 	predskb[pr].push_back(i);
-    }
+	}
 
 
 }
@@ -557,17 +556,17 @@ void gen_pred2rules_map(old::prover *p)
 //namespace issue here? well, not an issue here, i put the whole old codebase into "old"..
 ///so why the 'y'? oh..yeah..i then added using namespace old so yeah
 yprover::yprover ( qdb qkb, bool check_consistency)  {
-    dout << "constructing old prover" << endl;
-    op=p = new old::prover(qkb, false);
-    gen_pred2rules_map(p);
-    compile_kb(p);
-    if(check_consistency) dout << "consistency: mushy" << endl; 
+	dout << "constructing old prover" << endl;
+	op=p = new old::prover(qkb, false);
+	gen_pred2rules_map(p);
+	compile_kb(p);
+	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
 void yprover::query(const old::qdb& goal){
-    dout << "query" << endl;
-    const old::prover::termset g = p->qdb2termset(goal);
-	//this is 23  
+	dout << "query" << endl;
+	const old::prover::termset g = p->qdb2termset(goal);
+	int nresults = 0;
 	old::nodeid pr = g[0]->p;
 	if (preds.find(pr) != preds.end()) {
 		auto as = atom(g[0]->s->p);
@@ -581,11 +580,14 @@ void yprover::query(const old::qdb& goal){
 		dout << "query 2" << endl;
 		//coro itself infloops
 		while (coro(as, ao)) {//this is weird, passing the args over and over
-			dout << L"results:";
+			nresults++;
+			if (nresults > 5) {dout << "STOPPING at " << nresults << " results." << endl;break;}
+			dout << L"RESULT " << nresults << ":";
 			dout << old::dict[g[0]->s->p] << L": " << as->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << ao->str() << endl;
 		}
 	}
+	dout << "thats all, folks, " << nresults << " results." << endl;
 }
 
 //i think i've got most of it, anything you wanted to show me?
