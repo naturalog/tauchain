@@ -13,7 +13,7 @@ using namespace old;
 so i guess we start with 1?
 */
 
-
+old::prover *op;
 
 
 
@@ -34,6 +34,7 @@ typedef std::unordered_map<old::nodeid, Var*> varmap;
 
 
 typedef vector<size_t> rulesindex;
+//std::unordered_map<old::nodeid, function<bool(Thing*,Thing*)> predskb;
 std::unordered_map<old::nodeid, rulesindex> predskb;
 
 
@@ -80,22 +81,32 @@ public:
 	wstring str(){return L"var("+(isBound?value->str():L"")+L")";}
 
 	function<bool()> unifcoro(Thing *arg){
+		setproc(L"Var.unifcoro");		
+		TRACE(dout << this << " unifcoro arg=" << arg <<  endl);
 		if(isBound)
 		{
+			TRACE(dout << "isBound" << endl);
 			return generalunifycoro(this, arg);
 		}
 		else
 		{
+			TRACE(dout << "!isBound" << endl);
+
 			Thing * argv = arg->getValue();
 			
+			TRACE(dout << "value=" << argv << endl);
+
 			if (argv == this)
 			{
+				TRACE(dout << "argv == this" << endl);
 				//# We are unifying this unbound variable with itself, so leave it unbound.^M
 				int entry = 0;
 				return [this, entry, argv]() mutable{
+					setproc(L"unify lambda 1");
+					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << endl);
 					switch(entry){
 						case 0:
-							value = argv;//???
+							value = argv;//??? // like, this.value?
 					                entry = 1;
 							return true;
 						default:
@@ -107,21 +118,27 @@ public:
 			}
 			else
 			{
+				TRACE(dout << "argv != this" << endl);
+				
 				int entry = 0;
-				return [this, entry, argv]() mutable{ 
+				return [this, entry, argv]() mutable{
+					setproc(L"unify lambda 2"); 
+					TRACE(dout << "im in ur var unify lambda, entry = " << entry << endl);
+
 					switch(entry)
 					{
+					    
 
 						case 0:
 							isBound = true;
 							value = argv;
-							//cout << "binding " << this << " to " << value << endl;
+							TRACE(dout << "binding " << this << " to " << value << endl);
 							entry = 1;
 							return true;
 						case 1:
 							
 						default:
-							//cout << "unbinding " << this << endl;
+							TRACE(dout << "unbinding " << this << endl);
 							isBound = false;
 							entry = 0;
 							return false;
@@ -203,7 +220,8 @@ comp fact(Thing *s, Thing *o){
 	function<bool()> c1;
 	function<bool()> c2;
 	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
-		dout << "im in ur fact,  entry: " << entry << endl;
+		setproc(L"fact lambda");
+		TRACE(dout << "im in ur fact,  entry: " << entry << endl);
 
 		switch(entry){
 		case 0:
@@ -224,8 +242,9 @@ comp fact(Thing *s, Thing *o){
 
 comp seq(comp a, comp b){
 	int entry = 0;
-	return [a, b, entry](Thing *Ds, Thing *Do) mutable{	
-		dout << "im in ur seq, entry: " << entry << endl;
+	return [a, b, entry](Thing *Ds, Thing *Do) mutable{
+		setproc(L"seq lambda");	
+		TRACE(dout << "im in ur seq, entry: " << entry << endl);
 
 		switch(entry){
 		case 0:
@@ -262,23 +281,30 @@ Var* atom(old::nodeid n){
 //any not right parts in particular?
 comp pred(old::nodeid x)
 {
-	dout << "constructing pred for nodeid " << x << endl;
+	setproc(L"comp pred");
+	TRACE(dout << "constructing pred for nodeid " << x << endl);
 	int entry = 0;
 	comp z;
 	//this looks up and proxies a pred
 	//we capture in the key
+	//this function, which would go and 
 	return [entry, z, x](Thing *Ds, Thing *Do)mutable{
-		dout << "im in ur pred, entry: " << entry << endl;
+		setproc(L"pred lambda");
+		dout << "im in ur pred proxy for nodeid " << x << ", entry: " << entry << endl;
 		
 		switch(entry)
 		{
 			case 0:
 			    entry++;
-			//and lookup the comp from the key
+			//ah, the problem is this is the function it's looking up :)?
+			//preds[x] would beok
+			//and lookup the compok from the key
 			    z = preds[x];
 			//looks right to me, what am i missing? looks right on a second thought to me too
+			//23 is the 'a' pred-function
+			//we only have 'a' and 'not-a' in the kb right?i guess 
 			//yea don't see anything wrong off the bat here ok cool
-			    while(z(Ds, Do))
+			    while((dout << "calling hopefully x:" << old::dict[x] << endl),z(Ds, Do))
 			    {
 					dout << "pred coro success" << endl;
 					return true;
@@ -290,14 +316,29 @@ comp pred(old::nodeid x)
 	};
 }
 
+join joinOne(comp a, Thing* w, Thing *x){
+	int entry = 0;
+	return [a, w, x, entry]() mutable{
+		switch(entry){
+		case 0:
+			while(a(w,x)){
+				entry = 1;
+				return true;
+		case 1: ;
+			}
+		}
+		return false;
+	};
+}
 
 
-
-function<bool()> joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
-    dout << "making a join" << endl;
+join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
+    setproc(L"joinwxyz");
+    TRACE(dout << "making a join" << endl);
     int entry = 0;
     return [a,b,w,x,y,z,entry]()mutable{
-	dout << "im in ur join, entry: " << entry << endl;
+	setproc(L"join lambda");
+	TRACE(dout << "im in ur join, entry: " << entry << endl);
 	switch(entry){
 	    case 0:
 		entry++;
@@ -314,26 +355,14 @@ function<bool()> joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z
 //actually maybe only the join combinators need to do a lookup
 
 
-
-comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
-{/*case for two body items*/
-	    dout << "compiling ruleproxy" << endl;
-
-	    Var *s = vars[head->s->p];
-	    Var *o = vars[head->o->p];
-
-	    Var *a = vars[body[0]->s->p];
-	    Var *b = vars[body[0]->o->p];
-	    Var *c = vars[body[1]->s->p];
-	    Var *d = vars[body[1]->o->p];
-
-	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+comp joinproxy(join c0, Var* s, Var* o){
 
 	    int entry=0;
 	    // proxy coro that unifies s and o with s and o vars
 	    return [ entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
 	    {
-		dout << "im in ur ruleproxy, entry=" << entry << endl;
+		setproc(L"ruleproxy lambda");
+		TRACE(dout << "im in ur ruleproxy, entry=" << entry << endl);
 		switch(entry)
 		{
 		    case 0:
@@ -343,24 +372,98 @@ comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
 			while( c0())//call the join
 			{
 	    		    return true;
-		    case 1:;
+		    case 1: ;
 			}
 		}
 		return false;
 	    };
 }
 
+join halfjoin(comp a, Var* w, Var* x, join b){
+	int entry = 0;
+	return [a, w, x, b, entry]() mutable{
+		switch(entry){
+		case 0:
+			while(a(w,x)){
+			   while(b()){
+				entry = 1;
+				return true;
+		case 1: ;
+			  }
+			}
+		}
+		return false;
+	};
+}
+
+comp ruleproxy(varmap vars, old::termid head, old::prover::termset body)
+{/*case for two body items*/
+	    setproc(L"comp ruleproxy");
+	    TRACE(dout << "compiling ruleproxy" << endl);
+
+	    Var *s = vars[head->s->p];
+	    Var *o = vars[head->o->p];
+
+	    Var *a = vars[body[0]->s->p];
+	    Var *b = vars[body[0]->o->p];
+	    Var *c = vars[body[1]->s->p];
+	    Var *d = vars[body[1]->o->p];
+//found ya :)
+//i guess we need 2 more ruleproxy's for the other 2 cases
+	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+
+	    // proxy coro that unifies s and o with s and o vars
+	    return joinproxy(c0, s, o);
+}
 
 
+comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
+
+	    setproc(L"comp ruleproxy");
+	    TRACE(dout << "compiling ruleproxy" << endl);
+
+	    Var *s = vars[head->s->p];
+	    Var *o = vars[head->o->p];
+
+	    Var *a = vars[body[0]->s->p];
+	    Var *b = vars[body[0]->o->p];
+	    
+	    join c0 = joinOne(pred(body[0]->p),a,b);
+	    return joinproxy(c0,s,o);
+}
+
+comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
+	//we'll wanna do a regular join first
+
+	    setproc(L"comp ruleproxyMore");
+	    TRACE(dout << "compiling ruleproxyMore" << endl);
+
+	    Var *s = vars[head->s->p];
+	    Var *o = vars[head->o->p];
+
+	    int k = body.size()-2;
+	    Var *a = vars[body[k]->s->p];
+	    Var *b = vars[body[k]->o->p];
+	    Var *c = vars[body[k+1]->s->p];
+	    Var *d = vars[body[k+1]->o->p];
+		
+//found ya :)
+//i guess we need 2 more ruleproxy's for the other 2 cases
+	    join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+	    for(int i = k-1; i >= 0; i--){
+		Var *vs = vars[body[i]->s->p];
+		Var *vo = vars[body[i]->o->p];
+		comp p = pred(body[i]->p);
+		c0 = halfjoin(p,vs,vo, c0);
+	    }
+	    return joinproxy(c0,s,o);
+}
 
 comp rule(old::termid head, old::prover::termset body)
 {
-	dout << "compiling rule " << endl;;//head << " " << body << endl; 
+	setproc(L"comp rule");
+	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;) 
 	varmap vars;
-
-	//hrmm
-	//it needs to work with the table of preds
-	
 
 	//ok now not everything is necessarily vars
 	//sometimes we'll have literals too
@@ -382,33 +485,21 @@ comp rule(old::termid head, old::prover::termset body)
 	    //this case would represent an actual kb 'fact'
 	    return fact(vars[head->s->p], vars[head->o->p]);
 	}
-	if(body.size() == 1){
-	    //need to do the var shuffle
-	    
-	    assert(false);
-
-	    //return //pred(body[0]->p));
+	if(body.size() == 1)
+	{
+	    return ruleproxyOne(vars, head, body);
 	}
 	else if(body.size() == 2)
 	{
 	    return ruleproxy(vars, head, body);
 	}
-	else if(body.size() > 2){
-	    /*todo
-    	    int k = body.size()-2;
-
-	    //i guess should just have joinwxyz as compile(term,term)
-	    //seems reasonable//or not
-
-	    comp c0 = joinwxyz(pred(body[k]),pred(body[k+1]));
-	    while(k > 0)
-	        c0 = halfjoin(pred(body[k]),c0);
-	        k--;
-	    */
-	    assert("explosion happened");
-	}else{
-	    //???? ???:)
-	    cout << "Negative body size? What is this, American TV?" << endl;
+	else if(body.size() > 2)
+	{
+	    return ruleproxyMore(vars, head, body);
+	}
+	else
+	{
+		assert(false);
 	}
 }
 
@@ -419,6 +510,7 @@ comp rule(old::termid head, old::prover::termset body)
 //rules with that pred in the rule-head or anywhere in the rule?head
 void compile_kb(old::prover *p)
 {
+    setproc(L"compile_kb");
     dout << "compile" << endl;
     for (auto x: predskb)
     {
@@ -427,22 +519,29 @@ void compile_kb(old::prover *p)
 	for (size_t i: rs) // for each rule with the pred
 	{
 	    comp r = rule(p->heads[i], p->bodies[i]);
-	    if(preds.find(k) != preds.end())
-		preds[k] = seq(preds[k], r);
-	    else
+	    if(preds.find(k) != preds.end()){
+		dout << "seq, nodeid: " << k << "(" << old::dict[k] << ")" << endl;
+		preds[k] = seq(r, preds[k]);
+	    }
+	    else{
+		dout << "first, nodeid: " << k << "(" << old::dict[k] << ")" << endl;
 		preds[k] = r;
+	    }
 	}
     }
-}
+}//ok hrrrm
 //on your comp do you see what line we're on?426
 
 /*writes into predskb*/
 //i see
 void gen_pred2rules_map(old::prover *p)
 {
-    dout << "gen predskb" << endl;
-    size_t i;
-    for (i = 0; i < p->heads.size(); i++)
+    setproc(L"gen_pred2rules_map");
+    TRACE(dout << "gen predskb" << endl);
+
+    int i;
+    //start at the end of the kb
+    for (i = p->heads.size() - 1; i >= 0; i--)
     {
 	old::nodeid pr = p->heads[i]->p;
 	auto it = predskb.find(pr);
@@ -450,35 +549,43 @@ void gen_pred2rules_map(old::prover *p)
 	    predskb[pr] = rulesindex();
 	predskb[pr].push_back(i);
     }
+
+
 }
 
 //namespace issue here? well, not an issue here, i put the whole old codebase into "old"..
 ///so why the 'y'? oh..yeah..i then added using namespace old so yeah
 yprover::yprover ( qdb qkb, bool check_consistency)  {
     dout << "constructing old prover" << endl;
-    p = new old::prover(qkb, false);
+    op=p = new old::prover(qkb, false);
     gen_pred2rules_map(p);
     compile_kb(p);
+    if(check_consistency) dout << "consistency: mushy" << endl; 
 }
 
-void yprover::query(const old::qdb& goal, old::subs * s){
+void yprover::query(const old::qdb& goal){
     dout << "query" << endl;
     const old::prover::termset g = p->qdb2termset(goal);
-  
+	//this is 23  
 	old::nodeid pr = g[0]->p;
 	if (preds.find(pr) != preds.end()) {
 		auto as = atom(g[0]->s->p);
 		auto ao = atom(g[0]->o->p);
-		dout << "query 1" << endl;
+		dout << "query 1: " << pr << endl;
+		//ok so it only supports one-pred queries at the moment    y
+		//so for multi-pred queries i think we'll build it up into a join yeah
+		//we don't need to worry about that yet though we'll just get this one
+		//to stop inflooping:)
 		auto coro = pred(pr);
+		dout << "query 2" << endl;
+		//coro itself infloops
 		while (coro(as, ao)) {//this is weird, passing the args over and over
-			wcout << L"results:";
-			wcout << old::dict[g[0]->s->p] << L": ";//well, here we will need to follow the chain of var bindings anyway...
-			//so it will be more complex <<  old::dict[as->value].value;//maybe
-			wcout << endl;
+			dout << L"results:";
+			dout << old::dict[g[0]->s->p] << L": " << as->str() << ",   ";
+			dout << old::dict[g[0]->o->p] << L": " << ao->str() << endl;
 		}
 	}
-};
+}
 
 //i think i've got most of it, anything you wanted to show me?
 //well, i think this is all from me, its yours:)

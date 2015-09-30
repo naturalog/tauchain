@@ -22,8 +22,9 @@ typedef std::shared_ptr<bool> pbool;
 
 string indent();
 using std::endl;
+
 #ifdef DEBUG
-#define TRACE(x) if (_indent + (int)proc.size() < level) { dout << indent(); x; }
+#define TRACE(x) if (_indent + (int)proc.size() < level) { dout << old::indent(); x; }
 #else
 #define TRACE(X)
 #endif

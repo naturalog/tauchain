@@ -581,6 +581,7 @@ int main ( int argc, char** argv) {
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
+		
 			dout << "that doesnt parse, try again" << std::endl;
 			if (mode == COMMANDS && trimmed_data == L"")
 				dout << "and theres no such command: \"" << token << "\"." << endl;

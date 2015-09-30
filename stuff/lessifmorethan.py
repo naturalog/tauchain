@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import sys, os
+newin = os.fdopen(sys.stdin.fileno(), 'r', 1)
+sys.stdin = newin
 n = 0
 lines = []
 for line in sys.stdin:
