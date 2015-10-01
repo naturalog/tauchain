@@ -26,6 +26,8 @@ public:
 class Var;
 
 typedef function<bool(Thing*,Thing*)> comp;
+typedef function<comp()> generator;
+
 std::map<old::nodeid, comp> preds;
 
 
@@ -41,7 +43,7 @@ std::unordered_map<old::nodeid, rulesindex> predskb;
 
 function<bool()> generalunifycoro(Thing*, Thing*);
 
-
+std::unordered_map<old::nodeid, generator> predGens;
 
 
 
@@ -90,7 +92,7 @@ public:
 		}
 		else
 		{
-			TRACE(dout << "!isBound" << endl);
+			TRACE(dout << "not isBound" << endl);
 
 			Thing * argv = arg->getValue();
 			
@@ -110,7 +112,6 @@ public:
 							entry = 1;
 							return true;
 						default:
-							entry = 0;//?
 							return false;
 					}
 				};
@@ -137,7 +138,6 @@ public:
 						default:
 							TRACE(dout << "unbinding " << this << endl);
 							isBound = false;
-							entry = 0;
 							return false;
 					}
 				};
@@ -235,7 +235,6 @@ comp fact(Thing *s, Thing *o){
 			}
 			entry++;
 		default:
-			entry = 0;
 			return false;
 		}
 	};
@@ -293,22 +292,23 @@ comp pred(old::nodeid x)
 		
 		switch(entry)
 		{
-			case 0:
-				entry++;
-				z = preds[x];
-				bool r;
-				while(true)
-				{
-					TRACE((dout << old::indent() << "calling hopefully x:" << old::dict[x] << endl))
-					r = z(Ds, Do);
-					if (! r) goto out;
-					TRACE(dout << "pred coro for " <<  old::dict[x] << " success" << endl;)
-					return true;
-			case 1:;
+		case 0:
+			entry++;
+			z = predGens[x]();
+			//z = preds[x];
+			bool r;
+			while(true)
+			{
+				TRACE((dout << old::indent() << "calling hopefully x:" << old::dict[x] << endl))
+				r = z(Ds, Do);
+				if (! r) goto out;
+				TRACE(dout << "pred coro for " <<  old::dict[x] << " success" << endl;)
+				return true;
+		case 1: ;
 
-				}
-				out:;
-				entry++;
+			}
+		out: ;
+			entry++;
 		}
 		return false;
 	};
@@ -325,7 +325,6 @@ join joinOne(comp a, Thing* w, Thing *x){
 		case 1: ;
 			}
 		}
-		entry = 0;
 		return false;
 	};
 }
@@ -336,25 +335,24 @@ join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
 	TRACE(dout << "making a join" << endl);
 	int entry = 0;
 	return [a,b,w,x,y,z,entry]()mutable{
-	setproc(L"join lambda");
-	TRACE(dout << "im in ur join, entry: " << entry << endl);
-	switch(entry){
+		setproc(L"join lambda");
+		TRACE(dout << "im in ur join, entry: " << entry << endl);
+		switch(entry){
 		case 0:
-			entry++;
 			while(a(w,x)) {
 				while (b(y, z)) {
+					entry = 1;
 					return true;
-		case 1:;
+		case 1: ;
 				}
 			}
-			entry = 0;
-			return false;
 		}
+		return false;
 	};
 }
 //actually maybe only the join combinators need to do a lookup
 
-
+//should be called ruleproxy after all? minus the name clash sure? i didn't see ruleproxy had become ruleproxytwo :)ah:)
 comp joinproxy(join c0, Var* s, Var* o){
 	int entry=0;
 	// proxy coro that unifies s and o with s and o vars
@@ -365,21 +363,23 @@ comp joinproxy(join c0, Var* s, Var* o){
 		TRACE(dout << "im in ur joinproxy, entry=" << entry << endl);
 		switch(entry)
 		{
-			case 0:
-				entry++;
-				suc = s->unifcoro(Ds);
-				ouc = o->unifcoro(Do);
-				while(suc()) {
-					while (ouc()) {
-						while (c0()) {
-							return true;
-			case 1:;
-						}
+		case 0:
+			entry++;
+			suc = s->unifcoro(Ds);
+			ouc = o->unifcoro(Do);
+			while(suc()) {//tbh i never went thoroughly thru the join stuff you did
+//and i made this loop over the arg unification like a ruleproxy should
+//well, tbh, i was looking at this func earlier and realized i hadn't gone through it thoroughly :)lol
+				while (ouc()) {
+					while (c0()) {
+						entry = 1;
+						return true;
+		case 1: ;
 					}
 				}
-				entry = 0;
-				return false;
+			}
 		}
+		return false;
 	};
 }
 
@@ -395,9 +395,7 @@ join halfjoin(comp a, Var* w, Var* x, join b){
 		case 1: ;
 			  }
 			}
-			entry++;
 		}
-		entry = 0;
 		return false;
 	};
 }
@@ -472,12 +470,13 @@ comp rule(old::termid head, old::prover::termset body)
 	//sometimes we'll have literals too
 
 	//these two are just proxies for whatever input we get
-	vars[head->s->p] = new Var();
-	vars[head->o->p] = new Var();
+	vars[head->s->p] = atom(head->s->p);
+	vars[head->o->p] = atom(head->o->p);
 	size_t i;
 	for (i = 0; i < body.size(); i++)
 	{
-		old::termid t = body[i]->s;
+		old::termid t;
+		t = body[i]->s;
 		vars[t->p] = atom(t->p);
 		t = body[i]->o;
 		vars[t->p] = atom(t->p);
@@ -531,8 +530,20 @@ void compile_kb(old::prover *p)
 		}
 	}
 	}
-}//ok hrrrm
-//on your comp do you see what line we're on?426
+}
+
+//something along these lines
+void preds2gens(){
+	for(auto x: preds){
+		old::nodeid k = x.first;
+		comp f = x.second;
+		predGens[k] = [f](){
+			setproc(L"preds2gens lambda");
+			TRACE(dout << "..." << endl;)
+			return f;
+		};
+	}
+}
 
 /*writes into predskb*/
 //i see
@@ -545,15 +556,17 @@ void gen_pred2rules_map(old::prover *p)
 	//start at the end of the kb
 	for (i = p->heads.size() - 1; i >= 0; i--)
 	{
-	old::nodeid pr = p->heads[i]->p;
-	auto it = predskb.find(pr);
-	if (it == predskb.end())
-		predskb[pr] = rulesindex();
-	predskb[pr].push_back(i);
+		old::nodeid pr = p->heads[i]->p;
+		auto it = predskb.find(pr);
+		if (it == predskb.end()){
+			predskb[pr] = rulesindex();
+		}
+		predskb[pr].push_back(i);
 	}
 
 
 }
+
 
 //namespace issue here? well, not an issue here, i put the whole old codebase into "old"..
 ///so why the 'y'? oh..yeah..i then added using namespace old so yeah
@@ -562,6 +575,9 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 	op=p = new old::prover(qkb, false);
 	gen_pred2rules_map(p);
 	compile_kb(p);
+	//so we'll do exactly like we did and then call this function to turn
+	//our pred-coros into pred-coro-generators
+	preds2gens();
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
@@ -574,13 +590,8 @@ void yprover::query(const old::qdb& goal){
 		auto as = atom(g[0]->s->p);
 		auto ao = atom(g[0]->o->p);
 		dout << "query 1: " << pr << endl;
-		//ok so it only supports one-pred queries at the moment    y
-		//so for multi-pred queries i think we'll build it up into a join yeah
-		//we don't need to worry about that yet though we'll just get this one
-		//to stop inflooping:)
 		auto coro = pred(pr);
 		dout << "query 2" << endl;
-		//coro itself infloops
 		while (coro(as, ao)) {//this is weird, passing the args over and over
 			nresults++;
 			if (nresults > 5) {dout << "STOPPING at " << nresults << " results." << endl;break;}
@@ -590,13 +601,44 @@ void yprover::query(const old::qdb& goal){
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
-
-	vector<function<void()>> zzz;
-	int xxx;
-	auto a = [xxx, zzz]()mutable{xxx++; dout << xxx << endl; zzz[0]();};
-	zzz.push_back(a);
-	a();
 }
 
-//i think i've got most of it, anything you wanted to show me?
-//well, i think this is all from me, its yours:)
+		//ok so it only supports one-pred queries at the moment    y
+		//so for multi-pred queries i think we'll build it up into a join yeah
+		//we don't need to worry about that yet though we'll just get this one
+		//to stop inflooping:)
+/*how c++ lambdas work:
+
+        int i,j=5;                                                                                                          
+        for (i =0; i < 3; i++)                                                                                              
+                [j]() mutable {                                                                                             
+                        static int x = 333;                                                                                 
+                        cout << x++ << " " << i << endl;                                                                    
+        }();   
+
+
+        vector<function<void()>> zzz;
+        int xxx;
+        auto a = [xxx, zzz]()mutable{xxx++; dout << xxx << endl; zzz[0]();};
+        zzz.push_back(a);
+        a();
+
+
+	int xxx=0;
+	auto a = [xxx]()mutable{xxx++; dout << xxx << endl;};
+	auto b = a;
+	auto c = a;
+	a();b();c();
+
+
+
+	int state=0;
+	function<void()> xxx = [state]()mutable{dout << state++ << endl;};
+	std::unordered_map<old::nodeid, function<function<void()>()>> pgs;
+	pgs[0] = [xxx](){return xxx;};
+	pgs[1] = [xxx](){return xxx;};
+	pgs[0]()();
+	pgs[1]()();
+
+
+*/
