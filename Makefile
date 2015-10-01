@@ -1,5 +1,5 @@
 CC=g++
-CXXFLAGS=-c -DDEBUG -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O0 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
+CXXFLAGS=-c -DDEBUG -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O3 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
 LDFLAGS= -L/usr/local/lib #-ldl -pthread -lrt
 OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
 

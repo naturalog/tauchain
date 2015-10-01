@@ -601,13 +601,28 @@ void yprover::query(const old::qdb& goal){
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
+
+	int state=0,state2=0;
+	//this is like a rule stuff
+	function<void()> fff = [state2]()mutable{dout << "fff " << state2++ << endl;}; 
+	//this is like a pred lambda
+	function<void()> xxx = [state, fff]()mutable{dout << state++ << endl; fff();};
+	std::unordered_map<old::nodeid, function<function<void()>()>> pgs;
+	//this is the pred copy lambda
+	pgs[0] = [xxx](){return xxx;};
+	pgs[1] = [xxx](){return xxx;};
+	pgs[0]()();
+	pgs[1]()();
+
+
 }
 
 		//ok so it only supports one-pred queries at the moment    y
 		//so for multi-pred queries i think we'll build it up into a join yeah
 		//we don't need to worry about that yet though we'll just get this one
 		//to stop inflooping:)
-/*how c++ lambdas work:
+/*
+how c++ lambdas work:
 
         int i,j=5;                                                                                                          
         for (i =0; i < 3; i++)                                                                                              
