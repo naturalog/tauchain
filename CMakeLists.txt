@@ -4,9 +4,25 @@ MESSAGE( STATUS "" )
 #cmake_minimum_required(VERSION 3.0)
 cmake_minimum_required(VERSION 2.8.7)
 
+
 project(tauchain)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -ggdb -DDEBUG")
+
+
+
+SET (CMAKE_C_COMPILER             "/usr/bin/clang")
+SET (CMAKE_CXX_COMPILER             "/usr/bin/clang++")
+SET (CMAKE_AR      "/usr/bin/llvm-ar")
+SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
+SET (CMAKE_NM      "/usr/bin/llvm-nm")
+SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
+SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
+
+
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -ggdb  -DDEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow")
+
 
 set(SOURCE_FILES
     cli.cpp

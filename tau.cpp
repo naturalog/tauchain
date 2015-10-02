@@ -152,9 +152,14 @@ void switch_color(){
 
 qdb old::merge_qdbs(const std::vector<qdb> qdbs)
 {
-        if (qdbs.size() > 1)
-                dout << L"warning, kb merging is half-assed";
         qdb r;
+		if (qdbs.size() == 0)
+			return r;
+		else if (qdbs.size() == 1)
+			return qdbs[0];
+		else
+			dout << L"warning, kb merging is half-assed";
+
         for (auto x:qdbs) {
 			for (auto graph: x.first) {
 				string name = graph.first;
@@ -481,6 +486,8 @@ int main ( int argc, char** argv) {
 				prompt = L"kb";
 			else if (mode == QUERY)
 				prompt = L"query";
+			else if (mode == SHOULDBE)
+				prompt = L"shouldbe";
 			else
 				assert(false);
 			std::wcout << prompt;
@@ -565,6 +572,15 @@ int main ( int argc, char** argv) {
 			}
 			if (token == L"quit") {
 				break;
+			}
+			std::wifstream is(ws(token));
+			if (!is.is_open()) {
+				dout << "failed to open \"" << token << "\"." << std::endl;
+			}
+			else {
+				std::wstringstream ss;
+				ss << is.rdbuf();
+				input_buffer += ss.str() + L"\n";
 			}
 		}
 

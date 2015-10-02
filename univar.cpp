@@ -645,6 +645,7 @@ void yprover::query(const old::qdb& goal){
 	dout << "query" << endl;
 	const old::prover::termset g = p->qdb2termset(goal);
 	results.first.clear();results.second.clear();
+	results.first[L"@default"] = old::mk_qlist();
 	int nresults = 0;
 	old::nodeid pr = g[0]->p;
 
