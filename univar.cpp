@@ -652,10 +652,12 @@ void yprover::query(const old::qdb& goal){
 			Node *n2 = dynamic_cast<Node*>(ov);
 			if (n1 && n2)
 			{
-				old::quad *q = make_shared<old::quad>(old::quad(
-				results.first[L"@default"].push_back(
-
-op->make(pr, op->make(n1->value,0,0), op->make(n2->value,0,0)));
+				old::pquad q = make_shared<old::quad>(old::quad(
+				std::make_shared<old::node>(old::dict[n1->value]),
+				std::make_shared<old::node>(old::dict[pr]),
+				std::make_shared<old::node>(old::dict[n2->value])));
+				results.first[L"@default"]->push_back(q);
+			}
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
