@@ -1,0 +1,30 @@
+kb
+zero :a Nat.
+0 :a Nat.
+nada :a Nat.
+
+0 :eq zero.
+nada :eq 0.
+
+#The three defining properties of an equivalence relation:
+#Reflexivity
+{?x :a Nat} => {?x :eq ?x}.
+
+#Symmetry
+{?x :a Nat. ?y :a Nat. ?x :eq ?y} => {?y :eq ?x}.
+
+#Transitivity
+{?x :a Nat. ?y :a Nat. ?z :a Nat. ?x :eq ?y. ?y :eq ?z} => {?x :eq ?z}.
+
+fin.
+
+query
+?WHAT :eq ?WHATELSE.
+fin.
+
+#expected matches:
+#?WHAT = nada
+#?WHAT = 0
+#?WHAT = zero
+#
+#possibly matching these in multiple ways

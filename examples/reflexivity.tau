@@ -1,0 +1,27 @@
+kb
+zero :a Nat.
+
+{?x :a Nat} => {?x :eq ?x}.
+
+fin.
+
+query
+#not working
+#?WHAT :eq ?WHATELSE.
+#
+#output: var() :eq var(zero)
+
+#working
+#zero :eq ?WHATELSE.
+
+#not working   
+#?WHAT :eq zero.
+#
+#output: var() :eq var(zero)
+
+#working
+#zero :eq zero.
+fin.
+
+#Expected results:
+# var(zero) :eq var(zero), for all 4 cases.

@@ -582,9 +582,9 @@ int main ( int argc, char** argv) {
 				set_mode(COMMANDS);
 			}
 		
-			dout << "that doesnt parse, try again" << std::endl;
+			dout << "[cli]that doesnt parse, try again" << std::endl;
 			if (mode == COMMANDS && trimmed_data == L"")
-				dout << "and theres no such command: \"" << token << "\"." << endl;
+				dout << "[cli]and theres no such command: \"" << token << "\"." << endl;
 		}
 		_argstream.clear();
 	}

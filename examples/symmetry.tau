@@ -1,0 +1,7 @@
+kb
+a :foo b.
+{?a :foo ?b} => {?b :foo ?a}.
+fin.
+query
+?WHAT :foo ?WHATELSE
+fin.

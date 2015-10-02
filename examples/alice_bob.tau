@@ -1,0 +1,8 @@
+kb
+Alice :loves Bob.
+{?x :loves ?y} => {?x :likes ?y}.
+{?x :likes ?y} => {?x :tolerates ?y}.
+fin.
+query
+?WHO :tolerates ?WHAT
+fin.

@@ -299,7 +299,7 @@ comp pred(old::nodeid x)
 			bool r;
 			while(true)
 			{
-				TRACE((dout << old::indent() << "calling hopefully x:" << old::dict[x] << endl))
+				TRACE((dout << "calling hopefully x:" << old::dict[x] << endl))
 				r = z(Ds, Do);
 				if (! r) goto out;
 				TRACE(dout << "pred coro for " <<  old::dict[x] << " success" << endl;)
@@ -602,19 +602,6 @@ void yprover::query(const old::qdb& goal){
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
 
-	int state=0,state2=0;
-	//this is like a rule stuff
-	function<void()> fff = [state2]()mutable{dout << "fff " << state2++ << endl;}; 
-	//this is like a pred lambda
-	function<void()> xxx = [state, fff]()mutable{dout << state++ << endl; fff();};
-	std::unordered_map<old::nodeid, function<function<void()>()>> pgs;
-	//this is the pred copy lambda
-	pgs[0] = [xxx](){return xxx;};
-	pgs[1] = [xxx](){return xxx;};
-	pgs[0]()();
-	pgs[1]()();
-
-
 }
 
 		//ok so it only supports one-pred queries at the moment    y
@@ -650,6 +637,20 @@ how c++ lambdas work:
 	int state=0;
 	function<void()> xxx = [state]()mutable{dout << state++ << endl;};
 	std::unordered_map<old::nodeid, function<function<void()>()>> pgs;
+	pgs[0] = [xxx](){return xxx;};
+	pgs[1] = [xxx](){return xxx;};
+	pgs[0]()();
+	pgs[1]()();
+
+
+
+	int state=0,state2=0;
+	//this is like a rule stuff
+	function<void()> fff = [state2]()mutable{dout << "fff " << state2++ << endl;}; 
+	//this is like a pred lambda
+	function<void()> xxx = [state, fff]()mutable{dout << state++ << endl; fff();};
+	std::unordered_map<old::nodeid, function<function<void()>()>> pgs;
+	//this is the pred copy lambda
 	pgs[0] = [xxx](){return xxx;};
 	pgs[1] = [xxx](){return xxx;};
 	pgs[0]()();
