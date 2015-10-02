@@ -6,13 +6,18 @@ zero :a Nat.
 fin.
 
 query
-#working
-#?WHAT :eq ?WHAT
+?WHAT :eq ?WHAT
+fin.
+shouldbe
+zero :eq zero.
+fin.
 
-#not working
+query
 ?WHAT :eq ?WHATELSE.
-#
-#output: var() :eq var(zero)
+fin.
+shouldbe
+zero :eq zero.
+fin.
 
 #working
 #zero :eq ?WHATELSE.

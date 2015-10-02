@@ -33,9 +33,10 @@ int mode = 0;
 const int COMMANDS = 0;
 const int KB = 1;
 const int QUERY = 2;
+const int SHOULDBE = 3;
 
 const int FAIL = 0;
-const int INCOMPLETE = 1;
+//const int INCOMPLETE = 1;
 const int COMPLETE = 2;
 
 string format = L"";
@@ -69,7 +70,22 @@ std::vector<qdb> kbs;
 
 void set_mode(int m)
 {
-	dout << L"mode = " << m << std::endl;
+	dout << L"mode = ";
+	switch(m) {
+		case COMMANDS:
+			dout << "commands";
+			break;
+		case KB:
+			dout << "kb";
+			break;
+		case QUERY:
+			dout << "query";
+			break;
+		case SHOULDBE:
+			dout << "shouldbe";
+			break;
+	}
+	dout << endl;
 	mode = m;
 }
 
@@ -332,6 +348,20 @@ int get_qdb(qdb &kb, string fname){
 	return r;
 }
 
+
+void shouldbe(qdb &kb) {
+	//if (qdbs_same(kb, tauProver->results))
+		dout << KGRN << "PASS" << KNRM << endl;
+	//else
+		dout << KRED << "FAIL" << KNRM << endl;
+}
+
+
+void mode_shouldbe() {
+	set_mode(SHOULDBE);
+}
+
+
 void mode_query(){
 	if(kbs.size() == 0){
 		dout << L"No kb; cannot query." << endl;
@@ -359,7 +389,7 @@ void mode_query(){
 				}else{
 					dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
 					assert(false);
-                        	}
+				}
 			}
 		}
 	}
@@ -529,12 +559,10 @@ int main ( int argc, char** argv) {
 				mode_query();
 				continue;
 			}
-
-			/*
-			if (token == L"fin.") {
-				if (mode == KB || mode == QUERY)//mode isnt kb fin query fin, we arent waiting for
+			if (token == L"shouldbe") {
+				mode_shouldbe();
+				continue;
 			}
-			*/
 			if (token == L"quit") {
 				break;
 			}
@@ -560,8 +588,13 @@ int main ( int argc, char** argv) {
 				set_mode(COMMANDS);
 			}
 			if (mode == QUERY && fins > 0) {
-				(*tauProver).query(kb);
+				(*tauProver).query(kb);//why not -> ?
 				//(*tauProver).e.clear();
+				data_buffer=L"";
+				set_mode(COMMANDS);
+			}
+			if (mode == SHOULDBE && fins > 0) {
+				shouldbe(kb);
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
