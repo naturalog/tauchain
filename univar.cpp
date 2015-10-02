@@ -46,7 +46,7 @@ function<bool()> generalunifycoro(Thing*, Thing*);
 std::vector<comp> predGens;
 
 int nterms = 0;
-std::queue<old::nodeid> predQueue;
+std::queue<old::termid> predQueue;
 
 
 
@@ -158,6 +158,10 @@ public:
 
 
 bool fail()
+{
+	return false;
+}
+bool fail_with_args(Thing *_s, Thing *_o)
 {
 	return false;
 }
@@ -285,13 +289,13 @@ Var* atom(old::nodeid n){
 }
 
 
-comp pred(old::nodeid x)
+comp pred(old::termid x)
 {
 	setproc(L"pred");
 	size_t index = nterms++;//predQueue.size();
 	predQueue.push(x);
-	old::nodeid dbgx = x;
-	TRACE(dout << "constructing pred proxy for nodeid " << x << endl);
+	old::nodeid dbgx = x->p;
+	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
 	int entry = 0;
 	comp z;
 	return [entry, z, dbgx, index](Thing *Ds, Thing *Do)mutable{
@@ -311,7 +315,6 @@ comp pred(old::nodeid x)
 				r = z(Ds, Do);
 				if (! r) goto out;
 				TRACE(dout << "pred coro for " <<  old::dict[dbgx] << " success" << endl;)
-			
 				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
 				return true;
 		case 1: ;
@@ -439,7 +442,7 @@ comp ruleproxyTwo(varmap vars, old::termid head, old::prover::termset body)
 		Var *c = vars[body[1]->s->p];
 		Var *d = vars[body[1]->o->p];
 
-		join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+		join c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 
 		// proxy coro that unifies s and o with s and o vars
 		return joinproxy(c0, s, o);
@@ -457,7 +460,7 @@ comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 		Var *a = vars[body[0]->s->p];
 		Var *b = vars[body[0]->o->p];
 
-		join c0 = joinOne(pred(body[0]->p),a,b);
+		join c0 = joinOne(pred(body[0]),a,b);
 		return joinproxy(c0,s,o);
 }
 
@@ -480,11 +483,11 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		Var *c = vars[body[k+1]->s->p];
 		Var *d = vars[body[k+1]->o->p];
 		
-		join c0 = joinwxyz(pred(body[0]->p), pred(body[1]->p), a,b,c,d);
+		join c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 		for(int i = k-1; i >= 0; i--){
 		Var *vs = vars[body[i]->s->p];
 		Var *vo = vars[body[i]->o->p];
-		comp p = pred(body[i]->p);
+		comp p = pred(body[i]);
 		c0 = halfjoin(p,vs,vo, c0);
 		}
 		return joinproxy(c0,s,o);
@@ -545,7 +548,7 @@ comp rule(old::termid head, old::prover::termset body)
 /*writes into preds*/
 //ok so by the time we get here, we'll already have
 //predskb, a map from preds to a vector of indexes of rules with that pred in the head
-void compile_kb()
+/*void compile_kb()
 {
 	setproc(L"compile_kb");
 	for (auto x: predskb)
@@ -553,7 +556,7 @@ void compile_kb()
 		old::nodeid k = x.first;
 		preds[k] = pred(k);//just queue it up, get the lookuping lambda
 	}
-}
+}*/
 
 /*imo this should infiloop, without ep check, on any recursive example
 step 2 should be to not do it per pred but per term(with unification, checking if a rule is relevant)*/
@@ -561,27 +564,43 @@ void compile_preds(old::prover *p){
 	setproc(L"compile_preds");
 
 	while(!predQueue.empty()){
-		old::nodeid x = predQueue.front(); predQueue.pop();
-		rulesindex rs = predskb[x];
+		old::termid x = predQueue.front(); predQueue.pop();
+		rulesindex rs = predskb[x->p];
 		comp r;
 		bool first = true;
 
 		//compile each rule with the pred in the head, seq them up
 		for (size_t i: rs)
 		{
+
+
+			assert(p->heads[i]->s->p);
+			assert(x->s->p);
+			if (!(
+						atom(p->heads[i]->s->p)->unifcoro(atom(x->s->p))()
+					&&
+						atom(p->heads[i]->o->p)->unifcoro(atom(x->o->p))()
+				)) {
+				TRACE(dout << "wouldnt match" << endl;)
+				continue;
+			}
+
+
+
 			comp y = rule(p->heads[i], p->bodies[i]);
 
 			if(first){
 				first = false;
-				TRACE(dout << "first, nodeid: " << x << "(" << old::dict[x] << ")" << endl;)
+				TRACE(dout << "first, nodeid: " << x->p << "(" << old::dict[x->p] << ")" << endl;)
 				r = y;
 			}
 			else{
-				TRACE(dout << "seq, nodeid: " <<  x << "(" << old::dict[x] << ")" << endl;)
+				TRACE(dout << "seq, nodeid: " <<  x->p << "(" << old::dict[x->p] << ")" << endl;)
 				r = seq(r,y);
 			}
 		}
-
+		if (first) // cant leave it empty
+			predGens.push_back(fail_with_args);
 		predGens.push_back(r);
 	}
 }
@@ -620,6 +639,8 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
+//ok so it only supports one-pred queries at the moment    y
+//so for multi-pred queries i think we'll build it up into a join yeah
 void yprover::query(const old::qdb& goal){
 	dout << "query" << endl;
 	const old::prover::termset g = p->qdb2termset(goal);
@@ -635,7 +656,7 @@ void yprover::query(const old::qdb& goal){
 		Var *o = atom(g[0]->o->p);
 		/*if g[0]->o->p == g[0]->s->p: s = o;*/
 		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
-		auto coro = pred(pr);
+		auto coro = pred(g[0]);
 		compile_preds(p);
 		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
 		//this is weird, passing the args over and over
@@ -664,26 +685,25 @@ void yprover::query(const old::qdb& goal){
 
 }
 
-		//ok so it only supports one-pred queries at the moment    y
-		//so for multi-pred queries i think we'll build it up into a join yeah
-		//we don't need to worry about that yet though we'll just get this one
-		//to stop inflooping:)
+
 /*
 how c++ lambdas work:
 
-        int i,j=5;                                                                                                          
-        for (i =0; i < 3; i++)                                                                                              
-                [j]() mutable {                                                                                             
-                        static int x = 333;                                                                                 
-                        cout << x++ << " " << i << endl;                                                                    
-        }();   
+ 	int i,j=5;
+ 	for (i =0; i < 3; i++)
+		[j]() mutable {
+			static int x = 333;
+			cout << x++ << " " << i << endl;
+		}();
 
 
-        vector<function<void()>> zzz;
-        int xxx;
-        auto a = [xxx, zzz]()mutable{xxx++; dout << xxx << endl; zzz[0]();};
-        zzz.push_back(a);
-        a();
+
+	vector<function<void()>> zzz;
+	int xxx;
+	auto a = [xxx, zzz]()mutable{xxx++; dout << xxx << endl; zzz[0]();};
+	zzz.push_back(a);
+	a();
+
 
 
 	int xxx=0;

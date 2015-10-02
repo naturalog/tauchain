@@ -6,4 +6,7 @@ fin.
 query
 ?Y :a :mortal .
 fin.
+shouldbe
+:socrates :a :mortal .
+fin.
 
