@@ -268,11 +268,12 @@ comp seq(comp a, comp b){
 
 //This was called something else before? node, clashed with old namespace gotcha
 Var* atom(old::nodeid n){
+	
 	Var* r = new Var();
 	if (n>0)
 	{
-	r->isBound = true;
-	r->value = new Node(n);
+		r->isBound = true;
+		r->value = new Node(n);
 	}
 	return r;
 }
@@ -470,8 +471,14 @@ comp rule(old::termid head, old::prover::termset body)
 	//sometimes we'll have literals too
 
 	//these two are just proxies for whatever input we get
+	
+	//yea yea we might not need the 's' one i just want to make sure
+	//vars[head->s->p] = (vars.find(head->s->p) != vars.end()) ? atom(head->s->p) : vars[head->s->p];
+	//vars[head->o->p] = (vars.find(head->o->p) != vars.end()) ? atom(head->o->p) : vars[head->o->p];
 	vars[head->s->p] = atom(head->s->p);
 	vars[head->o->p] = atom(head->o->p);
+
+
 	size_t i;
 	for (i = 0; i < body.size(); i++)
 	{
@@ -587,17 +594,18 @@ void yprover::query(const old::qdb& goal){
 	int nresults = 0;
 	old::nodeid pr = g[0]->p;
 	if (preds.find(pr) != preds.end()) {
-		auto as = atom(g[0]->s->p);
-		auto ao = atom(g[0]->o->p);
+		varmap vars;
+		vars[g[0]->s->p] = atom(g[0]->s->p);
+		vars[g[0]->o->p] = atom(g[0]->o->p);
 		dout << "query 1: " << pr << endl;
 		auto coro = pred(pr);
 		dout << "query 2" << endl;
-		while (coro(as, ao)) {//this is weird, passing the args over and over
+		while (coro(vars[g[0]->s->p], vars[g[0]->o->p])) {//this is weird, passing the args over and over
 			nresults++;
 			if (nresults > 5) {dout << "STOPPING at " << nresults << " results." << endl;break;}
 			dout << L"RESULT " << nresults << ":";
-			dout << old::dict[g[0]->s->p] << L": " << as->str() << ",   ";
-			dout << old::dict[g[0]->o->p] << L": " << ao->str() << endl;
+			dout << old::dict[g[0]->s->p] << L": " << vars[g[0]->s->p]->str() << ",   ";
+			dout << old::dict[g[0]->o->p] << L": " << vars[g[0]->o->p]->str() << endl;
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;

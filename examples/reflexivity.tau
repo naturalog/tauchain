@@ -6,6 +6,8 @@ zero :a Nat.
 fin.
 
 query
+?WHAT :eq ?WHAT
+
 #not working
 #?WHAT :eq ?WHATELSE.
 #
