@@ -1,0 +1,13 @@
+kb
+
+A :causes B.
+B :causes C.
+{?x :causes ?y. ?y :causes ?z} => {?x :causes ?z}
+
+fin.
+
+query
+
+?WHAT :causes ?WHATELSE
+
+fin.

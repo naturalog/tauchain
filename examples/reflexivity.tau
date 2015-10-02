@@ -15,7 +15,7 @@ query
 #output: var() :eq var(zero)
 
 #working
-#zero :eq ?WHATELSE.
+zero :eq ?WHATELSE.
 
 #not working   
 #?WHAT :eq zero.
@@ -23,7 +23,7 @@ query
 #output: var() :eq var(zero)
 
 #working
-zero :eq zero.
+#zero :eq zero.
 fin.
 
 #Expected results:

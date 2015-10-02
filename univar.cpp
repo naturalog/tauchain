@@ -84,10 +84,11 @@ public:
 
 	function<bool()> unifcoro(Thing *arg){
 		setproc(L"Var.unifcoro");		
-		TRACE(dout << this << " unifcoro arg=" << arg <<  endl);
+		TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl);
 		if(isBound)
 		{
 			TRACE(dout << "isBound" << endl);
+			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl);
 			return generalunifycoro(this, arg);
 		}
 		else
@@ -96,7 +97,7 @@ public:
 
 			Thing * argv = arg->getValue();
 			
-			TRACE(dout << "value=" << argv << endl);
+			TRACE(dout << "value=" << argv << "/" << argv->str() << endl);
 
 			if (argv == this)
 			{
@@ -105,7 +106,7 @@ public:
 				int entry = 0;
 				return [this, entry, argv]() mutable{
 					setproc(L"unify lambda 1");
-					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << endl);
+					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" << argv->str() << endl);
 					switch(entry){
 						case 0:
 							//value = argv;//??? // like, this.value?
@@ -123,7 +124,7 @@ public:
 				int entry = 0;
 				return [this, entry, argv]() mutable{
 					setproc(L"unify lambda 2"); 
-					TRACE(dout << "im in ur var unify lambda, entry = " << entry << endl);
+					TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" << argv->str() << endl);
 
 					switch(entry)
 					{
@@ -132,11 +133,11 @@ public:
 						case 0:
 							isBound = true;
 							value = argv;
-							TRACE(dout << "binding " << this << " to " << value << endl);
+							TRACE(dout << "binding " << this << "/" << this->str() << " to " << value << endl);
 							entry = 1;
 							return true;
 						default:
-							TRACE(dout << "unbinding " << this << endl);
+							TRACE(dout << "unbinding " << this << "/" << this->str() << endl);
 							isBound = false;
 							return false;
 					}
@@ -196,8 +197,8 @@ function<bool()> generalunifycoro(Thing *a, Thing *b){
 	if (a_var)
 		return a_var->unifcoro(b);
 	Var *b_var = dynamic_cast<Var*>(b);
-		if (b_var)
-				return b_var->unifcoro(a);
+	if (b_var)
+		return b_var->unifcoro(a);
 	//# Arguments are "normal" types.
 	Node *n1 = dynamic_cast<Node*>(a);
 	Node *n2 = dynamic_cast<Node*>(b);
@@ -226,8 +227,10 @@ comp fact(Thing *s, Thing *o){
 		case 0:
 			c1 = generalunifycoro(Ds,s);
 			c2 = generalunifycoro(Do,o);
+			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 			while(c1()){
 				while(c2()){
+					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 					entry = 1;
 					return true;
 		case 1: ;
@@ -300,10 +303,13 @@ comp pred(old::nodeid x)
 			bool r;
 			while(true)
 			{
-				TRACE((dout << "calling hopefully x:" << old::dict[x] << endl))
+				TRACE((dout << "calling hopefully x:" << old::dict[x] << endl));
+				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
 				r = z(Ds, Do);
 				if (! r) goto out;
 				TRACE(dout << "pred coro for " <<  old::dict[x] << " success" << endl;)
+			
+				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
 				return true;
 		case 1: ;
 
@@ -318,9 +324,12 @@ comp pred(old::nodeid x)
 join joinOne(comp a, Thing* w, Thing *x){
 	int entry = 0;
 	return [a, w, x, entry]() mutable{
+		setproc(L"joinOne");
 		switch(entry){
 		case 0:
+			TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
 			while(a(w,x)){
+				TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
 				entry = 1;
 				return true;
 		case 1: ;
@@ -366,13 +375,26 @@ comp joinproxy(join c0, Var* s, Var* o){
 		{
 		case 0:
 			entry++;
+			
 			suc = s->unifcoro(Ds);
 			ouc = o->unifcoro(Do);
+			
+			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
+			TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
 			while(suc()) {//tbh i never went thoroughly thru the join stuff you did
 //and i made this loop over the arg unification like a ruleproxy should
 //well, tbh, i was looking at this func earlier and realized i hadn't gone through it thoroughly :)lol
+				TRACE(dout << "After suc() -- " << endl);
+				TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl)
+				TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl)
 				while (ouc()) {
+					TRACE(dout << "After ouc() -- " << endl);
+					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
+					TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
 					while (c0()) {
+						TRACE(dout << "After c0() -- " << endl);
+						TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
+						TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
 						entry = 1;
 						return true;
 		case 1: ;
@@ -444,6 +466,10 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 
 		Var *s = vars[head->s->p];
 		Var *o = vars[head->o->p];
+
+		if(head->s->p == head->o->p){
+			assert(s == o);
+		}
 
 		int k = body.size()-2;
 		Var *a = vars[body[k]->s->p];
@@ -546,7 +572,7 @@ void preds2gens(){
 		comp f = x.second;
 		predGens[k] = [f](){
 			setproc(L"preds2gens lambda");
-			TRACE(dout << "..." << endl;)
+			TRACE(dout << "..." << endl);
 			return f;
 		};
 	}
@@ -599,13 +625,13 @@ void yprover::query(const old::qdb& goal){
 		vars[g[0]->o->p] = atom(g[0]->o->p);
 		dout << "query 1: " << pr << endl;
 		auto coro = pred(pr);
-		dout << "query 2" << endl;
+		dout << "query --  arg1: " << vars[g[0]->s->p] << "/" << vars[g[0]->s->p]->str() << ", arg2: " << vars[g[0]->o->p] << "/" << vars[g[0]->o->p]->str() << endl;
 		while (coro(vars[g[0]->s->p], vars[g[0]->o->p])) {//this is weird, passing the args over and over
 			nresults++;
 			if (nresults > 5) {dout << "STOPPING at " << nresults << " results." << endl;break;}
 			dout << L"RESULT " << nresults << ":";
-			dout << old::dict[g[0]->s->p] << L": " << vars[g[0]->s->p]->str() << ",   ";
-			dout << old::dict[g[0]->o->p] << L": " << vars[g[0]->o->p]->str() << endl;
+			dout << old::dict[g[0]->s->p] << L": " << vars[g[0]->s->p] << ", "  << vars[g[0]->s->p]->str() << ",   ";
+			dout << old::dict[g[0]->o->p] << L": " << vars[g[0]->o->p] << ", " << vars[g[0]->o->p]->str() << endl;
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;

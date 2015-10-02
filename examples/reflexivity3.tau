@@ -1,0 +1,11 @@
+kb
+Bob :a Person.
+Bob :self Bob.
+{?x :a Person. ?x :self ?x} => {?x :is ?x}
+
+fin.
+
+query
+#?WHO :is ?WHO
+?WHO :is ?WHOELSE
+fin.
