@@ -6,7 +6,8 @@ zero :a Nat.
 fin.
 
 query
-?WHAT :eq ?WHAT
+#working
+#?WHAT :eq ?WHAT
 
 #not working
 #?WHAT :eq ?WHATELSE.
@@ -22,7 +23,7 @@ query
 #output: var() :eq var(zero)
 
 #working
-#zero :eq zero.
+zero :eq zero.
 fin.
 
 #Expected results:
