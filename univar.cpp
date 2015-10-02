@@ -33,7 +33,7 @@ std::map<old::nodeid, comp> preds;
 */
 
 typedef function<bool()> join;
-typedef std::unordered_map<old::nodeid, Var*> varmap;
+typedef std::unordered_map<old::termid, Var*> varmap;
 
 
 typedef vector<size_t> rulesindex;
@@ -57,16 +57,16 @@ std::queue<old::termid> predQueue;
 class Node:public Thing
 {
 public:
-	old::nodeid value;//hmm
+	old::termid value;
 	bool eq(Node *x)
 	{
 		return x->value == value;
 	}
-	Node(old::nodeid s)
+	Node(old::termid s)
 	{
 		value = s;
 	}
-	wstring str(){return *old::dict[value].value;}
+	wstring str(){return op->format(value);}
 };
 
 
@@ -278,7 +278,7 @@ comp seq(comp a, comp b){
 
 
 //This was called something else before? node, clashed with old namespace gotcha
-Var* atom(old::nodeid n){
+Var* atom(old::termid n){
 	
 	Var* r = new Var();
 	if (n>0)
@@ -435,13 +435,13 @@ comp ruleproxyTwo(varmap vars, old::termid head, old::prover::termset body)
 		setproc(L"comp ruleproxyTwo");
 		TRACE(dout << "compiling ruleproxyTwo" << endl);
 
-		Var *s = vars[head->s->p];
-		Var *o = vars[head->o->p];
+		Var *s = vars[head->s];
+		Var *o = vars[head->o];
 
-		Var *a = vars[body[0]->s->p];
-		Var *b = vars[body[0]->o->p];
-		Var *c = vars[body[1]->s->p];
-		Var *d = vars[body[1]->o->p];
+		Var *a = vars[body[0]->s];
+		Var *b = vars[body[0]->o];
+		Var *c = vars[body[1]->s];
+		Var *d = vars[body[1]->o];
 
 		join c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 
@@ -455,11 +455,11 @@ comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 		setproc(L"comp ruleproxyOne");
 		TRACE(dout << "compiling ruleproxyOne" << endl);
 
-		Var *s = vars[head->s->p];
-		Var *o = vars[head->o->p];
+		Var *s = vars[head->s];
+		Var *o = vars[head->o];
 
-		Var *a = vars[body[0]->s->p];
-		Var *b = vars[body[0]->o->p];
+		Var *a = vars[body[0]->s];
+		Var *b = vars[body[0]->o];
 
 		join c0 = joinOne(pred(body[0]),a,b);
 		return joinproxy(c0,s,o);
@@ -471,23 +471,23 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		setproc(L"comp ruleproxyMore");
 		TRACE(dout << "compiling ruleproxyMore" << endl);
 
-		Var *s = vars[head->s->p];
-		Var *o = vars[head->o->p];
+		Var *s = vars[head->s];
+		Var *o = vars[head->o];
 
-		if(head->s->p == head->o->p){
+		/*if(head->s->p == head->o->p){
 			assert(s == o);
-		}
+		}*/
 
 		int k = body.size()-2;
-		Var *a = vars[body[k]->s->p];
-		Var *b = vars[body[k]->o->p];
-		Var *c = vars[body[k+1]->s->p];
-		Var *d = vars[body[k+1]->o->p];
+		Var *a = vars[body[k]->s];
+		Var *b = vars[body[k]->o];
+		Var *c = vars[body[k+1]->s];
+		Var *d = vars[body[k+1]->o];
 		
 		join c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 		for(int i = k-1; i >= 0; i--){
-		Var *vs = vars[body[i]->s->p];
-		Var *vo = vars[body[i]->o->p];
+		Var *vs = vars[body[i]->s];
+		Var *vo = vars[body[i]->o];
 		comp p = pred(body[i]);
 		c0 = halfjoin(p,vs,vo, c0);
 		}
@@ -508,8 +508,8 @@ comp rule(old::termid head, old::prover::termset body)
 	//yea yea we might not need the 's' one i just want to make sure
 	//vars[head->s->p] = (vars.find(head->s->p) != vars.end()) ? atom(head->s->p) : vars[head->s->p];
 	//vars[head->o->p] = (vars.find(head->o->p) != vars.end()) ? atom(head->o->p) : vars[head->o->p];
-	vars[head->s->p] = atom(head->s->p);
-	vars[head->o->p] = atom(head->o->p);
+	vars[head->s] = atom(head->s);
+	vars[head->o] = atom(head->o);
 
 
 	size_t i;
@@ -517,15 +517,15 @@ comp rule(old::termid head, old::prover::termset body)
 	{
 		old::termid t;
 		t = body[i]->s;
-		vars[t->p] = atom(t->p);
+		vars[t] = atom(t);
 		t = body[i]->o;
-		vars[t->p] = atom(t->p);
+		vars[t] = atom(t);
 	}
 
 
 	if(body.size() == 0){
 		//this case would represent an actual kb 'fact'
-		return fact(vars[head->s->p], vars[head->o->p]);
+		return fact(vars[head->s], vars[head->o]);
 	}
 	if(body.size() == 1)
 	{
@@ -575,12 +575,13 @@ void compile_preds(old::prover *p){
 		{
 
 
+			//skip rules that wouldnt match
 			assert(p->heads[i]->s->p);
 			assert(x->s->p);
 			if (!(
-						atom(p->heads[i]->s->p)->unifcoro(atom(x->s->p))()
+						atom(p->heads[i]->s)->unifcoro(atom(x->s))()
 					&&
-						atom(p->heads[i]->o->p)->unifcoro(atom(x->o->p))()
+						atom(p->heads[i]->o)->unifcoro(atom(x->o))()
 				)) {
 				TRACE(dout << "wouldnt match" << endl;)
 				continue;
@@ -651,12 +652,12 @@ void yprover::query(const old::qdb& goal){
 	old::nodeid pr = g[0]->p;
 
 	if (predskb.find(pr) != predskb.end()) {
-		Var *s = atom(g[0]->s->p);
-		Var *o = atom(g[0]->o->p);
+		Var *s = atom(g[0]->s);
+		Var *o = atom(g[0]->o);
 		//varmap vars;
 		//putting them to vars should be irrelevant at this point, all the pointers have been captured
 		//
-		/*if g[0]->o->p == g[0]->s->p: s = o;*/
+		/*if g[0]->o == g[0]->s: s = o;*/
 		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
 		auto coro = pred(g[0]);
 		compile_preds(p);
@@ -669,6 +670,8 @@ void yprover::query(const old::qdb& goal){
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
 
+			/*
+			//put result to results. will be more complicated with internalized lists.
 			auto sv = s->getValue();
 			auto ov = o->getValue();
 			Node *n1 = dynamic_cast<Node*>(sv);
@@ -681,6 +684,7 @@ void yprover::query(const old::qdb& goal){
 				std::make_shared<old::node>(old::dict[n2->value])));
 				results.first[L"@default"]->push_back(q);
 			}
+			*/
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
