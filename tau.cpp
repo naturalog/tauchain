@@ -573,14 +573,16 @@ int main ( int argc, char** argv) {
 			if (token == L"quit") {
 				break;
 			}
-			std::wifstream is(ws(token));
-			if (!is.is_open()) {
-				dout << "failed to open \"" << token << "\"." << std::endl;
-			}
-			else {
-				std::wstringstream ss;
-				ss << is.rdbuf();
-				input_buffer += ss.str() + L"\n";
+			if(token != L"") {
+				std::wifstream is(ws(token));
+				if (!is.is_open()) {
+					dout << "failed to open \"" << token << "\"." << std::endl;
+				}
+				else {
+					std::wstringstream ss;
+					ss << is.rdbuf();
+					input_buffer += ss.str() + L"\n";
+				}
 			}
 		}
 

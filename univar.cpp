@@ -26,10 +26,11 @@ public:
 class Var;
 
 typedef function<bool(Thing*,Thing*)> comp;
+
+/*
 typedef function<comp()> generator;
-
 std::map<old::nodeid, comp> preds;
-
+*/
 
 typedef function<bool()> join;
 typedef std::unordered_map<old::nodeid, Var*> varmap;
@@ -650,11 +651,11 @@ void yprover::query(const old::qdb& goal){
 	old::nodeid pr = g[0]->p;
 
 	if (predskb.find(pr) != predskb.end()) {
+		Var *s = atom(g[0]->s->p);
+		Var *o = atom(g[0]->o->p);
 		//varmap vars;
 		//putting them to vars should be irrelevant at this point, all the pointers have been captured
 		//
-		Var *s = atom(g[0]->s->p);
-		Var *o = atom(g[0]->o->p);
 		/*if g[0]->o->p == g[0]->s->p: s = o;*/
 		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
 		auto coro = pred(g[0]);
@@ -663,7 +664,7 @@ void yprover::query(const old::qdb& goal){
 		//this is weird, passing the args over and over
 		while (coro(s,o)) {
 			nresults++;
-			if (nresults > 123) {dout << "STOPPING at " << nresults << " results." << endl;break;}
+			if (nresults >= 123) {dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;break;}
 			dout << L"RESULT " << nresults << ":";
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
