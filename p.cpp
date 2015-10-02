@@ -1,43 +1,59 @@
-#include <stdlib.h>
 #include <iostream>
 #include <cstring>
 #include <string>
-#include <functional>
-#include <set>
-#include <cmath>
-using std::endl;
-typedef std::wstring string;
-typedef int resid;
-struct term;
+#include <sstream>
+#include <stdexcept>
+#include <ctime>
 
-#define vec_t vector<T,ispod>
-#define map_t map<K, V, ispod>
-#define vec_templ template<typename T, bool ispod>
-#define map_tmpl template<typename K, typename V, bool ispod>
+template<typename T>
+struct sp { // smart pointer
+	T* p = 0;
+	int* r = 0;
+	sp() {}
+	sp(T* v) : p(v) 			{ *(r = new int) = 1; }
+	sp(const sp<T>& s) : p(s.p), r(s.r) 	{ if (r) ++*r; }
+
+	~sp() { if (r && !--*r) delete p , delete r; }
+
+	T& operator*()  { return *p; } 
+	T* operator->() { return p; }
+    
+	sp<T>& operator=(const sp<T>& s) {
+		if (this == &s) return *this;
+		if (r && !--*r) delete p , delete r;
+		p = s.p;
+		if ((r = s.r)) ++*r;
+		return *this;
+	}
+};
+typedef sp<struct frame> sp_frame;
 
 const size_t chunk = 4;
-
 template<typename T, bool ispod = std::is_pod<T>::value>
-struct vector {
+class vector {
 protected:
 	T* a;
-	static const size_t szchunk;
+	const size_t szchunk = chunk * sizeof(T);
 	size_t n, c;
 public:
+	explicit vector() : a(0),n(0),c(0) {}
+	vector(const vector<T>& t) : a(0),n(0),c(0) { copyfrom(t); }
+	vector<T>& operator=(const vector<T>& t) { copyfrom(t); return *this; }
+
 	typedef T* iterator;
-	vector() : a(0),n(0),c(0)/*,m(*this)*/ {}
-	vector(const vector<T, ispod>& t) : a(0),n(0),c(0)/*,m(*this)*/ { copyfrom(t); }
-	vec_t& operator=(const vector<T, ispod>& t) { copyfrom(t); return *this; }
-	T operator[](size_t k) const 		{ return a[k]; }
-	T& operator[](size_t k) 		{ return a[k]; }
-	size_t size() const			{ return n; }
-	T* begin() const			{ return a; }
-	T* end() const				{ return n ? &a[n] : 0; }
-	void clear()				{ n = c = 0; if (!a) return; free(a); a = 0; }
-	void clear1() 				{ n = c = 0; }
-	bool empty() const			{ return !n; }
-	~vector()				{ if(a)free(a); }
-	T* back()				{ return n ? &a[n-1] : 0; }
+	T operator[](size_t k) const { return a[k]; }
+	size_t size() const	{ return n; }
+	T* begin() const	{ return a; }
+	T* end() const		{ return a ? &a[n] : 0; }
+	void clear()		{
+		n = 0; c = 0;
+		if (!a) return;
+		free(a);
+		a = 0;
+	}
+	bool empty() const	{ return !a; }
+	~vector()		{ clear(); }
+	iterator back()		{ return n ? &a[n-1] : 0; }
 	T& push_back(const T& t) {
 		if (!(n % chunk))
 			a = (T*)realloc(a, szchunk * ++c);
@@ -45,32 +61,15 @@ public:
 		else new (&a[n])(T)(t);
 		return a[n++];
 	}
-	void copyfrom(const vector<T, ispod>& t) {
-		if (!(n = t.n)) { c = 0; return; }
-		memcpy(a = (T*)realloc(a, t.c * szchunk), t.a, (c = t.c) * szchunk);
+protected:	
+	void copyfrom(const vector<T>& t) {
+		clear();
+		if (!(n = t.n)) return; 
+		memcpy(a = (T*)malloc(t.c * szchunk), t.a, (c = t.c) * szchunk);
+//		if (!ispod)
+//			for (size_t k = 0; k < n; ++k)
+//				new (&a[k])(T);
 	}
-	vector(size_t sz) : a(0), n(sz), c(ceil(((double)sz) / (double)szchunk)) {
-		memset(a = (T*)malloc(c * szchunk), 0, c * szchunk);
-	}
-/*
-	struct coro {
-		bool state;
-		iterator i, e;
-		const vector<T, ispod>* t;
-		coro(const vector<T, ispod>& _t) : state(false), i(0), e(0), t(&_t) {}
-		bool operator()() {
-			switch (state) {
-			case false: 
-				i = t->begin(), e = t->end();
-				while (i != e) {
-					return state = true;
-			case true: 	++i;
-				}
-				return state = false;
-			}
-		}
-	} m;
-*/
 };
 
 template<typename K, typename V>
@@ -82,63 +81,229 @@ struct mapelem {
 	mapelem(const K& _k, const V& _v) : first(_k), second(_v) {} 
 };
 
-template<typename K, typename V, bool ispod>
-struct map : public vector<mapelem<K, V>, ispod > {
+template<typename K, typename V>
+struct map : public vector<mapelem<K, V> > {
 	typedef mapelem<K, V> vtype;
-	typedef vector<mapelem<K, V>, ispod > base;
-	typedef map<K, V, ispod > _this;
+	typedef vector<mapelem<K, V> > base;
 public:
+	map(const vector<vtype>& t) { copyfrom(t); }
 	map() : base() {}
-	map(const base& t)		{ copyfrom(t); }
-	map(const _this& _s) : base(){ base::copyfrom(_s); }
-	map<K, V, ispod>& operator=(const _this& m)	{ base::copyfrom(m); return *this; }
-	V& operator[](const K& k){ mapelem<K, V>* z = find(k); return z ? z->second : set(k, V()); }
-//	_this& operator=(const _this& m);
-	typedef vtype* iterator;
+	map(const map<K, V>& _s) : base()      	{ base::copyfrom(_s); }
+	map<K, V>& operator=(const map<K, V>& m){ base::copyfrom(m); return *this; }
+//	const V& operator[](const K& k) const	{ mapelem<K, V>* z = find(k); return z->second; } // ? z->second : set(k, V()); }
+	V& operator[](const K& k)		{ mapelem<K, V>* z = find(k); return z ? z->second : set(k, V()); }
 	V& set(const K& k, const V& v) {
 		vtype* z = find(k);
 		if (z) { return z->second = v; }
 		return base::push_back(vtype(k, v)).second;
-	//	qsort(base::a, base::n, sizeof(vtype), compare);
+//		qsort(base::a, base::n, sizeof(vtype), compare);
 	}
-	mapelem<K, V>* find(const K& k) const {
+	typedef vtype* iterator;
+	iterator find(const K& k) const {
 		if (!base::n) return 0;
-		iterator e = base::end();
-		for (vtype* x = base::begin(); x != e; ++x) if (x->first == k) return x;
+		for (vtype& x : *this) if (x.first == k) return &x;
 		return 0;
-	//	vtype v(k, V()); vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare); return z;
+//		vtype v(k, V());
+//		vtype* z = (vtype*)bsearch(&v, base::a, base::n, sizeof(vtype), compare);
+//		return z;
 	}
 private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
 
-int nvars = 0;
+typedef std::wstring string;
+void trim(string& s) {
+	string::iterator i = s.begin();
+	while (iswspace(*i)) {
+		s.erase(i);
+		i = s.begin();
+	}
+	size_t n = s.size();
+	if (n) {
+		while (iswspace(s[--n]));
+		s = s.substr(0, ++n);
+	}
+}
+
+typedef int resid;
+std::wistream &din = std::wcin;
+std::wostream &dout = std::wcout;
+struct term;
+typedef map<resid, term*> subs;
+typedef vector<term*> termset;
+//string lower ( const string& s_ ) { string s = s_; std::transform ( s.begin(), s.end(), s.begin(), ::towlower ); return s; }
+string wstrim(string s) { trim(s); return s; }
+string format(const term* t, bool body = false);
+string format(const termset& t, int dep = 0);
+string format(const subs& s);
+bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
+
+class wruntime_error : public std::exception {
+	string msg;
+public:
+	wruntime_error(string s) : msg(s){}
+	virtual const char* what() const _GLIBCXX_USE_NOEXCEPT { return std::string(msg.begin(), msg.end()).c_str(); }
+	virtual ~wruntime_error() _GLIBCXX_USE_NOEXCEPT {}
+};
+
+#ifdef DEBUG
+#define TRACE(x) x
+#else
+#define TRACE(x)
+#endif
 
 class bidict {
-	map<resid, string, false> ip;
-	map<string, resid, false> pi;
+	map<resid, string> ip;
+	map<string, resid> pi;
 public:
-	resid set(string v) {
-		if (!v.size()) throw "bidict::set called with a node containing null value";
-		map<string, resid, false>::iterator it = pi.find ( v );
-		if (it) return it->second;
+	void init() {
+	}
+
+	resid set ( string v ) {
+		if (!v.size()) throw std::runtime_error("bidict::set called with a node containing null value");
+		map<string, resid>::iterator it = pi.find ( v );
+		if ( it ) return it->second;
 		resid k = pi.size() + 1;
-		static int lastres = -1, lastvar = 1;
-		if ( v[0] != L'?' ) k = lastres--;
-		else nvars = k = lastvar++;
+		if ( v[0] == L'?' ) k = -k;
+//		pi.set(v, k), ip.set(k, v);
 		pi[v] = k, ip[k] = v;
 		return k;
 	}
-	string operator[](resid k) { return ip[k]; }
-	resid operator[](string v) { return set(v); }
+
+	string operator[] ( resid k ) { return ip[k]; }
+	resid operator[] ( string v ) { return set(v); }
 } dict;
 
-template<typename T, bool ispod /*= std::is_pod<T>::value*/>
-const size_t vector<T, ispod>::szchunk = chunk * sizeof(T);
+const resid implies = dict.set(L"=>");
+const resid Dot = dict.set(L".");
 
-//map_tmpl int map<K, V, ispod>::compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
-typedef vector<term*, true> termset;
+term* mkterm();
+term* mkterm(termset& kb, termset& query);
+term* mkterm(resid p);
+term* mkterm(resid p, const termset& args);
 
+/*
+typedef term* (*fevaluate)(term&, const subs&);
+typedef bool (*funify)(term& s, const subs& ssub, term& d, subs& dsub);
+typedef bool (*funify_ep)(term& s, const subs& ssub, term& d, const subs& dsub);
+*/
+struct term {
+	term() : p(0) { throw 0; }
+	term(termset& kb, termset& query) : p(0) { addbody(query); trymatch(kb); }
+	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) {
+		TRACE(if (!p) throw 0);
+	}
+	const resid p;
+	const termset args;
+	struct body_t {
+		friend struct term;
+		term* t;
+		bool state;
+		body_t(term* _t) : t(_t), state(false) {}
+		termset matches;
+	};
+	typedef vector<body_t*> bvec;
+	bvec body;
+
+	// add term(s) to body
+	term* addbody(const termset& t) { for (termset::iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
+	term* addbody(term* t) {
+		TRACE(dout << "added body " << format(t) << " to " << format(this) << std::endl);
+		body.push_back(new body_t(t));
+		return this;
+	}
+
+	// indexer: given rule's heads, see which can match to each body
+	void trymatch(termset& heads) {
+		for (bvec::iterator b = body.begin(); b != body.end(); ++b)
+			for (termset::iterator it = heads.begin(); it != heads.end(); ++it)
+				trymatch(**b, *it);
+	}
+	static term* evaluate(term* _t, subs& ss) {
+		static term *v, *r;
+		if (!_t) throw 0;
+		term& t = *_t;
+		if (t.p < 0)
+			return (v = ss[t.p]) ? r = v->evaluate(v, ss) : 0;
+		if (t.args.empty())
+			return &t;
+		termset ts;
+		for (term* a : t.args) {
+			if ((v = a->evaluate(a, ss))) ts.push_back(v);
+			else ts.push_back(mkterm(a->p));
+		}
+		return mkterm(t.p, ts);
+		TRACE(dout<<"evaluate " << format(&t) << " under " << format(ss) << " returned " << format(r) << std::endl);
+		return r;
+	};
+	bool unify(subs& ssub, term& d, subs& dsub) {
+		term* v;
+		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(v, ssub))) ? v->unify(ssub, d, dsub) : true;
+		if (d.p < 0) {
+			if ((v = dsub[d.p]) && (v = d.evaluate(&d, dsub))) return unify(ssub, *v, dsub);
+			dsub.set(d.p, v = evaluate(this, ssub));
+//			TRACE(dout << "new sub: " << dict[d.p] << '\\' << format(v) << std::endl);
+			return true;
+		}
+		size_t sz = args.size();
+		if (p != d.p || sz != d.args.size()) return false;
+		for (size_t n = 0; n < sz; ++n)
+			if (!args[n]->unify(ssub, *d.args[n], dsub)) 
+				return false;
+		return true;
+	}
+	bool unify_ep(subs& ssub, term& d, subs& dsub) {
+		static term* v;
+		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(v, ssub))) ? v->unify_ep(ssub, d, dsub) : true;
+		if (d.p < 0) return ((v=dsub[d.p]) && (v = v->evaluate(v, dsub))) ? unify_ep(ssub, *v, dsub) : true;
+		size_t sz = args.size();
+		if (p != d.p || sz != d.args.size()) return false;
+		for (size_t n = 0; n < sz; ++n)
+			if (!args[n]->unify_ep(ssub, *d.args[n], dsub)) 
+				return false;
+		return true;
+	}
+	void _unify(subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
+private:
+	// indexer: match a term (head) to a body's term by trying to unify them.
+	// if they cannot unify without subs, then they will not be able to
+	// unify also during inference.
+	void trymatch(body_t& b, term* t) {
+		if (t == this) return;
+		//b.addmatch(t, subs()); return; // unremark to disable indexing
+		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
+		static subs d, empty;
+		if (b.t->unify(empty, *t, d)) {
+			TRACE(dout << "added match " << format(t) << " to " << format(b.t) << std::endl);
+			b.matches.push_back(t);
+		}
+		d.clear();
+	}
+};
+
+const size_t tchunk = 8192, nch = tchunk / sizeof(term);
+size_t bufpos = 0;
+char* buf = (char*)malloc(tchunk);
+
+#define MKTERM if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term); return &((term*)buf)[bufpos++];
+#define MKTERM1(x) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x); return &((term*)buf)[bufpos++];
+#define MKTERM2(x, y) if (bufpos == nch) { buf = (char*)malloc(tchunk); bufpos = 0; } new (&((term*)buf)[bufpos])(term)(x, y); return &((term*)buf)[bufpos++];
+
+term* mkterm() { MKTERM }
+term* mkterm(termset& kb, termset& query) { MKTERM2(kb, query); }
+//	return new term(kb, query); }
+term* mkterm(resid p, const termset& args) { MKTERM2(p, args); }
+//	return new term(p, args); }
+term* mkterm(resid p) { MKTERM1(p); }
+//	return new term(p); }
+
+#define EPARSE(x) throw wruntime_error(string(x) + string(s,0,48));
+#define SKIPWS while (iswspace(*s)) ++s
+#define RETIF(x) if (*s == x) return 0
+#define RETIFN(x) if (*s != x) return 0
+#define PROCEED1 while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')')
+#define PROCEED PROCEED1 t[pos++] = *s++; t[pos] = 0; pos = 0
+#define TILL(x) do { t[pos++] = *s++; } while (x)
 class nqparser {
 private:
 	wchar_t *t;
@@ -148,391 +313,337 @@ public:
 	nqparser() : t(new wchar_t[4096*4096]) {}
 	~nqparser() { delete[] t; }
 
-	bool readcurly(vector<term*, true>& ts);
-	term* readlist();
-	term* readiri();
-	term* readbnode();
-	term* readvar();
-	term* readlit();
-	term* readany(bool lit = true);
-	void addhead(vector<term*, true>& ts, term* t, termset* subjs = 0);
-	vector<term*, true> operator()(const wchar_t* _s);
-	static vector<term*, true> readterms (std::wistream& is);
-};
-
-void trim(string& s) {
-	string::iterator i = s.begin();
-	while (iswspace(*i)) s.erase(i), i = s.begin(); 
-	size_t n = s.size();
-	if (n) {
-		while (iswspace(s[--n]));
-		s = s.substr(0, ++n);
+	bool readcurly(termset& ts) {
+		while (iswspace(*s)) ++s;
+		if (*s != L'{') return false;
+		ts.clear();
+		do { ++s; } while (iswspace(*s));
+		if (*s == L'}') ++s;
+		else ts = (*this)(s);
+		return true;
 	}
-}
 
-#ifdef DEBUG
-#define TRACE(x) x
-#else
-#define TRACE(x)
-#endif
-
-typedef map<resid, term*, true> subs;
-string format(const term* t, bool body = false);
-string format(const termset& t, int dep = 0);
-string format(const subs& s);
-void trim(string& s);
-string wstrim(string s);
-std::wistream &din = std::wcin;
-std::wostream &dout = std::wcout;
-bool startsWith ( const string& x, const string& y ) { return x.size() >= y.size() && x.substr ( 0, y.size() ) == y; }
-string wstrim(string s) { trim(s); return s; }
-const resid implies = dict.set(L"=>");
-const resid Dot = dict.set(L".");
-
-struct term {
-	term(termset& query) : p(0), szargs(0), body(query) { }
-	term(resid _p, const termset& _args = termset()) : p(_p), args(_args), szargs(args.size()) {}
-
-	const resid p;
-	termset args;
-	const size_t szargs;
-	termset body;
-};
-const size_t tchunk = 8192, nch = tchunk / sizeof(term);
-
-struct tcmp {
-	bool operator()(term* _x, term* _y) const {
-		term &x = *_x, &y = *_y;
-		if (x.szargs != y.szargs) return x.szargs < y.szargs;
-		if (x.p != y.p) return x.p < y.p;
-		for (termset::iterator i = x.args.begin(), e = x.args.end(), j = y.args.begin(); i != e; ++i, ++j) 
-			if ((*i)->p != (*j)->p)
-				return (*i)->p < (*j)->p;
-		return false;
-	}
-};
-std::set<term*, tcmp> terms;
-term* mkterm(termset& query) { return new term(query); }
-term* mkterm(resid p, const termset& args = termset()) { return new term(p, args); }
-
-#define EPARSE(x) dout << (string(x) + string(s,0,48)) << endl, throw 0
-#define SKIPWS while (iswspace(*s)) ++s
-#define RETIF(x) if (*s == x) return 0
-#define RETIFN(x) if (*s != x) return 0
-#define PROCEED1 while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')')
-#define PROCEED PROCEED1 t[pos++] = *s++; t[pos] = 0; pos = 0
-#define TILL(x) do { t[pos++] = *s++; } while (x)
-
-bool nqparser::readcurly(termset& ts) {
-	while (iswspace(*s)) ++s;
-	if (*s != L'{') return false;
-	ts.clear();
-	do { ++s; } while (iswspace(*s));
-	if (*s == L'}') ++s;
-	else ts = (*this)(s);
-	return true;
-}
-
-term* nqparser::readlist() {
-	if (*s != L'(') return (term*)0;
-	++s;
-	termset items;
-	term* pn;
-	while (*s != L')') {
-		SKIPWS;
-		if (*s == L')') break;
-		if (!(pn = readany(true))) EPARSE(L"couldn't read next list item: ");
-		items.push_back(pn);
-		SKIPWS;
-		if (*s == L'.') while (iswspace(*s++));
-		if (*s == L'}') EPARSE(L"unexpected } inside list: ");
-	};
-	do { ++s; } while (iswspace(*s));
-	return mkterm(Dot, items);
-}
-
-term* nqparser::readiri() {
-	while (iswspace(*s)) ++s;
-	if (*s == L'<') {
-		while (*++s != L'>') t[pos++] = *s;
-		t[pos] = 0, pos = 0, ++s;
-		return mkterm(dict[t]);
-	}
-	if (*s == L'=' && *(s+1) == L'>') return ++++s, mkterm(implies);
-	PROCEED;
-	string iri = wstrim(t);
-	return mkterm(dict[iri]);
-}
-
-term* nqparser::readbnode() { SKIPWS; if (*s != L'_' || *(s+1) != L':') return 0; PROCEED; return mkterm(dict[wstrim(t)]); } 
-term* nqparser::readvar() { SKIPWS; RETIFN(L'?'); PROCEED; return mkterm(dict[wstrim(t)]); }
-
-term* nqparser::readlit() {
-	SKIPWS; RETIFN(L'\"');
-	++s;
-	TILL(!(*(s-1) != L'\\' && *s == L'\"'));
-	string dt, lang;
-	++s;
-	PROCEED1 {
-		if (*s == L'^' && *++s == L'^') {
-			if (*++s == L'<') {
-				++s; while (*s != L'>') dt += *s++;
-				++s; break;
-			}
-		} else if (*s == L'@') { while (!iswspace(*s)) lang += *s++; break; }
-		else EPARSE(L"expected langtag or iri:");
-	}
-	t[pos] = 0; pos = 0;
-	string t1 = t;
-//boost:replace_all(t1, L"\\\\", L"\\");
-	return mkterm(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
-}
-
-term* nqparser::readany(bool lit) {
-	term* pn;
-	return ((pn = readbnode()) || (pn = readvar()) || (lit && (pn = readlit())) || (pn = readlist()) || (pn = readiri()) ) ? pn : 0;
-}
-
-void nqparser::addhead(termset& heads, term* h, termset* body) {
-	if (body) h->body = *body;
-	heads.push_back(h);
-}
-
-termset nqparser::operator()(const wchar_t* _s) {
-	typedef map<term*, termset, false> preds_t;
-	preds_t preds;
-	s = _s;
-//	string graph;
-	term *subject, *pn;
-	termset subjs, objs, heads;
-	pos = 0;
-	preds_t::iterator pos1 = 0;
-
-	while(*s) {
-		if (readcurly(subjs)) subject = 0;
-		else if (!(subject = readany(false))) EPARSE(L"expected iri or bnode subject:"); // read subject
-		do { // read predicates
-			while (iswspace(*s) || *s == L';') ++s;
-			if (*s == L'.' || *s == L'}') break;
-			if ((pn = readiri())) { // read predicate
-				preds.set(pn, termset());
-				pos1 = preds.back();
-			} else EPARSE(L"expected iri predicate:");
-			do { // read objects
-				while (iswspace(*s) || *s == L',') ++s;
-				if (*s == L'.' || *s == L'}') break;
-				if (readcurly(objs)) pos1->second = objs;
-				else if ((pn = readany(true))) pos1->second.push_back(pn); // read object
-				else EPARSE(L"expected iri or bnode or literal object:");
-				SKIPWS;
-			} while (*s == L','); // end predicates
+	term* readlist() {
+		if (*s != L'(') return (term*)0;
+		++s;
+		termset items;
+		term* pn;
+		while (*s != L')') {
 			SKIPWS;
-		} while (*s == L';'); // end objects
-		if (*s != L'.' && *s != L'}' && *s) { // read graph
-			if (!(pn = readbnode()) && !(pn = readiri()))
-				EPARSE(L"expected iri or bnode graph:");
-//			graph = dict[pn->p];
-		} //else graph = ctx;
-		SKIPWS; while (*s == '.') ++s; SKIPWS;
-		if (*s == L')') EPARSE(L"expected ) outside list: ");
-		if (subject)
-			for (preds_t::vtype* x = preds.begin(); x != preds.end(); ++x)
-				for (termset::iterator o = x->second.begin(); o != x->second.end(); ++o) {
-					termset ts;
-					ts.push_back(subject);
-					ts.push_back(*o);
-					addhead(heads, mkterm(x->first->p, ts));
-				}
-		else for (termset::iterator o = objs.begin(); o != objs.end(); ++o)
-			addhead(heads, *o, &subjs);
-		if (*s == L'}') { ++s; return heads; }
-		preds.clear();
-		subjs.clear();
-		objs.clear();
+			if (*s == L')') break;
+			if (!(pn = readany(true)))
+				EPARSE(L"couldn't read next list item: ");
+			items.push_back(pn);
+			SKIPWS;
+//			pn = pn->o = mkterm(Dot);
+			if (*s == L'.') while (iswspace(*s++));
+			if (*s == L'}') EPARSE(L"expected { inside list: ");
+		};
+		do { ++s; } while (iswspace(*s));
+		return mkterm(Dot, items);
 	}
-	return heads;
-}
 
-termset nqparser::readterms(std::wistream& is) {
+	term* readiri() {
+		while (iswspace(*s)) ++s;
+		if (*s == L'<') {
+			while (*++s != L'>') t[pos++] = *s;
+			t[pos] = 0; pos = 0; ++s;
+			return mkterm(dict[t]);
+		}
+		if (*s == L'=' && *(s+1) == L'>') {
+			++++s;
+			return mkterm(implies);
+		}
+		PROCEED;
+		string iri = wstrim(t);
+		return mkterm(dict[iri]);
+	}
+
+	term* readbnode() { SKIPWS; if (*s != L'_' || *(s+1) != L':') return 0; PROCEED; return mkterm(dict[wstrim(t)]); } 
+	term* readvar() { SKIPWS; RETIFN(L'?'); PROCEED; return mkterm(dict[wstrim(t)]); }
+
+	term* readlit() {
+		SKIPWS; RETIFN(L'\"');
+		++s;
+		TILL(!(*(s-1) != L'\\' && *s == L'\"'));
+		string dt, lang;
+		++s;
+		PROCEED1 {
+			if (*s == L'^' && *++s == L'^') {
+				if (*++s == L'<') {
+					++s; while (*s != L'>') dt += *s++;
+					++s; break;
+				}
+			} else if (*s == L'@') { while (!iswspace(*s)) lang += *s++; break; }
+			else EPARSE(L"expected langtag or iri:");
+		}
+		t[pos] = 0; pos = 0;
+		string t1 = t;
+//boost::replace_all(t1, L"\\\\", L"\\");
+		return mkterm(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
+	}
+
+	term* readany(bool lit = true) {
+		term* pn;
+		return ((pn = readbnode()) || (pn = readvar()) || (lit && (pn = readlit())) || (pn = readlist()) || (pn = readiri()) ) ? pn : 0;
+	}
+
+	void addhead(termset& ts, term* t) {
+		if (!t) throw 0;
+		if (!t->p) throw 0;
+//		if (!t->s != !t->p) throw 0;
+		ts.push_back(t);
+	}
+
+	termset operator()(const wchar_t* _s) {
+		//typedef vector<std::pair<term*, termset> > preds_t;
+		typedef map<term*, termset> preds_t;
+		preds_t preds;
+		s = _s;
+//		string graph;
+		term *subject, *pn;
+		termset subjs, objs, heads;
+		pos = 0;
+//		auto pos1 = preds.back();
+		termset dummy;
+		preds_t::iterator pos1 = 0;
+
+		while(*s) {
+			if (readcurly(subjs)) subject = 0;
+			else if (!(subject = readany(false))) EPARSE(L"expected iri or bnode subject:"); // read subject
+			do { // read predicates
+				while (iswspace(*s) || *s == L';') ++s;
+				if (*s == L'.' || *s == L'}') break;
+				if ((pn = readiri())) { // read predicate
+					preds.set(pn, termset());
+					pos1 = preds.back();
+				} else EPARSE(L"expected iri predicate:");
+				do { // read objects
+					while (iswspace(*s) || *s == L',') ++s;
+					if (*s == L'.' || *s == L'}') break;
+					if (readcurly(objs)) pos1->second = objs;
+					else if ((pn = readany(true))) pos1->second.push_back(pn); // read object
+					else EPARSE(L"expected iri or bnode or literal object:");
+					SKIPWS;
+				} while (*s == L','); // end predicates
+				SKIPWS;
+			} while (*s == L';'); // end objects
+			if (*s != L'.' && *s != L'}' && *s) { // read graph
+				if (!(pn = readbnode()) && !(pn = readiri()))
+					EPARSE(L"expected iri or bnode graph:");
+//				graph = dict[pn->p];
+			} //else graph = ctx;
+			SKIPWS; while (*s == '.') ++s; SKIPWS;
+			if (*s == L')') EPARSE(L"expected ) outside list: ");
+			if (subject)
+				for (auto x = preds.begin(); x != preds.end(); ++x)
+					for (termset::iterator o = x->second.begin(); o != x->second.end(); ++o) {
+						termset ts;
+						ts.push_back(subject);
+						ts.push_back(*o);
+						addhead(heads, mkterm(x->first->p, ts));
+					}
+			else for (termset::iterator o = objs.begin(); o != objs.end(); ++o) addhead(heads, (*o)->addbody(subjs));
+			if (*s == L'}') { ++s; return heads; }
+			preds.clear();
+			subjs.clear();
+			objs.clear();
+		}
+		return heads;
+	}
+};
+
+termset readterms ( std::wistream& is) {
 	string s, c;
 	nqparser p;
-	string ss, space = L" ";
+	std::wstringstream ss;
 	while (getline(is, s)) {
 		trim(s);
 		if (s[0] == '#') continue;
 		if (startsWith(s, L"fin") && wstrim(s.c_str() + 3) == L".") break;
-		ss += space + s + space;
+		ss << ' ' << s << ' ';
 	}
-	return p((wchar_t*)ss.c_str());
+	return p((wchar_t*)ss.str().c_str());
+}
+
+string formatlist(const term* t, bool in = false) {
+	if (!t) return L"";
+	if (t->p != Dot)
+		throw 0;
+	std::wstringstream ss;
+	if (!in) ss << L'(';
+	ss << format(t->args, true);// << L' ' << format(t->s) << L' ';
+	if (!in) ss << L')';
+	return ss.str();
 }
 
 string format(const term* t, bool body) {
 	if (!t || !t->p) return L"";
-	string ss;
+	std::wstringstream ss;
 	if (body && t->p == implies) {
-		ss += L'{';
-		for (termset::iterator x = t->body.begin(); x != t->body.end(); ++x) ss += format(*x) + L';';
-		ss += L'}';
-		ss += format(t, false);
+		ss << L'{';
+		for (term::bvec::iterator x = t->body.begin(); x != t->body.end(); ++x) ss << format((*x)->t) << L';';
+		ss << L'}';
+		ss << format(t, false);
 	}
 	else if (!t->p) return L"";
-	ss += dict[t->p];
-	if (t->args.size()) {
-		ss += L'(';
-		for (term** y = t->args.begin(); y != t->args.end(); ++y) ss += format(*y) += L' ';
-		ss += L") ";
-	}
-	return ss;
+//	else if (t->p != Dot) {
+		ss << dict[t->p];
+		if (t->args.size()) {
+			ss << L'(';
+			for (term* y : t->args) ss << format(y) << L' ';
+			ss << L") ";
+		}
+//	}
+//	else return formatlist(t);
+	return ss.str();
 }
 
 string format(const subs& s) {
-	string ss;
-	vector<mapelem<resid, term*>, true > v((const vector<mapelem<resid, term*>, true >&)s);
+	std::wstringstream ss;
+	vector<mapelem<resid, term*> > v((const vector<mapelem<resid, term*> >&)s);
 	for (size_t n = 0; n < s.size(); ++n)
-		ss += dict[v[n].first] += L'\\' + format(v[n].second) += L' ';
-	return ss;
+		ss << dict[v[n].first] << L'\\' << format(v[n].second) << L' ';
+	return ss.str();
 }
 
-#define IDENT for (int n = 0; n < dep; ++n) ss += L'\t'
+#define IDENT for (int n = 0; n < dep; ++n) ss << L'\t'
 
 string format(const termset& t, int dep) {
-	string ss;
+	std::wstringstream ss;
 	for (termset::iterator _x = t.begin(); _x != t.end(); ++_x) {
 		term* x = *_x;
 		if (!x || !x->p) continue;
 		IDENT;
-		ss += format(x, true);
-		if (x->body.size()) ss += L" implied by: ";
-		ss += L"\r\n";
-		for (termset::iterator y = x->body.begin(); y != x->body.end(); ++y) {
+		ss << format(x, true);
+		if (x->body.size()) 
+			ss << L" implied by: ";
+		else
+			ss <<  L" a fact.";
+		ss << std::endl;
+		for (term::bvec::iterator y = x->body.begin(); y != x->body.end(); ++y) {
 			IDENT;
-//			((
-			ss += L"\t";
-			ss += format(*y, true);
-			ss += L"\r\n";
-//			)/* += L" matches to heads:")*/ += endl;
-//			for (termset::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
-//				IDENT;
-//				ss += L"\t\t" + format(*z, true) + endl;
-//			}
+			ss << L"\t" << format((*y)->t, true) << L" matches to heads:" << std::endl;
+			for (termset::iterator z = (*y)->matches.begin(); z != (*y)->matches.end(); ++z) {
+				IDENT;
+				ss << L"\t\t" << format(*z, true) << std::endl;
+			}
 		}
 	}
-	return ss;
+	return ss.str();
 }
 
-typedef map<int, term*, true> condset;
-
-bool put(int p, term* t, condset& c) {
-	static condset::iterator i;
-	return (!(i = c.find(p))) ? (c[p] = t), true : (i->second == t);
-}
-
-bool mkconds(term* h, term* b, condset& c) {
-	size_t s = h->args.size();
-	if (s != b->args.size()) return false;
-	if (h->p < 0) {
-		if (b->p < 0) {
-			if (h->p != b->p) return false;
-		}
-		else if (!put(b->p, h, c))
-			return false;
-	} else if (!put(h->p, b, c))
-		return false;
-	for (size_t n = 0; n < s; ++n)
-		if (!mkconds(h->args[n], b->args[n], c))
-			return false;
-	return true;
-}
-
-map<int, map<int, std::function<void(struct frame*)>, false>, false> conds;
+typedef vector<mapelem<term*, subs> > ground;
+typedef map<resid, vector<mapelem<term*, ground> > > evidence;
 
 struct frame {
-	size_t h, b;
-	frame* prev;
-	termset env;
-	frame() : h(0), b(0), prev(0), env(nvars) {}
-	void run() { conds[h][b](this); }
+	term* rule;
+	term::bvec::iterator b;
+	sp_frame prev, creator, next;
+	subs s;
+	ground g() const { // calculate the ground
+		if (!creator.p) return ground();
+		ground r = creator.p->g();
+		termset empty;
+		frame& cp = *creator.p;
+		typedef mapelem<term*, subs> elem;
+		if (btterm)
+			r.push_back(elem(btterm, subs()));
+		else if (cp.b != cp.rule->body.end()) {
+			if (!rule->body.size())
+				r.push_back(elem(rule, subs()));
+		} else if (cp.rule->body.size())
+			r.push_back(elem(creator.p->rule, creator.p->s));
+		return r;	
+	}
+	term* btterm;
+	frame(sp_frame c, term* r, term::bvec::iterator* l, sp_frame p, const subs&  _s = subs())
+		: rule(r), b(l ? *l : rule->body.begin()), prev(p), creator(c), s(_s), btterm(0) { }
+	frame(sp_frame c, frame& p, const subs& _s) 
+		: rule(p.rule), b(p.b), prev(p.prev), creator(c), s(_s), btterm(0) { }
 };
+size_t steps = 0;
 
-void run(termset& heads) {
-	const size_t max_frames = 1e+6;
-	frame* last = new frame[max_frames];
-	for (size_t n = 0; n < heads.size(); ++n)
-		for (size_t k = 0; k < heads[n]->body.size(); ++k) {
-			map<int, condset, false> cs;
-			for (size_t m = 0; m < heads.size(); ++m) {
-				map<int, term*,true> c;
-				term *b = heads[n]->body[k], *h = heads[m];
-				if (mkconds(h, b, c)) {
-					dout << "conds for body " << format(b) << " vs head " << format(h) << " are: ";
-					for (auto x : c) dout << dict[x.first] << '=' << format(x.second) << ';';
-					dout << endl;
-					cs[m] = c;
+sp_frame prove(sp_frame _p, sp_frame& lastp) {
+	if (!lastp.p) lastp = _p;
+	evidence e;
+	while (_p.p) {
+		if (++steps % 1000000 == 0) (dout << "step: " << steps << std::endl);
+		sp_frame ep = _p;
+		frame& p = *_p.p;
+		term* t = p.rule, *epr;
+		if (t) { // check for euler path
+			while ((ep = ep.p->prev).p) {
+				epr = ep->rule;
+				if (epr == p.rule && epr->unify_ep(ep->s, *t, p.s)) {
+					_p = _p->next;
+					t = 0;
+					break;
 				}
 			}
-		       	conds[n][k] = [cs, n, k, last](frame* f) mutable {
-				if (f->h != n && f->b != k) throw 0;
-				frame* l = ++last;
-				for (auto x : cs) {
-					bool b = true;
-					for (auto y : x.second) {
-						int p = y.first;
-						term *s = y.second;
-						if (f->env[p]) {
-							if (f->env[p] != s) {
-								b = false;
-								break;
-							}
-						} else
-							last->env[p] = s;
-					}
-					if (b) {
-						last->h = x.first, last->b = 0, last->prev = f;
-						for (size_t z = 0; z < nvars; ++z)
-							if (f->env[z])
-								last->env[z] = f->env[z];
-						++last;
-					} else 
-						*last = frame();
-				}
-				if (l == last) --last;
-			};
+			if (!t) { _p = p.next; continue; }
 		}
-	vector<size_t> q;
-	for (size_t n = 0; n < heads.size(); ++n)
-		if (!heads[n]->p)
-			q.push_back(n);
-	for (size_t n = 0; n < q.size(); ++n)
-		last[n].h = q[n];
-	while (last->h) last++->run();
+		if (p.b != p.rule->body.end()) (*p.b)->t->_unify(p.s, (*p.b)->matches, _p, lastp);
+		else if (!p.prev.p) {
+			#ifndef NOTRACE
+			term* _t; // push evidence
+			for (term::bvec::iterator r = p.rule->body.begin(); r != p.rule->body.end(); ++r) {
+				if (!(_t = ((*r)->t->evaluate((*r)->t, p.s)))) continue;
+				e[_t->p].push_back(mapelem<term*, ground>(_t, p.g()));
+				dout << "proved: " << format(_t) << std::endl;
+			}
+			#endif
+		}
+		else { // if body is done, go up the tree
+			frame& ppr = *p.prev;
+			sp_frame r(new frame(_p, ppr, ppr.s));
+			p.rule->unify(p.s, *(*((r->b)++))->t, r->s);
+			prove(r, lastp);
+		}
+		_p = p.next;
+	}
+//	dout << "steps: " << steps << std::endl;
+	return sp_frame();
+}
+
+void term::_unify(subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
+	subs dsub;
+	for (term* _d : ts)  {
+		term& d = *_d;
+		if (args.size() != d.args.size()) continue;
+		termset::iterator it = args.begin(), end = args.end(), dit = d.args.begin();
+		while (it != end) {
+			term& x = **it++;
+			if (!x.unify(ssub, **dit++, dsub)) {
+				--it;
+				break;
+			}
+		}
+		if (it == end) 
+			lastp = lastp->next = sp_frame(new frame(f, _d, 0, f, dsub));
+		dsub.clear();
+	}
 }
 
 int main() {
-	termset kb = nqparser::readterms(din);
-	termset query = nqparser::readterms(din);
-	term* q = mkterm(query);
+	dict.init();
+	termset kb = readterms(din);
+	termset query = readterms(din);
+
+	// create the query term and index it wrt the kb
+	term* q = mkterm(kb, query);
+	// now index the kb itself wrt itself
+	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
+		(*it)->trymatch(kb);
 	kb.push_back(q);
-	run(kb);
-//	compile(kb);
-//	for (uint n = 0; n < rules.size(); ++n)
-//		for (uint k = 0; k < rules[n].size(); ++k)
-//			for (uint m = 0; m < rules[n][k].size(); ++m)
-//				dout << "int _" <<n << '_' << k << '_' << m << "(int* env, bool f) { ",
-//				rules[n][k][m](), dout << " }" << endl;
-//	auto r = frame(rules.size()-1)();
-//	dout << r.size() << endl;
-//	for (frame* f : r) (*f)();
-	
-//	vector<frame*> f = frame()();
-//	TRACE(
-	dout << "kb:" << endl << format(kb) << endl;
+	TRACE(dout << "kb:" << std::endl << format(kb) << std::endl);
 
 	// create the initial frame with the query term as the frame's rule
-//	pframe p(new frame(pframe(), q, 1, pframe(), subs())), lp = 0;
-//	clock_t begin = clock(), end;
-//	prove(p, lp); // the main loop
-//	end = clock();
-//	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << endl;
+	sp_frame p(new frame(sp_frame(), q, 0, sp_frame(), subs())), lastp;
+	clock_t begin = clock(), end;
+	prove(p, lastp); // the main loop
+	end = clock();
+	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << std::endl;
 
 	return 0;
 }
