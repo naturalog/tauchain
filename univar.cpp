@@ -43,7 +43,10 @@ std::unordered_map<old::nodeid, rulesindex> predskb;
 
 function<bool()> generalunifycoro(Thing*, Thing*);
 
-std::unordered_map<old::nodeid, generator> predGens;
+std::vector<comp> predGens;
+
+int nterms = 0;
+std::queue<old::nodeid> predQueue;
 
 
 
@@ -282,32 +285,32 @@ Var* atom(old::nodeid n){
 }
 
 
-//this looks up and proxies a pred
-//we capture in the lambda the key into preds[]
 comp pred(old::nodeid x)
 {
-	setproc(L"comp pred");
+	setproc(L"pred");
+	size_t index = nterms++;//predQueue.size();
+	predQueue.push(x);
+	old::nodeid dbgx = x;
 	TRACE(dout << "constructing pred proxy for nodeid " << x << endl);
 	int entry = 0;
 	comp z;
-	return [entry, z, x](Thing *Ds, Thing *Do)mutable{
+	return [entry, z, dbgx, index](Thing *Ds, Thing *Do)mutable{
 		setproc(L"pred lambda");
-		TRACE(dout << "im in ur pred proxy for nodeid " << x << ", entry: " << entry << endl;)
+		TRACE(dout << "im in ur pred proxy for nodeid " << dbgx << ", index: " << index << " entry: " << entry << endl;)
 		
 		switch(entry)
 		{
 		case 0:
 			entry++;
-			z = predGens[x]();
-			//z = preds[x];
+			z = predGens[index];
 			bool r;
 			while(true)
 			{
-				TRACE((dout << "calling hopefully x:" << old::dict[x] << endl));
+				TRACE((dout << "calling hopefully x:" << old::dict[dbgx] << endl));
 				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
 				r = z(Ds, Do);
 				if (! r) goto out;
-				TRACE(dout << "pred coro for " <<  old::dict[x] << " success" << endl;)
+				TRACE(dout << "pred coro for " <<  old::dict[dbgx] << " success" << endl;)
 			
 				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
 				return true;
@@ -324,7 +327,7 @@ comp pred(old::nodeid x)
 join joinOne(comp a, Thing* w, Thing *x){
 	int entry = 0;
 	return [a, w, x, entry]() mutable{
-		setproc(L"joinOne");
+		setproc(L"joinOne lambda");
 		switch(entry){
 		case 0:
 			TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
@@ -376,8 +379,8 @@ comp joinproxy(join c0, Var* s, Var* o){
 		case 0:
 			entry++;
 			
-			suc = s->unifcoro(Ds);
-			ouc = o->unifcoro(Do);
+			suc = generalunifycoro(Ds, s);
+			ouc = generalunifycoro(Do, o);
 			
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
 			TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
@@ -445,8 +448,8 @@ comp ruleproxyTwo(varmap vars, old::termid head, old::prover::termset body)
 
 comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 
-		setproc(L"comp ruleproxyTwo");
-		TRACE(dout << "compiling ruleproxyTwo" << endl);
+		setproc(L"comp ruleproxyOne");
+		TRACE(dout << "compiling ruleproxyOne" << endl);
 
 		Var *s = vars[head->s->p];
 		Var *o = vars[head->o->p];
@@ -541,40 +544,45 @@ comp rule(old::termid head, old::prover::termset body)
 
 /*writes into preds*/
 //ok so by the time we get here, we'll already have
-//predskb, a map from preds to a vector of indexes of rules with that pred
-//rules with that pred in the rule-head or anywhere in the rule?head
-void compile_kb(old::prover *p)
+//predskb, a map from preds to a vector of indexes of rules with that pred in the head
+void compile_kb()
 {
 	setproc(L"compile_kb");
 	for (auto x: predskb)
 	{
-	old::nodeid k = x.first;
-	rulesindex rs = x.second;
-	for (size_t i: rs) // for each rule with the pred
-	{
-		comp r = rule(p->heads[i], p->bodies[i]);
-		if(preds.find(k) != preds.end()){
-		dout << "seq, nodeid: " << k << "(" << old::dict[k] << ")" << endl;
-		preds[k] = seq(r, preds[k]);
-		}
-		else{
-		dout << "first, nodeid: " << k << "(" << old::dict[k] << ")" << endl;
-		preds[k] = r;
-		}
-	}
+		old::nodeid k = x.first;
+		preds[k] = pred(k);//just queue it up, get the lookuping lambda
 	}
 }
 
-//something along these lines
-void preds2gens(){
-	for(auto x: preds){
-		old::nodeid k = x.first;
-		comp f = x.second;
-		predGens[k] = [f](){
-			setproc(L"preds2gens lambda");
-			TRACE(dout << "..." << endl);
-			return f;
-		};
+/*imo this should infiloop, without ep check, on any recursive example
+step 2 should be to not do it per pred but per term(with unification, checking if a rule is relevant)*/
+void compile_preds(old::prover *p){
+	setproc(L"compile_preds");
+
+	while(!predQueue.empty()){
+		old::nodeid x = predQueue.front(); predQueue.pop();
+		rulesindex rs = predskb[x];
+		comp r;
+		bool first = true;
+
+		//compile each rule with the pred in the head, seq them up
+		for (size_t i: rs)
+		{
+			comp y = rule(p->heads[i], p->bodies[i]);
+
+			if(first){
+				first = false;
+				TRACE(dout << "first, nodeid: " << x << "(" << old::dict[x] << ")" << endl;)
+				r = y;
+			}
+			else{
+				TRACE(dout << "seq, nodeid: " <<  x << "(" << old::dict[x] << ")" << endl;)
+				r = seq(r,y);
+			}
+		}
+
+		predGens.push_back(r);
 	}
 }
 
@@ -586,7 +594,7 @@ void gen_pred2rules_map(old::prover *p)
 	TRACE(dout << "gen predskb" << endl);
 
 	int i;
-	//start at the end of the kb
+	//start at the end of the kb//irrelevant?
 	for (i = p->heads.size() - 1; i >= 0; i--)
 	{
 		old::nodeid pr = p->heads[i]->p;
@@ -607,31 +615,47 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
 	op=p = new old::prover(qkb, false);
 	gen_pred2rules_map(p);
-	compile_kb(p);
-	//so we'll do exactly like we did and then call this function to turn
-	//our pred-coros into pred-coro-generators
-	preds2gens();
+	//compile_kb();
+	//compile_preds(p);
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
 void yprover::query(const old::qdb& goal){
 	dout << "query" << endl;
 	const old::prover::termset g = p->qdb2termset(goal);
+	results.first.clear();results.second.clear();
 	int nresults = 0;
 	old::nodeid pr = g[0]->p;
-	if (preds.find(pr) != preds.end()) {
-		varmap vars;
-		vars[g[0]->s->p] = atom(g[0]->s->p);
-		vars[g[0]->o->p] = atom(g[0]->o->p);
-		dout << "query 1: " << pr << endl;
+
+	if (predskb.find(pr) != predskb.end()) {
+		//varmap vars;
+		//putting them to vars should be irrelevant at this point, all the pointers have been captured
+		//
+		Var *s = atom(g[0]->s->p);
+		Var *o = atom(g[0]->o->p);
+		/*if g[0]->o->p == g[0]->s->p: s = o;*/
+		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
 		auto coro = pred(pr);
-		dout << "query --  arg1: " << vars[g[0]->s->p] << "/" << vars[g[0]->s->p]->str() << ", arg2: " << vars[g[0]->o->p] << "/" << vars[g[0]->o->p]->str() << endl;
-		while (coro(vars[g[0]->s->p], vars[g[0]->o->p])) {//this is weird, passing the args over and over
+		compile_preds(p);
+		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
+		//this is weird, passing the args over and over
+		while (coro(s,o)) {
 			nresults++;
-			if (nresults > 5) {dout << "STOPPING at " << nresults << " results." << endl;break;}
+			if (nresults > 123) {dout << "STOPPING at " << nresults << " results." << endl;break;}
 			dout << L"RESULT " << nresults << ":";
-			dout << old::dict[g[0]->s->p] << L": " << vars[g[0]->s->p] << ", "  << vars[g[0]->s->p]->str() << ",   ";
-			dout << old::dict[g[0]->o->p] << L": " << vars[g[0]->o->p] << ", " << vars[g[0]->o->p]->str() << endl;
+			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
+			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
+
+			auto sv = s->getValue();
+			auto ov = o->getValue();
+			Node *n1 = dynamic_cast<Node*>(sv);
+			Node *n2 = dynamic_cast<Node*>(ov);
+			if (n1 && n2)
+			{
+				old::quad *q = make_shared<old::quad>(old::quad(
+				results.first[L"@default"].push_back(
+
+op->make(pr, op->make(n1->value,0,0), op->make(n2->value,0,0)));
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;

@@ -10,12 +10,12 @@ query
 #?WHAT :eq ?WHAT
 
 #not working
-#?WHAT :eq ?WHATELSE.
+?WHAT :eq ?WHATELSE.
 #
 #output: var() :eq var(zero)
 
 #working
-zero :eq ?WHATELSE.
+#zero :eq ?WHATELSE.
 
 #not working   
 #?WHAT :eq zero.
