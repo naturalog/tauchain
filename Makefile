@@ -1,13 +1,17 @@
-CC=g++
-CXXFLAGS=-c -DDEBUG -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O3 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
-LDFLAGS= -L/usr/local/lib #-ldl -pthread -lrt
+CC=clang++
+
+#ASAN=  -fno-omit-frame-pointer -fno-optimize-sibling-calls  -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow 
+
+CXXFLAGS=-c $(ASAN) -DDEBUG -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O1    -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
+LDFLAGS=  $(ASAN) -L/usr/local/lib #-ldl -pthread -lrt
 OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
+
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
-%.o: %.cpp `g++ -std=c++11 $(CXXFLAGS) -M %.cpp`
+%.o: %.cpp `${CC} -std=c++11 $(CXXFLAGS) -M %.cpp`
 
 with_marpa: marpa_tau.o libmarpa/dist/.libs/libmarpa.so
 

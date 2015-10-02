@@ -6,18 +6,19 @@ zero :a Nat.
 fin.
 
 query
-?WHAT :eq ?WHAT
-fin.
-shouldbe
-zero :eq zero.
-fin.
+#?WHAT :eq ?WHAT
+#fin.
+#shouldbe
+#zero :eq zero.
+#fin.
 
-query
-?WHAT :eq ?WHATELSE.
-fin.
-shouldbe
-zero :eq zero.
-fin.
+#query
+#?WHAT :eq ?WHATELSE.
+#fin.
+
+#shouldbe
+#zero :eq zero.
+#fin.
 
 #working
 #zero :eq ?WHATELSE.
@@ -28,8 +29,8 @@ fin.
 #output: var() :eq var(zero)
 
 #working
-#zero :eq zero.
+zero :eq zero.
+#fin.
 fin.
-
 #Expected results:
 # var(zero) :eq var(zero), for all 4 cases.

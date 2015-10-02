@@ -281,7 +281,7 @@ comp seq(comp a, comp b){
 Var* atom(old::termid n){
 	
 	Var* r = new Var();
-	if (n>0)
+	if (n->p>0)
 	{
 		r->isBound = true;
 		r->value = new Node(n);
