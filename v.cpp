@@ -28,7 +28,7 @@ bool isdelim(wchar_t ch, wstring& d = edelims) {
 	for (auto x : d) if (ch == x) return true;
 	return false;
 }
-wchar_t* till(wstring& d = edelims) {
+wchar_t* till(/*wstring& d = edelims*/) {
 	skip();
 	wstringstream ws;
 	wchar_t ch;
@@ -76,20 +76,22 @@ struct triple {
 };
 wostream& operator<<(wostream& os, const triple& t) {
 	os << *t.r[0] << ' ' << *t.r[1] << ' ' << *t.r[2] << L'.';
+	return os;
 }
 
 struct rule {
-	triple head;
-	vector<triple> body;
+	triple* head;
+	vector<triple*> body;
 //	rule() {}
-	rule(triple h, vector<triple> b) : head(h), body(b) {}
+	rule(triple* h, vector<triple*> b) : head(h), body(b) {}
 };
 vector<rule> rules;
 wostream& operator<<(wostream& os, const rule& r) {
 	os << L'{';
-	for (const triple& t : r.body)
-		os << t << ' ';
-	os << L"} => { " << r.head << " }.";
+	for (const triple* t : r.body)
+		os << *t << ' ';
+	os << L"} => { " << *r.head << " }.";
+	return os;
 }
 
 void print() {
@@ -113,9 +115,13 @@ resource* readany() {
 	return new resource(true);
 }
 
-triple readtriple() {
+triple* readtriple() {
 	skip();
-	triple r(readany(), readany(), readany());
+	resource *s = readany();
+	resource *p = readany();
+	resource *o = readany();
+	if (!s || !p || !o) return 0;
+	triple* r = new triple(s, p, o);
 	skip();
 	if (din.peek() == L'.') din >> dummych, skip();
 	return r;
@@ -123,7 +129,7 @@ triple readtriple() {
 
 void readrule() {
 	skip();
-	vector<triple> body;
+	vector<triple*> body;
 	if (din.peek() == L'{') {
 		din >> dummych;
 		while (din.peek() != L'}')
@@ -186,12 +192,12 @@ bool prepare(triple *s, triple *d, subs& c) {
 
 void prepare() {
 	subs c;
-	for (int n = 0; n < rules.size(); ++n)
-		for (int k = 0; k < rules[n].body.size(); ++k)
-			for (int m = 0; m < rules.size(); ++m)
-				if (prepare(&rules[n].body[k], &rules[m].head, c))
+	for (int n = 0; n < (int)rules.size(); ++n)
+		for (int k = 0; k < (int)rules[n].body.size(); ++k)
+			for (int m = 0; m < (int)rules.size(); ++m)
+				if (prepare(rules[n].body[k], rules[m].head, c))
 					intermediate[make_pair(n, k)][m] = c, c.clear();
-};
+}
 
 bool unify(resource *s, resource *d, subs& trail) { // in runtime
 }
@@ -205,13 +211,13 @@ function<bool()> compile(conds& c) {
 		}
 		return false;
 	};
-};
+}
 void compile() {
 	prepare();
-	for (int n = 0; n < rules.size(); ++n)
+	for (int n = 0; n < (int)rules.size(); ++n)
 		if (!rules[n].body.size())
 			program[make_pair(n, 0)] = [](){return true;};
-		else for (int k = 0; k < rules[n].body.size(); ++k) {
+		else for (int k = 0; k < (int)rules[n].body.size(); ++k) {
 			auto i = make_pair(n, k);
 			program[i] = compile(intermediate[i]);
 		}
