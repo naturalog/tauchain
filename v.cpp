@@ -84,10 +84,13 @@ struct frame {
 bool unify(resource *s, resource *d, subs& trail) { // in runtime
 }
 
-bool compile(int h, int b) {
+void compile(int h, int b) {
 	auto i = make_pair(h, b);
 	conds& c = intermediate[i];
-	program[i] = [c]() {
+	if (rules[h].body.size())
+		program[i] = []() { // hit ground, push appropriate frame
+		};
+	else program[i] = [c]() {
 		for (conds::const_iterator x = c.begin(); x != c.end(); ++x) {
 			for (pair<resource*, resource*> y : x->second)
 				if (!unify(y.first, y.second, last->trail))
