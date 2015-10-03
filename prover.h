@@ -143,7 +143,6 @@ public:
 
 	void clear();
 
-private:
 	class termdb {
 	public:
 		typedef std::map<nodeid, termset> p2id_t;
@@ -181,6 +180,9 @@ private:
 	} _terms;
 	friend ruleset;
 	friend proof;
+
+private:
+
 	int steps = 0;
 	bool printNow;
 
