@@ -35,7 +35,7 @@ typedef map<int/*head*/, subs> conds;
 // compiler's intermediate representation language. the information
 // in the following variable contains everything the emitter has to know
 map<pair<int/*head*/,int/*body*/>, conds> intermediate;
-map<pair<int/*head*/,int/*body*/>, function<bool()>> program;
+map<pair<int/*head*/,int/*body*/>, function<bool()>> program; // compiled functions
 
 bool occurs_check(resource *x, resource *y) {
 	if (x->type != VAR) return (y->type != VAR) ? false : occurs_check(y, x);
@@ -49,7 +49,7 @@ bool occurs_check(resource *x, resource *y) {
 
 bool prepare(resource *s, resource *d, subs& c) {
 	if (s->type != VAR && d->type != VAR) {
-		if (s != d) return c.clear(), false;
+		if (s->type != d->type && s != d) return c.clear(), false;
 		if (s->type != LIST) return true;
 		resource **rs, **rd;
 		for (rs = s->args, rd = d->args; *rs && *rd;)
