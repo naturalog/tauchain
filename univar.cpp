@@ -60,7 +60,9 @@ public:
 	old::termid value;
 	bool eq(Node *x)
 	{
-		return x->value == value;
+		setproc(L"eq");
+		TRACE(dout << op->format(value) << " =?= " << op->format(x->value) << endl;)
+		return op->_terms.equals(value, x->value);
 	}
 	Node(old::termid s)
 	{
@@ -160,10 +162,14 @@ public:
 
 bool fail()
 {
+	setproc(L"fail");
+	TRACE(dout << "..." << endl;)
 	return false;
 }
 bool fail_with_args(Thing *_s, Thing *_o)
 {
+	setproc(L"fail_with_args");
+	TRACE(dout << "..." << endl;)
 	return false;
 }
 
