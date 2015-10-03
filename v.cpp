@@ -9,7 +9,21 @@
 using namespace std;
 
 wstring edelims = L")}.";
-void skip() { static wchar_t ch; while (iswspace(wcin.peek())) wcin >> ch; }
+wchar_t dummych; // due to wcin.get() not working
+
+struct din_t { // due to wcin.peek() not working
+	wchar_t ch;
+	bool f = false;
+	wchar_t peek() { if (f) return ch; return f = true, wcin >> ch, ch; }
+	wchar_t get() { if (f) { f = false; return ch; } return wcin >> ch, ch; }
+	bool good() { return wcin.good(); }
+	din_t() { wcin >> noskipws; }
+} din;
+din_t& operator>>(din_t& d, wchar_t& ch) {
+	return ch = d.get(), d;
+}
+
+void skip() { while (iswspace(din.peek())) din >> dummych; }
 bool isdelim(wchar_t ch, wstring& d = edelims) {
 	for (auto x : d) if (ch == x) return true;
 	return false;
@@ -18,9 +32,10 @@ wchar_t* till(wstring& d = edelims) {
 	skip();
 	wstringstream ws;
 	wchar_t ch;
-	while (!isdelim(wcin.peek()) && !iswspace(wcin.peek())) { wcin >> ch, ws << ch; }
+	while (!isdelim(din.peek()) && !iswspace(din.peek()))
+		din >> ch, ws << ch;
 	wchar_t *r = wcsdup(ws.str().c_str());
-	wcout << "till: " << r << endl;
+	din >> dummych, wcout << "till: " << r << endl;
 	return r;
 }
 
@@ -84,16 +99,17 @@ void print() {
 resource* readany();
 
 resource* readlist() {
-	wcin.get(), skip();
+	din >> dummych, skip();
 	vector<resource*> items;
-	while (wcin.peek() != L')')
+	while (din.peek() != L')')
 		items.push_back(readany()), skip();
+	din >> dummych, skip();
 	return new resource(items);
 }
 
 resource* readany() {
 	skip();
-	if (wcin.peek() == L'(') return readlist();
+	if (din.peek() == L'(') return readlist();
 	return new resource(true);
 }
 
@@ -101,28 +117,28 @@ triple readtriple() {
 	skip();
 	triple r(readany(), readany(), readany());
 	skip();
-	if (wcin.peek() == L'.') wcin.get(), skip();
+	if (din.peek() == L'.') din >> dummych, skip();
 	return r;
 }
 
 void readrule() {
 	skip();
 	vector<triple> body;
-	if (wcin && wcin.peek() == L'{') {
-		while (wcin.peek() != L'}')
+	if (din.peek() == L'{') {
+		din >> dummych;
+		while (din.peek() != L'}')
 			body.push_back(readtriple()), skip();
-		wcin.get(), skip(), wcin.get(), wcin.get(), skip(), wcin.get(); // "} => {";
-		while (wcin && wcin.peek() != L'}')
-			rules.push_back(rule(readtriple(), body));
+		din >> dummych, skip(), din >> dummych >> dummych, skip(), din >> dummych, skip(); // "} => {";
+		while (din.peek() != L'}')
+			rules.push_back(rule(readtriple(), body)), skip();
 	} else rules.push_back(rule(readtriple(), body));
 	skip();
 }
 
-void readdoc() { while (wcin.good()) skip(), readrule(), skip(); }
+void readdoc() { while (din.good()) skip(), readrule(), skip(); }
 
 vector<resource> res;
 typedef map<resource*, resource*> subs;
-
 
 const size_t max_frames = 1e+6;
 struct frame {
@@ -145,6 +161,7 @@ bool occurs_check(resource *x, resource *y) {
 			return true;
 	return false;
 }
+
 bool prepare(resource *s, resource *d, subs& c) {
 	if (*s->value != L'?' && *d->value != L'?') {
 		// FIXME
@@ -159,12 +176,14 @@ bool prepare(resource *s, resource *d, subs& c) {
 	if (occurs_check(s, d)) return false;
 	return c[s] = d, true;
 }
+
 bool prepare(triple *s, triple *d, subs& c) {
 	for (int n = 0; n < 3; ++n)
 		if (!prepare(s->r[n], d->r[n], c))
 			return false;
 	return true;
 }
+
 void prepare() {
 	subs c;
 	for (int n = 0; n < rules.size(); ++n)
@@ -173,6 +192,7 @@ void prepare() {
 				if (prepare(&rules[n].body[k], &rules[m].head, c))
 					intermediate[make_pair(n, k)][m] = c, c.clear();
 };
+
 bool unify(resource *s, resource *d, subs& trail) { // in runtime
 }
 function<bool()> compile(conds& c) {
@@ -203,7 +223,6 @@ void run(int q /* query's index in rules */) {
 	} while (++first <= last);
 }
 int main() {
-//	wcin << skipws;
 	readdoc(), print();
 	int q;// = read(), parse();
 	compile(), run(q);
