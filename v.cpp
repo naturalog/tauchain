@@ -112,3 +112,9 @@ void run(int q /* query's index in rules */) {
 	} while (++first <= last);
 }
 
+int main() {
+//	read();
+	int q;// = parse();
+	compile();
+	run(q);
+}
