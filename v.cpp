@@ -9,33 +9,42 @@
 using namespace std;
 
 wstring edelims = L")}.";
-wchar_t dummych; // due to wcin.get() not working
 
 struct din_t { // due to wcin.peek() not working
 	wchar_t ch;
 	bool f = false;
-	wchar_t peek() { if (f) return ch; return f = true, wcin >> ch, ch; }
-	wchar_t get() { if (f) { f = false; return ch; } return wcin >> ch, ch; }
+	wchar_t peek() {
+		if (f)
+			return ch;
+		return (f = true), (wcin >> ch), ch;
+	}
+	wchar_t get() {
+		if (f) 
+			return f = false, ch;
+		return wcin >> ch, ch;
+	}
 	bool good() { return wcin.good(); }
+	void skip() {
+		while (iswspace(peek()))
+			get();
+	}
 	din_t() { wcin >> noskipws; }
 } din;
-din_t& operator>>(din_t& d, wchar_t& ch) {
-	return ch = d.get(), d;
-}
 
-void skip() { while (iswspace(din.peek())) din >> dummych; }
-bool isdelim(wchar_t ch, wstring& d = edelims) {
+
+bool isdelim(wchar_t ch, wstring d = edelims) {
 	for (auto x : d) if (ch == x) return true;
 	return false;
 }
 wchar_t* till(/*wstring& d = edelims*/) {
-	skip();
+	din.skip();
 	wstringstream ws;
-	wchar_t ch;
 	while (!isdelim(din.peek()) && !iswspace(din.peek()))
-		din >> ch, ws << ch;
+		ws << din.get();
 	wchar_t *r = wcsdup(ws.str().c_str());
-	din >> dummych, wcout << "till: " << r << endl;
+	if (isdelim(*r, L"{}().")) throw 0;
+	din.get(), wcout << "till: " << r << endl;
+	if (!wcslen(r)) throw 0;
 	return r;
 }
 
@@ -101,47 +110,52 @@ void print() {
 resource* readany();
 
 resource* readlist() {
-	din >> dummych, skip();
+	din.get(), din.skip();
 	vector<resource*> items;
 	while (din.peek() != L')')
-		items.push_back(readany()), skip();
-	din >> dummych, skip();
+		items.push_back(readany()), din.skip();
+	din.get(), din.skip();
 	return new resource(items);
 }
 
 resource* readany() {
-	skip();
+	din.skip();
 	if (din.peek() == L'(') return readlist();
 	return new resource(true);
 }
 
 triple* readtriple() {
-	skip();
+	din.skip();
 	resource *s = readany();
 	resource *p = readany();
 	resource *o = readany();
 	if (!s || !p || !o) return 0;
 	triple* r = new triple(s, p, o);
-	skip();
-	if (din.peek() == L'.') din >> dummych, skip();
+	din.skip();
+	if (din.peek() == L'.') din.get(), din.skip();
 	return r;
 }
 
 void readrule() {
-	skip();
+	din.skip();
 	vector<triple*> body;
 	if (din.peek() == L'{') {
-		din >> dummych;
+		din.get();
 		while (din.peek() != L'}')
-			body.push_back(readtriple()), skip();
-		din >> dummych, skip(), din >> dummych >> dummych, skip(), din >> dummych, skip(); // "} => {";
-		while (din.peek() != L'}')
-			rules.push_back(rule(readtriple(), body)), skip();
-	} else rules.push_back(rule(readtriple(), body));
-	skip();
+			body.push_back(readtriple()), din.skip();
+		din.get(), din.skip(), din.get(), din.skip(), din.get(), din.skip(); // "} => {";
+		if (din.peek() == L'}')
+			rules.push_back(rule(0, body)), din.skip();
+		else while (din.peek() != L'}')
+			rules.push_back(rule(readtriple(), body)), din.skip();
+	} else
+		rules.push_back(rule(readtriple(), body));
+	din.skip();
+	if (din.peek() == L'.') din.get();
+	din.skip();
 }
 
-void readdoc() { while (din.good()) skip(), readrule(), skip(); }
+void readdoc() { while (din.good()) din.skip(), readrule(), din.skip(); }
 
 vector<resource> res;
 typedef map<resource*, resource*> subs;
@@ -201,6 +215,7 @@ void prepare() {
 
 bool unify(resource *s, resource *d, subs& trail) { // in runtime
 }
+
 function<bool()> compile(conds& c) {
 	return [c]() {
 		for (conds::const_iterator x = c.begin(); x != c.end(); ++x) {
