@@ -17,18 +17,22 @@ bool isdelim(wchar_t ch, wstring& d = edelims) {
 wchar_t* till(wstring& d = edelims) {
 	skip();
 	wstringstream ws;
-	while (!isdelim(wcin.peek())) ws << wcin.get();
-	return wcsdup(ws.str().c_str());
+	wchar_t ch;
+	while (!isdelim(wcin.peek())) { wcin >> ch, ws << ch; }
+	wchar_t *r = wcsdup(ws.str().c_str());
+	wcout << "till: " << r << endl;
+	return r;
 }
 
+wostream& operator<<(wostream& os, const struct resource& r);
 struct resource {
 	wchar_t *value;
 	union {
 		resource* sub;	// substitution, in case of var. not used in compile time
 		resource** args;// list items. last item must be null
 	};
-	resource(bool in = false) : value(in ? till() : 0), sub(0) {}
-	resource(vector<resource*> _args) : value(new wchar_t[2]), args(new resource*[_args.size()]) {
+	resource(bool in = false) : value(in ? till() : 0), sub(0) { wcout << "new resource: " << *this << endl; }
+	resource(vector<resource*> _args) : value(new wchar_t[2]), args(new resource*[_args.size() + 1]) {
 	       *value= L'.', value[1] = 0;
 	       int n = 0;
 	       for (auto x : _args) args[n++] = x;
@@ -95,28 +99,26 @@ resource* readany() {
 
 triple readtriple() {
 	skip();
-	if (wcin.peek() != L'{') {
-		triple r(readany(), readany(), readany());
-		skip();
-		if (wcin.peek() == L'.') wcin.get(), skip();
-		return r;
-	}
+	triple r(readany(), readany(), readany());
+	skip();
+	if (wcin.peek() == L'.') wcin.get(), skip();
+	return r;
 }
 
 void readrule() {
 	skip();
 	vector<triple> body;
-	if (wcin.peek() == L'{') {
+	if (wcin && wcin.peek() == L'{') {
 		while (wcin.peek() != L'}')
 			body.push_back(readtriple()), skip();
 		wcin.get(), skip(), wcin.get(), wcin.get(), skip(), wcin.get(); // "} => {";
-	}
-	while (wcin.peek() != L'}')
-		rules.push_back(rule(readtriple(), body));
+		while (wcin && wcin.peek() != L'}')
+			rules.push_back(rule(readtriple(), body));
+	} else rules.push_back(rule(readtriple(), body));
 	skip();
 }
 
-void readdoc() { while (wcin) skip(), readrule(), skip(); }
+void readdoc() { while (wcin.good()) skip(), readrule(), skip(); }
 
 vector<resource> res;
 typedef map<resource*, resource*> subs;
@@ -202,6 +204,7 @@ void run(int q /* query's index in rules */) {
 }
 int main() {
 //	wcin << skipws;
+	readdoc(), print();
 	int q;// = read(), parse();
 	compile(), run(q);
 }
