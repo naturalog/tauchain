@@ -9,7 +9,7 @@
 using namespace std;
 
 wstring edelims = L")}.";
-void skip() { while (iswspace(wcin.peek())) wcin.get(); }
+void skip() { static wchar_t ch; while (iswspace(wcin.peek())) wcin >> ch; }
 bool isdelim(wchar_t ch, wstring& d = edelims) {
 	for (auto x : d) if (ch == x) return true;
 	return false;
@@ -18,7 +18,7 @@ wchar_t* till(wstring& d = edelims) {
 	skip();
 	wstringstream ws;
 	wchar_t ch;
-	while (!isdelim(wcin.peek())) { wcin >> ch, ws << ch; }
+	while (!isdelim(wcin.peek()) && !iswspace(wcin.peek())) { wcin >> ch, ws << ch; }
 	wchar_t *r = wcsdup(ws.str().c_str());
 	wcout << "till: " << r << endl;
 	return r;
