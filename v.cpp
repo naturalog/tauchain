@@ -8,8 +8,7 @@ enum etype { IRI, VAR, BNODE, LITERAL, LIST };
 struct resource {
 	etype type;
 	union {
-		resource* sub;	// substitution, in case of var.
-				// not used in compile time
+		resource* sub;	// substitution, in case of var. not used in compile time
 		resource** args;// list items. last item must be null
 	};
 };
@@ -19,12 +18,24 @@ typedef map<resource*, resource*> subs;
 struct triple {
 	resource *r[3]; // spo
 };
-
 struct rule {
 	triple head;
 	vector<triple> body;
 };
 vector<rule> rules;
+
+const size_t max_frames = 1e+6;
+struct frame {
+	int h,b;
+	frame* prev;
+	subs trail;
+} *first, *last = new frame[max_frames];
+
+typedef map<int/*head*/, subs> conds;
+// compiler's intermediate representation language. the information
+// in the following variable contains everything the emitter has to know
+map<pair<int/*head*/,int/*body*/>, conds> intermediate;
+map<pair<int/*head*/,int/*body*/>, std::function<void()>> program;
 
 bool occurs_check(resource *x, resource *y) {
 	if (x->type != VAR) return (y->type != VAR) ? false : occurs_check(y, x);
@@ -57,13 +68,6 @@ bool prepare(triple *s, triple *d, subs& c) {
 	return true;
 }
 
-typedef map<int/*head*/, subs> conds;
-// compiler's intermediate representation language. the information
-// in the following variable contains everything the emitter has to know
-map<pair<int/*head*/,int/*body*/>, conds> intermediate;
-
-map<pair<int/*head*/,int/*body*/>, std::function<void()>> program;
-
 void prepare() {
 	subs c;
 	for (int n = 0; n < rules.size(); ++n)
@@ -72,14 +76,6 @@ void prepare() {
 				if (prepare(&rules[n].body[k], &rules[m].head, c))
 					intermediate[make_pair(n, k)][m] = c, c.clear();
 };
-
-const size_t max_frames = 1e+6;
-
-struct frame {
-	int h,b;
-	frame* prev;
-	subs trail;
-} *first, *last = new frame[max_frames];
 
 bool unify(resource *s, resource *d, subs& trail) { // in runtime
 }
