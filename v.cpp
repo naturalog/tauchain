@@ -26,25 +26,20 @@ vector<rule> rules;
 
 typedef map<resource*, resource*> vars;
 
-void clear(pair<vars, vars>& c) { c.first.clear(); c.second.clear(); }
-
-bool compile(resource *s, resource *d, pair<vars, vars>& c) {
-	if (s->type != VAR) {
-		if (d->type != VAR) {
-			if (s != d) return clear(c), false;
-			if (s->type != LIST) return true;
-			resource **rs, **rd;
-			for (rs = s->args, rd = d->args; *rs && *rd;)
-				if (!*rs != !*rd || !compile(*rs++, *rd++, c))
-					return false;
-			return true;
-		} else
-			return c.first[d] = s, true;
-	} else
-		return c.second[s] = d, true;
+bool compile(resource *s, resource *d, vars& c) {
+	if (s->type != VAR && d->type != VAR) {
+		if (s != d) return c.clear(), false;
+		if (s->type != LIST) return true;
+		resource **rs, **rd;
+		for (rs = s->args, rd = d->args; *rs && *rd;)
+			if (!*rs != !*rd || !compile(*rs++, *rd++, c))
+				return false;
+		return true;
+	}
+	return c[s] = d, true;
 }
 
-bool compile(triple *s, triple *d, pair<vars, vars>& c) {
+bool compile(triple *s, triple *d, vars& c) {
 	for (int n = 0; n < 3; ++n)
 		if (!compile(s->r[n], d->r[n], c))
 			return false;
@@ -53,13 +48,13 @@ bool compile(triple *s, triple *d, pair<vars, vars>& c) {
 
 // compiler's intermediate representation language. the information
 // in the following variable contains everything the emitter has to know
-map<tuple<int/*head*/,int/*body*/,int/*head*/>, pair<vars, vars>> intermediate;
+map<tuple<int/*head*/,int/*body*/,int/*head*/>, vars> intermediate;
 
 void compile() {
-	pair<vars, vars> c;
+	vars c;
 	for (int n = 0; n < rules.size(); ++n)
 		for (int k = 0; k < rules[n].body.size(); ++k)
 			for (int m = 0; m < rules.size(); ++m)
 				if (compile(&rules[n].body[k], &rules[m].head, c))
-					intermediate[make_tuple(n, k, m)] = c, clear(c);
+					intermediate[make_tuple(n, k, m)] = c, c.clear();
 };
