@@ -97,6 +97,13 @@ bool compile(int h, int b) {
 	};
 };
 
+void compile() {
+	prepare();
+	for (int n = 0; n < rules.size(); ++n)
+		for (int k = 0; k < rules[n].body.size(); ++k)
+			compile(n, k);
+}
+
 void run(int q /* query's index in rules */) {
 	first = last;
 	first->h = q, first->b = 0, first->prev = 0;
