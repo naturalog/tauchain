@@ -35,7 +35,7 @@ typedef map<int/*head*/, subs> conds;
 // compiler's intermediate representation language. the information
 // in the following variable contains everything the emitter has to know
 map<pair<int/*head*/,int/*body*/>, conds> intermediate;
-map<pair<int/*head*/,int/*body*/>, std::function<void()>> program;
+map<pair<int/*head*/,int/*body*/>, function<bool()>> program;
 
 bool occurs_check(resource *x, resource *y) {
 	if (x->type != VAR) return (y->type != VAR) ? false : occurs_check(y, x);
@@ -80,32 +80,31 @@ void prepare() {
 bool unify(resource *s, resource *d, subs& trail) { // in runtime
 }
 
-void compile(int h, int b) {
-	auto i = make_pair(h, b);
-	conds& c = intermediate[i];
-	if (rules[h].body.size())
-		program[i] = []() { // hit ground, push appropriate frame
-		};
-	else program[i] = [c]() {
+function<bool()> compile(conds& c) {
+	return [c]() {
 		for (conds::const_iterator x = c.begin(); x != c.end(); ++x) {
 			for (pair<resource*, resource*> y : x->second)
 				if (!unify(y.first, y.second, last->trail))
 					continue;
 			last->h = x->first, last->b = 0, last->prev = first, ++last;
 		}
+		return false;
 	};
 };
 
 void compile() {
 	prepare();
 	for (int n = 0; n < rules.size(); ++n)
-		for (int k = 0; k < rules[n].body.size(); ++k)
-			compile(n, k);
+		if (!rules[n].body.size())
+			program[make_pair(n, 0)] = [](){return true;};
+		else for (int k = 0; k < rules[n].body.size(); ++k) {
+			auto i = make_pair(n, k);
+			program[i] = compile(intermediate[i]);
+		}
 }
 
 void run(int q /* query's index in rules */) {
-	first = last;
-	first->h = q, first->b = 0, first->prev = 0;
+	first = last, first->h = q, first->b = 0, first->prev = 0;
 	do {
 		program[make_pair(first->h, first->b)]();
 	} while (++first <= last);
@@ -114,6 +113,5 @@ void run(int q /* query's index in rules */) {
 int main() {
 //	read();
 	int q;// = parse();
-	compile();
-	run(q);
+	compile(), run(q);
 }
