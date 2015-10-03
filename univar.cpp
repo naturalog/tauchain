@@ -44,7 +44,9 @@ std::unordered_map<old::nodeid, rulesindex> predskb;
 
 function<bool()> generalunifycoro(Thing*, Thing*);
 
-std::vector<comp> predGens;
+typedef function<comp()> generator;
+std::unordered_map<old::termid, generator> predGens;
+//std::vector<comp> predGens;
 
 int nterms = 0;
 std::queue<old::termid> predQueue;
@@ -294,12 +296,14 @@ comp pred(old::termid x)
 {
 	setproc(L"pred");
 	size_t index = nterms++;//predQueue.size();
-	predQueue.push(x);
+	if(predGens.find(x) != predGens.end()){
+		predQueue.push(x);
+	}
 	old::nodeid dbgx = x->p;
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
 	int entry = 0;
 	comp z;
-	return [entry, z, dbgx, index](Thing *Ds, Thing *Do)mutable{
+	return [entry, z, x, dbgx, index](Thing *Ds, Thing *Do)mutable{
 		setproc(L"pred lambda");
 		TRACE(dout << "im in ur pred proxy for nodeid " << dbgx << ", index: " << index << " entry: " << entry << endl;)
 		
@@ -307,7 +311,7 @@ comp pred(old::termid x)
 		{
 		case 0:
 			entry++;
-			z = predGens[index];
+			z = predGens[x]();
 			bool r;
 			while(true)
 			{
@@ -576,6 +580,9 @@ void compile_preds(old::prover *p){
 
 
 			//skip rules that wouldnt match
+			//lets figure out what's going on here
+			/*
+			dout << "Is this where we infloop?" << endl;
 			assert(p->heads[i]->s->p);
 			assert(x->s->p);
 			if (!(
@@ -586,8 +593,8 @@ void compile_preds(old::prover *p){
 				TRACE(dout << "wouldnt match" << endl;)
 				continue;
 			}
-
-
+			dout << "Nope." << endl;
+			*/
 
 			comp y = rule(p->heads[i], p->bodies[i]);
 
@@ -602,8 +609,8 @@ void compile_preds(old::prover *p){
 			}
 		}
 		if (first) // cant leave it empty
-			predGens.push_back(fail_with_args);
-		predGens.push_back(r);
+			predGens[x] = [](){return fail_with_args;};
+		predGens[x] = [r](){return r;};
 	}
 }
 
