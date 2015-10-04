@@ -20,22 +20,27 @@ struct din_t { // due to wcin.peek() not working
 	}
 	wchar_t get() {
 		if (f) 
-			return f = false, ch;
-		return wcin >> ch, ch;
+			return (f = false), ch;
+		return (wcin >> ch), ch;
 	}
 	bool good() { return wcin.good(); }
 	void skip() {
-		while (iswspace(peek()))
+		while (good() && iswspace(peek()))
 			get();
+	}
+	wstring getline() {
+		wstring s;
+		f = false, std::getline(wcin, s);
+		return s;
 	}
 	din_t() { wcin >> noskipws; }
 } din;
-
 
 bool isdelim(wchar_t ch, wstring d = edelims) {
 	for (auto x : d) if (ch == x) return true;
 	return false;
 }
+
 wchar_t* till(/*wstring& d = edelims*/) {
 	din.skip();
 	wstringstream ws;
@@ -43,32 +48,34 @@ wchar_t* till(/*wstring& d = edelims*/) {
 		ws << din.get();
 	wchar_t *r = wcsdup(ws.str().c_str());
 	if (isdelim(*r, L"{}().")) throw 0;
-	din.get(), wcout << "till: " << r << endl;
-	if (!wcslen(r)) throw 0;
-	return r;
+	return din.get(), (wcslen(r) ? r : 0);
 }
 
 wostream& operator<<(wostream& os, const struct resource& r);
+
 struct resource {
 	wchar_t *value;
 	union {
 		resource* sub;	// substitution, in case of var. not used in compile time
 		resource** args;// list items. last item must be null
 	};
-	resource(bool in = false) : value(in ? till() : 0), sub(0) { wcout << "new resource: " << *this << endl; }
-	resource(vector<resource*> _args) : value(new wchar_t[2]), args(new resource*[_args.size() + 1]) {
-	       *value= L'.', value[1] = 0;
-	       int n = 0;
-	       for (auto x : _args) args[n++] = x;
-	       args[n] = 0;
+	resource(wchar_t *v) : value(v ? wcsdup(v) : 0), sub(0) {
+		wcout << "new resource: " << *this << endl;
+	}
+	resource(vector<resource*> _args)
+		: value(new wchar_t[2]), args(new resource*[_args.size() + 1]) {
+		*value= L'.', value[1] = 0;
+		int n = 0;
+		for (auto x : _args) args[n++] = x;
+		args[n] = 0;
 	}
 };
+
 wostream& operator<<(wostream& os, const resource& r) {
 	if (*r.value == L'.') {
 		os << L'(';
 		resource **a = r.args;
-		while (*a)
-			os << (**a) << L' ';
+		while (*a) os << (**a) << L' ';
 		os << L')'; 
 	} else {
 		os << r.value;
@@ -83,30 +90,30 @@ struct triple {
 		r[0] = s, r[1] = p, r[2] = o; }
 	triple(const triple& t) : triple(t.r[0], t.r[1], t.r[2]) {}
 };
+
 wostream& operator<<(wostream& os, const triple& t) {
 	os << *t.r[0] << ' ' << *t.r[1] << ' ' << *t.r[2] << L'.';
 	return os;
 }
 
+typedef vector<triple*> triples;
+
 struct rule {
 	triple* head;
-	vector<triple*> body;
+	triples body;
 //	rule() {}
-	rule(triple* h, vector<triple*> b) : head(h), body(b) {}
+	rule(triple* h, const triples& b = triples()) : head(h), body(b) {}
 };
 vector<rule> rules;
+
 wostream& operator<<(wostream& os, const rule& r) {
 	os << L'{';
-	for (const triple* t : r.body)
-		os << *t << ' ';
+	for (const triple* t : r.body) os << *t << ' ';
 	os << L"} => { " << *r.head << " }.";
 	return os;
 }
 
-void print() {
-	for (auto r : rules) wcout << r << endl;
-}
-
+void print() { for (auto r : rules) wcout << r << endl; } 
 resource* readany();
 
 resource* readlist() {
@@ -121,15 +128,18 @@ resource* readlist() {
 resource* readany() {
 	din.skip();
 	if (din.peek() == L'(') return readlist();
-	return new resource(true);
+	wchar_t *s = till();
+	return s ? new resource(s) : 0;
 }
 
 triple* readtriple() {
 	din.skip();
 	resource *s = readany();
+	if (!s) return 0;
 	resource *p = readany();
+	if (!p) return 0;
 	resource *o = readany();
-	if (!s || !p || !o) return 0;
+	if (!o) return 0;
 	triple* r = new triple(s, p, o);
 	din.skip();
 	if (din.peek() == L'.') din.get(), din.skip();
@@ -137,22 +147,24 @@ triple* readtriple() {
 }
 
 void readrule() {
-	din.skip();
-	vector<triple*> body;
+	if (din.peek() == L'#') din.getline();
+	triples body;
 	if (din.peek() == L'{') {
 		din.get();
 		while (din.peek() != L'}')
-			body.push_back(readtriple()), din.skip();
-		din.get(), din.skip(), din.get(), din.skip(), din.get(), din.skip(); // "} => {";
+			body.push_back(readtriple());
+		din.get(), din.skip(), din.get(),
+		din.get(), din.skip(), din.get(), din.skip(); // "} => {";
 		if (din.peek() == L'}')
 			rules.push_back(rule(0, body)), din.skip();
-		else while (din.peek() != L'}')
-			rules.push_back(rule(readtriple(), body)), din.skip();
+		else {
+			while (din.peek() != L'}') rules.push_back(rule(readtriple(), body));
+			din.get();
+		}
 	} else
-		rules.push_back(rule(readtriple(), body));
+		rules.push_back(rule(readtriple()));
 	din.skip();
 	if (din.peek() == L'.') din.get();
-	din.skip();
 }
 
 void readdoc() { while (din.good()) din.skip(), readrule(), din.skip(); }
