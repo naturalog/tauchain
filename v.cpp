@@ -177,8 +177,8 @@ struct frame {
 typedef map<int/*head*/, subs> conds;
 // compiler's intermediate representation language. the information
 // in the following variable contains everything the emitter has to know
-map<pair<int/*head*/,int/*body*/>, conds> intermediate;
-map<pair<int/*head*/,int/*body*/>, std::function<bool()>> program; // compiled functions
+map<int/*head*/,map<int/*body*/, conds>> intermediate;
+map<int/*head*/,map<int/*body*/, std::function<bool()>>> program; // compiled functions
 
 bool occurs_check(res *x, res *y) {
 	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
@@ -217,7 +217,7 @@ void prepare() {
 		for (int k = 0; k < (int)rules[n].body.size(); ++k)
 			for (int m = 0; m < (int)rules.size(); ++m)
 				if (prepare(rules[n].body[k], rules[m].head, c))
-					intermediate[make_pair(n, k)][m] = c, c.clear();
+					intermediate[n][k][m] = c, c.clear();
 }
 
 bool unify(res *s, res *d, subs& trail) { // in runtime
@@ -234,20 +234,19 @@ function<bool()> compile(conds& c) {
 		return false;
 	};
 }
+
 void compile() {
 	prepare();
 	for (int n = 0; n < (int)rules.size(); ++n)
 		if (!rules[n].body.size())
-			program[make_pair(n, 0)] = [](){return true;};
-		else for (int k = 0; k < (int)rules[n].body.size(); ++k) {
-			auto i = make_pair(n, k);
-			program[i] = compile(intermediate[i]);
-		}
+			program[n][0] = [](){return true;};
+		else for (int k = 0; k < (int)rules[n].body.size(); ++k)
+			program[n][k] = compile(intermediate[n][k]);
 }
 void run(int q /* query's index in rules */) {
 	first = last, first->h = q, first->b = 0, first->prev = 0;
 	do {
-		program[make_pair(first->h, first->b)]();
+		program[first->h][first->b]();
 	} while (++first <= last);
 }
 int main() {
