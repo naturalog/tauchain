@@ -156,13 +156,27 @@ public:
 
 class List: public Thing{
 public:
-	std::vector<Node*> nodes;
+	std::vector<Thing*> nodes;
 	List(std::vector<old::termid> x)
 	{
 		for(auto y:x)
 			nodes.push_back(atom(y));
 	}
 
+	wstring str(){
+		wstringstream r;
+		r << L"(";
+		if(this->nodes.size() > 0){
+			for(size_t i=0;i<this->nodes.size();i++){
+				if(i != 0) r << " ";
+				r << nodes[i]->str();
+			}
+		}else{
+			r << " ";
+		}
+		r << ")";
+		return r.str();
+	}
 
 
 };
@@ -196,7 +210,7 @@ function<bool()> succeed()
 		switch(entry)
 		{
 			case 0:
-				entry = 1;
+		//		entry = 1;
 				return true;
 			default:
 				return false;
@@ -208,6 +222,8 @@ function<bool()> succeed()
 //yea its one of these
 function<bool()> listunifycoro(List *a, List *b)
 {
+	setproc(L"listunifycoro");
+	TRACE(dout << "im in ur listunifycoro" << endl);
 	//gotta join up unifcoros of vars in the lists
 	if(a->nodes.size() != b->nodes.size())
 		return fail;
@@ -217,26 +233,26 @@ function<bool()> listunifycoro(List *a, List *b)
 	function<bool()> r;
 	bool first = true;
 
-	for(i = b->nodes.size();i >= 0; i--)
+	for(i = b->nodes.size()-1;i >= 0; i--)
+	{
 		//we need a join that operates on parameterless coros
 		//your turn:D :) ok lemme see what i can do
 		//this is the only place we would use it we might as well just make it specially in here
 
 		//well i guess we can just join up generalunifcoros for a start
 
-		
-
-		function<bool()> uc = generalunifycoro(a->nodes[i], b->nodes[i]);	
+		//but it's here! D:
+		join uc = generalunifycoro(a->nodes[i], b->nodes[i]);	
+		//interesting:)
 		
 		if(first){
-			//huh?
 			r = uc;
 			first = false;
 		}
 		else
 		{
 			int entry = 0;
-			r = [r,uc]()mutable{
+			r = [r,uc, entry]() mutable{
 				switch(entry)
 				{
 					case 0:
@@ -244,16 +260,16 @@ function<bool()> listunifycoro(List *a, List *b)
 						while(r()){
 							while(uc()){
 								return true;
-					case 1:
+					case 1: ;
 							}
 						}
-						return false;
 				}
+				return false;//i guess we do it like this?
 				//just in case
 				//just in this case, id rather see valgrind tell me there was a use of uninitialized value than hide it good point
 			};
 		}
-		
+	}	
 	return r;
 }//thats it i guess
 //lemme check this listunifycoro real quick to make sure i got everything
@@ -369,12 +385,13 @@ Var* atom(old::termid n){
 	{
 		r->isBound = true;
 		//so rather than have the value be a new Node you'd have it be a new List?yes cool
-		if(old::dict[n->p]->value == L".")
+		if(*old::dict[n->p].value == L".")
 		{
-			old::prover::proof dummy;
-			r->value = new List(op->get_list(n, dummy));
+
+			r->value = new List(op->get_dotstyle_list(n));
 		}
-		r->value = new Node(n);
+		else
+			r->value = new Node(n);
 	}
 	return r;
 }

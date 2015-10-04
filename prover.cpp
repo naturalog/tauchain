@@ -125,6 +125,21 @@ void prover::get_dotstyle_list(termid id, std::list<nodeid> &list) {
 	return;
 }
 
+void prover::get_dotstyle_list(termid id, std::vector<termid> &list) {
+	auto s = id->s;
+	if (!s) return;
+	
+	list.push_back(s);
+	get_dotstyle_list(id->o, list);
+	return;
+}
+
+std::vector<termid> prover::get_dotstyle_list(termid id) {
+	std::vector<termid> r;
+	get_dotstyle_list(id, r);
+	return r;
+}
+
 void* testfunc(void* p) {
 	derr <<std::endl<< "***** Test func calleued ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());

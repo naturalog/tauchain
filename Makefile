@@ -1,6 +1,6 @@
 CC=clang++
 
-#ASAN=  -fno-omit-frame-pointer -fno-optimize-sibling-calls  -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow 
+ASAN=  -fno-omit-frame-pointer -fno-optimize-sibling-calls  -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow 
 
 CXXFLAGS=-c $(ASAN) -DDEBUG -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O1    -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
 LDFLAGS=  $(ASAN) -L/usr/local/lib #-ldl -pthread -lrt

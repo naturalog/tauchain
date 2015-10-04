@@ -122,6 +122,8 @@ public:
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
 	void get_dotstyle_list(termid, std::list<nodeid>&);
+	void get_dotstyle_list(termid id, std::vector<termid> &list);
+	std::vector<termid> get_dotstyle_list(termid id);
 
 	typedef std::vector <nodeid> nodeids;
 	typedef std::vector <termid> termids;
