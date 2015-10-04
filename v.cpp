@@ -36,7 +36,7 @@ wstring& trim(wstring& s) {
 	return s;
 }
 
-const wchar_t* till() {
+const wchar_t* till() { // read till delim or space
 	din.skip();
 	wstringstream ws;
 	bool isdel;
@@ -49,7 +49,7 @@ const wchar_t* till() {
 	return wcslen(r) ? r : 0;
 }
 
-struct res {
+struct res { // iri, var, or list
 	const wchar_t *val;
 	union {
 		res* sub; // substitution, in case of var. not used in compile time
@@ -71,13 +71,23 @@ struct triple {
 	triple(const triple& t) : triple(t.r[0], t.r[1], t.r[2]) {}
 };
 
-typedef map<const res*, const res*> subs; // for compile time only
+typedef vector<const triple*> triples;
+
+struct rule {
+	const triple* head;
+	const triples body;
+	rule(const triple* h, const triples& b = triples()) : head(h), body(b) {}
+};
+vector<rule> rules;
+
+typedef map<const res*, const res*> subs; // for holding conditions in compile time
 
 wostream& operator<<(wostream&, const res&);
 wostream& operator<<(wostream&, const triple&t);
 wostream& operator<<(wostream&, const subs&);
 wostream& operator<<(wostream&, const struct rule&);
 
+// uniquely create resources and triples
 res* mkres(const wchar_t* v) { 
 	static map<wstring, res*> r; 
 	static map<wstring, res*>::iterator i; 
@@ -110,15 +120,7 @@ triple* mktriple(res *s, res *p, res *o) {
 	return r;
 }
 
-typedef vector<const triple*> triples;
-
-struct rule {
-	const triple* head;
-	const triples body;
-	rule(const triple* h, const triples& b = triples()) : head(h), body(b) {}
-};
-vector<rule> rules;
-
+// serializers
 wostream& operator<<(wostream& os, const rule& r) {
 	os << L'{';
 	for (const triple* t : r.body) os << *t << ' ';
@@ -147,6 +149,7 @@ wostream& operator<<(wostream& os, const subs& r) {
 }
 void print() { dout << "rules: " << rules.size() << endl; for (auto r : rules) dout << r << endl; } 
 
+// parsers
 res* readany();
 
 res* readlist() {
@@ -197,7 +200,7 @@ void readdoc() {
 
 const size_t max_frames = 1e+6;
 struct frame {
-	int h, b;
+	int h, b; // head and body ids
 	frame* prev;
 	subs trail;
 } *first = new frame[max_frames], *last;
@@ -227,6 +230,7 @@ bool occurs_check(const res *x, const res *y) {
 	return false;
 }
 
+// calculate conditions given two resources
 bool prepare(const res *s, const res *d, subs& cs, subs& cd, subs& csd) {
 	dout << "preparing " << *s << " and " << *d << endl;
 	if (!isvar(*s) && !isvar(*d)) {
@@ -246,6 +250,7 @@ bool prepare(const res *s, const res *d, subs& cs, subs& cd, subs& csd) {
 	return (dout << " passed " << endl, true);
 }
 
+// calculate conditions given two triples
 bool prepare(const triple *s, const triple *d, subs& cs, subs& cd, subs& csd) {
 	if (!d) return false;
 	FOR(n, 3)
@@ -254,6 +259,7 @@ bool prepare(const triple *s, const triple *d, subs& cs, subs& cd, subs& csd) {
 	return true;
 }
 
+// calculate conditions for kb
 void prepare() {
 	subs cs, cd, csd;
 	FOR(n, rules.size())
@@ -266,10 +272,12 @@ void prepare() {
 					, csd.clear();
 }
 
+// runtime resource unifiers
 bool sunify(const res*, const res*, subs&) {return false;}
 bool dunify(const res*, const res*, subs&) {return false;}
 bool sdunify(const res*, const res*, subs&) {return false;}
 
+// return a function that calls the unifiers given the conditions
 function<bool()> compile(conds& c) {
 	return [c]() {
 		for (conds::const_iterator x = c.begin(); x != c.end(); ++x) {
@@ -288,6 +296,7 @@ function<bool()> compile(conds& c) {
 	};
 }
 
+// compile whole kb
 void compile() {
 	prepare();
 	FOR(n, rules.size())
@@ -300,8 +309,10 @@ void run() {
 	FOR(n, rules.size())
 		if (!rules[n].head) // push queries
 			(++last)->h = n, last->b = 0, last->prev = 0;
-	do {
+	do { // execute the func that is indexed by the current frame's head&body id
 		program[first->h][first->b]();
+		// TODO: run a proof trace collector thread here
+		// as well as garbage collector
 		if (!rules[first->h].body.size()) dout << "ground" << endl;
 	} while (++first <= last);
 }
