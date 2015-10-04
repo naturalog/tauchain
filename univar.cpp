@@ -37,18 +37,17 @@ typedef std::unordered_map<old::termid, Var*> varmap;
 
 
 typedef vector<size_t> rulesindex;
-//std::unordered_map<old::nodeid, function<bool(Thing*,Thing*)> predskb;
-std::unordered_map<old::nodeid, rulesindex> predskb;
+std::unordered_map<old::nodeid, rulesindex> pred_index;
 
 
 
 function<bool()> generalunifycoro(Thing*, Thing*);
 
+/*
 std::vector<comp> predGens;
-
 int nterms = 0;
 std::queue<old::termid> predQueue;
-
+*/
 
 
 
@@ -168,6 +167,8 @@ bool fail()
 }
 bool fail_with_args(Thing *_s, Thing *_o)
 {
+	(void)_s;
+	(void)_o;
 	setproc(L"fail_with_args");
 	TRACE(dout << "..." << endl;)
 	return false;
@@ -296,24 +297,54 @@ Var* atom(old::termid n){
 }
 
 
+comp rule(old::termid head, old::prover::termset body);
+
+comp compile_pred(old::termid x) {
+	setproc(L"compile_pred");
+	rulesindex rs = pred_index[x->p];
+	comp r;
+	bool first = true;
+
+	//compile each rule with the pred in the head, seq them up
+	for (size_t i: rs) {
+
+		comp y = rule(op->heads[i], op->bodies[i]);
+
+		if (first) {
+			first = false;
+			TRACE(dout << "first, nodeid: " << x->p << "(" << old::dict[x->p] << ")" << endl;)
+			r = y;
+		}
+		else {
+			TRACE(dout << "seq, nodeid: " << x->p << "(" << old::dict[x->p] << ")" << endl;)
+			r = seq(r, y);
+		}
+	}
+	if (first) // cant leave it empty
+		return (fail_with_args);
+	return r;
+}
+
+
+
 comp pred(old::termid x)
 {
 	setproc(L"pred");
-	size_t index = nterms++;//predQueue.size();
-	predQueue.push(x);
+	//size_t index = nterms++;//predQueue.size();
+	//predQueue.push(x);
 	old::nodeid dbgx = x->p;
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
 	int entry = 0;
 	comp z;
-	return [entry, z, dbgx, index](Thing *Ds, Thing *Do)mutable{
+	return [entry, z, x, dbgx](Thing *Ds, Thing *Do)mutable{
 		setproc(L"pred lambda");
-		TRACE(dout << "im in ur pred proxy for nodeid " << dbgx << ", index: " << index << " entry: " << entry << endl;)
+		TRACE(dout << "im in ur pred proxy for nodeid " << dbgx << " entry: " << entry << endl;)
 		
 		switch(entry)
 		{
 		case 0:
 			entry++;
-			z = predGens[index];
+			z = compile_pred(x);
 			bool r;
 			while(true)
 			{
@@ -554,82 +585,51 @@ comp rule(old::termid head, old::prover::termset body)
 
 /*writes into preds*/
 //ok so by the time we get here, we'll already have
-//predskb, a map from preds to a vector of indexes of rules with that pred in the head
+//pred_index, a map from preds to a vector of indexes of rules with that pred in the head
 /*void compile_kb()
 {
 	setproc(L"compile_kb");
-	for (auto x: predskb)
+	for (auto x: pred_index)
 	{
 		old::nodeid k = x.first;
 		preds[k] = pred(k);//just queue it up, get the lookuping lambda
 	}
 }*/
 
-/*imo this should infiloop, without ep check, on any recursive example
-step 2 should be to not do it per pred but per term(with unification, checking if a rule is relevant)*/
-void compile_preds(old::prover *p){
-	setproc(L"compile_preds");
-
-	while(!predQueue.empty()){
-		old::termid x = predQueue.front(); predQueue.pop();
-		rulesindex rs = predskb[x->p];
-		comp r;
-		bool first = true;
-
-		//compile each rule with the pred in the head, seq them up
-		for (size_t i: rs)
-		{
-
-
-			//skip rules that wouldnt match
-			assert(p->heads[i]->s->p);
-			assert(x->s->p);
-			if (!(
-						atom(p->heads[i]->s)->unifcoro(atom(x->s))()
-					&&
-						atom(p->heads[i]->o)->unifcoro(atom(x->o))()
-				)) {
-				TRACE(dout << "wouldnt match" << endl;)
-				continue;
-			}
-
-
-
-			comp y = rule(p->heads[i], p->bodies[i]);
-
-			if(first){
-				first = false;
-				TRACE(dout << "first, nodeid: " << x->p << "(" << old::dict[x->p] << ")" << endl;)
-				r = y;
-			}
-			else{
-				TRACE(dout << "seq, nodeid: " <<  x->p << "(" << old::dict[x->p] << ")" << endl;)
-				r = seq(r,y);
-			}
-		}
-		if (first) // cant leave it empty
-			predGens.push_back(fail_with_args);
-		predGens.push_back(r);
+/*
+//skip rules that wouldnt match
+bool wouldmatch(old::termid t, size_t i) {
+	assert(p->heads[i]->s->p);
+	assert(x->s->p);
+	if (!(
+			atom(p->heads[i]->s)->unifcoro(atom(x->s))()
+			&&
+			atom(p->heads[i]->o)->unifcoro(atom(x->o))()
+	)) {
+		TRACE(dout << "wouldnt match" << endl;)
+		return false;
 	}
+	else
+		return true;
 }
+*/
 
-/*writes into predskb*/
-//i see
-void gen_pred2rules_map(old::prover *p)
+
+void generate_pred_index(old::prover *p)
 {
-	setproc(L"gen_pred2rules_map");
-	TRACE(dout << "gen predskb" << endl);
+	setproc(L"generate_pred_index");
+	TRACE(dout << "gen pred_index" << endl);
 
 	int i;
 	//start at the end of the kb//irrelevant?
 	for (i = p->heads.size() - 1; i >= 0; i--)
 	{
 		old::nodeid pr = p->heads[i]->p;
-		auto it = predskb.find(pr);
-		if (it == predskb.end()){
-			predskb[pr] = rulesindex();
+		auto it = pred_index.find(pr);
+		if (it == pred_index.end()){
+			pred_index[pr] = rulesindex();
 		}
-		predskb[pr].push_back(i);
+		pred_index[pr].push_back(i);
 	}
 
 
@@ -641,7 +641,7 @@ void gen_pred2rules_map(old::prover *p)
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
 	op=p = new old::prover(qkb, false);
-	gen_pred2rules_map(p);
+	generate_pred_index(p);
 	//compile_kb();
 	//compile_preds(p);
 	if(check_consistency) dout << "consistency: mushy" << endl;
@@ -657,16 +657,15 @@ void yprover::query(const old::qdb& goal){
 	int nresults = 0;
 	old::nodeid pr = g[0]->p;
 
-	if (predskb.find(pr) != predskb.end()) {
+	if (pred_index.find(pr) != pred_index.end()) {
 		Var *s = atom(g[0]->s);
 		Var *o = atom(g[0]->o);
 		//varmap vars;
 		//putting them to vars should be irrelevant at this point, all the pointers have been captured
-		//
-		/*if g[0]->o == g[0]->s: s = o;*/
+		///*if g[0]->o == g[0]->s: s = o;*/
 		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
 		auto coro = pred(g[0]);
-		compile_preds(p);
+		//compile_preds(p);
 		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
 		//this is weird, passing the args over and over
 		while (coro(s,o)) {
@@ -675,9 +674,15 @@ void yprover::query(const old::qdb& goal){
 			dout << L"RESULT " << nresults << ":";
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
+		}
+	}
+	dout << "thats all, folks, " << nresults << " results." << endl;
+
+}
+
 
 			/*
-			//put result to results. will be more complicated with internalized lists.
+			//put result into results. will be more complicated with internalized lists.
 			auto sv = s->getValue();
 			auto ov = o->getValue();
 			Node *n1 = dynamic_cast<Node*>(sv);
@@ -691,11 +696,7 @@ void yprover::query(const old::qdb& goal){
 				results.first[L"@default"]->push_back(q);
 			}
 			*/
-		}
-	}
-	dout << "thats all, folks, " << nresults << " results." << endl;
 
-}
 
 
 /*
