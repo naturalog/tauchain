@@ -71,6 +71,15 @@ struct res {
 	~res() { if (args && *val == L'.') delete[] args; if (val) free(val); }
 };
 
+#define _mkres(T, K) \
+res* mkres(T v) { \
+	static map<K, res*> r; \
+	static map<K, res*>::iterator i; \
+	return ((i = r.find(K(v))) == r.end()) ? (r[v] = new res(v)) : i->second; \
+}
+_mkres(wchar_t*, wstring)
+_mkres(vector<res*>, vector<res*>)
+
 wostream& operator<<(wostream& os, const res& r) {
 	if (*r.val == L'.') {
 		os << L'(';
@@ -90,6 +99,20 @@ struct triple {
 		r[0] = s, r[1] = p, r[2] = o; }
 	triple(const triple& t) : triple(t.r[0], t.r[1], t.r[2]) {}
 };
+
+triple* mktriple(res *s, res *p, res *o) {
+	static map<res*, map<res*, map<res*, triple*>>> spo;
+	static map<res*, map<res*, map<res*, triple*>>>::iterator i;
+	static map<res*, map<res*, triple*>>::iterator j;
+	static map<res*, triple*>::iterator k;
+	i = spo.find(s);
+	if (i == spo.end()) return spo[s][p][o] = new triple(s, p, o);
+	j = i->second.find(p);
+	if (j == i->second.end()) return i->second[p][o] = new triple(s, p, o);
+	k = j->second.find(o);
+	if (k == j->second.end()) return j->second[o] = new triple(s, p, o);
+	return k->second;
+}
 
 wostream& operator<<(wostream& os, const triple& t) {
 	os << *t.r[0] << ' ' << *t.r[1] << ' ' << *t.r[2] << L'.';
@@ -122,21 +145,21 @@ res* readlist() {
 	vector<res*> items;
 	while (din.peek() != L')') items.push_back(readany()), din.skip();
 	din.get(), din.skip();
-	return new res(items);
+	return mkres(items);
 }
 
 res* readany() {
 	din.skip();
 	if (din.peek() == L'(') return readlist();
 	wchar_t *s = till();
-	return s ? new res(s) : 0;
+	return s ? mkres(s) : 0;
 }
 
 triple* readtriple() {
 	din.skip();
 	res *s, *p, *o;
 	if (!(s = readany()) || !(p = readany()) || !(o = readany())) return 0;
-	triple* r = new triple(s, p, o);
+	triple* r = mktriple(s, p, o);
 	din.skip();
 	if (din.peek() == L'.') din.get(), din.skip();
 	return r;
