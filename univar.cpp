@@ -210,7 +210,8 @@ function<bool()> succeed()
 		switch(entry)
 		{
 			case 0:
-		//		entry = 1;
+				entry = 1; //who did it!?1?!?!:) :D oh you started moving around when i started typing
+		//a comment must have coincidentally ended up here, i forgot to go back and look for it
 				return true;
 			default:
 				return false;
@@ -445,6 +446,7 @@ comp pred(old::termid x)
 	old::nodeid dbgx = x->p;
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
 	int entry = 0;
+	//comp z = compile_pred(x);
 	comp z;
 	return [entry, z, x, dbgx](Thing *Ds, Thing *Do)mutable{
 		setproc(L"pred lambda");
@@ -476,7 +478,7 @@ comp pred(old::termid x)
 				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
 				return true;
 		case 1: ;
-
+			
 			}
 		out: ;
 			entry++;
@@ -789,7 +791,6 @@ void yprover::query(const old::qdb& goal){
 
 		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
 		//this is weird, passing the args over and over
-		//will be fixed when we lambda this up too
 		while (coro(s,o)) {
 			nresults++;
 			if (nresults >= 123) {dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;break;}
@@ -798,7 +799,6 @@ void yprover::query(const old::qdb& goal){
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
 			s = atom(g[0]->s);
 			o = atom(g[0]->o);
-
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
