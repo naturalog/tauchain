@@ -36,7 +36,7 @@ wstring& trim(wstring& s) {
 	return s;
 }
 
-wchar_t* till() {
+const wchar_t* till() {
 	din.skip();
 	wstringstream ws;
 	bool isdel;
@@ -44,8 +44,8 @@ wchar_t* till() {
 		(isdel = (edelims.find(din.peek()) == string::npos)) && 
 		!iswspace(din.peek()))
 		ws << din.get();
-	wchar_t *r = wcsdup(ws.str().c_str());
-	if (isdel) din.get();
+	const wchar_t *r = wcsdup(ws.str().c_str());
+//	if (isdel) din.get();
 	return wcslen(r) ? r : 0;
 }
 
@@ -66,8 +66,8 @@ struct res {
 };
 
 struct triple {
-	res *r[3]; // spo
-	triple(res *s, res *p, res *o) { r[0] = s, r[1] = p, r[2] = o; }
+	const res *r[3]; // spo
+	triple(const res *s, const res *p, const res *o) { r[0] = s, r[1] = p, r[2] = o; }
 	triple(const triple& t) : triple(t.r[0], t.r[1], t.r[2]) {}
 };
 
@@ -105,27 +105,24 @@ triple* mktriple(res *s, res *p, res *o) {
 			k = j->second.find(o);
 			if (k == j->second.end()) r = j->second[o] = new triple(s, p, o);
 			else r = k->second;
-		}
-	}
+	}	}
 	dout << "new triple: " << *r << endl;
 	return r;
 }
 
-typedef vector<triple*> triples;
+typedef vector<const triple*> triples;
 
 struct rule {
-	triple* head;
-	triples body;
-	rule(triple* h, const triples& b = triples()) : head(h), body(b) {}
+	const triple* head;
+	const triples body;
+	rule(const triple* h, const triples& b = triples()) : head(h), body(b) {}
 };
 vector<rule> rules;
 
 wostream& operator<<(wostream& os, const rule& r) {
 	os << L'{';
 	for (const triple* t : r.body) os << *t << ' ';
-	os << L"} => { "; 
-	r.head ? os << *r.head : os << L"";
-       	os << " }.";
+	os << L"} => { ", (r.head ? os << *r.head : os << L""), os << " }.";
 	return os;
 }
 wostream& operator<<(wostream& os, const triple& t) {
@@ -164,7 +161,7 @@ res* readany() {
 	din.skip();
 	if (!din.good()) return 0;
 	if (din.peek() == L'(') return readlist();
-	wchar_t *s = till();
+	const wchar_t *s = till();
 	return s ? mkres(s) : 0;
 }
 
@@ -178,27 +175,25 @@ triple* readtriple() {
 	return r;
 }
 
-bool readrule() {
-	din.skip();
-	triples body;
-	if (din.peek() == L'{') {
-		din.get();
-		while (din.good() && din.peek() != L'}') body.push_back(readtriple());
-		din.get(), din.skip(), din.get(),
-		din.get(), din.skip(), din.get(), din.skip(); // "} => {";
-		if (din.peek() == L'}') rules.push_back(rule(0, body)), din.skip();
-		else while (din.good() && din.peek() != L'}') rules.push_back(rule(readtriple(), body));
-		din.get();
-	} else {
-		triple *t = readtriple();
-		if (t) rules.push_back(rule(t));
-	}
-	din.skip();
-	if (din.peek() == L'.') din.get(), din.skip();
-	return din.good();
-}
-
-void readdoc() { while (readrule()); }
+void readdoc() {
+	while (din.good()) {
+		din.skip();
+		triples body;
+		if (din.peek() == L'{') {
+			din.get();
+			while (din.good() && din.peek() != L'}') body.push_back(readtriple());
+			din.get(), din.skip(), din.get(),
+			din.get(), din.skip(), din.get(), din.skip(); // "} => {";
+			if (din.peek() == L'}') rules.push_back(rule(0, body)), din.skip();
+			else while (din.good() && din.peek() != L'}') rules.push_back(rule(readtriple(), body));
+			din.get();
+		} else {
+			triple *t = readtriple();
+			if (t) rules.push_back(rule(t));
+		}
+		din.skip();
+		if (din.peek() == L'.') din.get(), din.skip();
+}	}
 
 const size_t max_frames = 1e+6;
 struct frame {
@@ -219,18 +214,13 @@ void print_interm() {
 				dout << "\tto unify with " << *rules[z.first].head;
 				dout << " the following unifications has to take place in runtime: " << endl;
 				dout << "\t\t" << z.second << endl;
-			}
-		}
-	}
-}
+}	}	}	}
 
 bool occurs_check(const res *x, const res *y) {
 	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
 	if (x == y) return true;
-	if (islist(*y))
-		for (const res **r = y->args; *r; ++r)
-			if (occurs_check(x, *r))
-				return true;
+	if (islist(*y)) for (const res **r = y->args; *r; ++r)
+		if (occurs_check(x, *r)) return true;
 	return false;
 }
 
@@ -248,7 +238,7 @@ bool prepare(const res *s, const res *d, subs& c) {
 	return occurs_check(s, d) ? false : (dout << " passed " << endl, c[s] = d, true);
 }
 
-bool prepare(triple *s, triple *d, subs& c) {
+bool prepare(const triple *s, const triple *d, subs& c) {
 	if (!d) return false;
 	FOR(n, 3)
 		if (!prepare(s->r[n], d->r[n], c))
@@ -283,10 +273,8 @@ function<bool()> compile(conds& c) {
 void compile() {
 	prepare();
 	FOR(n, rules.size())
-		if (!rules[n].body.size())
-			program[n][0] = [](){return true;}; // fact
-		else FOR(k, rules[n].body.size())
-			program[n][k] = compile(intermediate[n][k]);
+		if (!rules[n].body.size()) program[n][0] = [](){return true;}; // fact
+		else FOR(k, rules[n].body.size()) program[n][k] = compile(intermediate[n][k]);
 }
 
 void run() {
