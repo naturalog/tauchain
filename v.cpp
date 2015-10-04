@@ -10,7 +10,9 @@ using namespace std;
 
 wstring edelims = L")}.";
 #define isvar(x) (*(x).val == L'?')
+#define islist(x) (*(x).val == L'.')
 wostream& dout = wcout;
+#define FOR(x, y) for (int x = 0; x < (int)y; ++x)
 
 struct din_t { // due to wcin.peek() not working
 	wchar_t ch;
@@ -53,6 +55,7 @@ wchar_t* till(/*wstring& d = edelims*/) {
 }
 
 wostream& operator<<(wostream& os, const struct res& r);
+wostream& operator<<(wostream& os, const struct triple& t);
 
 struct res {
 	wchar_t *val;
@@ -80,19 +83,6 @@ res* mkres(T v) { \
 _mkres(wchar_t*, wstring)
 _mkres(vector<res*>, vector<res*>)
 
-wostream& operator<<(wostream& os, const res& r) {
-	if (*r.val == L'.') {
-		os << L'(';
-		res **a = r.args;
-		while (*a) os << (**a) << L' ';
-		os << L')'; 
-	} else {
-		os << r.val;
-		if (isvar(r) && r.sub) os << L'=' << *r.sub;
-	}
-	return os;
-}
-
 struct triple {
 	res *r[3]; // spo
 	triple(res *s, res *p, res *o) {
@@ -114,11 +104,6 @@ triple* mktriple(res *s, res *p, res *o) {
 	return k->second;
 }
 
-wostream& operator<<(wostream& os, const triple& t) {
-	os << *t.r[0] << ' ' << *t.r[1] << ' ' << *t.r[2] << L'.';
-	return os;
-}
-
 typedef vector<triple*> triples;
 
 struct rule {
@@ -136,8 +121,24 @@ wostream& operator<<(wostream& os, const rule& r) {
        	os << " }.";
 	return os;
 }
-
+wostream& operator<<(wostream& os, const triple& t) {
+	os << *t.r[0] << ' ' << *t.r[1] << ' ' << *t.r[2] << L'.';
+	return os;
+}
+wostream& operator<<(wostream& os, const res& r) {
+	if (*r.val == L'.') {
+		os << L'(';
+		res **a = r.args;
+		while (*a) os << (**a) << L' ';
+		os << L')'; 
+	} else {
+		os << r.val;
+		if (isvar(r) && r.sub) os << L'=' << *r.sub;
+	}
+	return os;
+}
 void print() { for (auto r : rules) wcout << r << endl; } 
+
 res* readany();
 
 res* readlist() {
@@ -206,9 +207,10 @@ map<int/*head*/,map<int/*body*/, std::function<bool()>>> program; // compiled fu
 bool occurs_check(res *x, res *y) {
 	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
 	if (x == y) return true;
-	for (res **r = y->args; *r; ++r)
-		if (occurs_check(x, *r))
-			return true;
+	if (islist(*y))
+		for (res **r = y->args; *r; ++r)
+			if (occurs_check(x, *r))
+				return true;
 	return false;
 }
 
@@ -216,7 +218,7 @@ bool prepare(res *s, res *d, subs& c) {
 	dout << "preparing " << *s << " and " << *d << endl;
 	if (!isvar(*s) && !isvar(*d)) {
 		if (s != d) return dout << " failed." << endl, c.clear(), false;
-		if (*s->val != L'.') return true;
+		if (!islist(*s)) return true;
 		res **rs, **rd;
 		for (rs = s->args, rd = d->args; *rs && *rd;)
 			if (!*rs != !*rd || !prepare(*rs++, *rd++, c))
@@ -228,7 +230,7 @@ bool prepare(res *s, res *d, subs& c) {
 
 bool prepare(triple *s, triple *d, subs& c) {
 	if (!d) return false;
-	for (int n = 0; n < 3; ++n)
+	FOR(n, 3)
 		if (!prepare(s->r[n], d->r[n], c))
 			return false;
 	return true;
@@ -236,9 +238,9 @@ bool prepare(triple *s, triple *d, subs& c) {
 
 void prepare() {
 	subs c;
-	for (int n = 0; n < (int)rules.size(); ++n)
-		for (int k = 0; k < (int)rules[n].body.size(); ++k)
-			for (int m = 0; m < (int)rules.size(); ++m)
+	FOR(n, rules.size())
+		FOR(k, rules[n].body.size())
+			FOR(m, rules.size())
 				if (prepare(rules[n].body[k], rules[m].head, c))
 					intermediate[n][k][m] = c, c.clear();
 }
@@ -260,23 +262,19 @@ function<bool()> compile(conds& c) {
 
 void compile() {
 	prepare();
-	for (int n = 0; n < (int)rules.size(); ++n)
+	FOR(n, rules.size())
 		if (!rules[n].body.size())
 			program[n][0] = [](){return true;}; // fact
-		else for (int k = 0; k < (int)rules[n].body.size(); ++k)
+		else FOR(k, rules[n].body.size())
 			program[n][k] = compile(intermediate[n][k]);
 }
 
 void run() {
 	last = first;
-	for (int n = 0; n < (int)rules.size(); ++n)
+	FOR(n, rules.size())
 		if (!rules[n].head) // push queries
 			(++last)->h = n, last->b = 0, last->prev = 0;
 	do { program[first->h][first->b](); } while (++first <= last);
 }
 
-int main() {
-	readdoc(), print(), compile(), run();
-}
-
-
+int main() { readdoc(), print(), compile(), run(); }
