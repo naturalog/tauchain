@@ -356,9 +356,9 @@ int get_qdb(qdb &kb, string fname){
 
 void shouldbe(qdb &kb) {
 	//if (qdbs_same(kb, tauProver->results))
-		dout << KGRN << "PASS" << KNRM << endl;
+		dout << KGRN << "PASS" /*<< KNRM << endl;
 	//else
-		dout << KRED << "FAIL" << KNRM << endl;
+		dout */<< KRED << "FAIL" << KNRM << endl;
 }
 
 
@@ -523,6 +523,8 @@ int main ( int argc, char** argv) {
 		)
 		string trimmed_data = data_buffer;
 		boost::algorithm::trim(trimmed_data);
+
+		dout << L"<\"" << line << "\"" << std::endl;
 
 		string token;
 		if (mode == COMMANDS && trimmed_data == L"") {
