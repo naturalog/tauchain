@@ -25,13 +25,28 @@ struct din_t { // due to wcin.peek() not working
 	din_t() { wcin >> noskipws; }
 } din;
 
+wstring& trim(wstring& s) {
+	static wstring::iterator i = s.begin();
+	while (iswspace(*i)) s.erase(i), i = s.begin();
+	size_t n = s.size();
+	if (n) {
+		while (iswspace(s[--n]));
+		s = s.substr(0, ++n);
+	}
+	return s;
+}
+
 wchar_t* till() {
 	din.skip();
 	wstringstream ws;
-	while (din.good() && edelims.find(din.peek()) == string::npos && !iswspace(din.peek()))
+	bool isdel;
+	while 	(din.good() &&
+		(isdel = (edelims.find(din.peek()) == string::npos)) && 
+		!iswspace(din.peek()))
 		ws << din.get();
 	wchar_t *r = wcsdup(ws.str().c_str());
-	return din.get(), (wcslen(r) ? r : 0);
+	if (isdel) din.get();
+	return wcslen(r) ? r : 0;
 }
 
 struct res {
@@ -80,13 +95,20 @@ triple* mktriple(res *s, res *p, res *o) {
 	static map<res*, map<res*, map<res*, triple*>>>::iterator i;
 	static map<res*, map<res*, triple*>>::iterator j;
 	static map<res*, triple*>::iterator k;
+	static triple* r;
 	i = spo.find(s);
-	if (i == spo.end()) return spo[s][p][o] = new triple(s, p, o);
-	j = i->second.find(p);
-	if (j == i->second.end()) return i->second[p][o] = new triple(s, p, o);
-	k = j->second.find(o);
-	if (k == j->second.end()) return j->second[o] = new triple(s, p, o);
-	return k->second;
+	if (i == spo.end()) r = spo[s][p][o] = new triple(s, p, o);
+	else {
+		j = i->second.find(p);
+		if (j == i->second.end()) r = i->second[p][o] = new triple(s, p, o);
+		else {
+			k = j->second.find(o);
+			if (k == j->second.end()) r = j->second[o] = new triple(s, p, o);
+			else r = k->second;
+		}
+	}
+	dout << "new triple: " << *r << endl;
+	return r;
 }
 
 typedef vector<triple*> triples;
@@ -114,7 +136,7 @@ wostream& operator<<(wostream& os, const res& r) {
 	if (*r.val == L'.') {
 		os << L'(';
 		const res **a = r.args;
-		while (*a) os << (**a) << L' ';
+		while (*a) os << (**a++) << L' ';
 		os << L')'; 
 	} else {
 		os << r.val;
@@ -133,13 +155,14 @@ res* readany();
 res* readlist() {
 	din.get(), din.skip();
 	vector<res*> items;
-	while (din.peek() != L')') items.push_back(readany()), din.skip();
+	while (din.good() && din.peek() != L')') items.push_back(readany()), din.skip();
 	din.get(), din.skip();
 	return mkres(items);
 }
 
 res* readany() {
 	din.skip();
+	if (!din.good()) return 0;
 	if (din.peek() == L'(') return readlist();
 	wchar_t *s = till();
 	return s ? mkres(s) : 0;
@@ -155,8 +178,8 @@ triple* readtriple() {
 	return r;
 }
 
-void readrule() {
-	if (din.peek() == L'#') din.getline();
+bool readrule() {
+	din.skip();
 	triples body;
 	if (din.peek() == L'{') {
 		din.get();
@@ -164,19 +187,18 @@ void readrule() {
 		din.get(), din.skip(), din.get(),
 		din.get(), din.skip(), din.get(), din.skip(); // "} => {";
 		if (din.peek() == L'}') rules.push_back(rule(0, body)), din.skip();
-		else {
-			while (din.good() && din.peek() != L'}') rules.push_back(rule(readtriple(), body));
-			din.get();
-		}
+		else while (din.good() && din.peek() != L'}') rules.push_back(rule(readtriple(), body));
+		din.get();
 	} else {
 		triple *t = readtriple();
 		if (t) rules.push_back(rule(t));
 	}
 	din.skip();
-	if (din.peek() == L'.') din.get();
+	if (din.peek() == L'.') din.get(), din.skip();
+	return din.good();
 }
 
-void readdoc() { while (din.good()) din.skip(), readrule(), din.skip(); }
+void readdoc() { while (readrule()); }
 
 const size_t max_frames = 1e+6;
 struct frame {
