@@ -109,7 +109,9 @@ vector<rule> rules;
 wostream& operator<<(wostream& os, const rule& r) {
 	os << L'{';
 	for (const triple* t : r.body) os << *t << ' ';
-	os << L"} => { " << *r.head << " }.";
+	os << L"} => { "; 
+	r.head ? os << *r.head : os << L"";
+       	os << " }.";
 	return os;
 }
 
@@ -161,8 +163,10 @@ void readrule() {
 			while (din.peek() != L'}') rules.push_back(rule(readtriple(), body));
 			din.get();
 		}
-	} else
-		rules.push_back(rule(readtriple()));
+	} else {
+		triple *t = readtriple();
+		if (t) rules.push_back(rule(t));
+	}
 	din.skip();
 	if (din.peek() == L'.') din.get();
 }
@@ -210,6 +214,7 @@ bool prepare(resource *s, resource *d, subs& c) {
 }
 
 bool prepare(triple *s, triple *d, subs& c) {
+	if (!d) return false;
 	for (int n = 0; n < 3; ++n)
 		if (!prepare(s->r[n], d->r[n], c))
 			return false;
