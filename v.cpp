@@ -34,9 +34,6 @@ wchar_t* till() {
 	return din.get(), (wcslen(r) ? r : 0);
 }
 
-wostream& operator<<(wostream& os, const struct res& r);
-wostream& operator<<(wostream& os, const struct triple& t);
-
 struct res {
 	const wchar_t *val;
 	union {
@@ -53,6 +50,19 @@ struct res {
 	~res() { if (args && *val == L'.') delete[] args; if (val) free((wchar_t*)val); }
 };
 
+struct triple {
+	res *r[3]; // spo
+	triple(res *s, res *p, res *o) { r[0] = s, r[1] = p, r[2] = o; }
+	triple(const triple& t) : triple(t.r[0], t.r[1], t.r[2]) {}
+};
+
+typedef map<const res*, const res*> subs; // for compile time only
+
+wostream& operator<<(wostream&, const res&);
+wostream& operator<<(wostream&, const triple&t);
+wostream& operator<<(wostream&, const subs&);
+wostream& operator<<(wostream&, const struct rule&);
+
 res* mkres(const wchar_t* v) { 
 	static map<wstring, res*> r; 
 	static map<wstring, res*>::iterator i; 
@@ -64,13 +74,6 @@ res* mkres(const vector<res*>& v) {
 	static map<vector<res*>, res*>::iterator i; 
 	return ((i = r.find(v)) == r.end()) ? (r[v] = new res(v)) : i->second; 
 }
-
-struct triple {
-	res *r[3]; // spo
-	triple(res *s, res *p, res *o) {
-		r[0] = s, r[1] = p, r[2] = o; }
-	triple(const triple& t) : triple(t.r[0], t.r[1], t.r[2]) {}
-};
 
 triple* mktriple(res *s, res *p, res *o) {
 	static map<res*, map<res*, map<res*, triple*>>> spo;
@@ -117,6 +120,10 @@ wostream& operator<<(wostream& os, const res& r) {
 		os << r.val;
 		if (isvar(r) && r.sub) os << L'=' << *r.sub;
 	}
+	return os;
+}
+wostream& operator<<(wostream& os, const subs& r) {
+	for (auto x : r) os << *x.first << '=' << *x.second << ';';
 	return os;
 }
 void print() { dout << "rules: " << rules.size() << endl; for (auto r : rules) dout << r << endl; } 
@@ -171,8 +178,6 @@ void readrule() {
 
 void readdoc() { while (din.good()) din.skip(), readrule(), din.skip(); }
 
-typedef map<const res*, const res*> subs; // for compile time only
-
 const size_t max_frames = 1e+6;
 struct frame {
 	int h,b;
@@ -181,10 +186,21 @@ struct frame {
 } *first = new frame[max_frames], *last;
 
 typedef map<int/*head*/, subs> conds;
-// compiler's intermediate representation language. the information
-// in the following variable contains everything the emitter has to know
 map<int/*head*/,map<int/*body*/, conds>> intermediate;
-map<int/*head*/,map<int/*body*/, std::function<bool()>>> program; // compiled functions
+map<int/*head*/,map<int/*body*/, std::function<bool()>>> program;
+
+void print_interm() {
+	for (auto x : intermediate) {
+		for (auto y : x.second) {
+			dout << "in order for " << *rules[x.first].body[y.first] << ":" << endl;
+			for (auto z : y.second) {
+				dout << "\tto unify with " << *rules[z.first].head;
+				dout << " the following unifications has to take place in runtime: " << endl;
+				dout << "\t\t" << z.second << endl;
+			}
+		}
+	}
+}
 
 bool occurs_check(const res *x, const res *y) {
 	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
@@ -259,4 +275,4 @@ void run() {
 	do { program[first->h][first->b](); } while (++first <= last);
 }
 
-int main() { readdoc(), print(), compile(), run(); }
+int main() { readdoc(), print(), compile(), print_interm(), run(); }
