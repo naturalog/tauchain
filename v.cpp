@@ -172,7 +172,7 @@ struct frame {
 	int h,b;
 	frame* prev;
 	subs trail;
-} *first, *last = new frame[max_frames];
+} *first = new frame[max_frames], *last;
 
 typedef map<int/*head*/, subs> conds;
 // compiler's intermediate representation language. the information
@@ -239,20 +239,21 @@ void compile() {
 	prepare();
 	for (int n = 0; n < (int)rules.size(); ++n)
 		if (!rules[n].body.size())
-			program[n][0] = [](){return true;};
+			program[n][0] = [](){return true;}; // fact
 		else for (int k = 0; k < (int)rules[n].body.size(); ++k)
 			program[n][k] = compile(intermediate[n][k]);
 }
-void run(int q /* query's index in rules */) {
-	first = last, first->h = q, first->b = 0, first->prev = 0;
-	do {
-		program[first->h][first->b]();
-	} while (++first <= last);
+
+void run() {
+	last = first;
+	for (int n = 0; n < (int)rules.size(); ++n)
+		if (!rules[n].head) // push queries
+			(++last)->h = n, last->b = 0, last->prev = 0;
+	do { program[first->h][first->b](); } while (++first <= last);
 }
+
 int main() {
-	readdoc(), print();
-	int q;// = read(), parse();
-	compile(), run(q);
+	readdoc(), print(), compile(), run();
 }
 
 
