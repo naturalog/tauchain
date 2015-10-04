@@ -9,8 +9,8 @@
 using namespace std;
 
 wstring edelims = L")}.";
-#define isvar(x) (*(x).val == L'?')
-#define islist(x) (*(x).val == L'.')
+#define isvar(x) ((x).type == L'?')
+#define islist(x) ((x).type == L'.')
 wostream& dout = wcout;
 #define FOR(x, y) for (int x = 0; x < (int)y; ++x)
 
@@ -50,19 +50,22 @@ const wchar_t* till() { // read till delim or space
 }
 
 struct res { // iri, var, or list
-	const wchar_t *val;
+	wchar_t type;
 	union {
 		res* sub; // substitution, in case of var. not used in compile time
-		const res** args; // list items. last item must be null
+		// in runtime, only the info up till here is used
+		// (in case the specific struct instance is used anyway)
+		const res** args; // list items, last item must be null. not used in runtime
 	};
-	res(const wchar_t *v) : val(v ? wcsdup(v) : 0), sub(0) { }
+	const wchar_t *val;
+	res(const wchar_t *v) : type(*v), sub(0), val(wcsdup(v)) { }
 	res(vector<res*> _args)
-		: val(wcsdup(L".")), args(new const res*[_args.size() + 1]) {
+		: type(L'.'), args(new const res*[_args.size() + 1]), val(0) {
 		int n = 0;
 		for (auto x : _args) args[n++] = x;
 		args[n] = 0;
 	}
-	~res() { if (args && *val == L'.') delete[] args; if (val) free((wchar_t*)val); }
+	~res() { if (args && type == L'.') delete[] args; if (val) free((wchar_t*)val); }
 };
 
 struct triple {
@@ -212,7 +215,7 @@ typedef map<int/*head*/, condset> conds;
 // cd where d is var and s is nonvar
 // csd where both s,d are vars
 map<int/*head*/,map<int/*body*/, conds>> intermediate;
-map<int/*head*/,map<int/*body*/, std::function<bool()>>> program;
+map<int/*head*/,map<int/*body*/, std::function<void()>>> program;
 
 void print_interm() {
 	for (auto x : intermediate) {
@@ -273,27 +276,40 @@ void prepare() {
 }
 
 // runtime resource unifiers
-bool sunify(const res*, const res*, subs&) {return false;}
-bool dunify(const res*, const res*, subs&) {return false;}
-bool sdunify(const res*, const res*, subs&) {return false;}
+const res* evaluate(const res* r) { return isvar(*r) ? r->sub ? evaluate(r->sub) : 0 : r; }
+const res* evalvar(const res* r) { return r->sub ? evaluate(r->sub) : 0; }
 
 // return a function that calls the unifiers given the conditions
-function<bool()> compile(conds& c) {
-	return [c]() {
-		for (conds::const_iterator x = c.begin(); x != c.end(); ++x) {
-			for (pair<const res*, const res*> y : get<0>(x->second))
-				if (!sunify(y.first, y.second, last->trail))
-					continue;
-			for (pair<const res*, const res*> y : get<1>(x->second))
-				if (!dunify(y.first, y.second, last->trail))
-					continue;
-			for (pair<const res*, const res*> y : get<2>(x->second))
-				if (!sdunify(y.first, y.second, last->trail))
-					continue;
-			last->h = x->first, last->b = 0, last->prev = first, ++last;
-		}
-		return false;
-	};
+function<void()> compile(conds& _c) {
+	map<int, function<bool()>> r;
+	for (conds::const_iterator x = _c.begin(); x != _c.end(); ++x) {
+		int h = x->first;
+		const condset& c = x->second;
+		r[h] = [c, h]() {
+			const res *u, *v;
+			for (auto y : get<0>(c))
+				if ((u = evalvar(y.first)))
+					if (u != y.second) return false;
+			for (auto y : get<1>(c))
+				if ((u = evalvar(y.second))) {
+					if (y.first != u) return false;
+				} else last->trail[y.second] = y.first;
+			for (auto y : get<2>(c))
+				if ((u = evalvar(y.first))) {
+					if ((v = evalvar(y.first))) {
+						if (u != v) return false;
+					} else
+						last->trail[y.second] = u;
+				}
+			last->h = h, last->b = 0, last->prev = first, ++last;
+			return true;
+	};	}
+	return [r]() {
+		for (auto x : r) {
+			++last;
+			if (!x.second())
+				--last;
+	}	};
 }
 
 // compile whole kb
@@ -312,7 +328,8 @@ void run() {
 	do { // execute the func that is indexed by the current frame's head&body id
 		program[first->h][first->b]();
 		// TODO: run a proof trace collector thread here
-		// as well as garbage collector
+		// as well as garbage collector.
+		// except maybe those collectors, this run() func can be compiled as well.
 		if (!rules[first->h].body.size()) dout << "ground" << endl;
 	} while (++first <= last);
 }
