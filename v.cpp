@@ -197,24 +197,27 @@ void readdoc() {
 
 const size_t max_frames = 1e+6;
 struct frame {
-	int h,b;
+	int h, b;
 	frame* prev;
 	subs trail;
 } *first = new frame[max_frames], *last;
 
-typedef map<int/*head*/, subs> conds;
+typedef tuple<subs, subs, subs> condset;
+typedef map<int/*head*/, condset> conds;
+// the following tuple is cs, cd, csd
+// where cs are conds where s is var and d is nonvar
+// cd where d is var and s is nonvar
+// csd where both s,d are vars
 map<int/*head*/,map<int/*body*/, conds>> intermediate;
 map<int/*head*/,map<int/*body*/, std::function<bool()>>> program;
 
 void print_interm() {
 	for (auto x : intermediate) {
 		for (auto y : x.second) {
-			dout << "in order for " << *rules[x.first].body[y.first] << ":" << endl;
-			for (auto z : y.second) {
-				dout << "\tto unify with " << *rules[z.first].head;
-				dout << " the following unifications has to take place in runtime: " << endl;
-				dout << "\t\t" << z.second << endl;
-}	}	}	}
+			dout << "Conditions in order for " << *rules[x.first].body[y.first] << ":" << endl;
+			for (auto z : y.second)
+				dout << "\tto unify with " << *rules[z.first].head << ": " << endl << "\t\t" << get<0>(z.second) << endl << "\t\t" << get<1>(z.second) << endl << "\t\t" << get<2>(z.second) << endl;
+}	}	}
 
 bool occurs_check(const res *x, const res *y) {
 	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
@@ -224,45 +227,60 @@ bool occurs_check(const res *x, const res *y) {
 	return false;
 }
 
-bool prepare(const res *s, const res *d, subs& c) {
+bool prepare(const res *s, const res *d, subs& cs, subs& cd, subs& csd) {
 	dout << "preparing " << *s << " and " << *d << endl;
 	if (!isvar(*s) && !isvar(*d)) {
-		if (s != d) return dout << " failed." << endl, c.clear(), false;
+		if (s != d) return dout << " failed." << endl, cs.clear(), cd.clear(), csd.clear(), false;
 		if (!islist(*s)) return true;
 		const res **rs, **rd;
 		for (rs = s->args, rd = d->args; *rs && *rd;)
-			if (!*rs != !*rd || !prepare(*rs++, *rd++, c))
+			if (!*rs != !*rd || !prepare(*rs++, *rd++, cs, cd, csd))
 				return false;
 		return dout << " passed." << endl, true;
 	}
-	return occurs_check(s, d) ? false : (dout << " passed " << endl, c[s] = d, true);
+	if (occurs_check(s, d)) return false;
+	if (isvar(*s)) {
+		if (isvar(*d)) csd[s] = d;
+		else cs[s] = d;
+	} else cd[s] = d;
+	return (dout << " passed " << endl, true);
 }
 
-bool prepare(const triple *s, const triple *d, subs& c) {
+bool prepare(const triple *s, const triple *d, subs& cs, subs& cd, subs& csd) {
 	if (!d) return false;
 	FOR(n, 3)
-		if (!prepare(s->r[n], d->r[n], c))
+		if (!prepare(s->r[n], d->r[n], cs, cd, csd))
 			return false;
 	return true;
 }
 
 void prepare() {
-	subs c;
+	subs cs, cd, csd;
 	FOR(n, rules.size())
 		FOR(k, rules[n].body.size())
 			FOR(m, rules.size())
-				if (prepare(rules[n].body[k], rules[m].head, c))
-					intermediate[n][k][m] = c, c.clear();
+				if (prepare(rules[n].body[k], rules[m].head, cs, cd, csd))
+					intermediate[n][k][m] = make_tuple(cs, cd, csd)
+					, cs.clear()
+					, cd.clear()
+					, csd.clear();
 }
 
-bool unify(const res *s, const res *d, subs& trail) { // in runtime
-}
+bool sunify(const res*, const res*, subs&) {return false;}
+bool dunify(const res*, const res*, subs&) {return false;}
+bool sdunify(const res*, const res*, subs&) {return false;}
 
 function<bool()> compile(conds& c) {
 	return [c]() {
 		for (conds::const_iterator x = c.begin(); x != c.end(); ++x) {
-			for (pair<const res*, const res*> y : x->second)
-				if (!unify(y.first, y.second, last->trail))
+			for (pair<const res*, const res*> y : get<0>(x->second))
+				if (!sunify(y.first, y.second, last->trail))
+					continue;
+			for (pair<const res*, const res*> y : get<1>(x->second))
+				if (!dunify(y.first, y.second, last->trail))
+					continue;
+			for (pair<const res*, const res*> y : get<2>(x->second))
+				if (!sdunify(y.first, y.second, last->trail))
 					continue;
 			last->h = x->first, last->b = 0, last->prev = first, ++last;
 		}
@@ -282,7 +300,10 @@ void run() {
 	FOR(n, rules.size())
 		if (!rules[n].head) // push queries
 			(++last)->h = n, last->b = 0, last->prev = 0;
-	do { program[first->h][first->b](); } while (++first <= last);
+	do {
+		program[first->h][first->b]();
+		if (!rules[first->h].body.size()) dout << "ground" << endl;
+	} while (++first <= last);
 }
 
 int main() { readdoc(), print(), compile(), print_interm(), run(); }
