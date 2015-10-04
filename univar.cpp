@@ -42,6 +42,7 @@ std::unordered_map<old::nodeid, rulesindex> pred_index;
 
 
 function<bool()> generalunifycoro(Thing*, Thing*);
+Var* atom(old::termid n);
 
 /*
 std::vector<comp> predGens;
@@ -135,7 +136,7 @@ public:
 					{
 
 
-						case 0:
+							case 0:
 							isBound = true;
 							value = argv;
 							TRACE(dout << "binding " << this << "/" << this->str() << " to " << value << endl);
@@ -153,6 +154,19 @@ public:
 };
 
 
+class List: public Thing{
+public:
+	std::vector<Node*> nodes;
+	List(std::vector<old::termid> x)
+	{
+		for(auto y:x)
+			nodes.push_back(atom(y));
+	}
+
+
+
+};
+//i guess classes have semicolons
 
 
 
@@ -190,6 +204,59 @@ function<bool()> succeed()
 	};
 }
 
+//these? Var.unifcoro()
+//yea its one of these
+function<bool()> listunifycoro(List *a, List *b)
+{
+	//gotta join up unifcoros of vars in the lists
+	if(a->nodes.size() != b->nodes.size())
+		return fail;
+	int i;
+	//we'll start at the end of the list
+	
+	function<bool()> r;
+	bool first = true;
+
+	for(i = b->nodes.size();i >= 0; i--)
+		//we need a join that operates on parameterless coros
+		//your turn:D :) ok lemme see what i can do
+		//this is the only place we would use it we might as well just make it specially in here
+
+		//well i guess we can just join up generalunifcoros for a start
+
+		
+
+		function<bool()> uc = generalunifycoro(a->nodes[i], b->nodes[i]);	
+		
+		if(first){
+			//huh?
+			r = uc;
+			first = false;
+		}
+		else
+		{
+			int entry = 0;
+			r = [r,uc]()mutable{
+				switch(entry)
+				{
+					case 0:
+						entry++;
+						while(r()){
+							while(uc()){
+								return true;
+					case 1:
+							}
+						}
+						return false;
+				}
+				//just in case
+				//just in this case, id rather see valgrind tell me there was a use of uninitialized value than hide it good point
+			};
+		}
+		
+	return r;
+}//thats it i guess
+//lemme check this listunifycoro real quick to make sure i got everything
 
 
 /*
@@ -202,25 +269,35 @@ function<bool()> succeed()
 	(returns an iterator)
 */
 function<bool()> generalunifycoro(Thing *a, Thing *b){
-	//cout << "u " << a << " " << b << endl;
 	a = a->getValue();
 	b = b->getValue();
-	//cout << "v " << a << " " << b << endl;
-	//Ohad was complaining about this, any thoughts about that?that its fine
 	Var *a_var = dynamic_cast<Var*>(a);
-	//cout << "a_var" << a_var << endl;
 	if (a_var)
 		return a_var->unifcoro(b);
 	Var *b_var = dynamic_cast<Var*>(b);
 	if (b_var)
 		return b_var->unifcoro(a);
+
 	//# Arguments are "normal" types.
 	Node *n1 = dynamic_cast<Node*>(a);
 	Node *n2 = dynamic_cast<Node*>(b);
-	if(n1->eq(n2))
-		return succeed();
-	else
-		return fail;
+
+	if(n1&&n2)
+	{
+		if(n1->eq(n2))
+			return succeed();
+		else
+			return fail;
+	}
+	
+	List *l1 = dynamic_cast<List*>(a);
+	List *l2 = dynamic_cast<List*>(b);
+
+	if (l1&&l2)
+		return listunifycoro(l1, l2);	
+
+	return fail;
+	
 }
 
 /*
@@ -291,6 +368,12 @@ Var* atom(old::termid n){
 	if (n->p>0)
 	{
 		r->isBound = true;
+		//so rather than have the value be a new Node you'd have it be a new List?yes cool
+		if(old::dict[n->p]->value == L".")
+		{
+			old::prover::proof dummy;
+			r->value = new List(op->get_list(n, dummy));
+		}
 		r->value = new Node(n);
 	}
 	return r;
@@ -330,8 +413,6 @@ comp compile_pred(old::termid x) {
 comp pred(old::termid x)
 {
 	setproc(L"pred");
-	//size_t index = nterms++;//predQueue.size();
-	//predQueue.push(x);
 	old::nodeid dbgx = x->p;
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
 	int entry = 0;

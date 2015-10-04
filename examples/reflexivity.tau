@@ -13,7 +13,7 @@ query
 #fin.
 
 #query
-#?WHAT :eq ?WHATELSE.
+?WHAT :eq ?WHATELSE.
 #fin.
 
 #shouldbe
