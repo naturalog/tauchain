@@ -139,7 +139,7 @@ public:
 							case 0:
 							isBound = true;
 							value = argv;
-							TRACE(dout << "binding " << this << "/" << this->str() << " to " << value << endl);
+							TRACE(dout << "binding " << this << "/" << this->str() << " to " << value << "/" << value->str() << endl);
 							entry = 1;
 							return true;
 						default:
@@ -218,6 +218,33 @@ function<bool()> succeed()
 	};
 }
 
+
+join unifjoin(join a, join b)
+{
+	setproc(L"unifjoin");
+	TRACE(dout << "..." << endl);
+	
+	int entry = 0;
+	return [a,b, entry]() mutable{
+		setproc(L"unifjoin lambda");
+		TRACE(dout << "entry = " << entry << endl);
+
+		switch(entry)
+		{
+			case 0:
+				entry++;
+				while(a()){
+					while(b()){
+						return true;
+			case 1: ;
+						}
+					}
+		}
+		entry++;//just to make sure
+		return false;//i guess we do it like this?
+	};
+}
+
 //these? Var.unifcoro()
 //yea its one of these
 function<bool()> listunifycoro(List *a, List *b)
@@ -227,13 +254,14 @@ function<bool()> listunifycoro(List *a, List *b)
 	//gotta join up unifcoros of vars in the lists
 	if(a->nodes.size() != b->nodes.size())
 		return fail;
+	//must be int or cant go negative to exit loop
 	int i;
 	//we'll start at the end of the list
 	
 	function<bool()> r;
 	bool first = true;
 
-	for(i = b->nodes.size()-1;i >= 0; i--)
+	for(i = b->nodes.size()-1;i >= 0; i--) // we go from end  already..
 	{
 		//we need a join that operates on parameterless coros
 		//your turn:D :) ok lemme see what i can do
@@ -242,6 +270,7 @@ function<bool()> listunifycoro(List *a, List *b)
 		//well i guess we can just join up generalunifcoros for a start
 
 		//but it's here! D:
+		//but uc is closer to the beginning
 		join uc = generalunifycoro(a->nodes[i], b->nodes[i]);	
 		//interesting:)
 		
@@ -251,28 +280,11 @@ function<bool()> listunifycoro(List *a, List *b)
 		}
 		else
 		{
-			int entry = 0;
-			r = [r,uc, entry]() mutable{
-				switch(entry)
-				{
-					case 0:
-						entry++;
-						while(r()){
-							while(uc()){
-								return true;
-					case 1: ;
-							}
-						}
-				}
-				return false;//i guess we do it like this?
-				//just in case
-				//just in this case, id rather see valgrind tell me there was a use of uninitialized value than hide it good point
-			};
+			r = unifjoin(uc, r);
 		}
 	}	
 	return r;
-}//thats it i guess
-//lemme check this listunifycoro real quick to make sure i got everything
+}
 
 
 /*
@@ -443,14 +455,24 @@ comp pred(old::termid x)
 		case 0:
 			entry++;
 			z = compile_pred(x);
-			bool r;
+			bool r;//this is all just a hack so that we can print out ..i forgot what
+			//anything you'd change?what why? well you say its all just a hack so i figure
+			//while we're here if you know how else you'd do it, maybe it will avoid our bug
+			//no i think its fine, ah ok
 			while(true)
 			{
 				TRACE((dout << "calling hopefully x:" << old::dict[dbgx] << endl));
 				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
+				//this just keeps going, i guess that would be this
 				r = z(Ds, Do);
+
+				//so this doesn't end up firing because because something keeps feeding it results
+				//this must never fire//?
+				//we never hit !r how?
+				//idk but i'm pretty sure that's why its inflooping
+				//well
 				if (! r) goto out;
-				TRACE(dout << "pred coro for " <<  old::dict[dbgx] << " success" << endl;)
+				TRACE(dout << "pred coro for " <<  old::dict[dbgx] << " success" << endl);
 				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
 				return true;
 		case 1: ;
@@ -764,14 +786,19 @@ void yprover::query(const old::qdb& goal){
 		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
 		auto coro = pred(g[0]);
 		//compile_preds(p);
+
 		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
 		//this is weird, passing the args over and over
+		//will be fixed when we lambda this up too
 		while (coro(s,o)) {
 			nresults++;
 			if (nresults >= 123) {dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;break;}
 			dout << L"RESULT " << nresults << ":";
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
+			s = atom(g[0]->s);
+			o = atom(g[0]->o);
+
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
