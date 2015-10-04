@@ -9,6 +9,8 @@
 using namespace std;
 
 wstring edelims = L")}.";
+#define isvar(x) (*(x).val == L'?')
+wostream& dout = wcout;
 
 struct din_t { // due to wcin.peek() not working
 	wchar_t ch;
@@ -47,46 +49,44 @@ wchar_t* till(/*wstring& d = edelims*/) {
 	while (!isdelim(din.peek()) && !iswspace(din.peek()))
 		ws << din.get();
 	wchar_t *r = wcsdup(ws.str().c_str());
-	if (isdelim(*r, L"{}().")) throw 0;
 	return din.get(), (wcslen(r) ? r : 0);
 }
 
-wostream& operator<<(wostream& os, const struct resource& r);
+wostream& operator<<(wostream& os, const struct res& r);
 
-struct resource {
-	wchar_t *value;
+struct res {
+	wchar_t *val;
 	union {
-		resource* sub;	// substitution, in case of var. not used in compile time
-		resource** args;// list items. last item must be null
+		res* sub;	// substitution, in case of var. not used in compile time
+		res** args;// list items. last item must be null
 	};
-	resource(wchar_t *v) : value(v ? wcsdup(v) : 0), sub(0) {
-		wcout << "new resource: " << *this << endl;
-	}
-	resource(vector<resource*> _args)
-		: value(new wchar_t[2]), args(new resource*[_args.size() + 1]) {
-		*value= L'.', value[1] = 0;
+	res(wchar_t *v) : val(v ? wcsdup(v) : 0), sub(0) { }
+	res(vector<res*> _args)
+		: val(new wchar_t[2]), args(new res*[_args.size() + 1]) {
+		*val= L'.', val[1] = 0;
 		int n = 0;
 		for (auto x : _args) args[n++] = x;
 		args[n] = 0;
 	}
+	~res() { if (args && *val == L'.') delete[] args; if (val) free(val); }
 };
 
-wostream& operator<<(wostream& os, const resource& r) {
-	if (*r.value == L'.') {
+wostream& operator<<(wostream& os, const res& r) {
+	if (*r.val == L'.') {
 		os << L'(';
-		resource **a = r.args;
+		res **a = r.args;
 		while (*a) os << (**a) << L' ';
 		os << L')'; 
 	} else {
-		os << r.value;
-		if (*r.value == L'?' && r.sub) os << L'=' << *r.sub;
+		os << r.val;
+		if (isvar(r) && r.sub) os << L'=' << *r.sub;
 	}
 	return os;
 }
 
 struct triple {
-	resource *r[3]; // spo
-	triple(resource *s, resource *p, resource *o) {
+	res *r[3]; // spo
+	triple(res *s, res *p, res *o) {
 		r[0] = s, r[1] = p, r[2] = o; }
 	triple(const triple& t) : triple(t.r[0], t.r[1], t.r[2]) {}
 };
@@ -101,7 +101,6 @@ typedef vector<triple*> triples;
 struct rule {
 	triple* head;
 	triples body;
-//	rule() {}
 	rule(triple* h, const triples& b = triples()) : head(h), body(b) {}
 };
 vector<rule> rules;
@@ -116,32 +115,27 @@ wostream& operator<<(wostream& os, const rule& r) {
 }
 
 void print() { for (auto r : rules) wcout << r << endl; } 
-resource* readany();
+res* readany();
 
-resource* readlist() {
+res* readlist() {
 	din.get(), din.skip();
-	vector<resource*> items;
-	while (din.peek() != L')')
-		items.push_back(readany()), din.skip();
+	vector<res*> items;
+	while (din.peek() != L')') items.push_back(readany()), din.skip();
 	din.get(), din.skip();
-	return new resource(items);
+	return new res(items);
 }
 
-resource* readany() {
+res* readany() {
 	din.skip();
 	if (din.peek() == L'(') return readlist();
 	wchar_t *s = till();
-	return s ? new resource(s) : 0;
+	return s ? new res(s) : 0;
 }
 
 triple* readtriple() {
 	din.skip();
-	resource *s = readany();
-	if (!s) return 0;
-	resource *p = readany();
-	if (!p) return 0;
-	resource *o = readany();
-	if (!o) return 0;
+	res *s, *p, *o;
+	if (!(s = readany()) || !(p = readany()) || !(o = readany())) return 0;
 	triple* r = new triple(s, p, o);
 	din.skip();
 	if (din.peek() == L'.') din.get(), din.skip();
@@ -153,12 +147,10 @@ void readrule() {
 	triples body;
 	if (din.peek() == L'{') {
 		din.get();
-		while (din.peek() != L'}')
-			body.push_back(readtriple());
+		while (din.peek() != L'}') body.push_back(readtriple());
 		din.get(), din.skip(), din.get(),
 		din.get(), din.skip(), din.get(), din.skip(); // "} => {";
-		if (din.peek() == L'}')
-			rules.push_back(rule(0, body)), din.skip();
+		if (din.peek() == L'}') rules.push_back(rule(0, body)), din.skip();
 		else {
 			while (din.peek() != L'}') rules.push_back(rule(readtriple(), body));
 			din.get();
@@ -173,8 +165,7 @@ void readrule() {
 
 void readdoc() { while (din.good()) din.skip(), readrule(), din.skip(); }
 
-vector<resource> res;
-typedef map<resource*, resource*> subs;
+typedef map<res*, res*> subs;
 
 const size_t max_frames = 1e+6;
 struct frame {
@@ -189,28 +180,27 @@ typedef map<int/*head*/, subs> conds;
 map<pair<int/*head*/,int/*body*/>, conds> intermediate;
 map<pair<int/*head*/,int/*body*/>, std::function<bool()>> program; // compiled functions
 
-bool occurs_check(resource *x, resource *y) {
-	if (*x->value != L'?') return (*y->value != L'?') ? false : occurs_check(y, x);
-	if (*y->value != L'.') return false;
-	for (resource **r = y->args; *r; ++r)
+bool occurs_check(res *x, res *y) {
+	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
+	if (x == y) return true;
+	for (res **r = y->args; *r; ++r)
 		if (occurs_check(x, *r))
 			return true;
 	return false;
 }
 
-bool prepare(resource *s, resource *d, subs& c) {
-	if (*s->value != L'?' && *d->value != L'?') {
-		// FIXME
-//		if (s->type != d->type && s != d) return c.clear(), false;
-		if (*s->value != L'.') return true;
-		resource **rs, **rd;
+bool prepare(res *s, res *d, subs& c) {
+	dout << "preparing " << *s << " and " << *d << endl;
+	if (!isvar(*s) && !isvar(*d)) {
+		if (s != d) return dout << " failed." << endl, c.clear(), false;
+		if (*s->val != L'.') return true;
+		res **rs, **rd;
 		for (rs = s->args, rd = d->args; *rs && *rd;)
 			if (!*rs != !*rd || !prepare(*rs++, *rd++, c))
 				return false;
-		return true;
+		return dout << " passed." << endl, true;
 	}
-	if (occurs_check(s, d)) return false;
-	return c[s] = d, true;
+	return occurs_check(s, d) ? false : (dout << " passed " << endl, c[s] = d, true);
 }
 
 bool prepare(triple *s, triple *d, subs& c) {
@@ -230,13 +220,13 @@ void prepare() {
 					intermediate[make_pair(n, k)][m] = c, c.clear();
 }
 
-bool unify(resource *s, resource *d, subs& trail) { // in runtime
+bool unify(res *s, res *d, subs& trail) { // in runtime
 }
 
 function<bool()> compile(conds& c) {
 	return [c]() {
 		for (conds::const_iterator x = c.begin(); x != c.end(); ++x) {
-			for (pair<resource*, resource*> y : x->second)
+			for (pair<res*, res*> y : x->second)
 				if (!unify(y.first, y.second, last->trail))
 					continue;
 			last->h = x->first, last->b = 0, last->prev = first, ++last;
