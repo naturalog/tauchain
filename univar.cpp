@@ -472,67 +472,34 @@ comp compile_pred(old::termid x) {
 }
 
 
+typedef function<comp()> pred_t;
 
-comp pred(old::termid x)
+pred_t pred(old::termid x)
 {
 	setproc(L"pred");
-	old::nodeid dbgx = x->p;
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
-	int entry = 0;
-	
-	//comp z = compile_pred(x);
-	comp z;
-	return [entry, z, x, dbgx](Thing *Ds, Thing *Do)mutable{
+	return [x]()mutable{
 		setproc(L"pred lambda");
-		TRACE(dout << "im in ur pred proxy for nodeid " << dbgx << " entry: " << entry << endl;)
-		
-		switch(entry)
-		{
-		case 0:
-			entry++;
-			z = compile_pred(x);
-			bool r;
-			while(true)
-			{
-				TRACE((dout << "calling hopefully x:" << old::dict[dbgx] << endl));
-				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
-				//this just keeps going, i guess that would be this
-				r = z(Ds, Do);
-
-				//so this doesn't end up firing because because something keeps feeding it results
-				//this must never fire//?
-				//we never hit !r how?
-				//idk but i'm pretty sure that's why its inflooping
-				//well
-				if (! r) goto out;
-				TRACE(dout << "pred coro for " <<  old::dict[dbgx] << " success" << endl);
-				TRACE(dout << "Ds: " << Ds << "/ " << Ds->str() << ", Do: " << Do << "/" << Do->str() << endl);
-				return true;
-		case 1: ;
-			
-			}
-		out: ;
-			entry=666;
-			return false;
-		default:
-			assert(false);
-		}
+		TRACE(dout << "im in ur pred proxy for nodeid " << x->p << endl;)
+		return compile_pred(x);
 	};
 }
 
-join joinOne(comp a, Thing* w, Thing *x){
+join joinOne(pred_t a, Thing* w, Thing *x){
 	setproc(L"joinOne");
 	TRACE(dout << "..." << endl);
 	int entry = 0;
 	int round = 0;
-	return [a, w, x, entry, round]() mutable{
+	comp ac;
+	return [ac, a, w, x, entry, round]() mutable{
 		setproc(L"joinOne lambda");
 		round++;
 		TRACE(dout << "round=" << round << endl);
 		switch(entry){
 		case 0:
 			TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
-			while(a(w,x)){
+			ac = a();
+			while(ac(w,x)){
 				TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
 				entry = 1;
 				return true;
@@ -547,7 +514,7 @@ join joinOne(comp a, Thing* w, Thing *x){
 }
 
 
-join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
+join joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 	setproc(L"joinwxyz");
 	TRACE(dout << "making a join" << endl);
 	int entry = 0;
@@ -559,9 +526,9 @@ join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
 		TRACE(dout << "round: " << round << endl);
 		switch(entry){
 		case 0:
-			ac = a;
-			while(a(w,x)) {
-				bc = b;
+			ac = a();
+			while(ac(w,x)) {
+				bc = b();
 				TRACE(dout << "MATCH A." << endl);
 				while (bc(y, z)) {
 					TRACE(dout << "MATCH." << endl);
@@ -633,7 +600,7 @@ comp joinproxy(join c0, Var* s, Var* o){
 	};
 }
 
-join halfjoin(comp a, Var* w, Var* x, join b){
+join halfjoin(pred_t a, Var* w, Var* x, join b){
 	setproc(L"halfjoin");
 	TRACE(dout << "..." << endl);
 	int entry = 0;
@@ -646,11 +613,11 @@ join halfjoin(comp a, Var* w, Var* x, join b){
 		TRACE(dout << "round=" << round << endl);
 		switch(entry){
 		case 0:
-			ac = a;
-			while(a(w,x)){
+			ac = a();
+			while(ac(w,x)){
 			   TRACE(dout << "MATCH a(w,x)" << endl);
-			   bc = b;
-			   while(bc()){
+			   //bc = b;
+			   while(b()){
 				entry = 1;
 				TRACE( dout << "MATCH." << endl);
 				return true;
@@ -725,7 +692,7 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		for(int i = k-1; i >= 0; i--){
 			Var *vs = vars[body[i]->s];
 			Var *vo = vars[body[i]->o];
-			comp p = pred(body[i]);
+			pred_t p = pred(body[i]);
 			c0 = halfjoin(p,vs,vo, c0);
 		}
 		return joinproxy(c0,s,o);
@@ -761,7 +728,6 @@ comp rule(old::termid head, old::prover::termset body)
 
 
 	if(body.size() == 0){
-		//this case would represent an actual kb 'fact'
 		return fact(vars[head->s], vars[head->o]);
 	}
 	if(body.size() == 1)
@@ -842,19 +808,18 @@ void yprover::query(const old::qdb& goal){
 	auto fnt2 = fact(F, T);
 
 	auto s1 = seq(tnf,fnt);
-	auto s2 = seq(tnf2,fnt2);
 
 	Var * x = new Var();
 	Var * xx = new Var();
 	Var * y = new Var();
 	Var * yy = new Var();
 
-	while(s1(x, xx))
-		while(s2(y, yy))
-		{
+	while(s1(x, xx)) {
+		auto s2 = seq(tnf2, fnt2);
+		while (s2(y, yy)) {
 			dout << x->str() << ", " << y->str() << endl;
 		}
-
+	}
 	dout << "======================================================================================" << endl;
 
 
@@ -871,7 +836,7 @@ void yprover::query(const old::qdb& goal){
 		//putting them to vars should be irrelevant at this point, all the pointers have been captured
 		///*if g[0]->o == g[0]->s: s = o;*/
 		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
-		auto coro = pred(g[0]);
+		auto coro = pred(g[0])();
 		//compile_preds(p);
 
 		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
