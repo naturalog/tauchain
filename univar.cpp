@@ -42,7 +42,7 @@ std::unordered_map<old::nodeid, rulesindex> pred_index;
 
 
 function<bool()> generalunifycoro(Thing*, Thing*);
-Var* atom(old::termid n);
+void atom(old::termid n, varmap &vars);
 
 
 //std::unordered_map<old::termid, generator> preds;
@@ -167,10 +167,9 @@ public:
 class List: public Thing{
 public:
 	std::vector<Thing*> nodes;
-	List(std::vector<old::termid> x)
+	List(std::vector<Thing *> n)
 	{
-		for(auto y:x)
-			nodes.push_back(atom(y));
+		nodes = n;
 	}
 
 	wstring str(){
@@ -419,31 +418,24 @@ comp seq(comp a, comp b){
 
 
 //This was called something else before? node, clashed with old namespace gotcha
-Var* atom(old::termid n){
-	Var* r;
+void atom(old::termid n, varmap &vars){
+	Var* r = vars[n] = new Var();
 	if (n->p>0)
 	{
-		r = new Var();
-
 		r->isBound = true;
 		//so rather than have the value be a new Node you'd have it be a new List?yes cool
 		if(*old::dict[n->p].value == L".")
 		{
-
-			r->value = new List(op->get_dotstyle_list(n));
+			std::vector<Thing*> nodes;
+			for(auto y:op->get_dotstyle_list(n)) {
+				atom(y, vars);
+				nodes.push_back(vars[y]);
+			}
+			r->value = new List(nodes);
 		}
 		else
 			r->value = new Node(n);
 	}
-	else
-	{/*
-		auto it = globals.find(n->p);
-		if(it!=globals.end())
-			r = it->second;
-		else
-			globals[n->p] =*/ r = new Var();
-	}
-	return r;
 }
 
 
@@ -556,7 +548,6 @@ join_gen joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 	};
 	};
 }
-//actually maybe only the join combinators need to do a lookup
 
 comp ruleproxy(join_gen c0_gen, Var *s, Var *o){
 	setproc(L"ruleproxy");
@@ -723,8 +714,8 @@ comp rule(old::termid head, old::prover::termset body)
 	//yea yea we might not need the 's' one i just want to make sure
 	//vars[head->s->p] = (vars.find(head->s->p) != vars.end()) ? atom(head->s->p) : vars[head->s->p];
 	//vars[head->o->p] = (vars.find(head->o->p) != vars.end()) ? atom(head->o->p) : vars[head->o->p];
-	vars[head->s] = atom(head->s);
-	vars[head->o] = atom(head->o);
+	atom(head->s, vars);
+	atom(head->o, vars);
 
 
 	size_t i;
@@ -732,9 +723,9 @@ comp rule(old::termid head, old::prover::termset body)
 	{
 		old::termid t;
 		t = body[i]->s;
-		vars[t] = atom(t);
+		atom(t, vars);
 		t = body[i]->o;
-		vars[t] = atom(t);
+		atom(t, vars);
 	}
 
 
@@ -758,20 +749,6 @@ comp rule(old::termid head, old::prover::termset body)
 		assert(false);
 	}
 }
-
-
-/*writes into preds*/
-//ok so by the time we get here, we'll already have
-//pred_index, a map from preds to a vector of indexes of rules with that pred in the head
-/*void compile_kb()
-{
-	setproc(L"compile_kb");
-	for (auto x: pred_index)
-	{
-		old::nodeid k = x.first;
-		preds[k] = pred(k);//just queue it up, get the lookuping lambda
-	}
-}*/
 
 void generate_pred_index(old::prover *p)
 {
@@ -809,7 +786,6 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 //so for multi-pred queries i think we'll build it up into a join yeah
 void yprover::query(const old::qdb& goal){
 
-
 	results.clear();
 	dout << "query" << endl;
 	const old::prover::termset g = p->qdb2termset(goal);
@@ -817,14 +793,14 @@ void yprover::query(const old::qdb& goal){
 	old::nodeid pr = g[0]->p;
 
 	if (pred_index.find(pr) != pred_index.end()) {
-		Var *s = atom(g[0]->s);
-		Var *o = atom(g[0]->o);
-		//varmap vars;
-		//putting them to vars should be irrelevant at this point, all the pointers have been captured
-		///*if g[0]->o == g[0]->s: s = o;*/
+		varmap vars;
+		atom(g[0]->s, vars);
+		atom(g[0]->o, vars);
+		Var *s = vars[g[0]->s];
+		Var *o = vars[g[0]->o];
+
 		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
 		auto coro = pred(g[0])();
-		//compile_preds(p);
 
 		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
 		//this is weird, passing the args over and over
@@ -834,7 +810,7 @@ void yprover::query(const old::qdb& goal){
 			dout << L"RESULT " << nresults << ":";
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
-			//wont help..but anyway, i dont think thats right yea i was gonna take it out 
+
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
@@ -1026,3 +1002,20 @@ function<bool()> nodeComp(Node *n){
 	
 }
 */
+		///*if g[0]->o == g[0]->s: s = o;*/
+
+
+/*writes into preds*/
+//ok so by the time we get here, we'll already have
+//pred_index, a map from preds to a vector of indexes of rules with that pred in the head
+/*void compile_kb()
+{
+	setproc(L"compile_kb");
+	for (auto x: pred_index)
+	{
+		old::nodeid k = x.first;
+		preds[k] = pred(k);//just queue it up, get the lookuping lambda
+	}
+}*/
+
+//actually maybe only the join combinators need to do a lookup
