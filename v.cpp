@@ -276,18 +276,26 @@ void prepare() {
 					, csd.clear();
 }
 
-// runtime resource unifiers
+// runtime variable chain resolving
 const res* evaluate(const res* r) { return isvar(*r) ? r->sub ? evaluate(r->sub) : 0 : r; }
 const res* evalvar(const res* r) { return r->sub ? evaluate(r->sub) : 0; }
 
-// return a function that calls the unifiers given the conditions
+// return a function that pushes new frames according to the static
+// conditions and the dynamic frame
 function<void()> compile(conds& _c) {
 	map<int, function<bool()>> r;
+	// we break the body's function to many functions
+	// per head, in order to efficiently update the compiled
+	// code when one rule changes
 	for (conds::const_iterator x = _c.begin(); x != _c.end(); ++x) {
 		int h = x->first;
 		const condset& c = x->second;
 		r[h] = [c, h]() {
 			const res *u, *v;
+			// TODO: revise. need to apply the subs only in entrance
+			// i.e. in the func returned from this compile() func.
+			// so need to keep trail as the subs to be done, then
+			// when reaching there, trail will hold subs to be reverted.
 			for (auto y : get<0>(c))
 				if ((u = evalvar(y.first)))
 					if (u != y.second)
@@ -322,7 +330,7 @@ function<void()> compile(conds& _c) {
 		if (first->b == (int)rules[first->h].body.size()) {
 			if (!first->prev)
 				*gnd++ = first;
-			else
+			else // TODO: unify in the opposite direction here (as in euler)
 				++(*++last = *first).b;
 		}
 	};
@@ -332,8 +340,8 @@ function<void()> compile(conds& _c) {
 void compile() {
 	prepare();
 	FOR(n, rules.size())
-		if (!rules[n].body.size()) program[n][0] = [](){return true;}; // fact
-		else FOR(k, rules[n].body.size()) program[n][k] = compile(intermediate[n][k]);
+		FOR(k, rules[n].body.size())
+			program[n][k] = compile(intermediate[n][k]);
 }
 
 void run() {
