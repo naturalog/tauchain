@@ -52,7 +52,7 @@ const wchar_t* till() { // read till delim or space
 struct res { // iri, var, or list
 	wchar_t type;
 	union {
-		res* sub; // substitution, in case of var. not used in compile time
+		const res* sub; // substitution, in case of var. not used in compile time (and will const_cast then)
 		// in runtime, only the info up till here is used
 		// (in case the specific struct instance is used anyway)
 		const res** args; // list items, last item must be null. not used in runtime
@@ -135,7 +135,7 @@ wostream& operator<<(wostream& os, const triple& t) {
 	return os;
 }
 wostream& operator<<(wostream& os, const res& r) {
-	if (*r.val == L'.') {
+	if (islist(r)) {
 		os << L'(';
 		const res **a = r.args;
 		while (*a) os << (**a++) << L' ';
@@ -202,11 +202,12 @@ void readdoc() {
 }	}
 
 const size_t max_frames = 1e+6;
+const size_t max_gnd = 1e+5;
 struct frame {
 	int h, b; // head and body ids
 	frame* prev;
 	subs trail;
-} *first = new frame[max_frames], *last;
+} *first = new frame[max_frames], *last, **gnd = new frame*[max_gnd];
 
 typedef tuple<subs, subs, subs> condset;
 typedef map<int/*head*/, condset> conds;
@@ -289,27 +290,42 @@ function<void()> compile(conds& _c) {
 			const res *u, *v;
 			for (auto y : get<0>(c))
 				if ((u = evalvar(y.first)))
-					if (u != y.second) return false;
+					if (u != y.second)
+						return false;
 			for (auto y : get<1>(c))
 				if ((u = evalvar(y.second))) {
-					if (y.first != u) return false;
-				} else last->trail[y.second] = y.first;
+					if (y.first != u)
+						return false;
+				} else
+					last->trail[y.second] = y.second->sub
+					, const_cast<res*>(y.second)->sub = y.first;
 			for (auto y : get<2>(c))
 				if ((u = evalvar(y.first))) {
 					if ((v = evalvar(y.first))) {
-						if (u != v) return false;
+						if (u != v)
+							return false;
 					} else
-						last->trail[y.second] = u;
+						last->trail[y.second] = y.second->sub
+						, const_cast<res*>(y.second)->sub = u;
 				}
 			last->h = h, last->b = 0, last->prev = first, ++last;
 			return true;
 	};	}
 	return [r]() {
+		// TODO: EP
 		for (auto x : r) {
 			++last;
 			if (!x.second())
 				--last;
-	}	};
+		}
+		// TODO: prepare the sizes in fast access table
+		if (first->b == (int)rules[first->h].body.size()) {
+			if (!first->prev)
+				*gnd++ = first;
+			else
+				++(*++last = *first).b;
+		}
+	};
 }
 
 // compile whole kb
@@ -329,8 +345,6 @@ void run() {
 		program[first->h][first->b]();
 		// TODO: run a proof trace collector thread here
 		// as well as garbage collector.
-		// except maybe those collectors, this run() func can be compiled as well.
-		if (!rules[first->h].body.size()) dout << "ground" << endl;
 	} while (++first <= last);
 }
 
