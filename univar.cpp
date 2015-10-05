@@ -33,9 +33,9 @@ std::map<old::nodeid, generator> preds;
 
 
 typedef function<bool()> join;
-typedef std::unordered_map<old::termid, Var*> varmap;
+typedef function<join()> join_gen;
 
-std::unordered_map<old::nodeid, Var*> globals;
+typedef std::unordered_map<old::termid, Var*> varmap;
 
 typedef vector<size_t> rulesindex;
 std::unordered_map<old::nodeid, rulesindex> pred_index;
@@ -436,12 +436,12 @@ Var* atom(old::termid n){
 			r->value = new Node(n);
 	}
 	else
-	{
+	{/*
 		auto it = globals.find(n->p);
 		if(it!=globals.end())
 			r = it->second;
 		else
-			globals[n->p] = r = new Var();
+			globals[n->p] =*/ r = new Var();
 	}
 	return r;
 }
@@ -489,14 +489,16 @@ pred_t pred(old::termid x)
 	};
 }
 
-join joinOne(pred_t a, Thing* w, Thing *x){
+join_gen joinOne(pred_t a, Thing* w, Thing *x){
 	setproc(L"joinOne");
 	TRACE(dout << "..." << endl);
 	int entry = 0;
 	int round = 0;
 	comp ac;
 	return [ac, a, w, x, entry, round]() mutable{
-		setproc(L"joinOne lambda");
+		setproc(L"joinOne gen");
+	return [ac, a, w, x, entry, round]() mutable{
+		setproc(L"joinOne λ λ");
 		round++;
 		TRACE(dout << "round=" << round << endl);
 		switch(entry){
@@ -515,10 +517,11 @@ join joinOne(pred_t a, Thing* w, Thing *x){
 			assert(false);
 		}
 	};
+	};
 }
 
 
-join joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
+join_gen joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 	setproc(L"joinwxyz");
 	TRACE(dout << "making a join" << endl);
 	int entry = 0;
@@ -526,6 +529,8 @@ join joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 	comp ac, bc;
 	return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
 		setproc(L"join lambda");
+	return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
+		setproc(L"join lambda lambda");
 		round++;
 		TRACE(dout << "round: " << round << endl);
 		switch(entry){
@@ -549,20 +554,21 @@ join joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 			assert(false);
 		}
 	};
+	};
 }
 //actually maybe only the join combinators need to do a lookup
 
-//should be called ruleproxy after all? minus the name clash sure? i didn't see ruleproxy had become ruleproxytwo :)ah:)
-comp joinproxy(join c0, Var* s, Var* o){
-	setproc(L"joinproxy");
-	TRACE(dout << "joinproxy" << endl);
+comp ruleproxy(join_gen c0_gen, Var *s, Var *o){
+	setproc(L"ruleproxy");
+	TRACE(dout << "ruleproxy" << endl);
+	join c0;
 	int entry=0;
 	int round=0;
 	// proxy coro that unifies s and o with s and o vars
 	function<bool()> suc, ouc;
-	return [ suc, ouc, entry, c0, s,o,round]   (Thing *Ds , Thing *Do) mutable
+	return [ suc, ouc, entry, c0_gen, c0, s,o,round]   (Thing *Ds , Thing *Do) mutable
 	{
-		setproc(L"joinproxy lambda");
+		setproc(L"ruleproxy lambda");
 		round++;
 		TRACE(dout << "round=" << round << endl);
 		switch(entry)
@@ -571,7 +577,7 @@ comp joinproxy(join c0, Var* s, Var* o){
 			entry++;
 			
 			suc = generalunifycoro(Ds, s);
-			ouc = generalunifycoro(Do, o);
+
 			
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
 			TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
@@ -579,10 +585,12 @@ comp joinproxy(join c0, Var* s, Var* o){
 				TRACE(dout << "After suc() -- " << endl);
 				TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl)
 				TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl)
+				ouc = generalunifycoro(Do, o);
 				while (ouc()) {
 					TRACE(dout << "After ouc() -- " << endl);
 					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
 					TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
+					c0 = c0_gen();
 					while (c0()) {
 						TRACE(dout << "After c0() -- " << endl);
 						TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
@@ -604,13 +612,15 @@ comp joinproxy(join c0, Var* s, Var* o){
 	};
 }
 
-join halfjoin(pred_t a, Var* w, Var* x, join b){
+join_gen halfjoin(pred_t a, Var* w, Var* x, join_gen b){
 	setproc(L"halfjoin");
 	TRACE(dout << "..." << endl);
 	int entry = 0;
 	int round = 0;
 	comp ac;
-	function<bool()> bc;
+	join bc;
+	return [a, w, x, b, entry, round,ac,bc]() mutable{
+		setproc(L"halfjoin gen");
 	return [a, w, x, b, entry, round,ac,bc]() mutable{
 		setproc(L"halfjoin lambda");
 		round++;
@@ -620,8 +630,8 @@ join halfjoin(pred_t a, Var* w, Var* x, join b){
 			ac = a();
 			while(ac(w,x)){
 				TRACE(dout << "MATCH a(w,x)" << endl);
-				//bc = b;
-				while(b()){
+				bc = b();
+				while(bc()){
 					entry = 1;
 					TRACE( dout << "MATCH." << endl);
 					return true;
@@ -635,6 +645,7 @@ join halfjoin(pred_t a, Var* w, Var* x, join b){
 		default:
 			assert(false);
 		}
+	};
 	};
 }
 
@@ -651,10 +662,10 @@ comp ruleproxyTwo(varmap vars, old::termid head, old::prover::termset body)
 		Var *c = vars[body[1]->s];
 		Var *d = vars[body[1]->o];
 
-		join c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
+		auto c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 
 		// proxy coro that unifies s and o with s and o vars
-		return joinproxy(c0, s, o);
+		return ruleproxy(c0, s, o);
 }
 
 
@@ -669,8 +680,8 @@ comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 		Var *a = vars[body[0]->s];
 		Var *b = vars[body[0]->o];
 
-		join c0 = joinOne(pred(body[0]),a,b);
-		return joinproxy(c0,s,o);
+		join_gen c0 = joinOne(pred(body[0]),a,b);
+		return ruleproxy(c0, s, o);
 }
 
 comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
@@ -688,14 +699,14 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		Var *c = vars[body[k+1]->s];
 		Var *d = vars[body[k+1]->o];
 		
-		join c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
+		join_gen c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 		for(int i = k-1; i >= 0; i--){
 			Var *vs = vars[body[i]->s];
 			Var *vo = vars[body[i]->o];
 			pred_t p = pred(body[i]);
 			c0 = halfjoin(p,vs,vo, c0);
 		}
-		return joinproxy(c0,s,o);
+		return ruleproxy(c0, s, o);
 }
 
 comp rule(old::termid head, old::prover::termset body)
