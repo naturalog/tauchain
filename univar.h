@@ -1,11 +1,13 @@
 
 #include "prover.h" // namespace "old"
 
-class yprover
-{
+class yprover {
 public:
-old::prover *p;
-old::qdb results;
-yprover ( old::qdb qkb, bool check_consistency = false);
-void query(const old::qdb& goal);
+	old::prover *p;
+	typedef std::list<old::qdb> results_t;
+	results_t results;
+
+	yprover(old::qdb qkb, bool check_consistency = false);
+
+	void query(const old::qdb &goal);
 };

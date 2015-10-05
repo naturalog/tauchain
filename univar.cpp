@@ -41,12 +41,13 @@ typedef vector<size_t> rulesindex;
 std::unordered_map<old::nodeid, rulesindex> pred_index;
 
 
-
 function<bool()> generalunifycoro(Thing*, Thing*);
 Var* atom(old::termid n);
 
 
 //std::unordered_map<old::termid, generator> preds;
+
+
 
 /*
 int nterms = 0;
@@ -857,10 +858,9 @@ void yprover::query(const old::qdb& goal){
 	dout << "======================================================================================" << endl;
 
 
+	results.clear();
 	dout << "query" << endl;
 	const old::prover::termset g = p->qdb2termset(goal);
-	results.first.clear();results.second.clear();
-	results.first[L"@default"] = old::mk_qlist();
 	int nresults = 0;
 	old::nodeid pr = g[0]->p;
 
@@ -889,23 +889,38 @@ void yprover::query(const old::qdb& goal){
 
 }
 
+/*
+void yprover::clear_results()
+{
 
-			/*
-			//put result into results. will be more complicated with internalized lists.
-			auto sv = s->getValue();
-			auto ov = o->getValue();
-			Node *n1 = dynamic_cast<Node*>(sv);
-			Node *n2 = dynamic_cast<Node*>(ov);
-			if (n1 && n2)
-			{
-				old::pquad q = make_shared<old::quad>(old::quad(
-				std::make_shared<old::node>(old::dict[n1->value]),
+	results.first[L"@default"] = old::mk_qlist();
+
+
+pnode thing2node(Thing *t, qdb &r) {
+	auto v = t->getValue();
+	List *l = dynamic_cast<List *>(v);
+	if (l) {
+		const wstring head = id();
+		for (auto x: l->nodes)
+			r.second[head].push_back();
+		return mkbnode(pstr(head));
+	}
+	Node *n = dynamic_cast<Node *>(v);
+	if (n)
+		return std::make_shared<old::node>(old::dict[n1->value]);
+}
+
+
+void add_result(qdb &r, Thing *s, Thing o, old::nodeid p)
+{
+	old::pquad q = make_shared<old::quad>(old::quad(
+				thing2node(
 				std::make_shared<old::node>(old::dict[pr]),
 				std::make_shared<old::node>(old::dict[n2->value])));
 				results.first[L"@default"]->push_back(q);
 			}
-			*/
-
+	r.first[L"@default"]->push_back(q)
+*/
 
 
 /*
