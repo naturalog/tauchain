@@ -215,12 +215,13 @@ function<bool()> succeed()
 		switch(entry)
 		{
 			case 0:
-				entry = 1; //who did it!?1?!?!:) :D oh you started moving around when i started typing
-		//a comment must have coincidentally ended up here, i forgot to go back and look for it
+				entry = 1;
 				return true;
-			default:
-				entry = 0;
+			case 1:
+				entry = 666;
 				return false;
+			default:
+				assert(false);
 		}
 	};
 }
@@ -247,10 +248,10 @@ join unifjoin(join a, join b)
 						
 				}
 			}
-			entry = 2;
-		default:
-			entry = 0;
+			entry = 666;
 			return false;
+		default:
+			assert(false);
 		}
 	};
 }
@@ -338,12 +339,6 @@ function<bool()> generalunifycoro(Thing *a, Thing *b){
 	
 }
 
-/*
-function<bool()> nodeComp(Node *n){
-	
-}
-*/
-
 
 comp fact(Thing *s, Thing *o){
 	setproc(L"fact");
@@ -370,18 +365,14 @@ comp fact(Thing *s, Thing *o){
 		TRACE(dout << "RE-ENTRY" << endl);
 				}
 			}
-			entry = 2;
-		default:
-			entry = 0;
+			entry = 666;
 			TRACE(dout << "DONE." << endl);
 			return false;
+		default:
+			assert(false);
 		}
 	};
 }
-/*
-generator factGen(Thing *s, Thing *o){
-	
-}*/
 
 comp seq(comp a, comp b){
 	setproc(L"seq");
@@ -410,11 +401,11 @@ comp seq(comp a, comp b){
 				return true;
 		case 2:	;
 			}
-			entry = 3;
-		default:
-			entry = 0;
+			entry = 666;
 			TRACE(dout << "SWITCH DONE." << endl);
 			return false;
+		default:
+			assert(false);
 		}
 		TRACE(dout << "Why are we here?" << endl);
 		
@@ -520,9 +511,11 @@ comp pred(old::termid x)
 			
 			}
 		out: ;
-			entry++;
+			entry=666;
+			return false;
+		default:
+			assert(false);
 		}
-		return false;
 	};
 }
 
@@ -544,8 +537,11 @@ join joinOne(comp a, Thing* w, Thing *x){
 				return true;
 		case 1: ;
 			}
+			entry=666;
+			return false;
+		default:
+			assert(false);
 		}
-		return false;
 	};
 }
 
@@ -574,10 +570,12 @@ join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
 				TRACE(dout << "RE-ENTRY" << endl);
 				}
 			}
+			entry = 666;
+			TRACE(dout << "DONE." << endl);
+			return false;
+		default:
+			assert(false);
 		}
-		entry = 0;
-		TRACE(dout << "DONE." << endl);
-		return false;
 	};
 }
 //actually maybe only the join combinators need to do a lookup
@@ -606,8 +604,6 @@ comp joinproxy(join c0, Var* s, Var* o){
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
 			TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
 			while(suc()) {//tbh i never went thoroughly thru the join stuff you did
-//and i made this loop over the arg unification like a ruleproxy should
-//well, tbh, i was looking at this func earlier and realized i hadn't gone through it thoroughly :)lol
 				TRACE(dout << "After suc() -- " << endl);
 				TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl)
 				TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl)
@@ -623,14 +619,16 @@ comp joinproxy(join c0, Var* s, Var* o){
 						return true;
 						TRACE(dout << "MATCH." << endl);
 		case 1: ;
-		TRACE(dout << "RE-ENTRY" << endl);
+			TRACE(dout << "RE-ENTRY" << endl);
 					}
 				}
 			}
+			entry = 666;
+			TRACE(dout << "DONE." << endl);
+			return false;
+		default:
+			assert(false);
 		}
-		entry = 0;
-		TRACE(dout << "DONE." << endl);
-		return false;
 	};
 }
 
@@ -656,13 +654,15 @@ join halfjoin(comp a, Var* w, Var* x, join b){
 				TRACE( dout << "MATCH." << endl);
 				return true;
 		case 1: ;
-		TRACE(dout << "RE-ENTRY" << endl);
+			TRACE(dout << "RE-ENTRY" << endl);
 			  }
 			}
+			entry = 666;
+			TRACE(dout << "DONE." << endl);
+			return false;
+		default:
+			assert(false);
 		}
-		entry = 0;
-		TRACE(dout << "DONE." << endl);
-		return false;
 	};
 }
 
@@ -794,25 +794,6 @@ comp rule(old::termid head, old::prover::termset body)
 		preds[k] = pred(k);//just queue it up, get the lookuping lambda
 	}
 }*/
-
-/*
-//skip rules that wouldnt match
-bool wouldmatch(old::termid t, size_t i) {
-	assert(p->heads[i]->s->p);
-	assert(x->s->p);
-	if (!(
-			atom(p->heads[i]->s)->unifcoro(atom(x->s))()
-			&&
-			atom(p->heads[i]->o)->unifcoro(atom(x->o))()
-	)) {
-		TRACE(dout << "wouldnt match" << endl;)
-		return false;
-	}
-	else
-		return true;
-}
-*/
-
 
 void generate_pred_index(old::prover *p)
 {
@@ -1004,6 +985,9 @@ how stuff works:
 	dout << "======================================================================================" << endl;
 
 
+*/
+/*
+
 i'm thinking something like
 
 struct fact{
@@ -1038,4 +1022,35 @@ gonna go fix up some food now ok sounds good
 
 2) wouldnt hmc say that now you have an interpreter not a compiler?
 no these would just take the place of our coro generators and would hold coros/run them
+*/
+
+
+
+/*
+//skip rules that wouldnt match
+bool wouldmatch(old::termid t, size_t i) {
+	assert(p->heads[i]->s->p);
+	assert(x->s->p);
+	if (!(
+			atom(p->heads[i]->s)->unifcoro(atom(x->s))()
+			&&
+			atom(p->heads[i]->o)->unifcoro(atom(x->o))()
+	)) {
+		TRACE(dout << "wouldnt match" << endl;)
+		return false;
+	}
+	else
+		return true;
+}
+*/
+
+/*
+generator factGen(Thing *s, Thing *o){
+	
+}*/
+
+/*
+function<bool()> nodeComp(Node *n){
+	
+}
 */

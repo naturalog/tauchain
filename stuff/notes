@@ -22,3 +22,7 @@ env ASAN_OPTIONS="check_initialization_order=1 detect_leaks=0" LD_PRELOAD=libmar
 
 
 git commit -a -m "mmm" ; git update-server-info
+
+
+env ASAN_OPTIONS="detect_leaks=0 verbosity=1"
+
