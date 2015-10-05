@@ -181,6 +181,7 @@ triple* readtriple() {
 	return r;
 }
 
+// TODO: support fin notation too. also support prefixes and remarks.
 void readdoc() {
 	while (din.good()) {
 		din.skip();
@@ -226,6 +227,7 @@ void print_interm() {
 				dout << "\tto unify with " << *rules[z.first].head << ": " << endl << "\t\t" << get<0>(z.second) << endl << "\t\t" << get<1>(z.second) << endl << "\t\t" << get<2>(z.second) << endl;
 }	}	}
 
+// var cannot be bound to something that refers to it
 bool occurs_check(const res *x, const res *y) {
 	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
 	if (x == y) return true;
@@ -234,7 +236,10 @@ bool occurs_check(const res *x, const res *y) {
 	return false;
 }
 
-// calculate conditions given two resources
+// calculate conditions given two resources, i.e. only what has to be checked in runtime,
+// which practically means only resources matching a variable. example: matching
+// (x y z) with (?t y z) will emit "x,?t" in cd. y,z aren't matched in runtime
+// since they already match in compile time.  TODO: verify subs conflicts.
 bool prepare(const res *s, const res *d, subs& cs, subs& cd, subs& csd) {
 	dout << "preparing " << *s << " and " << *d << endl;
 	if (!isvar(*s) && !isvar(*d)) {
@@ -294,12 +299,13 @@ function<void()> compile(conds& _c) {
 			const res *u, *v;
 			// TODO: revise. need to apply the subs only in entrance
 			// i.e. in the func returned from this compile() func.
+			// this practically means verifying that existing subs
+			// don't contradict the conditions.
 			// so need to keep trail as the subs to be done, then
 			// when reaching there, trail will hold subs to be reverted.
 			for (auto y : get<0>(c))
-				if ((u = evalvar(y.first)))
-					if (u != y.second)
-						return false;
+				if ((u = evalvar(y.first)) != y.second)
+					return false;
 			for (auto y : get<1>(c))
 				if ((u = evalvar(y.second))) {
 					if (y.first != u)
@@ -320,7 +326,7 @@ function<void()> compile(conds& _c) {
 			return true;
 	};	}
 	return [r]() {
-		// TODO: EP
+		// TODO: EP. hence need to compile a func for every head to unify with itself.
 		for (auto x : r) {
 			++last;
 			if (!x.second())
