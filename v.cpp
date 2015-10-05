@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
-#include <unordered_set>
+#include <list>
 using namespace std;
 
 wstring edelims = L")}.";
@@ -49,17 +49,14 @@ const wchar_t* till() { // read till delim or space
 }
 
 struct res { // iri, var, or list
-	wchar_t type;
+	wchar_t type; // the only member used in runtime
 	union {
-		const res* sub; // substitution, in case of var. not used in compile time (and will const_cast then)
-		// in runtime, only the info up till here is used
-		// (in case the specific struct instance is used anyway)
-		const res** args; // list items, last item must be null. not used in runtime
+		const res** args; // list items, last item must be null.
+		const wchar_t *val;
 	};
-	const wchar_t *val;
-	res(const wchar_t *v) : type(*v), sub(0), val(wcsdup(v)) { }
+	res(const wchar_t *v) : type(*v), val(wcsdup(v)) { }
 	res(vector<res*> _args)
-		: type(L'.'), args(new const res*[_args.size() + 1]), val(0) {
+		: type(L'.'), args(new const res*[_args.size() + 1]) {
 		int n = 0;
 		for (auto x : _args) args[n++] = x;
 		args[n] = 0;
@@ -82,12 +79,103 @@ struct rule {
 };
 vector<rule> rules;
 
-typedef map<const res*, const res*> subs; // for holding conditions in compile time
+bool occurs_check(const res *x, const res *y);
+
+struct vm {
+	typedef list<const res*> eq; // "cols"
+	list<eq> eqs; // "rows"
+	// function apply(x,y): try to put x,y at the same row and keep the state valid,
+	// means: require them to be equal.
+	// rules of state validation:
+	// 1. all rows must contain at most one nonvar.
+	// 2. nonvars must be the second element in a row, while
+	// the first element in a row containing a nonvar must be null.
+	// this is a bounded row. an unbounded row (that contains only
+	// vars) must not begin with null.
+	// 3. once element was put in a row, it cannot be moved.
+	// 4. every element appears at most once in at most one row.
+	//
+	// note that the res* pointers (for vars or nonvars)
+	// are ever dereferenced, serve only as a unique id.
+	// all comparisons are done by comparing those addresses
+	// therefore the function has to have three specialized versions (or 
+	// conversly another argument) to tell if which x,y are vars. though
+	// the table itself doesn't need to store this information.
+	//
+	// given we have a valid state and we want to update
+	// another equality condition x=y, we have to execute
+	// the following function, called apply(x,y):
+	// 1. if x already appears in row n:
+	// 	1.1 if y never appears
+	// 		1.1.1 if y is a nonvar
+	// 			1.1.1 if the row n is unbounded,
+	// 			add y to the head of row n and return success.
+	// 			1.1.2 fail.
+	// 		1.1.2 if y is a var, append it to row n and return success.
+	// 	1.2 if y appears at row k
+	// 		1.2.1 if n==k, return success.
+	// 		1.2.2 if rows n,k are both bounded, fail.
+	// 		1.2.3 append all items of the unbounded row to the bounded one
+	// 		and delete the old unbounded row. if both rows are unbounded,
+	// 		append into row min(n,k). return success.
+	// 2. if x never appears
+	// 	2.1 if y never appears, put x,y in a new row and return success.
+	// 	otherwise, let k by y's row.
+	// 	2.2 if x is a var or row k is unbounded, append x to row k and return success.
+	// 	2.3 fail
+	bool apply(const res* x, bool xvar, const res* y, bool yvar, bool checkOnly = false) {
+		if (x == y || occurs_check(x, y)) return false;
+		eq *n = 0, *k = 0; 
+		for (eq& e : eqs) {
+			for (const res* r : e)
+				if (r == x) { n = &e; break; }
+				else if (r == y) { k = &e; break; }
+			if (n && k) break;
+		}
+		if (!check(xvar, yvar, n, k)) return false;
+		if (checkOnly) return true;
+		if (!n) { // x never appears
+			if (!k) { // y never appears
+				eq e;
+				if (!xvar)
+					e.push_front(x), e.push_front(0),
+					e.push_back(y), eqs.push_back(e);
+				else if (!yvar)
+					e.push_front(y), e.push_front(0),
+					e.push_back(x), eqs.push_back(e);
+				else e.push_front(x), e.push_front(y), eqs.push_back(e);
+			}
+			else if (xvar) k->push_back(x);
+			else k->push_front(x), k->push_front(0);
+		}
+		else if (!k) {
+			if (yvar) n->push_back(y);
+			else n->push_front(y), n->push_front(0);
+		}
+		else if (n != k) {
+			if (!n->front()) k->splice(k->begin(), *n);
+			else min(n, k)->splice(min(n, k)->begin(), *max(n, k));
+		}
+		return true;
+	}
+	bool check(bool xvar, bool yvar, eq *n, eq *k) {
+		if (!n) return !k || xvar || k->front();
+		if (!k) return yvar || n->front();
+		if (n == k) return true;
+		if (!n->front()) return k->front();
+		return true;
+	}
+	void clear() { eqs.clear(); }
+};
+
+// calculate conditions given two resources, i.e. only what has to be checked in runtime,
+// which practically means only resources matching a variable. example: matching
+// (x y z) with (?t y z) will emit "x,?t" in cd. y,z aren't matched in runtime
 
 wostream& operator<<(wostream&, const res&);
 wostream& operator<<(wostream&, const triple&t);
-wostream& operator<<(wostream&, const subs&);
-wostream& operator<<(wostream&, const struct rule&);
+wostream& operator<<(wostream&, const vm&);
+wostream& operator<<(wostream&, const rule&);
 
 // uniquely create resources and triples
 res* mkres(const wchar_t* v) { 
@@ -139,14 +227,14 @@ wostream& operator<<(wostream& os, const res& r) {
 		const res **a = r.args;
 		while (*a) os << (**a++) << L' ';
 		os << L')'; 
-	} else {
-		os << r.val;
-		if (isvar(r) && r.sub) os << L'=' << *r.sub;
-	}
+	} else os << r.val;
 	return os;
 }
-wostream& operator<<(wostream& os, const subs& r) {
-	for (auto x : r) os << *x.first << '=' << *x.second << ';';
+wostream& operator<<(wostream& os, const vm& r) {
+	for (auto e : r.eqs) {
+		for (auto x : e) os << *x << '=';
+		os << ';';
+	}
 	return os;
 }
 void print() { dout << "rules: " << rules.size() << endl; for (auto r : rules) dout << r << endl; } 
@@ -206,11 +294,10 @@ const size_t max_gnd = 1e+5;
 struct frame {
 	int h, b; // head and body ids
 	frame* prev;
-	subs trail;
+	vm trail;
 } *first = new frame[max_frames], *last, **gnd = new frame*[max_gnd];
 
-typedef map<const res*, unordered_set<const res*>> cond_sublist;
-typedef tuple<cond_sublist, cond_sublist, cond_sublist> condset;
+typedef tuple<vm, vm, vm> condset;
 typedef map<int/*head*/, condset> conds;
 // the following tuple is cs, cd, csd
 // where cs are conds where s is var and d is nonvar
@@ -228,161 +315,8 @@ bool occurs_check(const res *x, const res *y) {
 	return false;
 }
 
-struct vm {
-	typedef list<res*> eq; // "cols"
-	list<eqs> eqs; // "rows"
-	// function apply(x,y): try to put x,y at the same row and keep the state valid,
-	// means: require them to be equal.
-	// rules of state validation:
-	// 1. all rows must contain at most one nonvar.
-	// 2. nonvars must be the second element in a row, while
-	// the first element in a row containing a nonvar must be null.
-	// this is a bounded row. an unbounded row (that contains only
-	// vars) must not begin with null.
-	// 3. once element was put in a row, it cannot be moved.
-	// 4. every element appears at most once in at most one row.
-	//
-	// note that the res* pointers (for vars or nonvars)
-	// are ever dereferenced, serve only as a unique id.
-	// all comparisons are done by comparing those addresses
-	// therefore the function has to have three specialized versions (or 
-	// conversly another argument) to tell if which x,y are vars. though
-	// the table itself doesn't need to store this information.
-	//
-	// given we have a valid state and we want to update
-	// another equality condition x=y, we have to execute
-	// the following function, called apply(x,y):
-	// 1. if x already appears in row n:
-	// 	1.1 if y never appears
-	// 		1.1.1 if y is a nonvar
-	// 			1.1.1 if the row n is unbounded,
-	// 			add y to the head of row n and return success.
-	// 			1.1.2 fail.
-	// 		1.1.2 if y is a var, append it to row n and return success.
-	// 	1.2 if y appears at row k
-	// 		1.2.1 if n==k, return success.
-	// 		1.2.2 if rows n,k are both bounded, fail.
-	// 		1.2.3 append all items of the unbounded row to the bounded one
-	// 		and delete the old unbounded row. if both rows are unbounded,
-	// 		append into row min(n,k). return success.
-	// 2. if x never appears
-	// 	2.1 if y never appears, put x,y in a new row and return success.
-	// 	otherwise, let k by y's row.
-	// 	2.2 if x is a var or row k is unbounded, append x to row k and return success.
-	// 	2.3 fail
-	bool apply(res* x, bool xvar, res* y, bool yvar) {
-		if (x == y) return false;
-		eq *n = 0, *k = 0; 
-		for (eq& e : eqs) {
-			for (res* r : e)
-				if (r == x) {
-					n = &e;
-					break;
-				} else if (r == y) {
-					k = &e;
-					break;
-				}
-			if (n && k) break;
-		}
-		if (!n) { // x never appears
-			if (!k) { // y never appears
-				eq e;
-				if (!xvar)
-					e.push_front(x), e.push_front(0),
-					e.push_back(y), eqs.push_back(e);
-				else if (!yvar)
-					e.push_front(y), e.push_front(0),
-					e.push_back(x), eqs.push_back(e);
-				else e.push_front(x), e.push_front(y), eqs.push_back(e);
-				return true;
-			}
-			if (xvar) return k->push_back(x), true;
-			return k->front() ? k->push_front(x), k->push_front(0), true : false;
-		}
-		if (!k) {
-			if (yvar) return n->push_back(y), true;
-			return n->front() ? n->push_front(y), n->push_front(0), true : false;
-		}
-		if (n == k) return true;
-		if (!n->front())
-			return k->front() ? k->splice(k->begin(), *n), true : false;
-		return min(n, k)->front() ? 
-			min(n, k)->splice(min(n, k)->begin(), *max(n, k)), true : false;
-	}
-};
-
-struct conds_t {
-	struct { // head
-		struct { // body
-			struct head {
-				int id;
-				struct cond {
-					// this represents a condition that s 
-					// should be (made) equal to d, otherwise fail.
-					res *s, *d; // at least one of them is var.
-					cond *next; // conds are stored as a linked list.
-					cond() : s(0), d(0), next(0) {}
-					bool apply(res* _s, res* _d, bool checkOnly = false) {
-						if (s == _s) {
-							if (!isvar(d)) {
-							       	if (!isvar(_d)} {if (d != _d) return false;}
-								else if (!apply(_d, d)) return false;
-							}	
-						}
-						if (checkOnly) return true;
-						if (!apply(d, s, true)) return false;
-						if (next) return next->apply(c);
-						return next->s = _s, next->d = _d, next->next = 0, true;
-					}
-				} conds;
-				head* next; 
-				// heads are linked list too since we list only
-				// possibly matching ones and might prune ones
-				// during inference.
-				head() : id(-1), conds(0), next(0);
-			} heads;
-		} *bodies;
-	} *heads;
-	void init() {
-		heads = malloc(sizeof(*heads) * rules.size());
-		for (size_t n = 0; n < rules.size(); ++n)
-			heads[n] = malloc(sizeof(*heads[n]) * rules[n].body.size());
-	}
-};
-
-struct cond_t {
-	const res &s, &d;
-	bool svar;
-	cond_t(const res *_s, const res *_d, cond_t* next = 0) : s(*_s), d(*_d), svar(isvar(s)) {}
-	cond_t *next;
-
-	bool prepare(bool checkOnly = false) {
-		if (svar) {
-			if (!s.sub)
-				return checkOnly ? true : 
-		}
-	};
-	function<bool(bool)> compile() {
-		return [](bool checkOnly) {
-		};
-	}
-};
-
-bool putcond(const res* s, const res* d, subs& c, bool checkOnly = false) {
-	if (s == d) return true;
-	subs::iterator it = c.find(s);
-	if (it == c.end())
-		return checkOnly ? true :
-			putcond(d, s, c, true) ? (c.insert(make_pair(s, d)) , true) : false;
-	if (!isvar(*it->second)) return false;
-	return (checkOnly || putcond(d, s, c, true)) && putcond(it->first, d, c);
-}
-
-// calculate conditions given two resources, i.e. only what has to be checked in runtime,
-// which practically means only resources matching a variable. example: matching
-// (x y z) with (?t y z) will emit "x,?t" in cd. y,z aren't matched in runtime
 // since they already match in compile time.  TODO: verify subs conflicts.
-bool prepare(const res *s, const res *d, subs& cs, subs& cd, subs& csd) {
+bool prepare(const res *s, const res *d, vm& cs, vm& cd, vm& csd) {
 	bool r = true;
 	if (!isvar(*s) && !isvar(*d)) {
 		if (s != d) r = false;
@@ -395,15 +329,15 @@ bool prepare(const res *s, const res *d, subs& cs, subs& cd, subs& csd) {
 	}
 	if (r && (r = !occurs_check(s, d))) {
 		if (isvar(*s)) {
-			if (isvar(*d)) r = putcond(s, d, csd);
-			else r = putcond(s, d, cs);
-		} else r = putcond(s, d, cd);
+			if (isvar(*d)) r = csd.apply(s, true, d, true);
+			else r = cs.apply(s, true, d, false);
+		} else r = cd.apply(s, false, d, true);
 	}
 	return r;
 }
 
 // calculate conditions given two triples
-bool prepare(const triple *s, const triple *d, subs& cs, subs& cd, subs& csd) {
+bool prepare(const triple *s, const triple *d, vm& cs, vm& cd, vm& csd) {
 	if (!d) return false;
 	dout << "preparing " << *s << " and " << *d;
 	FOR(n, 3)
@@ -415,7 +349,7 @@ bool prepare(const triple *s, const triple *d, subs& cs, subs& cd, subs& csd) {
 
 // calculate conditions for kb
 void prepare() {
-	subs cs, cd, csd;
+	vm cs, cd, csd;
 	FOR(n, rules.size())
 		FOR(k, rules[n].body.size())
 			FOR(m, rules.size())
@@ -426,9 +360,6 @@ void prepare() {
 					, csd.clear();
 }
 
-// runtime variable chain resolving
-const res* evaluate(const res* r) { return isvar(*r) ? r->sub ? evaluate(r->sub) : 0 : r; }
-const res* evalvar(const res* r) { return r->sub ? evaluate(r->sub) : 0; }
 int *bsizes;
 
 // return a function that pushes new frames according to the static
@@ -443,18 +374,6 @@ function<void()> compile(conds& _c) {
 		const condset& c = x->second;
 		r[h] = [c, h]() {
 			const res *u, *v;
-			// TODO: revise. need to apply the subs only in entrance
-			// i.e. in the func returned from this compile() func.
-			// this practically means verifying that existing subs
-			// don't contradict the conditions.
-			// so need to keep trail as the subs to be done, then
-			// when reaching there, trail will hold subs to be reverted.
-			// TODO: maybe runtime subs can be encoded as jitted code
-			// into existing funcs, efficiently (i.e. only to funcs
-			// of terms concerning those vars)? this way all
-			// conditions are compiled including runtime's,
-			// ultimate memory consumption, and no need
-			// the var chain recursion.
 			for (auto y : get<0>(c))
 				for (auto z : y.second)
 					if ((u = evalvar(y.first)) != z && u)
