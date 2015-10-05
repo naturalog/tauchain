@@ -122,9 +122,11 @@ public:
 							//value = argv;//??? // like, this.value?
 							entry = 1;
 							return true;
-						default:
-							entry = 0;
+						case 1:
+							entry = 666;
 							return false;
+						default:
+							assert(false);
 					}
 				};
 			}
@@ -147,11 +149,13 @@ public:
 							TRACE(dout << "binding " << this << "/" << this->str() << " to " << value << "/" << value->str() << endl);
 							entry = 1;
 							return true;
-						default:
+						case 1:
 							TRACE(dout << "unbinding " << this << "/" << this->str() << endl);
 							isBound = false;
-							entry = 0;
+							entry = 666;
 							return false;
+						default:
+							assert(false);
 					}
 				};
 			}
@@ -615,12 +619,12 @@ join halfjoin(pred_t a, Var* w, Var* x, join b){
 		case 0:
 			ac = a();
 			while(ac(w,x)){
-			   TRACE(dout << "MATCH a(w,x)" << endl);
-			   //bc = b;
-			   while(b()){
-				entry = 1;
-				TRACE( dout << "MATCH." << endl);
-				return true;
+				TRACE(dout << "MATCH a(w,x)" << endl);
+				//bc = b;
+				while(b()){
+					entry = 1;
+					TRACE( dout << "MATCH." << endl);
+					return true;
 		case 1: ;
 			TRACE(dout << "RE-ENTRY" << endl);
 			  }
@@ -677,10 +681,6 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 
 		Var *s = vars[head->s];
 		Var *o = vars[head->o];
-
-		/*if(head->s->p == head->o->p){
-			assert(s == o);
-		}*/
 
 		int k = body.size()-2;
 		Var *a = vars[body[k]->s];
@@ -797,30 +797,6 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 //ok so it only supports one-pred queries at the moment    y
 //so for multi-pred queries i think we'll build it up into a join yeah
 void yprover::query(const old::qdb& goal){
-
-
-	auto T = atom(op->make(mkiri(pstr(L"T")), 0,0));
-	auto F = atom(op->make(mkiri(pstr(L"F")), 0,0));
-
-	auto tnf = fact(T, F);
-	auto fnt = fact(F, T);
-	auto tnf2 = fact(T, F);
-	auto fnt2 = fact(F, T);
-
-	auto s1 = seq(tnf,fnt);
-
-	Var * x = new Var();
-	Var * xx = new Var();
-	Var * y = new Var();
-	Var * yy = new Var();
-
-	while(s1(x, xx)) {
-		auto s2 = seq(tnf2, fnt2);
-		while (s2(y, yy)) {
-			dout << x->str() << ", " << y->str() << endl;
-		}
-	}
-	dout << "======================================================================================" << endl;
 
 
 	results.clear();
@@ -943,26 +919,31 @@ how c++ lambdas work:
 how stuff works:
 
 
+	auto T = atom(op->make(mkiri(pstr(L"T")), 0,0));
+	auto F = atom(op->make(mkiri(pstr(L"F")), 0,0));
+
 	auto tnf = fact(T, F);
 	auto fnt = fact(F, T);
 	auto tnf2 = fact(T, F);
 	auto fnt2 = fact(F, T);
 
 	auto s1 = seq(tnf,fnt);
-	auto s2 = seq(tnf2,fnt2);
 
 	Var * x = new Var();
 	Var * xx = new Var();
 	Var * y = new Var();
 	Var * yy = new Var();
 
-	while(s1(x, xx))
-		while(s2(y, yy))
-		{
+	while(s1(x, xx)) {
+		auto s2 = seq(tnf2, fnt2);
+		while (s2(y, yy)) {
 			dout << x->str() << ", " << y->str() << endl;
 		}
-
+	}
 	dout << "======================================================================================" << endl;
+
+
+
 
 
 */

@@ -49,4 +49,4 @@
 fin.
 :cout :nand3 ?V1 .
 :sum :nand3 ?V2 .
-in.
+fin.
