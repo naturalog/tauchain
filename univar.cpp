@@ -397,14 +397,14 @@ comp seq(comp a, comp b){
 		switch(entry){
 		case 0:
 			ac = a;
-			while(ac(Ds, Do)){
+			while(a(Ds, Do)){
 				TRACE(dout << "MATCH A." << endl);
 				entry = 1;
 				return true;
 		case 1: ;
 			}
 			bc = b;
-			while(bc(Ds, Do)){
+			while(b(Ds, Do)){
 				entry = 2;
 				TRACE(dout << "MATCH B." << endl);
 				return true;
@@ -563,7 +563,7 @@ join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
 		switch(entry){
 		case 0:
 			ac = a;
-			while(ac(w,x)) {
+			while(a(w,x)) {
 				bc = b;
 				TRACE(dout << "MATCH A." << endl);
 				while (bc(y, z)) {
@@ -648,7 +648,7 @@ join halfjoin(comp a, Var* w, Var* x, join b){
 		switch(entry){
 		case 0:
 			ac = a;
-			while(ac(w,x)){
+			while(a(w,x)){
 			   TRACE(dout << "MATCH a(w,x)" << endl);
 			   bc = b;
 			   while(bc()){
