@@ -27,14 +27,15 @@ class Var;
 
 typedef function<bool(Thing*,Thing*)> comp;
 
-/*
+
 typedef function<comp()> generator;
-std::map<old::nodeid, comp> preds;
-*/
+std::map<old::nodeid, generator> preds;
+
 
 typedef function<bool()> join;
 typedef std::unordered_map<old::termid, Var*> varmap;
 
+std::unordered_map<old::nodeid, Var*> globals;
 
 typedef vector<size_t> rulesindex;
 std::unordered_map<old::nodeid, rulesindex> pred_index;
@@ -44,8 +45,10 @@ std::unordered_map<old::nodeid, rulesindex> pred_index;
 function<bool()> generalunifycoro(Thing*, Thing*);
 Var* atom(old::termid n);
 
+
+//std::unordered_map<old::termid, generator> preds;
+
 /*
-std::vector<comp> predGens;
 int nterms = 0;
 std::queue<old::termid> predQueue;
 */
@@ -119,6 +122,7 @@ public:
 							entry = 1;
 							return true;
 						default:
+							entry = 0;
 							return false;
 					}
 				};
@@ -145,6 +149,7 @@ public:
 						default:
 							TRACE(dout << "unbinding " << this << "/" << this->str() << endl);
 							isBound = false;
+							entry = 0;
 							return false;
 					}
 				};
@@ -214,6 +219,7 @@ function<bool()> succeed()
 		//a comment must have coincidentally ended up here, i forgot to go back and look for it
 				return true;
 			default:
+				entry = 0;
 				return false;
 		}
 	};
@@ -232,17 +238,20 @@ join unifjoin(join a, join b)
 
 		switch(entry)
 		{
-			case 0:
-				entry++;
-				while(a()){
-					while(b()){
-						return true;
-			case 1: ;
-						}
-					}
+		case 0:
+			entry++;
+			while(a()){
+				while(b()){
+					return true;
+		case 1: ;
+						
+				}
+			}
+			entry = 2;
+		default:
+			entry = 0;
+			return false;
 		}
-		entry++;//just to make sure
-		return false;//i guess we do it like this?
 	};
 }
 
@@ -337,6 +346,7 @@ function<bool()> nodeComp(Node *n){
 
 
 comp fact(Thing *s, Thing *o){
+	setproc(L"fact");
 	int entry = 0;
 	function<bool()> c1;
 	function<bool()> c2;
@@ -350,52 +360,75 @@ comp fact(Thing *s, Thing *o){
 			c2 = generalunifycoro(Do,o);
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 			while(c1()){
+				TRACE(dout << "MATCH c1() " << endl);
 				while(c2()){
 					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 					entry = 1;
+					TRACE(dout << "MATCH" << endl);
 					return true;
 		case 1: ;
+		TRACE(dout << "RE-ENTRY" << endl);
 				}
 			}
-			entry++;
+			entry = 2;
 		default:
+			entry = 0;
+			TRACE(dout << "DONE." << endl);
 			return false;
 		}
 	};
 }
+/*
+generator factGen(Thing *s, Thing *o){
+	
+}*/
 
 comp seq(comp a, comp b){
+	setproc(L"seq");
+	TRACE(dout << ".." << endl);
 	int entry = 0;
-	return [a, b, entry](Thing *Ds, Thing *Do) mutable{
+	int round = 0;
+	comp ac, bc;
+	return [a, b, entry, round, ac, bc](Thing *Ds, Thing *Do) mutable{
 		setproc(L"seq lambda");	
-		TRACE(dout << "im in ur seq, entry: " << entry << endl);
-
+		round++;
+		TRACE(dout << "round: " << round << endl);
+		
 		switch(entry){
 		case 0:
-			while(a(Ds, Do)){
+			ac = a;
+			while(ac(Ds, Do)){
+				TRACE(dout << "MATCH A." << endl);
 				entry = 1;
 				return true;
 		case 1: ;
 			}
-			while(b(Ds, Do)){
+			bc = b;
+			while(bc(Ds, Do)){
 				entry = 2;
+				TRACE(dout << "MATCH B." << endl);
 				return true;
 		case 2:	;
 			}
 			entry = 3;
 		default:
+			entry = 0;
+			TRACE(dout << "SWITCH DONE." << endl);
 			return false;
 		}
+		TRACE(dout << "Why are we here?" << endl);
+		
 	};
 }
 
 
 //This was called something else before? node, clashed with old namespace gotcha
 Var* atom(old::termid n){
-	
-	Var* r = new Var();
+	Var* r;
 	if (n->p>0)
 	{
+		r = new Var();
+
 		r->isBound = true;
 		//so rather than have the value be a new Node you'd have it be a new List?yes cool
 		if(*old::dict[n->p].value == L".")
@@ -405,6 +438,14 @@ Var* atom(old::termid n){
 		}
 		else
 			r->value = new Node(n);
+	}
+	else
+	{
+		auto it = globals.find(n->p);
+		if(it!=globals.end())
+			r = it->second;
+		else
+			globals[n->p] = r = new Var();
 	}
 	return r;
 }
@@ -430,7 +471,7 @@ comp compile_pred(old::termid x) {
 		}
 		else {
 			TRACE(dout << "seq, nodeid: " << x->p << "(" << old::dict[x->p] << ")" << endl;)
-			r = seq(r, y);
+			r = seq(y, r);
 		}
 	}
 	if (first) // cant leave it empty
@@ -446,6 +487,7 @@ comp pred(old::termid x)
 	old::nodeid dbgx = x->p;
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
 	int entry = 0;
+	
 	//comp z = compile_pred(x);
 	comp z;
 	return [entry, z, x, dbgx](Thing *Ds, Thing *Do)mutable{
@@ -457,10 +499,7 @@ comp pred(old::termid x)
 		case 0:
 			entry++;
 			z = compile_pred(x);
-			bool r;//this is all just a hack so that we can print out ..i forgot what
-			//anything you'd change?what why? well you say its all just a hack so i figure
-			//while we're here if you know how else you'd do it, maybe it will avoid our bug
-			//no i think its fine, ah ok
+			bool r;
 			while(true)
 			{
 				TRACE((dout << "calling hopefully x:" << old::dict[dbgx] << endl));
@@ -488,9 +527,14 @@ comp pred(old::termid x)
 }
 
 join joinOne(comp a, Thing* w, Thing *x){
+	setproc(L"joinOne");
+	TRACE(dout << "..." << endl);
 	int entry = 0;
-	return [a, w, x, entry]() mutable{
+	int round = 0;
+	return [a, w, x, entry, round]() mutable{
 		setproc(L"joinOne lambda");
+		round++;
+		TRACE(dout << "round=" << round << endl);
 		switch(entry){
 		case 0:
 			TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
@@ -510,19 +554,29 @@ join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
 	setproc(L"joinwxyz");
 	TRACE(dout << "making a join" << endl);
 	int entry = 0;
-	return [a,b,w,x,y,z,entry]()mutable{
+	int round = 0;
+	comp ac, bc;
+	return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
 		setproc(L"join lambda");
-		TRACE(dout << "im in ur join, entry: " << entry << endl);
+		round++;
+		TRACE(dout << "round: " << round << endl);
 		switch(entry){
 		case 0:
-			while(a(w,x)) {
-				while (b(y, z)) {
+			ac = a;
+			while(ac(w,x)) {
+				bc = b;
+				TRACE(dout << "MATCH A." << endl);
+				while (bc(y, z)) {
+					TRACE(dout << "MATCH." << endl);
 					entry = 1;
 					return true;
 		case 1: ;
+				TRACE(dout << "RE-ENTRY" << endl);
 				}
 			}
 		}
+		entry = 0;
+		TRACE(dout << "DONE." << endl);
 		return false;
 	};
 }
@@ -530,13 +584,17 @@ join joinwxyz(comp a, comp b, Thing *w, Thing *x, Thing *y, Thing *z){
 
 //should be called ruleproxy after all? minus the name clash sure? i didn't see ruleproxy had become ruleproxytwo :)ah:)
 comp joinproxy(join c0, Var* s, Var* o){
+	setproc(L"joinproxy");
+	TRACE(dout << "joinproxy" << endl);
 	int entry=0;
+	int round=0;
 	// proxy coro that unifies s and o with s and o vars
 	function<bool()> suc, ouc;
-	return [ suc, ouc, entry, c0, s,o]   (Thing *Ds , Thing *Do) mutable
+	return [ suc, ouc, entry, c0, s,o,round]   (Thing *Ds , Thing *Do) mutable
 	{
 		setproc(L"joinproxy lambda");
-		TRACE(dout << "im in ur joinproxy, entry=" << entry << endl);
+		round++;
+		TRACE(dout << "round=" << round << endl);
 		switch(entry)
 		{
 		case 0:
@@ -563,28 +621,47 @@ comp joinproxy(join c0, Var* s, Var* o){
 						TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
 						entry = 1;
 						return true;
+						TRACE(dout << "MATCH." << endl);
 		case 1: ;
+		TRACE(dout << "RE-ENTRY" << endl);
 					}
 				}
 			}
 		}
+		entry = 0;
+		TRACE(dout << "DONE." << endl);
 		return false;
 	};
 }
 
 join halfjoin(comp a, Var* w, Var* x, join b){
+	setproc(L"halfjoin");
+	TRACE(dout << "..." << endl);
 	int entry = 0;
-	return [a, w, x, b, entry]() mutable{
+	int round = 0;
+	comp ac;
+	function<bool()> bc;
+	return [a, w, x, b, entry, round,ac,bc]() mutable{
+		setproc(L"halfjoin lambda");
+		round++;
+		TRACE(dout << "round=" << round << endl);
 		switch(entry){
 		case 0:
-			while(a(w,x)){
-			   while(b()){
+			ac = a;
+			while(ac(w,x)){
+			   TRACE(dout << "MATCH a(w,x)" << endl);
+			   bc = b;
+			   while(bc()){
 				entry = 1;
+				TRACE( dout << "MATCH." << endl);
 				return true;
 		case 1: ;
+		TRACE(dout << "RE-ENTRY" << endl);
 			  }
 			}
 		}
+		entry = 0;
+		TRACE(dout << "DONE." << endl);
 		return false;
 	};
 }
@@ -645,10 +722,10 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		
 		join c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 		for(int i = k-1; i >= 0; i--){
-		Var *vs = vars[body[i]->s];
-		Var *vo = vars[body[i]->o];
-		comp p = pred(body[i]);
-		c0 = halfjoin(p,vs,vo, c0);
+			Var *vs = vars[body[i]->s];
+			Var *vo = vars[body[i]->o];
+			comp p = pred(body[i]);
+			c0 = halfjoin(p,vs,vo, c0);
 		}
 		return joinproxy(c0,s,o);
 }
@@ -772,6 +849,33 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 //ok so it only supports one-pred queries at the moment    y
 //so for multi-pred queries i think we'll build it up into a join yeah
 void yprover::query(const old::qdb& goal){
+
+
+	auto T = atom(op->make(mkiri(pstr(L"T")), 0,0));
+	auto F = atom(op->make(mkiri(pstr(L"F")), 0,0));
+
+	auto tnf = fact(T, F);
+	auto fnt = fact(F, T);
+	auto tnf2 = fact(T, F);
+	auto fnt2 = fact(F, T);
+
+	auto s1 = seq(tnf,fnt);
+	auto s2 = seq(tnf2,fnt2);
+
+	Var * x = new Var();
+	Var * xx = new Var();
+	Var * y = new Var();
+	Var * yy = new Var();
+
+	while(s1(x, xx))
+		while(s2(y, yy))
+		{
+			dout << x->str() << ", " << y->str() << endl;
+		}
+
+	dout << "======================================================================================" << endl;
+
+
 	dout << "query" << endl;
 	const old::prover::termset g = p->qdb2termset(goal);
 	results.first.clear();results.second.clear();
@@ -797,8 +901,7 @@ void yprover::query(const old::qdb& goal){
 			dout << L"RESULT " << nresults << ":";
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
-			s = atom(g[0]->s);
-			o = atom(g[0]->o);
+			//wont help..but anyway, i dont think thats right yea i was gonna take it out 
 		}
 	}
 	dout << "thats all, folks, " << nresults << " results." << endl;
@@ -875,4 +978,64 @@ how c++ lambdas work:
 	pgs[1]()();
 
 
+
+how stuff works:
+
+
+	auto tnf = fact(T, F);
+	auto fnt = fact(F, T);
+	auto tnf2 = fact(T, F);
+	auto fnt2 = fact(F, T);
+
+	auto s1 = seq(tnf,fnt);
+	auto s2 = seq(tnf2,fnt2);
+
+	Var * x = new Var();
+	Var * xx = new Var();
+	Var * y = new Var();
+	Var * yy = new Var();
+
+	while(s1(x, xx))
+		while(s2(y, yy))
+		{
+			dout << x->str() << ", " << y->str() << endl;
+		}
+
+	dout << "======================================================================================" << endl;
+
+
+i'm thinking something like
+
+struct fact{
+
+}
+
+struct seq{
+
+}
+
+struct join{
+
+}
+
+struct halfjoin{
+	fact current; 
+	join rest;
+}
+1) ok, but as a solution to what?
+so, we have some issues with the current setup
+for one the way we're trying to keep things around and having to recompile and all that is kinda messy
+not to mention that we don't really need to recompile each time, hmc said that jit was really more wrt block-changes
+//mkay, but it should work i think there's some issues with how we set it up, i think maybe some things aren't
+//getting generated like they're supposed to, but we could solve this vars issue this way also
+//im all for solving the vars issue, just not to run away from a problem i dont see/understand, well, that's why i've
+//been trying to determine where exactly in the code we're going wrong, because we could continue with our current method
+//its just not ideal, basically our current method works but we have a control flow bug seems to be something not getting
+//restarted as its supposed to be, but we could just put things into this other structure and perhaps just avoid these
+//bugs altogether
+i would say go ahead and work your idea out ...but i will focus on this here for now
+gonna go fix up some food now ok sounds good
+
+2) wouldnt hmc say that now you have an interpreter not a compiler?
+no these would just take the place of our coro generators and would hold coros/run them
 */
