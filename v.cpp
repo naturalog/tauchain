@@ -219,21 +219,23 @@ typedef map<int/*head*/, condset> conds;
 map<int/*head*/,map<int/*body*/, conds>> intermediate;
 map<int/*head*/,map<int/*body*/, std::function<void()>>> program;
 
-void print_interm() {
-	for (auto x : intermediate) {
-		for (auto y : x.second) {
-			dout << "Conditions in order for " << *rules[x.first].body[y.first] << ":" << endl;
-			for (auto z : y.second)
-				dout << "\tto unify with " << *rules[z.first].head << ": " << endl << "\t\t" << get<0>(z.second) << endl << "\t\t" << get<1>(z.second) << endl << "\t\t" << get<2>(z.second) << endl;
-}	}	}
-
 // var cannot be bound to something that refers to it
 bool occurs_check(const res *x, const res *y) {
 	if (!isvar(*x)) return isvar(*y) ? occurs_check(y, x) : false;
-	if (x == y) return true;
+	if (x == y)	return true;
 	if (islist(*y)) for (const res **r = y->args; *r; ++r)
 		if (occurs_check(x, *r)) return true;
 	return false;
+}
+
+bool putcond(const res* s, const res* d, subs& c, bool checkOnly = false) {
+	if (s == d) return true;
+	subs::iterator it = c.find(s);
+	if (it == c.end())
+		return checkOnly ? true :
+			putcond(d, s, c, true) ? (c[s] = d, true) : false;
+	if (!isvar(*it->second)) return false;
+	return (checkOnly || putcond(d, s, c, true)) && putcond(it->first, d, c);
 }
 
 // calculate conditions given two resources, i.e. only what has to be checked in runtime,
@@ -241,30 +243,33 @@ bool occurs_check(const res *x, const res *y) {
 // (x y z) with (?t y z) will emit "x,?t" in cd. y,z aren't matched in runtime
 // since they already match in compile time.  TODO: verify subs conflicts.
 bool prepare(const res *s, const res *d, subs& cs, subs& cd, subs& csd) {
-	dout << "preparing " << *s << " and " << *d << endl;
+	bool r = true;
 	if (!isvar(*s) && !isvar(*d)) {
-		if (s != d) return dout << " failed." << endl, cs.clear(), cd.clear(), csd.clear(), false;
-		if (!islist(*s)) return true;
-		const res **rs, **rd;
-		for (rs = s->args, rd = d->args; *rs && *rd;)
-			if (!*rs != !*rd || !prepare(*rs++, *rd++, cs, cd, csd))
-				return false;
-		return dout << " passed." << endl, true;
+		if (s != d) r = false;
+		else if (islist(*s)) {
+			const res **rs, **rd;
+			for (rs = s->args, rd = d->args; *rs && *rd;)
+				if (!*rs != !*rd || !prepare(*rs++, *rd++, cs, cd, csd))
+					r = false;
+		}
 	}
-	if (occurs_check(s, d)) return false;
-	if (isvar(*s)) {
-		if (isvar(*d)) csd[s] = d;
-		else cs[s] = d;
-	} else cd[s] = d;
-	return (dout << " passed " << endl, true);
+	if (r && (r = !occurs_check(s, d))) {
+		if (isvar(*s)) {
+			if (isvar(*d)) r = putcond(s, d, csd);
+			else r = putcond(s, d, cs);
+		} else r = putcond(s, d, cd);
+	}
+	return r;
 }
 
 // calculate conditions given two triples
 bool prepare(const triple *s, const triple *d, subs& cs, subs& cd, subs& csd) {
 	if (!d) return false;
+	dout << "preparing " << *s << " and " << *d;
 	FOR(n, 3)
 		if (!prepare(s->r[n], d->r[n], cs, cd, csd))
-			return false;
+			return dout << " failed." << endl, cs.clear(), cd.clear(), csd.clear(), false;
+	dout << " passed with conds: " << cs << ' ' << cd << ' ' << csd << endl;
 	return true;
 }
 
@@ -284,6 +289,7 @@ void prepare() {
 // runtime variable chain resolving
 const res* evaluate(const res* r) { return isvar(*r) ? r->sub ? evaluate(r->sub) : 0 : r; }
 const res* evalvar(const res* r) { return r->sub ? evaluate(r->sub) : 0; }
+int *bsizes;
 
 // return a function that pushes new frames according to the static
 // conditions and the dynamic frame
@@ -303,24 +309,26 @@ function<void()> compile(conds& _c) {
 			// don't contradict the conditions.
 			// so need to keep trail as the subs to be done, then
 			// when reaching there, trail will hold subs to be reverted.
+			// TODO: maybe runtime subs can be encoded as jitted code
+			// into existing funcs, efficiently (i.e. only to funcs
+			// of terms concerning those vars)? this way all
+			// conditions are compiled including runtime's,
+			// ultimate memory consumption, and no need
+			// the var chain recursion.
 			for (auto y : get<0>(c))
-				if ((u = evalvar(y.first)) != y.second)
+				if ((u = evalvar(y.first)) != y.second && u)
 					return false;
 			for (auto y : get<1>(c))
-				if ((u = evalvar(y.second))) {
-					if (y.first != u)
-						return false;
-				} else
-					last->trail[y.second] = y.second->sub
-					, const_cast<res*>(y.second)->sub = y.first;
+				if ((u = evalvar(y.second)))
+					{ if (y.first != u) return false; }
+				else last->trail[y.second] = y.second->sub,
+					const_cast<res*>(y.second)->sub = y.first;
 			for (auto y : get<2>(c))
 				if ((u = evalvar(y.first))) {
-					if ((v = evalvar(y.first))) {
-						if (u != v)
-							return false;
-					} else
-						last->trail[y.second] = y.second->sub
-						, const_cast<res*>(y.second)->sub = u;
+					if ((v = evalvar(y.first)))
+						{ if (u != v) return false; }
+					else last->trail[y.second] = y.second->sub,
+						const_cast<res*>(y.second)->sub = u;
 				}
 			last->h = h, last->b = 0, last->prev = first, ++last;
 			return true;
@@ -329,11 +337,9 @@ function<void()> compile(conds& _c) {
 		// TODO: EP. hence need to compile a func for every head to unify with itself.
 		for (auto x : r) {
 			++last;
-			if (!x.second())
-				--last;
+			if (!x.second()) --last;
 		}
-		// TODO: prepare the sizes in fast access table
-		if (first->b == (int)rules[first->h].body.size()) {
+		if (first->b == bsizes[first->h]) {
 			if (!first->prev)
 				*gnd++ = first;
 			else // TODO: unify in the opposite direction here (as in euler)
@@ -345,8 +351,11 @@ function<void()> compile(conds& _c) {
 // compile whole kb
 void compile() {
 	prepare();
+	bsizes = new int[rules.size()];
 	FOR(n, rules.size())
-		FOR(k, rules[n].body.size())
+		if (!(bsizes[n] = rules[n].body.size()))
+			program[n][0] = [](){return true;};// ground
+		else FOR(k, bsizes[n])
 			program[n][k] = compile(intermediate[n][k]);
 }
 
@@ -362,4 +371,4 @@ void run() {
 	} while (++first <= last);
 }
 
-int main() { readdoc(), print(), compile(), print_interm(), run(); }
+int main() { readdoc(), print(), compile(), run(); }
