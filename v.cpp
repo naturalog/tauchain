@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
+#include <unordered_set>
 using namespace std;
 
 wstring edelims = L")}.";
@@ -39,13 +40,11 @@ wstring& trim(wstring& s) {
 const wchar_t* till() { // read till delim or space
 	din.skip();
 	wstringstream ws;
-	bool isdel;
 	while 	(din.good() &&
-		(isdel = (edelims.find(din.peek()) == string::npos)) && 
+		edelims.find(din.peek()) == string::npos && 
 		!iswspace(din.peek()))
 		ws << din.get();
 	const wchar_t *r = wcsdup(ws.str().c_str());
-//	if (isdel) din.get();
 	return wcslen(r) ? r : 0;
 }
 
@@ -210,7 +209,8 @@ struct frame {
 	subs trail;
 } *first = new frame[max_frames], *last, **gnd = new frame*[max_gnd];
 
-typedef tuple<subs, subs, subs> condset;
+typedef map<const res*, unordered_set<const res*>> cond_sublist;
+typedef tuple<cond_sublist, cond_sublist, cond_sublist> condset;
 typedef map<int/*head*/, condset> conds;
 // the following tuple is cs, cd, csd
 // where cs are conds where s is var and d is nonvar
@@ -228,12 +228,146 @@ bool occurs_check(const res *x, const res *y) {
 	return false;
 }
 
+struct vm {
+	typedef list<res*> eq; // "cols"
+	list<eqs> eqs; // "rows"
+	// function apply(x,y): try to put x,y at the same row and keep the state valid,
+	// means: require them to be equal.
+	// rules of state validation:
+	// 1. all rows must contain at most one nonvar.
+	// 2. nonvars must be the second element in a row, while
+	// the first element in a row containing a nonvar must be null.
+	// this is a bounded row. an unbounded row (that contains only
+	// vars) must not begin with null.
+	// 3. once element was put in a row, it cannot be moved.
+	// 4. every element appears at most once in at most one row.
+	//
+	// note that the res* pointers (for vars or nonvars)
+	// are ever dereferenced, serve only as a unique id.
+	// all comparisons are done by comparing those addresses
+	// therefore the function has to have three specialized versions (or 
+	// conversly another argument) to tell if which x,y are vars. though
+	// the table itself doesn't need to store this information.
+	//
+	// given we have a valid state and we want to update
+	// another equality condition x=y, we have to execute
+	// the following function, called apply(x,y):
+	// 1. if x already appears in row n:
+	// 	1.1 if y never appears
+	// 		1.1.1 if y is a nonvar
+	// 			1.1.1 if the row n is unbounded,
+	// 			add y to the head of row n and return success.
+	// 			1.1.2 fail.
+	// 		1.1.2 if y is a var, append it to row n and return success.
+	// 	1.2 if y appears at row k
+	// 		1.2.1 if n==k, return success.
+	// 		1.2.2 if rows n,k are both bounded, fail.
+	// 		1.2.3 append all items of the unbounded row to the bounded one
+	// 		and delete the old unbounded row. if both rows are unbounded,
+	// 		append into row min(n,k). return success.
+	// 2. if x never appears
+	// 	2.1 if y never appears, put x,y in a new row and return success.
+	// 	otherwise, let k by y's row.
+	// 	2.2 if x is a var or row k is unbounded, append x to row k and return success.
+	// 	2.3 fail
+	bool apply(res* x, res* y) {
+		if (x == y) return false;
+		eq *n = 0, *k = 0; 
+		for (eq& e : eqs) {
+			for (res* r : e)
+				if (r == x) {
+					n = &e;
+					break;
+				} else if (r == y) {
+					k = &e;
+					break;
+				}
+			if (n && k) break;
+		}
+		if (!n) { // x never appears
+			if (!k) { // y never appears
+				eq e;
+				e.push_back(x), e.push_back(y), eqs.push_back(e);
+				return true;
+			}
+			if (isvar(x)) return k->push_back(x), true;
+			return k->front() ? k->push_front(x), k->push_front(0), true : false;
+		}
+		if (!k) {
+			if (isvar(y)) return n->push_back(y), true;
+			return n->front() ? n->push_front(y), n->push_front(0), true : false;
+		}
+		if (n == k) return true;
+		if (!n->front())
+			return k->front() ? k->splice(k->begin(), *n), true : false;
+		return min(n, k)->front() ? 
+			min(n, k)->splice(min(n, k)->begin(), *max(n, k)), true : false;
+	}
+};
+
+struct conds_t {
+	struct { // head
+		struct { // body
+			struct head {
+				int id;
+				struct cond {
+					// this represents a condition that s 
+					// should be (made) equal to d, otherwise fail.
+					res *s, *d; // at least one of them is var.
+					cond *next; // conds are stored as a linked list.
+					cond() : s(0), d(0), next(0) {}
+					bool apply(res* _s, res* _d, bool checkOnly = false) {
+						if (s == _s) {
+							if (!isvar(d)) {
+							       	if (!isvar(_d)} {if (d != _d) return false;}
+								else if (!apply(_d, d)) return false;
+							}	
+						}
+						if (checkOnly) return true;
+						if (!apply(d, s, true)) return false;
+						if (next) return next->apply(c);
+						return next->s = _s, next->d = _d, next->next = 0, true;
+					}
+				} conds;
+				head* next; 
+				// heads are linked list too since we list only
+				// possibly matching ones and might prune ones
+				// during inference.
+				head() : id(-1), conds(0), next(0);
+			} heads;
+		} *bodies;
+	} *heads;
+	void init() {
+		heads = malloc(sizeof(*heads) * rules.size());
+		for (size_t n = 0; n < rules.size(); ++n)
+			heads[n] = malloc(sizeof(*heads[n]) * rules[n].body.size());
+	}
+};
+
+struct cond_t {
+	const res &s, &d;
+	bool svar;
+	cond_t(const res *_s, const res *_d, cond_t* next = 0) : s(*_s), d(*_d), svar(isvar(s)) {}
+	cond_t *next;
+
+	bool prepare(bool checkOnly = false) {
+		if (svar) {
+			if (!s.sub)
+				return checkOnly ? true : 
+		}
+	};
+	function<bool(bool)> compile() {
+		return [](bool checkOnly) {
+		};
+	}
+};
+
 bool putcond(const res* s, const res* d, subs& c, bool checkOnly = false) {
 	if (s == d) return true;
 	subs::iterator it = c.find(s);
 	if (it == c.end())
 		return checkOnly ? true :
-			putcond(d, s, c, true) ? (c[s] = d, true) : false;
+			putcond(d, s, c, true) ? (c.insert(make_pair(s, d)) , true) : false;
 	if (!isvar(*it->second)) return false;
 	return (checkOnly || putcond(d, s, c, true)) && putcond(it->first, d, c);
 }
@@ -316,20 +450,23 @@ function<void()> compile(conds& _c) {
 			// ultimate memory consumption, and no need
 			// the var chain recursion.
 			for (auto y : get<0>(c))
-				if ((u = evalvar(y.first)) != y.second && u)
-					return false;
+				for (auto z : y.second)
+					if ((u = evalvar(y.first)) != z && u)
+						return false;
 			for (auto y : get<1>(c))
-				if ((u = evalvar(y.second)))
-					{ if (y.first != u) return false; }
-				else last->trail[y.second] = y.second->sub,
-					const_cast<res*>(y.second)->sub = y.first;
+				for (auto z : y.second)
+					if ((u = evalvar(z)))
+						{ if (y.first != u) return false; }
+					else last->trail[y.second] = z->sub,
+						const_cast<res*>(z)->sub = y.first;
 			for (auto y : get<2>(c))
-				if ((u = evalvar(y.first))) {
-					if ((v = evalvar(y.first)))
-						{ if (u != v) return false; }
-					else last->trail[y.second] = y.second->sub,
-						const_cast<res*>(y.second)->sub = u;
-				}
+				for (auto z : y.second)
+					if ((u = evalvar(y.first))) {
+						if ((v = evalvar(y.first)))
+							{ if (u != v) return false; }
+						else last->trail[z] = z->sub,
+							const_cast<res*>(z)->sub = u;
+					}
 			last->h = h, last->b = 0, last->prev = first, ++last;
 			return true;
 	};	}
@@ -354,7 +491,7 @@ void compile() {
 	bsizes = new int[rules.size()];
 	FOR(n, rules.size())
 		if (!(bsizes[n] = rules[n].body.size()))
-			program[n][0] = [](){return true;};// ground
+			program[n][0] = [](){return true;};// fact
 		else FOR(k, bsizes[n])
 			program[n][k] = compile(intermediate[n][k]);
 }
