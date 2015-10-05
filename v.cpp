@@ -270,7 +270,7 @@ struct vm {
 	// 	otherwise, let k by y's row.
 	// 	2.2 if x is a var or row k is unbounded, append x to row k and return success.
 	// 	2.3 fail
-	bool apply(res* x, res* y) {
+	bool apply(res* x, bool xvar, res* y, bool yvar) {
 		if (x == y) return false;
 		eq *n = 0, *k = 0; 
 		for (eq& e : eqs) {
@@ -287,14 +287,20 @@ struct vm {
 		if (!n) { // x never appears
 			if (!k) { // y never appears
 				eq e;
-				e.push_back(x), e.push_back(y), eqs.push_back(e);
+				if (!xvar)
+					e.push_front(x), e.push_front(0),
+					e.push_back(y), eqs.push_back(e);
+				else if (!yvar)
+					e.push_front(y), e.push_front(0),
+					e.push_back(x), eqs.push_back(e);
+				else e.push_front(x), e.push_front(y), eqs.push_back(e);
 				return true;
 			}
-			if (isvar(x)) return k->push_back(x), true;
+			if (xvar) return k->push_back(x), true;
 			return k->front() ? k->push_front(x), k->push_front(0), true : false;
 		}
 		if (!k) {
-			if (isvar(y)) return n->push_back(y), true;
+			if (yvar) return n->push_back(y), true;
 			return n->front() ? n->push_front(y), n->push_front(0), true : false;
 		}
 		if (n == k) return true;
