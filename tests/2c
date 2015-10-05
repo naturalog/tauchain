@@ -1,0 +1,8 @@
+T not F.
+F not T.
+
+{ ?y not ?ny. ?z not ?nz} => { (?x ?y ?z) a SAT }.
+
+fin.
+?banana a SAT.
+fin.
