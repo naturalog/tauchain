@@ -36,9 +36,9 @@ class list {
        	sp<impl> first, last;
 public:
 	list() : first(0), last(0) {}
-	list(const T& t) 		: first(last = new impl(t)){}
-	list(const T& x, const T& y)	: first(new impl(x, last = new impl(y))) {}
-	list(const T& x, const T& y, const T& z) : first(new impl(x, new impl(y, last = new impl(z)))) {}
+	list(const T& t) 		{ first = last = new impl(t); }
+	list(const T& x, const T& y)	{ first = new impl(x, last = new impl(y)); }
+	list(const T& x, const T& y, const T& z) { first = new impl(x, new impl(y, last = new impl(z))); }
 	void push_back(const T& t) 	{ last = last->next = new impl(t); } // dont call for empty list
 	void push_front(const T& t) 	{ first = new impl(t, first); }
 	T& back() 			{ return last->t; }
@@ -58,9 +58,10 @@ public:
 		iterator& operator++() 			{ return prev = curr, curr = curr->next, *this; }
 		bool operator==(const iterator& i) const{ return curr == i.curr; }
 		bool operator!=(const iterator& i) const{ return curr != i.curr; }
+		operator bool() const			{ return curr; }
 	};
 	iterator begin() const { return iterator(first); }
-	const iterator& end() const { static iterator z(0); return z; }
+	const iterator& end() const { static iterator z; return z; }
 	T& erase(iterator& i) {
 		T& r = *i;
 		if (i.prev) i.prev->next = i.curr->next;

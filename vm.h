@@ -26,7 +26,7 @@ struct vm {
 		// externally ahead of time and not rechecked here.
 		list<sp<eq>>::iterator n, k;
 		findrow(x, n, y, k);
-		if (dontEvenCheck || !check(xvar, yvar, *n, *k)) return false;
+		if (dontEvenCheck || !check(xvar, yvar, n, k)) return false;
 		return checkOnly || apply(x, n, xvar, y, k, yvar);
 	}
 	list<sp<eq>>::iterator findrow(const res* x) {
@@ -36,14 +36,13 @@ struct vm {
 	}
 	void findrow(const res* x, list<sp<eq>>::iterator& n, const res* y, list<sp<eq>>::iterator& k) {
 		char f = 0;
-		n = k = eqs.end();
 		for (list<sp<eq>>::iterator e = eqs.begin(); e != eqs.end() && f < 2; ++e)
 			for (const res* r : **e)
 				if 	(r == x){ n = e; ++f; }
 				else if (r == y){ k = e; ++f; }
 	}
-	bool apply(const res* x, list<sp<eq>>::iterator& itn, bool xvar, const res* y, list<sp<eq>>::iterator& itk, bool yvar) {
-		sp<eq> n = *itn, k = *itk;
+	bool apply(const res* x, list<sp<eq>>::iterator n, bool xvar, const res* y, list<sp<eq>>::iterator k, bool yvar) {
+//		sp<eq> n = *itn, k = *itk;
 		// at the following logic we take
 		// into account that check() returned
 		// true so we avoid duplicate checks.
@@ -54,11 +53,11 @@ struct vm {
 				else eqs.push_front(new eq(x, y));
 			} else	// if y appears and x doesn't, push x to y's row
 				// (we can assume we may do that since check() succeeded)
-				push(x, xvar, *k);
+				push(x, xvar, **k);
 		} else if (!k) // relying on check(), if x appears and y doesn't, 
-			push(y, yvar, *n);// push y to x's row
+			push(y, yvar, **n);// push y to x's row
 		else if (n != k) // if x,y appear at different rows, we can safely merge
-			merge(itn, itk); // these two rows (again relying on check())
+			merge(n, k); // these two rows (again relying on check())
 		return true;
 	}
 	void clear() { eqs = list<sp<eq>>(); }
@@ -67,19 +66,26 @@ private:
 	void merge(list<sp<eq>>::iterator& n, list<sp<eq>>::iterator& k) {
 		(*n)->free() ? (*k)->splice(*eqs.erase(n)) : (*n)->splice(*eqs.erase(k));
 	}
-	bool check(bool xvar, bool yvar, sp<eq> n, sp<eq> k) {
+	bool check(bool xvar, bool yvar, list<sp<eq>>::iterator n, list<sp<eq>>::iterator k) {
 		// if x never appears, require that y never appears, or
 		// that x is a variable (hence unbounded since it never appears),
 		// or that y's row is unbounded (so even nonvar x can be appended
 		// to it and bind all vars in it)
-		if (!n) return !k || xvar || k->free();
+		if (!n) return !k || xvar || (*k)->free();
 		// if k never appears but x appears, require that
 		// either y is a var or that y's row is unbounded
-		if (!k) return yvar || n->free();
+		if (!k) return yvar || (*n)->free();
 		// if x,y both appear, require that x,y to either appear at the same
 		// row, or that one of the rows they appear at is unbounded.
-		return n == k || n->front() || k->free();
+		return *n == *k || (*n)->front() || (*k)->free();
 	}
 //	bool apply(const vm& v) { }
 };
-wostream& operator<<(wostream& os, const vm& r) { for (auto e : r.eqs) { for (auto x : *e) os << *x << '='; os << ';'; } return os; }
+wostream& operator<<(wostream& os, const vm& r) {
+	for (auto e : r.eqs) {
+		for (auto x : *e)
+			x ? os << *x << '=' : os << "B ";
+		os << ';';
+	}
+	return os;
+}

@@ -82,7 +82,7 @@ const triple* mktriple(const res *s, const res *p, const res *o) {
 				r = j->second[o] = new triple(s, p, o);
 			else r = k->second;
 	}	}
-	dout << "new triple: " << *r << endl;
+//	dout << "new triple: " << *r << endl;
 	return r;
 }
 
