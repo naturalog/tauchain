@@ -1,13 +1,11 @@
 #include <iostream>
 #include <algorithm>
 #include <string>
-#include <sstream>
 #include "containers.h"
 
 using std::function;
 using std::wostream;
 using std::wstring;
-using std::wstringstream;
 using std::endl;
 using std::wcin;
 #define FOR(x, y) for (int x = 0; x < (int)y; ++x)
@@ -52,12 +50,12 @@ wostream& operator<<(wostream&, const struct vm&);
 wostream& operator<<(wostream&, const rule&);
 
 // uniquely create resources and triples
-const res* mkres(const wchar_t* v) { 
+const res* mkres(const wstring& v) { 
 	static map<wstring, const res*> r; 
 	static map<wstring, const res*>::iterator i; 
-	i = r.find( wstring(v));
+	i = r.find(v);
 	if (i) return i->second;
-	return r.set(v, new res(v)); 
+	return r.set(v, new res(v.c_str()));
 }
 
 const res* mkres(const vector<const res*>& v) { 
@@ -107,15 +105,18 @@ struct din_t {
 		return s;
 	}
 	wstring edelims = L")}.";
-	const wchar_t* till() { 
+	wstring till() { 
 		skip();
-		wstringstream ws;
+		static wchar_t buf[4096];
+		static size_t pos;
+		pos = 0;
 		while 	(good() &&
 			edelims.find(peek()) == wstring::npos && 
 			!iswspace(peek()))
-			ws << get();
-		const wchar_t *r = wcsdup(ws.str().c_str());
-		return wcslen(r) ? r : 0;
+			buf[pos++] = get();
+		buf[pos] = 0;
+//		const wchar_t *r = wcsdup(ws.str().c_str());
+		return wcslen(buf) ? buf : 0;
 	}
 	const res* readlist() {
 		get();
@@ -127,8 +128,8 @@ struct din_t {
 	const res* readany() {
 		if (skip(), !good()) return 0;
 		if (peek() == L'(') return readlist();
-		const wchar_t *s = till();
-		return s ? mkres(s) : 0;
+		wstring s = till();
+		return s.size() ? mkres(s) : 0;
 	}
 	const triple* readtriple() {
 		const res *s, *p, *o;
