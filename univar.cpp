@@ -73,7 +73,7 @@ class Var:public Thing{
 public:
 	bool isBound = false;
 
-	Thing *value;
+	Thing *value=(Thing*)666;
 
 	Thing *getValue()
 	{
@@ -83,7 +83,14 @@ public:
 			return this;
 	}
 
-	wstring str(){return L"var("+(isBound?value->str():L"")+L")";}
+
+	wstring str() {
+		if (isBound) {
+			assert(value != (Thing*)666);
+			return L"var(" + value->str() + L")";
+		}
+		return L"var()";
+	}
 
 
 
@@ -92,7 +99,8 @@ public:
     # this Variable's value.)
     # Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
     # yield, return this Variable to the unbound state.
-    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html*/
+    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
+*/
 
 	function<bool()> unifcoro(Thing *arg){
 		setproc(L"Var.unifcoro");
@@ -146,9 +154,9 @@ public:
 
 
 							case 0:
+							TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" << argv->str() << endl);
 							isBound = true;
 							value = argv;
-							TRACE(dout << "binding " << this << "/" << this->str() << " to " << value << "/" << value->str() << endl);
 							entry = 1;
 							return true;
 						case 1:
@@ -167,11 +175,7 @@ public:
 
 
 Var * vvv(Var *v)
-{//enienienienienienieni
-	Var *r = new Var();
-	r->isBound = true;
-	r->value = v;
-	return r;
+{	return v;
 }
 
 class List: public Thing{
