@@ -382,7 +382,7 @@ comp seq(comp a, comp b){
 		switch(entry){
 		case 0:
 			ac = a;
-			while(ac(Ds, Do)){
+			while(a(Ds, Do)){
 				TRACE(dout << "MATCH A." << endl);
 				entry = 1;
 				return true;
@@ -390,7 +390,7 @@ comp seq(comp a, comp b){
 			}
 
 			bc = a;
-			while(bc(Ds, Do)){
+			while(b(Ds, Do)){
 				entry = 2;
 				TRACE(dout << "MATCH B." << endl);
 				return true;
