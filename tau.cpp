@@ -325,8 +325,8 @@ bool check_option(string s){
 	
 			if(tmpLevel < 1) 
 				level = 1;
-			else if(tmpLevel > 100) 
-				level = 100;
+			/*else if(tmpLevel > 100) 
+				level = 100;why?*/
 			else
 				level = tmpLevel;
 			dout << "level:" << level << std::endl;
