@@ -63,6 +63,18 @@ struct vm {
 		return true;
 	}
 	void clear() { eqs = list<sp<eq>>(); }
+	bool check(const vm& v) {
+		for (const sp<eq>& e : v.eqs)
+			if (!check(*e))
+				return false;
+		return true;
+	}
+	void apply(const vm& v) {
+		for (const sp<eq>& e : v.eqs) apply(*e);
+	}
+	bool check(const eq& e) {
+	}
+	void apply(const eq& e) {}
 private:	
 	void push(const res* x, bool var, eq& e) { var ? e.push_back(x) : e.push_front(x), e.push_front(0); }
 	void merge(list<sp<eq>>::iterator& n, list<sp<eq>>::iterator& k) {
@@ -81,5 +93,4 @@ private:
 		// row, or that one of the rows they appear at is unbounded.
 		return *n == *k || (*n)->front() || (*k)->free();
 	}
-//	bool apply(const vm& v) { }
 };

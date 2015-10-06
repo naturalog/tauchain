@@ -14,13 +14,18 @@ list<frame> proof;
 list<frame*> gnd;
 
 map<int/*head*/,map<int/*body*/, map<int/*head*/, vm>>> intermediate;
-map<int/*head*/,map<int/*body*/, std::function<void()>>> program;
+map<int/*head*/,map<int/*body*/, map<int, std::function<bool(vm&)>>>> checkers;
+map<int/*head*/,map<int/*body*/, map<int, std::function<void(vm&)>>>> appliers;
 
 wostream& operator<<(wostream& os, const vm& r) {
 	for (auto e : r.eqs) {
-		for (auto x : *e)
-			x ? os << *x << '=' : os << "B ";
-		os << ';';
+		auto x = e->begin();
+	        for(;;) {
+			if (!*x) { os << "B "; ++x; continue; }
+			os << **x;
+			if (++x != e->end()) os << " = ";
+			else { os << ";" << endl; break; }
+		}
 	}
 	return os;
 }
@@ -35,7 +40,7 @@ bool occurs_check(const res *x, const res *y) {
 	return false;
 }
 
-bool prepare(const res *x, const res *y, vm& c) {
+bool compile(const res *x, const res *y, vm& c) {
 	if (x == y) return true;
 	bool xvar = isvar(*x), yvar = isvar(*y);
 	if (xvar && occurs_check(x, y)) return false;
@@ -45,31 +50,36 @@ bool prepare(const res *x, const res *y, vm& c) {
 			return false;
 		const res **rx, **ry;
 		for (rx = x->args, ry = y->args; *rx && *ry; ++rx, ++ry)
-			if (!*rx != !*ry || !prepare(*rx, *ry, c))
+			if (!*rx != !*ry || !compile(*rx, *ry, c))
 				return false;
 	}
+	if (islist(*x) && islist(*y)) return true;
 	return c.apply(x, xvar, y, yvar);
 }
 
 // calculate conditions given two triples
-bool prepare(const triple *s, const triple *d, vm& c) {
-	if (!d) return false;
-	dout << "preparing " << *s << " and " << *d;
+bool compile(const triple *x, const triple *y, vm& c) {
+	if (!x || !y) return false;
+	dout << "preparing " << *x << " and " << *y;
 	FOR(n, 3)
-		if (!prepare(s->r[n], d->r[n], c))
+		if (!compile(x->r[n], y->r[n], c))
 			return dout << " failed." << endl, c.clear(), false;
-	dout << endl << " passed with vm: " << c << endl;
-	return true;
+	return dout << endl << " passed with vm:" << endl << c << endl, true;
 }
 
 // calculate conditions for kb
-void prepare() {
+void compile() {
 	vm c;
 	FOR(n, rules.size())
 		FOR(k, rules[n].body.size())
-			FOR(m, rules.size())
-				if (prepare(rules[n].body[k], rules[m].head, c))
-					intermediate[n][k][m] = c, c.clear();
+			FOR(m, rules.size()) {
+				if (compile(rules[n].body[k], rules[m].head, c)) {
+					intermediate[n][k][m] = c;
+					checkers[n][k][m] = [c](vm& v) {return v.check(c); };
+					appliers[n][k][m] = [c](vm& v) { v.apply(c); };
+				}
+				c.clear();
+			}
 }
 /*
 int *bsizes;
@@ -121,7 +131,7 @@ function<void()> compile(vm& _c) {
 
 // compile whole kb
 void compile() {
-	prepare();
+	compile();
 	bsizes = new int[rules.size()];
 	FOR(n, rules.size())
 		if (!(bsizes[n] = rules[n].body.size()))
@@ -152,5 +162,5 @@ void run() {
 	} while (++first <= last);
 }
 */
-int main() { din.readdoc(), print(), prepare()/*compile(), run()*/; }
+int main() { din.readdoc(), print(), compile()/*run()*/; }
 

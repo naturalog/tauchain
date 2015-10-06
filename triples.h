@@ -8,8 +8,6 @@ using std::wstring;
 using std::endl;
 using std::wcin;
 #define FOR(x, y) for (int x = 0; x < (int)y; ++x)
-#define isvar(x) ((x).type == L'?')
-#define islist(x) ((x).type == L'.')
 wostream& dout = std::wcout;
 
 struct res { // iri, var, or list
