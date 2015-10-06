@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
-#include <list>
+//#include <list>
 using namespace std;
 
 wstring edelims = L")}.";
@@ -79,98 +79,103 @@ struct rule {
 };
 vector<rule> rules;
 
+// following list isn't very robust but is minimal
+// and efficient due to making some assumptions like
+// list cannot be empty
+template<typename T>
+class list {
+	struct impl {
+		T t;
+		impl *next;
+		impl(const T& _t) : t(_t), next(0) {}
+		impl(const T& _t, impl* n) : t(_t), next(n) {}
+		~impl() { if (next) delete next; }
+	} *first = 0, *last = 0;
+	bool dontdel = false;
+public:
+	list(const T& t) : first(new impl(t)), last(first) {}
+	void push_back(const T& t) { last = last->next = new impl(t); }
+	void push_front(const T& t) { first = new impl(t, first); }
+	T& back() { return last->t; }
+	T& front() { return first->t; }
+	void appendelete(list<T>* l) { l.dontdel = true, last->next = l->first, delete l; }
+	~list() { if (!dontdel) delete first; }
+};
+
 bool occurs_check(const res *x, const res *y);
 
-struct vm {
-	typedef list<const res*> eq; // "cols"
-	list<eq> eqs; // "rows"
-	// function apply(x,y): try to put x,y at the same row and keep the state valid,
-	// means: require them to be equal.
+class vm {
+	typedef list<const res*> eq; 	// "row", representing that all listed
+					// resources have to be equal: x=?y=?z=...=?t
+	list<eq> eqs;
+public:
+	// function apply(x,y): try to put x,y at the same row and keep the state valid.
+	// on our context that means: mark them as required them to be equal.
 	// rules of state validation:
 	// 1. all rows must contain at most one nonvar.
 	// 2. nonvars must be the second element in a row, while
 	// the first element in a row containing a nonvar must be null.
-	// this is a bounded row. an unbounded row (that contains only
-	// vars) must not begin with null.
-	// 3. once element was put in a row, it cannot be moved.
-	// 4. every element appears at most once in at most one row.
-	//
-	// note that the res* pointers (for vars or nonvars)
-	// are ever dereferenced, serve only as a unique id.
-	// all comparisons are done by comparing those addresses
-	// therefore the function has to have three specialized versions (or 
-	// conversly another argument) to tell if which x,y are vars. though
-	// the table itself doesn't need to store this information.
-	//
-	// given we have a valid state and we want to update
-	// another equality condition x=y, we have to execute
-	// the following function, called apply(x,y):
-	// 1. if x already appears in row n:
-	// 	1.1 if y never appears
-	// 		1.1.1 if y is a nonvar
-	// 			1.1.1 if the row n is unbounded,
-	// 			add y to the head of row n and return success.
-	// 			1.1.2 fail.
-	// 		1.1.2 if y is a var, append it to row n and return success.
-	// 	1.2 if y appears at row k
-	// 		1.2.1 if n==k, return success.
-	// 		1.2.2 if rows n,k are both bounded, fail.
-	// 		1.2.3 append all items of the unbounded row to the bounded one
-	// 		and delete the old unbounded row. if both rows are unbounded,
-	// 		append into row min(n,k). return success.
-	// 2. if x never appears
-	// 	2.1 if y never appears, put x,y in a new row and return success.
-	// 	otherwise, let k by y's row.
-	// 	2.2 if x is a var or row k is unbounded, append x to row k and return success.
-	// 	2.3 fail
-	bool apply(const res* x, bool xvar, const res* y, bool yvar, bool checkOnly = false) {
+	// this is a referred as a bounded row. nulls must not appear anywhere else.
+	// 3. every element appears at most once in at most one row.
+	// 4. once element was put in a row, it cannot be moved, except for merging 
+	// whole rows in a way that doesn't violate the above conditions.
+	bool apply(const res* x, bool xvar, const res* y, bool yvar, bool checkOnly = false, bool dontEvenCheck = false) {
+		// TODO: the condition at the following line must be checked
+		// externally ahead of time and not rechecked here.
 		if (x == y || occurs_check(x, y)) return false;
-		eq *n = 0, *k = 0; 
-		for (eq& e : eqs) {
-			for (const res* r : e)
-				if (r == x) { n = &e; break; }
-				else if (r == y) { k = &e; break; }
-			if (n && k) break;
-		}
-		if (!check(xvar, yvar, n, k)) return false;
+		eq *n = 0, *k = 0;
+		// TODO: optimize. many times the caller already
+		// has (or can have) n or even n&k in hand.
+		for (list<eq>::iterator e = eqs.begin(), e != eqs.end() && (!n || !k), ++e)
+			for (const res* r : *e)
+				if 	(r == x){ n = *e; break; }
+				else if (r == y){ k = *e; break; }
+		if (dontEvenCheck || !check(xvar, yvar, n, k)) return false;
 		if (checkOnly) return true;
+		// at the following logic we take
+		// into account that check() returned
+		// true so we avoid duplicate checks.
 		if (!n) { // x never appears
 			if (!k) { // y never appears
 				eq e;
-				if (!xvar)
-					e.push_front(x), e.push_front(0),
-					e.push_back(y), eqs.push_back(e);
-				else if (!yvar)
-					e.push_front(y), e.push_front(0),
-					e.push_back(x), eqs.push_back(e);
-				else e.push_front(x), e.push_front(y), eqs.push_back(e);
-			}
-			else if (xvar) k->push_back(x);
-			else k->push_front(x), k->push_front(0);
-		}
-		else if (!k) {
-			if (yvar) n->push_back(y);
-			else n->push_front(y), n->push_front(0);
-		}
-		else if (n != k) {
-			if (!n->front()) k->splice(k->begin(), *n);
-			else min(n, k)->splice(min(n, k)->begin(), *max(n, k));
-		}
-		return true;
-	}
-	bool check(bool xvar, bool yvar, eq *n, eq *k) {
-		if (!n) return !k || xvar || k->front();
-		if (!k) return yvar || n->front();
-		if (n == k) return true;
-		if (!n->front()) return k->front();
+				if (!xvar)	push_nonvar(x, e), e.push_back(y);
+				else if (!yvar) push_nonvar(y, e), e.push_back(x); 
+				else		e.push_front(x),   e.push_front(y);
+				eqs.push_back(e);
+			} else	// if y appears and x doesn't, push x to y's row
+				// (we can assume we may do that since check() succeeded)
+				push(x, xvar, *k);
+		} else if (!k) // relying on check(), if x appears and y doesn't, 
+			push(y, yvar, *n);// push y to x's row
+		else if (n != k) // if x,y appear at different rows, we can safely merge
+			merge(n, k); // these two rows (again relying on check())
 		return true;
 	}
 	void clear() { eqs.clear(); }
-};
+private:	
+	void push(const res* x, bool var, eq& e) { var ? e.push_back(x) : push_nonvar(x, e); }
+	void push_nonvar(const res* x, eq& e) { e.push_front(x), e.push_front(0); }
+	void merge(eq* n, eq* k) {
+		if (!n->front()) k->splice(k->begin(), *n);
+		else min(n, k)->splice(min(n, k)->begin(), *max(n, k));
+	}
+	bool check(bool xvar, bool yvar, eq *n, eq *k) {
+		// if x never appears, require that y never appears, or
+		// that x is a variable (hence unbounded since it never appears),
+		// or that y's row is unbounded (so even nonvar x can be appended
+		// to it and bind all vars in it)
+		if (!n) return !k || xvar || k->front();
+		// if k never appears but x appears, require that
+		// either y is a var or that y's row is unbounded
+		if (!k) return yvar || n->front();
+		// if x,y both appear, require that x,y to either appear at the same
+		// row, or that one of the rows they appear at is unbounded.
+		return n == k || n->front() || k->front();
+	}
+	bool apply(const vm& v) {
 
-// calculate conditions given two resources, i.e. only what has to be checked in runtime,
-// which practically means only resources matching a variable. example: matching
-// (x y z) with (?t y z) will emit "x,?t" in cd. y,z aren't matched in runtime
+	}
+};
 
 wostream& operator<<(wostream&, const res&);
 wostream& operator<<(wostream&, const triple&t);
@@ -374,24 +379,21 @@ function<void()> compile(conds& _c) {
 		const condset& c = x->second;
 		r[h] = [c, h]() {
 			const res *u, *v;
-			for (auto y : get<0>(c))
-				for (auto z : y.second)
-					if ((u = evalvar(y.first)) != z && u)
-						return false;
-			for (auto y : get<1>(c))
-				for (auto z : y.second)
-					if ((u = evalvar(z)))
-						{ if (y.first != u) return false; }
-					else last->trail[y.second] = z->sub,
-						const_cast<res*>(z)->sub = y.first;
-			for (auto y : get<2>(c))
-				for (auto z : y.second)
-					if ((u = evalvar(y.first))) {
-						if ((v = evalvar(y.first)))
-							{ if (u != v) return false; }
-						else last->trail[z] = z->sub,
-							const_cast<res*>(z)->sub = u;
-					}
+			for (auto y : get<0>(c)) {
+				u = y.first, v = y.second;
+				if (!first->trail.apply(u, isvar(*u), v, isvar(*v), true))
+					return false;
+			}
+			for (auto y : get<1>(c)) {
+				u = y.first, v = y.second;
+				if (!first->trail.apply(u, isvar(*u), v, isvar(*v), true))
+					return false;
+			}
+			for (auto y : get<2>(c)) {
+				u = y.first, v = y.second;
+				if (!first->trail.apply(u, isvar(*u), v, isvar(*v), true))
+					return false;
+			}
 			last->h = h, last->b = 0, last->prev = first, ++last;
 			return true;
 	};	}
