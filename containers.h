@@ -144,4 +144,3 @@ public:
 private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
-
