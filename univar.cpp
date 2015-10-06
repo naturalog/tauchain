@@ -125,6 +125,7 @@ public:
 				//# We are unifying this unbound variable with itself, so leave it unbound.^M
 				int entry = 0;
 				return [this, entry, argv]() mutable{
+					assert(!isBound);
 					setproc(L"unify lambda 1");
 					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" << argv->str() << endl);
 					switch(entry){
@@ -146,21 +147,22 @@ public:
 
 				int entry = 0;
 				return [this, entry, argv]() mutable{
-					setproc(L"unify lambda 2"); 
+
+					setproc(L"unify lambda 2");
 					TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" << argv->str() << endl);
 
 					switch(entry)
 					{
-
-
 							case 0:
 							TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" << argv->str() << endl);
+							assert(!isBound);
 							isBound = true;
 							value = argv;
 							entry = 1;
 							return true;
 						case 1:
 							TRACE(dout << "unbinding " << this << "/" << this->str() << endl);
+							assert(isBound);
 							isBound = false;
 							entry = 666;
 							return false;
@@ -363,10 +365,13 @@ function<bool()> listunifycoro(List *a, List *b)
 */
 function<bool()> generalunifycoro(Thing *a, Thing *b){
 	a = a->getValue();
-	b = b->getValue();
+
 	Var *a_var = dynamic_cast<Var*>(a);
 	if (a_var)
 		return a_var->unifcoro(b);
+
+	b = b->getValue();
+
 	Var *b_var = dynamic_cast<Var*>(b);
 	if (b_var)
 		return b_var->unifcoro(a);
