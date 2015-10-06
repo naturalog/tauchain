@@ -47,14 +47,7 @@ Var* atom(old::termid n);
 
 //std::unordered_map<old::termid, generator> preds;
 
-
-
-/*
-int nterms = 0;
-std::queue<old::termid> predQueue;
-*/
-
-
+std::unordered_map<old::nodeid, Var*> globals;
 
 
 
@@ -190,11 +183,20 @@ public:
 
 
 };
-//i guess classes have semicolons
 
 
 
+wstring sprintVar(wstring label, Var *v){
+	wstringstream s;
+	s << label << ": (" << v << ")" << v->str();
+	return s.str();
+}
 
+wstring sprintPred(wstring label, old::nodeid pred){
+	wstringstream s;
+	s << label << ": (" << pred << ")" << old::dict[pred];
+	return s.str();
+}
 
 
 bool fail()
@@ -392,28 +394,30 @@ comp seq(comp a, comp b){
 		
 		switch(entry){
 		case 0:
-			ac = a;
 			while(a(Ds, Do)){
 				TRACE(dout << "MATCH A." << endl);
 				entry = 1;
 				return true;
 		case 1: ;
 			}
-			bc = b;
+
 			while(b(Ds, Do)){
 				entry = 2;
 				TRACE(dout << "MATCH B." << endl);
 				return true;
 		case 2:	;
 			}
-			entry = 666;
+
 			TRACE(dout << "SWITCH DONE." << endl);
+
+			entry = 666;
 			return false;
+
 		default:
 			assert(false);
 		}
 		TRACE(dout << "Why are we here?" << endl);
-		
+		assert(false);
 	};
 }
 
@@ -436,12 +440,12 @@ Var* atom(old::termid n){
 			r->value = new Node(n);
 	}
 	else
-	{/*
-		auto it = globals.find(n->p);
+	{
+		/*auto it = globals.find(n->p);
 		if(it!=globals.end())
 			r = it->second;
 		else
-			globals[n->p] =*/ r = new Var();
+			globals[n->p] = */r = new Var();
 	}
 	return r;
 }
@@ -456,7 +460,7 @@ comp compile_pred(old::termid x) {
 	bool first = true;
 
 	//compile each rule with the pred in the head, seq them up
-	for (size_t i: rs) {
+	for (int i = rs.size()-1;i>=0; i--) {
 
 		comp y = rule(op->heads[i], op->bodies[i]);
 
@@ -484,7 +488,8 @@ pred_t pred(old::termid x)
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
 	return [x]()mutable{
 		setproc(L"pred lambda");
-		TRACE(dout << "im in ur pred proxy for nodeid " << x->p << endl;)
+		TRACE(dout << "nodeid " << x->p << endl);
+
 		return compile_pred(x);
 	};
 }
@@ -497,26 +502,26 @@ join_gen joinOne(pred_t a, Thing* w, Thing *x){
 	comp ac;
 	return [ac, a, w, x, entry, round]() mutable{
 		setproc(L"joinOne gen");
-	return [ac, a, w, x, entry, round]() mutable{
-		setproc(L"joinOne λ λ");
-		round++;
-		TRACE(dout << "round=" << round << endl);
-		switch(entry){
-		case 0:
-			TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
-			ac = a();
-			while(ac(w,x)){
-				TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
-				entry = 1;
-				return true;
-		case 1: ;
+		return [ac, a, w, x, entry, round]() mutable{
+			setproc(L"joinOne λ λ");
+			round++;
+			TRACE(dout << "round=" << round << endl);
+			switch(entry){
+			case 0:
+				TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
+				ac = a();
+				while(ac(w,x)){
+					TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
+					entry = 1;
+					return true;
+			case 1: ;
+				}
+				entry=666;
+				return false;
+			default:
+				assert(false);
 			}
-			entry=666;
-			return false;
-		default:
-			assert(false);
-		}
-	};
+		};
 	};
 }
 
@@ -529,34 +534,33 @@ join_gen joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 	comp ac, bc;
 	return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
 		setproc(L"join lambda");
-	return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
-		setproc(L"join lambda lambda");
-		round++;
-		TRACE(dout << "round: " << round << endl);
-		switch(entry){
-		case 0:
-			ac = a();
-			while(ac(w,x)) {
-				bc = b();
-				TRACE(dout << "MATCH A." << endl);
-				while (bc(y, z)) {
-					TRACE(dout << "MATCH." << endl);
-					entry = 1;
-					return true;
-		case 1: ;
-				TRACE(dout << "RE-ENTRY" << endl);
+		return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
+			setproc(L"join lambda lambda");
+			round++;
+			TRACE(dout << "round: " << round << endl);
+			switch(entry){
+			case 0:
+				ac = a();
+				while(ac(w,x)) {
+					bc = b();
+					TRACE(dout << "MATCH A." << endl);
+					while (bc(y, z)) {
+						TRACE(dout << "MATCH." << endl);
+						entry = 1;
+						return true;
+			case 1: ;
+					TRACE(dout << "RE-ENTRY" << endl);
+					}
 				}
+				entry = 666;
+				TRACE(dout << "DONE." << endl);
+				return false;
+			default:
+				assert(false);
 			}
-			entry = 666;
-			TRACE(dout << "DONE." << endl);
-			return false;
-		default:
-			assert(false);
-		}
-	};
+		};
 	};
 }
-//actually maybe only the join combinators need to do a lookup
 
 comp ruleproxy(join_gen c0_gen, Var *s, Var *o){
 	setproc(L"ruleproxy");
@@ -621,31 +625,31 @@ join_gen halfjoin(pred_t a, Var* w, Var* x, join_gen b){
 	join bc;
 	return [a, w, x, b, entry, round,ac,bc]() mutable{
 		setproc(L"halfjoin gen");
-	return [a, w, x, b, entry, round,ac,bc]() mutable{
-		setproc(L"halfjoin lambda");
-		round++;
-		TRACE(dout << "round=" << round << endl);
-		switch(entry){
-		case 0:
-			ac = a();
-			while(ac(w,x)){
-				TRACE(dout << "MATCH a(w,x)" << endl);
-				bc = b();
-				while(bc()){
-					entry = 1;
-					TRACE( dout << "MATCH." << endl);
-					return true;
-		case 1: ;
-			TRACE(dout << "RE-ENTRY" << endl);
-			  }
+		return [a, w, x, b, entry, round,ac,bc]() mutable{
+			setproc(L"halfjoin lambda");
+			round++;
+			TRACE(dout << "round=" << round << endl);
+			switch(entry){
+			case 0:
+				ac = a();
+				while(ac(w,x)){
+					TRACE(dout << "MATCH a(w,x)" << endl);
+					bc = b();
+					while(bc()){
+						entry = 1;
+						TRACE( dout << "MATCH." << endl);
+						return true;
+			case 1: ;
+				TRACE(dout << "RE-ENTRY" << endl);
+				  }
+				}
+				entry = 666;
+				TRACE(dout << "DONE." << endl);
+				return false;
+			default:
+				assert(false);
 			}
-			entry = 666;
-			TRACE(dout << "DONE." << endl);
-			return false;
-		default:
-			assert(false);
-		}
-	};
+		};
 	};
 }
 
@@ -712,20 +716,13 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 comp rule(old::termid head, old::prover::termset body)
 {
 	setproc(L"comp rule");
-	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;) 
+	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;)
+	//we make a per-rule varmap
 	varmap vars;
 
-	//ok now not everything is necessarily vars
-	//sometimes we'll have literals too
-
 	//these two are just proxies for whatever input we get
-	
-	//yea yea we might not need the 's' one i just want to make sure
-	//vars[head->s->p] = (vars.find(head->s->p) != vars.end()) ? atom(head->s->p) : vars[head->s->p];
-	//vars[head->o->p] = (vars.find(head->o->p) != vars.end()) ? atom(head->o->p) : vars[head->o->p];
 	vars[head->s] = atom(head->s);
 	vars[head->o] = atom(head->o);
-
 
 	size_t i;
 	for (i = 0; i < body.size(); i++)
@@ -759,59 +756,44 @@ comp rule(old::termid head, old::prover::termset body)
 	}
 }
 
-
-/*writes into preds*/
-//ok so by the time we get here, we'll already have
-//pred_index, a map from preds to a vector of indexes of rules with that pred in the head
-/*void compile_kb()
-{
-	setproc(L"compile_kb");
-	for (auto x: pred_index)
-	{
-		old::nodeid k = x.first;
-		preds[k] = pred(k);//just queue it up, get the lookuping lambda
-	}
-}*/
-
 void generate_pred_index(old::prover *p)
 {
 	setproc(L"generate_pred_index");
-	TRACE(dout << "gen pred_index" << endl);
+	TRACE(dout << "..." << endl);
 
-	int i;
-	//start at the end of the kb//irrelevant?
-	for (i = p->heads.size() - 1; i >= 0; i--)
+	for (size_t i = 0; i < p->heads.size(); i++)
 	{
 		old::nodeid pr = p->heads[i]->p;
-		auto it = pred_index.find(pr);
-		if (it == pred_index.end()){
+		if(pred_index.find(pr) != pred_index.end()){
 			pred_index[pr] = rulesindex();
 		}
 		pred_index[pr].push_back(i);
 	}
 
-
 }
 
+void thatsAllFolks(int nresults){
+	dout << "That's all, folks, ";
+	if(nresults == 0){
+		dout << KRED;
+	}else{
+		dout << KCYN;
+	}
+	dout << nresults << KNRM << " results." << endl;
+}
 
-//namespace issue here? well, not an issue here, i put the whole old codebase into "old"..
-///so why the 'y'? oh..yeah..i then added using namespace old so yeah
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
 	op=p = new old::prover(qkb, false);
 	generate_pred_index(p);
-	//compile_kb();
-	//compile_preds(p);
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
-//ok so it only supports one-pred queries at the moment    y
-//so for multi-pred queries i think we'll build it up into a join yeah
 void yprover::query(const old::qdb& goal){
-
+	dout << KGRN << "Query." << KNRM << endl;
 
 	results.clear();
-	dout << "query" << endl;
+
 	const old::prover::termset g = p->qdb2termset(goal);
 	int nresults = 0;
 	old::nodeid pr = g[0]->p;
@@ -819,26 +801,30 @@ void yprover::query(const old::qdb& goal){
 	if (pred_index.find(pr) != pred_index.end()) {
 		Var *s = atom(g[0]->s);
 		Var *o = atom(g[0]->o);
-		//varmap vars;
-		//putting them to vars should be irrelevant at this point, all the pointers have been captured
-		///*if g[0]->o == g[0]->s: s = o;*/
-		dout << "query 1: (" << pr << ") " << old::dict[g[0]->p] << endl;
-		auto coro = pred(g[0])();
-		//compile_preds(p);
+		/*if g[0]->o == g[0]->s: s = o;*/
 
-		dout << "query --  arg1: " << s << "/" << s->str() << ", arg2: " << o << "/" << o->str() << endl;
-		//this is weird, passing the args over and over
+
+		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
+		auto coro = pred(g[0])();
+
+		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with  " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
+		// this is weird, passing the args over and over
 		while (coro(s,o)) {
 			nresults++;
-			if (nresults >= 123) {dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;break;}
-			dout << L"RESULT " << nresults << ":";
+
+			dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
-			//wont help..but anyway, i dont think thats right yea i was gonna take it out 
+			
+			if (nresults >= 123) {dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;break;}
+ 
 		}
-	}
-	dout << "thats all, folks, " << nresults << " results." << endl;
 
+		thatsAllFolks(nresults);
+	}else{
+		
+		dout << "Predicate '" << old::dict[pr] << "' not found, " << KRED << "0" << KNRM << " results." << endl;
+	}
 }
 
 /*

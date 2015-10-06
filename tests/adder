@@ -1,3 +1,4 @@
+kb
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "false".} => {?C :nand3 "true"}.
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "true".} => {?C :nand3 "true"}.
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "true".  ?B :nand2 "false".} => {?C :nand3 "true"}.
@@ -47,6 +48,11 @@
 :g9 :gnand2 :a11 .
 :g9 :gnand3 :cout .
 fin.
+query
 :cout :nand3 ?V1 .
 :sum :nand3 ?V2 .
 fin.
+#well, i dont see anything that i know should break our code... i didn't either with CNF until i saw what the 
+#output was and compared to what i knew it should be
+#its hmcs pet example..it must output something, idk what though
+#well, i see that it runs a boolean add circuit, but besides for that..
