@@ -22,8 +22,7 @@ struct res { // iri, var, or list
 		const wchar_t *val;
 	};
 	res(const wchar_t *v) : type(*v), val(wcsdup(v)) { }
-	res(vector<const res*> _args)
-		: type(L'.'), args(0) {
+	res(vector<const res*> _args) : type(L'.'), args(new const res*[_args.size()+1]) {
 		int n = 0;
 		for (auto x : _args) args[n++] = x;
 		args[n] = 0;
@@ -56,13 +55,15 @@ wostream& operator<<(wostream&, const rule&);
 const res* mkres(const wchar_t* v) { 
 	static map<wstring, const res*> r; 
 	static map<wstring, const res*>::iterator i; 
-	return ((i = r.find(wstring(v))) == r.end()) ? r.set(v, new res(v)) : i->second; 
+	i = r.find( wstring(v));
+	if (i) return i->second;
+	return r.set(v, new res(v)); 
 }
 
 const res* mkres(const vector<const res*>& v) { 
 	static map<vector<const res*>, const res*> r; 
 	static map<vector<const res*>, const res*>::iterator i; 
-	return ((i = r.find(v)) == r.end()) ? r.set(v, new res(v)) : i->second; 
+	return (i = r.find(v)) ? i->second : r.set(v, new res(v));
 }
 
 const triple* mktriple(const res *s, const res *p, const res *o) {
@@ -71,13 +72,13 @@ const triple* mktriple(const res *s, const res *p, const res *o) {
 	static map<const res*, map<const res*, const triple*>>::iterator j;
 	static map<const res*, const triple*>::iterator k;
 	static const triple* r;
-	if ((i = spo.find(s)) == spo.end())
+	if (!(i = spo.find(s)))
 		r = spo.set(s).set(p).set(o, new triple(s, p, o));
 	else {
-		if ((j = i->second.find(p)) == i->second.end())
+		if (!(j = i->second.find(p)))
 				r = i->second[p][o] = new triple(s, p, o);
 		else {
-			if ((k = j->second.find(o)) == j->second.end())
+			if (!(k = j->second.find(o)))
 				r = j->second[o] = new triple(s, p, o);
 			else r = k->second;
 	}	}

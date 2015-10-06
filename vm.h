@@ -82,3 +82,4 @@ private:
 	}
 //	bool apply(const vm& v) { }
 };
+wostream& operator<<(wostream& os, const vm& r) { for (auto e : r.eqs) { for (auto x : *e) os << *x << '='; os << ';'; } return os; }
