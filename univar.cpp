@@ -42,7 +42,7 @@ std::unordered_map<old::nodeid, rulesindex> pred_index;
 
 
 function<bool()> generalunifycoro(Thing*, Thing*);
-Var* atom(old::termid n);
+void atom(old::termid n, varmap &vars);
 
 
 //std::unordered_map<old::termid, generator> preds;
@@ -160,10 +160,9 @@ public:
 class List: public Thing{
 public:
 	std::vector<Thing*> nodes;
-	List(std::vector<old::termid> x)
+	List(std::vector<Thing *> n)
 	{
-		for(auto y:x)
-			nodes.push_back(atom(y));
+		nodes = n;
 	}
 
 	wstring str(){
@@ -423,31 +422,24 @@ comp seq(comp a, comp b){
 
 
 //This was called something else before? node, clashed with old namespace gotcha
-Var* atom(old::termid n){
-	Var* r;
+void atom(old::termid n, varmap &vars){
+	Var* r = vars[n] = new Var();
 	if (n->p>0)
 	{
-		r = new Var();
-
 		r->isBound = true;
 		//so rather than have the value be a new Node you'd have it be a new List?yes cool
 		if(*old::dict[n->p].value == L".")
 		{
-
-			r->value = new List(op->get_dotstyle_list(n));
+			std::vector<Thing*> nodes;
+			for(auto y:op->get_dotstyle_list(n)) {
+				atom(y, vars);
+				nodes.push_back(vars[y]);
+			}
+			r->value = new List(nodes);
 		}
 		else
 			r->value = new Node(n);
 	}
-	else
-	{
-		/*auto it = globals.find(n->p);
-		if(it!=globals.end())
-			r = it->second;
-		else
-			globals[n->p] = */r = new Var();
-	}
-	return r;
 }
 
 
@@ -721,17 +713,17 @@ comp rule(old::termid head, old::prover::termset body)
 	varmap vars;
 
 	//these two are just proxies for whatever input we get
-	vars[head->s] = atom(head->s);
-	vars[head->o] = atom(head->o);
+	atom(head->s, vars);
+	atom(head->o, vars);
 
 	size_t i;
 	for (i = 0; i < body.size(); i++)
 	{
 		old::termid t;
 		t = body[i]->s;
-		vars[t] = atom(t);
+		atom(t, vars);
 		t = body[i]->o;
-		vars[t] = atom(t);
+		atom(t, vars);
 	}
 
 
@@ -799,12 +791,15 @@ void yprover::query(const old::qdb& goal){
 	old::nodeid pr = g[0]->p;
 
 	if (pred_index.find(pr) != pred_index.end()) {
-		Var *s = atom(g[0]->s);
-		Var *o = atom(g[0]->o);
-		/*if g[0]->o == g[0]->s: s = o;*/
 
 
 		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
+		varmap vars;
+		atom(g[0]->s, vars);
+		atom(g[0]->o, vars);
+		Var *s = vars[g[0]->s];
+		Var *o = vars[g[0]->o];
+
 		auto coro = pred(g[0])();
 
 		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with  " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
@@ -1012,3 +1007,20 @@ function<bool()> nodeComp(Node *n){
 	
 }
 */
+		///*if g[0]->o == g[0]->s: s = o;*/
+
+
+/*writes into preds*/
+//ok so by the time we get here, we'll already have
+//pred_index, a map from preds to a vector of indexes of rules with that pred in the head
+/*void compile_kb()
+{
+	setproc(L"compile_kb");
+	for (auto x: pred_index)
+	{
+		old::nodeid k = x.first;
+		preds[k] = pred(k);//just queue it up, get the lookuping lambda
+	}
+}*/
+
+//actually maybe only the join combinators need to do a lookup
