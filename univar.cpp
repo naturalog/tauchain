@@ -406,10 +406,11 @@ comp fact(Thing *s, Thing *o){
 		switch(entry){
 		case 0:
 			c1 = generalunifycoro(Ds,s);
-			c2 = generalunifycoro(Do,o);
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 			while(c1()){
 				TRACE(dout << "MATCH c1() " << endl);
+			c2 = generalunifycoro(Do,o);
+
 				while(c2()){
 					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 					entry = 1;
@@ -636,15 +637,15 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 			entry++;
 			
 			suc = generalunifycoro(Ds, s);
-			ouc = generalunifycoro(Do, o);
 
-			
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
 			TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
 			while(suc()) {//tbh i never went thoroughly thru the join stuff you did
 				TRACE(dout << "After suc() -- " << endl);
 				TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl)
 				TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl)
+			ouc = generalunifycoro(Do, o);
+
 				while (ouc()) {
 					TRACE(dout << "After ouc() -- " << endl);
 					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
