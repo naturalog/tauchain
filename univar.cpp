@@ -441,8 +441,8 @@ comp compile_pred(old::termid x) {
 	TRACE(dout << "# of rules: " << rs.size() << endl);
 	//compile each rule with the pred in the head, seq them up
 	for (int i = rs.size()-1; i>=0; i--) {
-
-		comp y = rule(op->heads[i], op->bodies[i]);
+		
+		comp y = rule(op->heads[rs[i]], op->bodies[rs[i]]);
 
 		if (first) {
 			first = false;
