@@ -95,7 +95,9 @@ public:
 	T& push_back(const T& t) {
 		if (!(n % chunk))
 			a = (T*)realloc(a, szchunk * ++c);
-		return ispod ? (a[n] = t) : ((new (&a[n])(T)(t)), a[n++]);
+		if (ispod) a[n] = t;
+	       	else new (&a[n])(T)(t);
+		return a[n++];
 	}
 protected:	
 	void copyfrom(const vector<T>& t) {
