@@ -58,7 +58,7 @@ bool prepare(const triple *s, const triple *d, vm& c) {
 	FOR(n, 3)
 		if (!prepare(s->r[n], d->r[n], c))
 			return dout << " failed." << endl, c.clear(), false;
-	dout << " passed with vm: " << c << endl;
+	dout << endl << " passed with vm: " << c << endl;
 	return true;
 }
 
