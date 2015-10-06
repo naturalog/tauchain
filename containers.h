@@ -12,6 +12,8 @@ struct sp { // smart pointer
 
 	T& operator*()  { return *p; } 
 	T* operator->() { return p; }
+	const T& operator*()  const { return *p; } 
+	const T* operator->() const { return p; }
     
 	sp<T>& operator=(const sp<T>& s) {
 		if (this == &s) return *this;
@@ -20,18 +22,18 @@ struct sp { // smart pointer
 		if ((r = s.r)) ++*r;
 		return *this;
 	}
+	operator bool() const { return p; }
 };
 
 template<typename T>
 class list {
 	struct impl {
 		T t;
-		impl *next;
+		sp<impl> next;
 		impl(const T& _t) : t(_t), next(0) {}
-		impl(const T& _t, impl* n) : t(_t), next(n) {}
-		~impl() { if (next) delete next; }
-	} *first, *last;
-	char dontdel = false;
+		impl(const T& _t, sp<impl> n) : t(_t), next(n) {}
+	};
+       	sp<impl> first, last;
 public:
 	list() : first(0), last(0) {}
 	list(const T& t) 		: first(last = new impl(t)){}
@@ -43,13 +45,12 @@ public:
 	T& front() 			{ return first->t; }
 	const T& back() const		{ return last->t; }
 	const T& front() const		{ return first->t; }
-	~list() 			{ if (!dontdel) delete first; }
 
 	class iterator {
 		friend class list<T>;
-		impl *curr, *prev = 0;
+		sp<impl> curr, prev = 0;
 	public:
-		iterator(impl* c = 0)			: curr(c) {}
+		iterator(sp<impl> c = 0)		: curr(c) {}
 		T& operator*()				{ return curr->t; }
 		T* operator->()				{ return &curr->t; }
 		const T& operator*() const		{ return curr->t; }
@@ -62,14 +63,11 @@ public:
 	const iterator& end() const { static iterator z(0); return z; }
 	T& erase(iterator& i) {
 		T& r = *i;
-		if (i.prev) i.prev->next = i.curr->next, delete i.curr;
-		else {
-			impl *t = i.curr;
-			i.curr = i.curr->next, delete t;
-		}
+		if (i.prev) i.prev->next = i.curr->next;
+		else i.curr = i.curr->next;
 		return r;
 	}
-	void splice(list<T>* l) { l->dontdel = true, last->next = l->first, delete l; }
+	void splice(list<T>& l) { last->next = l.first; }
 };
 
 const size_t chunk = 4;
