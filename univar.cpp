@@ -204,6 +204,7 @@ bool fail()
 	TRACE(dout << "..." << endl;)
 	return false;
 }
+
 bool fail_with_args(Thing *_s, Thing *_o)
 {
 	(void)_s;
@@ -220,14 +221,14 @@ function<bool()> succeed()
 	return [entry]() mutable{
 		switch(entry)
 		{
-			case 0:
-				entry = 1;
-				return true;
-			case 1:
-				entry = 666;
-				return false;
-			default:
-				assert(false);
+		case 0:
+			entry = 1;
+			return true;
+		case 1:
+			entry = 666;
+			return false;
+		default:
+			assert(false);
 		}
 	};
 }
@@ -262,34 +263,21 @@ join unifjoin(join a, join b)
 	};
 }
 
-//these? Var.unifcoro()
-//yea its one of these
 function<bool()> listunifycoro(List *a, List *b)
 {
 	setproc(L"listunifycoro");
 	TRACE(dout << "im in ur listunifycoro" << endl);
+
 	//gotta join up unifcoros of vars in the lists
 	if(a->nodes.size() != b->nodes.size())
 		return fail;
-	//must be int or cant go negative to exit loop
-	int i;
-	//we'll start at the end of the list
 	
 	function<bool()> r;
 	bool first = true;
 
-	for(i = b->nodes.size()-1;i >= 0; i--) // we go from end  already..
+	for(int i = b->nodes.size()-1;i >= 0; i--) 
 	{
-		//we need a join that operates on parameterless coros
-		//your turn:D :) ok lemme see what i can do
-		//this is the only place we would use it we might as well just make it specially in here
-
-		//well i guess we can just join up generalunifcoros for a start
-
-		//but it's here! D:
-		//but uc is closer to the beginning
 		join uc = generalunifycoro(a->nodes[i], b->nodes[i]);	
-		//interesting:)
 		
 		if(first){
 			r = uc;
@@ -393,14 +381,16 @@ comp seq(comp a, comp b){
 		
 		switch(entry){
 		case 0:
-			while(a(Ds, Do)){
+			ac = a;
+			while(ac(Ds, Do)){
 				TRACE(dout << "MATCH A." << endl);
 				entry = 1;
 				return true;
 		case 1: ;
 			}
 
-			while(b(Ds, Do)){
+			bc = a;
+			while(bc(Ds, Do)){
 				entry = 2;
 				TRACE(dout << "MATCH B." << endl);
 				return true;
@@ -421,17 +411,15 @@ comp seq(comp a, comp b){
 }
 
 
-//This was called something else before? node, clashed with old namespace gotcha
 void atom(old::termid n, varmap &vars){
-	Var* r = vars[n] = new Var();
+	Var *r = vars[n] = new Var();
 	if (n->p>0)
 	{
 		r->isBound = true;
-		//so rather than have the value be a new Node you'd have it be a new List?yes cool
 		if(*old::dict[n->p].value == L".")
 		{
 			std::vector<Thing*> nodes;
-			for(auto y:op->get_dotstyle_list(n)) {
+			for(auto y: op->get_dotstyle_list(n)) {
 				atom(y, vars);
 				nodes.push_back(vars[y]);
 			}
@@ -450,9 +438,9 @@ comp compile_pred(old::termid x) {
 	rulesindex rs = pred_index[x->p];
 	comp r;
 	bool first = true;
-
+	TRACE(dout << "# of rules: " << rs.size() << endl);
 	//compile each rule with the pred in the head, seq them up
-	for (int i = rs.size()-1;i>=0; i--) {
+	for (int i = rs.size()-1; i>=0; i--) {
 
 		comp y = rule(op->heads[i], op->bodies[i]);
 
@@ -466,6 +454,7 @@ comp compile_pred(old::termid x) {
 			r = seq(y, r);
 		}
 	}
+
 	if (first) // cant leave it empty
 		return (fail_with_args);
 	return r;
@@ -478,9 +467,9 @@ pred_t pred(old::termid x)
 {
 	setproc(L"pred");
 	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
-	return [x]()mutable{
+	return [x]() mutable{
 		setproc(L"pred lambda");
-		TRACE(dout << "nodeid " << x->p << endl);
+		TRACE(dout << "nodeid: " << x->p << endl);
 
 		return compile_pred(x);
 	};
@@ -534,8 +523,8 @@ join_gen joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 			case 0:
 				ac = a();
 				while(ac(w,x)) {
-					bc = b();
 					TRACE(dout << "MATCH A." << endl);
+					bc = b();
 					while (bc(y, z)) {
 						TRACE(dout << "MATCH." << endl);
 						entry = 1;
@@ -709,6 +698,7 @@ comp rule(old::termid head, old::prover::termset body)
 {
 	setproc(L"comp rule");
 	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;)
+
 	//we make a per-rule varmap
 	varmap vars;
 
@@ -752,14 +742,19 @@ void generate_pred_index(old::prover *p)
 {
 	setproc(L"generate_pred_index");
 	TRACE(dout << "..." << endl);
-
+	TRACE(dout << "# of rules: " << p->heads.size() << endl);
 	for (size_t i = 0; i < p->heads.size(); i++)
 	{
 		old::nodeid pr = p->heads[i]->p;
-		if(pred_index.find(pr) != pred_index.end()){
+		TRACE(dout << "adding rule for pred '" << old::dict[pr] << "'" << endl);
+		if(pred_index.find(pr) == pred_index.end()){
 			pred_index[pr] = rulesindex();
 		}
+
 		pred_index[pr].push_back(i);
+	}
+	for(auto x : pred_index){
+		TRACE(dout << "Pred: " << old::dict[x.first] << ", # of rules: " << x.second.size() << endl);
 	}
 
 }
@@ -791,8 +786,6 @@ void yprover::query(const old::qdb& goal){
 	old::nodeid pr = g[0]->p;
 
 	if (pred_index.find(pr) != pred_index.end()) {
-
-
 		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
 		varmap vars;
 		atom(g[0]->s, vars);
@@ -811,8 +804,11 @@ void yprover::query(const old::qdb& goal){
 			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
 			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
 			
-			if (nresults >= 123) {dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;break;}
- 
+			if (nresults >= 123) {
+				dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;
+				break;
+			}
+
 		}
 
 		thatsAllFolks(nresults);
@@ -821,6 +817,9 @@ void yprover::query(const old::qdb& goal){
 		dout << "Predicate '" << old::dict[pr] << "' not found, " << KRED << "0" << KNRM << " results." << endl;
 	}
 }
+
+
+
 
 /*
 void yprover::clear_results()
