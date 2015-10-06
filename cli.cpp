@@ -2,7 +2,7 @@
 #include "jsonld.h"
 #include "cli.h"
 
-bool autobt = false, _pause = false, __printkb = false, fnamebase = true, quad_in = false, nocolor = false;
+bool autobt = false, _pause = false, __printkb = false, fnamebase = true, nocolor = false;
 
 namespace old {
 

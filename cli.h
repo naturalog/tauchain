@@ -3,7 +3,7 @@
 
 #include "rdf.h"
 
-extern bool fnamebase, quad_in, nocolor;
+extern bool fnamebase, nocolor;
 
 
 namespace old{

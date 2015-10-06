@@ -4,6 +4,7 @@
 #include <iostream>
 #include <queue>
 #include "univar.h"
+#include <set>
 
 #include "cli.h"
 #include <stdexcept>
@@ -43,15 +44,14 @@ string format = L"";
 string base = L"";
 
 bool irc = false;
+std::set<string>& silence = *new std::set<string>;
 
 std::map<string,bool*> _flags = {
-	{L"nocolor",&nocolor},
-	{L"deref",&deref},
-	{L"irc",&irc},
-	{L"shorten",&shorten},
-	{L"base",&fnamebase},
-	{L"quads",&quad_in}
-//	{L"pause",&_pause}
+		{L"nocolor",&nocolor}
+		,{L"deref",&deref}
+		,{L"irc",&irc}
+		,{L"shorten",&shorten}
+		,{L"base",&fnamebase}
 };
 
 std::vector<string> extensions = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
@@ -310,6 +310,18 @@ bool check_option(string s){
 			dout << "format:"<<format<<std::endl;
 			return true;
 		}
+	}
+
+	if(_option == L"silence") {
+		if (_argstream.size() != 0) {
+			string token = read_arg();
+			silence.emplace(token);
+			dout << "silence:";
+			for(auto x: silence)
+				dout << x << " ";
+			dout << endl;
+		}
+		return true;
 	}
 
 	if(_option == L"level"){
