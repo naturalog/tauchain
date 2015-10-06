@@ -1,3 +1,5 @@
+#ifndef __CONTAINERS_H__
+#define __CONTAINERS_H__
 #include <string.h> // for memcpy
 
 template<typename T>
@@ -147,3 +149,4 @@ public:
 private:
 	static int compare(const void* x, const void* y) { return ((vtype*)x)->first - ((vtype*)y)->first; }
 };
+#endif

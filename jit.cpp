@@ -1,6 +1,6 @@
-//#include <utility>
 #include <functional>
 #include "vm.h"
+#include "triples.h"
 
 const size_t max_frames = 1e+6;
 const size_t max_gnd = 1e+5;
@@ -15,6 +15,15 @@ list<frame*> gnd;
 
 map<int/*head*/,map<int/*body*/, map<int/*head*/, vm>>> intermediate;
 map<int/*head*/,map<int/*body*/, std::function<void()>>> program;
+
+wostream& operator<<(wostream& os, const vm& r) {
+	for (auto e : r.eqs) {
+		for (auto x : *e)
+			x ? os << *x << '=' : os << "B ";
+		os << ';';
+	}
+	return os;
+}
 
 // var cannot be bound to something that refers to it
 bool occurs_check(const res *x, const res *y) {

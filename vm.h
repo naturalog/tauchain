@@ -1,4 +1,6 @@
-#include "triples.h"
+#include "containers.h"
+
+struct res;
 
 struct vm {
 	typedef list<const res*> row;
@@ -81,11 +83,3 @@ private:
 	}
 //	bool apply(const vm& v) { }
 };
-wostream& operator<<(wostream& os, const vm& r) {
-	for (auto e : r.eqs) {
-		for (auto x : *e)
-			x ? os << *x << '=' : os << "B ";
-		os << ';';
-	}
-	return os;
-}
