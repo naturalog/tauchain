@@ -42,7 +42,7 @@ void atom(old::termid n, varmap &vars);
 
 
 typedef function<comp()> pred_t;
-std::unordered_map<old::termid, pred_t> preds;
+std::unordered_map<old::nodeid, pred_t> preds;
 
 //std::unordered_map<old::nodeid, Var*> globals;
 
@@ -219,7 +219,6 @@ wstring sprintPred(wstring label, old::nodeid pred){
 	s << label << ": (" << pred << ")" << old::dict[pred];
 	return s.str();
 }
-
 
 bool fail()
 {
@@ -492,7 +491,7 @@ void atom(old::termid n, varmap &vars){
 			for(auto y: op->get_dotstyle_list(n)) {
 				TRACE(dout << "item..." << endl);
 				atom(y, vars);
-				nodes.push_back(vars.at(y));//we push a damned pointer....
+				nodes.push_back(vars.at(y));
 			}
 			auto r = vars[n] = new List(nodes);
 			TRACE(dout << "new List: " << r << endl);
@@ -513,12 +512,14 @@ void atom(old::termid n, varmap &vars){
 comp rule(old::termid head, old::prover::termset body);
 
 
-comp compile_pred(old::termid x) {
+comp compile_pred(old::nodeid pr) {
 	setproc(L"compile_pred");
-	rulesindex rs = pred_index[x->p];
+	rulesindex rs = pred_index[pr];
+	TRACE(dout << "# of rules: " << rs.size() << endl);
+	
 	comp r;
 	bool first = true;
-	TRACE(dout << "# of rules: " << rs.size() << endl);
+	
 	//compile each rule with the pred in the head, seq them up
 	for (int i = rs.size()-1; i>=0; i--) {
 		
@@ -526,11 +527,11 @@ comp compile_pred(old::termid x) {
 
 		if (first) {
 			first = false;
-			TRACE(dout << "first, nodeid: " << x->p << "(" << old::dict[x->p] << ")" << endl;)
+			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
 			r = y;
 		}
 		else {
-			TRACE(dout << "seq, nodeid: " << x->p << "(" << old::dict[x->p] << ")" << endl;)
+			TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
 			r = seq(y, r);
 		}
 	}
@@ -540,27 +541,26 @@ comp compile_pred(old::termid x) {
 	return r;
 }
 
-
-//This appears to be working properly
-pred_t pred(old::termid x)
+pred_t pred(old::nodeid pr)
 {
 	setproc(L"pred");
-	TRACE(dout << "constructing pred proxy for nodeid " << x->p << endl);
-	return [x]() mutable{
+	TRACE(dout << "constructing pred proxy for (" << pr << ")" << old::dict[pr] << endl);
+	comp y = compile_pred(pr);
+	return [pr, y]() mutable{
 		setproc(L"pred lambda");
-		TRACE(dout << "nodeid: " << x->p << endl);
+		TRACE(dout << "nodeid: " << pr << endl);
 
-		return compile_pred(x);
+		return y;
 	};
 }
 
-join_gen joinOne(pred_t a, Thing* w, Thing *x){
+join_gen joinOne(old::nodeid a, Thing* w, Thing *x){
 	setproc(L"joinOne");
 	TRACE(dout << "..." << endl);
 	int entry = 0;
 	int round = 0;
 	comp ac;
-	return [ac, a, w, x, entry, round]() mutable{
+	return [a, w, x, entry, round, ac]() mutable{
 		setproc(L"joinOne gen");
 		return [ac, a, w, x, entry, round]() mutable{
 			setproc(L"joinOne λ λ");
@@ -568,8 +568,8 @@ join_gen joinOne(pred_t a, Thing* w, Thing *x){
 			TRACE(dout << "round=" << round << endl);
 			switch(entry){
 			case 0:
+				ac = preds[a]();
 				TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
-				ac = a();
 				while(ac(w,x)){
 					TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
 					entry = 1;
@@ -586,13 +586,14 @@ join_gen joinOne(pred_t a, Thing* w, Thing *x){
 }
 
 
-join_gen joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
+join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Thing *z){
 	setproc(L"joinwxyz");
 	TRACE(dout << "making a join" << endl);
 	int entry = 0;
 	int round = 0;
-	comp ac, bc;
-	return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
+	comp ac;
+	comp bc;
+	return [a,b,w,x,y,z,entry,round,ac,bc]()mutable{
 		setproc(L"join lambda");
 		return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
 			setproc(L"join lambda lambda");
@@ -600,10 +601,10 @@ join_gen joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 			TRACE(dout << "round: " << round << endl);
 			switch(entry){
 			case 0:
-				ac = a();
+				ac = preds[a]();
 				while(ac(w,x)) {
 					TRACE(dout << "MATCH A." << endl);
-					bc = b();
+					bc = preds[b]();
 					while (bc(y, z)) {
 						TRACE(dout << "MATCH." << endl);
 						entry = 1;
@@ -639,7 +640,7 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 		{
 		case 0:
 			entry++;
-			
+			//hrrmm
 			suc = generalunifycoro(Ds, s);
 
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
@@ -648,7 +649,7 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 				TRACE(dout << "After suc() -- " << endl);
 				TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl)
 				TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl)
-			ouc = generalunifycoro(Do, o);
+				ouc = generalunifycoro(Do, o);
 
 				while (ouc()) {
 					TRACE(dout << "After ouc() -- " << endl);
@@ -676,14 +677,14 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 	};
 }
 
-join_gen halfjoin(pred_t a, Thing* w, Thing* x, join_gen b){
+join_gen halfjoin(old::nodeid a, Thing* w, Thing* x, join_gen b){
 	setproc(L"halfjoin");
 	TRACE(dout << "..." << endl);
 	int entry = 0;
 	int round = 0;
 	comp ac;
 	join bc;
-	return [a, w, x, b, entry, round,ac,bc]() mutable{
+	return [a, w, x, b, entry, round, ac, bc]() mutable{
 		setproc(L"halfjoin gen");
 		return [a, w, x, b, entry, round,ac,bc]() mutable{
 			setproc(L"halfjoin lambda");
@@ -691,7 +692,9 @@ join_gen halfjoin(pred_t a, Thing* w, Thing* x, join_gen b){
 			TRACE(dout << "round=" << round << endl);
 			switch(entry){
 			case 0:
-				ac = a();
+				TRACE(dout << "Is this our bad function call?" << endl);
+				ac = preds[a]();
+				TRACE(dout << "Nope." << endl);
 				while(ac(w,x)){
 					TRACE(dout << "MATCH a(w,x)" << endl);
 					bc = b();
@@ -726,7 +729,7 @@ comp ruleproxyTwo(varmap vars, old::termid head, old::prover::termset body)
 		Thing *c = vars.at(body[1]->s);
 		Thing *d = vars.at(body[1]->o);
 
-		auto c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
+		auto c0 = joinwxyz(body[0]->p, body[1]->p, a,b,c,d);
 
 		// proxy coro that unifies s and o with s and o vars
 		return ruleproxy(c0, s, o);
@@ -744,7 +747,8 @@ comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 		Thing *a = vars.at(body[0]->s);
 		Thing *b = vars.at(body[0]->o);
 
-		join_gen c0 = joinOne(pred(body[0]),a,b);
+		
+		join_gen c0 = joinOne(body[0]->p,a,b);
 		return ruleproxy(c0, s, o);
 }
 
@@ -763,12 +767,22 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		Thing  *c = vars.at(body[k+1]->s);
 		Thing  *d = vars.at(body[k+1]->o);
 		
-		join_gen c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
+		join_gen c0 = joinwxyz(body[0]->p, body[1]->p, a,b,c,d);
 		for(int i = k-1; i >= 0; i--){
 			Thing  *vs = vars.at(body[i]->s);
 			Thing  *vo = vars.at(body[i]->o);
-			pred_t p = pred(body[i]);
-			c0 = halfjoin(p,vs,vo, c0);
+			/*
+			if(preds.find(body[i]->p) == preds.end()){
+				TRACE(dout << old::dict[body[i]->p] << "/" << body[i]->p << " was not found. Failing." <<  endl);
+				assert(false);
+			}
+			pred_t p = preds[body[i]->p];
+			if(!p){
+				TRACE(dout << "[" << body[i]->p << "]" << old::dict[body[i]->p] << " found, but not constructed. Failing." << endl); 
+				assert(false);
+			}
+			*/	
+			c0 = halfjoin(body[i]->p, vs, vo, c0);
 		}
 		return ruleproxy(c0, s, o);
 }
@@ -778,7 +792,6 @@ comp rule(old::termid head, old::prover::termset body)
 	setproc(L"comp rule");
 	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;)
 
-	//we make a per-rule varmap
 	varmap vars;
 
 	//these two are just proxies for whatever input we get
@@ -819,8 +832,7 @@ comp rule(old::termid head, old::prover::termset body)
 	}
 }
 
-//This is still fine for now
-void generate_pred_index(old::prover *p)
+void compile_kb(old::prover *p)
 {
 	setproc(L"generate_pred_index");
 	TRACE(dout << "..." << endl);
@@ -828,7 +840,7 @@ void generate_pred_index(old::prover *p)
 	for (size_t i = 0; i < p->heads.size(); i++)
 	{
 		old::nodeid pr = p->heads[i]->p;
-		TRACE(dout << "adding rule for pred '" << old::dict[pr] << "'" << endl);
+		TRACE(dout << "adding rule for pred [" << pr << "]" << old::dict[pr] << "'" << endl);
 		if(pred_index.find(pr) == pred_index.end()){
 			pred_index[pr] = rulesindex();
 		}
@@ -836,17 +848,19 @@ void generate_pred_index(old::prover *p)
 		pred_index[pr].push_back(i);
 	}
 	for(auto x: pred_index){
-		
+		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl);
+		pred_t tmp_pred = pred(x.first);
+		if(!tmp_pred){
+			assert(false);
+		} 
+		preds[x.first] = tmp_pred;
+		if(!preds[x.first]){
+			assert(false);
+		}
 	}
-	/*
-	for(auto x : pred_index){
-		TRACE(dout << "Pred: " << old::dict[x.first] << ", # of rules: " << x.second.size() << endl);
-	}
-	*/
 
 }
 
-//Irrelevant
 void thatsAllFolks(int nresults){
 	dout << "That's all, folks, ";
 	if(nresults == 0){
@@ -857,24 +871,13 @@ void thatsAllFolks(int nresults){
 	dout << nresults << KNRM << " results." << endl;
 }
 
-void compile_kb(){
-	for(auto x: pred_index){
-		preds[x.first] = pred(x.first);
-	}	
-}
-
-//This seems to be working properly
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
 	op=p = new old::prover(qkb, false);
-	generate_pred_index(p);
-	compile_kb();
+	compile_kb(p);
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
-
-//Let's switch to AOT and see what happensk
-//This is not working properly
 void yprover::query(const old::qdb& goal){
 	dout << KGRN << "Query." << KNRM << endl;
 
@@ -895,11 +898,10 @@ void yprover::query(const old::qdb& goal){
 
 		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
 
-		auto coro = pred(g[0])();
+		auto coro = preds[pr]();
 
 		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with  " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
 
-		//THIS
 		// this is weird, passing the args over and over
 		while (coro(s,o)) {
 			nresults++;
