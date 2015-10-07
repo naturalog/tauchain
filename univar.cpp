@@ -31,7 +31,7 @@ typedef function<bool(Thing*,Thing*)> comp;
 typedef function<bool()> join;
 typedef function<join()> join_gen;
 
-typedef std::unordered_map<old::termid, Var*> varmap;
+typedef std::unordered_map<old::termid, Thing *> varmap;
 
 typedef vector<size_t> rulesindex;
 std::unordered_map<old::nodeid, rulesindex> pred_index;
@@ -70,7 +70,7 @@ class Var:public Thing{
 public:
 	bool isBound = false;
 
-	Thing *value;
+	Thing *value=(Thing*)666;
 
 	Thing *getValue()
 	{
@@ -80,7 +80,14 @@ public:
 			return this;
 	}
 
-	wstring str(){return L"var("+(isBound?value->str():L"")+L")";}
+
+	wstring str() {
+		if (isBound) {
+			assert(value != (Thing*)666);
+			return L"var(" + value->str() + L")";
+		}
+		return L"var()";
+	}
 
 
 
@@ -89,8 +96,10 @@ public:
     # this Variable's value.)
     # Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
     # yield, return this Variable to the unbound state.
-    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html*/
+    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
+*/
 
+	//lets break this up into a couple functions for readability
 	function<bool()> unifcoro(Thing *arg){
 		setproc(L"Var.unifcoro");
 		TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl);
@@ -114,6 +123,7 @@ public:
 				//# We are unifying this unbound variable with itself, so leave it unbound.^M
 				int entry = 0;
 				return [this, entry, argv]() mutable{
+					assert(!isBound);
 					setproc(L"unify lambda 1");
 					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" << argv->str() << endl);
 					switch(entry){
@@ -135,21 +145,22 @@ public:
 
 				int entry = 0;
 				return [this, entry, argv]() mutable{
-					setproc(L"unify lambda 2"); 
+
+					setproc(L"unify lambda 2");
 					TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" << argv->str() << endl);
 
 					switch(entry)
 					{
-
-
 							case 0:
+							TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" << argv->str() << endl);
+							assert(!isBound);
 							isBound = true;
 							value = argv;
-							TRACE(dout << "binding " << this << "/" << this->str() << " to " << value << "/" << value->str() << endl);
 							entry = 1;
 							return true;
 						case 1:
 							TRACE(dout << "unbinding " << this << "/" << this->str() << endl);
+							assert(isBound);
 							isBound = false;
 							entry = 666;
 							return false;
@@ -163,12 +174,10 @@ public:
 };
 
 
-Var * vvv(Var *v)
-{//this function doesnt seem to make any difference, luckily...but lets leave it here for now
-	Var *r = new Var();
-	r->isBound = true;
-	r->value = v;
-	return r;
+
+Thing  * vvv(Thing *v)
+{	
+	return v;
 }
 
 class List: public Thing{
@@ -199,7 +208,7 @@ public:
 
 
 
-wstring sprintVar(wstring label, Var *v){
+wstring sprintVar(wstring label, Thing *v){
 	wstringstream s;
 	s << label << ": (" << v << ")" << v->str();
 	return s.str();
@@ -356,10 +365,13 @@ function<bool()> listunifycoro(List *a, List *b)
 */
 function<bool()> generalunifycoro(Thing *a, Thing *b){
 	a = a->getValue();
-	b = b->getValue();
+
 	Var *a_var = dynamic_cast<Var*>(a);
 	if (a_var)
 		return a_var->unifcoro(b);
+
+	b = b->getValue();
+
 	Var *b_var = dynamic_cast<Var*>(b);
 	if (b_var)
 		return b_var->unifcoro(a);
@@ -399,10 +411,11 @@ comp fact(Thing *s, Thing *o){
 		switch(entry){
 		case 0:
 			c1 = generalunifycoro(Ds,s);
-			c2 = generalunifycoro(Do,o);
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 			while(c1()){
 				TRACE(dout << "MATCH c1() " << endl);
+			c2 = generalunifycoro(Do,o);
+
 				while(c2()){
 					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 					entry = 1;
@@ -466,11 +479,12 @@ comp seq(comp a, comp b){
 
 void atom(old::termid n, varmap &vars){
 	setproc(L"atom");
-	TRACE(dout << n << ":" << old::dict[n->p] << endl);
-	Var *r = vars[n] = new Var();
+	TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl);
+	if (vars.find(n) != vars.end())
+		return;
 	if (n->p>0)
 	{
-		r->isBound = true;
+
 		if(*old::dict[n->p].value == L".")
 		{
 			TRACE(dout << "list" << endl);
@@ -478,12 +492,20 @@ void atom(old::termid n, varmap &vars){
 			for(auto y: op->get_dotstyle_list(n)) {
 				TRACE(dout << "item..." << endl);
 				atom(y, vars);
-				nodes.push_back(vars[y]);
+				nodes.push_back(vars.at(y));//we push a damned pointer....
 			}
-			r->value = new List(nodes);
+			auto r = vars[n] = new List(nodes);
+			TRACE(dout << "new List: " << r << endl);
 		}
-		else
-			r->value = new Node(n);
+		else {
+			auto r = vars[n] = new Node(n);
+			TRACE(dout << "new Node: " << r << endl);
+		}
+
+	}
+	else {
+		auto r = vars[n] = new Var();
+		TRACE(dout << "new Var: " << r << endl);
 	}
 }
 
@@ -600,7 +622,7 @@ join_gen joinwxyz(pred_t a, pred_t b, Thing *w, Thing *x, Thing *y, Thing *z){
 	};
 }
 
-comp ruleproxy(join_gen c0_gen, Var *s, Var *o){
+comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 	setproc(L"ruleproxy");
 	TRACE(dout << "ruleproxy" << endl);
 	join c0;
@@ -619,15 +641,15 @@ comp ruleproxy(join_gen c0_gen, Var *s, Var *o){
 			entry++;
 			
 			suc = generalunifycoro(Ds, s);
-			ouc = generalunifycoro(Do, o);
 
-			
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
 			TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
 			while(suc()) {//tbh i never went thoroughly thru the join stuff you did
 				TRACE(dout << "After suc() -- " << endl);
 				TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl)
 				TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl)
+			ouc = generalunifycoro(Do, o);
+
 				while (ouc()) {
 					TRACE(dout << "After ouc() -- " << endl);
 					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
@@ -654,7 +676,7 @@ comp ruleproxy(join_gen c0_gen, Var *s, Var *o){
 	};
 }
 
-join_gen halfjoin(pred_t a, Var* w, Var* x, join_gen b){
+join_gen halfjoin(pred_t a, Thing* w, Thing* x, join_gen b){
 	setproc(L"halfjoin");
 	TRACE(dout << "..." << endl);
 	int entry = 0;
@@ -696,13 +718,13 @@ comp ruleproxyTwo(varmap vars, old::termid head, old::prover::termset body)
 		setproc(L"comp ruleproxyTwo");
 		TRACE(dout << "compiling ruleproxyTwo" << endl);
 
-		Var *s = vvv(vars[head->s]);
-		Var *o = vvv(vars[head->o]);
+		Thing *s = vars.at(head->s);
+		Thing *o = vars.at(head->o);
 
-		Var *a = vvv(vars[body[0]->s]);
-		Var *b = vvv(vars[body[0]->o]);
-		Var *c = vvv(vars[body[1]->s]);
-		Var *d = vvv(vars[body[1]->o]);
+		Thing *a = vars.at(body[0]->s);
+		Thing *b = vars.at(body[0]->o);
+		Thing *c = vars.at(body[1]->s);
+		Thing *d = vars.at(body[1]->o);
 
 		auto c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 
@@ -716,11 +738,11 @@ comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body){
 		setproc(L"comp ruleproxyOne");
 		TRACE(dout << "compiling ruleproxyOne" << endl);
 
-		Var *s = vvv(vars[head->s]);
-		Var *o = vvv(vars[head->o]);
+		Thing *s = vars.at(head->s);
+		Thing *o = vars.at(head->o);
 
-		Var *a = vvv(vars[body[0]->s]);
-		Var *b = vvv(vars[body[0]->o]);
+		Thing *a = vars.at(body[0]->s);
+		Thing *b = vars.at(body[0]->o);
 
 		join_gen c0 = joinOne(pred(body[0]),a,b);
 		return ruleproxy(c0, s, o);
@@ -732,19 +754,19 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		setproc(L"comp ruleproxyMore");
 		TRACE(dout << "compiling ruleproxyMore" << endl);
 
-		Var *s = vvv(vars[head->s]);
-		Var *o = vvv(vars[head->o]);
+		Thing  *s = vars.at(head->s);
+		Thing  *o = vars.at(head->o);
 
 		int k = body.size()-2;
-		Var *a = vvv(vars[body[k]->s]);
-		Var *b = vvv(vars[body[k]->o]);
-		Var *c = vvv(vars[body[k+1]->s]);
-		Var *d = vvv(vars[body[k+1]->o]);
+		Thing  *a = vars.at(body[k]->s);
+		Thing  *b = vars.at(body[k]->o);
+		Thing  *c = vars.at(body[k+1]->s);
+		Thing  *d = vars.at(body[k+1]->o);
 		
 		join_gen c0 = joinwxyz(pred(body[0]), pred(body[1]), a,b,c,d);
 		for(int i = k-1; i >= 0; i--){
-			Var *vs = vvv(vars[body[i]->s]);
-			Var *vo = vvv(vars[body[i]->o]);
+			Thing  *vs = vars.at(body[i]->s);
+			Thing  *vo = vars.at(body[i]->o);
 			pred_t p = pred(body[i]);
 			c0 = halfjoin(p,vs,vo, c0);
 		}
@@ -777,7 +799,7 @@ comp rule(old::termid head, old::prover::termset body)
 
 
 	if(body.size() == 0){
-		return fact(vvv(vars[head->s]), vvv(vars[head->o]));
+		return fact(vars.at(head->s), vars.at(head->o));
 	}
 	if(body.size() == 1)
 	{
@@ -863,17 +885,16 @@ void yprover::query(const old::qdb& goal){
 	old::nodeid pr = g[0]->p;
 
 	if (pred_index.find(pr) != pred_index.end()) {
-		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
 		varmap vars;
 		atom(g[0]->s, vars);
 		atom(g[0]->o, vars);
-
 		TRACE(dout << vars.size() << " vars" << endl;)
 
-		Var *s = vvv(vars[g[0]->s]);
-		Var *o = vvv(vars[g[0]->o]);
+		Thing  *s = vars.at(g[0]->s);
+		Thing  *o = vars.at(g[0]->o);
 
-		//THIS
+		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
+
 		auto coro = pred(g[0])();
 
 		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with  " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
@@ -902,7 +923,7 @@ void yprover::query(const old::qdb& goal){
 }
 
 
-
+#ifdef stuff
 
 /*
 void yprover::clear_results()
@@ -1106,3 +1127,5 @@ function<bool()> nodeComp(Node *n){
 }*/
 
 //actually maybe only the join combinators need to do a lookup
+
+#endif
