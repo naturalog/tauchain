@@ -105,8 +105,8 @@ public:
 		TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl);
 		if(isBound)
 		{
-			TRACE(dout << "isBound" << endl);
-			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl);
+			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
+			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
 			return generalunifycoro(this, arg);
 		}
 		else
@@ -340,7 +340,7 @@ join unifjoin(join a, join b)
 function<bool()> listunifycoro(List *a, List *b)
 {
 	setproc(L"listunifycoro");
-	TRACE(dout << "im in ur listunifycoro" << endl);
+	TRACE(dout << "..." << endl);
 
 	//gotta join up unifcoros of vars in the lists
 	if(a->nodes.size() != b->nodes.size())
@@ -376,38 +376,55 @@ function<bool()> listunifycoro(List *a, List *b)
 	(returns an iterator)
 */
 function<bool()> generalunifycoro(Thing *a, Thing *b){
+	setproc(L"generalunifycoro");
+	TRACE(dout << "..." << endl;)
+
+	if (a == b)
+		return succeed();
+	
+
+	//# First argument is a variable
+	TRACE(dout << "a: " << a << ", " << a->getValue() << endl;)	
 	a = a->getValue();
-
 	Var *a_var = dynamic_cast<Var*>(a);
-	if (a_var)
+	if (a_var){
+		TRACE(dout << "arg1 is a variable." << endl;) 
 		return a_var->unifcoro(b);
+	}	
 
+	//# Second argument is a variable
 	b = b->getValue();
-
 	Var *b_var = dynamic_cast<Var*>(b);
-	if (b_var)
+	if (b_var){
+		TRACE(dout << "arg2 is a variable." << endl;)
 		return b_var->unifcoro(a);
+	}
 
-	//# Arguments are "normal" types.
+	//# Both arguments are nodes.
 	Node *n1 = dynamic_cast<Node*>(a);
 	Node *n2 = dynamic_cast<Node*>(b);
-
 	if(n1&&n2)
 	{
+		TRACE(dout << "Both args are nodes." << endl;)
 		if(n1->eq(n2))
 			return succeed();
 		else
 			return dbg_fail();
 	}
 	
+	//# Both arguments are lists
 	List *l1 = dynamic_cast<List*>(a);
 	List *l2 = dynamic_cast<List*>(b);
-
-	if (l1&&l2)
+	if (l1&&l2){
+		TRACE(dout << "Both args are lists." << endl;)
+//i see it doesnt happen thru listunifycoro.....
 		return listunifycoro(l1, l2);	
+	}
 
+	assert(false);
+	//# Other combinations cannot unify. Fail.
+	TRACE(dout << "Some non-unifying combination. Fail." << endl;)
 	return dbg_fail();
-	
 }
 
 
@@ -426,7 +443,7 @@ comp fact(Thing *s, Thing *o){
 			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
 			while(c1()){
 				TRACE(dout << "MATCH c1() " << endl);
-			c2 = generalunifycoro(Do,o);
+				c2 = generalunifycoro(Do,o);
 
 				while(c2()){
 					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
@@ -616,14 +633,17 @@ join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Th
 			case 0:
 				TRACE( dout << sprintPred(L"a()",a) << endl);
 				TRACE( dout << sprintPred(L"b()",b) << endl);
+
 				ac = preds[a]();
 				while(ac(w,x)) {
 					TRACE(dout << "MATCH A." << endl);
+
 					bc = preds[b]();
 					while (bc(y, z)) {
 						TRACE(dout << "MATCH." << endl);
 						entry = 1;
 						return true;
+
 			case 1: ;
 					TRACE(dout << "RE-ENTRY" << endl);
 					}
