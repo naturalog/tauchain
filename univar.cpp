@@ -209,16 +209,29 @@ public:
 
 
 wstring sprintVar(wstring label, Thing *v){
-	wstringstream s;
-	s << label << ": (" << v << ")" << v->str();
-	return s.str();
+	wstringstream wss;
+	wss << label << ": (" << v << ")" << v->str();
+	return wss.str();
 }
 
 wstring sprintPred(wstring label, old::nodeid pred){
-	wstringstream s;
-	s << label << ": (" << pred << ")" << old::dict[pred];
-	return s.str();
+	wstringstream wss;
+	wss << label << ": (" << pred << ")" << old::dict[pred];
+	return wss.str();
 }
+
+wstring sprintThing(wstring label, Thing *t){
+	wstringstream wss;
+	wss << label << ": [" << t << "]" << t->str();
+	return wss.str();
+}
+
+wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
+	wstringstream wss;
+	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
+	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
+	return wss.str();
+} 
 
 bool fail()
 {
@@ -601,6 +614,8 @@ join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Th
 			TRACE(dout << "round: " << round << endl);
 			switch(entry){
 			case 0:
+				TRACE( dout << sprintPred(L"a()",a) << endl);
+				TRACE( dout << sprintPred(L"b()",b) << endl);
 				ac = preds[a]();
 				while(ac(w,x)) {
 					TRACE(dout << "MATCH A." << endl);
@@ -631,7 +646,8 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 	int round=0;
 	// proxy coro that unifies s and o with s and o vars
 	function<bool()> suc, ouc;
-	return [ suc, ouc, entry, c0_gen, c0, s,o,round]   (Thing *Ds , Thing *Do) mutable
+
+	return [ suc, ouc, entry, c0_gen, c0, s, o, round]   (Thing *Ds , Thing *Do) mutable
 	{
 		setproc(L"ruleproxy lambda");
 		round++;
@@ -640,26 +656,23 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 		{
 		case 0:
 			entry++;
-			//hrrmm
-			suc = generalunifycoro(Ds, s);
-
-			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
-			TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
-			while(suc()) {//tbh i never went thoroughly thru the join stuff you did
+			TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);
+	
+			suc = generalunifycoro(Ds, s);			
+			while(suc()) {
 				TRACE(dout << "After suc() -- " << endl);
-				TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl)
-				TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl)
-				ouc = generalunifycoro(Do, o);
+				TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);
 
+				ouc = generalunifycoro(Do, o);
 				while (ouc()) {
 					TRACE(dout << "After ouc() -- " << endl);
-					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
-					TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
+					TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl); 
+
 					c0 = c0_gen();
 					while (c0()) {
 						TRACE(dout << "After c0() -- " << endl);
-						TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << endl); 
-						TRACE(dout << "Do: " << Do << "/" << Do->str() << ", o: " << o << "/" << o->str() << endl);
+						TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);					
+	
 						entry = 1;
 						return true;
 						TRACE(dout << "MATCH." << endl);
@@ -679,35 +692,37 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 
 join_gen halfjoin(old::nodeid a, Thing* w, Thing* x, join_gen b){
 	setproc(L"halfjoin");
-	TRACE(dout << "..." << endl);
+	TRACE(dout << "..." << endl;)
+
 	int entry = 0;
 	int round = 0;
+
 	comp ac;
 	join bc;
+
 	return [a, w, x, b, entry, round, ac, bc]() mutable{
 		setproc(L"halfjoin gen");
 		return [a, w, x, b, entry, round,ac,bc]() mutable{
 			setproc(L"halfjoin lambda");
 			round++;
-			TRACE(dout << "round=" << round << endl);
+			TRACE(dout << "round=" << round << endl;)
 			switch(entry){
 			case 0:
-				TRACE(dout << "Is this our bad function call?" << endl);
+				TRACE(dout << sprintPred(L"a()",a) << endl;)
 				ac = preds[a]();
-				TRACE(dout << "Nope." << endl);
 				while(ac(w,x)){
-					TRACE(dout << "MATCH a(w,x)" << endl);
+					TRACE(dout << "MATCH a(w,x)" << endl;)
 					bc = b();
 					while(bc()){
 						entry = 1;
-						TRACE( dout << "MATCH." << endl);
+						TRACE( dout << "MATCH." << endl;)
 						return true;
 			case 1: ;
-				TRACE(dout << "RE-ENTRY" << endl);
+				TRACE(dout << "RE-ENTRY" << endl;)
 				  }
 				}
 				entry = 666;
-				TRACE(dout << "DONE." << endl);
+				TRACE(dout << "DONE." << endl;)
 				return false;
 			default:
 				assert(false);
@@ -766,22 +781,12 @@ comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body){
 		Thing  *b = vars.at(body[k]->o);
 		Thing  *c = vars.at(body[k+1]->s);
 		Thing  *d = vars.at(body[k+1]->o);
-		
-		join_gen c0 = joinwxyz(body[0]->p, body[1]->p, a,b,c,d);
+		join_gen c0 = joinwxyz(body[k]->p, body[k+1]->p, a,b,c,d);
+
 		for(int i = k-1; i >= 0; i--){
 			Thing  *vs = vars.at(body[i]->s);
 			Thing  *vo = vars.at(body[i]->o);
-			/*
-			if(preds.find(body[i]->p) == preds.end()){
-				TRACE(dout << old::dict[body[i]->p] << "/" << body[i]->p << " was not found. Failing." <<  endl);
-				assert(false);
-			}
-			pred_t p = preds[body[i]->p];
-			if(!p){
-				TRACE(dout << "[" << body[i]->p << "]" << old::dict[body[i]->p] << " found, but not constructed. Failing." << endl); 
-				assert(false);
-			}
-			*/	
+
 			c0 = halfjoin(body[i]->p, vs, vo, c0);
 		}
 		return ruleproxy(c0, s, o);
@@ -837,6 +842,8 @@ void compile_kb(old::prover *p)
 	setproc(L"generate_pred_index");
 	TRACE(dout << "..." << endl);
 	TRACE(dout << "# of rules: " << p->heads.size() << endl);
+
+	//old::prover --> pred_index (preprocessing step)
 	for (size_t i = 0; i < p->heads.size(); i++)
 	{
 		old::nodeid pr = p->heads[i]->p;
@@ -847,6 +854,8 @@ void compile_kb(old::prover *p)
 
 		pred_index[pr].push_back(i);
 	}
+
+	//pred_index --> preds (compilation step)
 	for(auto x: pred_index){
 		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl);
 		pred_t tmp_pred = pred(x.first);
@@ -873,7 +882,7 @@ void thatsAllFolks(int nresults){
 
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
-	op=p = new old::prover(qkb, false);
+	op = p = new old::prover(qkb, false);
 	compile_kb(p);
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
@@ -893,22 +902,23 @@ void yprover::query(const old::qdb& goal){
 		atom(g[0]->o, vars);
 		TRACE(dout << vars.size() << " vars" << endl;)
 
-		Thing  *s = vars.at(g[0]->s);
-		Thing  *o = vars.at(g[0]->o);
+		Thing *s = vars.at(g[0]->s);
+		Thing *o = vars.at(g[0]->o);
 
 		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
 
 		auto coro = preds[pr]();
 
-		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with  " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
+		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
 
 		// this is weird, passing the args over and over
 		while (coro(s,o)) {
 			nresults++;
 
 			dout << KCYN << L"RESULT " << KNRM << nresults << ":";
-			dout << old::dict[g[0]->s->p] << L": " << s << ", " << s->str() << ",   ";
-			dout << old::dict[g[0]->o->p] << L": " << o << ", " << o->str() << endl;
+			
+			//get actually Subject/Object names from old::dict
+			dout << sprintThing(L"Subject", s) << ", " << sprintThing(L"Object", o) << endl;
 			
 			if (nresults >= 1234) {
 				dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;
