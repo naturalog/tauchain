@@ -29,7 +29,7 @@ query
 #output: var() :eq var(zero)
 
 #working
-zero :eq zero.
+#zero :eq zero.
 #fin.
 fin.
 #Expected results:

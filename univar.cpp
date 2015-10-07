@@ -417,11 +417,10 @@ function<bool()> generalunifycoro(Thing *a, Thing *b){
 	List *l2 = dynamic_cast<List*>(b);
 	if (l1&&l2){
 		TRACE(dout << "Both args are lists." << endl;)
-//i see it doesnt happen thru listunifycoro.....
 		return listunifycoro(l1, l2);	
 	}
 
-	assert(false);
+	//assert(false);
 	//# Other combinations cannot unify. Fail.
 	TRACE(dout << "Some non-unifying combination. Fail." << endl;)
 	return dbg_fail();
@@ -575,10 +574,32 @@ pred_t pred(old::nodeid pr)
 {
 	setproc(L"pred");
 	TRACE(dout << "constructing pred proxy for (" << pr << ")" << old::dict[pr] << endl);
-	comp y = compile_pred(pr);
+	comp y = compile_pred(pr);//you think theres any advantage to compiling it aot like this?
+	//well, in our case yes, we could compile on-demand, but we were compiling on-demand every invocation
+	//so the time-complexities here aren't even comparable
+	//one is finite & one-time, the other is basically that over and over and over again
+	//mkay but you forgot about variables? ? this is variation of your predGens lookup table mechanism
+	//yes
+	//i'm not sure where the difference arises variables, nodes, all the pointers to stuff we new
+	//with just aot, one instance of pred with one instances of variables could be invoked recursively one
+	//inside another, ok then we'll handle that at the var level
+
+	/*well...
+	anyway, you think you agree with me in how i think this works? i'm not 100% on how its working me neither
+	i mean..im sure we capture these pointers and then we try to reuse them from two different instances of the pred,
+	but, yes i agree
+	but im totally not sure if thats a bad thing
+	ok im pretty sure it is, but, i think i have an idea how to fix it
+	hmm, ok i think i see generally what the problem is, i'll need to think about it
+	i havent given much thought to it yet...
+	we capture pointers to variables which must be being kept around somewhere
+	*/
+
 	return [pr, y]() mutable{
 		setproc(L"pred lambda");
 		TRACE(dout << "nodeid: " << pr << endl);
+
+		y = compile_pred(pr);//you think theres any advantage to compiling it aot like this?
 
 		return y;
 	};
@@ -599,7 +620,7 @@ join_gen joinOne(old::nodeid a, Thing* w, Thing *x){
 			switch(entry){
 			case 0:
 				ac = preds[a]();
-				TRACE(dout << "OUTER -- w: " << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
+				TRACE(dout << "OUTER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
 				while(ac(w,x)){
 					TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
 					entry = 1;
@@ -678,17 +699,19 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 			entry++;
 			TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);
 	
-			suc = generalunifycoro(Ds, s);			
+			suc = generalunifycoro(Ds, s);
+			ouc = generalunifycoro(Do, o);
+			c0 = c0_gen();			
 			while(suc()) {
 				TRACE(dout << "After suc() -- " << endl);
 				TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);
 
-				ouc = generalunifycoro(Do, o);
+				//ouc = generalunifycoro(Do, o);
 				while (ouc()) {
 					TRACE(dout << "After ouc() -- " << endl);
 					TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl); 
 
-					c0 = c0_gen();
+					//c0 = c0_gen();
 					while (c0()) {
 						TRACE(dout << "After c0() -- " << endl);
 						TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);					
