@@ -60,6 +60,8 @@ struct _setproc {
 
 extern int _indent;
 
+string listid();
+
 }
 
 #endif

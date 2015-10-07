@@ -366,11 +366,34 @@ int get_qdb(qdb &kb, string fname){
 }
 
 
-void shouldbe(qdb &kb) {
-	//if (qdbs_same(kb, tauProver->results))
-		dout << KGRN << "PASS" /*<< KNRM << endl;
-	//else
-		dout */<< KRED << "FAIL" << KNRM << endl;
+bool qdbs_equal(qdb &a, qdb &b) {
+	dout << "a.first.size  b.first.size  a.second.size  b.second.size" << endl;
+	dout << a.first.size() << " " << b.first.size() << " " << a.second.size() << " " << b.second.size() << endl;
+	if(a.first.size() != b.first.size() || a.second.size() != b.second.size())
+		return false;
+	dout << "maybe..";
+	dout << "A:" << endl;
+	dout << a;
+	dout << "B:" << endl;
+	dout << b;
+	return true;
+}
+
+bool _shouldbe(qdb &sb) {
+	if (sb.first.empty() && sb.second.empty()) {
+		return tauProver->results.empty();
+	}
+	auto r = tauProver->results.front();
+	tauProver->results.pop_front();
+
+	return qdbs_equal(r, sb);
+}
+
+void shouldbe(qdb &sb) {
+	if (_shouldbe(sb))
+		dout << KGRN << "PASS" << KNRM << endl;
+	else
+		dout << KRED << "FAIL" << KNRM << endl;
 }
 
 
