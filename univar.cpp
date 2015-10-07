@@ -28,10 +28,6 @@ class Var;
 typedef function<bool(Thing*,Thing*)> comp;
 
 
-typedef function<comp()> generator;
-std::map<old::nodeid, generator> preds;
-
-
 typedef function<bool()> join;
 typedef function<join()> join_gen;
 
@@ -45,7 +41,8 @@ function<bool()> generalunifycoro(Thing*, Thing*);
 void atom(old::termid n, varmap &vars);
 
 
-//std::unordered_map<old::termid, generator> preds;
+typedef function<comp()> pred_t;
+std::unordered_map<old::termid, pred_t> preds;
 
 //std::unordered_map<old::nodeid, Var*> globals;
 
@@ -167,7 +164,7 @@ public:
 
 
 Var * vvv(Var *v)
-{//enienienienienienieni
+{//this function doesnt seem to make any difference, luckily...but lets leave it here for now
 	Var *r = new Var();
 	r->isBound = true;
 	r->value = v;
@@ -493,6 +490,7 @@ void atom(old::termid n, varmap &vars){
 
 comp rule(old::termid head, old::prover::termset body);
 
+
 comp compile_pred(old::termid x) {
 	setproc(L"compile_pred");
 	rulesindex rs = pred_index[x->p];
@@ -521,8 +519,7 @@ comp compile_pred(old::termid x) {
 }
 
 
-typedef function<comp()> pred_t;
-
+//This appears to be working properly
 pred_t pred(old::termid x)
 {
 	setproc(L"pred");
@@ -656,9 +653,6 @@ comp ruleproxy(join_gen c0_gen, Var *s, Var *o){
 		}
 	};
 }
-//how does this theme work for you? works great for me cool me too.
-//anyway im tired im gonna lay down for a while i think...i m sure we will catch the bug with deep enough studying of the logs
-//yea, i'm just gonna keep chiseling away at it. we'll get it eventually cool
 
 join_gen halfjoin(pred_t a, Var* w, Var* x, join_gen b){
 	setproc(L"halfjoin");
@@ -803,6 +797,7 @@ comp rule(old::termid head, old::prover::termset body)
 	}
 }
 
+//This is still fine for now
 void generate_pred_index(old::prover *p)
 {
 	setproc(L"generate_pred_index");
@@ -818,12 +813,18 @@ void generate_pred_index(old::prover *p)
 
 		pred_index[pr].push_back(i);
 	}
+	for(auto x: pred_index){
+		
+	}
+	/*
 	for(auto x : pred_index){
 		TRACE(dout << "Pred: " << old::dict[x.first] << ", # of rules: " << x.second.size() << endl);
 	}
+	*/
 
 }
 
+//Irrelevant
 void thatsAllFolks(int nresults){
 	dout << "That's all, folks, ";
 	if(nresults == 0){
@@ -834,13 +835,24 @@ void thatsAllFolks(int nresults){
 	dout << nresults << KNRM << " results." << endl;
 }
 
+void compile_kb(){
+	for(auto x: pred_index){
+		preds[x.first] = pred(x.first);
+	}	
+}
+
+//This seems to be working properly
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
 	op=p = new old::prover(qkb, false);
 	generate_pred_index(p);
+	compile_kb();
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
+
+//Let's switch to AOT and see what happensk
+//This is not working properly
 void yprover::query(const old::qdb& goal){
 	dout << KGRN << "Query." << KNRM << endl;
 
@@ -861,9 +873,12 @@ void yprover::query(const old::qdb& goal){
 		Var *s = vvv(vars[g[0]->s]);
 		Var *o = vvv(vars[g[0]->o]);
 
+		//THIS
 		auto coro = pred(g[0])();
 
 		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with  " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
+
+		//THIS
 		// this is weird, passing the args over and over
 		while (coro(s,o)) {
 			nresults++;
