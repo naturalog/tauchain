@@ -900,6 +900,36 @@ void thatsAllFolks(int nresults){
 	dout << nresults << KNRM << " results." << endl;
 }
 
+
+
+pnode thing2node(Thing *t, qdb &r) {
+	auto v = t->getValue();
+	List *l = dynamic_cast<List *>(v);
+	if (l) {
+		const wstring head = listid();
+		for (auto x: l->nodes)
+			r.second[head].emplace_back(thing2node(x, r));
+		return mkbnode(pstr(head));
+	}
+	Node *n = dynamic_cast<Node *>(v);
+	if (n)
+		return std::make_shared<old::node>(old::dict[n->value->p]);
+	assert(false);
+}
+
+
+void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
+{
+	r.first[L"@default"]->push_back(
+			make_shared<old::quad>(
+					old::quad(
+				thing2node(s, r),
+				std::make_shared<old::node>(old::dict[p]),
+				thing2node(o, r))));
+}
+
+
+
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
 	op = p = new old::prover(qkb, false);
@@ -936,10 +966,14 @@ void yprover::query(const old::qdb& goal){
 			nresults++;
 
 			dout << KCYN << L"RESULT " << KNRM << nresults << ":";
-			
 			//get actually Subject/Object names from old::dict
 			dout << sprintThing(L"Subject", s) << ", " << sprintThing(L"Object", o) << endl;
-			
+
+			qdb r;
+			r.first[L"@default"] = old::mk_qlist();
+			add_result(r, s, o, pr);
+			results.emplace_back(r);
+
 			if (nresults >= 1234) {
 				dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;
 				break;
@@ -953,42 +987,6 @@ void yprover::query(const old::qdb& goal){
 		dout << "Predicate '" << old::dict[pr] << "' not found, " << KRED << "0" << KNRM << " results." << endl;
 	}
 }
-
-
-#ifdef stuff
-
-/*
-void yprover::clear_results()
-{
-
-	results.first[L"@default"] = old::mk_qlist();
-
-
-pnode thing2node(Thing *t, qdb &r) {
-	auto v = t->getValue();
-	List *l = dynamic_cast<List *>(v);
-	if (l) {
-		const wstring head = id();
-		for (auto x: l->nodes)
-			r.second[head].push_back();
-		return mkbnode(pstr(head));
-	}
-	Node *n = dynamic_cast<Node *>(v);
-	if (n)
-		return std::make_shared<old::node>(old::dict[n1->value]);
-}
-
-
-void add_result(qdb &r, Thing *s, Thing o, old::nodeid p)
-{
-	old::pquad q = make_shared<old::quad>(old::quad(
-				thing2node(
-				std::make_shared<old::node>(old::dict[pr]),
-				std::make_shared<old::node>(old::dict[n2->value])));
-				results.first[L"@default"]->push_back(q);
-			}
-	r.first[L"@default"]->push_back(q)
-*/
 
 
 /*
@@ -1704,5 +1702,3 @@ function<bool()> nodeComp(Node *n){
 }*/
 
 //actually maybe only the join combinators need to do a lookup
-
-#endif

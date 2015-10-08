@@ -623,15 +623,6 @@ public:
     //bool has_keywords = false;
     //std::vector<string> keywords;
 
-    //generate a hopefully unique bnode name for a new list
-    string listid()
-    {
-        static int curid = 0;
-        std::wstringstream ss;
-        ss << L"_:list" << curid++;
-        return ss.str();
-    };
-
     prover::nodeids get_dotstyle_list(termid l) {
         std::list<nodeid> r;
         prvr->get_dotstyle_list(l, r);

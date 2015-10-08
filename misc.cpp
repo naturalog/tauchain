@@ -442,4 +442,14 @@ string prover::ruleset::format() const {
 	ss << L']';
 	return ss.str();
 }
+
+    //generate a hopefully unique bnode name for a new list
+    string listid()
+    {
+        static int curid = 0;
+        std::wstringstream ss;
+        ss << L"_:list" << curid++;
+        return ss.str();
+    };
 }
+
