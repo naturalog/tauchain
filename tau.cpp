@@ -369,8 +369,8 @@ int get_qdb(qdb &kb, string fname){
 bool qdbs_equal(qdb &a, qdb &b) {
 	dout << "a.first.size  b.first.size  a.second.size  b.second.size" << endl;
 	dout << a.first.size() << " " << b.first.size() << " " << a.second.size() << " " << b.second.size() << endl;
-	if(a.first.size() != b.first.size() || a.second.size() != b.second.size())
-		return false;
+	//if(a.first.size() != b.first.size() || a.second.size() != b.second.size())
+	//	return false;
 	dout << "maybe..";
 	dout << "A:" << endl;
 	dout << a;
