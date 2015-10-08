@@ -921,11 +921,14 @@ pnode thing2node(Thing *t, qdb &r) {
 void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 {
 	r.first[L"@default"]->push_back(
-			make_shared<old::quad>(
-					old::quad(
+		make_shared<old::quad>(
+			old::quad(
 				thing2node(s, r),
 				std::make_shared<old::node>(old::dict[p]),
-				thing2node(o, r))));
+				thing2node(o, r)
+			)
+		)
+	);
 }
 
 
