@@ -438,6 +438,29 @@ function<bool()> generalunifycoro(Thing *a, Thing *b){
 	return dbg_fail();
 }
 
+bool ep_check(Thing *a, Thing *b){
+	List *l1 = dynamic_cast<List*>(a);
+	List *l2 = dynamic_cast<List*>(b);
+	if(l1&&l2){
+		if(l1->nodes.size() == l2->nodes.size()){
+			for(size_t i=0;i<l1->nodes.size();i++){
+				if(!ep_check(l1->nodes[i],l2->nodes[i])){
+					return false;
+				}
+			}
+			return true;
+		}else{
+			return false;
+		}
+	}else if(!l1 && l2){
+		return false;
+	}else if(l1 && !l2){
+		return false;
+	}else{
+		return a->ep_value == b->ep_value;
+	}
+}
+
 
 comp fact(Thing *s, Thing *o){
 	setproc(L"fact");
@@ -643,7 +666,9 @@ pred_t pred(old::nodeid pr)
 					}*/
 					//while(x.first == Ds)
 					//	while(x.second == Do)
-					hit = (x.first->ep_value == Ds->ep_value) && (x.second->ep_value == Do->ep_value);
+					hit = ep_check(x.first,Ds) && ep_check(x.second,Do);
+					//hit = (x.first->ep_value == Ds->ep_value) && (x.second->ep_value == Do->ep_value);
+					
 					if(hit)
 						break;
 				}
