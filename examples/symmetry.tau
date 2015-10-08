@@ -1,24 +1,8 @@
 kb
 a :foo b.
-#this is really recursive//yeah this really calls for ep
-#was bout to say the same
-#lets do some more testing
 {?a :foo ?b} => {?b :foo ?a}.
 fin.
 
 query
-?WHAT :foo ?WHAT.
+?WHAT :foo ?WHATELSE.
 fin.
-
-#query
-#?WHAT :foo ?WHATELSE.
-#fin.
-
-#a :foo ?WHAT.
-#?WHAT :foo b.
-#?WHAT :foo a.
-#b :foo ?WHAT.
-#a :foo b.
-#b :foo a.
-
-#fin.

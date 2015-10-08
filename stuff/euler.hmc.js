@@ -124,6 +124,18 @@ function prove(goal, maxNumberOfSteps) {
             if (unify(t, c.env, rl.head, r.env, true)) {
                 //it does!  Check it for a euler path...
                 var ep = c;  // euler path
+
+body is a seq of preds
+we begin iteration of one not
+we put the arguments (unbound vars to the table)
+we begin iteration of second not
+the vars are bound at this moment
+we unify our unbound args with them, passess
+
+
+
+
+
                 //Walk up the evidence tree and see if we find a frame already in the tree that is the same as this "potential next frame"
                 //If we do find that this "next" frame was already seen this indicates that we are about to enter a proof state that we have already been in
                 //This would create a non-productive loop, so if we do encounter such a case we simply fail out of the match and continue on

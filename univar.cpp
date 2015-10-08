@@ -21,6 +21,7 @@ class Thing{
 public:
 	virtual Thing *getValue(){return this;};
 	virtual wstring str(){assert(false);}
+	old::termid ep_value;
 };
 
 class Var;
@@ -46,6 +47,10 @@ std::unordered_map<old::nodeid, pred_t> preds;
 
 //std::unordered_map<old::nodeid, Var*> globals;
 
+typedef std::pair<Thing*,Thing*> thingthingpair;
+typedef std::unordered_map<old::nodeid, std::vector<thingthingpair>> ep_t;
+
+ep_t ep;
 
 
 class Node:public Thing
@@ -60,6 +65,7 @@ public:
 	}
 	Node(old::termid s)
 	{
+		ep_value = s;
 		value = s;
 	}
 	wstring str(){return op->format(value);}
@@ -78,6 +84,12 @@ public:
 			return value;
 		else
 			return this;
+	}
+
+	Var(){}
+
+	Var(old::termid n){
+		ep_value = n;	
 	}
 
 
@@ -102,7 +114,7 @@ public:
 	//lets break this up into a couple functions for readability
 	function<bool()> unifcoro(Thing *arg){
 		setproc(L"Var.unifcoro");
-		TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl);
+		TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
 		if(isBound)
 		{
 			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
@@ -111,21 +123,21 @@ public:
 		}
 		else
 		{
-			TRACE(dout << "!Bound" << endl);
+			TRACE(dout << "!Bound" << endl;)
 
 			Thing * argv = arg->getValue();
 
-			TRACE(dout << "value=" << argv << "/" << argv->str() << endl);
+			TRACE(dout << "value=" << argv << "/" << argv->str() << endl;)
 
 			if (argv == this)
 			{
-				TRACE(dout << "argv == this" << endl);
+				TRACE(dout << "argv == this" << endl;)
 				//# We are unifying this unbound variable with itself, so leave it unbound.^M
 				int entry = 0;
 				return [this, entry, argv]() mutable{
 					assert(!isBound);
 					setproc(L"unify lambda 1");
-					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" << argv->str() << endl);
+					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" << argv->str() << endl;)
 					switch(entry){
 						case 0:
 							//value = argv;//??? // like, this.value?
@@ -141,25 +153,25 @@ public:
 			}
 			else
 			{
-				TRACE(dout << "argv != this" << endl);
+				TRACE(dout << "argv != this" << endl;)
 
 				int entry = 0;
 				return [this, entry, argv]() mutable{
 
 					setproc(L"unify lambda 2");
-					TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" << argv->str() << endl);
+					TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" << argv->str() << endl;)
 
 					switch(entry)
 					{
 							case 0:
-							TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" << argv->str() << endl);
+							TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" << argv->str() << endl;)
 							assert(!isBound);
 							isBound = true;
 							value = argv;
 							entry = 1;
 							return true;
 						case 1:
-							TRACE(dout << "unbinding " << this << "/" << this->str() << endl);
+							TRACE(dout << "unbinding " << this << "/" << this->str() << endl;)
 							assert(isBound);
 							isBound = false;
 							entry = 666;
@@ -311,12 +323,12 @@ function<bool()> succeed()
 join unifjoin(join a, join b)
 {
 	setproc(L"unifjoin");
-	TRACE(dout << "..." << endl);
+	TRACE(dout << "..." << endl;)
 	
 	int entry = 0;
 	return [a,b, entry]() mutable{
 		setproc(L"unifjoin lambda");
-		TRACE(dout << "entry = " << entry << endl);
+		TRACE(dout << "entry = " << entry << endl;)
 
 		switch(entry)
 		{
@@ -340,7 +352,7 @@ join unifjoin(join a, join b)
 function<bool()> listunifycoro(List *a, List *b)
 {
 	setproc(L"listunifycoro");
-	TRACE(dout << "..." << endl);
+	TRACE(dout << "..." << endl;)
 
 	//gotta join up unifcoros of vars in the lists
 	if(a->nodes.size() != b->nodes.size())
@@ -434,27 +446,27 @@ comp fact(Thing *s, Thing *o){
 	function<bool()> c2;
 	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
 		setproc(L"fact lambda");
-		TRACE(dout << "im in ur fact,  entry: " << entry << endl);
+		TRACE(dout << "im in ur fact,  entry: " << entry << endl;)
 
 		switch(entry){
 		case 0:
 			c1 = generalunifycoro(Ds,s);
-			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
+			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
 			while(c1()){
-				TRACE(dout << "MATCH c1() " << endl);
+				TRACE(dout << "MATCH c1() " << endl;)
 
 				c2 = generalunifycoro(Do,o);
 				while(c2()){
-					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl);
+					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
 					entry = 1;
-					TRACE(dout << "MATCH" << endl);
+					TRACE(dout << "MATCH" << endl;)
 					return true;
 		case 1: ;
-		TRACE(dout << "RE-ENTRY" << endl);
+		TRACE(dout << "RE-ENTRY" << endl;)
 				}
 			}
 			entry = 666;
-			TRACE(dout << "DONE." << endl);
+			TRACE(dout << "DONE." << endl;)
 			return false;
 		default:
 			assert(false);
@@ -464,20 +476,20 @@ comp fact(Thing *s, Thing *o){
 
 comp seq(comp a, comp b){
 	setproc(L"seq");
-	TRACE(dout << ".." << endl);
+	TRACE(dout << ".." << endl;)
 	int entry = 0;
 	int round = 0;
 	comp ac, bc;
 	return [a, b, entry, round, ac, bc](Thing *Ds, Thing *Do) mutable{
 		setproc(L"seq lambda");	
 		round++;
-		TRACE(dout << "round: " << round << endl);
+		TRACE(dout << "round: " << round << endl;)
 		
 		switch(entry){
 		case 0:
 			//ac = a;
 			while(a(Ds, Do)){
-				TRACE(dout << "MATCH A." << endl);
+				TRACE(dout << "MATCH A." << endl;)
 				entry = 1;
 				return true;
 		case 1: ;
@@ -486,12 +498,12 @@ comp seq(comp a, comp b){
 			//bc = a;
 			while(b(Ds, Do)){
 				entry = 2;
-				TRACE(dout << "MATCH B." << endl);
+				TRACE(dout << "MATCH B." << endl;)
 				return true;
 		case 2:	;
 			}
 
-			TRACE(dout << "SWITCH DONE." << endl);
+			TRACE(dout << "SWITCH DONE." << endl;)
 
 			entry = 666;
 			return false;
@@ -499,7 +511,7 @@ comp seq(comp a, comp b){
 		default:
 			assert(false);
 		}
-		TRACE(dout << "Why are we here?" << endl);
+		TRACE(dout << "Why are we here?" << endl;)
 		assert(false);
 	};
 }
@@ -507,7 +519,7 @@ comp seq(comp a, comp b){
 
 void atom(old::termid n, varmap &vars){
 	setproc(L"atom");
-	TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl);
+	TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl;)
 	if (vars.find(n) != vars.end())
 		return;
 	if (n->p>0)
@@ -515,25 +527,25 @@ void atom(old::termid n, varmap &vars){
 
 		if(*old::dict[n->p].value == L".")
 		{
-			TRACE(dout << "list" << endl);
+			TRACE(dout << "list" << endl;)
 			std::vector<Thing*> nodes;
 			for(auto y: op->get_dotstyle_list(n)) {
-				TRACE(dout << "item..." << endl);
+				TRACE(dout << "item..." << endl;)
 				atom(y, vars);
 				nodes.push_back(vars.at(y));
 			}
 			auto r = vars[n] = new List(nodes);
-			TRACE(dout << "new List: " << r << endl);
+			TRACE(dout << "new List: " << r << endl;)
 		}
 		else {
 			auto r = vars[n] = new Node(n);
-			TRACE(dout << "new Node: " << r << endl);
+			TRACE(dout << "new Node: " << r << endl;)
 		}
 
 	}
 	else {
-		auto r = vars[n] = new Var();
-		TRACE(dout << "new Var: " << r << endl);
+		auto r = vars[n] = new Var(n);
+		TRACE(dout << "new Var: " << r << endl;)
 	}
 }
 
@@ -544,7 +556,7 @@ comp rule(old::termid head, old::prover::termset body);
 comp compile_pred(old::nodeid pr) {
 	setproc(L"compile_pred");
 	rulesindex rs = pred_index[pr];
-	TRACE(dout << "# of rules: " << rs.size() << endl);
+	TRACE(dout << "# of rules: " << rs.size() << endl;)
 	
 	comp r;
 	bool first = true;
@@ -573,8 +585,9 @@ comp compile_pred(old::nodeid pr) {
 pred_t pred(old::nodeid pr)
 {
 	setproc(L"pred");
-	TRACE(dout << "constructing pred proxy for (" << pr << ")" << old::dict[pr] << endl);
-	comp y = compile_pred(pr);//you think theres any advantage to compiling it aot like this?
+	TRACE(dout << "constructing pred proxy for (" << pr << ")" << old::dict[pr] << endl;)
+	comp y;// = compile_pred(pr);
+	//you think theres any advantage to compiling it aot like this?
 	//well, in our case yes, we could compile on-demand, but we were compiling on-demand every invocation
 	//so the time-complexities here aren't even comparable
 	//one is finite & one-time, the other is basically that over and over and over again
@@ -597,32 +610,102 @@ pred_t pred(old::nodeid pr)
 
 	return [pr, y]() mutable{
 		setproc(L"pred lambda");
-		TRACE(dout << "nodeid: " << pr << endl);
+		TRACE(dout << "nodeid: " << pr << endl;)
 
-		//y = compile_pred(pr);//you think theres any advantage to compiling it aot like this?
+		y = compile_pred(pr);
 
-		return y;
+		int entry=0;
+		int round=0;
+
+		size_t index=666666;
+
+		return [index, pr, y, entry, round](Thing *Ds, Thing *Do) mutable{
+		        setproc(L"pred ep lambda");
+			TRACE(dout << "entry=" << entry << endl);
+
+			bool hit = false;
+
+			switch(entry)
+			{
+			case 0:
+				
+				dout << "check ep table" << endl;
+				for (auto x: ep[pr])
+				{
+					dout << x.first->ep_value << "=?=" << Ds->ep_value << endl;
+					dout << x.second->ep_value << "=?=" << Do->ep_value << endl;
+					/*auto ucs = generalunifycoro(x.first, Ds);
+					while(ucs())
+					{
+						auto uco = generalunifycoro(x.second, Do);
+						while(uco())
+							hit = true;
+					}*/
+					//while(x.first == Ds)
+					//	while(x.second == Do)
+					hit = (x.first->ep_value == Ds->ep_value) && (x.second->ep_value == Do->ep_value);
+					if(hit)
+						break;
+				}
+				if(hit)
+				{
+					dout << "ep! ep!" << endl;
+					entry = 666;
+					return false;
+				}
+
+				//add:
+				index = ep[pr].size();
+				dout << "store " << Ds->ep_value << " " << Do->ep_value << endl;
+				ep[pr].push_back(thingthingpair(Ds, Do));
+				//ep[pr].push_back(thingthingpair(Ds->getValue(), Do->getValue()));
+
+				//loop over pred results:
+				while(y(Ds, Do))
+				{
+					entry = 1;
+					return true;
+			case 1: ;
+				}
+
+				//remove:
+				assert(ep[pr].size() > index);
+				{
+					auto xxx = ep[pr][index];
+					TRACE(dout << "erase " << xxx.first << " " << xxx.second << endl);
+				}
+
+				ep[pr].erase(ep[pr].begin()+index);
+				entry = 666;
+				return false;
+			default: ;
+				assert(false);
+			}
+		};
 	};
 }
 
 join_gen joinOne(old::nodeid a, Thing* w, Thing *x){
 	setproc(L"joinOne");
-	TRACE(dout << "..." << endl);
+	TRACE(dout << "..." << endl;)
+
 	int entry = 0;
 	int round = 0;
+
 	comp ac;
+
 	return [a, w, x, entry, round, ac]() mutable{
 		setproc(L"joinOne gen");
 		return [ac, a, w, x, entry, round]() mutable{
 			setproc(L"joinOne λ λ");
 			round++;
-			TRACE(dout << "round=" << round << endl);
+			TRACE(dout << "round=" << round << endl;)
 			switch(entry){
 			case 0:
 				ac = preds[a]();
-				TRACE(dout << "OUTER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
+				TRACE(dout << "OUTER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl;)
 				while(ac(w,x)){
-					TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl);
+					TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl;)
 					entry = 1;
 					return true;
 			case 1: ;
@@ -639,7 +722,7 @@ join_gen joinOne(old::nodeid a, Thing* w, Thing *x){
 
 join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Thing *z){
 	setproc(L"joinwxyz");
-	TRACE(dout << "making a join" << endl);
+	TRACE(dout << "making a join" << endl;)
 	int entry = 0;
 	int round = 0;
 	comp ac;
@@ -649,27 +732,27 @@ join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Th
 		return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
 			setproc(L"join lambda lambda");
 			round++;
-			TRACE(dout << "round: " << round << endl);
+			TRACE(dout << "round: " << round << endl;)
 			switch(entry){
 			case 0:
-				TRACE( dout << sprintPred(L"a()",a) << endl);
-				TRACE( dout << sprintPred(L"b()",b) << endl);
+				TRACE( dout << sprintPred(L"a()",a) << endl;)
+				TRACE( dout << sprintPred(L"b()",b) << endl;)
 				ac = preds[a]();
 				while(ac(w,x)) {
-					TRACE(dout << "MATCH A." << endl);
+					TRACE(dout << "MATCH A." << endl;)
 
 					bc = preds[b]();
 					while (bc(y,z)) {
-						TRACE(dout << "MATCH." << endl);
+						TRACE(dout << "MATCH." << endl;)
 						entry = 1;
 						return true;
 
 			case 1: ;
-					TRACE(dout << "RE-ENTRY" << endl);
+					TRACE(dout << "RE-ENTRY" << endl;)
 					}
 				}
 				entry = 666;
-				TRACE(dout << "DONE." << endl);
+				TRACE(dout << "DONE." << endl;)
 				return false;
 			default:
 				assert(false);
@@ -680,7 +763,7 @@ join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Th
 
 comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 	setproc(L"ruleproxy");
-	TRACE(dout << "ruleproxy" << endl);
+	TRACE(dout << "ruleproxy" << endl;)
 
 	
 	int entry=0;
@@ -693,40 +776,40 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 	{
 		setproc(L"ruleproxy lambda");
 		round++;
-		TRACE(dout << "round=" << round << endl);
+		TRACE(dout << "round=" << round << endl;)
 		switch(entry)
 		{
 		case 0:
 			entry++;
-			TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);
+			TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 	
 			suc = generalunifycoro(Ds, s);
 			ouc = generalunifycoro(Do, o);
 			c0 = c0_gen();			
 			while(suc()) {
-				TRACE(dout << "After suc() -- " << endl);
-				TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);
+				TRACE(dout << "After suc() -- " << endl;)
+				TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
 				//ouc = generalunifycoro(Do, o);
 				while (ouc()) {
-					TRACE(dout << "After ouc() -- " << endl);
-					TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl); 
+					TRACE(dout << "After ouc() -- " << endl;)
+					TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;) 
 
 					//c0 = c0_gen();
 					while (c0()) {
-						TRACE(dout << "After c0() -- " << endl);
-						TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl);					
+						TRACE(dout << "After c0() -- " << endl;)
+						TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)					
 	
 						entry = 1;
 						return true;
-						TRACE(dout << "MATCH." << endl);
+						TRACE(dout << "MATCH." << endl;)
 		case 1: ;
-			TRACE(dout << "RE-ENTRY" << endl);
+			TRACE(dout << "RE-ENTRY" << endl;)
 					}
 				}
 			}
 			entry = 666;
-			TRACE(dout << "DONE." << endl);
+			TRACE(dout << "DONE." << endl;)
 			return false;
 		default:
 			assert(false);
@@ -860,14 +943,14 @@ comp rule(old::termid head, old::prover::termset body)
 void compile_kb(old::prover *p)
 {
 	setproc(L"generate_pred_index");
-	TRACE(dout << "..." << endl);
-	TRACE(dout << "# of rules: " << p->heads.size() << endl);
+	TRACE(dout << "..." << endl;)
+	TRACE(dout << "# of rules: " << p->heads.size() << endl;)
 
 	//old::prover --> pred_index (preprocessing step)
 	for (size_t i = 0; i < p->heads.size(); i++)
 	{
 		old::nodeid pr = p->heads[i]->p;
-		TRACE(dout << "adding rule for pred [" << pr << "]" << old::dict[pr] << "'" << endl);
+		TRACE(dout << "adding rule for pred [" << pr << "]" << old::dict[pr] << "'" << endl;)
 		if(pred_index.find(pr) == pred_index.end()){
 			pred_index[pr] = rulesindex();
 		}
@@ -877,7 +960,7 @@ void compile_kb(old::prover *p)
 
 	//pred_index --> preds (compilation step)
 	for(auto x: pred_index){
-		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl);
+		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl;)
 		pred_t tmp_pred = pred(x.first);
 		if(!tmp_pred){
 			assert(false);
@@ -904,6 +987,7 @@ void thatsAllFolks(int nresults){
 
 pnode thing2node(Thing *t, qdb &r) {
 	auto v = t->getValue();
+
 	List *l = dynamic_cast<List *>(v);
 	if (l) {
 		const wstring head = listid();
@@ -911,10 +995,13 @@ pnode thing2node(Thing *t, qdb &r) {
 			r.second[head].emplace_back(thing2node(x, r));
 		return mkbnode(pstr(head));
 	}
+
 	Node *n = dynamic_cast<Node *>(v);
 	if (n)
 		return std::make_shared<old::node>(old::dict[n->value->p]);
-	assert(false);
+
+	dout << "thing2node: Wtf did you send me?" << endl;
+	//assert(false);
 }
 
 
@@ -958,27 +1045,30 @@ void yprover::query(const old::qdb& goal){
 		Thing *s = vars.at(g[0]->s);
 		Thing *o = vars.at(g[0]->o);
 
-		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl);
+		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl;)
 
 		auto coro = preds[pr]();
 
-		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl);
+		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl;)
 
 		// this is weird, passing the args over and over
 		while (coro(s,o)) {
 			nresults++;
 
 			dout << KCYN << L"RESULT " << KNRM << nresults << ":";
+			
 			//get actually Subject/Object names from old::dict
 			dout << sprintThing(L"Subject", s) << ", " << sprintThing(L"Object", o) << endl;
-
+			
+			
 			qdb r;
 			r.first[L"@default"] = old::mk_qlist();
-			add_result(r, s, o, pr);
+			//add_result(r, s, o, pr);
 			results.emplace_back(r);
+			
 
-			if (nresults >= 1234) {
-				dout << "STOPPING at " << nresults << KRED << " results." << KNRM << endl;
+			if (nresults >= 10) {
+				dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
 				break;
 			}
 
@@ -1114,6 +1204,47 @@ no these would just take the place of our coro generators and would hold coros/r
 */
 
 /*
+19:10 < koo7> hmc, care to sketch out the procedure of compiling a rule?
+19:13 < HMC_Alpha> a single rule?
+19:13 < koo7> yes
+19:15 < HMC_Alpha> if the body length is zero, compile as a fact.  If the body length is 1, compile as a single unification to the body.  If the body length is 2, compile as a single full join.  If the body length is >2, compile the first two statments as a full join, and then compose the result iteratively in a half join with each additional statement.
+19:17 < koo7> so much for the obvious high level stuff
+19:17 < HMC_Alpha> ?
+19:18 < HMC_Alpha> not sure what you mean
+19:49 < koo7> i take a rule, and create a table of variables that are in its head and body, and then go over the body items and compose lambdas that capture those variables...
+19:52 < HMC_Alpha> eh?
+19:52 < HMC_Alpha> the variables in the head become parameters to the coro
+19:52 < HMC_Alpha> the variables in the body become "local" join variables
+19:54 < HMC_Alpha> so you aren't creating any variables "before" the compilation, but during
+
+21:01 < HMC_Alpha> well it optimizes into a single lambda, it seems
+21:01 < HMC_Alpha> pastebin.com/WVa0iAgk
+
+21:18 < HMC_Alpha> fixed: pastebin.com/qDAvP3xE
+21:19 < HMC_Alpha> hrmm, ofc this is not how ours would look, either, we'd always have 4 params on each
+21:19  * HMC_Alpha ponders
+21:20 < HMC_Alpha> so we'd actually be a little closer to the LJW one after all, heh
+21:20 < HMC_Alpha> hrmm
+21:20 < HMC_Alpha> yah I'll have to think about this some more, now I see what you are struggling w/
+
+
+19:54 < koo7> i dont see how the variables propagate across the joins to where they are needed
+19:55 < HMC_Alpha> "propogate to where they are needed"?
+19:55 < HMC_Alpha> I don't understand what you mean
+19:56 < koo7> {?a b ?c} <= {?d e ?f. ?g h ?i. ?a aa ?aaa. ?i h ?g}
+19:56 < koo7> j1 = join(e(?d,?f),h(?g,?i); j2=join(j1, aa(?a, ?aaa)); j3=join(j2, h(?i, ?g));
+19:56 < koo7> now i call j3 with a and c..
+19:57 < koo7> and ?a makes its way across j2 to aa how?
+19:58 < HMC_Alpha> ah, ?a is not a join variable in this example!
+19:58 < koo7> so what?
+19:58 < koo7> its in the head and in one of the body items
+19:59 < HMC_Alpha> so it is passed into the creation of that join step directly, it is not "local" to any join
+19:59 < HMC_Alpha> your join variables there are i and g
+20:00 < HMC_Alpha> brb
+20:02 < koo7> maybe ?a is also needed in another body item. this suggests a need for a table of variables to me?
+20:07 < HMC_Alpha> probably it would help to look at how yieldprolog would actually compile these examples?
+20:08 < HMC_Alpha> meaning feed it to the yp.js as prolog source and see how the resulting coro constructions look
+20:08 < HMC_Alpha> if you give me a sec I can run your example through it :-)
 
 23:01 < HMC_Alpha> the compiled code *creates* a chain of references at each result, and then yields to the caller
 23:01 < HMC_Alpha> the caller follows the indirection to see the binding
@@ -1498,8 +1629,6 @@ they don't call their own coro re-entry point. ;-)
 07:32 < koo7> what closure?
 07:32 < stoopkid> i think its rather, the first time the pred is used, it gets compiled and then this compiled pred-function is wrapped in a generator function, so that on each use of the pred, this generator returns a fresh instance of our compiled function
 07:33 < koo7> stoopkid, no, that was your version, but it didnt work because of Vars
-
-
 07:33 < HMC_Alph> you need to be able to "call foo" at runtime to get the coroutine functions at runtime
 07:34 < HMC_Alph> right now you just have "a lambda that is one coroutine" at runtime
 07:34 < koo7> its all in function pred and compile_preds
@@ -1525,7 +1654,6 @@ they don't call their own coro re-entry point. ;-)
 07:50 < koo7> that order of rules in kb matters
 07:50 < HMC_Alph> very much so, heh
 07:51 < koo7> stoopkid, go ahead, then you will see why i changed it to "jit"
-
 07:51 < stoopkid> the order only matters for our particular 'standardization' though, right?
 07:52 < stoopkid> koo7: i cant think of why we'd need to
 07:53 < koo7> well, there wasnt the compiletime unification check back then, so it just compiled everything twice
@@ -1540,12 +1668,14 @@ they don't call their own coro re-entry point. ;-)
 08:00 < stoopkid> maybe not? not sure, HMC_Alph any thoughts?
 08:00 < koo7> maybe something maybe with some indexes could be conjured up
 08:01 < HMC_Alph> http://pastebin.com/NaS8bKLr
-08:01 < koo7> but i dont believe in the motivation for this, its just to avoid the compile time ep check because hmc doesnt understand why it must be there
+08:01 < koo7> but i dont believe in the motivation for this, its just to avoid the compile time ep check because hmc doesnt 
+understand why it must be there
 08:02 < stoopkid> i'm not sure why it must be there
 08:02 < HMC_Alph> ep check cant be done at compile time...
 08:04 < stoopkid> capturing a lambda into itself on definition is interesting i don't even think that's the issue here though
 08:04 < stoopkid> lookup accomplishes the same with indirection
-08:06 < stoopkid> koo7: compiling shouldn't infloop because it's basically just replacing the preds in our finite kb with functions
+08:06 < stoopkid> koo7: compiling shouldn't infloop because it's basically just replacing the preds in our finite kb with 
+functions
 08:06 < HMC_Alph> no, not quite the same
 08:06 < stoopkid> or, function calls, whichever
 08:06 < stoopkid> or
@@ -1559,16 +1689,14 @@ they don't call their own coro re-entry point. ;-)
 08:13 < koo7> i hoped it would let us progress and a full solution would be the ep check
 08:16 < HMC_Alph> ep check is for runtime loops...
 08:16 < koo7> HMC_Alph, *something like* ep check that would catch the compile time recursion?
-
 08:17 < stoopkid> i still don't see where we should be getting compile time recursion
 08:18 < koo7> because each invocation of a pred in a rule body requires that a fresh coro for that pred be compiled
 08:19 < koo7> we cant copy because of vars
 08:19 < HMC_Alph> no coros should actually exist until runtime...
 08:19 < koo7> well, that was the current state of code
-
-
 08:21 < koo7> maybe you should go over that in a bit more detail
-08:21 < stoopkid> the pred itself should be packaged into a generator, and each invocation of a pred in a rule body should be a call to the generator to get a fresh instance of the coro at runtime
+08:21 < stoopkid> the pred itself should be packaged into a generator, and each invocation of a pred in a rule body should be a 
+call to the generator to get a fresh instance of the coro at runtime
 
 08:57 < koo7> ok i see if we compile strictly on demand, that ep check will avoid for us the infiloop
 
@@ -1578,16 +1706,16 @@ they don't call their own coro re-entry point. ;-)
 
 10:08 < koo7> HMC_Alph, we cant compile everything up front, we dont know how many instances of each pred coro we need
 10:09 < koo7> and i think youre wrong that theres just one lambda coro, theres a lambda that looks up a coro
-
-
-
 16:09 < HMC_Alph> this is a slightly simplified explanation, but hopefully gets the basic point across? :-)
+
 16:21 < HMC_Alph> http://people.cs.kuleuven.be/~jon.sneyers/papers/toplas-complexity.pdf
+
 16:28 < koo7> yeah that sounds simple, at least a non-optimized way of doing that
 16:29 < koo7> we have more problems, for one our atom() function must participate in the per-rule varmap
 16:29 < koo7> but more importantly we apparently have to wrap preds in yet another lambda
 16:33 < HMC_Alph> not sure what you mean wrt atom()
-16:34 < HMC_Alph> but yah, you do still need to do that lambda-over-lambda thing to get multiple instances of the same coro working correctly... ;-)
+16:34 < HMC_Alph> but yah, you do still need to do that lambda-over-lambda thing to get multiple instances of the same coro 
+working correctly... ;-)
 
 16:04 < HMC_Alph> anyway the ep check is not very hard... what you basically want to do is to keep a "memo set" per predicate... when each predicate is first invoked, it should check it's set to see if its argument pair is already there...
 16:04 < HMC_Alph> if so, it should "fail" immediately and not do any loop
