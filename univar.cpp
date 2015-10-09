@@ -1012,6 +1012,12 @@ void thatsAllFolks(int nresults){
 
 pnode thing2node(Thing *t, qdb &r) {
 	auto v = t->getValue();
+	while(true)//dig to the value
+	{
+		auto old = v;
+		v = v->getValue();
+		if (v == old) break;
+	}
 
 	List *l = dynamic_cast<List *>(v);
 	if (l) {
@@ -1025,8 +1031,10 @@ pnode thing2node(Thing *t, qdb &r) {
 	if (n)
 		return std::make_shared<old::node>(old::dict[n->value->p]);
 
-	dout << "thing2node: Wtf did you send me?" << endl;
-	//assert(false);
+	Var *var = dynamic_cast<Var *>(v);
+	if (var)
+		dout << "thing2node: Wtf did you send me?, " << var->str() << endl;
+	assert(false);
 }
 
 
