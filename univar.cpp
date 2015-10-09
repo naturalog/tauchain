@@ -79,6 +79,26 @@ public:
 	Thing *value=(Thing*)666;
 
 	Thing *getValue()
+/*btw!!
+    # If this Variable is unbound, then just return this Variable.^M
+    # Otherwise, if this has been bound to a value with unify, return the value.^M
+    # If the bound value is another Variable, this follows the "variable chain"^M
+    # to the end and returns the final value, or the final Variable if it is unbound.^M
+    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
+    def getValue(self):^M
+        if not self._isBound:^M
+            return self^M
+
+        result = self._value^M
+        while isinstance(result, Variable):^M
+            if not result._isBound:^M
+                return result^M
+
+            # Keep following the Variable chain.^M
+            result = result._value^M
+
+        return result^M
+*/
 	{
 		if (isBound)
 			return value;
