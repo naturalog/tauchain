@@ -652,11 +652,11 @@ pred_t pred(old::nodeid pr)
 			{
 			case 0:
 				
-				dout << "check ep table" << endl;
+				TRACE(dout << "check ep table" << endl;)
 				for (auto x: ep[pr])
 				{
-					dout << x.first->ep_value << "=?=" << Ds->ep_value << endl;
-					dout << x.second->ep_value << "=?=" << Do->ep_value << endl;
+					TRACE(dout << x.first->ep_value << "=?=" << Ds->ep_value << endl;)
+					TRACE(dout << x.second->ep_value << "=?=" << Do->ep_value << endl;)
 					/*auto ucs = generalunifycoro(x.first, Ds);
 					while(ucs())
 					{
@@ -674,14 +674,14 @@ pred_t pred(old::nodeid pr)
 				}
 				if(hit)
 				{
-					dout << "ep! ep!" << endl;
+					TRACE(dout << "ep! ep!" << endl;)
 					entry = 666;
 					return false;
 				}
 
 				//add:
 				index = ep[pr].size();
-				dout << "store " << Ds->ep_value << " " << Do->ep_value << endl;
+				TRACE(dout << "store " << Ds->ep_value << " " << Do->ep_value << endl;)
 				ep[pr].push_back(thingthingpair(Ds, Do));
 				//ep[pr].push_back(thingthingpair(Ds->getValue(), Do->getValue()));
 
