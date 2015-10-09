@@ -2,54 +2,37 @@
 #include <cstdlib>
 using namespace std;
 
-// sorted integer list
-struct sil {
-	const int *d; // first item - length
-	sil(const int* _d) : d(_d) { }
-	void print() {
-		for (int n = 0; n < *d; ++n)
-			cout << d[1+n] << ',';
-		cout << endl;
-	}
-};
+///////// null-terminated lists version
 
-sil operator+(const sil& x, const sil& y) { // union
-	register const int *a, *b;
-	const int sa = *(a = x.d)++, sb = *(b = y.d)++;
-	register int *r, &rr = *(r = new int[sa + sb])++ = 0;
-	register const int *ea = sa + a, *eb = sb + b;
-	register int u = *a, v = *b;
-	for (; a != ea && b != eb; ++rr)
-		if (u > v) *r++ = v, v = *++b;
-		else if (u < v) *r++ = u, u = *++a;
-		else *r++ = v, u = *++a, v = *++b;
-	while (a != ea) ++rr, *r++ = *a++;
-	while (b != eb) ++rr, *r++ = *b++;
-	return sil(&rr);
+// since union is more efficient with leading-size, and intersection
+// is more efficient with terminating zero, we'll do both.
+
+void print(const int* x) { while (*++x) cout << *x << ','; cout << endl; }
+
+bool common(const int* a, const int* b) { 
+	register int u = *a, v = *b, d;
+	while (a && b)
+		if (!(d = u-v)) return true;
+		else if (d > 0) v = *++b;
+		else u = *++a;
+	return false;
 }
 
-sil operator*(const sil& x, const sil& y) { // intersection
-	register const int *a, *b;
-	const int sa = *(a = x.d)++, sb = *(b = y.d)++;
-	register int *r, &rr = *(r = new int[min(sa, sb)])++ = 0;
-	register const int *ea = sa + a, *eb = sb + b;
-	register int u = *a, v = *b;
-	while (a != ea && b != eb)
-		if (u > v)
-			v = *++b;
-		else if (v > u)
-			u = *++a;
-		else
-			++rr, *r++ = *a++, v = *++b, u = *a;
-	return sil(&rr);
+const int* all(const int* a, const int* b) {
+	register int *r, &rr = *(r = new int[*a++ + *b++])++ = 0, d, u = *a, v = *b;
+	for (; u && v; ++rr)
+		if (!(d = u - v)) *r++ = v, u = *++a, v = *++b;
+		else if (d > 0) *r++ = v, v = *++b;
+		else *r++ = u, u = *++a;
+	if (u) while ((*r++ = *a++)) ++rr;
+	if (v) while ((*r++ = *b++)) ++rr;
+	return &rr;
 }
 
 int main() {
-	int _x[] = { 5, 1, 2, 3, 4, 5 };
-	int _y[] = { 4, 2, 4, 6, 8 };
-	sil x(_x), y(_y);
-	sil u = x + y;
-	sil i = x * y;
-	x.print(), y.print();
-	u.print(), i.print();
+	int x[] = { 5, 1, 2, 3, 4, 5, 0 }; // size first, null last
+	int y[] = { 4, 2, 4, 6, 8, 0 };
+	const int* u = all(x, y);
+	print(x), print(y), print(u);
+	if (!common(x, y)) throw 0;
 }
