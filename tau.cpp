@@ -365,17 +365,69 @@ int get_qdb(qdb &kb, string fname){
 	return r;
 }
 
+bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
+	setproc(L"nodes_same");
+	CLI_TRACE(dout << x->_type << ":" << x->tostring() << ", " <<
+					  y->_type << ":" << y->tostring()  << endl);
+	if(x->_type == node::BNODE && y->_type == node::BNODE)
+	{
+		//CLI_TRACE(dout << "BBB" << endl);
+		auto la = a.second.find(*x->value);
+		auto lb = b.second.find(*y->value);
+		if ((la == a.second.end()) != (lb == b.second.end()))
+			return false;
+		if (la == a.second.end())
+		{
+			return true;//its a bnode not in lists, bail out for now
+		}
+		else {
+			auto laa = la->second;
+			auto lbb = lb->second;
+			if (laa.size() != lbb.size())
+				return false;
+			auto ai = laa.begin();
+			auto bi = lbb.begin();
+			while(ai != laa.end()) {
+				if (!nodes_same(*ai, a, *bi, b))
+					return false;
+				ai++;
+				bi++;
+			}
+			return true;
+		}
+	}
+	else
+		return *x == *y;
+}
 
 bool qdbs_equal(qdb &a, qdb &b) {
 	dout << "a.first.size  b.first.size  a.second.size  b.second.size" << endl;
 	dout << a.first.size() << " " << b.first.size() << " " << a.second.size() << " " << b.second.size() << endl;
-	if(a.first.size() != b.first.size() || a.second.size() != b.second.size())
-		return false;
+	//if(a.first.size() != b.first.size() || a.second.size() != b.second.size())
+	//	return false;
 	dout << "maybe..";
 	dout << "A:" << endl;
 	dout << a;
 	dout << "B:" << endl;
 	dout << b;
+	auto ad = *a.first[L"@default"];
+	auto bd = *b.first[L"@default"];
+	auto i = ad.begin();
+	for (pquad x: bd) {
+		if (dict[x->pred] == rdffirst || dict[x->pred] == rdfrest)
+			continue;
+		if (i == ad.end())
+			return false;
+		pquad n1 = *i;
+		pquad n2 = x;
+		if (!(*n1->pred == *n2->pred))
+			return false;
+		if (!nodes_same(n1->subj, a, n2->subj, b))
+			return false;
+		if (!nodes_same(n1->object, a, n2->object, b))
+			return false;
+		i++;
+	}
 	return true;
 }
 

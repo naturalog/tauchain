@@ -94,9 +94,17 @@ std::wostream& operator<< ( std::wostream& o, const qlist& x ) {
 	return o;
 }
 
+std::wostream& operator<< ( std::wostream& o, const std::list<pnode>& x ) {
+	for ( pnode n : x )
+		o << n->tostring ( ) << std::endl;
+	return o;
+}
+
 std::wostream& operator<< ( std::wostream& o, const qdb& q ) {
 	for ( auto x : q.first )
-		o /*<< x.first*/ << *x.second;
+		o << x.first << ": " << std::endl << *x.second << std::endl;
+	for ( auto x : q.second )
+		o << x.first << ": " << std::endl << x.second << std::endl;
 	return o;
 }
 #ifdef JSON
