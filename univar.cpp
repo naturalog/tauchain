@@ -28,8 +28,10 @@ class Var;
 
 typedef function<bool(Thing*,Thing*)> comp;
 
+typedef vector<Thing *> locals;
 
-typedef function<bool()> join;
+typedef function<bool(Thing*,Thing*, locals)> join;
+//btw im using gen in the sense that its a lambda generating another lambda
 typedef function<join()> join_gen;
 
 typedef std::unordered_map<old::termid, Thing *> varmap;
@@ -99,7 +101,7 @@ public:
 
         return result^M
 */
-	{
+	{//i didnt actually change the code yet
 		if (isBound)
 			return value;
 		else
@@ -763,31 +765,29 @@ join_gen joinOne(old::nodeid a, Thing* w, Thing *x){
 		};
 	};
 }
-
-
-join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Thing *z){
-	setproc(L"joinwxyz");
+//9x:
+join_gen join_sl(pred_gen a, join_gen b, size_t wi, size_t xi){
+	setproc(L"joinsw");
 	TRACE(dout << "making a join" << endl;)
 	int entry = 0;
 	int round = 0;
 	comp ac;
 	comp bc;
-	return [a,b,w,x,y,z,entry,round,ac,bc]()mutable{
-		setproc(L"join lambda");
-		return [a,b,w,x,y,z,entry, round, ac,bc]()mutable{
-			setproc(L"join lambda lambda");
+	return [a,b,wi,xi,entry,round,ac,bc]()mutable{
+		setproc(L"join gen");
+		return [a,b,wi,xi,entry, round, ac,bc](Thing *s, Thing *o)mutable{
+			setproc(L"join coro");
 			round++;
 			TRACE(dout << "round: " << round << endl;)
 			switch(entry){
 			case 0:
 				TRACE( dout << sprintPred(L"a()",a) << endl;)
-				TRACE( dout << sprintPred(L"b()",b) << endl;)
-				ac = preds[a]();
-				while(ac(w,x)) {
+				ac = a();
+				while(ac(s,locals[wi])) {
 					TRACE(dout << "MATCH A." << endl;)
 
-					bc = preds[b]();
-					while (bc(y,z)) {
+					bc = b();
+					while (bc(s,o)) {
 						TRACE(dout << "MATCH." << endl;)
 						entry = 1;
 						return true;
@@ -805,6 +805,126 @@ join_gen joinwxyz(old::nodeid a, old::nodeid b, Thing *w, Thing *x, Thing *y, Th
 		};
 	};
 }
+
+
+
+comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body)
+{
+	setproc(L"comp ruleproxyOne");
+	TRACE(dout << "compiling ruleproxyOne" << endl;)
+
+	Thing *s = vars.at(head->s);
+	Thing *o = vars.at(head->o);
+
+	Thing *as = vars.at(body[0]->s);
+	Thing *ao = vars.at(body[0]->o);
+
+		
+	join_gen c0 = joinOne(body[0]->p,as,ao);
+	return ruleproxy(c0, s, o);
+}
+
+typedef vector<old::termid> locals_map;
+
+void lm_add(locals_map &lm, old::termid t)
+{
+	for (auto x: lm)
+	{
+		if (x == t)
+			return;
+	}
+	lm.push_back(t);
+}
+
+size_t lm_index(locals_map &lm, old::termid t)
+{
+	for(size_t i = 0; i < lm.size(); i++)
+		if (lm[i] == t)	
+			return i;
+	assert(false);
+}
+
+//permutation map key
+char pk(locals_map &lm, termid x, termid head)
+{
+	char sk;
+	if (x == head->s)
+		sk = 's';
+	else if (x == head->o)
+		sk = 'o';
+	else 
+	{
+		sk = 'l';
+		lm_add(lm, x);
+	}
+	return sk;
+}	
+
+comp ruleproxy(old::termid head, old::prover::termset body)
+{
+	setproc(L"comp ruleproxy");
+	TRACE(dout << "compiling ruleproxy" << endl;)
+	join_gen jg = gen_succeed_with_args();
+	locals_map lm;
+	for(int i = body.size() - 1; i >= 0; i--){
+		termid s = body[i]->s;
+		termid o = body[i]->o;
+		char sk = hk(s, head);
+		char ok = hk(o, head);
+		jg = perms[sk][ok](body[i]->p, jg, lm_index(lm, s), lm_index(lm, o));
+	}
+
+	locals * l;
+	
+	return [ jg, suc,ouc,j, entry,round]   (Thing *s , Thing *o) mutable
+	{
+		setproc(L"ruleproxy lambda");
+		round++;
+		TRACE(dout << "round=" << round << endl;)
+		switch(entry)
+		{
+		case 0:
+			entry++;
+			//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
+
+			l = new locals();
+			for (int i = 0;i < nlocals; i++)
+				l.push_back(new Var());
+	
+			suc = generalunifycoro(s, hs);
+			while(suc()) {
+				TRACE(dout << "After suc() -- " << endl;)
+				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
+
+				ouc = generalunifycoro(o, ho);
+				while (ouc()) {
+					TRACE(dout << "After ouc() -- " << endl;)
+					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;) 
+
+					j = jg();
+					while (j(l,s,o)) {
+						TRACE(dout << "After c0() -- " << endl;)
+						TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)					
+	
+						entry = 1;
+						return true;
+						TRACE(dout << "MATCH." << endl;)
+		case 1: ;
+			TRACE(dout << "RE-ENTRY" << endl;)
+					}
+				}
+			}
+			entry = 666;
+			TRACE(dout << "DONE." << endl;)
+			return false;
+		default:
+			assert(false);
+		}
+	};
+}
+
+
+
 
 comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 	setproc(L"ruleproxy");
@@ -862,98 +982,12 @@ comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
 	};
 }
 
-join_gen halfjoin(old::nodeid a, Thing* w, Thing* x, join_gen b){
-	setproc(L"halfjoin");
-	TRACE(dout << "..." << endl;)
 
-	int entry = 0;
-	int round = 0;
-
-	comp ac;
-	join bc;
-
-	return [a, w, x, b, entry, round, ac, bc]() mutable{
-		setproc(L"halfjoin gen");
-		return [a, w, x, b, entry, round,ac,bc]() mutable{
-			setproc(L"halfjoin lambda");
-			round++;
-			TRACE(dout << "round=" << round << endl;)
-			switch(entry){
-			case 0:
-				TRACE(dout << sprintPred(L"a()",a) << endl;)
-				ac = preds[a]();
-				while(ac(w,x)){
-					TRACE(dout << "MATCH a(w,x)" << endl;)
-					bc = b();
-					while(bc()){
-						entry = 1;
-						TRACE( dout << "MATCH." << endl;)
-						return true;
-			case 1: ;
-				TRACE(dout << "RE-ENTRY" << endl;)
-				  }
-				}
-				entry = 666;
-				TRACE(dout << "DONE." << endl;)
-				return false;
-			default:
-				assert(false);
-			}
-		};
-	};
-}
-
-comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body)
-{
-	setproc(L"comp ruleproxyOne");
-	TRACE(dout << "compiling ruleproxyOne" << endl;)
-
-	Thing *s = vars.at(head->s);
-	Thing *o = vars.at(head->o);
-
-	Thing *as = vars.at(body[0]->s);
-	Thing *ao = vars.at(body[0]->o);
-
-		
-	join_gen c0 = joinOne(body[0]->p,as,ao);
-	return ruleproxy(c0, s, o);
-}
-
-comp ruleproxyMore(varmap vars, old::termid head, old::prover::termset body)
-{
-	setproc(L"comp ruleproxyMore");
-	TRACE(dout << "compiling ruleproxyMore" << endl;)
-
-	int k = body.size()-2;
-	Thing *as = vars.at(body[k]->s);
-	Thing *ao = vars.at(body[k]->o);
-	Thing *bs = vars.at(body[k+1]->s);
-	Thing *bo = vars.at(body[k+1]->o);
-	join_gen c0 = joinwxyz(body[k]->p, body[k+1]->p, as, ao, bs, bo);
-
-	for(int i = k-1; i >= 0; i--){
-		Thing *vs = vars.at(body[i]->s);
-		Thing *vo = vars.at(body[i]->o);
-
-		c0 = halfjoin(body[i]->p, vs, vo, c0);
-	}
-
-	Thing *s = vars.at(head->s);
-	Thing *o = vars.at(head->o);
-
-	return ruleproxy(c0, s, o);
-}
 
 comp rule(old::termid head, old::prover::termset body)
 {
 	setproc(L"comp rule");
 	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;)
-
-	varmap vars;
-
-	//these two are just proxies for whatever input we get
-	atom(head->s, vars);
-	atom(head->o, vars);
 
 	size_t i;
 	for (i = 0; i < body.size(); i++)
@@ -1132,5 +1166,38 @@ void yprover::query(const old::qdb& goal){
 		
 		dout << "Predicate '" << old::dict[pr] << "' not found, " << KRED << "0" << KNRM << " results." << endl;
 	}
+	
+dout << "this 
+is
+a 
+multiline
+string" << endl;//nope, im not writing it in c++:)
+
 }
 
+
+/*
+anyway...one join function, joins "just pass" query s and o down between them,
+each join calls one pred,
+so we are only concerned with permuting the two params to the pred,
+and these can be either: s, o, or a local var
+so thats 9 variants
+a join captures two indexes into the local vars table, which it may or may not use
+so...not the most efficient but a simple design, what do you think?
+i think it would work, if i understand it correctly
+i would start with a python script that prints out the code... which code exactly?
+the permutations...so thats like our function joinwxyz now 
++ some wrapping, are you better in python than C++?hmm maybe comparable
+
+dunno if i want to start tonight tho
+yea i feel like i want to spend some time just analyzing this whole thing from first principles
+i just think it will be a good exp to finish this, and good to not think about things too much
+and just hack when i feel like it mmm, i'd probably like to a have firm understanding before i 
+start any hacking. i have understanding, but no firm :) the ideal scenario would be that i could
+actually analyze this mathematically
+understanding of general tau matters or this thing? our implementation of the reasoner
+well, i only have some idea where to start i guess
+*/
+/me getting something to drink
+
+*/
