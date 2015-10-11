@@ -6,60 +6,45 @@ using namespace std;
 using namespace old;
 
 
-/*so it seems we have 3 variants to start with:
- 1: parameterless joins, with extra rule lambda and unify's,
- 2: all joins have two parameters, there are permutations,
- 3: joins have only as many parameters as they need, there are even more permutations
-so i guess we start with 1?
-*/
 
-old::prover *op;
+
+old::prover *op; // used as a kb
 
 
 
-class Thing{
-public:
-	virtual Thing *getValue(){return this;};
-	virtual wstring str(){assert(false);}
-	old::termid ep_value;
-};
 
-class Var;
+struct Thing;
 
 typedef function<bool(Thing*,Thing*)> comp;
-
+typedef function<comp()> rule_gen;
 typedef vector<Thing *> locals;
-
 typedef function<bool(Thing*,Thing*, locals)> join;
 //btw im using gen in the sense that its a lambda generating another lambda
 typedef function<join()> join_gen;
-
 typedef std::unordered_map<old::termid, Thing *> varmap;
-
 typedef vector<size_t> rulesindex;
 std::unordered_map<old::nodeid, rulesindex> pred_index;
-
-
 function<bool()> generalunifycoro(Thing*, Thing*);
-void atom(old::termid n, varmap &vars);
-
-
+void Thing(old::termid n, varmap &vars);
 typedef function<comp()> pred_t;
 std::unordered_map<old::nodeid, pred_t> preds;
-
-//std::unordered_map<old::nodeid, Var*> globals;
-
 typedef std::pair<Thing*,Thing*> thingthingpair;
-typedef std::unordered_map<old::nodeid, std::vector<thingthingpair>> ep_t;
+typedef std::vector<thingthingpair> ep_t;
+typedef vector<Thing> List;
+comp rule(old::termid head, old::prover::termset body);
+typedef vector<Thing> locals;
 
-ep_t ep;
 
 
-class Node:public Thing
+
+
+enum ThingType {UNBOUND, BOUND, NODE, LIST};
+struct Thing
 {
-public:
-	old::termid value;
-	bool eq(Node *x)
+	ThingType type;
+	union {termid * term, Thing * Thing, List * list};
+
+	/*bool eq(Node *x)
 	{
 		setproc(L"eq");
 		TRACE(dout << op->format(value) << " =?= " << op->format(x->value) << endl;)
@@ -71,17 +56,21 @@ public:
 		value = s;
 	}
 	wstring str(){return op->format(value);}
-};
+
+	wstring str() {
+		if (isBound) {
+			assert(value != (Thing*)666);
+			return L"var(" + value->str() + L")";
+		}
+		return L"var()";
+	}
 
 
-class Var:public Thing{
-public:
-	bool isBound = false;
 
-	Thing *value=(Thing*)666;
+*/
 
 	Thing *getValue()
-/*btw!!
+/*
     # If this Variable is unbound, then just return this Variable.^M
     # Otherwise, if this has been bound to a value with unify, return the value.^M
     # If the bound value is another Variable, this follows the "variable chain"^M
@@ -101,29 +90,13 @@ public:
 
         return result^M
 */
-	{//i didnt actually change the code yet
-		if (isBound)
-			return value;
-		else
-			return this;
-	}
+{
+	if (type == BOUND)
+		return Thing->getValue();
+	else
+		return this;
 
-	Var(){}
-
-	Var(old::termid n){
-		ep_value = n;	
-	}
-
-
-	wstring str() {
-		if (isBound) {
-			assert(value != (Thing*)666);
-			return L"var(" + value->str() + L")";
-		}
-		return L"var()";
-	}
-
-
+}
 
 /*  # If this Variable is bound, then just call YP.unify to unify this with arg.
     # (Note that if arg is an unbound Variable, then YP.unify will bind it to
@@ -206,17 +179,8 @@ public:
 		}
 	}
 };
+/*
 
-
-
-Thing  * vvv(Thing *v)
-{	
-	return v;
-}
-
-class List: public Thing{
-public:
-	std::vector<Thing*> nodes;
 	List(std::vector<Thing *> n)
 	{
 		nodes = n;
@@ -237,10 +201,10 @@ public:
 		return r.str();
 	}
 
-
+*/
 };
 
-
+/*
 
 wstring sprintVar(wstring label, Thing *v){
 	wstringstream wss;
@@ -266,6 +230,17 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
 	return wss.str();
 } 
+*/
+
+
+
+
+
+
+
+
+
+#ifndef DEBUG
 
 bool fail()
 {
@@ -283,6 +258,11 @@ bool fail_with_args(Thing *_s, Thing *_o)
 	return false;
 }
 
+#define GEN_FAIL (fail)
+#define GEN_FAIL_WITH_ARGS (fail_with_args)
+
+#else
+
 join dbg_fail()
 {
 	int entry = 0;
@@ -293,7 +273,7 @@ join dbg_fail()
 		switch(entry)
 		{
 		case 0:
-			entry = 1;
+			entry = 666;
 			return false;
 		default:
 			assert(false);
@@ -321,6 +301,11 @@ comp dbg_fail_with_args()
 		}
 	};
 }
+
+#define GEN_FAIL (dbg_fail())
+#define GEN_FAIL_WITH_ARGS (dbg_fail_with_args())
+#endif
+
 
 //yield once
 function<bool()> succeed()
@@ -459,7 +444,7 @@ function<bool()> generalunifycoro(Thing *a, Thing *b){
 	TRACE(dout << "Some non-unifying combination. Fail." << endl;)
 	return dbg_fail();
 }
-
+/*
 bool ep_check(Thing *a, Thing *b){
 	List *l1 = dynamic_cast<List*>(a);
 	List *l2 = dynamic_cast<List*>(b);
@@ -482,192 +467,9 @@ bool ep_check(Thing *a, Thing *b){
 		return a->ep_value == b->ep_value;
 	}
 }
+*/
 
-
-comp fact(Thing *s, Thing *o){
-	setproc(L"fact");
-	int entry = 0;
-	function<bool()> c1;
-	function<bool()> c2;
-	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
-		setproc(L"fact lambda");
-		TRACE(dout << "im in ur fact,  entry: " << entry << endl;)
-
-		switch(entry){
-		case 0:
-			c1 = generalunifycoro(Ds,s);
-			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
-			while(c1()){
-				TRACE(dout << "MATCH c1() " << endl;)
-
-				c2 = generalunifycoro(Do,o);
-				while(c2()){
-					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
-					entry = 1;
-					TRACE(dout << "MATCH" << endl;)
-					return true;
-		case 1: ;
-		TRACE(dout << "RE-ENTRY" << endl;)
-				}
-			}
-			entry = 666;
-			TRACE(dout << "DONE." << endl;)
-			return false;
-		default:
-			assert(false);
-		}
-	};
-}
-
-comp seq(comp a, comp b){
-	setproc(L"seq");
-	TRACE(dout << ".." << endl;)
-	int entry = 0;
-	int round = 0;
-	comp ac, bc;
-	return [a, b, entry, round, ac, bc](Thing *Ds, Thing *Do) mutable{
-		setproc(L"seq lambda");	
-		round++;
-		TRACE(dout << "round: " << round << endl;)
-		
-		switch(entry){
-		case 0:
-			//ac = a;
-			while(a(Ds, Do)){
-				TRACE(dout << "MATCH A." << endl;)
-				entry = 1;
-				return true;
-		case 1: ;
-			}
-
-			//bc = a;
-			while(b(Ds, Do)){
-				entry = 2;
-				TRACE(dout << "MATCH B." << endl;)
-				return true;
-		case 2:	;
-			}
-
-			TRACE(dout << "SWITCH DONE." << endl;)
-
-			entry = 666;
-			return false;
-
-		default:
-			assert(false);
-		}
-		TRACE(dout << "Why are we here?" << endl;)
-		assert(false);
-	};
-}
-
-
-void atom(old::termid n, varmap &vars){
-	setproc(L"atom");
-	TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl;)
-	if (vars.find(n) != vars.end())
-		return;
-	if (n->p>0)
-	{
-
-		if(*old::dict[n->p].value == L".")
-		{
-			TRACE(dout << "list" << endl;)
-			std::vector<Thing*> nodes;
-			for(auto y: op->get_dotstyle_list(n)) {
-				TRACE(dout << "item..." << endl;)
-				atom(y, vars);
-				nodes.push_back(vars.at(y));
-			}
-			auto r = vars[n] = new List(nodes);
-			TRACE(dout << "new List: " << r << endl;)
-		}
-		else {
-			auto r = vars[n] = new Node(n);
-			TRACE(dout << "new Node: " << r << endl;)
-		}
-
-	}
-	else {
-		auto r = vars[n] = new Var(n);
-		TRACE(dout << "new Var: " << r << endl;)
-	}
-}
-
-
-comp rule(old::termid head, old::prover::termset body);
-
-
-comp compile_pred(old::nodeid pr) {
-	setproc(L"compile_pred");
-	rulesindex rs = pred_index[pr];
-	TRACE(dout << "# of rules: " << rs.size() << endl;)
-	
-	comp r;
-	bool first = true;
-	
-	//compile each rule with the pred in the head, seq them up
-	for (int i = rs.size()-1; i>=0; i--) {
-		
-		comp y = rule(op->heads[rs[i]], op->bodies[rs[i]]);
-
-		if (first) {
-			first = false;
-			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-			r = y;
-		}
-		else {
-			TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-			r = seq(y, r);
-		}
-	}
-
-	if (first) // cant leave it empty
-		return dbg_fail_with_args();
-	return r;
-}
-
-pred_t pred(old::nodeid pr)
-{
-	setproc(L"pred");
-	TRACE(dout << "constructing pred proxy for (" << pr << ")" << old::dict[pr] << endl;)
-	comp y;// = compile_pred(pr);
-	//you think theres any advantage to compiling it aot like this?
-	//well, in our case yes, we could compile on-demand, but we were compiling on-demand every invocation
-	//so the time-complexities here aren't even comparable
-	//one is finite & one-time, the other is basically that over and over and over again
-	//mkay but you forgot about variables? ? this is variation of your predGens lookup table mechanism
-	//yes
-	//i'm not sure where the difference arises variables, nodes, all the pointers to stuff we new
-	//with just aot, one instance of pred with one instances of variables could be invoked recursively one
-	//inside another, ok then we'll handle that at the var level
-
-	/*well...
-	anyway, you think you agree with me in how i think this works? i'm not 100% on how its working me neither
-	i mean..im sure we capture these pointers and then we try to reuse them from two different instances of the pred,
-	but, yes i agree
-	but im totally not sure if thats a bad thing
-	ok im pretty sure it is, but, i think i have an idea how to fix it
-	hmm, ok i think i see generally what the problem is, i'll need to think about it
-	i havent given much thought to it yet...
-	we capture pointers to variables which must be being kept around somewhere
-	*/
-
-	return [pr, y]() mutable{
-		setproc(L"pred lambda");
-		TRACE(dout << "nodeid: " << pr << endl;)
-
-		y = compile_pred(pr);
-
-		int entry=0;
-		int round=0;
-
-		size_t index=666666;
-
-		return [index, pr, y, entry, round](Thing *Ds, Thing *Do) mutable{
-		        setproc(L"pred ep lambda");
-			TRACE(dout << "entry=" << entry << endl);
-
+/*
 			bool hit = false;
 
 			switch(entry)
@@ -731,40 +533,168 @@ pred_t pred(old::nodeid pr)
 		};
 	};
 }
+*/
 
-join_gen joinOne(old::nodeid a, Thing* w, Thing *x){
-	setproc(L"joinOne");
-	TRACE(dout << "..." << endl;)
-
+comp fact(termid head){
+	setproc(L"fact");
 	int entry = 0;
-	int round = 0;
+	function<bool()> c1;
+	function<bool()> c2;
+	auto s = atom(head->s);
+	auto o = atom(head->o);
+	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
+		setproc(L"fact lambda");
+		TRACE(dout << "im in ur fact,  entry: " << entry << endl;)
 
-	comp ac;
+		switch(entry){
+		case 0:
+			c1 = generalunifycoro(Ds,s);
+			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
+			while(c1()){
+				TRACE(dout << "MATCH c1() " << endl;)
 
-	return [a, w, x, entry, round, ac]() mutable{
-		setproc(L"joinOne gen");
-		return [ac, a, w, x, entry, round]() mutable{
-			setproc(L"joinOne λ λ");
-			round++;
-			TRACE(dout << "round=" << round << endl;)
-			switch(entry){
-			case 0:
-				ac = preds[a]();
-				TRACE(dout << "OUTER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl;)
-				while(ac(w,x)){
-					TRACE(dout << "INNER -- w: " << w << "/" << w->str() << ", x: " << x << "/" << x->str() << endl;)
+				c2 = generalunifycoro(Do,o);
+				while(c2()){
+					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
 					entry = 1;
+					TRACE(dout << "MATCH" << endl;)
 					return true;
-			case 1: ;
+		case 1: ;
+		TRACE(dout << "RE-ENTRY" << endl;)
 				}
-				entry=666;
-				return false;
-			default:
-				assert(false);
 			}
-		};
+			entry = 666;
+			TRACE(dout << "DONE." << endl;)
+			return false;
+		default:
+			assert(false);
+		}
 	};
 }
+
+comp seq(comp a, comp b){
+	setproc(L"seq");
+	TRACE(dout << ".." << endl;)
+	int entry = 0;
+	int round = 0;
+	comp ac, bc;
+	return [a, b, entry, round, ac, bc](Thing *Ds, Thing *Do) mutable{
+		setproc(L"seq lambda");	
+		round++;
+		TRACE(dout << "round: " << round << endl;)
+		
+		switch(entry){
+		case 0:
+			while(a(Ds, Do)){
+				TRACE(dout << "MATCH A." << endl;)
+				entry = 1;
+				return true;
+		case 1: ;
+			}
+			while(b(Ds, Do)){
+				entry = 2;
+				TRACE(dout << "MATCH B." << endl;)
+				return true;
+		case 2:	;
+			}
+
+			TRACE(dout << "SWITCH DONE." << endl;)
+
+			entry = 666;
+			return false;
+
+		default:
+			assert(false);
+		}
+		TRACE(dout << "Why are we here?" << endl;)
+		assert(false);
+	};
+}
+
+
+void atom(old::termid n, varmap &vars){
+	setproc(L"atom");
+	TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl;)
+	if (vars.find(n) != vars.end())
+		return;
+	if (n->p>0)
+	{
+
+		if(*old::dict[n->p].value == L".")
+		{
+			TRACE(dout << "list" << endl;)
+			std::vector<Thing*> nodes;
+			for(auto y: op->get_dotstyle_list(n)) {
+				TRACE(dout << "item..." << endl;)
+				atom(y, vars);
+				nodes.push_back(vars.at(y));
+			}
+			auto r = vars[n] = new List(nodes);
+			TRACE(dout << "new List: " << r << endl;)
+		}
+		else {
+			auto r = vars[n] = new Node(n);
+			TRACE(dout << "new Node: " << r << endl;)
+		}
+
+	}
+	else {
+		auto r = vars[n] = new Var(n);
+		TRACE(dout << "new Var: " << r << endl;)
+	}
+}
+
+
+
+pred_gen pred(old::nodeid pr) {
+	setproc(L"compile_pred");
+	rulesindex rs = pred_index[pr];
+	TRACE(dout << "# of rules: " << rs.size() << endl;)
+
+	size_t nlocals = 0;
+	
+	comp y;
+	bool first = true;
+	
+	//compile each rule with the pred in the head, seq them up
+	for (int i = rs.size()-1; i>=0; i--) {
+		
+		rule_t x = rule(op->heads[rs[i]], op->bodies[rs[i]], nlocals);
+
+		if (first) {
+			first = false;
+			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+			y = x;
+		}
+		else {
+			TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+			y = seq(x, y);
+		}
+	}
+
+	if (first)
+		return GEN_FAIL_WITH_ARGS;
+
+	return [nlocals, pr, y]() mutable{
+		setproc(L"pred lambda");
+		TRACE(dout << "nodeid: " << pr << endl;)
+
+		//im trying to get a bit smart here to avoid mallocing 
+		lo = new locals(nlocals);
+		for (auto l: lists)
+		{
+			lo[l.first].pointer = (void*)make_list(l.second);
+			lo[l.first].type = LIST;
+		}
+
+		int entry=0;
+		int round=0;
+		
+		return [lo, pr, y, entry, round](Thing *Ds, Thing *Do) mutable{
+		        setproc(L"pred ep lambda");
+			TRACE(dout << "entry=" << entry << endl);
+
+
 //9x:
 join_gen join_sl(pred_gen a, join_gen b, size_t wi, size_t xi){
 	setproc(L"joinsw");
@@ -807,23 +737,6 @@ join_gen join_sl(pred_gen a, join_gen b, size_t wi, size_t xi){
 }
 
 
-
-comp ruleproxyOne(varmap vars, old::termid head, old::prover::termset body)
-{
-	setproc(L"comp ruleproxyOne");
-	TRACE(dout << "compiling ruleproxyOne" << endl;)
-
-	Thing *s = vars.at(head->s);
-	Thing *o = vars.at(head->o);
-
-	Thing *as = vars.at(body[0]->s);
-	Thing *ao = vars.at(body[0]->o);
-
-		
-	join_gen c0 = joinOne(body[0]->p,as,ao);
-	return ruleproxy(c0, s, o);
-}
-
 typedef vector<old::termid> locals_map;
 
 void lm_add(locals_map &lm, old::termid t)
@@ -860,7 +773,7 @@ char pk(locals_map &lm, termid x, termid head)
 	return sk;
 }	
 
-comp ruleproxy(old::termid head, old::prover::termset body)
+comp rule_generator(old::termid head, old::prover::termset body)
 {
 	setproc(L"comp ruleproxy");
 	TRACE(dout << "compiling ruleproxy" << endl;)
@@ -887,7 +800,6 @@ comp ruleproxy(old::termid head, old::prover::termset body)
 			entry++;
 			//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
-			l = new locals();
 			for (int i = 0;i < nlocals; i++)
 				l.push_back(new Var());
 	
@@ -924,86 +836,13 @@ comp ruleproxy(old::termid head, old::prover::termset body)
 }
 
 
-
-
-comp ruleproxy(join_gen c0_gen, Thing *s, Thing *o){
-	setproc(L"ruleproxy");
-	TRACE(dout << "ruleproxy" << endl;)
-
-	
-	int entry=0;
-	int round=0;
-
-	join c0;
-	function<bool()> suc, ouc;
-
-	return [ suc, ouc, entry, c0_gen, c0, s, o, round]   (Thing *Ds , Thing *Do) mutable
-	{
-		setproc(L"ruleproxy lambda");
-		round++;
-		TRACE(dout << "round=" << round << endl;)
-		switch(entry)
-		{
-		case 0:
-			entry++;
-			TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-	
-			suc = generalunifycoro(Ds, s);
-			ouc = generalunifycoro(Do, o);
-			c0 = c0_gen();			
-			while(suc()) {
-				TRACE(dout << "After suc() -- " << endl;)
-				TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-
-				//ouc = generalunifycoro(Do, o);
-				while (ouc()) {
-					TRACE(dout << "After ouc() -- " << endl;)
-					TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;) 
-
-					//c0 = c0_gen();
-					while (c0()) {
-						TRACE(dout << "After c0() -- " << endl;)
-						TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)					
-	
-						entry = 1;
-						return true;
-						TRACE(dout << "MATCH." << endl;)
-		case 1: ;
-			TRACE(dout << "RE-ENTRY" << endl;)
-					}
-				}
-			}
-			entry = 666;
-			TRACE(dout << "DONE." << endl;)
-			return false;
-		default:
-			assert(false);
-		}
-	};
-}
-
-
-
-comp rule(old::termid head, old::prover::termset body)
+rule_gen rule(old::termid head, old::prover::termset body)
 {
 	setproc(L"comp rule");
 	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;)
 
-	size_t i;
-	for (i = 0; i < body.size(); i++)
-	{
-		old::termid t;
-		t = body[i]->s;
-		atom(t, vars);
-		t = body[i]->o;
-		atom(t, vars);
-	}
-
-	TRACE(dout << vars.size() << " vars" << endl;)
-
-
 	if(body.size() == 0){
-		return fact(vars.at(head->s), vars.at(head->o));
+		return fact(head);
 	}
 	if(body.size() == 1)
 	{
@@ -1198,6 +1037,15 @@ actually analyze this mathematically
 understanding of general tau matters or this thing? our implementation of the reasoner
 well, i only have some idea where to start i guess
 */
-/me getting something to drink
+/*
+
+
+/*so it seems we have 3 variants to start with:
+ 1: parameterless joins, with extra rule lambda and unify's,
+ 2: all joins have two parameters, there are permutations,
+ 3: joins have only as many parameters as they need, there are even more permutations
+so i guess we start with 1?
+*/
+
 
 */
