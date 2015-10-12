@@ -49,6 +49,7 @@ string indent();
 
 struct _setproc {
 	string prev;
+	_setproc(const std::string& p);
 	_setproc(const string& p);
 	~_setproc();
 };

@@ -8,66 +8,286 @@ using namespace old;
 
 
 
+
+#define FUN setproc(__FUNCTION__);
+
+
+
+
+
+class Thing;
+//btw im using gen in the sense that its a lambda generating another lambda
+
+typedef std::pair<Thing*,Thing*> thingthingpair;
+typedef std::vector<thingthingpair> ep_t;
+typedef vector<Thing> List;
+typedef vector<Thing> locals;
+
+typedef function<bool()> coro;
+typedef function<bool(Thing*,Thing*)> pred_t;
+typedef function<bool(Thing*,Thing*, locals)> rule_t;
+typedef function<rule_t()> rule_gen;
+typedef rule_t join;
+typedef function<join()> join_gen;
+typedef function<pred_t()> pred_gen;
+
+
+
+
+std::unordered_map<old::nodeid, pred_gen> preds;
 old::prover *op; // used as a kb
 
 
 
 
-struct Thing;
+coro unbound_succeed(Thing *x, Thing *y);
+coro unify(Thing *, Thing *);
+pred_gen pred(old::nodeid pr);
 
-typedef function<bool(Thing*,Thing*)> comp;
-typedef function<comp()> rule_gen;
-typedef vector<Thing *> locals;
-typedef function<bool(Thing*,Thing*, locals)> join;
-//btw im using gen in the sense that its a lambda generating another lambda
-typedef function<join()> join_gen;
-typedef std::unordered_map<old::termid, Thing *> varmap;
-typedef vector<size_t> rulesindex;
-std::unordered_map<old::nodeid, rulesindex> pred_index;
-function<bool()> generalunifycoro(Thing*, Thing*);
-void Thing(old::termid n, varmap &vars);
-typedef function<comp()> pred_t;
-std::unordered_map<old::nodeid, pred_t> preds;
-typedef std::pair<Thing*,Thing*> thingthingpair;
-typedef std::vector<thingthingpair> ep_t;
-typedef vector<Thing> List;
-comp rule(old::termid head, old::prover::termset body);
-typedef vector<Thing> locals;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//yield once
+coro gen_succeed()
+{
+	int entry = 0;
+	return [entry]() mutable{
+		switch(entry)
+		{
+		case 0:
+			entry = 1;
+			return true;
+		case 1:
+			entry = 666;
+			return false;
+		default:
+			assert(false);
+		}
+	};
+}
+
+rule_t succeed_with_args()
+{
+	int entry = 0;
+	return [entry](Thing *Ds, Thing *Do, locals _) mutable{
+		(void)Ds;
+		(void)Do;
+		(void)_;
+		switch(entry)
+		{
+		case 0:
+			entry = 1;
+			return true;
+		case 1:
+			entry = 666;
+			return false;
+		default:
+			assert(false);
+		}
+	};
+}
+
+join_gen gen_succeed_with_args()
+{
+	return []() {
+		return succeed_with_args();
+	};
+}
+
+#ifndef DEBUG
+
+bool fail()
+{
+	setproc(L"fail");
+	TRACE(dout << "..." << endl;)
+	return false;
+}
+
+bool fail_with_args(Thing *_s, Thing *_o)
+{
+	(void)_s;
+	(void)_o;
+	setproc(L"fail_with_args");
+	TRACE(dout << "..." << endl;)
+	return false;
+}
+
+#define GEN_FAIL (fail)
+#define GEN_FAIL_WITH_ARGS (fail_with_args)
+
+#else
+
+coro dbg_fail()
+{
+	int entry = 0;
+	return [entry]() mutable{
+		setproc(L"dbg_fail lambda");
+		TRACE(dout << "..." << endl;)
+
+		switch(entry)
+		{
+		case 0:
+			entry = 666;
+			return false;
+		default:
+			assert(false);
+		}
+	};
+}
+
+pred_t dbg_fail_with_args()
+{
+	int entry = 0;
+	return [entry](Thing *_s, Thing *_o) mutable{
+		setproc(L"dbg_fail_with_args lambda");
+		TRACE(dout << "..." << endl;)
+
+		(void)_s;
+		(void)_o;
+
+		switch(entry)
+		{
+		case 0:
+			entry = 1;
+			return false;
+		default:
+			assert(false);
+		}
+	};
+}
+
+#define GEN_FAIL (dbg_fail())
+#define GEN_FAIL_WITH_ARGS (dbg_fail_with_args())
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
 
 enum ThingType {UNBOUND, BOUND, NODE, LIST};
-struct Thing
+class Thing
 {
+public:
 	ThingType type;
-	union {termid * term, Thing * Thing, List * list};
+	union {old::termid term; Thing * thing; List * list;};
+
+
+	Thing(old::termid n)
+	{
+		FUN;
+		TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl;)
+		if (n->p > 0) {
+			if (*old::dict[n->p].value == L".") {
+				type = LIST;
+				TRACE(dout << "list" << endl;)
+				auto l = op->get_dotstyle_list(n);
+				list = new List(l.size());
+				for (auto y: l) {
+					TRACE(dout << "item..." << endl;)
+					list->push_back(Thing(y));
+				}
+				TRACE(dout << "new List: " << this << endl;)
+			}
+			else {
+				type = NODE;
+				term = n;
+				TRACE(dout << "new Node: " << this << endl;)
+			}
+		}
+		else {
+			type = UNBOUND;
+			TRACE(dout << "new Var: " << this << endl;)
+		}
+	}
+
+
+
+
 
 	/*bool eq(Node *x)
 	{
 		setproc(L"eq");
 		TRACE(dout << op->format(value) << " =?= " << op->format(x->value) << endl;)
 		return op->_terms.equals(value, x->value);
-	}
-	Node(old::termid s)
-	{
-		ep_value = s;
-		value = s;
-	}
-	wstring str(){return op->format(value);}
-
+	}*/
 	wstring str() {
-		if (isBound) {
-			assert(value != (Thing*)666);
-			return L"var(" + value->str() + L")";
+		switch(type)
+		{
+			case UNBOUND:
+				return L"var()";
+			case BOUND:
+				assert(thing);
+				return L"var(" + thing->str() + L")";
+			case NODE:
+				assert(term);
+				return op->format(term);
+			case LIST:
+			{
+				assert(list);
+				wstringstream r;
+				r << L"(";
+				if(list->size() > 0)
+				{
+					for(size_t i=0;i<list->size();i++)
+					{
+						if(i != 0) r << " ";
+							r << list->at(i).str();
+					}
+				}else{
+					r << " ";
+				}
+				r << ")";
+				return r.str();
+			}
 		}
-		return L"var()";
 	}
 
 
 
-*/
+
 
 	Thing *getValue()
 /*
@@ -92,7 +312,7 @@ struct Thing
 */
 {
 	if (type == BOUND)
-		return Thing->getValue();
+		return thing->getValue();
 	else
 		return this;
 
@@ -106,106 +326,79 @@ struct Thing
     # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
 */
 
-	//lets break this up into a couple functions for readability
-	function<bool()> unifcoro(Thing *arg){
-		setproc(L"Var.unifcoro");
-		TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
-		if(isBound)
-		{
-			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
-			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
-			return generalunifycoro(this, arg);
+	function<bool()> boundunifycoro(Thing *arg){
+		setproc(L"boundunifycoro");
+		//TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
+		TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
+		TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
+		return unify(this, arg);
+	}
+
+	function<bool()> unboundunifycoro(Thing *arg)
+	{
+		TRACE(dout << "!Bound" << endl;)
+		Thing *argv = arg->getValue();
+		TRACE(dout << "value=" << argv << "/" << argv->str() << endl;)
+
+		if (argv == this) {
+			TRACE(dout << "argv == this" << endl;)
+			//# We are unifying this unbound variable with itself, so leave it unbound.^M
+#ifdef DEBUG
+			return unbound_succeed(this, argv);
+#else
+			return gen_succeed();
+#endif
 		}
-		else
-		{
-			TRACE(dout << "!Bound" << endl;)
+		else {
+			TRACE(dout << "argv != this" << endl;)
 
-			Thing * argv = arg->getValue();
+			int entry = 0;
+			return [this, entry, argv]() mutable {
 
-			TRACE(dout << "value=" << argv << "/" << argv->str() << endl;)
+				setproc(L"unify lambda 2");
+				TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" <<
+					  argv->str() << endl;)
 
-			if (argv == this)
-			{
-				TRACE(dout << "argv == this" << endl;)
-				//# We are unifying this unbound variable with itself, so leave it unbound.^M
-				int entry = 0;
-				return [this, entry, argv]() mutable{
-					assert(!isBound);
-					setproc(L"unify lambda 1");
-					TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" << argv->str() << endl;)
-					switch(entry){
-						case 0:
-							//value = argv;//??? // like, this.value?
-							entry = 1;
-							return true;
-						case 1:
-							entry = 666;
-							return false;
-						default:
-							assert(false);
-					}
-				};
-			}
-			else
-			{
-				TRACE(dout << "argv != this" << endl;)
-
-				int entry = 0;
-				return [this, entry, argv]() mutable{
-
-					setproc(L"unify lambda 2");
-					TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" << argv->str() << endl;)
-
-					switch(entry)
-					{
-							case 0:
-							TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" << argv->str() << endl;)
-							assert(!isBound);
-							isBound = true;
-							value = argv;
-							entry = 1;
-							return true;
-						case 1:
-							TRACE(dout << "unbinding " << this << "/" << this->str() << endl;)
-							assert(isBound);
-							isBound = false;
-							entry = 666;
-							return false;
-						default:
-							assert(false);
-					}
-				};
-			}
+				switch (entry) {
+					case 0:
+						TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" <<
+							  argv->str() << endl;)
+						assert(type == UNBOUND);
+						type = BOUND;
+						thing = argv;
+						entry = 1;
+						return true;
+					case 1:
+						TRACE(dout << "unbinding " << this << "/" << this->str() << endl;)
+						assert(type == BOUND);
+						type = UNBOUND;
+						entry = 666;
+						return false;
+					default:
+						assert(false);
+				}
+			};
 		}
 	}
+	/*
+	function<bool()> varunifycoro(Thing *arg)
+	{
+		if (type == BOUND)
+			return boundunifycoro(arg);
+		else if (type == UNBOUND)
+			return unboundunifycoro(arg);
+		else
+			assert(false);
+	}
+	*/
 };
-/*
-
-	List(std::vector<Thing *> n)
+/*List(std::vector<Thing *> n)
 	{
 		nodes = n;
-	}
+	}*/
 
-	wstring str(){
-		wstringstream r;
-		r << L"(";
-		if(this->nodes.size() > 0){
-			for(size_t i=0;i<this->nodes.size();i++){
-				if(i != 0) r << " ";
-				r << nodes[i]->str();
-			}
-		}else{
-			r << " ";
-		}
-		r << ")";
-		return r.str();
-	}
-
-*/
-};
 
 /*
-
 wstring sprintVar(wstring label, Thing *v){
 	wstringstream wss;
 	wss << label << ": (" << v << ")" << v->str();
@@ -240,94 +433,84 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 
 
 
-#ifndef DEBUG
 
-bool fail()
+
+
+
+
+class yterm {
+public:
+	nodeid p;
+	Thing s, o;
+	yterm(termid x):p(x->p),s(x->s),o(x->o){};
+};
+
+typedef vector<yterm> body_t;
+
+class kb_rule {
+public:
+	yterm head;
+	body_t body;
+	kb_rule(yterm h, body_t b):head(h),body(b){};
+
+};
+
+typedef vector<kb_rule> kb_rules;
+
+std::unordered_map<old::nodeid, kb_rules> rules;
+
+
+body_t make_body(old::prover::termset b)
 {
-	setproc(L"fail");
-	TRACE(dout << "..." << endl;)
-	return false;
+	body_t r;
+	for (termid i: b)
+		r.push_back(yterm(i));
+	return r;
 }
 
-bool fail_with_args(Thing *_s, Thing *_o)
+void compile_kb()
 {
-	(void)_s;
-	(void)_o;
-	setproc(L"fail_with_args");
-	TRACE(dout << "..." << endl;)
-	return false;
-}
+	FUN
+	TRACE(dout << "# of rules: " << op->heads.size() << endl;)
 
-#define GEN_FAIL (fail)
-#define GEN_FAIL_WITH_ARGS (fail_with_args)
+	//old::prover --> pred_index (preprocessing step)
+	for (size_t i = 0; i < op->heads.size(); i++)
+	{
+		old::nodeid pr = op->heads[i]->p;
+		TRACE(dout << "adding rule for pred [" << pr << "] " << old::dict[pr] << "'" << endl;)
+		rules[pr].push_back(kb_rule(yterm(op->heads[i]), make_body(op->bodies[i])));
+		reverse(rules[pr].begin(), rules[pr].end());
+	}
 
-#else
-
-join dbg_fail()
-{
-	int entry = 0;
-	return [entry]() mutable{
-		setproc(L"dbg_fail lambda");
-		TRACE(dout << "..." << endl;)
-
-		switch(entry)
-		{
-		case 0:
-			entry = 666;
-			return false;
-		default:
-			assert(false);
-		}
-	};
-}
-
-comp dbg_fail_with_args()
-{
-	int entry = 0;
-	return [entry](Thing *_s, Thing *_o) mutable{
-		setproc(L"dbg_fail_with_args lambda");
-		TRACE(dout << "..." << endl;)
-
-		(void)_s;
-		(void)_o;
-
-		switch(entry)
-		{
-		case 0:
-			entry = 1;
-			return false;
-		default:
-			assert(false);
-		}
-	};
-}
-
-#define GEN_FAIL (dbg_fail())
-#define GEN_FAIL_WITH_ARGS (dbg_fail_with_args())
-#endif
-
-
-//yield once
-function<bool()> succeed()
-{
-	int entry = 0;
-	return [entry]() mutable{
-		switch(entry)
-		{
-		case 0:
-			entry = 1;
-			return true;
-		case 1:
-			entry = 666;
-			return false;
-		default:
-			assert(false);
-		}
-	};
+	//pred_index --> preds (compilation step)
+	for(auto x: rules){
+		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl;)
+		preds[x.first] = pred(x.first);
+	}
 }
 
 
-join unifjoin(join a, join b)
+
+
+
+
+
+
+
+
+
+rule_t rule(kb_rule x, size_t &nlocals);
+
+
+
+
+
+
+
+
+
+
+coro corojoin(coro a, coro b)
 {
 	setproc(L"unifjoin");
 	TRACE(dout << "..." << endl;)
@@ -356,21 +539,29 @@ join unifjoin(join a, join b)
 	};
 }
 
-function<bool()> listunifycoro(List *a, List *b)
+coro listunifycoro(Thing *aa, Thing *bb)
 {
 	setproc(L"listunifycoro");
 	TRACE(dout << "..." << endl;)
+	assert(aa->type == LIST);
+	assert(aa->type == LIST);
+
+	assert(aa->list);
+	assert(bb->list);
+
+	List & a = *aa->list;
+	List & b = *bb->list;
 
 	//gotta join up unifcoros of vars in the lists
-	if(a->nodes.size() != b->nodes.size())
+	if(a.size() != b.size())
 		return dbg_fail();
 	
 	function<bool()> r;
 	bool first = true;
 
-	for(int i = b->nodes.size()-1;i >= 0; i--) 
+	for(int i = b.size()-1;i >= 0; i--)
 	{
-		join uc = generalunifycoro(a->nodes[i], b->nodes[i]);
+		coro uc = unify(&a[i], &b[i]);
 		
 		if(first){
 			r = uc;
@@ -378,7 +569,7 @@ function<bool()> listunifycoro(List *a, List *b)
 		}
 		else
 		{
-			r = unifjoin(uc, r);
+			r = corojoin(uc, r);
 		}
 	}	
 	return r;
@@ -394,168 +585,75 @@ function<bool()> listunifycoro(List *a, List *b)
 	# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
 	(returns an iterator)
 */
-function<bool()> generalunifycoro(Thing *a, Thing *b){
-	setproc(L"generalunifycoro");
+coro unify(Thing *a, Thing *b){
+	setproc(L"unify");
 	TRACE(dout << "..." << endl;)
 
-	if (a == b)
-		return succeed();
-	
+	if (a == b) {
+		TRACE(dout << "a == b" << endl;)
+		return gen_succeed();
+	}
 
 	//# First argument is a variable
 	TRACE(dout << "a: " << a << ", " << a->getValue() << endl;)	
 	a = a->getValue();
-	Var *a_var = dynamic_cast<Var*>(a);
-	if (a_var){
-		TRACE(dout << "arg1 is a variable." << endl;) 
-		return a_var->unifcoro(b);
-	}	
+	if (a->type == BOUND)
+		return a->boundunifycoro(b);
+	else if (a->type == UNBOUND)
+		return a->unboundunifycoro(b);
 
 	//# Second argument is a variable
 	b = b->getValue();
-	Var *b_var = dynamic_cast<Var*>(b);
-	if (b_var){
-		TRACE(dout << "arg2 is a variable." << endl;)
-		return b_var->unifcoro(a);
-	}
+	if (b->type == BOUND)
+		return b->boundunifycoro(a);
+	else if (b->type == UNBOUND)
+		return b->unboundunifycoro(a);
 
 	//# Both arguments are nodes.
-	Node *n1 = dynamic_cast<Node*>(a);
-	Node *n2 = dynamic_cast<Node*>(b);
-	if(n1&&n2)
+	if(a->type == NODE && b->type == NODE)
 	{
 		TRACE(dout << "Both args are nodes." << endl;)
-		if(n1->eq(n2))
-			return succeed();
+		if(a->term == b->term) ////////eq needed?
+			return gen_succeed();
 		else
-			return dbg_fail();
+			return GEN_FAIL;
 	}
 	
 	//# Both arguments are lists
-	List *l1 = dynamic_cast<List*>(a);
-	List *l2 = dynamic_cast<List*>(b);
-	if (l1&&l2){
+	if(a->type  == LIST && b->type == LIST)
+	{
 		TRACE(dout << "Both args are lists." << endl;)
-		return listunifycoro(l1, l2);	
+		return listunifycoro(a, b);
 	}
 
-	//assert(false);
 	//# Other combinations cannot unify. Fail.
 	TRACE(dout << "Some non-unifying combination. Fail." << endl;)
-	return dbg_fail();
+	return GEN_FAIL;
 }
-/*
-bool ep_check(Thing *a, Thing *b){
-	List *l1 = dynamic_cast<List*>(a);
-	List *l2 = dynamic_cast<List*>(b);
-	if(l1&&l2){
-		if(l1->nodes.size() == l2->nodes.size()){
-			for(size_t i=0;i<l1->nodes.size();i++){
-				if(!ep_check(l1->nodes[i],l2->nodes[i])){
-					return false;
-				}
-			}
-			return true;
-		}else{
-			return false;
-		}
-	}else if(!l1 && l2){
-		return false;
-	}else if(l1 && !l2){
-		return false;
-	}else{
-		return a->ep_value == b->ep_value;
-	}
-}
-*/
 
-/*
-			bool hit = false;
 
-			switch(entry)
-			{
-			case 0:
-				
-				TRACE(dout << "check ep table" << endl;)
-				for (auto x: ep[pr])
-				{
-					TRACE(dout << x.first->ep_value << "=?=" << Ds->ep_value << endl;)
-					TRACE(dout << x.second->ep_value << "=?=" << Do->ep_value << endl;)
-					/*auto ucs = generalunifycoro(x.first, Ds);
-					while(ucs())
-					{
-						auto uco = generalunifycoro(x.second, Do);
-						while(uco())
-							hit = true;
-					}*/
-					//while(x.first == Ds)
-					//	while(x.second == Do)
-					hit = ep_check(x.first,Ds) && ep_check(x.second,Do);
-					//hit = (x.first->ep_value == Ds->ep_value) && (x.second->ep_value == Do->ep_value);
-					
-					if(hit)
-						break;
-				}
-				if(hit)
-				{
-					TRACE(dout << "ep! ep!" << endl;)
-					entry = 666;
-					return false;
-				}
-
-				//add:
-				index = ep[pr].size();
-				TRACE(dout << "store " << Ds->ep_value << " " << Do->ep_value << endl;)
-				ep[pr].push_back(thingthingpair(Ds, Do));
-				//ep[pr].push_back(thingthingpair(Ds->getValue(), Do->getValue()));
-
-				//loop over pred results:
-				while(y(Ds, Do))
-				{
-					entry = 1;
-					return true;
-			case 1: ;
-				}
-
-				//remove:
-				assert(ep[pr].size() > index);
-				{
-					auto xxx = ep[pr][index];
-					TRACE(dout << "erase " << xxx.first << " " << xxx.second << endl);
-				}
-
-				ep[pr].erase(ep[pr].begin()+index);
-				entry = 666;
-				return false;
-			default: ;
-				assert(false);
-			}
-		};
-	};
-}
-*/
-
-comp fact(termid head){
-	setproc(L"fact");
+join fact(yterm * head){
+	FUN;
 	int entry = 0;
-	function<bool()> c1;
-	function<bool()> c2;
-	auto s = atom(head->s);
-	auto o = atom(head->o);
-	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
+	coro c1;
+	coro c2;
+	Thing s = Thing(head->s);
+	Thing o = Thing(head->o);
+	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do, locals _) mutable{
+		(void)_;
 		setproc(L"fact lambda");
 		TRACE(dout << "im in ur fact,  entry: " << entry << endl;)
 
 		switch(entry){
 		case 0:
-			c1 = generalunifycoro(Ds,s);
-			TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
+			c1 = unify(Ds, &s);
+			//TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
 			while(c1()){
 				TRACE(dout << "MATCH c1() " << endl;)
 
-				c2 = generalunifycoro(Do,o);
+				c2 = unify(Do, &o);
 				while(c2()){
-					TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
+					//TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
 					entry = 1;
 					TRACE(dout << "MATCH" << endl;)
 					return true;
@@ -572,26 +670,25 @@ comp fact(termid head){
 	};
 }
 
-comp seq(comp a, comp b){
+join seq(rule_t a, rule_t b){
 	setproc(L"seq");
 	TRACE(dout << ".." << endl;)
 	int entry = 0;
 	int round = 0;
-	comp ac, bc;
-	return [a, b, entry, round, ac, bc](Thing *Ds, Thing *Do) mutable{
+	return [a, b, entry, round](Thing *Ds, Thing *Do, locals l) mutable{
 		setproc(L"seq lambda");	
 		round++;
 		TRACE(dout << "round: " << round << endl;)
 		
 		switch(entry){
 		case 0:
-			while(a(Ds, Do)){
+			while(a(Ds, Do, l)){
 				TRACE(dout << "MATCH A." << endl;)
 				entry = 1;
 				return true;
 		case 1: ;
 			}
-			while(b(Ds, Do)){
+			while(b(Ds, Do, l)){
 				entry = 2;
 				TRACE(dout << "MATCH B." << endl;)
 				return true;
@@ -612,54 +709,24 @@ comp seq(comp a, comp b){
 }
 
 
-void atom(old::termid n, varmap &vars){
-	setproc(L"atom");
-	TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl;)
-	if (vars.find(n) != vars.end())
-		return;
-	if (n->p>0)
-	{
-
-		if(*old::dict[n->p].value == L".")
-		{
-			TRACE(dout << "list" << endl;)
-			std::vector<Thing*> nodes;
-			for(auto y: op->get_dotstyle_list(n)) {
-				TRACE(dout << "item..." << endl;)
-				atom(y, vars);
-				nodes.push_back(vars.at(y));
-			}
-			auto r = vars[n] = new List(nodes);
-			TRACE(dout << "new List: " << r << endl;)
-		}
-		else {
-			auto r = vars[n] = new Node(n);
-			TRACE(dout << "new Node: " << r << endl;)
-		}
-
-	}
-	else {
-		auto r = vars[n] = new Var(n);
-		TRACE(dout << "new Var: " << r << endl;)
-	}
-}
-
 
 
 pred_gen pred(old::nodeid pr) {
 	setproc(L"compile_pred");
-	rulesindex rs = pred_index[pr];
+
+	kb_rules & rs = rules[pr];
+
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
 
 	size_t nlocals = 0;
 	
-	comp y;
+	join y;
 	bool first = true;
 	
 	//compile each rule with the pred in the head, seq them up
-	for (int i = rs.size()-1; i>=0; i--) {
-		
-		rule_t x = rule(op->heads[rs[i]], op->bodies[rs[i]], nlocals);
+	for (auto kbr: rules[pr])
+	{
+		rule_t x = rule(kbr, nlocals);
 
 		if (first) {
 			first = false;
@@ -672,15 +739,14 @@ pred_gen pred(old::nodeid pr) {
 		}
 	}
 
-	if (first)
-		return GEN_FAIL_WITH_ARGS;
+	assert(!first);
 
 	return [nlocals, pr, y]() mutable{
 		setproc(L"pred lambda");
 		TRACE(dout << "nodeid: " << pr << endl;)
 
 		//im trying to get a bit smart here to avoid mallocing 
-		lo = new locals(nlocals);
+		auto lo = new locals(nlocals);
 		for (auto l: lists)
 		{
 			lo[l.first].pointer = (void*)make_list(l.second);
@@ -773,10 +839,10 @@ char pk(locals_map &lm, termid x, termid head)
 	return sk;
 }	
 
-comp rule_generator(old::termid head, old::prover::termset body)
+rule_t compile_rule(yterm head, body_t body, size_t &nlocals)
 {
-	setproc(L"comp ruleproxy");
-	TRACE(dout << "compiling ruleproxy" << endl;)
+	FUN;
+	//TRACE(dout << "compiling ruleproxy" << endl;)
 	join_gen jg = gen_succeed_with_args();
 	locals_map lm;
 	for(int i = body.size() - 1; i >= 0; i--){
@@ -803,12 +869,12 @@ comp rule_generator(old::termid head, old::prover::termset body)
 			for (int i = 0;i < nlocals; i++)
 				l.push_back(new Var());
 	
-			suc = generalunifycoro(s, hs);
+			suc = unify(s, hs);
 			while(suc()) {
 				TRACE(dout << "After suc() -- " << endl;)
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
-				ouc = generalunifycoro(o, ho);
+				ouc = unify(o, ho);
 				while (ouc()) {
 					TRACE(dout << "After ouc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;) 
@@ -836,60 +902,35 @@ comp rule_generator(old::termid head, old::prover::termset body)
 }
 
 
-rule_gen rule(old::termid head, old::prover::termset body)
+rule_t rule(kb_rule x, size_t &nlocals)
 {
-	setproc(L"comp rule");
-	TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;)
-
-	if(body.size() == 0){
-		return fact(head);
-	}
-	if(body.size() == 1)
-	{
-		return ruleproxyOne(vars, head, body);
-	}
-	else if(body.size() > 1)
-	{
-		return ruleproxyMore(vars, head, body);
-	}
+	FUN;
+	//TRACE(dout << "compiling rule " << op->format(head) << " " << body.size() << endl;)
+	if(x.body.size() == 0)
+		return fact(x.head);
 	else
-	{
-		assert(false);
-	}
+		return compile_rule(x.head, x.body, nlocals);
 }
 
-void compile_kb(old::prover *p)
-{
-	setproc(L"generate_pred_index");
-	TRACE(dout << "..." << endl;)
-	TRACE(dout << "# of rules: " << p->heads.size() << endl;)
 
-	//old::prover --> pred_index (preprocessing step)
-	for (size_t i = 0; i < p->heads.size(); i++)
-	{
-		old::nodeid pr = p->heads[i]->p;
-		TRACE(dout << "adding rule for pred [" << pr << "]" << old::dict[pr] << "'" << endl;)
-		if(pred_index.find(pr) == pred_index.end()){
-			pred_index[pr] = rulesindex();
-		}
 
-		pred_index[pr].push_back(i);
-	}
 
-	//pred_index --> preds (compilation step)
-	for(auto x: pred_index){
-		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl;)
-		pred_t tmp_pred = pred(x.first);
-		if(!tmp_pred){
-			assert(false);
-		} 
-		preds[x.first] = tmp_pred;
-		if(!preds[x.first]){
-			assert(false);
-		}
-	}
 
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void thatsAllFolks(int nresults){
 	dout << "That's all, folks, ";
@@ -943,6 +984,22 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 		)
 	);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1014,7 +1071,7 @@ string" << endl;//nope, im not writing it in c++:)
 
 }
 
-
+#ifdef notes
 /*
 anyway...one join function, joins "just pass" query s and o down between them,
 each join calls one pred,
@@ -1049,3 +1106,120 @@ so i guess we start with 1?
 
 
 */
+
+
+/*
+bool ep_check(Thing *a, Thing *b){
+	List *l1 = dynamic_cast<List*>(a);
+	List *l2 = dynamic_cast<List*>(b);
+	if(l1&&l2){
+		if(l1->nodes.size() == l2->nodes.size()){
+			for(size_t i=0;i<l1->nodes.size();i++){
+				if(!ep_check(l1->nodes[i],l2->nodes[i])){
+					return false;
+				}
+			}
+			return true;
+		}else{
+			return false;
+		}
+	}else if(!l1 && l2){
+		return false;
+	}else if(l1 && !l2){
+		return false;
+	}else{
+		return a->ep_value == b->ep_value;
+	}
+}
+*/
+
+/*
+			bool hit = false;
+
+			switch(entry)
+			{
+			case 0:
+
+				TRACE(dout << "check ep table" << endl;)
+				for (auto x: ep[pr])
+				{
+					TRACE(dout << x.first->ep_value << "=?=" << Ds->ep_value << endl;)
+					TRACE(dout << x.second->ep_value << "=?=" << Do->ep_value << endl;)
+					/*auto ucs = generalunifycoro(x.first, Ds);
+					while(ucs())
+					{
+						auto uco = unify(x.second, Do);
+						while(uco())
+							hit = true;
+					}*/
+					//while(x.first == Ds)
+					//	while(x.second == Do)
+					hit = ep_check(x.first,Ds) && ep_check(x.second,Do);
+					//hit = (x.first->ep_value == Ds->ep_value) && (x.second->ep_value == Do->ep_value);
+
+					if(hit)
+						break;
+				}
+				if(hit)
+				{
+					TRACE(dout << "ep! ep!" << endl;)
+					entry = 666;
+					return false;
+				}
+
+				//add:
+				index = ep[pr].size();
+				TRACE(dout << "store " << Ds->ep_value << " " << Do->ep_value << endl;)
+				ep[pr].push_back(thingthingpair(Ds, Do));
+				//ep[pr].push_back(thingthingpair(Ds->getValue(), Do->getValue()));
+
+				//loop over pred results:
+				while(y(Ds, Do))
+				{
+					entry = 1;
+					return true;
+			case 1: ;
+				}
+
+				//remove:
+				assert(ep[pr].size() > index);
+				{
+					auto xxx = ep[pr][index];
+					TRACE(dout << "erase " << xxx.first << " " << xxx.second << endl);
+				}
+
+				ep[pr].erase(ep[pr].begin()+index);
+				entry = 666;
+				return false;
+			default: ;
+				assert(false);
+			}
+		};
+	};
+}
+*/
+
+
+#endif
+
+
+coro unbound_succeed(Thing *x, Thing *y)
+{
+	int entry = 0;
+	return [entry, x, y]() mutable {
+		assert(x->type == UNBOUND);
+		setproc(L"unify lambda 1");
+		//TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" <<y->str() << endl;)
+		switch (entry) {
+			case 0:
+				entry = 1;
+				return true;
+			case 1:
+				entry = 666;
+				return false;
+			default:
+				assert(false);
+		}
+	};
+}
+

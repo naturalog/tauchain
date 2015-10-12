@@ -342,6 +342,11 @@ _setproc:: _setproc(const string& p) {
 	++_indent;
 }
 
+_setproc:: _setproc(const std::string& p) {
+	proc.push_front(ws(p));
+	++_indent;
+}
+
 _setproc:: ~_setproc() {
 	proc.pop_front();
 	--_indent;
