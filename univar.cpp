@@ -25,11 +25,12 @@ typedef vector<Thing> locals;
 
 typedef function<bool()> coro;
 typedef function<bool(Thing*,Thing*)> pred_t;
-typedef function<bool(Thing*,Thing*, locals)> rule_t;
-typedef function<rule_t()> rule_gen;
-typedef rule_t join;
-typedef function<join()> join_gen;
 typedef function<pred_t()> pred_gen;
+typedef function<bool(Thing*,Thing*)> rule_t;
+typedef function<rule_t()> rule_gen;
+typedef function<bool(Thing*,Thing*, locals)> join_t;
+typedef function<join_t()> join_gen;
+
 
 
 
@@ -92,7 +93,7 @@ coro gen_succeed()
 	};
 }
 
-rule_t succeed_with_args()
+join_t succeed_with_args()
 {
 	int entry = 0;
 	return [entry](Thing *Ds, Thing *Do, locals _) mutable{
@@ -113,7 +114,7 @@ rule_t succeed_with_args()
 	};
 }
 
-join_gen gen_succeed_with_args()
+join_gen succeed_with_args_gen()
 {
 	return []() {
 		return succeed_with_args();
@@ -207,12 +208,12 @@ pred_t dbg_fail_with_args()
 
 
 
-enum ThingType {UNBOUND, BOUND, NODE, LIST};
+enum ThingType {UNBOUND, BOUND, NODE, LIST, LINK};
 class Thing
 {
 public:
 	ThingType type;
-	union {old::termid term; Thing * thing; List * list;};
+	union {old::termid term; Thing * thing; List * list; int offset};
 
 
 	Thing(old::termid n)
@@ -283,6 +284,7 @@ public:
 				return r.str();
 			}
 		}
+		assert(false);
 	}
 
 
@@ -313,6 +315,8 @@ public:
 {
 	if (type == BOUND)
 		return thing->getValue();
+	else if (type == LINK)
+		return (this + offset)->getValue();
 	else
 		return this;
 
@@ -380,53 +384,6 @@ public:
 			};
 		}
 	}
-	/*
-	function<bool()> varunifycoro(Thing *arg)
-	{
-		if (type == BOUND)
-			return boundunifycoro(arg);
-		else if (type == UNBOUND)
-			return unboundunifycoro(arg);
-		else
-			assert(false);
-	}
-	*/
-};
-/*List(std::vector<Thing *> n)
-	{
-		nodes = n;
-	}*/
-
-
-/*
-wstring sprintVar(wstring label, Thing *v){
-	wstringstream wss;
-	wss << label << ": (" << v << ")" << v->str();
-	return wss.str();
-}
-
-wstring sprintPred(wstring label, old::nodeid pred){
-	wstringstream wss;
-	wss << label << ": (" << pred << ")" << old::dict[pred];
-	return wss.str();
-}
-
-wstring sprintThing(wstring label, Thing *t){
-	wstringstream wss;
-	wss << label << ": [" << t << "]" << t->str();
-	return wss.str();
-}
-
-wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
-	wstringstream wss;
-	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
-	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
-	return wss.str();
-} 
-*/
-
-
-
 
 
 
@@ -632,15 +589,15 @@ coro unify(Thing *a, Thing *b){
 }
 
 
-join fact(yterm * head){
+rule_t fact(yterm * head){
 	FUN;
 	int entry = 0;
 	coro c1;
 	coro c2;
 	Thing s = Thing(head->s);
 	Thing o = Thing(head->o);
-	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do, locals _) mutable{
-		(void)_;
+	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
+
 		setproc(L"fact lambda");
 		TRACE(dout << "im in ur fact,  entry: " << entry << endl;)
 
@@ -670,25 +627,25 @@ join fact(yterm * head){
 	};
 }
 
-join seq(rule_t a, rule_t b){
+rule_t seq(rule_t a, rule_t b){
 	setproc(L"seq");
 	TRACE(dout << ".." << endl;)
 	int entry = 0;
 	int round = 0;
-	return [a, b, entry, round](Thing *Ds, Thing *Do, locals l) mutable{
+	return [a, b, entry, round](Thing *Ds, Thing *Do) mutable{
 		setproc(L"seq lambda");	
 		round++;
 		TRACE(dout << "round: " << round << endl;)
 		
 		switch(entry){
 		case 0:
-			while(a(Ds, Do, l)){
+			while(a(Ds, Do)){
 				TRACE(dout << "MATCH A." << endl;)
 				entry = 1;
 				return true;
 		case 1: ;
 			}
-			while(b(Ds, Do, l)){
+			while(b(Ds, Do)){
 				entry = 2;
 				TRACE(dout << "MATCH B." << endl;)
 				return true;
@@ -711,22 +668,20 @@ join seq(rule_t a, rule_t b){
 
 
 
-pred_gen pred(old::nodeid pr) {
+pred_gen pred(old::nodeid pr)
+{
 	setproc(L"compile_pred");
 
-	kb_rules & rs = rules[pr];
+	kb_rules &rs = rules[pr];
 
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
 
-	size_t nlocals = 0;
-	
-	join y;
+	rule_t y;
 	bool first = true;
-	
+
 	//compile each rule with the pred in the head, seq them up
-	for (auto kbr: rules[pr])
-	{
-		rule_t x = rule(kbr, nlocals);
+	for (auto kbr: rules[pr]) {
+		rule_t x = rule(kbr);
 
 		if (first) {
 			first = false;
@@ -741,66 +696,17 @@ pred_gen pred(old::nodeid pr) {
 
 	assert(!first);
 
-	return [nlocals, pr, y]() mutable{
+	return [pr, y]() mutable {
 		setproc(L"pred lambda");
 		TRACE(dout << "nodeid: " << pr << endl;)
 
-		//im trying to get a bit smart here to avoid mallocing 
-		auto lo = new locals(nlocals);
-		for (auto l: lists)
-		{
-			lo[l.first].pointer = (void*)make_list(l.second);
-			lo[l.first].type = LIST;
-		}
-
-		int entry=0;
-		int round=0;
-		
-		return [lo, pr, y, entry, round](Thing *Ds, Thing *Do) mutable{
-		        setproc(L"pred ep lambda");
-			TRACE(dout << "entry=" << entry << endl);
-
-
-//9x:
-join_gen join_sl(pred_gen a, join_gen b, size_t wi, size_t xi){
-	setproc(L"joinsw");
-	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
-	comp ac;
-	comp bc;
-	return [a,b,wi,xi,entry,round,ac,bc]()mutable{
-		setproc(L"join gen");
-		return [a,b,wi,xi,entry, round, ac,bc](Thing *s, Thing *o)mutable{
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
-			switch(entry){
-			case 0:
-				TRACE( dout << sprintPred(L"a()",a) << endl;)
-				ac = a();
-				while(ac(s,locals[wi])) {
-					TRACE(dout << "MATCH A." << endl;)
-
-					bc = b();
-					while (bc(s,o)) {
-						TRACE(dout << "MATCH." << endl;)
-						entry = 1;
-						return true;
-
-			case 1: ;
-					TRACE(dout << "RE-ENTRY" << endl;)
-					}
-				}
-				entry = 666;
-				TRACE(dout << "DONE." << endl;)
-				return false;
-			default:
-				assert(false);
-			}
-		};
+		return y;
 	};
 }
+
+
+
+
 
 
 typedef vector<old::termid> locals_map;
@@ -843,7 +749,7 @@ rule_t compile_rule(yterm head, body_t body, size_t &nlocals)
 {
 	FUN;
 	//TRACE(dout << "compiling ruleproxy" << endl;)
-	join_gen jg = gen_succeed_with_args();
+	join_gen jg = succeed_with_args_gen();
 	locals_map lm;
 	for(int i = body.size() - 1; i >= 0; i--){
 		termid s = body[i]->s;
@@ -857,7 +763,12 @@ rule_t compile_rule(yterm head, body_t body, size_t &nlocals)
 	
 	return [ jg, suc,ouc,j, entry,round]   (Thing *s , Thing *o) mutable
 	{
-		setproc(L"ruleproxy lambda");
+		setproc(L"rule coro");
+
+		locals l = lt;
+
+
+
 		round++;
 		TRACE(dout << "round=" << round << endl;)
 		switch(entry)
@@ -912,6 +823,48 @@ rule_t rule(kb_rule x, size_t &nlocals)
 		return compile_rule(x.head, x.body, nlocals);
 }
 
+
+
+//9x:
+join_gen join_sl(pred_gen a, join_gen b, size_t wi, size_t xi){
+	setproc(L"joinsw");
+	TRACE(dout << "making a join" << endl;)
+	int entry = 0;
+	int round = 0;
+	pred_t ac;
+	join_t bc;
+	return [a,b,wi,xi,entry,round,ac,bc]()mutable{
+		setproc(L"join gen");
+		return [a,b,wi,xi,entry, round, ac,bc](Thing *s, Thing *o)mutable{
+			setproc(L"join coro");
+			round++;
+			TRACE(dout << "round: " << round << endl;)
+			switch(entry){
+			case 0:
+				TRACE( dout << sprintPred(L"a()",a) << endl;)
+				ac = a();
+				while(ac(s,locals[wi])) {
+					TRACE(dout << "MATCH A." << endl;)
+
+					bc = b();
+					while (bc(s,o)) {
+						TRACE(dout << "MATCH." << endl;)
+						entry = 1;
+						return true;
+
+			case 1: ;
+					TRACE(dout << "RE-ENTRY" << endl;)
+					}
+				}
+				entry = 666;
+				TRACE(dout << "DONE." << endl;)
+				return false;
+			default:
+				assert(false);
+			}
+		};
+	};
+}
 
 
 
@@ -1222,4 +1175,51 @@ coro unbound_succeed(Thing *x, Thing *y)
 		}
 	};
 }
+
+
+
+	/*
+	function<bool()> varunifycoro(Thing *arg)
+	{
+		if (type == BOUND)
+			return boundunifycoro(arg);
+		else if (type == UNBOUND)
+			return unboundunifycoro(arg);
+		else
+			assert(false);
+	}
+	*/
+};
+/*List(std::vector<Thing *> n)
+	{
+		nodes = n;
+	}*/
+
+
+/*
+wstring sprintVar(wstring label, Thing *v){
+	wstringstream wss;
+	wss << label << ": (" << v << ")" << v->str();
+	return wss.str();
+}
+
+wstring sprintPred(wstring label, old::nodeid pred){
+	wstringstream wss;
+	wss << label << ": (" << pred << ")" << old::dict[pred];
+	return wss.str();
+}
+
+wstring sprintThing(wstring label, Thing *t){
+	wstringstream wss;
+	wss << label << ": [" << t << "]" << t->str();
+	return wss.str();
+}
+
+wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
+	wstringstream wss;
+	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
+	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
+	return wss.str();
+}
+*/
 
