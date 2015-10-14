@@ -6,7 +6,7 @@
 using namespace std;
 using namespace old;
 
-#define FUN setproc(__FUNCTION__);
+#define FUN setproc(__FUNCTION__);//
 
 
 
@@ -176,35 +176,6 @@ pred_t dbg_fail_with_args()
 
 
 
-//region sprint
-
-wstring sprintVar(wstring label, Thing *v){
-	wstringstream wss;
-	wss << label << ": (" << v << ")" << v->str();
-	return wss.str();
-}
-
-wstring sprintPred(wstring label, old::nodeid pred){
-	wstringstream wss;
-	wss << label << ": (" << pred << ")" << old::dict[pred];
-	return wss.str();
-}
-
-wstring sprintThing(wstring label, Thing *t){
-	wstringstream wss;
-	wss << label << ": [" << t << "]" << t->str();
-	return wss.str();
-}
-
-wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
-	wstringstream wss;
-	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
-	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
-	return wss.str();
-}
-
-
-//endregion
 
 
 
@@ -334,6 +305,36 @@ public:
 	}
 };
 
+
+//region sprint
+
+wstring sprintVar(wstring label, Thing *v){
+	wstringstream wss;
+	wss << label << ": (" << v << ")" << v->str();
+	return wss.str();
+}
+
+wstring sprintPred(wstring label, old::nodeid pred){
+	wstringstream wss;
+	wss << label << ": (" << pred << ")" << old::dict[pred];
+	return wss.str();
+}
+
+wstring sprintThing(wstring label, Thing *t){
+	wstringstream wss;
+	wss << label << ": [" << t << "]" << t->str();
+	return wss.str();
+}
+
+wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
+	wstringstream wss;
+	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
+	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
+	return wss.str();
+}
+
+
+//endregion
 
 
 
@@ -541,30 +542,36 @@ rule_t seq(rule_t a, rule_t b){
 pred_gen pred(old::nodeid pr)
 {
 	FUN;
-	vector<size_t> rs = pred_index[pr];
-	TRACE(dout << "# of rules: " << rs.size() << endl;)
 	rule_t y;
-	bool first = true;
-	//compile each rule with the pred in the head, seq them up
-	for (auto r: rs) {
-		rule_t x
-				=
-				//op->bodies[r].size()
-				//?
-				compile_rule(op->heads[r], op->bodies[r])
-				//:
-				/*fact(op->heads[r])*/;
-		if (first) {
-			first = false;
-			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-			y = x;
-		}
-		else {
-			TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-			y = seq(x, y);
-		}
+	auto it = pred_index.find(pr);
+	if (it == pred_index.end()) {
+		y = GEN_FAIL_WITH_ARGS;
 	}
-	assert(!first);
+	else {
+		vector<size_t> rs = pred_index.at(pr);
+		TRACE(dout << "# of rules: " << rs.size() << endl;)
+		bool first = true;
+		//compile each rule with the pred in the head, seq them up
+		for (auto r: rs) {
+			rule_t x
+					=
+					//op->bodies[r].size()
+					//?
+					compile_rule(op->heads[r], op->bodies[r])
+			//:
+			/*fact(op->heads[r])*/;
+			if (first) {
+				first = false;
+				TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+				y = x;
+			}
+			else {
+				TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+				y = seq(x, y);
+			}
+		}
+		assert(!first);
+	}
 	return [pr, y]() mutable {
 		setproc(L"pred lambda");
 		TRACE(dout << "nodeid: " << pr << endl;)
@@ -598,7 +605,7 @@ join_gen perm0(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
 					ac = a();
-					while (ac(s, &locals[wi])) {
+					while (ac(&locals[wi], s)) {
 						TRACE(dout << "MATCH A." << endl;)
 
 						bc = b();
@@ -640,10 +647,10 @@ bool islist(termid t)
 
 
 //return term's PredParam and possibly also its index into the corresponding vector
-char thing_key (termid x, size_t &index, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head) {
-		if (x == head->s)
+char thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head) {
+		if (head && x == head->s)
 			return HEAD_S;
-		else if (x == head->o)
+		else if (head && x == head->o)
 			return HEAD_O;
 		else {
 			auto it = lm.find(x);
@@ -740,8 +747,10 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	};
 
 	vector<termid> terms;
-	terms.push_back(head->s);
-	terms.push_back(head->o);
+	if (head) {
+		terms.push_back(head->s);
+		terms.push_back(head->o);
+	}
 	for (termid bi: body) {
 		terms.push_back(bi->s);
 		terms.push_back(bi->o);
@@ -750,7 +759,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	for (termid x: terms)
 		if (x->p > 0 && !islist(x)) {
 			//force rule s and o into locals for now
-			if (x == head->s || x == head->o)
+			if (head && (x == head->s || x == head->o))
 				add_node(x, locals, lm);
 			else
 				add_node(x, consts, cm);
@@ -768,16 +777,9 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 
 
-rule_t compile_rule(termid head, prover::termset body)
+join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
-	FUN;
-
-	locals_map lm;
-	locals_map cm;
-	Locals locals;
-	Locals consts;
-
-	make_locals(locals, consts, lm, cm, head, body);
+	FUN!
 
 	join_gen jg = succeed_with_args_gen();
 
@@ -786,26 +788,49 @@ rule_t compile_rule(termid head, prover::termset body)
 		termid s = bi->s;
 		termid o = bi->o;
 		size_t i1, i2;
-		PredParam sk = thing_key(s, i1, locals, consts, lm, cm, head);
-		PredParam ok = thing_key(o, i2, locals, consts, lm, cm, head);
+		PredParam sk = thing_key(s, i1, lm, cm, head);
+		PredParam ok = thing_key(o, i2, lm, cm, head);
 		jg = perms.at(sk).at(ok)(pred(bi->p), jg, i1, i2, locals);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
 
-	size_t hs, ho;
-	thing_key(head->s, hs);
-	thing_key(head->s, ho);
+	return jg;
+}
 
-	coro suc, ouc;
+
+
+
+
+
+rule_t compile_rule(termid head, prover::termset body)
+{
+	FUN!
+
+	locals_map lm, cm;
+	Locals locals, consts;
+
+	make_locals(locals, consts, lm, cm, head, body);
+	join_gen jg = compile_body(locals, consts, lm, cm, head, body);
+
+	size_t hs, ho;
+	thing_key(head->s, hs, lm, cm, head);
+	thing_key(head->s, ho, lm, cm, head);
+
 	join_t j;
+	coro suc, ouc;
 	int round = 0, entry = 0;
 
-	return [hs, ho, locals,consts, jg, suc, ouc, j, entry, round](Thing *s, Thing *o) mutable {
+	return [hs, ho, locals,&consts, jg, suc, ouc, j, entry, round](Thing *s, Thing *o) mutable {
 		setproc(L"rule coro");
 		round++;
 		TRACE(dout << "round=" << round << endl;)
 		switch (entry) {
 			case 0:
+
+
+				//ep
+
+
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				suc = unify(s, &locals.at(hs));
 				while (suc()) {
@@ -838,7 +863,6 @@ rule_t compile_rule(termid head, prover::termset body)
 		}
 	};
 }
-
 
 
 
@@ -938,19 +962,19 @@ void yprover::query(const old::qdb& goal){
 	results.clear();
 	const old::prover::termset g = p->qdb2termset(goal);
 	int nresults = 0;
-	old::nodeid pr = g[0]->p;
+	//TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl;)
+	locals_map lm, cm;
+	Locals locals, consts;
 
-	if (pred_index.find(pr) != pred_index.end()) {
+	make_locals(locals, consts, lm, cm, 0, g);
+	join_gen jg = compile_body(locals, consts, lm, cm, 0, g);
 
+	//TRACE(dout << sprintPred(L"Run pred: ",pr) << " with " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl;)
+	// this is weird, passing the args over and over
 
-		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl;)
+	join_t coro = jg();
 
-		auto coro = preds[pr]();
-
-		TRACE(dout << sprintPred(L"Run pred: ",pr) << " with " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl;)
-
-		// this is weird, passing the args over and over
-		while (coro(s,o)) {
+	while (coro((Thing*)666,(Thing*)666,locals)) {
 			nresults++;
 
 			dout << KCYN << L"RESULT " << KNRM << nresults << ":";
