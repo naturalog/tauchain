@@ -2,13 +2,9 @@
 #include <unordered_map>
 #include <queue>
 #include "univar.h"
-//#include <limits.h>
+
 using namespace std;
 using namespace old;
-
-
-
-
 
 #define FUN setproc(__FUNCTION__);
 
@@ -17,12 +13,10 @@ using namespace old;
 
 
 class Thing;
-//btw im using gen in the sense that its a lambda generating another lambda
+typedef vector<Thing> Locals;
 
 typedef std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
-
-typedef vector<Thing> Locals;
 
 typedef function<bool()> coro;
 typedef function<bool(Thing*,Thing*)> pred_t;
@@ -31,13 +25,13 @@ typedef function<bool(Thing*,Thing*)> rule_t;
 typedef function<rule_t()> rule_gen;
 typedef function<bool(Thing*,Thing*, Locals&)> join_t;
 typedef function<join_t()> join_gen;
+//btw im using gen in the sense that its a lambda generating another lambda
 
 
 
-
-
-std::unordered_map<old::nodeid, pred_gen> preds;
 old::prover *op; // used as a kb
+map<nodeid, vector<size_t>> pred_index;
+std::unordered_map<old::nodeid, pred_gen> preds;
 
 
 
@@ -201,45 +195,6 @@ public:
 		size_t size;
 		int offset;
 	};
-
-
-	/*
-	Thing(old::termid n)
-	{
-		FUN;
-		TRACE(dout << "termid:" << n << " p:" << old::dict[n->p] << endl;)
-		if (n->p > 0) {
-			if (*old::dict[n->p].value == L".") {
-				type = LIST;
-				TRACE(dout << "list" << endl;)
-				auto l = op->get_dotstyle_list(n);
-				size = l.size();
-				for (auto y: l) {
-					TRACE(dout << "item..." << endl;)
-					list->push_back(Thing(y));
-				}
-				TRACE(dout << "new List: " << this << endl;)
-			}
-			else {
-				type = NODE;
-				term = n;
-				TRACE(dout << "new Node: " << this << endl;)
-			}
-		}
-		else {
-			type = UNBOUND;
-			TRACE(dout << "new Var: " << this << endl;)
-		}
-	}
-*/
-
-
-	/*bool eq(Node *x)
-	{
-		setproc(L"eq");
-		TRACE(dout << op->format(value) << " =?= " << op->format(x->value) << endl;)
-		return op->_terms.equals(value, x->value);
-	}*/
 	wstring str()
 	{
 		switch (type)
@@ -311,15 +266,6 @@ public:
 		# yield, return this Variable to the unbound state.
 		# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
 	*/
-	/*
-		function<bool()> boundunifycoro(Thing *arg){
-			setproc(L"boundunifycoro");
-			//TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
-			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
-			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
-			return unify(this, arg);
-		}
-	*/
 	function<bool()> unboundunifycoro(Thing *arg)
 	{
 		TRACE(dout << "!Bound" << endl;)
@@ -373,40 +319,7 @@ public:
 
 //region kb
 
-map<nodeid, vector<size_t>> pred_index;
 
-/*
-
-class yterm {
-public:
-	nodeid p;
-	Thing s, o;
-	yterm(termid x):p(x->p),s(x->s),o(x->o){};
-};
-
-typedef vector<yterm> body_t;
-
-class kb_rule {
-public:
-	yterm head;
-	body_t body;
-	kb_rule(yterm h, body_t b):head(h),body(b){};
-
-};
-
-typedef vector<kb_rule> kb_rules;
-
-std::unordered_map<old::nodeid, kb_rules> rules;
-
-
-body_t make_body(old::prover::termset b)
-{
-	body_t r;
-	for (termid i: b)
-		r.push_back(yterm(i));
-	reverse(r.begin(), r.end());
-	return r;
-}
 
 void compile_kb()
 {
@@ -414,21 +327,20 @@ void compile_kb()
 	TRACE(dout << "# of rules: " << op->heads.size() << endl;)
 
 	//old::prover --> pred_index (preprocessing step)
-	for (size_t i = 0; i < op->heads.size(); i++)
+	for (int i = op->heads.size()-1; i >= 0; i--)
 	{
 		old::nodeid pr = op->heads[i]->p;
 		TRACE(dout << "adding rule for pred [" << pr << "] " << old::dict[pr] << "'" << endl;)
-		rules[pr].push_back(kb_rule(yterm(op->heads[i]), make_body(op->bodies[i])));
-		reverse(rules[pr].begin(), rules[pr].end());
+		pred_index[pr].push_back(i);
 	}
 
 	//pred_index --> preds (compilation step)
-	for(auto x: rules){
+	for(auto x: pred_index){
 		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl;)
 		preds[x.first] = pred(x.first);
 	}
 }
-*/
+
 
 
 
@@ -905,14 +817,15 @@ rule_gen compile_rule(termid head, prover::termset body)
 
 	join_gen jg = succeed_with_args_gen();
 
-	for(termid i: body)
+	for(int i = body.size()-1; i >= 0; i--)
 	{
-		termid s = i->s;
-		termid o = i->o;
+		termid &bi = body[i];
+		termid s = bi->s;
+		termid o = bi->o;
 		size_t i1, i2;
 		PredParam sk = thing_key(s, i1);
 		PredParam ok = thing_key(o, i2);
-		jg = perms[sk][ok](pred(i->p), jg, i1, i2, locals);
+		jg = perms.at(sk).at(ok)(pred(bi->p), jg, i1, i2, locals);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
 
@@ -1297,12 +1210,6 @@ bool ep_check(Thing *a, Thing *b){
 	}
 	*/
 
-/*List(std::vector<Thing *> n)
-	{
-		nodes = n;
-	}*/
-
-
 /*
 wstring sprintVar(wstring label, Thing *v){
 	wstringstream wss;
@@ -1330,5 +1237,20 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 }
 */
 
+	/*bool eq(Node *x)
+	{
+		setproc(L"eq");
+		TRACE(dout << op->format(value) << " =?= " << op->format(x->value) << endl;)
+		return op->_terms.equals(value, x->value);
+	}*/
+	/*
+		function<bool()> boundunifycoro(Thing *arg){
+			setproc(L"boundunifycoro");
+			//TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
+			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
+			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
+			return unify(this, arg);
+		}
+	*/
 
 #endif
