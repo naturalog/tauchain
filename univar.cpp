@@ -39,7 +39,7 @@ std::unordered_map<old::nodeid, pred_gen> preds;
 coro unbound_succeed(Thing *x, Thing *y);
 coro unify(Thing *, Thing *);
 pred_gen pred(old::nodeid pr);
-
+rule_gen compile_rule(termid head, prover::termset body);
 
 
 
@@ -207,22 +207,18 @@ public:
 			case NODE:
 				assert(term);
 				return op->format(term);
-			case LIST: /*{
-				assert(list);
+			case LIST: {
 				wstringstream r;
-				r << L"(";
-				if (list->size() > 0) {
-					for (size_t i = 0; i < list->size(); i++) {
-						if (i != 0) r << " ";
-						r << list->at(i).str();
-					}
-				} else {
-					r << " ";
+				for (size_t i = 0; i < size; i++) {
+					if (i != 0) r << " ";
+					r << (this + i)->str();
 				}
-				r << ")";
-				return r.str();
-			}*/
-			case OFFSET:;
+				if(!size)
+					r << " ";
+				return L"(" + r.str() + L")";
+			}
+			case OFFSET:
+				return (this + offset)->str();
 		}
 		assert(false);
 	}
@@ -391,29 +387,23 @@ coro corojoin(coro a, coro b)
 	};
 }
 
-coro listunifycoro(Thing *aa, Thing *bb)
+coro listunifycoro(Thing *a, Thing *b)
 {
 	setproc(L"listunifycoro");
 	TRACE(dout << "..." << endl;)
-	assert(aa->type == LIST);
-	assert(bb->type == LIST);
-/*
-	assert(aa->list);
-	assert(bb->list);
-
-	List & a = *aa->list;
-	List & b = *bb->list;
+	assert(a->type == LIST);
+	assert(b->type == LIST);
 
 	//gotta join up unifcoros of vars in the lists
-	if(a.size() != b.size())
+	if(a->size != b->size)
 		return dbg_fail();
 	
 	function<bool()> r;
 	bool first = true;
 
-	for(int i = b.size()-1;i >= 0; i--)
+	for(int i = b->size-1;i >= 0; i--)
 	{
-		coro uc = unify(&a[i], &b[i]);
+		coro uc = unify(a+i, b+i);
 		
 		if(first){
 			r = uc;
@@ -424,7 +414,7 @@ coro listunifycoro(Thing *aa, Thing *bb)
 			r = corojoin(uc, r);
 		}
 	}	
-	return r;*/
+	return r;
 }
 
 
@@ -484,7 +474,7 @@ coro unify(Thing *a, Thing *b){
 }
 
 
-rule_t fact(term * head){/*
+rule_t fact(termid head){/*
 	FUN;
 	int entry = 0;
 	coro c1;
@@ -565,9 +555,9 @@ rule_t seq(rule_t a, rule_t b){
 
 pred_gen pred(old::nodeid pr)
 {
-	setproc(L"compile_pred");
-/*
-	kb_rules &rs = rules[pr];
+	FUN;
+
+	vector<size_t> rs = pred_index[pr];
 
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
 
@@ -575,16 +565,14 @@ pred_gen pred(old::nodeid pr)
 	bool first = true;
 
 	//compile each rule with the pred in the head, seq them up
-	for (auto kbr: rules[pr]) {
-		rule_t x = rule(kbr);
-
-
-			if(x.body.size() == 0)
-		return fact(x.head);
-	else
-		return compile_rule(x.head, x.body, nlocals);
-
-
+	for (auto r: rs) {
+		rule_t x
+				=
+				op->bodies[r].size()
+				?
+				compile_rule(op->heads[r], op->bodies[r])
+				:
+				fact(op->heads[r]);
 
 		if (first) {
 			first = false;
