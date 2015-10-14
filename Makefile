@@ -13,6 +13,11 @@ tau: $(OBJECTS) $(EXECUTABLE)
 
 %.o: %.cpp `${CC} -std=c++11 $(CXXFLAGS) -M %.cpp`
 
+
+test1: univar.txt.cpp
+	clang++ $(ASAN) -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O3   univar.txt.cpp
+
+
 with_marpa: marpa_tau.o libmarpa/dist/.libs/libmarpa.so
 
 libmarpa/dist/.libs/libmarpa.so:

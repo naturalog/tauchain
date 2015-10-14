@@ -39,7 +39,7 @@ std::unordered_map<old::nodeid, pred_gen> preds;
 coro unbound_succeed(Thing *x, Thing *y);
 coro unify(Thing *, Thing *);
 pred_gen pred(old::nodeid pr);
-rule_gen compile_rule(termid head, prover::termset body);
+rule_t compile_rule(termid head, prover::termset body);
 
 
 
@@ -176,11 +176,35 @@ pred_t dbg_fail_with_args()
 
 
 
+//region sprint
+
+wstring sprintVar(wstring label, Thing *v){
+	wstringstream wss;
+	wss << label << ": (" << v << ")" << v->str();
+	return wss.str();
+}
+
+wstring sprintPred(wstring label, old::nodeid pred){
+	wstringstream wss;
+	wss << label << ": (" << pred << ")" << old::dict[pred];
+	return wss.str();
+}
+
+wstring sprintThing(wstring label, Thing *t){
+	wstringstream wss;
+	wss << label << ": [" << t << "]" << t->str();
+	return wss.str();
+}
+
+wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
+	wstringstream wss;
+	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
+	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
+	return wss.str();
+}
 
 
-
-
-
+//endregion
 
 
 
@@ -473,45 +497,6 @@ coro unify(Thing *a, Thing *b){
 	return GEN_FAIL;
 }
 
-
-rule_t fact(termid head){/*
-	FUN;
-	int entry = 0;
-	coro c1;
-	coro c2;
-	Thing s = Thing(head->s);
-	Thing o = Thing(head->o);
-	return [s, o, entry, c1, c2](Thing *Ds, Thing *Do) mutable{
-
-		setproc(L"fact lambda");
-		TRACE(dout << "im in ur fact,  entry: " << entry << endl;)
-
-		switch(entry){
-		case 0:
-			c1 = unify(Ds, &s);
-			//TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
-			while(c1()){
-				TRACE(dout << "MATCH c1() " << endl;)
-
-				c2 = unify(Do, &o);
-				while(c2()){
-					//TRACE(dout << "Ds: " << Ds << "/" << Ds->str() << ", s: " << s << "/" << s->str() << "Do: " << Do << "/" << Do->str() << endl;)
-					entry = 1;
-					TRACE(dout << "MATCH" << endl;)
-					return true;
-		case 1: ;
-		TRACE(dout << "RE-ENTRY" << endl;)
-				}
-			}
-			entry = 666;
-			TRACE(dout << "DONE." << endl;)
-			return false;
-		default:
-			assert(false);
-		}
-	};*/
-}
-
 rule_t seq(rule_t a, rule_t b){
 	setproc(L"seq");
 	TRACE(dout << ".." << endl;)
@@ -556,24 +541,19 @@ rule_t seq(rule_t a, rule_t b){
 pred_gen pred(old::nodeid pr)
 {
 	FUN;
-
 	vector<size_t> rs = pred_index[pr];
-
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
-
 	rule_t y;
 	bool first = true;
-
 	//compile each rule with the pred in the head, seq them up
 	for (auto r: rs) {
 		rule_t x
 				=
-				op->bodies[r].size()
-				?
+				//op->bodies[r].size()
+				//?
 				compile_rule(op->heads[r], op->bodies[r])
-				:
-				fact(op->heads[r]);
-
+				//:
+				/*fact(op->heads[r])*/;
 		if (first) {
 			first = false;
 			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
@@ -584,16 +564,12 @@ pred_gen pred(old::nodeid pr)
 			y = seq(x, y);
 		}
 	}
-
 	assert(!first);
-
 	return [pr, y]() mutable {
 		setproc(L"pred lambda");
 		TRACE(dout << "nodeid: " << pr << endl;)
-
 		return y;
 	};
-*/
  }
 
 
@@ -654,16 +630,6 @@ void make_perms()
 }
 
 typedef map<old::termid, size_t> locals_map;
-//const size_t bad = numeric_limits::max(size_t);
-
-/*size_t local_index(byte k, locals_map &lm, locals_map &cm, old::termid t)
-{
-	if(k == 'l')
-		return lm.at(t);
-	else if(k == 'c')
-		return cm.at(t);
-	else return bad;
-}*/
 
 
 bool islist(termid t)
@@ -673,14 +639,29 @@ bool islist(termid t)
 }
 
 
-rule_gen compile_rule(termid head, prover::termset body)
-{
-	FUN;
+//return term's PredParam and possibly also its index into the corresponding vector
+char thing_key (termid x, size_t &index, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head) {
+		if (x == head->s)
+			return HEAD_S;
+		else if (x == head->o)
+			return HEAD_O;
+		else {
+			auto it = lm.find(x);
+			if (it != lm.end()) {
+				index = it->second;
+				return LOCAL;
+			}
+			else {
+				index = cm.at(x);
+				return CONST;
+			}
+		}
+	};
 
-	locals_map lm;
-	locals_map cm;
-	Locals locals;
-	Locals consts;
+
+
+void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+{
 	std::queue<termid> lq;
 
 	auto expand_lists = [&lq, &locals, &lm]() {
@@ -722,7 +703,7 @@ rule_gen compile_rule(termid head, prover::termset body)
 	//replace NODEs whose terms are lists with OFFSETs. expand_lists left them there.
 	auto link_lists = [&locals, &lm]() {
 		for (size_t i = 0; i < locals.size(); i++) {
-			Thing & x = locals[i];
+			Thing &x = locals[i];
 			if (x.type == NODE && islist(x.term)) {
 				x.type = OFFSET;
 				x.offset = lm.at(x.term) - i;
@@ -734,58 +715,39 @@ rule_gen compile_rule(termid head, prover::termset body)
 		Thing t;
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
 
-			auto it = lm.find(x);
-			if (it == lm.end()) {
-				t.type = UNBOUND;
-				t.thing = (Thing *) 666;
-				lm[x] = locals.size();
-				locals.push_back(t);
-			}
+		auto it = lm.find(x);
+		if (it == lm.end()) {
+			t.type = UNBOUND;
+			t.thing = (Thing *) 666;
+			lm[x] = locals.size();
+			locals.push_back(t);
+		}
 
 	};
 
 	auto add_node = [](old::termid x, Locals &vec, locals_map &m) {
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
 
-			Thing t;
-			t.type = NODE;
-			t.term = x;
-			auto it = m.find(x);
-			if (it == m.end()) {
-				m[x] = vec.size();
-				vec.push_back(t);
-			}
-
-	};
-
-	//return term's PredParam and possibly also its index into the corresponding vector
-	auto thing_key = [&locals, &consts, &lm, &cm, head](termid x, size_t &index) {
-		if (x == head->s)
-			return HEAD_S;
-		else if (x == head->o)
-			return HEAD_O;
-		else {
-			auto it = lm.find(x);
-			if (it != lm.end()) {
-				index = it->second;
-				return LOCAL;
-			}
-			else {
-				index = cm.at(x);
-				return CONST;
-			}
+		Thing t;
+		t.type = NODE;
+		t.term = x;
+		auto it = m.find(x);
+		if (it == m.end()) {
+			m[x] = vec.size();
+			vec.push_back(t);
 		}
+
 	};
 
 	vector<termid> terms;
 	terms.push_back(head->s);
 	terms.push_back(head->o);
-	for(termid bi: body) {
+	for (termid bi: body) {
 		terms.push_back(bi->s);
 		terms.push_back(bi->o);
 	}
 
-	for(termid x: terms)
+	for (termid x: terms)
 		if (x->p > 0 && !islist(x)) {
 			//force rule s and o into locals for now
 			if (x == head->s || x == head->o)
@@ -793,26 +755,39 @@ rule_gen compile_rule(termid head, prover::termset body)
 			else
 				add_node(x, consts, cm);
 		}
-	for(termid x: terms)
+	for (termid x: terms)
 		if (x->p < 0)
 			add_var(x);
-	for(termid x: terms)
+	for (termid x: terms)
 		if (x->p > 0 && islist(x))
 			lq.push(x);
 
 	expand_lists();
 	link_lists();
+}
+
+
+
+rule_t compile_rule(termid head, prover::termset body)
+{
+	FUN;
+
+	locals_map lm;
+	locals_map cm;
+	Locals locals;
+	Locals consts;
+
+	make_locals(locals, consts, lm, cm, head, body);
 
 	join_gen jg = succeed_with_args_gen();
 
-	for(int i = body.size()-1; i >= 0; i--)
-	{
+	for (int i = body.size() - 1; i >= 0; i--) {
 		termid &bi = body[i];
 		termid s = bi->s;
 		termid o = bi->o;
 		size_t i1, i2;
-		PredParam sk = thing_key(s, i1);
-		PredParam ok = thing_key(o, i2);
+		PredParam sk = thing_key(s, i1, locals, consts, lm, cm, head);
+		PredParam ok = thing_key(o, i2, locals, consts, lm, cm, head);
 		jg = perms.at(sk).at(ok)(pred(bi->p), jg, i1, i2, locals);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
@@ -821,54 +796,46 @@ rule_gen compile_rule(termid head, prover::termset body)
 	thing_key(head->s, hs);
 	thing_key(head->s, ho);
 
-	//rule_gen
-	return /*rule_t*/[ hs,ho, locals,consts, jg]   () mutable {
-		coro suc, ouc;
-		join_t j;
-		int round = 0, entry = 0;
+	coro suc, ouc;
+	join_t j;
+	int round = 0, entry = 0;
 
-		return [hs, ho, locals, consts, jg, suc, ouc, j, entry, round](Thing *s, Thing *o) mutable {
-			setproc(L"rule coro");
-
-			Locals l = locals;
-
-
-			round++;
-			TRACE(dout << "round=" << round << endl;)
-			switch (entry) {
-				case 0:
-					entry++;
+	return [hs, ho, locals,consts, jg, suc, ouc, j, entry, round](Thing *s, Thing *o) mutable {
+		setproc(L"rule coro");
+		round++;
+		TRACE(dout << "round=" << round << endl;)
+		switch (entry) {
+			case 0:
+				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
+				suc = unify(s, &locals.at(hs));
+				while (suc()) {
+					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-					suc = unify(s, &locals.at(hs));
-					while (suc()) {
-						TRACE(dout << "After suc() -- " << endl;)
+
+					ouc = unify(o, &locals.at(ho));
+					while (ouc()) {
+						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
-						ouc = unify(o, &locals.at(ho));
-						while (ouc()) {
-							TRACE(dout << "After ouc() -- " << endl;)
+						j = jg();
+						while (j(s, o, locals)) {
+							TRACE(dout << "After c0() -- " << endl;)
 							//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
-							j = jg();
-							while (j(s, o, l)) {
-								TRACE(dout << "After c0() -- " << endl;)
-								//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-
-								entry = 1;
-								return true;
-								TRACE(dout << "MATCH." << endl;)
-								case 1:;
-								TRACE(dout << "RE-ENTRY" << endl;)
-							}
+							entry = 1;
+							return true;
+							TRACE(dout << "MATCH." << endl;)
+							case 1:;
+							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
-					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
-			}
-		};
+				}
+				entry = 666;
+				TRACE(dout << "DONE." << endl;)
+				return false;
+			default:
+				assert(false);
+		}
 	};
 }
 
@@ -906,12 +873,6 @@ void thatsAllFolks(int nresults){
 
 pnode thing2node(Thing *t, qdb &r) {
 	auto v = t->getValue();
-	while(true)//dig to the value
-	{
-		auto old = v;
-		v = v->getValue();
-		if (v == old) break;
-	}
 
 	/*List *l = dynamic_cast<List *>(v);
 	if (l) {
@@ -974,22 +935,13 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 
 void yprover::query(const old::qdb& goal){
 	dout << KGRN << "Query." << KNRM << endl;
-
 	results.clear();
-
 	const old::prover::termset g = p->qdb2termset(goal);
 	int nresults = 0;
 	old::nodeid pr = g[0]->p;
 
 	if (pred_index.find(pr) != pred_index.end()) {
-		/*
-		varmap vars;
-		atom(g[0]->s, vars);
-		atom(g[0]->o, vars);
-		TRACE(dout << vars.size() << " vars" << endl;)
 
-		Thing *s = vars.at(g[0]->s);
-		Thing *o = vars.at(g[0]->o);
 
 		TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl;)
 
@@ -1065,20 +1017,9 @@ so...not the most efficient but a simple design, what do you think?
 i think it would work, if i understand it correctly
 i would start with a python script that prints out the code... which code exactly?
 the permutations...so thats like our function joinwxyz now 
-+ some wrapping, are you better in python than C++?hmm maybe comparable
-
-dunno if i want to start tonight tho
-yea i feel like i want to spend some time just analyzing this whole thing from first principles
-i just think it will be a good exp to finish this, and good to not think about things too much
-and just hack when i feel like it mmm, i'd probably like to a have firm understanding before i 
-start any hacking. i have understanding, but no firm :) the ideal scenario would be that i could
-actually analyze this mathematically
-understanding of general tau matters or this thing? our implementation of the reasoner
-well, i only have some idea where to start i guess
 */
+
 /*
-
-
 /*so it seems we have 3 variants to start with:
  1: parameterless joins, with extra rule lambda and unify's,
  2: all joins have two parameters, there are permutations,
@@ -1198,32 +1139,6 @@ bool ep_check(Thing *a, Thing *b){
 	}
 	*/
 
-/*
-wstring sprintVar(wstring label, Thing *v){
-	wstringstream wss;
-	wss << label << ": (" << v << ")" << v->str();
-	return wss.str();
-}
-
-wstring sprintPred(wstring label, old::nodeid pred){
-	wstringstream wss;
-	wss << label << ": (" << pred << ")" << old::dict[pred];
-	return wss.str();
-}
-
-wstring sprintThing(wstring label, Thing *t){
-	wstringstream wss;
-	wss << label << ": [" << t << "]" << t->str();
-	return wss.str();
-}
-
-wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
-	wstringstream wss;
-	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
-	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
-	return wss.str();
-}
-*/
 
 	/*bool eq(Node *x)
 	{

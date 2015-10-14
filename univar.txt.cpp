@@ -1,55 +1,99 @@
-
-/*
-how c++ lambdas work:
-
- 	int i,j=5;
- 	for (i =0; i < 3; i++)
-		[j]() mutable {
-			static int x = 333;
-			cout << x++ << " " << i << endl;
-		}();
+#include <iostream>
+#include <vector>
+#include <functional>
+#include <unordered_map>
 
 
+using namespace std;
 
-	vector<function<void()>> zzz;
-	int xxx;
-	auto a = [xxx, zzz]()mutable{xxx++; dout << xxx << endl; zzz[0]();};
-	zzz.push_back(a);
-	a();
+#define LLL cout << endl << __FILE__ << ":" << __LINE__ << ":" << endl;
+
+//how c++ lambdas work:
+
+int main()
+{
+	LLL
+	{
+		int i;
+		for (i = 0; i < 3; i++)
+			[]() mutable {
+				static int x = 333;
+				cout << x++ << endl;
+			}();
+	}
+LLL
+	{/*
+		vector<function<void()>> zzz;
+		int xxx;
+		auto a = [xxx, zzz]()mutable {
+			xxx++;
+			cout << xxx << endl;
+			zzz[0]();
+		};
+		zzz.push_back(a);
+		a();
+	*/}
+LLL
+	{
+		auto xxx = 0;
+		auto a = [xxx]()mutable {
+			xxx++;
+			cout << xxx << endl;
+		};
+		auto b = a;
+		auto c = a;
+		a();
+		b();
+		c();
+	}
+	LLL
+	{
+
+		vector<int> xxx;
+		xxx.push_back(3);
+
+		auto a = [xxx]()mutable {
+			xxx[0]++;
+			cout << xxx[0] << endl;
+		};
+		auto b = a;
+		auto c = a;
+		a();
+		b();
+		c();
+	}
+	LLL
+	{
+		int state = 0;
+		function<void()> xxx = [state]()mutable { cout << state++ << endl; };
+		std::unordered_map<int, function<function<void()>()>> pgs;
+		pgs[0] = [xxx]() { return xxx; };
+		pgs[1] = [xxx]() { return xxx; };
+		pgs[0]()();
+		pgs[1]()();
+	}
+LLL
+	{
+		int state = 0, state2 = 0;
+		//this is like a rule stuff
+		function<void()> fff = [state2]()mutable { cout << "fff " << state2++ << endl; };
+		//this is like a pred lambda
+		function<void()> xxx = [state, fff]()mutable {
+			cout << state++ << endl;
+			fff();
+		};
+		std::unordered_map<int, function<function<void()>()>> pgs;
+		//this is the pred copy lambda
+		pgs[0] = [xxx]() { return xxx; };
+		pgs[1] = [xxx]() { return xxx; };
+		pgs[0]()();
+		pgs[1]()();
+	}
+}
 
 
 
-	int xxx=0;
-	auto a = [xxx]()mutable{xxx++; dout << xxx << endl;};
-	auto b = a;
-	auto c = a;
-	a();b();c();
-
-
-
-	int state=0;
-	function<void()> xxx = [state]()mutable{dout << state++ << endl;};
-	std::unordered_map<old::nodeid, function<function<void()>()>> pgs;
-	pgs[0] = [xxx](){return xxx;};
-	pgs[1] = [xxx](){return xxx;};
-	pgs[0]()();
-	pgs[1]()();
-
-
-
-	int state=0,state2=0;
-	//this is like a rule stuff
-	function<void()> fff = [state2]()mutable{dout << "fff " << state2++ << endl;};
-	//this is like a pred lambda
-	function<void()> xxx = [state, fff]()mutable{dout << state++ << endl; fff();};
-	std::unordered_map<old::nodeid, function<function<void()>()>> pgs;
-	//this is the pred copy lambda
-	pgs[0] = [xxx](){return xxx;};
-	pgs[1] = [xxx](){return xxx;};
-	pgs[0]()();
-	pgs[1]()();
-
-
+#ifdef fffffffff
 
 how stuff works:
 
@@ -750,3 +794,4 @@ function<bool()> nodeComp(Node *n){
 }*/
 
 //actually maybe only the join combinators need to do a lookup
+#endif
