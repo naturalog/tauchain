@@ -20,15 +20,15 @@ class Thing;
 
 typedef std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
-typedef vector<Thing> List;
-typedef vector<Thing> locals;
+
+typedef vector<Thing> Locals;
 
 typedef function<bool()> coro;
 typedef function<bool(Thing*,Thing*)> pred_t;
 typedef function<pred_t()> pred_gen;
 typedef function<bool(Thing*,Thing*)> rule_t;
 typedef function<rule_t()> rule_gen;
-typedef function<bool(Thing*,Thing*, locals)> join_t;
+typedef function<bool(Thing*,Thing*, Locals)> join_t;
 typedef function<join_t()> join_gen;
 
 
@@ -55,22 +55,7 @@ pred_gen pred(old::nodeid pr);
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//region succeed and fail
 
 
 
@@ -190,6 +175,7 @@ pred_t dbg_fail_with_args()
 
 
 
+//endregion
 
 
 
@@ -204,18 +190,19 @@ pred_t dbg_fail_with_args()
 
 
 
-
-
-
-
-enum ThingType {UNBOUND, BOUND, NODE, LIST, LINK};
-class Thing
-{
+enum ThingType {UNBOUND, BOUND, NODE, LIST, OFFSET};
+class Thing {
 public:
 	ThingType type;
-	union {old::termid term; Thing * thing; List * list; int offset};
+	union {
+		Thing *thing;
+		old::termid term;
+		size_t size;
+		int offset
+	};
 
 
+	/*
 	Thing(old::termid n)
 	{
 		FUN;
@@ -225,7 +212,7 @@ public:
 				type = LIST;
 				TRACE(dout << "list" << endl;)
 				auto l = op->get_dotstyle_list(n);
-				list = new List(l.size());
+				size = l.size();
 				for (auto y: l) {
 					TRACE(dout << "item..." << endl;)
 					list->push_back(Thing(y));
@@ -243,9 +230,7 @@ public:
 			TRACE(dout << "new Var: " << this << endl;)
 		}
 	}
-
-
-
+*/
 
 
 	/*bool eq(Node *x)
@@ -254,9 +239,9 @@ public:
 		TRACE(dout << op->format(value) << " =?= " << op->format(x->value) << endl;)
 		return op->_terms.equals(value, x->value);
 	}*/
-	wstring str() {
-		switch(type)
-		{
+	wstring str()
+	{
+		switch (type) {
 			case UNBOUND:
 				return L"var()";
 			case BOUND:
@@ -265,79 +250,73 @@ public:
 			case NODE:
 				assert(term);
 				return op->format(term);
-			case LIST:
-			{
+			/*case LIST: {
 				assert(list);
 				wstringstream r;
 				r << L"(";
-				if(list->size() > 0)
-				{
-					for(size_t i=0;i<list->size();i++)
-					{
-						if(i != 0) r << " ";
-							r << list->at(i).str();
+				if (list->size() > 0) {
+					for (size_t i = 0; i < list->size(); i++) {
+						if (i != 0) r << " ";
+						r << list->at(i).str();
 					}
-				}else{
+				} else {
 					r << " ";
 				}
 				r << ")";
-				return r.str();
+				return r.str();*/
 			}
 		}
 		assert(false);
 	}
 
 
-
-
-
 	Thing *getValue()
-/*
-    # If this Variable is unbound, then just return this Variable.^M
-    # Otherwise, if this has been bound to a value with unify, return the value.^M
-    # If the bound value is another Variable, this follows the "variable chain"^M
-    # to the end and returns the final value, or the final Variable if it is unbound.^M
-    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
-    def getValue(self):^M
-        if not self._isBound:^M
-            return self^M
+	/*
+		# If this Variable is unbound, then just return this Variable.^M
+		# Otherwise, if this has been bound to a value with unify, return the value.^M
+		# If the bound value is another Variable, this follows the "variable chain"^M
+		# to the end and returns the final value, or the final Variable if it is unbound.^M
+		# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
+		def getValue(self):^M
+			if not self._isBound:^M
+				return self^M
 
-        result = self._value^M
-        while isinstance(result, Variable):^M
-            if not result._isBound:^M
-                return result^M
+			result = self._value^M
+			while isinstance(result, Variable):^M
+				if not result._isBound:^M
+					return result^M
 
-            # Keep following the Variable chain.^M
-            result = result._value^M
+				# Keep following the Variable chain.^M
+				result = result._value^M
 
-        return result^M
-*/
-{
-	if (type == BOUND)
-		return thing->getValue();
-	else if (type == LINK)
-		return (this + offset)->getValue();
-	else
-		return this;
+			return result^M
+	*/
+	{
+		if (type == BOUND)
+			return thing->getValue();
+		else if (type == offset)
+			return (this + offset)->getValue();
+		else
+			return this;
 
-}
-
-/*  # If this Variable is bound, then just call YP.unify to unify this with arg.
-    # (Note that if arg is an unbound Variable, then YP.unify will bind it to
-    # this Variable's value.)
-    # Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
-    # yield, return this Variable to the unbound state.
-    # For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
-*/
-
-	function<bool()> boundunifycoro(Thing *arg){
-		setproc(L"boundunifycoro");
-		//TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
-		TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
-		TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
-		return unify(this, arg);
 	}
 
+	/*  # If this Variable is bound, then just call YP.unify to unify this with arg.
+		# (Note that if arg is an unbound Variable, then YP.unify will bind it to
+		# this Variable's value.)
+		# Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
+		# yield, return this Variable to the unbound state.
+		# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
+	*/
+	/*
+		function<bool()> boundunifycoro(Thing *arg){
+			setproc(L"boundunifycoro");
+			//TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
+			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
+			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
+			return unify(this, arg);
+		}
+	*/
 	function<bool()> unboundunifycoro(Thing *arg)
 	{
 		TRACE(dout << "!Bound" << endl;)
@@ -384,16 +363,16 @@ public:
 			};
 		}
 	}
+}
 
 
 
 
+//region kb
 
+map<nodeid, vector<size_t>> pred_index;
 
-
-
-
-
+/*
 
 class yterm {
 public:
@@ -422,6 +401,7 @@ body_t make_body(old::prover::termset b)
 	body_t r;
 	for (termid i: b)
 		r.push_back(yterm(i));
+	reverse(r.begin(), r.end());
 	return r;
 }
 
@@ -445,6 +425,11 @@ void compile_kb()
 		preds[x.first] = pred(x.first);
 	}
 }
+*/
+
+
+
+//endregion
 
 
 
@@ -456,12 +441,7 @@ void compile_kb()
 
 
 
-rule_t rule(kb_rule x, size_t &nlocals);
-
-
-
-
-
+//region coros
 
 
 
@@ -498,7 +478,7 @@ coro corojoin(coro a, coro b)
 
 coro listunifycoro(Thing *aa, Thing *bb)
 {
-	setproc(L"listunifycoro");
+/*	setproc(L"listunifycoro");
 	TRACE(dout << "..." << endl;)
 	assert(aa->type == LIST);
 	assert(aa->type == LIST);
@@ -529,7 +509,7 @@ coro listunifycoro(Thing *aa, Thing *bb)
 			r = corojoin(uc, r);
 		}
 	}	
-	return r;
+	return r;*/
 }
 
 
@@ -589,7 +569,7 @@ coro unify(Thing *a, Thing *b){
 }
 
 
-rule_t fact(yterm * head){
+rule_t fact(term * head){/*
 	FUN;
 	int entry = 0;
 	coro c1;
@@ -624,7 +604,7 @@ rule_t fact(yterm * head){
 		default:
 			assert(false);
 		}
-	};
+	};*/
 }
 
 rule_t seq(rule_t a, rule_t b){
@@ -671,7 +651,7 @@ rule_t seq(rule_t a, rule_t b){
 pred_gen pred(old::nodeid pr)
 {
 	setproc(L"compile_pred");
-
+/*
 	kb_rules &rs = rules[pr];
 
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
@@ -702,70 +682,226 @@ pred_gen pred(old::nodeid pr)
 
 		return y;
 	};
+*/
+ }
+
+
+
+
+enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
+
+
+map<PredParam, map<PredParam, join_gen>> perms;
+
+perms[LOCAL][HEAD_S] = [](pred_gen a, join_gen b, size_t wi, size_t xi){
+	setproc(L"joinsw");
+	TRACE(dout << "making a join" << endl;)
+	int entry = 0;
+	int round = 0;
+	pred_t ac;
+	join_t bc;
+	return [a,b,wi,xi,entry,round,ac,bc]()mutable{
+		setproc(L"join gen");
+		return [a,b,wi,xi,entry, round, ac,bc](Thing *s, Thing *o)mutable{
+			setproc(L"join coro");
+			round++;
+			TRACE(dout << "round: " << round << endl;)
+			switch(entry){
+			case 0:
+				//TRACE( dout << sprintPred(L"a()",a) << endl;)
+				ac = a();
+				while(ac(s,locals[wi])) {
+					TRACE(dout << "MATCH A." << endl;)
+
+					bc = b();
+					while (bc(s,o)) {
+						TRACE(dout << "MATCH." << endl;)
+						entry = 1;
+						return true;
+
+			case 1: ;
+					TRACE(dout << "RE-ENTRY" << endl;)
+					}
+				}
+				entry = 666;
+				TRACE(dout << "DONE." << endl;)
+				return false;
+			default:
+				assert(false);
+			}
+		};
+	};
 }
 
 
 
 
 
+typedef map<old::termid, size_t> locals_map;
+const size_t bad = numeric_limits::max(size_t);
 
-typedef vector<old::termid> locals_map;
-
-void lm_add(locals_map &lm, old::termid t)
+/*size_t local_index(byte k, locals_map &lm, locals_map &cm, old::termid t)
 {
-	for (auto x: lm)
-	{
-		if (x == t)
-			return;
-	}
-	lm.push_back(t);
+	if(k == 'l')
+		return lm.at(t);
+	else if(k == 'c')
+		return cm.at(t);
+	else return bad;
+}*/
+
+
+bool islist(termid t)
+{
+	assert(t);
+	return *old::dict[t->p].value == L".";
 }
 
-size_t lm_index(locals_map &lm, old::termid t)
-{
-	for(size_t i = 0; i < lm.size(); i++)
-		if (lm[i] == t)	
-			return i;
-	assert(false);
-}
 
-//permutation map key
-char pk(locals_map &lm, termid x, termid head)
-{
-	char sk;
-	if (x == head->s)
-		sk = 's';
-	else if (x == head->o)
-		sk = 'o';
-	else 
-	{
-		sk = 'l';
-		lm_add(lm, x);
-	}
-	return sk;
-}	
-
-rule_t compile_rule(yterm head, body_t body, size_t &nlocals)
+rule_t compile_rule(termid head, prover::termset body)
 {
 	FUN;
-	//TRACE(dout << "compiling ruleproxy" << endl;)
-	join_gen jg = succeed_with_args_gen();
+
 	locals_map lm;
-	for(int i = body.size() - 1; i >= 0; i--){
-		termid s = body[i]->s;
-		termid o = body[i]->o;
-		char sk = hk(s, head);
-		char ok = hk(o, head);
-		jg = perms[sk][ok](body[i]->p, jg, lm_index(lm, s), lm_index(lm, o));
+	locals_map cm;
+	Locals locals;
+	Locals consts;
+	queue<termid> lq;
+
+	auto expand_lists = [&lq, &locals, &lm]() {
+		while (!lq.empty()) {
+			Thing & l = lq.front();
+			lq.pop_front();
+			Thing i0;
+			i0.type = LIST;
+			auto lst = op->get_dotstyle_list(t.term);
+			i0.size = lst.size();
+			lm[l.term] = locals.size();
+			locals.push_back(i0);
+			for (auto li: lst) {
+				TRACE(dout << "item..." << endl;)
+				Thing t;
+				if (li->p < 0) {
+					auto it = lm.find(li);
+					if (it == lm.end()) {
+						t.type = UNBOUND;
+						t.thing = (Thing *) 666;
+						lm[li] = locals.size();
+					}
+					else {
+						t.type = OFFSET;
+						t.offset = *it - locals.size();
+					}
+				}
+				else {
+					t.type = NODE;
+					t.term = li;
+					if (islist(li))
+						lq.emplace_back(li);
+				}
+				locals.push_back(t);
+			}
+		}
 	}
 
-	locals * l;
+	auto link_lists = [&locals, &lm]() {
+		for (size_t i = 0; i < locals.size(); i++) {
+			Thing & x = locals[i];
+			if (x.type == NODE && islist(x.term)) {
+				x.type = OFFSET;
+				x.offset = lm.at(x.term) - i;
+			}
+		}
+	}
+
+	auto add_var = [&locals, &lm](old::termid x) {
+		Thing t;
+		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
+
+			auto it = lm.find(x);
+			if (it == lm.end()) {
+				t.type = UNBOUND;
+				t.thing = (Thing *) 666;
+				lm[x] = locals.size();
+				locals.push_back(t);
+			}
+
+	}
+
+	auto add_const = [&locals, &lm](old::termid x) {
+		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
+
+			Thing t;
+			t.type = NODE;
+			t.term = x;
+			auto it = cm.find(x);
+			if (it == cm.end()) {
+				cm[x] = consts.size();
+				consts.push_back(t);
+			}
+
+	}
+
+	auto thing_key = [&locals, &consts, &lm, &cm, head](termid x, size_t &i) {
+		if (x == head->s)
+			return HEAD_S;
+		else if (x == head->o)
+			return HEAD_O;
+		else {
+			auto it = lm.find(x);
+			if (it != lm.end()) {
+				i = *it;
+				return LOCAL;
+			}
+			else {
+				i = cm.at(x);
+				return CONST;
+			}
+		}
+	}
+
+	vector<termid> terms;
+	terms.push_back(head->s);
+	terms.push_back(head->o);
+	for(termid bi: body) {
+		terms.push_back(bi->s);
+		terms.push_back(bi->o);
+	}
 	
-	return [ jg, suc,ouc,j, entry,round]   (Thing *s , Thing *o) mutable
+	for(termid x: terms)
+		if (x->p > 0 && !islist(x))
+			add_const(x);
+	for(termid x: terms)
+		if (x->p < 0)
+			add_var(x);
+	for(termid x: terms)
+		if (x->p > 0 && islist(x))
+			lq.emplace_back(x);
+
+
+	join_gen jg = succeed_with_args_gen()
+
+	for(termid i: body)
+	{
+		termid s = i->s;
+		termid o = i->o;
+		size_t i1, i2;
+		char sk = thing_key(s, i1);
+		char ok = thing_key(o, i2);
+		jg = perms[sk][ok](pred(i->p), jg, i1, i2);
+	}
+
+	size_t _hs;
+	thing_key(head->s, _hs);
+
+
+	coro suc, ouc;
+	join_t j;
+
+	return [ hs,ho, locals,consts,jg, suc,ouc,j, entry,round]   (Thing *s , Thing *o) mutable
 	{
 		setproc(L"rule coro");
 
-		locals l = lt;
+		Locals l = locals;
 
 
 
@@ -776,10 +912,6 @@ rule_t compile_rule(yterm head, body_t body, size_t &nlocals)
 		case 0:
 			entry++;
 			//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-
-			for (int i = 0;i < nlocals; i++)
-				l.push_back(new Var());
-	
 			suc = unify(s, hs);
 			while(suc()) {
 				TRACE(dout << "After suc() -- " << endl;)
@@ -793,7 +925,7 @@ rule_t compile_rule(yterm head, body_t body, size_t &nlocals)
 					j = jg();
 					while (j(l,s,o)) {
 						TRACE(dout << "After c0() -- " << endl;)
-						TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)					
+						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 	
 						entry = 1;
 						return true;
@@ -825,46 +957,9 @@ rule_t rule(kb_rule x, size_t &nlocals)
 
 
 
-//9x:
-join_gen join_sl(pred_gen a, join_gen b, size_t wi, size_t xi){
-	setproc(L"joinsw");
-	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
-	pred_t ac;
-	join_t bc;
-	return [a,b,wi,xi,entry,round,ac,bc]()mutable{
-		setproc(L"join gen");
-		return [a,b,wi,xi,entry, round, ac,bc](Thing *s, Thing *o)mutable{
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
-			switch(entry){
-			case 0:
-				TRACE( dout << sprintPred(L"a()",a) << endl;)
-				ac = a();
-				while(ac(s,locals[wi])) {
-					TRACE(dout << "MATCH A." << endl;)
 
-					bc = b();
-					while (bc(s,o)) {
-						TRACE(dout << "MATCH." << endl;)
-						entry = 1;
-						return true;
 
-			case 1: ;
-					TRACE(dout << "RE-ENTRY" << endl;)
-					}
-				}
-				entry = 666;
-				TRACE(dout << "DONE." << endl;)
-				return false;
-			default:
-				assert(false);
-			}
-		};
-	};
-}
+//endregion
 
 
 
@@ -876,11 +971,7 @@ join_gen join_sl(pred_gen a, join_gen b, size_t wi, size_t xi){
 
 
 
-
-
-
-
-
+//region interface
 
 
 
@@ -1015,14 +1106,33 @@ void yprover::query(const old::qdb& goal){
 		
 		dout << "Predicate '" << old::dict[pr] << "' not found, " << KRED << "0" << KNRM << " results." << endl;
 	}
-	
-dout << "this 
-is
-a 
-multiline
-string" << endl;//nope, im not writing it in c++:)
-
 }
+
+//endregion
+
+
+coro unbound_succeed(Thing *x, Thing *y)
+{
+	int entry = 0;
+	return [entry, x, y]() mutable {
+		assert(x->type == UNBOUND);
+		setproc(L"unify lambda 1");
+		//TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" <<y->str() << endl;)
+		switch (entry) {
+			case 0:
+				entry = 1;
+				return true;
+			case 1:
+				entry = 666;
+				return false;
+			default:
+				assert(false);
+		}
+	};
+}
+
+
+
 
 #ifdef notes
 /*
@@ -1153,28 +1263,7 @@ bool ep_check(Thing *a, Thing *b){
 */
 
 
-#endif
 
-
-coro unbound_succeed(Thing *x, Thing *y)
-{
-	int entry = 0;
-	return [entry, x, y]() mutable {
-		assert(x->type == UNBOUND);
-		setproc(L"unify lambda 1");
-		//TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" <<y->str() << endl;)
-		switch (entry) {
-			case 0:
-				entry = 1;
-				return true;
-			case 1:
-				entry = 666;
-				return false;
-			default:
-				assert(false);
-		}
-	};
-}
 
 
 
@@ -1189,7 +1278,7 @@ coro unbound_succeed(Thing *x, Thing *y)
 			assert(false);
 	}
 	*/
-};
+
 /*List(std::vector<Thing *> n)
 	{
 		nodes = n;
@@ -1223,3 +1312,5 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 }
 */
 
+
+#endif
