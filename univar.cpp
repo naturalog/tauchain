@@ -647,7 +647,7 @@ bool islist(termid t)
 
 
 //return term's PredParam and possibly also its index into the corresponding vector
-char thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head) {
+PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head) {
 		if (head && x == head->s)
 			return HEAD_S;
 		else if (head && x == head->o)
@@ -779,7 +779,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
-	FUN!
+	FUN;
 
 	join_gen jg = succeed_with_args_gen();
 
@@ -790,7 +790,7 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 		size_t i1, i2;
 		PredParam sk = thing_key(s, i1, lm, cm, head);
 		PredParam ok = thing_key(o, i2, lm, cm, head);
-		jg = perms.at(sk).at(ok)(pred(bi->p), jg, i1, i2, locals);
+		jg = perms.at(sk).at(ok)(pred(bi->p), jg, i1, i2, consts);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
 
@@ -804,7 +804,7 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 
 rule_t compile_rule(termid head, prover::termset body)
 {
-	FUN!
+	FUN;
 
 	locals_map lm, cm;
 	Locals locals, consts;
@@ -995,7 +995,7 @@ void yprover::query(const old::qdb& goal){
 			}
 
 		}
-*/
+
 		thatsAllFolks(nresults);
 	}else{
 		
