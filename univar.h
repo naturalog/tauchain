@@ -8,6 +8,6 @@ public:
 	results_t results;
 
 	yprover(old::qdb qkb, bool check_consistency = false);
-
+	~yprover();
 	void query(const old::qdb &goal);
 };

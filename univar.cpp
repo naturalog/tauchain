@@ -31,7 +31,7 @@ typedef function<join_t()> join_gen;
 map<nodeid, vector<size_t>> pred_index;
 std::unordered_map<old::nodeid, pred_t> preds;
 old::prover *op;
-
+std::vector<ep_t*> eps;
 
 
 coro unbound_succeed(Thing *x, Thing *y);
@@ -345,7 +345,11 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 
 //region kb
 
-
+void free_eps()
+{
+	for (auto x: eps)
+		delete x;
+}
 
 void compile_kb()
 {
@@ -353,6 +357,7 @@ void compile_kb()
 	TRACE(dout << "# of rules: " << op->heads.size() << endl;)
 	pred_index.clear();
 	preds.clear();
+	eps.clear();
 
 	//old::prover --> pred_index (preprocessing step)
 	for (int i = op->heads.size()-1; i >= 0; i--)
@@ -758,8 +763,9 @@ Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, local
 }
 
 
-void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head)
 {
+	(void)head;
 	TRACE(dout << "locals:" << endl);
 	for (auto x: lm)
 		dout << op->format(x.first) << " : : " << x.second << "  --> " << locals.at(x.second).str() << endl;
@@ -880,7 +886,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	expand_lists();
 	link_lists();
 
-	print_locals(locals, consts, lm, cm, head, body);
+	print_locals(locals, consts, lm, cm, head);
 
 }
 
@@ -913,7 +919,13 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 
 
 
-
+bool find_ep(ep_t *ep, const Thing *s, const Thing *o)
+{
+	for (auto i: *ep)
+		if (i.first == s && i.second == o)
+			return true;
+	return false;
+}
 
 
 rule_t compile_rule(termid head, prover::termset body)
@@ -933,17 +945,26 @@ rule_t compile_rule(termid head, prover::termset body)
 	join_t j;
 	coro suc, ouc;
 	int round = 0, entry = 0;
+	ep_t *ep = new ep_t();
+	eps.push_back(ep);
 
-	return [hs, ho, locals,&consts, jg, suc, ouc, j, entry, round](Thing *s, Thing *o) mutable {
+	return [ep, hs, ho, locals,&consts, jg, suc, ouc, j, entry, round](Thing *s, Thing *o) mutable {
 		setproc(L"rule coro");
 		round++;
 		TRACE(dout << "round=" << round << endl;)
 		switch (entry) {
 			case 0:
 
-
-				//ep
-
+				if (find_ep(ep, s, o)) {
+					entry = 666;
+					TRACE(dout << "EP." << endl;)
+					return false;
+				}
+				else {
+					ep->push_back(thingthingpair(s, o));
+					for (auto ttp: *ep)
+						dout << ttp.first << " " << ttp.second << endl;
+				}
 
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				suc = unify(s, &locals.at(hs));
@@ -971,6 +992,8 @@ rule_t compile_rule(termid head, prover::termset body)
 				}
 				entry = 666;
 				TRACE(dout << "DONE." << endl;)
+				assert(ep->size());
+				ep->pop_back();
 				return false;
 			default:
 				assert(false);
@@ -1012,19 +1035,20 @@ void thatsAllFolks(int nresults){
 pnode thing2node(Thing *t, qdb &r) {
 	auto v = t->getValue();
 
-	/*List *l = dynamic_cast<List *>(v);
-	if (l) {
+	if (v->type == LIST)
+	{
 		const wstring head = listid();
-		for (auto x: l->nodes)
+		for (size_t i = 0; i < v->size; i++) {
+			auto x = (v + i);
 			r.second[head].emplace_back(thing2node(x, r));
+		}
 		return mkbnode(pstr(head));
 	}
 
-	Node *n = dynamic_cast<Node *>(v);
-	if (n)
-		return std::make_shared<old::node>(old::dict[n->value->p]);
+	if (v->type == NODE)
+		return std::make_shared<old::node>(old::dict[v->term->p]);
 
-	Var *var = dynamic_cast<Var *>(v);
+	/*Var *var = dynamic_cast<Var *>(v);
 	if (var)
 		dout << "thing2node: Wtf did you send me?, " << var->str() << endl;
 	 */
@@ -1071,6 +1095,12 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
+
+yprover::~yprover()
+{
+	free_eps();
+}
+
 void yprover::query(const old::qdb& goal){
 	FUN;
 	dout << KGRN << "compile query." << KNRM << endl;
@@ -1096,20 +1126,21 @@ void yprover::query(const old::qdb& goal){
 		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 		qdb r;
 		r.first[L"@default"] = old::mk_qlist();
-		//add_result(r, s, o, pr);
-		//results.emplace_back(r);
-			
+
 		for(auto i: g)
 		{
 			Thing &s = get_thing(i->s, locals, consts, lm, cm);
 			Thing &o = get_thing(i->o, locals, consts, lm, cm);
-			dout << sprintThing(L"Subject", &s) << " Pred:" << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;
+
+			dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;
+			add_result(r, &s, &o, i->p);
 
 			if (nresults >= 10) {
 				dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
 				break;
 			}
 		}
+		results.emplace_back(r);
 	}
 	thatsAllFolks(nresults);
 }
