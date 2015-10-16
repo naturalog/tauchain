@@ -46,7 +46,20 @@ LLL
 		b();
 		c();
 	}
-	LLL
+LLL
+	{
+		auto xxx = 0;
+		auto a = [xxx]()mutable {
+			xxx++;
+			cout << xxx << endl;
+		};
+		vector<function<void()>> ooo;
+		ooo.push_back(a);
+		auto c = ooo[0];
+		a();
+		c();
+	}
+LLL
 	{
 
 		vector<int> xxx;

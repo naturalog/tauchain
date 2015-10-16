@@ -29,16 +29,16 @@ typedef function<join_t()> join_gen;
 
 
 map<nodeid, vector<size_t>> pred_index;
-std::unordered_map<old::nodeid, pred_gen> preds;
+std::unordered_map<old::nodeid, pred_t> preds;
 old::prover *op;
 
 
 
 coro unbound_succeed(Thing *x, Thing *y);
 coro unify(Thing *, Thing *);
-pred_gen pred(old::nodeid pr);
+void check_pred(old::nodeid pr);
 rule_t compile_rule(termid head, prover::termset body);
-
+pred_t compile_pred(old::nodeid pr);
 
 
 
@@ -202,6 +202,7 @@ public:
 				return op->format(term);
 			case LIST: {
 				wstringstream r;
+				r << L"{" << size << L"}";
 				for (size_t i = 0; i < size; i++) {
 					if (i != 0) r << " ";
 					r << (this + i)->str();
@@ -211,7 +212,13 @@ public:
 				return L"(" + r.str() + L")";
 			}
 			case OFFSET:
-				return (this + offset)->str();
+				wstringstream r;
+				r << L"{";
+				if (offset >= 0)
+					r << L"+";
+				r << offset << L"}->";
+				r << (this + offset)->str();
+				return r.str();
 		}
 		assert(false);
 	}
@@ -345,6 +352,7 @@ void compile_kb()
 	FUN
 	TRACE(dout << "# of rules: " << op->heads.size() << endl;)
 	pred_index.clear();
+	preds.clear();
 
 	//old::prover --> pred_index (preprocessing step)
 	for (int i = op->heads.size()-1; i >= 0; i--)
@@ -358,7 +366,7 @@ void compile_kb()
 	for(auto x: pred_index){
 		reverse(x.second.begin(), x.second.end());
 		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl;)
-		preds[x.first] = pred(x.first);
+		preds[x.first] = compile_pred(x.first);
 	}
 }
 
@@ -538,46 +546,52 @@ rule_t seq(rule_t a, rule_t b){
 
 
 
+pred_t compile_pred(old::nodeid pr)
+{
+	FUN;
+	rule_t y;
+	vector<size_t> rs = pred_index.at(pr);
+	TRACE(dout << "# of rules: " << rs.size() << endl;)
+	bool first = true;
+	//compile each rule with the pred in the head, seq them up
+	for (auto r: rs) {
+		rule_t x
+				=
+				//op->bodies[r].size()
+				//?
+				compile_rule(op->heads[r], op->bodies[r])
+		//:
+		/*fact(op->heads[r])*/;
+		if (first) {
+			first = false;
+			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+			y = x;
+		}
+		else {
+			TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+			y = seq(x, y);
+		}
+	}
+	assert(!first);
+	return y;
+}
 
-pred_gen pred(old::nodeid pr)
+
+
+void check_pred(old::nodeid pr)
 {
 	FUN;
 	rule_t y;
 	auto it = pred_index.find(pr);
 	if (it == pred_index.end()) {
 		dout << "Predicate '" << old::dict[pr] << "' not found." << endl;
-		y = GEN_FAIL_WITH_ARGS;
+		preds[pr] = GEN_FAIL_WITH_ARGS;
 	}
-	else {
-		vector<size_t> rs = pred_index.at(pr);
-		TRACE(dout << "# of rules: " << rs.size() << endl;)
-		bool first = true;
-		//compile each rule with the pred in the head, seq them up
-		for (auto r: rs) {
-			rule_t x
-					=
-					//op->bodies[r].size()
-					//?
-					compile_rule(op->heads[r], op->bodies[r])
-			//:
-			/*fact(op->heads[r])*/;
-			if (first) {
-				first = false;
-				TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-				y = x;
-			}
-			else {
-				TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-				y = seq(x, y);
-			}
-		}
-		assert(!first);
-	}
-	return [pr, y]() mutable {
-		setproc(L"pred lambda");
+	/*else return [pr]() mutable {
+		setproc(L"pred lookup");
 		TRACE(dout << "nodeid: " << pr << endl;)
-		return y;
-	};
+		return preds.at(pr);
+	};*/
  }
 
 
@@ -587,10 +601,10 @@ enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
 
 map<PredParam, old::string> permname;
 
-typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
+typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
 
 
-join_gen perm0(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm0(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
 {
 	setproc(L"joinws");
 	TRACE(dout << "making a join" << endl;)
@@ -607,7 +621,7 @@ join_gen perm0(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = a();
+					ac = preds.at(a);
 					while (ac(&locals.at(wi), s)) {
 						TRACE(dout << "MATCH A." << endl;)
 
@@ -630,7 +644,7 @@ join_gen perm0(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
 		};
 	};
 }
-join_gen perm1(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm1(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
 {
 	setproc(L"joinws");
 	TRACE(dout << "making a join" << endl;)
@@ -647,7 +661,7 @@ join_gen perm1(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = a();
+					ac = preds.at(a);
 					while (ac(&consts.at(wi), &consts.at(xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 
@@ -743,11 +757,25 @@ Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, local
 		assert(false);
 }
 
+
+void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+{
+	TRACE(dout << "locals:" << endl);
+	for (auto x: lm)
+		dout << op->format(x.first) << " : : " << x.second << "  --> " << locals.at(x.second).str() << endl;
+	TRACE(dout << "consts:" << endl);
+	for (auto x: cm)
+		dout << op->format(x.first) << " : : " << x.second << "  --> " << consts.at(x.second).str() << endl;
+}
+
+
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
+	FUN;
 	std::queue<termid> lq;
 
 	auto expand_lists = [&lq, &locals, &lm]() {
+		setproc("expand_lists");
 		while (!lq.empty()) {
 			termid l = lq.front();
 			lq.pop();
@@ -794,25 +822,23 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		}
 	};
 
-	auto add_var = [&locals, &lm](old::termid x) {
+	auto add_var = [](old::termid x, Locals &vec, locals_map &m) {
 		setproc("add_var");		
+		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
 		Thing t;
-		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
-
-		auto it = lm.find(x);
-		if (it == lm.end()) {
-			t.type = UNBOUND;
-			t.thing = (Thing *) 666;
-			lm[x] = locals.size();
-			locals.push_back(t);
+		t.type = UNBOUND;
+		t.thing = (Thing *) 666;
+		auto it = m.find(x);
+		if (it == m.end()) {
+			m[x] = vec.size();
+			vec.push_back(t);
 		}
 
 	};
 
 	auto add_node = [](old::termid x, Locals &vec, locals_map &m) {
 		setproc("add_node");
-		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
-
+		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
 		Thing t;
 		t.type = NODE;
 		t.term = x;
@@ -825,6 +851,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	};
 
 	vector<termid> terms;
+	TRACE(dout << "head:" << op->format(head) << endl);
+
 	if (head) {
 		terms.push_back(head->s);
 		terms.push_back(head->o);
@@ -833,24 +861,27 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		terms.push_back(bi->s);
 		terms.push_back(bi->o);
 	}
-
-	for (termid x: terms)
+	TRACE(dout << terms.size() << "terms." << endl);
+	for (termid x: terms) {
 		if (x->p > 0 && !islist(x)) {
 			//force rule s and o into locals for now
 			if (head && (x == head->s || x == head->o))
-				add_var(x);
+				add_node(x, locals, lm);
 			else
 				add_node(x, consts, cm);
 		}
-	for (termid x: terms)
-		if (x->p < 0)
-			add_var(x);
+		else if (x->p < 0)
+			add_var(x, locals, lm);
+	}
 	for (termid x: terms)
 		if (x->p > 0 && islist(x))
 			lq.push(x);
 
 	expand_lists();
 	link_lists();
+
+	print_locals(locals, consts, lm, cm, head, body);
+
 }
 
 
@@ -867,16 +898,16 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 	reverse(b2.begin(), b2.end());
 	for (termid bi: b2)
 	{
+		check_pred(bi->p);
 		termid s = bi->s;
 		termid o = bi->o;
 		size_t i1, i2;
 		PredParam sk = thing_key(s, i1, lm, cm, head);
 		PredParam ok = thing_key(o, i2, lm, cm, head);
 		TRACE(dout <<"perm " << permname.at(sk) << " " << permname.at(ok) << endl );
-		jg = perms.at(sk).at(ok)(pred(bi->p), jg, i1, i2, consts);
+		jg = perms.at(sk).at(ok)(bi->p, jg, i1, i2, consts);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
-
 	return jg;
 }
 

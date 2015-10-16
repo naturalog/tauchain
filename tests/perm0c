@@ -1,6 +1,6 @@
 kb
 b x a .
-{ ?local x ?heads } => { ?heads y ?heado }.
+{ ?local y ?heads } => { ?heads y ?heado }.
 fin.
 query
 c y b .

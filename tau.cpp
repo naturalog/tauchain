@@ -401,10 +401,8 @@ bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
 }
 
 bool qdbs_equal(qdb &a, qdb &b) {
-	dout << "a.first.size  b.first.size  a.second.size  b.second.size" << endl;
-	dout << a.first.size() << " " << b.first.size() << " " << a.second.size() << " " << b.second.size() << endl;
-	//if(a.first.size() != b.first.size() || a.second.size() != b.second.size())
-	//	return false;
+	dout << "a.first.size  a.second.size  b.first.size  b.second.size" << endl;
+	dout << a.first.size() << " " << a.second.size() << " " << b.first.size() << " " << b.second.size() << endl;
 	dout << "maybe..";
 	dout << "A:" << endl;
 	dout << a;
@@ -435,17 +433,25 @@ bool _shouldbe(qdb &sb) {
 	if (sb.first.empty() && sb.second.empty()) {
 		return tauProver->results.empty();
 	}
+	if(!tauProver->results.size())
+		return false;
 	auto r = tauProver->results.front();
 	tauProver->results.pop_front();
-
 	return qdbs_equal(r, sb);
 }
 
-void shouldbe(qdb &sb) {
-	if (_shouldbe(sb))
+
+
+void test_result(bool x) {
+	if (x)
 		dout << KGRN << "PASS" << KNRM << endl;
 	else
 		dout << KRED << "FAIL" << KNRM << endl;
+}
+
+
+void shouldbe(qdb &sb) {
+	test_result(_shouldbe(sb));
 }
 
 
@@ -453,6 +459,10 @@ void mode_shouldbe() {
 	set_mode(SHOULDBE);
 }
 
+void thatsall()
+{
+	test_result(tauProver->results.empty());
+}
 
 void mode_query(){
 	if(kbs.size() == 0){
@@ -657,6 +667,10 @@ int main ( int argc, char** argv) {
 			}
 			if (token == L"shouldbe") {
 				mode_shouldbe();
+				continue;
+			}
+			if (token == L"thatsall") {
+				thatsall();
 				continue;
 			}
 			if (token == L"quit") {
