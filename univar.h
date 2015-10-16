@@ -3,7 +3,7 @@
 
 class yprover {
 public:
-	old::prover *p;
+
 	typedef std::list<old::qdb> results_t;
 	results_t results;
 

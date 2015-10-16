@@ -28,11 +28,9 @@ typedef function<join_t()> join_gen;
 //btw im using gen in the sense that its a lambda generating another lambda
 
 
-
-old::prover *op; // used as a kb
 map<nodeid, vector<size_t>> pred_index;
 std::unordered_map<old::nodeid, pred_gen> preds;
-
+old::prover *op;
 
 
 
@@ -710,25 +708,40 @@ bool islist(termid t)
 
 
 //return term's PredParam and possibly also its index into the corresponding vector
-PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head) {
-		if (head && x == head->s)
-			return HEAD_S;
-		else if (head && x == head->o)
-			return HEAD_O;
-		else {
-			auto it = lm.find(x);
-			if (it != lm.end()) {
-				index = it->second;
-				return LOCAL;
-			}
-			else {
-				index = cm.at(x);
-				return CONST;
-			}
+PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head)
+{
+	if (head && x == head->s) {
+		index = lm.at(head->s);
+		return HEAD_S;
+	}
+	else if (head && x == head->o) {
+		index = lm.at(head->o);
+		return HEAD_O;
+	}
+	else {
+		auto it = lm.find(x);
+		if (it != lm.end()) {
+			index = it->second;
+			return LOCAL;
 		}
-	};
+		else {
+			index = cm.at(x);
+			return CONST;
+		}
+	}
+}
 
-
+Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
+{
+	size_t i;
+	auto pp = thing_key(x, i, lm, cm, 0);
+	if (pp == LOCAL)
+		return locals[i];
+	else if (pp == CONST)
+		return consts[i];
+	else
+		assert(false);
+}
 
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
@@ -884,7 +897,7 @@ rule_t compile_rule(termid head, prover::termset body)
 
 	size_t hs, ho;
 	thing_key(head->s, hs, lm, cm, head);
-	thing_key(head->s, ho, lm, cm, head);
+	thing_key(head->o, ho, lm, cm, head);
 
 	join_t j;
 	coro suc, ouc;
@@ -1031,7 +1044,7 @@ void yprover::query(const old::qdb& goal){
 	FUN;
 	dout << KGRN << "compile query." << KNRM << endl;
 	results.clear();
-	const old::prover::termset g = p->qdb2termset(goal);
+	const old::prover::termset g = op->qdb2termset(goal);
 	int nresults = 0;
 	//TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl;)
 	locals_map lm, cm;
@@ -1057,7 +1070,9 @@ void yprover::query(const old::qdb& goal){
 			
 		for(auto i: g)
 		{
-			dout << sprintThing(L"Subject", &locals.at(lm.at(i->s)));// << " " << old::dict[i->p] << " "  << sprintThing(L"Object", o) << endl;
+			Thing &s = get_thing(i->s, locals, consts, lm, cm);
+			Thing &o = get_thing(i->o, locals, consts, lm, cm);
+			dout << sprintThing(L"Subject", &s) << " Pred:" << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;
 
 			if (nresults >= 10) {
 				dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;

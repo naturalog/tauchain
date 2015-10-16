@@ -1,0 +1,8 @@
+T not F.
+F not T.
+
+{ ?x not ?nx. ?y not ?ny. ?z not ?nz} => { ?x fff ?y }.
+
+fin.
+?banana fff ?orange.
+fin.
