@@ -6,7 +6,7 @@
 using namespace std;
 using namespace old;
 
-#define FUN setproc(__FUNCTION__);//
+#define FUN setproc(__FUNCTION__);
 
 
 
@@ -346,6 +346,7 @@ void compile_kb()
 {
 	FUN
 	TRACE(dout << "# of rules: " << op->heads.size() << endl;)
+	pred_index.clear();
 
 	//old::prover --> pred_index (preprocessing step)
 	for (int i = op->heads.size()-1; i >= 0; i--)
@@ -357,6 +358,7 @@ void compile_kb()
 
 	//pred_index --> preds (compilation step)
 	for(auto x: pred_index){
+		reverse(x.second.begin(), x.second.end());
 		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl;)
 		preds[x.first] = pred(x.first);
 	}
@@ -545,6 +547,7 @@ pred_gen pred(old::nodeid pr)
 	rule_t y;
 	auto it = pred_index.find(pr);
 	if (it == pred_index.end()) {
+		dout << "Predicate '" << old::dict[pr] << "' not found." << endl;
 		y = GEN_FAIL_WITH_ARGS;
 	}
 	else {
@@ -584,6 +587,8 @@ pred_gen pred(old::nodeid pr)
 
 enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
 
+map<PredParam, old::string> permname;
+
 typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
 
 
@@ -605,7 +610,47 @@ join_gen perm0(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
 					ac = a();
-					while (ac(&locals[wi], s)) {
+					while (ac(&locals.at(wi), s)) {
+						TRACE(dout << "MATCH A." << endl;)
+
+						bc = b();
+						while (bc(s, o, locals)) {
+							TRACE(dout << "MATCH." << endl;)
+							entry = 1;
+							return true;
+
+							case 1:;
+							TRACE(dout << "RE-ENTRY" << endl;)
+						}
+					}
+					entry = 666;
+					TRACE(dout << "DONE." << endl;)
+					return false;
+				default:
+					assert(false);
+			}
+		};
+	};
+}
+join_gen perm1(pred_gen a, join_gen b, size_t wi, size_t xi, Locals &consts)
+{
+	setproc(L"joinws");
+	TRACE(dout << "making a join" << endl;)
+	int entry = 0;
+	int round = 0;
+	pred_t ac;
+	join_t bc;
+	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+		setproc(L"join gen");
+		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
+			setproc(L"join coro");
+			round++;
+			TRACE(dout << "round: " << round << endl;)
+			switch (entry) {
+				case 0:
+					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					ac = a();
+					while (ac(&consts.at(wi), &consts.at(xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 
 						bc = b();
@@ -633,8 +678,26 @@ Perms perms;
 
 void make_perms()
 {
+	permname[HEAD_S] = L"head_s";
+	permname[HEAD_O] = L"head_o";
+	permname[LOCAL] = L"local";
+	permname[CONST] = L"const";
+
+
 	perms[LOCAL][HEAD_S] = perm0;
-}
+	perms[CONST][CONST] = perm1;
+}/*
+kb
+b x a .
+{ ?local x ?heads } => { ?heads y ?heado }.
+fin.
+query
+a y b .
+fin.
+
+
+
+*/
 
 typedef map<old::termid, size_t> locals_map;
 
@@ -719,6 +782,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	};
 
 	auto add_var = [&locals, &lm](old::termid x) {
+		setproc("add_var");		
 		Thing t;
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
 
@@ -733,6 +797,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	};
 
 	auto add_node = [](old::termid x, Locals &vec, locals_map &m) {
+		setproc("add_node");
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << endl;)
 
 		Thing t;
@@ -760,7 +825,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		if (x->p > 0 && !islist(x)) {
 			//force rule s and o into locals for now
 			if (head && (x == head->s || x == head->o))
-				add_node(x, locals, lm);
+				add_var(x);
 			else
 				add_node(x, consts, cm);
 		}
@@ -777,19 +842,24 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 
 
-join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
 	FUN;
 
 	join_gen jg = succeed_with_args_gen();
 
-	for (int i = body.size() - 1; i >= 0; i--) {
-		termid &bi = body[i];
+	//for (int i = body.size() - 1; i >= 0; i--) {
+		//termid &bi = body[i];
+	auto b2 = body;
+	reverse(b2.begin(), b2.end());
+	for (termid bi: b2)
+	{
 		termid s = bi->s;
 		termid o = bi->o;
 		size_t i1, i2;
 		PredParam sk = thing_key(s, i1, lm, cm, head);
 		PredParam ok = thing_key(o, i2, lm, cm, head);
+		TRACE(dout <<"perm " << permname.at(sk) << " " << permname.at(ok) << endl );
 		jg = perms.at(sk).at(ok)(pred(bi->p), jg, i1, i2, consts);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
@@ -810,7 +880,7 @@ rule_t compile_rule(termid head, prover::termset body)
 	Locals locals, consts;
 
 	make_locals(locals, consts, lm, cm, head, body);
-	join_gen jg = compile_body(locals, consts, lm, cm, head, body);
+	join_gen jg = compile_body(consts, lm, cm, head, body);
 
 	size_t hs, ho;
 	thing_key(head->s, hs, lm, cm, head);
@@ -951,14 +1021,15 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	dout << "constructing old prover" << endl;
-	op = p = new old::prover(qkb, false);
+	op = new old::prover(qkb, false);
 	make_perms();
-	//compile_kb(p);
+	compile_kb();
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
 void yprover::query(const old::qdb& goal){
-	dout << KGRN << "Query." << KNRM << endl;
+	FUN;
+	dout << KGRN << "compile query." << KNRM << endl;
 	results.clear();
 	const old::prover::termset g = p->qdb2termset(goal);
 	int nresults = 0;
@@ -967,40 +1038,34 @@ void yprover::query(const old::qdb& goal){
 	Locals locals, consts;
 
 	make_locals(locals, consts, lm, cm, 0, g);
-	join_gen jg = compile_body(locals, consts, lm, cm, 0, g);
+	join_gen jg = compile_body(consts, lm, cm, 0, g);
 
 	//TRACE(dout << sprintPred(L"Run pred: ",pr) << " with " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl;)
 	// this is weird, passing the args over and over
 
 	join_t coro = jg();
 
-	while (coro((Thing*)666,(Thing*)666,locals)) {
-			nresults++;
+	dout << KGRN << "run." << KNRM << endl;
 
-			dout << KCYN << L"RESULT " << KNRM << nresults << ":";
+	while (coro((Thing*)666,(Thing*)666,locals)) {
+		nresults++;
+		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
+		qdb r;
+		r.first[L"@default"] = old::mk_qlist();
+		//add_result(r, s, o, pr);
+		//results.emplace_back(r);
 			
-			//get actually Subject/Object names from old::dict
-			dout << sprintThing(L"Subject", s) << ", " << sprintThing(L"Object", o) << endl;
-			
-			
-			qdb r;
-			r.first[L"@default"] = old::mk_qlist();
-			add_result(r, s, o, pr);
-			results.emplace_back(r);
-			
+		for(auto i: g)
+		{
+			dout << sprintThing(L"Subject", &locals.at(lm.at(i->s)));// << " " << old::dict[i->p] << " "  << sprintThing(L"Object", o) << endl;
 
 			if (nresults >= 10) {
 				dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
 				break;
 			}
-
 		}
-
-		thatsAllFolks(nresults);
-	}else{
-		
-		dout << "Predicate '" << old::dict[pr] << "' not found, " << KRED << "0" << KNRM << " results." << endl;
 	}
+	thatsAllFolks(nresults);
 }
 
 //endregion
