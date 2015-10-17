@@ -6,3 +6,17 @@ F not T.
 fin.
 ?banana a SAT.
 fin.
+shouldbe
+(T T) a SAT.
+fin.
+shouldbe
+(T F) a SAT.
+fin.
+shouldbe
+(F T) a SAT.
+fin.
+shouldbe
+(F F) a SAT.
+fin.
+thatsall
+

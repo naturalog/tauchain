@@ -54,5 +54,5 @@ fin.
 query
 #?what :nand3 ?whatelse .
 :cout :nand3 ?V1 .
-#:sum :nand3 ?V2 .
+:sum :nand3 ?V2 .
 fin.

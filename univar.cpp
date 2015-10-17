@@ -327,7 +327,7 @@ public:
 	{
 		if (type == BOUND)
 			return thing->getValue();
-		else if (type == offset)
+		else if (type == OFFSET)
 		{
 			assert(offset);
 			return (this + offset)->getValue();
@@ -964,7 +964,7 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
-	FUN;
+	FUN;/*
 	s = s->getValue();
 	o = o->getValue();
 	for (auto i: *ep) 
@@ -973,12 +973,13 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 		TRACE(dout << o->str() << " vs " << i.second->str() << endl;)
 		auto os = i.first->getValue();
 		auto oo = i.second->getValue();
-		if (os->eq(s) && oo->eq(o))
+		if (s->eq(os) && o->eq(oo))
 		{
 			TRACE(dout << "EP." << endl;)
 			return true;
 		}
 	}
+*/
 	ep->push_back(thingthingpair(s, o));
 	TRACE(dout << "paths:" << endl;
 	for (auto ttp: *ep)
@@ -1016,6 +1017,7 @@ rule_t compile_rule(termid head, prover::termset body)
 		TRACE(dout << "round=" << round << endl;)
 		switch (entry) {
 			case 0: 
+
 				if (find_ep(ep, s, o)) {
 					entry = 666;
 					return false;
@@ -1088,25 +1090,23 @@ void thatsAllFolks(int nresults){
 
 
 pnode thing2node(Thing *t, qdb &r) {
-	auto v = t->getValue();
+	t = t->getValue();
 
-	if (v->type == LIST)
+	if (t->type == LIST)
 	{
 		const wstring head = listid();
-		for (size_t i = 0; i < v->size; i++) {
-			auto x = (v + i);
+		for (size_t i = 1; i <= t->size; i++) {
+			auto x = (t + i);
 			r.second[head].emplace_back(thing2node(x, r));
 		}
 		return mkbnode(pstr(head));
 	}
 
-	if (v->type == NODE)
-		return std::make_shared<old::node>(old::dict[v->term->p]);
+	if (t->type == NODE)
+		return std::make_shared<old::node>(old::dict[t->term->p]);
 
-	/*Var *var = dynamic_cast<Var *>(v);
-	if (var)
-		dout << "thing2node: Wtf did you send me?, " << var->str() << endl;
-	 */
+	dout << "thing2node: Wtf did you send me?, " << t->type << " " << t->offset << endl;
+	
 	assert(false);
 }
 
@@ -1178,6 +1178,11 @@ void yprover::query(const old::qdb& goal){
 
 	while (coro((Thing*)666,(Thing*)666,locals)) {
 		nresults++;
+		if (nresults >= 10) {
+			dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
+			goto out;
+		}
+
 		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 		qdb r;
 		r.first[L"@default"] = old::mk_qlist();
@@ -1190,14 +1195,11 @@ void yprover::query(const old::qdb& goal){
 			dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;
 			add_result(r, &s, &o, i->p);
 
-			if (nresults >= 10) {
-				dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
-				break;
-			}
 		}
 		results.emplace_back(r);
 	}
 	thatsAllFolks(nresults);
+	out:;
 }
 
 //endregion

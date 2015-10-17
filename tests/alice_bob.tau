@@ -6,3 +6,8 @@ fin.
 query
 ?WHO :tolerates ?WHAT
 fin.
+shouldbe
+Alice :tolerates Bob.
+fin.
+thatsall
+
