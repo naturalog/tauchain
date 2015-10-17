@@ -1,9 +1,11 @@
+kb
 T not F.
 F not T.
 
 {?y not ?ny. ?z not ?nz} => { (?y ?z) a SAT }.
 
 fin.
+query
 ?banana a SAT.
 fin.
 shouldbe

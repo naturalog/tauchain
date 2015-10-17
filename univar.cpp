@@ -9,6 +9,11 @@ using namespace old;
 #define FUN setproc(__FUNCTION__);
 
 
+#ifdef DEBUG
+#define ITEM(x,y) x.at(y)
+#else
+#define ITEM(x,y) x[y]
+#endif
 
 
 
@@ -33,9 +38,8 @@ typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
 
 
-
-map<PredParam, old::string> permname;
 Perms perms;
+map<PredParam, old::string> permname;
 map<nodeid, vector<size_t>> pred_index;
 #ifdef DEBUG
 std::map<old::nodeid, pred_t> preds;
@@ -478,10 +482,14 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 void free_eps()
 {
 	for (auto x: eps)
+	{
+		assert(!x->size());
 		delete x;
+	}
 	for (auto x: constss)
 		delete x;
-
+	eps.clear();
+	constss.clear();
 }
 
 void compile_kb()
@@ -490,7 +498,7 @@ void compile_kb()
 	TRACE(dout << "# of rules: " << op->heads.size() << endl;)
 	pred_index.clear();
 	preds.clear();
-	eps.clear();
+	free_eps();
 
 	//old::prover --> pred_index (preprocessing step)
 	for (int i = op->heads.size()-1; i >= 0; i--)
@@ -1024,12 +1032,12 @@ rule_t compile_rule(termid head, prover::termset body)
 				}
 			
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-				suc = unify(s, &locals.at(hs));
+				suc = unify(s, ITEM(&locals,hs));
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
-					ouc = unify(o, &locals.at(ho));
+					ouc = unify(o, ITEM(&locals,ho));
 					while (ouc()) {
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
@@ -1154,6 +1162,7 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 yprover::~yprover()
 {
 	free_eps();
+	delete op;
 }
 
 void yprover::query(const old::qdb& goal){

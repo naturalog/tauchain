@@ -15,7 +15,7 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
+					ac = ITEM(preds,a);
 					while (ac(s, s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -53,7 +53,7 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
+					ac = ITEM(preds,a);
 					while (ac(s, o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -91,8 +91,8 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(s, &locals.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(s, ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -129,8 +129,8 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(s, &consts.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(s, ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -167,7 +167,7 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
+					ac = ITEM(preds,a);
 					while (ac(o, s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -205,7 +205,7 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
+					ac = ITEM(preds,a);
 					while (ac(o, o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -243,8 +243,8 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(o, &locals.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(o, ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -281,8 +281,8 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(o, &consts.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(o, ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -319,8 +319,8 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&locals.at(wi), s)) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&locals,wi), s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -357,8 +357,8 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&locals.at(wi), o)) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&locals,wi), o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -395,8 +395,8 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&locals.at(wi), &locals.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&locals,wi), ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -433,8 +433,8 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&locals.at(wi), &consts.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&locals,wi), ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -471,8 +471,8 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&consts.at(wi), s)) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&consts,wi), s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -509,8 +509,8 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&consts.at(wi), o)) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&consts,wi), o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -547,8 +547,8 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&consts.at(wi), &locals.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&consts,wi), ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -585,8 +585,8 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&consts.at(wi), &consts.at(xi))) {
+					ac = ITEM(preds,a);
+					while (ac(ITEM(&consts,wi), ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {

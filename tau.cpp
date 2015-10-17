@@ -68,6 +68,14 @@ using namespace old;
 
 std::vector<qdb> kbs;
 
+void fresh_prover()
+{
+	if (tauProver)
+		delete tauProver;
+	tauProver = new yprover(old::merge_qdbs(kbs));
+}
+
+
 void set_mode(int m)
 {
 	dout << L"mode = ";
@@ -528,7 +536,7 @@ void mode_kb(){
 			int r = get_qdb(kb_in,L"");
 			if(r == 2){
 				kbs.push_back(kb_in);
-				tauProver = new yprover(old::merge_qdbs(kbs));
+				fresh_prover();
 			}else if(r == 1 || r==0){
 				dout << L"Error parsing kb input." << endl;
 			}else{
@@ -551,7 +559,7 @@ void mode_kb(){
 				int r = get_qdb(kb_in, token);	
 				if(r == 2){
 					kbs.push_back(kb_in);
-					tauProver = new yprover(old::merge_qdbs(kbs));
+					fresh_prover();
 				}else if(r == 1 || r == 0){
 					dout<< L"Error parsing kb file: \"" << token << L"\"" << endl;
 				}else{
@@ -705,7 +713,7 @@ int main ( int argc, char** argv) {
 		{
 			if (mode == KB && fins > 0) {
 				kbs.push_back(kb);
-				tauProver = new yprover(old::merge_qdbs(kbs));
+				fresh_prover();
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
@@ -723,7 +731,7 @@ int main ( int argc, char** argv) {
 			else if(mode == COMMANDS && fins == 2) {
 				dout << "querying" << std::endl;
 				kbs.push_back(kb);
-				tauProver = new yprover(old::merge_qdbs(kbs));
+				fresh_prover();
 				(*tauProver).query(query);
 				//(*tauProver).e.clear();
 				data_buffer=L"";

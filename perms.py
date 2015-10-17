@@ -1,4 +1,9 @@
 #!/usr/bin/env python2
+
+###
+###./perms.py > perms.cpp
+###
+
 PP = ["HEAD_S", "HEAD_O", "LOCAL", "CONST"]
 
 def permname(w, x):
@@ -10,9 +15,9 @@ def param(a, s):
 	if a == "HEAD_O":
 		return "o"
 	if a == "LOCAL":
-		return "&locals.at(" + s + "i)"
+		return "ITEM(&locals," + s + "i)"
 	if a == "CONST":
-		return "&consts.at(" + s + "i)"
+		return "ITEM(&consts," + s + "i)" #wi, xi
 
 for w in PP:
 	for x in PP:
@@ -33,7 +38,7 @@ for w in PP:
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
+					ac = ITEM(preds,a);
 					while (ac(""" + param(w, "w") + ", " + param(x, "x") + """)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
