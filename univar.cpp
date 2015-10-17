@@ -15,7 +15,7 @@ using namespace old;
 class Thing;
 typedef vector<Thing> Locals;
 
-typedef std::pair<const Thing*,const Thing*> thingthingpair;
+typedef std::pair</*const*/ Thing*,/*const*/ Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
 typedef function<bool()> coro;
@@ -303,7 +303,7 @@ public:
 	}*/
 
 
-	Thing *getValue()
+	Thing *getValue () 
 	/*
 		# If this Variable is unbound, then just return this Variable.^M
 		# Otherwise, if this has been bound to a value with unify, return the value.^M
@@ -389,6 +389,30 @@ public:
 				}
 			};
 		}
+	}
+	bool eq(/*const*/ Thing *x)
+	{
+		assert(type != OFFSET);
+		assert(type != BOUND);
+		assert(x->type != OFFSET);
+		assert(x->type != BOUND);
+		FUN;
+		if(type == NODE && x->type == NODE)
+		{
+			TRACE(dout << op->format(term) << " =?= " << op->format(x->term) << endl;)//??
+			return op->_terms.equals(term, x->term);
+		}
+		/*else if (type == UNBOUND && x->type == UNBOUND)
+			return true;*/
+		else if (type == LIST && x->type == LIST)
+		{
+			if(size != x->size) return false;
+			for (size_t i = 1; i <= size; i++) 
+				if (!(this+i)->eq(x+i))
+					return false;
+			return true;
+		}
+		return false;
 	}
 };
 
@@ -938,31 +962,22 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 	return jg;
 }
 
-
-
-bool find_ep(ep_t *ep, const Thing *s, const Thing *o)
+bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
 	FUN;
+	s = s->getValue();
+	o = o->getValue();
 	for (auto i: *ep) 
 	{
 		TRACE(dout << s->str() << " vs " << i.first->str() << "  ,  ")
 		TRACE(dout << o->str() << " vs " << i.second->str() << endl;)
-		//auto os = i.first->getValue();
-		//auto oo = i.second->getValue();
-		if (
-				((i.first == s))
-				&&
-				((i.second == o))
-		)
+		auto os = i.first->getValue();
+		auto oo = i.second->getValue();
+		if (os->eq(s) && oo->eq(o))
 		{
 			TRACE(dout << "EP." << endl;)
 			return true;
 		}
-		/*if (
-				((os == s) || (os->type == UNBOUND && s->type == UNBOUND))
-				&&
-				((oo == o) || (oo->type == UNBOUND && o->type == UNBOUND)))
-			return true;*/
 	}
 	ep->push_back(thingthingpair(s, o));
 	TRACE(dout << "paths:" << endl;
@@ -1310,12 +1325,6 @@ bool ep_check(Thing *a, Thing *b){
 	*/
 
 
-	/*bool eq(Node *x)
-	{
-		setproc(L"eq");
-		TRACE(dout << op->format(value) << " =?= " << op->format(x->value) << endl;)
-		return op->_terms.equals(value, x->value);
-	}*/
 	/*
 		function<bool()> boundunifycoro(Thing *arg){
 			setproc(L"boundunifycoro");
