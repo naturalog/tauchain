@@ -36,7 +36,7 @@ std::unordered_map<old::nodeid, pred_t> preds;
 #endif
 old::prover *op;
 std::vector<ep_t*> eps;
-
+vector<Locals*> constss;
 
 coro unbound_succeed(Thing *x, Thing *y);
 coro unify(Thing *, Thing *);
@@ -397,6 +397,9 @@ void free_eps()
 {
 	for (auto x: eps)
 		delete x;
+	for (auto x: constss)
+		delete x;
+
 }
 
 void compile_kb()
@@ -894,7 +897,10 @@ rule_t compile_rule(termid head, prover::termset body)
 	FUN;
 
 	locals_map lm, cm;
-	Locals locals, consts;
+	Locals locals;
+	Locals *consts_ = new Locals();
+	constss.push_back(consts_);
+	Locals &consts = *consts_;
 
 	make_locals(locals, consts, lm, cm, head, body);
 	join_gen jg = compile_body(consts, lm, cm, head, body);

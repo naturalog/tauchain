@@ -443,6 +443,7 @@ bool _shouldbe(qdb &sb) {
 
 
 void test_result(bool x) {
+	dout << "test:";
 	if (x)
 		dout << KGRN << "PASS" << KNRM << endl;
 	else

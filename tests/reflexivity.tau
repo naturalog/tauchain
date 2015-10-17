@@ -1,36 +1,46 @@
 kb
 zero :a Nat.
-
 {?x :a Nat} => {?x :eq ?x}.
-
 fin.
 
 query
-#?WHAT :eq ?WHAT
-#fin.
-#shouldbe
-#zero :eq zero.
-#fin.
-
-#query
-?WHAT :eq ?WHATELSE.
-#fin.
-
-#shouldbe
-#zero :eq zero.
-#fin.
-
-#working
-#zero :eq ?WHATELSE.
-
-#not working   
-#?WHAT :eq zero.
-#
-#output: var() :eq var(zero)
-
-#working
-#zero :eq zero.
-#fin.
+?WHAT :eq ?WHAT
 fin.
-#Expected results:
-# var(zero) :eq var(zero), for all 4 cases.
+shouldbe
+zero :eq zero.
+fin.
+thatsall
+
+query
+?WHAT :eq ?WHATELSE.
+fin.
+shouldbe
+zero :eq zero.
+fin.
+thatsall
+
+
+query
+zero :eq ?WHATELSE.
+fin.
+shouldbe
+zero :eq zero.
+fin.
+thatsall
+
+
+query
+?WHAT :eq zero.
+fin.
+shouldbe
+zero :eq zero.
+fin.
+thatsall
+
+query
+zero :eq zero.
+fin.
+shouldbe
+zero :eq zero.
+fin.
+thatsall
