@@ -328,7 +328,10 @@ public:
 		if (type == BOUND)
 			return thing->getValue();
 		else if (type == offset)
+		{
+			assert(offset);
 			return (this + offset)->getValue();
+		}
 		else
 			return this;
 
@@ -541,7 +544,9 @@ coro listunifycoro(Thing *a, Thing *b)
 	//gotta join up unifcoros of vars in the lists
 	if(a->size != b->size)
 		return dbg_fail();
-	
+	if(!a->size)
+		return gen_succeed();
+
 	function<bool()> r;
 	bool first = true;
 
@@ -557,7 +562,7 @@ coro listunifycoro(Thing *a, Thing *b)
 		{
 			r = corojoin(uc, r);
 		}
-	}	
+	}
 	return r;
 }
 
@@ -583,8 +588,10 @@ coro unify(Thing *a, Thing *b){
 	//# First argument is a variable
 	TRACE(dout << "a: " << a << ", " << a->getValue() << endl;)	
 	a = a->getValue();
-	if (a->type == BOUND)
+	if (a->type == BOUND) {
+		assert(0);// result of getvalue a bound var?
 		return unify(a, b);
+	}
 	else if (a->type == UNBOUND)
 		return a->unboundunifycoro(b);
 
@@ -611,6 +618,8 @@ coro unify(Thing *a, Thing *b){
 		TRACE(dout << "Both args are lists." << endl;)
 		return listunifycoro(a, b);
 	}
+
+
 
 	//# Other combinations cannot unify. Fail.
 	TRACE(dout << "Some non-unifying combination. Fail.(" << a->type << "," << b->type << ")" << endl;)
