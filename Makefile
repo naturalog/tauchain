@@ -1,17 +1,17 @@
-CC=clang++
+CXX=clang++
 
 ASAN=  -fno-omit-frame-pointer -fno-optimize-sibling-calls  -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow 
-
-CXXFLAGS=-c $(ASAN) -DDEBUG -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O1    -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
-LDFLAGS=  $(ASAN) -L/usr/local/lib #-ldl -pthread -lrt
+DBG= $(ASAN) -DDEBUG -g -ggdb -O1
+CXXFLAGS= -c -O3 $(DBG) -std=c++11 -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
+LDFLAGS=  $(DBG) -L/usr/local/lib #-ldl -pthread -lrt
 OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
 
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
 
-%.o: %.cpp `${CC} -std=c++11 $(CXXFLAGS) -M %.cpp`
+%.o: %.cpp `${CXX} -std=c++11 $(CXXFLAGS) -M %.cpp`
 
 
 test1: univar.txt.cpp
@@ -34,26 +34,26 @@ cl: CXXFLAGS += -DOPENCL
 irc: CXXFLAGS += -DIRC -DDEBUG
 
 with_marpa: $(OBJECTS) $(EXECUTABLE)
-	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o tau $(LDFLAGS)
 debug: $(OBJECTS) $(EXECUTABLE)
-	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o tau $(LDFLAGS)
 release: $(OBJECTS) $(EXECUTABLE)
-	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o tau $(LDFLAGS)
 irc: $(OBJECTS) $(EXECUTABLE)
-	$(CC) $(OBJECTS) -o tau $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o tau $(LDFLAGS)
 cl: $(OBJECTS) $(EXECUTABLE)
-	$(CC) $(OBJECTS) -o tau $(LDFLAGS) -lOpenCL
+	$(CXX) $(OBJECTS) -o tau $(LDFLAGS) -lOpenCL
 ubi-tau: $(OBJECTS) ubi/client.o
-	$(CC) $(OBJECTS) ubi/client.o -o $@ $(LDFLAGS)
+	$(CXX) $(OBJECTS) ubi/client.o -o $@ $(LDFLAGS)
 .cpp.o:
-	$(CC) $(CXXFLAGS) $< -o $@
+	$(CXX) $(CXXFLAGS) $< -o $@
 $(EXECUTABLE): $(OBJECTS) 
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
 
 clean:
 	rm -rf tau $(OBJECTS) ubi/client.o marpa.o marpa_tau.o
 
 ppjson: ppjson.cpp
-	$(CC) -std=c++11 ppjson.cpp -oppjson -Wall -ggdb
+	$(CXX) -std=c++11 ppjson.cpp -oppjson -Wall -ggdb
 dimacs2tau: dimacs2tau.cpp
-	$(CC) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb
+	$(CXX) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb

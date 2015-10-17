@@ -335,18 +335,15 @@ bool check_option(string s){
 	if(_option == L"level"){
 		if(_argstream.size() != 0){
 			string token = read_arg();
-			int tmpLevel = level;
+			int tmpLevel;
 			try{
 				tmpLevel = std::stoi(token);
 			}catch(const std::invalid_argument& e){
 				_argstream.push_front(token);
 				return true;
 			}
-	
-			if(tmpLevel < 1) 
+			if(tmpLevel < 1)
 				level = 1;
-			/*else if(tmpLevel > 100) 
-				level = 100;why?*/
 			else
 				level = tmpLevel;
 			dout << "level:" << level << std::endl;

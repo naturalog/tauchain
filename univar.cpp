@@ -11,8 +11,10 @@ using namespace old;
 
 #ifdef DEBUG
 #define ITEM(x,y) x.at(y)
+#define ASSERT assert
 #else
 #define ITEM(x,y) x[y]
+#define ASSERT(x)
 #endif
 
 
@@ -84,7 +86,7 @@ coro gen_succeed()
 			entry = 666;
 			return false;
 		default:
-			assert(false);
+			ASSERT(false);
 		}
 	};
 }
@@ -105,7 +107,7 @@ join_t succeed_with_args()
 			entry = 666;
 			return false;
 		default:
-			assert(false);
+			ASSERT(false);
 		}
 	};
 }
@@ -153,7 +155,7 @@ coro dbg_fail()
 			entry = 666;
 			return false;
 		default:
-			assert(false);
+			ASSERT(false);
 		}
 	};
 }
@@ -174,7 +176,7 @@ pred_t dbg_fail_with_args()
 			entry = 1;
 			return false;
 		default:
-			assert(false);
+			ASSERT(false);
 		}
 	};
 }
@@ -234,10 +236,10 @@ public:
 			case UNBOUND:
 				return L"var()";
 			case BOUND:
-				assert(thing);
+				ASSERT(thing);
 				return L"var(" + thing->str() + L")";
 			case NODE:
-				assert(term);
+				ASSERT(term);
 				return op->format(term);
 			case LIST: {
 				wstringstream r;
@@ -259,7 +261,7 @@ public:
 				r << (this + offset)->str();
 				return r.str();
 		}
-		assert(false);
+		ASSERT(false);
 	}/*
 	wstring dbgstr() const
 	{
@@ -276,11 +278,11 @@ public:
 				r << L"var()";
 				break;
 			case BOUND:
-				assert(thing);
+				ASSERT(thing);
 				r << L"var(" << thing << L")";
 				break;
 			case NODE:
-				assert(term);
+				ASSERT(term);
 				r << op->format(term);
 				break;
 			case LIST: {
@@ -333,7 +335,7 @@ public:
 			return thing->getValue();
 		else if (type == OFFSET)
 		{
-			assert(offset);
+			ASSERT(offset);
 			return (this + offset)->getValue();
 		}
 		else
@@ -377,29 +379,29 @@ public:
 					case 0:
 						TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" <<
 							  argv->str() << endl;)
-						assert(type == UNBOUND);
+						ASSERT(type == UNBOUND);
 						type = BOUND;
 						thing = argv;
 						entry = 1;
 						return true;
 					case 1:
 						TRACE(dout << "unbinding " << this << "/" << this->str() << endl;)
-						assert(type == BOUND);
+						ASSERT(type == BOUND);
 						type = UNBOUND;
 						entry = 666;
 						return false;
 					default:
-						assert(false);
+						ASSERT(false);
 				}
 			};
 		}
 	}
 	bool eq(/*const*/ Thing *x)
 	{
-		assert(type != OFFSET);
-		assert(type != BOUND);
-		assert(x->type != OFFSET);
-		assert(x->type != BOUND);
+		ASSERT(type != OFFSET);
+		ASSERT(type != BOUND);
+		ASSERT(x->type != OFFSET);
+		ASSERT(x->type != BOUND);
 		FUN;
 		if(type == NODE && x->type == NODE)
 		{
@@ -426,7 +428,7 @@ coro unbound_succeed(Thing *x, Thing *y)
 {
 	int entry = 0;
 	return [entry, x, y]() mutable {
-		assert(x->type == UNBOUND);
+		ASSERT(x->type == UNBOUND);
 		setproc(L"unify lambda 1");
 		//TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" <<y->str() << endl;)
 		switch (entry) {
@@ -437,7 +439,7 @@ coro unbound_succeed(Thing *x, Thing *y)
 				entry = 666;
 				return false;
 			default:
-				assert(false);
+				ASSERT(false);
 		}
 	};
 }
@@ -483,7 +485,7 @@ void free_eps()
 {
 	for (auto x: eps)
 	{
-		assert(!x->size());
+		ASSERT(!x->size());
 		delete x;
 	}
 	for (auto x: constss)
@@ -561,7 +563,7 @@ coro corojoin(coro a, coro b)
 			entry = 666;
 			return false;
 		default:
-			assert(false);
+			ASSERT(false);
 		}
 	};
 }
@@ -570,12 +572,12 @@ coro listunifycoro(Thing *a, Thing *b)
 {
 	setproc(L"listunifycoro");
 	TRACE(dout << "..." << endl;)
-	assert(a->type == LIST);
-	assert(b->type == LIST);
+	ASSERT(a->type == LIST);
+	ASSERT(b->type == LIST);
 
 	//gotta join up unifcoros of vars in the lists
 	if(a->size != b->size)
-		return dbg_fail();
+		return GEN_FAIL ;
 	if(!a->size)
 		return gen_succeed();
 
@@ -621,7 +623,7 @@ coro unify(Thing *a, Thing *b){
 	TRACE(dout << "a: " << a << ", " << a->getValue() << endl;)	
 	a = a->getValue();
 	if (a->type == BOUND) {
-		assert(0);// result of getvalue a bound var?
+		ASSERT(0);// result of getvalue a bound var?
 		return unify(a, b);
 	}
 	else if (a->type == UNBOUND)
@@ -689,10 +691,10 @@ rule_t seq(rule_t a, rule_t b){
 			return false;
 
 		default:
-			assert(false);
+			ASSERT(false);
 		}
 		TRACE(dout << "Why are we here?" << endl;)
-		assert(false);
+		ASSERT(false);
 	};
 }
 
@@ -724,7 +726,7 @@ pred_t compile_pred(old::nodeid pr)
 			y = seq(x, y);
 		}
 	}
-	assert(!first);
+	ASSERT(!first);
 	return y;
 }
 
@@ -765,7 +767,7 @@ a join captures two indexes into the locals/consts table, which it may or may no
 
 bool islist(termid t)
 {
-	assert(t);
+	ASSERT(t);
 	return *old::dict[t->p].value == L".";
 }
 
@@ -774,7 +776,7 @@ bool islist(termid t)
 PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head)
 {
 	if (head)
-		assert(head->s && head->o);
+		ASSERT(head->s && head->o);
 	if (head && x == head->s) {
 		index = lm.at(head->s);
 		return HEAD_S;
@@ -806,7 +808,7 @@ Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, local
 	else if (pp == CONST)
 		return consts[i];
 	else
-		assert(false);
+		ASSERT(false);
 }
 
 
@@ -825,7 +827,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 void make_offset(Locals &locals, Thing &t, size_t pos) {
 	t.type = OFFSET;
 	t.offset = pos - locals.size();
-};// we are getting a strange warning from asan here
+}// we are getting a strange warning from asan here
 
 
 
@@ -1057,11 +1059,11 @@ rule_t compile_rule(termid head, prover::termset body)
 				}
 				entry = 666;
 				TRACE(dout << "DONE." << endl;)
-				assert(ep->size());
+				ASSERT(ep->size());
 				ep->pop_back();
 				return false;
 			default:
-				assert(false);
+				ASSERT(false);
 		}
 	};
 }
@@ -1115,7 +1117,7 @@ pnode thing2node(Thing *t, qdb &r) {
 
 	dout << "thing2node: Wtf did you send me?, " << t->type << " " << t->offset << endl;
 	
-	assert(false);
+	ASSERT(false);
 }
 
 
@@ -1187,10 +1189,10 @@ void yprover::query(const old::qdb& goal){
 
 	while (coro((Thing*)666,(Thing*)666,locals)) {
 		nresults++;
-		if (nresults >= 10) {
+		/*if (nresults >= 10) {
 			dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
 			goto out;
-		}
+		}*/
 
 		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 		qdb r;
@@ -1215,7 +1217,7 @@ void yprover::query(const old::qdb& goal){
 
 #ifdef notes
 
-/*
+
 /*so it seems we have 3 variants to start with:
  1: parameterless joins, with extra rule lambda and unify's,
  2: all joins have two parameters, there are permutations,
@@ -1224,7 +1226,7 @@ so i guess we start with 1?
 */
 
 
-*/
+
 
 
 /*
@@ -1252,7 +1254,8 @@ bool ep_check(Thing *a, Thing *b){
 }
 */
 
-/*
+
+
 			bool hit = false;
 
 			switch(entry)
@@ -1301,7 +1304,7 @@ bool ep_check(Thing *a, Thing *b){
 				}
 
 				//remove:
-				assert(ep[pr].size() > index);
+				ASSERT(ep[pr].size() > index);
 				{
 					auto xxx = ep[pr][index];
 					TRACE(dout << "erase " << xxx.first << " " << xxx.second << endl);
@@ -1311,12 +1314,12 @@ bool ep_check(Thing *a, Thing *b){
 				entry = 666;
 				return false;
 			default: ;
-				assert(false);
+				ASSERT(false);
 			}
 		};
 	};
 }
-*/
+
 
 
 
@@ -1331,7 +1334,7 @@ bool ep_check(Thing *a, Thing *b){
 		else if (type == UNBOUND)
 			return unboundunifycoro(arg);
 		else
-			assert(false);
+			ASSERT(false);
 	}
 	*/
 
