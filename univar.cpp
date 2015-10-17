@@ -29,7 +29,11 @@ typedef function<join_t()> join_gen;
 
 
 map<nodeid, vector<size_t>> pred_index;
+#ifdef DEBUG
+std::map<old::nodeid, pred_t> preds;
+#else
 std::unordered_map<old::nodeid, pred_t> preds;
+#endif
 old::prover *op;
 std::vector<ep_t*> eps;
 
@@ -186,7 +190,7 @@ public:
 		Thing *thing;
 		old::termid term;
 		size_t size;
-		long offset;
+		signed long offset;
 	};
 	wstring str() const
 	{
@@ -202,14 +206,14 @@ public:
 				return op->format(term);
 			case LIST: {
 				wstringstream r;
-				r << L"{" << size << L"}";
+				r << L"{" << size << L"}(";
 				for (size_t i = 0; i < size; i++) {
 					if (i != 0) r << " ";
-					r << (this + i)->str();
+					r << (this + 1 + i)->str();
 				}
 				if(!size)
 					r << " ";
-				return L"(" + r.str() + L")";
+				return r.str() + L")";
 			}
 			case OFFSET:
 				wstringstream r;
@@ -221,7 +225,51 @@ public:
 				return r.str();
 		}
 		assert(false);
-	}
+	}/*
+	wstring dbgstr() const
+	{
+		static int d = 0;
+		if (d++ == 15) {
+			d = 0;
+			return L"break";
+		}
+		wstringstream r;
+		r << "[" << this << "]";
+		switch (type)
+		{
+			case UNBOUND:
+				r << L"var()";
+				break;
+			case BOUND:
+				assert(thing);
+				r << L"var(" << thing << L")";
+				break;
+			case NODE:
+				assert(term);
+				r << op->format(term);
+				break;
+			case LIST: {
+				r << L"{" << size << L"}(";
+				for (size_t i = 1; i < size; i++) {
+					if (i != 0) r << " ";
+					r << (this + i)->dbgstr();
+				}
+				if(!size)
+					r << " ";
+				r << L")";
+				break;
+			}
+			case OFFSET:
+				wstringstream r;
+				r << L"{";
+				if (offset >= 0)
+					r << L"+";
+				r << offset << L"}->";
+				r << (this + offset)->dbgstr();
+				break;
+		}
+		return r.str();
+	}*/
 
 
 	Thing *getValue()
@@ -439,7 +487,7 @@ coro listunifycoro(Thing *a, Thing *b)
 	function<bool()> r;
 	bool first = true;
 
-	for(int i = b->size-1;i >= 0; i--)
+	for(int i = b->size;i > 0; i--)
 	{
 		coro uc = unify(a+i, b+i);
 		
@@ -609,112 +657,10 @@ map<PredParam, old::string> permname;
 typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
 
 
-join_gen perm0(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
-{
-	setproc(L"joinws");
-	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
-	pred_t ac;
-	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
-		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
-			switch (entry) {
-				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&locals.at(wi), s)) {
-						TRACE(dout << "MATCH A." << endl;)
-
-						bc = b();
-						while (bc(s, o, locals)) {
-							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
-							return true;
-
-							case 1:;
-							TRACE(dout << "RE-ENTRY" << endl;)
-						}
-					}
-					entry = 666;
-					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
-			}
-		};
-	};
-}
-join_gen perm1(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
-{
-	setproc(L"joinws");
-	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
-	pred_t ac;
-	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
-		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
-			switch (entry) {
-				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
-					ac = preds.at(a);
-					while (ac(&consts.at(wi), &consts.at(xi))) {
-						TRACE(dout << "MATCH A." << endl;)
-
-						bc = b();
-						while (bc(s, o, locals)) {
-							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
-							return true;
-
-							case 1:;
-							TRACE(dout << "RE-ENTRY" << endl;)
-						}
-					}
-					entry = 666;
-					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
-			}
-		};
-	};
-}
-
 typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 Perms perms;
 
-void make_perms()
-{
-	permname[HEAD_S] = L"head_s";
-	permname[HEAD_O] = L"head_o";
-	permname[LOCAL] = L"local";
-	permname[CONST] = L"const";
-
-
-	perms[LOCAL][HEAD_S] = perm0;
-	perms[CONST][CONST] = perm1;
-}/*
-kb
-b x a .
-{ ?local x ?heads } => { ?heads y ?heado }.
-fin.
-query
-a y b .
-fin.
-
-
-
-*/
+#include "perms.cpp"
 
 typedef map<old::termid, size_t> locals_map;
 
@@ -775,6 +721,13 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 }
 
 
+void make_offset(Locals &locals, Thing &t, size_t pos) {
+	t.type = OFFSET;
+	t.offset = pos - locals.size();
+};
+
+
+
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
 	FUN;
@@ -802,9 +755,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 						lm[li] = locals.size();
 					}
 					else {
-						t.type = OFFSET;
-						t.offset = it->second;
-						t.offset -= locals.size();
+						make_offset(locals, t, it->second);
 					}
 				}
 				else {
