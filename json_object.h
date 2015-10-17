@@ -24,7 +24,7 @@ typedef std::shared_ptr<bool> pbool;
 string indent();
 using std::endl;
 
-extern std::set<string>& silence;
+extern std::set<string> silence;
 #ifdef DEBUG
 #define TRACE(x) if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) { dout << old::indent(); x; }
 #else

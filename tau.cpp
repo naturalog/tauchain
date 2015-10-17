@@ -44,7 +44,7 @@ string format = L"";
 string base = L"";
 
 bool irc = false;
-std::set<string>& silence = *new std::set<string>;
+std::set<string> silence;// = *new std::set<string>;
 
 std::map<string,bool*> _flags = {
 		{L"nocolor",&nocolor}
