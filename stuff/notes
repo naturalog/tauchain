@@ -26,3 +26,4 @@ git commit -a -m "mmm" ; git update-server-info
 
 env ASAN_OPTIONS="detect_leaks=0 verbosity=1"
 
+tau --level 100 --nocolor  --silence addrules --silence readcurly --silence quad::ctor   < examples/einstein.n3 

@@ -62,7 +62,7 @@ std::vector<string> _formats = {L"nq",
 								L"jsonld"};
 std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
 
-yprover *tauProver;
+yprover *tauProver = 0;
 
 using namespace old;
 
@@ -597,7 +597,7 @@ int main ( int argc, char** argv) {
 		if (input_buffer.size() == 0 && _argstream.size() == 0)
 		{
 			if (std::wcin.eof())
-				exit(0);
+				break;
 			string line;
 			std::getline(std::wcin, line);
 			input_buffer += line + L"\n";
@@ -742,5 +742,7 @@ int main ( int argc, char** argv) {
 		}
 		_argstream.clear();
 	}
+	if (tauProver)
+		delete tauProver;
 }
 

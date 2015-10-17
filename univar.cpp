@@ -186,9 +186,9 @@ public:
 		Thing *thing;
 		old::termid term;
 		size_t size;
-		int offset;
+		long offset;
 	};
-	wstring str()
+	wstring str() const
 	{
 		switch (type)
 		{
@@ -803,7 +803,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 					}
 					else {
 						t.type = OFFSET;
-						t.offset = it->second - locals.size();
+						t.offset = it->second;
+						t.offset -= locals.size();
 					}
 				}
 				else {
@@ -921,9 +922,18 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 
 bool find_ep(ep_t *ep, const Thing *s, const Thing *o)
 {
-	for (auto i: *ep)
-		if (i.first == s && i.second == o)
+	FUN;
+	for (auto i: *ep) {
+		TRACE(dout << s->str() << " vs " << i.first->str() << "  ,  ")
+		TRACE(dout << o->str() << " vs " << i.second->str() << endl;)
+		auto os = i.first->getValue();
+		auto oo = i.second->getValue();
+		if (
+				((os == s) || (os->type == UNBOUND && s->type == UNBOUND))
+				&&
+				((oo == o) || (oo->type == UNBOUND && o->type == UNBOUND)))
 			return true;
+	}
 	return false;
 }
 
@@ -953,19 +963,22 @@ rule_t compile_rule(termid head, prover::termset body)
 		round++;
 		TRACE(dout << "round=" << round << endl;)
 		switch (entry) {
-			case 0:
+			case 0: {
+				auto sv = s->getValue();
+				auto ov = o->getValue();
 
-				if (find_ep(ep, s, o)) {
+				if (find_ep(ep, sv, ov)) {
 					entry = 666;
 					TRACE(dout << "EP." << endl;)
 					return false;
 				}
 				else {
-					ep->push_back(thingthingpair(s, o));
-					for (auto ttp: *ep)
-						dout << ttp.first << " " << ttp.second << endl;
+					ep->push_back(thingthingpair(sv, ov));
+					TRACE(dout << "paths:" << endl;
+								  for (auto ttp: *ep)
+									  dout << ttp.first << " " << ttp.second << endl;)
 				}
-
+			}
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				suc = unify(s, &locals.at(hs));
 				while (suc()) {
