@@ -15,7 +15,7 @@ using namespace old;
 class Thing;
 typedef vector<Thing> Locals;
 
-typedef std::pair<Thing*,Thing*> thingthingpair;
+typedef std::pair<const Thing*,const Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
 typedef function<bool()> coro;
@@ -26,13 +26,23 @@ typedef function<rule_t()> rule_gen;
 typedef function<bool(Thing*,Thing*, Locals&)> join_t;
 typedef function<join_t()> join_gen;
 //btw im using gen in the sense that its a lambda generating another lambda
+typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
+
+enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
+typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
 
+
+
+map<PredParam, old::string> permname;
+Perms perms;
 map<nodeid, vector<size_t>> pred_index;
 #ifdef DEBUG
 std::map<old::nodeid, pred_t> preds;
+typedef map<old::termid, size_t> locals_map;
 #else
 std::unordered_map<old::nodeid, pred_t> preds;
+typedef unordered_map<old::termid, size_t> locals_map;
 #endif
 old::prover *op;
 std::vector<ep_t*> eps;
@@ -172,6 +182,8 @@ pred_t dbg_fail_with_args()
 
 
 
+
+
 //endregion
 
 
@@ -180,6 +192,25 @@ pred_t dbg_fail_with_args()
 
 
 
+/*so, the idea behind this new data structuring is that each little thing doesnt have to be allocated separately, 
+we can put them in one big array per rule, and we can initialize such locals array from a template simply by memcpy
+most importantly, this is just an attempt at optimization, it isnt a change needed for the correct functioning
+
+	UNBOUND, 	// unbound var
+	BOUND,  	// bound var
+	NODE, 		// nodeid - atom
+	LIST, 		// has size, is followed by its items
+	OFFSET		// pointer offset to another item in the vector
+
+so, a rule needs local variables shared among its body joins.
+these will be in one contiguous vector of things
+a link is an offset, it points to another thing within the vector
+its like a rule-local var
+the reason for this is that vars may occur multiple times, for example:
+{(?z ?y) a b. (?y ?x) a b} => ...
+we have two distinct lists in this rule, each contains ?y
+the lists themselves will be just consecutive things in the locals vector
+*/
 
 
 enum ThingType {UNBOUND, BOUND, NODE, LIST, OFFSET};
@@ -359,6 +390,30 @@ public:
 };
 
 
+#ifdef DEBUG
+coro unbound_succeed(Thing *x, Thing *y)
+{
+	int entry = 0;
+	return [entry, x, y]() mutable {
+		assert(x->type == UNBOUND);
+		setproc(L"unify lambda 1");
+		//TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" <<y->str() << endl;)
+		switch (entry) {
+			case 0:
+				entry = 1;
+				return true;
+			case 1:
+				entry = 666;
+				return false;
+			default:
+				assert(false);
+		}
+	};
+}
+#endif
+
+
+
 //region sprint
 
 wstring sprintVar(wstring label, Thing *v){
@@ -449,7 +504,7 @@ void compile_kb()
 
 coro corojoin(coro a, coro b)
 {
-	setproc(L"unifjoin");
+	FUN;
 	TRACE(dout << "..." << endl;)
 	
 	int entry = 0;
@@ -558,7 +613,7 @@ coro unify(Thing *a, Thing *b){
 	}
 
 	//# Other combinations cannot unify. Fail.
-	TRACE(dout << "Some non-unifying combination. Fail." << endl;)
+	TRACE(dout << "Some non-unifying combination. Fail.(" << a->type << "," << b->type << ")" << endl;)
 	return GEN_FAIL;
 }
 
@@ -653,19 +708,18 @@ void check_pred(old::nodeid pr)
 
 
 
-enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
+/*
+one join function, joins "just pass" query s and o down between them,
+each join calls one pred,
+so we are only concerned with permuting the two params to the pred,
+and these can be either: s, o, or a local var, or a const
+a join captures two indexes into the locals/consts table, which it may or may not use
+*/
 
-map<PredParam, old::string> permname;
-
-typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
-
-
-typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
-Perms perms;
 
 #include "perms.cpp"
 
-typedef map<old::termid, size_t> locals_map;
+
 
 
 bool islist(termid t)
@@ -678,6 +732,8 @@ bool islist(termid t)
 //return term's PredParam and possibly also its index into the corresponding vector
 PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head)
 {
+	if (head)
+		assert(head->s && head->o);
 	if (head && x == head->s) {
 		index = lm.at(head->s);
 		return HEAD_S;
@@ -699,6 +755,7 @@ PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, te
 	}
 }
 
+//return reference to thing by termid
 Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
 	size_t i;
@@ -727,7 +784,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 void make_offset(Locals &locals, Thing &t, size_t pos) {
 	t.type = OFFSET;
 	t.offset = pos - locals.size();
-};
+};// we are getting a strange warning from asan here
 
 
 
@@ -741,27 +798,27 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		while (!lq.empty()) {
 			termid l = lq.front();
 			lq.pop();
-			Thing i0;
-			i0.type = LIST;
 			auto lst = op->get_dotstyle_list(l);
+			Thing i0; // list size item
+			i0.type = LIST;
 			i0.size = lst.size();
 			lm[l] = locals.size();
 			locals.push_back(i0);
 			for (auto li: lst) {
 				TRACE(dout << "item..." << endl;)
 				Thing t;
-				if (li->p < 0) {
-					auto it = lm.find(li);
-					if (it == lm.end()) {
+				if (li->p < 0) { //its a var
+					auto it = lm.find(li); //is it already in locals?
+					if (it == lm.end()) { //no? create a fresh var
 						t.type = UNBOUND;
 						t.thing = (Thing *) 666;
 						lm[li] = locals.size();
 					}
-					else {
-						make_offset(locals, t, it->second);
+					else { //just point to it
+						make_offset(locals, t, it->second); 
 					}
 				}
-				else {
+				else { //its a node
 					t.type = NODE;
 					t.term = li;
 					if (islist(li))
@@ -877,17 +934,31 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 bool find_ep(ep_t *ep, const Thing *s, const Thing *o)
 {
 	FUN;
-	for (auto i: *ep) {
+	for (auto i: *ep) 
+	{
 		TRACE(dout << s->str() << " vs " << i.first->str() << "  ,  ")
 		TRACE(dout << o->str() << " vs " << i.second->str() << endl;)
-		auto os = i.first->getValue();
-		auto oo = i.second->getValue();
+		//auto os = i.first->getValue();
+		//auto oo = i.second->getValue();
 		if (
+				((i.first == s))
+				&&
+				((i.second == o))
+		)
+		{
+			TRACE(dout << "EP." << endl;)
+			return true;
+		}
+		/*if (
 				((os == s) || (os->type == UNBOUND && s->type == UNBOUND))
 				&&
 				((oo == o) || (oo->type == UNBOUND && o->type == UNBOUND)))
-			return true;
+			return true;*/
 	}
+	ep->push_back(thingthingpair(s, o));
+	TRACE(dout << "paths:" << endl;
+	for (auto ttp: *ep)
+		  dout << ttp.first << " " << ttp.second << endl;)
 	return false;
 }
 
@@ -920,22 +991,12 @@ rule_t compile_rule(termid head, prover::termset body)
 		round++;
 		TRACE(dout << "round=" << round << endl;)
 		switch (entry) {
-			case 0: {
-				auto sv = s->getValue();
-				auto ov = o->getValue();
-
-				if (find_ep(ep, sv, ov)) {
+			case 0: 
+				if (find_ep(ep, s, o)) {
 					entry = 666;
-					TRACE(dout << "EP." << endl;)
 					return false;
 				}
-				else {
-					ep->push_back(thingthingpair(sv, ov));
-					TRACE(dout << "paths:" << endl;
-								  for (auto ttp: *ep)
-									  dout << ttp.first << " " << ttp.second << endl;)
-				}
-			}
+			
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				suc = unify(s, &locals.at(hs));
 				while (suc()) {
@@ -1117,43 +1178,7 @@ void yprover::query(const old::qdb& goal){
 
 //endregion
 
-
-coro unbound_succeed(Thing *x, Thing *y)
-{
-	int entry = 0;
-	return [entry, x, y]() mutable {
-		assert(x->type == UNBOUND);
-		setproc(L"unify lambda 1");
-		//TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" <<y->str() << endl;)
-		switch (entry) {
-			case 0:
-				entry = 1;
-				return true;
-			case 1:
-				entry = 666;
-				return false;
-			default:
-				assert(false);
-		}
-	};
-}
-
-
-
-
 #ifdef notes
-/*
-anyway...one join function, joins "just pass" query s and o down between them,
-each join calls one pred,
-so we are only concerned with permuting the two params to the pred,
-and these can be either: s, o, or a local var
-so thats 9 variants
-a join captures two indexes into the local vars table, which it may or may not use
-so...not the most efficient but a simple design, what do you think?
-i think it would work, if i understand it correctly
-i would start with a python script that prints out the code... which code exactly?
-the permutations...so thats like our function joinwxyz now 
-*/
 
 /*
 /*so it seems we have 3 variants to start with:
