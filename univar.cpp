@@ -8,15 +8,23 @@ using namespace old;
 
 #define FUN setproc(__FUNCTION__);
 
+#define EEE char entry = 0;
+#define LAST 33
 
 #ifdef DEBUG
 #define ITEM(x,y) x.at(y)
 #define ASSERT assert
+#define case_LAST case LAST:
+#define END entry = 66; return false; default:	ASSERT(false);
 #else
 #define ITEM(x,y) x[y]
 #define ASSERT(x)
+#define case_LAST default:
+#define END return false;
 #endif
 
+
+extern int result_limit ;
 
 
 class Thing;
@@ -75,25 +83,21 @@ pred_t compile_pred(old::nodeid pr);
 //yield once
 coro gen_succeed()
 {
-	int entry = 0;
+	EEE
 	return [entry]() mutable{
 		switch(entry)
 		{
 		case 0:
-			entry = 1;
+			entry = LAST;
 			return true;
-		case 1:
-			entry = 666;
-			return false;
-		default:
-			ASSERT(false);
+		case_LAST:END
 		}
 	};
 }
 
 join_t succeed_with_args()
 {
-	int entry = 0;
+	EEE
 	return [entry](Thing *Ds, Thing *Do, Locals _) mutable{
 		(void)Ds;
 		(void)Do;
@@ -101,13 +105,9 @@ join_t succeed_with_args()
 		switch(entry)
 		{
 		case 0:
-			entry = 1;
+			entry = LAST;
 			return true;
-		case 1:
-			entry = 666;
-			return false;
-		default:
-			ASSERT(false);
+		case_LAST:END
 		}
 	};
 }
@@ -331,8 +331,10 @@ public:
 			return result^M
 	*/
 	{
-		if (type == BOUND)
+		if (type == BOUND) {
+					ASSERT(thing);
 			return thing->getValue();
+		}
 		else if (type == OFFSET)
 		{
 			ASSERT(offset);
@@ -340,7 +342,6 @@ public:
 		}
 		else
 			return this;
-
 	}
 
 	/*  # If this Variable is bound, then just call YP.unify to unify this with arg.
@@ -368,13 +369,11 @@ public:
 		else {
 			TRACE(dout << "argv != this" << endl;)
 
-			int entry = 0;
+			EEE
 			return [this, entry, argv]() mutable {
-
 				setproc(L"unify lambda 2");
 				TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" <<
 					  argv->str() << endl;)
-
 				switch (entry) {
 					case 0:
 						TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" <<
@@ -382,21 +381,19 @@ public:
 						ASSERT(type == UNBOUND);
 						type = BOUND;
 						thing = argv;
-						entry = 1;
+						entry = LAST;
 						return true;
-					case 1:
+					case_LAST:
 						TRACE(dout << "unbinding " << this << "/" << this->str() << endl;)
 						ASSERT(type == BOUND);
 						type = UNBOUND;
-						entry = 666;
-						return false;
-					default:
-						ASSERT(false);
+						END
 				}
 			};
 		}
 	}
-	bool eq(/*const*/ Thing *x)
+	bool would_unify(/*const*/ Thing *x)
+	/*<HMC_a> koo7: ep check is supposed to determine equality by seeing if the values would unify (but not actually doing the unifying assignment)*/
 	{
 		ASSERT(type != OFFSET);
 		ASSERT(type != BOUND);
@@ -406,15 +403,16 @@ public:
 		if(type == NODE && x->type == NODE)
 		{
 			TRACE(dout << op->format(term) << " =?= " << op->format(x->term) << endl;)//??
-			return op->_terms.equals(term, x->term);
+			ASSERT(op->_terms.equals(term, x->term) == (term == x->term));
+			return term == x->term;
 		}
-		/*else if (type == UNBOUND && x->type == UNBOUND)
-			return true;*/
+		else if (type == UNBOUND && x->type == UNBOUND)
+			return true;
 		else if (type == LIST && x->type == LIST)
 		{
 			if(size != x->size) return false;
 			for (size_t i = 1; i <= size; i++) 
-				if (!(this+i)->eq(x+i))
+				if (!(this+i)->would_unify(x+i))
 					return false;
 			return true;
 		}
@@ -552,18 +550,15 @@ coro corojoin(coro a, coro b)
 		switch(entry)
 		{
 		case 0:
-			entry++;
+			entry = LAST;
 			while(a()){
 				while(b()){
 					return true;
-		case 1: ;
+		CASE_LAST ;
 						
 				}
 			}
-			entry = 666;
-			return false;
-		default:
-			ASSERT(false);
+		END;
 		}
 	};
 }
@@ -586,7 +581,7 @@ coro listunifycoro(Thing *a, Thing *b)
 
 	for(int i = b->size;i > 0; i--)
 	{
-		coro uc = unify(a+i, b+i);
+		coro uc = unify(a+i, b+i);//////////
 		
 		if(first){
 			r = uc;
@@ -631,8 +626,10 @@ coro unify(Thing *a, Thing *b){
 
 	//# Second argument is a variable
 	b = b->getValue();
-	if (b->type == BOUND)
+	if (b->type == BOUND) {
+		ASSERT(0);// result of getvalue a bound var?
 		return unify(b, a);
+	}
 	else if (b->type == UNBOUND)
 		return b->unboundunifycoro(a);
 
@@ -647,7 +644,7 @@ coro unify(Thing *a, Thing *b){
 	}
 	
 	//# Both arguments are lists
-	if(a->type  == LIST && b->type == LIST)
+	if(a->type == LIST && b->type == LIST)
 	{
 		TRACE(dout << "Both args are lists." << endl;)
 		return listunifycoro(a, b);

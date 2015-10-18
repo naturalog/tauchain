@@ -50,11 +50,11 @@ for w in PP:
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};

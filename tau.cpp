@@ -43,8 +43,9 @@ const int COMPLETE = 2;
 string format = L"";
 string base = L"";
 
+int result_limit = 123;
 bool irc = false;
-std::set<string> silence;// = *new std::set<string>;
+std::set<string> silence;
 
 std::map<string,bool*> _flags = {
 		{L"nocolor",&nocolor}
@@ -350,6 +351,21 @@ bool check_option(string s){
 		}
 		return true;
 	}
+
+	if(_option == L"limit"){
+		if(_argstream.size() != 0){
+			string token = read_arg();
+			try{
+				result_limit = std::stoi(token);
+			}catch(const std::invalid_argument& e){
+				_argstream.push_front(token);
+				return true;
+			}
+			dout << "limit:" << result_limit << std::endl;
+		}
+		return true;
+	}
+
 	return false;
 }
 
