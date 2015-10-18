@@ -8,18 +8,18 @@ using namespace old;
 
 #define FUN setproc(__FUNCTION__);
 
-#define EEE char entry = 0;
-#define LAST 33
+#define EEE char entry = 0
+const char LAST = 33;
 
 #ifdef DEBUG
 #define ITEM(x,y) x.at(y)
 #define ASSERT assert
-#define case_LAST case LAST:
-#define END entry = 66; return false; default:	ASSERT(false);
+#define case_LAST case LAST
+#define END entry = 66; return false; default: ASSERT(false);
 #else
 #define ITEM(x,y) x[y]
 #define ASSERT(x)
-#define case_LAST default:
+#define case_LAST default
 #define END return false;
 #endif
 
@@ -83,21 +83,22 @@ pred_t compile_pred(old::nodeid pr);
 //yield once
 coro gen_succeed()
 {
-	EEE
+	EEE;
 	return [entry]() mutable{
 		switch(entry)
 		{
 		case 0:
 			entry = LAST;
 			return true;
-		case_LAST:END
+		case_LAST:
+			END
 		}
 	};
 }
 
 join_t succeed_with_args()
 {
-	EEE
+	EEE;
 	return [entry](Thing *Ds, Thing *Do, Locals _) mutable{
 		(void)Ds;
 		(void)Do;
@@ -107,7 +108,8 @@ join_t succeed_with_args()
 		case 0:
 			entry = LAST;
 			return true;
-		case_LAST:END
+		case_LAST:
+			END
 		}
 	};
 }
@@ -369,7 +371,7 @@ public:
 		else {
 			TRACE(dout << "argv != this" << endl;)
 
-			EEE
+			EEE;
 			return [this, entry, argv]() mutable {
 				setproc(L"unify lambda 2");
 				TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" <<
@@ -537,31 +539,32 @@ void compile_kb()
 
 
 
-coro corojoin(coro a, coro b)
+coro unifjoin(Thing *a, Thing *b, coro c)
 {
 	FUN;
 	TRACE(dout << "..." << endl;)
-	
-	int entry = 0;
-	return [a,b, entry]() mutable{
+	EEE;
+	coro uc;
+	return [a,b,c, uc, entry]() mutable{
 		setproc(L"unifjoin lambda");
 		TRACE(dout << "entry = " << entry << endl;)
 
 		switch(entry)
 		{
 		case 0:
-			entry = LAST;
-			while(a()){
-				while(b()){
+			uc = unify(a,b);
+			while(uc()){
+				while(c()){
+					entry = 1;
 					return true;
-		CASE_LAST ;
-						
-				}
+		case 1:;
+				};
 			}
-		END;
+		case_LAST: END;
 		}
 	};
 }
+
 
 coro listunifycoro(Thing *a, Thing *b)
 {
@@ -573,25 +576,14 @@ coro listunifycoro(Thing *a, Thing *b)
 	//gotta join up unifcoros of vars in the lists
 	if(a->size != b->size)
 		return GEN_FAIL ;
-	if(!a->size)
-		return gen_succeed();
 
-	function<bool()> r;
-	bool first = true;
+	coro r = gen_succeed();
 
 	for(int i = b->size;i > 0; i--)
 	{
-		coro uc = unify(a+i, b+i);//////////
-		
-		if(first){
-			r = uc;
-			first = false;
-		}
-		else
-		{
-			r = corojoin(uc, r);
-		}
+		r = unifjoin(a+i, b+i, r);
 	}
+
 	return r;
 }
 
@@ -1150,7 +1142,7 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 
 
 yprover::yprover ( qdb qkb, bool check_consistency)  {
-	dout << "constructing old prover" << endl;
+	TRACE(dout << "constructing old prover" << endl;)
 	op = new old::prover(qkb, false);
 	make_perms();
 	compile_kb();
@@ -1161,6 +1153,7 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 yprover::~yprover()
 {
 	free_eps();
+	TRACE(dout << "deleting old prover" << endl;)
 	delete op;
 }
 
@@ -1186,11 +1179,6 @@ void yprover::query(const old::qdb& goal){
 
 	while (coro((Thing*)666,(Thing*)666,locals)) {
 		nresults++;
-		/*if (nresults >= 10) {
-			dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
-			goto out;
-		}*/
-
 		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 		qdb r;
 		r.first[L"@default"] = old::mk_qlist();
@@ -1204,7 +1192,17 @@ void yprover::query(const old::qdb& goal){
 			add_result(r, &s, &o, i->p);
 
 		}
+
 		results.emplace_back(r);
+
+		if (result_limit && nresults == result_limit) {
+			dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
+			for (auto x: eps)
+				delete x;
+			eps.clear();
+			goto out;
+		}
+
 	}
 	thatsAllFolks(nresults);
 	out:;
