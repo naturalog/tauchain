@@ -12,11 +12,15 @@ using namespace old;
 const char LAST = 33;
 
 #ifdef DEBUG
+#define TRC(x) x
+#define TRCCAP(x) ,x
 #define ITEM(x,y) x.at(y)
 #define ASSERT assert
 #define case_LAST case LAST
 #define END entry = 66; return false; default: ASSERT(false);
 #else
+#define TRC(x)
+#define TRCCAP(x)
 #define ITEM(x,y) x[y]
 #define ASSERT(x)
 #define case_LAST default
@@ -226,10 +230,10 @@ class Thing {
 public:
 	ThingType type;
 	union {
-		Thing *thing;
-		old::termid term;
-		size_t size;
-		signed long offset;
+		Thing *thing; // for bound var
+		old::termid term; // for node
+		size_t size;  // for list
+		signed long offset; // for offset
 	};
 	wstring str() const
 	{
@@ -395,18 +399,20 @@ public:
 		}
 	}
 	bool would_unify(/*const*/ Thing *x)
-	/*<HMC_a> koo7: ep check is supposed to determine equality by seeing if the values would unify (but not actually doing the unifying assignment)*/
+	/*ep check is supposed to determine equality by seeing if the values would unify
+	* (but not actually doing the unifying assignment)*/
 	{
+		FUN;
 		ASSERT(type != OFFSET);
 		ASSERT(type != BOUND);
 		ASSERT(x->type != OFFSET);
 		ASSERT(x->type != BOUND);
-		FUN;
 		if(type == NODE && x->type == NODE)
 		{
-			TRACE(dout << op->format(term) << " =?= " << op->format(x->term) << endl;)//??
-			ASSERT(op->_terms.equals(term, x->term) == (term == x->term));
-			return term == x->term;
+			TRACE(dout << op->format(term) << " =?= " << op->format(x->term) << endl;)
+			bool r = term == x->term;
+			ASSERT(op->_terms.equals(term, x->term) == r);
+			return r;
 		}
 		else if (type == UNBOUND && x->type == UNBOUND)
 			return true;
@@ -426,20 +432,16 @@ public:
 #ifdef DEBUG
 coro unbound_succeed(Thing *x, Thing *y)
 {
-	int entry = 0;
+	EEE;
 	return [entry, x, y]() mutable {
 		ASSERT(x->type == UNBOUND);
-		setproc(L"unify lambda 1");
-		//TRACE(dout << "im in ur argv == this var unify lambda, entry = " << entry << ", argv= " << argv << "/" <<y->str() << endl;)
+		setproc(L"unbound_succeed lambda");
+		TRACE(dout << x << " " << y << "entry:" << entry << endl);
 		switch (entry) {
 			case 0:
-				entry = 1;
+				entry = LAST;
 				return true;
-			case 1:
-				entry = 666;
-				return false;
-			default:
-				ASSERT(false);
+			case_LAST: END
 		}
 	};
 }
@@ -492,6 +494,14 @@ void free_eps()
 		delete x;
 	eps.clear();
 	constss.clear();
+}
+
+void free_eps_nonassert()
+{
+	for (auto x: eps)
+		delete x;
+	eps.clear();
+
 }
 
 void compile_kb()
@@ -553,14 +563,14 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 		{
 		case 0:
 			uc = unify(a,b);
+			entry = LAST;
 			while(uc()){
 				while(c()){
-					entry = 1;
 					return true;
-		case 1:;
+		case_LAST:;
 				};
 			}
-		case_LAST: END;
+			END;
 		}
 	};
 }
@@ -652,35 +662,28 @@ coro unify(Thing *a, Thing *b){
 rule_t seq(rule_t a, rule_t b){
 	setproc(L"seq");
 	TRACE(dout << ".." << endl;)
-	int entry = 0;
-	int round = 0;
-	return [a, b, entry, round](Thing *Ds, Thing *Do) mutable{
+	EEE;
+	TRC(int round = 0;)
+	return [a, b, entry TRCCAP(round)](Thing *Ds, Thing *Do) mutable{
 		setproc(L"seq lambda");	
-		round++;
+		TRC(round++;)
 		TRACE(dout << "round: " << round << endl;)
-		
 		switch(entry){
 		case 0:
+			entry = 1;
 			while(a(Ds, Do)){
 				TRACE(dout << "MATCH A." << endl;)
-				entry = 1;
 				return true;
 		case 1: ;
 			}
+			entry = LAST;
 			while(b(Ds, Do)){
-				entry = 2;
 				TRACE(dout << "MATCH B." << endl;)
 				return true;
-		case 2:	;
+		case_LAST: ;
 			}
-
 			TRACE(dout << "SWITCH DONE." << endl;)
-
-			entry = 666;
-			return false;
-
-		default:
-			ASSERT(false);
+			END
 		}
 		TRACE(dout << "Why are we here?" << endl;)
 		ASSERT(false);
@@ -1197,9 +1200,7 @@ void yprover::query(const old::qdb& goal){
 
 		if (result_limit && nresults == result_limit) {
 			dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
-			for (auto x: eps)
-				delete x;
-			eps.clear();
+			free_eps_nonassert();
 			goto out;
 		}
 

@@ -27,11 +27,11 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -65,11 +65,11 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -103,11 +103,11 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -141,11 +141,11 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -179,11 +179,11 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -217,11 +217,11 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -255,11 +255,11 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -293,11 +293,11 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -331,11 +331,11 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -369,11 +369,11 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -407,11 +407,11 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -445,11 +445,11 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -483,11 +483,11 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -521,11 +521,11 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -559,11 +559,11 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
@@ -597,11 +597,11 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
+					entry = 666;
 					return false;
 				default:
-					assert(false);
+					ASSERT(false);
 			}
 		};
 	};
