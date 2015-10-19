@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <queue>
 #include "univar.h"
+#include <string.h>
 
 using namespace std;
 using namespace old;
@@ -15,7 +16,8 @@ const char LAST = 33;
 #define DBG(x) x
 #define TRC(x) x
 #define TRCCAP(x) ,x
-#define ITEM(x,y) x.at(y)
+//#define ITEM(x,y) x.at(y)
+#define ITEM(x,y) x[y]
 #define ASSERT assert
 #define case_LAST case LAST
 #define END entry = 66; return false; default: ASSERT(false);
@@ -44,7 +46,7 @@ typedef function<bool(Thing*,Thing*)> pred_t;
 typedef function<pred_t()> pred_gen;
 typedef function<bool(Thing*,Thing*)> rule_t;
 typedef function<rule_t()> rule_gen;
-typedef function<bool(Thing*,Thing*, Locals&)> join_t;
+typedef function<bool(Thing*,Thing*, Thing*)> join_t;
 typedef function<join_t()> join_gen;
 //btw im using gen in the sense that its a lambda generating another lambda
 typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
@@ -67,6 +69,9 @@ typedef unordered_map<old::termid, size_t> locals_map;
 old::prover *op;
 std::vector<ep_t*> eps;
 vector<Locals*> constss;
+vector<Locals*> locals_templates;
+
+
 
 coro unbound_succeed(Thing *x, Thing *y);
 coro unify(Thing *, Thing *);
@@ -105,7 +110,7 @@ coro gen_succeed()
 join_t succeed_with_args()
 {
 	EEE;
-	return [entry](Thing *Ds, Thing *Do, Locals _) mutable{
+	return [entry](Thing *Ds, Thing *Do, Thing* _) mutable{
 		(void)Ds;
 		(void)Do;
 		(void)_;
@@ -492,9 +497,14 @@ void free_eps()
 		ASSERT(!x->size());
 		delete x;
 	}
+	eps.clear();
+
+	for (auto x: locals_templates)
+		delete x;
+	locals_templates.clear();
+
 	for (auto x: constss)
 		delete x;
-	eps.clear();
 	constss.clear();
 }
 
@@ -503,7 +513,6 @@ void free_eps_nonassert()
 	for (auto x: eps)
 		delete x;
 	eps.clear();
-
 }
 
 void compile_kb()
@@ -997,26 +1006,31 @@ rule_t compile_rule(termid head, prover::termset body)
 	FUN;
 
 	locals_map lm, cm;
-	Locals locals;
+	Locals &locals_template = *new Locals();
+	locals_templates.push_back(&locals_template);
 	Locals *consts_ = new Locals();
 	constss.push_back(consts_);
 	Locals &consts = *consts_;
 
-	make_locals(locals, consts, lm, cm, head, body);
+	make_locals(locals_template, consts, lm, cm, head, body);
 	join_gen jg = compile_body(consts, lm, cm, head, body);
 
 	size_t hs, ho;
 	thing_key(head->s, hs, lm, cm, head);
 	thing_key(head->o, ho, lm, cm, head);
 
+	EEE;
 	join_t j;
 	coro suc, ouc;
 	TRC(int round = 0;)
-	EEE;
 	ep_t *ep = new ep_t();
 	eps.push_back(ep);
 
-	return [ep, hs, ho, locals,&consts, jg, suc, ouc, j, entry TRCCAP(round)](Thing *s, Thing *o) mutable {
+	auto locals_data = locals_template.data();
+	auto locals_bytes = locals_template.size() * sizeof(Thing);
+	Thing * locals=0;
+
+	return [locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(round)](Thing *s, Thing *o) mutable {
 		setproc(L"rule coro");
 		TRC(round++;)
 		TRACE(dout << "round=" << round << endl;)
@@ -1027,6 +1041,9 @@ rule_t compile_rule(termid head, prover::termset body)
 					DBG(entry = 66;)
 					return false;
 				}
+
+				locals = (Thing*)malloc(locals_bytes);
+				memcpy(locals, locals_data, locals_bytes);
 			
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				suc = unify(s, ITEM(&locals,hs));
@@ -1055,6 +1072,7 @@ rule_t compile_rule(termid head, prover::termset body)
 				TRACE(dout << "DONE." << endl;)
 				ASSERT(ep->size());
 				ep->pop_back();
+				free(locals);
 				END
 		}
 	};
@@ -1180,7 +1198,7 @@ void yprover::query(const old::qdb& goal){
 
 	dout << KGRN << "run." << KNRM << endl;
 
-	while (coro((Thing*)666,(Thing*)666,locals)) {
+	while (coro((Thing*)666,(Thing*)666,locals.data())) {
 		nresults++;
 		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 		qdb r;
