@@ -975,30 +975,36 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 	return jg;
 }
 
+
+
+
+
+
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
-	FUN;/*
+	FUN;
 	s = s->getValue();
 	o = o->getValue();
 	for (auto i: *ep) 
 	{
-		TRACE(dout << s->str() << " vs " << i.first->str() << "  ,  ")
-		TRACE(dout << o->str() << " vs " << i.second->str() << endl;)
+		TRACE(dout << s->str() << " vs " << i.first->str() << "  ,  " << o->str() << " vs " << i.second->str() << endl;)
+		TRACE(dout << "---------------------" << endl);
 		auto os = i.first->getValue();
 		auto oo = i.second->getValue();
-		if (s->eq(os) && o->eq(oo))
+		if (s->would_unify(os) && o->would_unify(oo))
 		{
 			TRACE(dout << "EP." << endl;)
 			return true;
 		}
 	}
-*/
 	ep->push_back(thingthingpair(s, o));
-	TRACE(dout << "paths:" << endl;
+	/*TRACE(dout << "paths:" << endl;
 	for (auto ttp: *ep)
-		  dout << ttp.first << " " << ttp.second << endl;)
+		  dout << ttp.first << " " << ttp.second << endl;)*/
 	return false;
 }
+
+
 
 
 rule_t compile_rule(termid head, prover::termset body)
