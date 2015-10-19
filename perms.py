@@ -31,7 +31,7 @@ for w in PP:
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
 			setproc(L"join coro");
 			TRC(round++;)
 			TRACE(dout << "round: " << round << endl;)
@@ -46,7 +46,7 @@ for w in PP:
 							TRACE(dout << "MATCH." << endl;)
 							entry = LAST;
 							return true;
-				case_LAST:
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
