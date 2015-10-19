@@ -12,6 +12,7 @@ using namespace old;
 const char LAST = 33;
 
 #ifdef DEBUG
+#define DBG(x) x
 #define TRC(x) x
 #define TRCCAP(x) ,x
 #define ITEM(x,y) x.at(y)
@@ -19,6 +20,7 @@ const char LAST = 33;
 #define case_LAST case LAST
 #define END entry = 66; return false; default: ASSERT(false);
 #else
+#define DBG(x)
 #define TRC(x)
 #define TRCCAP(x)
 #define ITEM(x,y) x[y]
@@ -1009,19 +1011,20 @@ rule_t compile_rule(termid head, prover::termset body)
 
 	join_t j;
 	coro suc, ouc;
-	int round = 0, entry = 0;
+	TRC(int round = 0;)
+	EEE;
 	ep_t *ep = new ep_t();
 	eps.push_back(ep);
 
-	return [ep, hs, ho, locals,&consts, jg, suc, ouc, j, entry, round](Thing *s, Thing *o) mutable {
+	return [ep, hs, ho, locals,&consts, jg, suc, ouc, j, entry TRCCAP(round)](Thing *s, Thing *o) mutable {
 		setproc(L"rule coro");
-		round++;
+		TRC(round++;)
 		TRACE(dout << "round=" << round << endl;)
 		switch (entry) {
 			case 0: 
 
 				if (find_ep(ep, s, o)) {
-					entry = 666;
+					DBG(entry = 66;)
 					return false;
 				}
 			
@@ -1041,21 +1044,18 @@ rule_t compile_rule(termid head, prover::termset body)
 							TRACE(dout << "After c0() -- " << endl;)
 							//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
-							entry = 1;
+							entry = LAST;
 							return true;
 							TRACE(dout << "MATCH." << endl;)
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
 				}
-				entry = 666;
 				TRACE(dout << "DONE." << endl;)
 				ASSERT(ep->size());
 				ep->pop_back();
-				return false;
-			default:
-				ASSERT(false);
+				END
 		}
 	};
 }

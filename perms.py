@@ -25,15 +25,15 @@ for w in PP:
 		print """{
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
 		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
 			setproc(L"join coro");
-			round++;
+			TRC(round++;)
 			TRACE(dout << "round: " << round << endl;)
 			switch (entry) {
 				case 0:
@@ -44,17 +44,14 @@ for w in PP:
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
 					TRACE(dout << "DONE." << endl;)
-					entry = 666;
-					return false;
-				default:
-					ASSERT(false);
+					END
 			}
 		};
 	};
