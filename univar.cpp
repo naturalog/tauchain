@@ -427,7 +427,7 @@ public:
 		{
 			if(size != x->size) return false;
 			for (size_t i = 1; i <= size; i++) 
-				if (!(this+i)->would_unify(x+i))
+				if (!(this+i)->getValue()->would_unify((x+i)->getValue()))
 					return false;
 			return true;
 		}
@@ -985,16 +985,22 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	FUN;
 	s = s->getValue();
 	o = o->getValue();
+	TRACE(dout << ep->size() << " ep items:" << endl);
 	for (auto i: *ep) 
 	{
-		TRACE(dout << s->str() << " vs " << i.first->str() << "  ,  " << o->str() << " vs " << i.second->str() << endl;)
 		TRACE(dout << "---------------------" << endl);
 		auto os = i.first->getValue();
 		auto oo = i.second->getValue();
-		if (s->would_unify(os) && o->would_unify(oo))
+		TRACE(dout << s->str() << "    VS     " << os->str() << endl << o->str() << "    VS    " << oo->str() << endl;)
+		TRACE(dout << "s:" << s->type << endl << "o:" << o->type << endl);
+		TRACE(dout << "os:" << os->type << endl << "oo:" << oo->type << endl);
+		if (s->would_unify(os))
 		{
-			TRACE(dout << "EP." << endl;)
-			return true;
+			TRACE(dout << "..");
+			if(o->would_unify(oo)) {
+				TRACE(dout << "EP." << endl;)
+				return true;
+			}
 		}
 	}
 	ep->push_back(thingthingpair(s, o));
@@ -1035,17 +1041,17 @@ rule_t compile_rule(termid head, prover::termset body)
 	auto locals_data = locals_template.data();
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
 	Thing * locals=0;
+	bool has_body = body.size();
 
-	return [locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(round)](Thing *s, Thing *o) mutable {
+	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(round)](Thing *s, Thing *o) mutable {
 		setproc(L"rule coro");
 		TRC(round++;)
 		TRACE(dout << "round=" << round << endl;)
 		switch (entry) {
 			case 0: 
 
-				if (find_ep(ep, s, o)) {
-					DBG(entry = 66;)
-					return false;
+				if (has_body && find_ep(ep, s, o)) {
+					goto end;
 				}
 
 				locals = (Thing*)malloc(locals_bytes);
@@ -1076,9 +1082,12 @@ rule_t compile_rule(termid head, prover::termset body)
 					}
 				}
 				TRACE(dout << "DONE." << endl;)
-				ASSERT(ep->size());
-				ep->pop_back();
+				if(has_body) {
+					ASSERT(ep->size());
+					ep->pop_back();
+				}
 				free(locals);
+			end:
 				END
 		}
 	};
