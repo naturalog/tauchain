@@ -10,12 +10,13 @@
 #define pws(x)	for (const wchar_t *_pws_t = x; *_pws_t; ++_pws_t) pw(*_pws_t);
 #define putws(x) fputws(x, stdin)
 
-wchar_t *input;
+wchar_t *input; // complete input is read into here first, then free'd after a parser pass
 char in_query = 0; // 1 after first "fin."
 const size_t buflen = 256, szwc = sizeof(wchar_t);
 const wchar_t* getstr(const wchar_t *s); // implemented in dict.cpp, manages unique strings
 int getres(); 
-void skip() { while (iswspace(*input)) ++input; }
+void skip() { while (*input && iswspace(*input)) ++input; }
+void printts(const int *t);
 const wchar_t* take(int p) {
 	wchar_t s[p + 1];
 	wcsncpy(s, input, p), s[p] = 0, input += p;
@@ -24,11 +25,12 @@ const wchar_t* take(int p) {
 char peek(const wchar_t *_s) {
 	const wchar_t *s = _s;
 	int n = 0;
-	while (*s) if (input[n++] != *s++) return 0;
+	while (*s) if (!input[n] || input[n++] != *s++) return 0;
 	return 1;
 }
 void expect(const wchar_t *s) {
-	if (!peek(s)) wprintf(L"Error: \"%s\" expected.", s), exit(1);
+	if (skip(), !peek(s)) wprintf(L"Error: \"%s\" expected.", s), exit(1);
+	input += wcslen(s);
 }
 
 /*
@@ -39,8 +41,8 @@ void expect(const wchar_t *s) {
  * integers, zero each.
  */
 struct res { char type; union { const wchar_t *value; const int *args; }; } *rs = 0;
-struct triple { const struct res *s, *p, *o; } *ts = 0; 
-struct rule { int *c, *p; } *rls = 0;
+struct triple { int s, p, o; } *ts = 0; 
+struct rule { int *p, *c; } *rls = 0; // premises and conclusions
 size_t nrs = 0, nts = 0, nrls = 0;
 const size_t chunk = 64;
 
@@ -50,10 +52,11 @@ int mkres(const wchar_t* s, char type) {
 }
 int mktriple(int s, int p, int o) {
 	if (!(nts % chunk)) ts = realloc(ts, chunk * sizeof(struct triple) * (nts / chunk + 1));
-	return ts[nts].s = &rs[s], ts[nts].p = &rs[p], ts[nts].o = &rs[o], nts++;
+	return ts[nts].s = s, ts[nts].p = p, ts[nts].o = o, nts++;
 }
-int mkrule(int *c, int *p) {
+int mkrule(int *p, int *c) {
 	if (!(nrls % chunk)) rls = realloc(rls, chunk * sizeof(struct rule) * (nrls / chunk + 1));
+//	printts(p), puts(""), printts(c), puts("");
 	return rls[nrls].c = c, rls[nrls].p = p, nrls++;
 }
 
@@ -83,42 +86,44 @@ int gettriple() {
 	int s, p, o;
 	if (!((s = getres()) && (p = getres()) && (o = getres()))) return 0;
 	if (skip(), *input == L'.') ++input, skip();
-	return mktriple(s, p, o);
+	int t = mktriple(s, p, o);
+//	printt(&ts[t]);
+	return t;
 }
 int getrule() {
-	static int *p;
-	if (peek(L"fin.")) {
-		if (in_query) return 0;
-		in_query = 1;
+	static int *p, r;
+	if (skip(), peek(L"fin.")) {
+		if (!in_query) return in_query = 1, input += 4, getrule();
+		return 0;
 	}
-	if (skip(), *input != L'{') {
+	if (skip(), !*input) return 0;
+	if (*input != L'{') {
 		int *r = calloc(3, sizeof(int));
 		r[r[r[2] = 0] = 1] = gettriple();
-		return in_query ? mkrule(0, r) : mkrule(r, 0);
+		return in_query ? mkrule(r, 0) : mkrule(0, r);
 	}
-	return p = getlist(gettriple, L'}'), expect(L"=>"), mkrule(p, getlist(gettriple, L'}'));
+	++input;
+	p = getlist(gettriple, L'}'), expect(L"=>"), skip(), expect(L"{"), r = mkrule(p, getlist(gettriple, L'}'));
+	if (*input == L'.') ++input;
+	return r;
 }
 
 void print(const struct res* r) {
+	if (!r) return;
 	if (r->type != '.') { pws(r->value); return; }
 	pws(L"( ");
 	const int *a = r->args;
 	while (*++a) print(&rs[*a]), pw(L' ');
 	pw(L')');
 }
-void printt(const struct triple* t) { print(t->s), pw(L' '), print(t->p), pw(L' '), print(t->o), pw(L'.'); }
-void printts(const int *t) {
-	if (!t) return;
-	pws(L"{ ");
-	while (*++t) printt(&ts[*t]);
-	pw(L'}');
-}
+void printt(const struct triple* t) { print(&rs[t->s]), pw(L' '), print(&rs[t->p]), pw(L' '), print(&rs[t->o]), pw(L'.'); }
+void printts(const int *t) { if (!t) return; pws(L"{ "); while (*++t) printt(&ts[*t]); pw(L'}'); }
 void printr(const struct rule* r) { printts(r->p); pws(L" => "); printts(r->c), puts(""); }
 
 void parse() {
 	int r;
 	while ((r = getrule()))
-		printr(&rls[r]), puts("");
+		printr(&rls[r]), pw(L'\n');
 }
 
 int _main(int argc, char** argv) {
@@ -127,11 +132,11 @@ int _main(int argc, char** argv) {
 	int pos = 0;
 	input = malloc(szwc * buflen);
 	while (!feof(stdin)) { // read whole doc into mem
-		input[pos++] = gw();
+		if ((input[pos++] = gw()) == WEOF) break;
 		if (!(pos % buflen))
-			input = realloc(input, szwc * (1 + pos / buflen));
+			input = realloc(input, buflen * szwc * (1 + pos / buflen));
 	}
-	input[pos] = 0;
+	input[--pos] = 0;
 	wchar_t *_input = input;
 	parse();
 	free(_input);
