@@ -201,7 +201,7 @@ void printc(int **c) {
 	}
 }
 
-void test_insert_sorted() {
+void test() {
 	int **c = MALLOC(int*, 3);
 	for (int n = 0; n < 3; ++n) c[n] = MALLOC(int, 4);
 	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3,
@@ -213,20 +213,24 @@ void test_insert_sorted() {
 	find(c, 6, 4, &i, &j), assert(i == 1 && j == 1);
 	find(c, 6, 7, &i, &j), assert(i == 1 && j == 1);
 	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
-	find(c, 7, 9, &i, &j), assert(i == 2 && j == 1);
+	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
 }
 
 int** merge_sorted(int **c, int i, int j) { }
 
 void find(int **c, int x, int y, int *i, int *j) {
-	if (x > y) { find(**c, y, x, j, i); return; }
-	int **_c = c, **rx = c, **ry = c, t = x;
-	for (int *p = *c; p = *c;) {
-		while (*p && *p < x) ++p; if (*p == x) rx = c;
-		while (*p && *p < y) ++p; if (*p == y) ry = c;
-		if (**++c > t) { if (t == x) t = y; else break; }
+	if (x > y) { find(c, y, x, j, i); return; }
+	*i = *j = 0;
+	for (int row = 1, rows = **c; row < rows; ++row) {
+		int *p = ROW(c, row), col;
+		for (col = 0; col < ROWLEN(c, row) - 1; ++col)
+			if (p[col] >= x) break;
+		if (p[col] == x) *i = row;
+		for (col = 0; col < ROWLEN(c, row) - 1; ++col)
+			if (p[col] >= y) break;
+		if (p[col] == y) *j = row;
+		if (*i && *j) return;
 	}
-	*i = rx - c, *j = ry - c;
 }
 
 int** require(int** c, int x, int y) {
@@ -258,7 +262,7 @@ char canmatch(int x, int y) {
 int _main(int argc, char** argv) {
 	setlocale(LC_ALL, "");
 	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0); // reserve zero indices to signal failure
-	test_insert_sorted();
+	test();
 	int pos = 0;
 	input = MALLOC(wchar_t, buflen);
 	while (!feof(stdin)) { // read whole doc into mem
