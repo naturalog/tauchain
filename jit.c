@@ -182,7 +182,7 @@ int** insert_sorted(int **c, int i, int x) {
 	int *p = ROW(c, i) = REALLOC(ROW(c, i), ++ROWLEN(c, i), int); // increase i'th row's space
 	while (*p && *p < x) ++p; // walk till row gets geq x
 	if (!*p) return *p++ = x, *p = 0, c; // push new largest member
-	int *t = ROW(c, i) + ROWLEN(c, i) + 1; // up till end of row
+	int *t = ROW(c, i) + ROWLEN(c, i) - 1; // up till end of row
 	*t-- = 0;
 	do { *t = *(t - 1); } while (*--t != *p);
 	*t = x;
@@ -207,12 +207,13 @@ void test_insert_sorted() {
 	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3,
 	c[1][0] = 4, c[1][1] = 6, c[1][2] = 7, c[1][3] = 0,
 	c[2][0] = 8, c[2][1] = 9, c[2][2] = 0;
-	putws(L"before:\n");
-	printc(c);
-	insert_sorted(c, 1, 5);
-	putws(L"after:\n");
-	printc(c);
-	fflush(stdout);
+	putws(L"before:\n"), printc(c), insert_sorted(c, 1, 5),
+	putws(L"after:\n"), printc(c), fflush(stdout);
+	int i, j;
+	find(c, 6, 4, &i, &j), assert(i == 1 && j == 1);
+	find(c, 6, 7, &i, &j), assert(i == 1 && j == 1);
+	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
+	find(c, 7, 9, &i, &j), assert(i == 2 && j == 1);
 }
 
 int** merge_sorted(int **c, int i, int j) { }
