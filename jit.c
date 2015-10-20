@@ -4,10 +4,8 @@
 #include <stdio.h>
 #include <wchar.h>
 #include <wctype.h>
-
-#define gw()	getwchar()
-#define pw(x)	putwchar(x)
-#define pws(x)	for (const wchar_t *_pws_t = x; *_pws_t; ++_pws_t) pw(*_pws_t);
+#include <assert.h>
+#define pws(x)	for (const wchar_t *_pws_t = x; *_pws_t; ++_pws_t) putwchar(*_pws_t);
 #define putws(x) fputws(x, stdin)
 
 wchar_t *input; // complete input is read into here first, then free'd after a parser pass
@@ -110,17 +108,17 @@ void print(const struct res* r) {
 	if (r->type != '.') { pws(r->value); return; }
 	pws(L"( ");
 	const int *a = r->args;
-	while (*++a) print(&rs[*a]), pw(L' ');
-	pw(L')');
+	while (*++a) print(&rs[*a]), putwchar(L' ');
+	putwchar(L')');
 }
-void printt(const struct triple* t) { print(&rs[t->s]), pw(L' '), print(&rs[t->p]), pw(L' '), print(&rs[t->o]), pw(L'.'); }
-void printts(const int *t) { if (!t) return; pws(L"{ "); while (*++t) printt(&ts[*t]); pw(L'}'); }
+void printt(const struct triple* t) { print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.'); }
+void printts(const int *t) { if (!t) return; pws(L"{ "); while (*++t) printt(&ts[*t]); putwchar(L'}'); }
 void printr(const struct rule* r) { printts(r->p); pws(L" => "); printts(r->c), puts(""); }
 
 void parse() {
 	int r;
 	while ((r = getrule()))
-		printr(&rls[r]), pw(L'\n');
+		printr(&rls[r]), putwchar(L'\n');
 }
 /*
 // using the following coros:
@@ -175,12 +173,6 @@ int* require(int** c, int x, int y) {
 			else break;
 		}
 	}
-
-	int *rx, *ry;
-	find(c, x, y, &rx, &ry);
-	if (rx == ry) {
-		if (rx) return rx;
-	}
 }
 int** merge(const int** x, const int** y) { }
 
@@ -204,7 +196,7 @@ int _main(int argc, char** argv) {
 	int pos = 0;
 	input = malloc(szwc * buflen);
 	while (!feof(stdin)) { // read whole doc into mem
-		if ((input[pos++] = gw()) == WEOF) break;
+		if ((input[pos++] = getwchar()) == WEOF) break;
 		if (!(pos % buflen))
 			input = realloc(input, buflen * szwc * (1 + pos / buflen));
 	}
