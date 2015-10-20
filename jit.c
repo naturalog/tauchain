@@ -47,6 +47,7 @@ size_t nrs = 0, nts = 0, nrls = 0;
 const size_t chunk = 64;
 
 int mkres(const wchar_t* s, char type) {
+	if (s && !type && *s == L'?') type = '?';
 	if (!(nrs % chunk)) rs = realloc(rs, chunk * sizeof(struct res) * (nrs / chunk + 1));
 	return rs[nrs].type = type, rs[nrs].value = s, nrs++;
 }
@@ -99,7 +100,8 @@ int getrule() {
 	if (skip(), !*input) return 0;
 	if (*input != L'{') {
 		int *r = calloc(3, sizeof(int));
-		r[r[r[2] = 0] = 1] = gettriple();
+		if (!(r[r[r[2] = 0] = 1] = gettriple()))
+			return 0;
 		return in_query ? mkrule(r, 0) : mkrule(0, r);
 	}
 	++input;
