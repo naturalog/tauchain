@@ -117,8 +117,7 @@ void printr(const struct rule* r) { printts(r->p); pws(L" => "); printts(r->c), 
 
 void parse() {
 	int r;
-	while ((r = getrule()))
-		printr(&rls[r]), putwchar(L'\n');
+	while ((r = getrule())) printr(&rls[r]), putwchar(L'\n');
 }
 /*
 // using the following coros:
@@ -151,28 +150,53 @@ char tres_coro(struct res* r, int *it, int *state) {
 #define eithervar(x, y) ((x).type == '?' || (y).type == '?')
 
 // Conditions have the form x=y=z=...=t.
-// and represented as int**, two dimensional array
+// and represented as int** c, two dimensional array
 // where both arrays are ordered in ascending order,
 // and the outer array is ordered by the first element
-// of the inner arrays. Arrays contain to length but
-// they are null terminated.
+// of the inner arrays. 
+// c[0] contains lengths only: **c contains the number
+// of arrays in c, and (*c)[n] contains the length of
+// the n'th equivalence class. the classes therefore
+// begin from index 1.
 
 // highest element that is still less or equal to x
 #define FWD(a, x) while (*(a) && *(a) < (x)) ++(a);
-#define FWD2(a, x) for( while (*(a) && **(a) < (x)) ++(a);
 
-int* require(int** c, int x, int y) {
+int** makeset(int **c, int x, int y) {
+	int *r = malloc(sizeof(int) * 3);
+	if (x > y) r[0] = y, r[1] = x;
+	else r[0] = x, r[1] = y;
+	r[2] = 0;
+	c = realloc(c, ++**c * sizeof(int*)), c[**c] = r;
+	*c = realloc(*c, **c * sizeof(int*)), (*c)[**c - 1] = 3;
+	return c;
+}
+
+int** insert_sorted(int **c, int **rx, int y) { }
+int** merge_sorted(int **c, int **rx, int **ry) { }
+
+int** require(int** c, int x, int y) {
 	assert(x != y);
-	int t = x;
+	int **_c = c, **rx = 0, **ry = 0, *p, t = x;
 	if (x > y) { t = y, y = x, x = t; }
-	int **rx = 0, **ry = 0;
-	while (**c) {
-		
-		if (**++c > x) {
+	while ((p = *c)) {
+		while (*p && *p < x) ++p;
+		if (*p == x) rx = c;
+		while (*p && *p < y) ++p;
+		if (*p == y) ry = c;
+		if (**++c > t) {
 			if (t == x) t = y;
 			else break;
 		}
 	}
+	if (!rx && !ry) return makeset(x, y);
+	c = _c;
+	if (rx == ry) return c;
+	if (rx && ry && **rx < 0 && **ry < 0) return 0;
+	if (!rx) return	insert_sorted(c, ry, x);
+	if (!ry) return	insert_sorted(c, rx, y);
+	if (**rx > **ry) { int **rr = ry; ry = rx, rx = rr; }
+	return merge_sorted(c, rx, ry);
 }
 int** merge(const int** x, const int** y) { }
 
@@ -203,6 +227,6 @@ int _main(int argc, char** argv) {
 	input[--pos] = 0;
 	wchar_t *_input = input;
 	parse();
-	free(_input);
+	free(_input); // input doc can be free'd right after parse
 	return 0;
 }
