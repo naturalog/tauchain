@@ -5,11 +5,15 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <assert.h>
-#define pws(x)	for (const wchar_t *_pws_t = x; *_pws_t; ++_pws_t) putwchar(*_pws_t);
-#define putws(x) fputws(x, stdin)
+void putws(const wchar_t* x) {for (const wchar_t *_putws_t = x; *_putws_t; ++_putws_t) putwchar(*_putws_t); putwchar(L'\n');}
+void putcs(char* x) {for (const char *_putws_t = x; *_putws_t; ++_putws_t) putchar(*_putws_t); putchar('\n');}
 #define MALLOC(x, y) malloc(sizeof(x) * (y))
 #define CALLOC(x, y) calloc(y, sizeof(x))
 #define REALLOC(x, y, z) realloc(x, (y) * sizeof(z))
+#define swap(t, x, y) { t tt = y; y = x, x = tt; }
+#define ROW(x, y) x[y]
+#define ROWLEN(x, y) x[0][y]
+
 wchar_t *input; // complete input is read into here first, then free'd after a parser pass
 char in_query = 0; // 1 after first "fin."
 const size_t buflen = 256, szwc = sizeof(wchar_t);
@@ -17,6 +21,7 @@ const wchar_t* getstr(const wchar_t *s); // implemented in dict.cpp, manages uni
 int getres(); 
 void skip() { while (*input && iswspace(*input)) ++input; }
 void printts(const int *t);
+void printc(int **c);
 const wchar_t* take(int p) {
 	wchar_t s[p + 1];
 	wcsncpy(s, input, p), s[p] = 0, input += p;
@@ -107,15 +112,15 @@ int getrule() {
 
 void print(const struct res* r) {
 	if (!r) return;
-	if (r->type != '.') { pws(r->value); return; }
-	pws(L"( ");
+	if (r->type != '.') { putws(r->value); return; }
+	putws(L"( ");
 	const int *a = r->args;
 	while (*++a) print(&rs[*a]), putwchar(L' ');
 	putwchar(L')');
 }
 void printt(const struct triple* t) { print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.'); }
-void printts(const int *t) { if (!t) return; pws(L"{ "); while (*++t) printt(&ts[*t]); putwchar(L'}'); }
-void printr(const struct rule* r) { printts(r->p); pws(L" => "); printts(r->c), puts(""); }
+void printts(const int *t) { if (!t) return; putws(L"{ "); while (*++t) printt(&ts[*t]); putwchar(L'}'); }
+void printr(const struct rule* r) { printts(r->p); putws(L" => "); printts(r->c), putws(L""); }
 
 void parse() {
 	int r;
@@ -166,25 +171,55 @@ int** makeset(int **c, int x, int y) {
 	if (x > y) r[0] = y, r[1] = x;
 	else r[0] = x, r[1] = y;
 	r[2] = 0;
-	(c = REALLOC(c, 1 + c00, int*), c)[c00] = r,
-	**c = ++c00,
-	(*c = REALLOC(*c, c00, int*))[c00] = 3;
+	(c = REALLOC(c, 1 + c00, int*))[c00] = r, // add row
+	**c = ++c00, // update row count
+	(*c = REALLOC(*c, c00, int*))[c00 - 1] = 3; // update row size
 	return c;
 }
 
 // add x to row i in c
 int** insert_sorted(int **c, int i, int x) {
-	int *p = c[i] = REALLOC(c[i], ++c[0][i], int), t;
-	while (*p && *p < x) ++p;
-	if (!*p) return *p++ = x, *p = 0, c;
-	do { t = *p, *p = x; } while (*p); 
+	int *p = ROW(c, i) = REALLOC(ROW(c, i), ++ROWLEN(c, i), int); // increase i'th row's space
+	while (*p && *p < x) ++p; // walk till row gets geq x
+	if (!*p) return *p++ = x, *p = 0, c; // push new largest member
+	int *t = ROW(c, i) + ROWLEN(c, i) + 1; // up till end of row
+	*t-- = 0;
+	do { *t = *(t - 1); } while (*--t != *p);
+	*t = x;
 }
+
+void printc(int **c) {
+	int rows = **c;
+	wchar_t s[1024], ss[1024];
+	*s = *ss = 0;
+	for (int r = 0; r < rows; ++r) {
+		swprintf(s, 1024, L"row %d:\t", r);
+		for (int n = 0; n < ROWLEN(c, r); ++n)
+			swprintf(ss, 1024, L"%d\t", ROW(c, r)[n]), wcscat(s, ss);
+		putws(s);
+		*s = 0;
+	}
+}
+
+void test_insert_sorted() {
+	int **c = MALLOC(int*, 3);
+	for (int n = 0; n < 3; ++n) c[n] = MALLOC(int, 4);
+	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3,
+	c[1][0] = 4, c[1][1] = 6, c[1][2] = 7, c[1][3] = 0,
+	c[2][0] = 8, c[2][1] = 9, c[2][2] = 0;
+	putws(L"before:\n");
+	printc(c);
+	insert_sorted(c, 1, 5);
+	putws(L"after:\n");
+	printc(c);
+	fflush(stdout);
+}
+
 int** merge_sorted(int **c, int i, int j) { }
-#define swap(t, x, y) { t tt = y; y = x, x = tt; }
 
 void find(int **c, int x, int y, int *i, int *j) {
 	if (x > y) { find(**c, y, x, j, i); return; }
-	int **_c = c, **rx = c, **ry = c, t;
+	int **_c = c, **rx = c, **ry = c, t = x;
 	for (int *p = *c; p = *c;) {
 		while (*p && *p < x) ++p; if (*p == x) rx = c;
 		while (*p && *p < y) ++p; if (*p == y) ry = c;
@@ -222,6 +257,7 @@ char canmatch(int x, int y) {
 int _main(int argc, char** argv) {
 	setlocale(LC_ALL, "");
 	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0); // reserve zero indices to signal failure
+	test_insert_sorted();
 	int pos = 0;
 	input = MALLOC(wchar_t, buflen);
 	while (!feof(stdin)) { // read whole doc into mem
