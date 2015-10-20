@@ -189,7 +189,7 @@ int** require(int** c, int x, int y) {
 			else break;
 		}
 	}
-	if (!rx && !ry) return makeset(x, y);
+	if (!rx && !ry) return makeset(c, x, y);
 	c = _c;
 	if (rx == ry) return c;
 	if (rx && ry && **rx < 0 && **ry < 0) return 0;
