@@ -7,7 +7,7 @@ struct wccmp {
 };
 extern "C"{
 const wchar_t* getstr(const wchar_t *s);
-int _main(int argc, char** argv);
+int _main(/*int argc, char** argv*/);
 }
 
 const wchar_t* getstr(const wchar_t *s) {
@@ -16,4 +16,4 @@ const wchar_t* getstr(const wchar_t *s) {
 	it = ss.find(s);
 	return (it == ss.end()) ? ss.insert(s = wcsdup(s)), s : *it;
 }
-int main(int argc, char** argv) { return _main(argc, argv); }
+int main(int, char**) { return _main(/*argc, argv*/); }

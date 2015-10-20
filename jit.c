@@ -186,6 +186,7 @@ int** insert_sorted(int **c, int i, int x) {
 	*t-- = 0;
 	do { *t = *(t - 1); } while (*--t != *p);
 	*t = x;
+	return c;
 }
 
 void printc(int **c) {
@@ -199,6 +200,50 @@ void printc(int **c) {
 		putws(s);
 		*s = 0;
 	}
+}
+
+int** merge_sorted(int **c, int i, int j) {
+	c=c,i=i,j=j;return c;
+}
+
+void find(int **c, int x, int y, int *i, int *j) {
+	if (x > y) { find(c, y, x, j, i); return; }
+	*i = *j = 0;
+	for (int row = 1, rows = **c; row < rows; ++row) {
+		const int *p = ROW(c, row);
+		int col = 0;
+		for (; (col < ROWLEN(c, row) - 1) && p[col] >= x; ++col)
+		if (p[col--] == x) *i = row;
+		for (; (col < ROWLEN(c, row) - 1) && p[col] >= y; ++col)
+		if (p[col] == y) *j = row;
+		if (*i && *j) return;
+	}
+}
+
+int** require(int** c, int x, int y) {
+	assert(x != y);
+	assert(x > 0 || y > 0); // at least one var
+	int i, j;
+	find(c, x, y, &i, &j);
+	if (!i)		return j ? insert_sorted(c, j, x) : makeset(c, x, y);
+	if (!j)		return insert_sorted(c, i, y);
+	if (i == j)	return c;
+	return (*c[i] < 0 && *c[j] < 0) ? 0 : merge_sorted(c, i, j);
+}
+const int** merge(const int** x, const int** y) { return x == y ? x : y; }
+
+char canmatch(int x, int y) {
+	struct res s = rs[x], d = rs[y];
+	if (!eithervar(s, d)) {
+		if (s.type != d.type) return 0;
+		if (s.type != '.') return x == y ? 1 : 0;
+		if (*s.args++ != *d.args++) return 0;
+		while (*s.args) if (!canmatch(*s.args++, *d.args++)) return 0;
+		return 1;
+	}
+	
+//	return setcond(x, y);
+	return 1;
 }
 
 void test() {
@@ -216,57 +261,14 @@ void test() {
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
 }
 
-int** merge_sorted(int **c, int i, int j) { }
-
-void find(int **c, int x, int y, int *i, int *j) {
-	if (x > y) { find(c, y, x, j, i); return; }
-	*i = *j = 0;
-	for (int row = 1, rows = **c; row < rows; ++row) {
-		int *p = ROW(c, row), col;
-		for (col = 0; col < ROWLEN(c, row) - 1; ++col)
-			if (p[col] >= x) break;
-		if (p[col] == x) *i = row;
-		for (col = 0; col < ROWLEN(c, row) - 1; ++col)
-			if (p[col] >= y) break;
-		if (p[col] == y) *j = row;
-		if (*i && *j) return;
-	}
-}
-
-int** require(int** c, int x, int y) {
-	assert(x != y);
-	assert(x > 0 || y > 0); // at least one var
-	int i, j;
-	find(c, x, y, &i, &j);
-	if (!i)		return j ? insert_sorted(c, j, x) : makeset(c, x, y);
-	if (!j)		return insert_sorted(c, i, y);
-	if (i == j)	return c;
-	return (*c[i] < 0 && *c[j] < 0) ? 0 : merge_sorted(c, i, j);
-}
-int** merge(const int** x, const int** y) { }
-
-char canmatch(int x, int y) {
-	struct res s = rs[x], d = rs[y];
-	if (!eithervar(s, d)) {
-		if (s.type != d.type) return 0;
-		if (s.type != '.') return x == y ? 1 : 0;
-		if (*s.args++ != *d.args++) return 0;
-		while (*s.args) if (!canmatch(*s.args++, *d.args++)) return 0;
-		return 1;
-	}
-	
-//	return setcond(x, y);
-	return 1;
-}
-
-int _main(int argc, char** argv) {
+int _main(/*int argc, char** argv*/) {
 	setlocale(LC_ALL, "");
 	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0); // reserve zero indices to signal failure
 	test();
 	int pos = 0;
 	input = MALLOC(wchar_t, buflen);
 	while (!feof(stdin)) { // read whole doc into mem
-		if ((input[pos++] = getwchar()) == WEOF) break;
+		if ((input[pos++] = getwchar()) == (wchar_t)WEOF) break;
 		if (!(pos % buflen))
 			input = REALLOC(input, buflen * (1 + pos / buflen), wchar_t);
 	}
