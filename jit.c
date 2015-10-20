@@ -33,13 +33,11 @@ void expect(const wchar_t *s) {
 	input += wcslen(s);
 }
 
-/*
- * Following 3 structs store the kb&query.
- * res::type is '.' for list, '?' for var, and 0 otherwise.
- * All three int* below (args, c, p) have first int as length,
- * and last int always null. Hence empty list consists of two
- * integers, zero each.
- */
+// Following 3 structs store the kb&query.
+// res::type is '.' for list, '?' for var, and 0 otherwise.
+// All three int* below (args, c, p) have first int as length,
+// and last int always null. Hence empty list consists of two
+// integers, zero each.
 struct res { char type; union { const wchar_t *value; const int *args; }; } *rs = 0;
 struct triple { int s, p, o; } *ts = 0; 
 struct rule { int *p, *c; } *rls = 0; // premises and conclusions
@@ -124,7 +122,7 @@ void parse() {
 	while ((r = getrule()))
 		printr(&rls[r]), pw(L'\n');
 }
-
+/*
 // using the following coros:
 // 'it' will return the iterated value.
 // state has to be initialized with zero and is for
@@ -151,8 +149,40 @@ char tres_coro(struct res* r, int *it, int *state) {
 	default:return r->args[*state] ? *it = r->args[*state++], 1 : (*state = 0);
 	}
 }
-
+*/
 #define eithervar(x, y) ((x).type == '?' || (y).type == '?')
+
+// Conditions have the form x=y=z=...=t.
+// and represented as int**, two dimensional array
+// where both arrays are ordered in ascending order,
+// and the outer array is ordered by the first element
+// of the inner arrays. Arrays contain to length but
+// they are null terminated.
+
+// highest element that is still less or equal to x
+#define FWD(a, x) while (*(a) && *(a) < (x)) ++(a);
+#define FWD2(a, x) for( while (*(a) && **(a) < (x)) ++(a);
+
+int* require(int** c, int x, int y) {
+	assert(x != y);
+	int t = x;
+	if (x > y) { t = y, y = x, x = t; }
+	int **rx = 0, **ry = 0;
+	while (**c) {
+		
+		if (**++c > x) {
+			if (t == x) t = y;
+			else break;
+		}
+	}
+
+	int *rx, *ry;
+	find(c, x, y, &rx, &ry);
+	if (rx == ry) {
+		if (rx) return rx;
+	}
+}
+int** merge(const int** x, const int** y) { }
 
 char canmatch(int x, int y) {
 	struct res s = rs[x], d = rs[y];
@@ -163,13 +193,14 @@ char canmatch(int x, int y) {
 		while (*s.args) if (!canmatch(*s.args++, *d.args++)) return 0;
 		return 1;
 	}
+	
 //	return setcond(x, y);
 	return 1;
 }
 
 int _main(int argc, char** argv) {
 	setlocale(LC_ALL, "");
-	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0);
+	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0); // reserve zero indices to signal failure
 	int pos = 0;
 	input = malloc(szwc * buflen);
 	while (!feof(stdin)) { // read whole doc into mem
