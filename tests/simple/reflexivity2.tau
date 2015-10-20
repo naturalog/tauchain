@@ -1,0 +1,49 @@
+kb
+Person :is Bob.
+{Person :is ?x} => {?x :self ?x}.
+fin.
+
+query
+?WHO :self ?WHO
+fin.
+shouldbe
+Bob :self Bob.
+fin.
+thatsall
+
+
+query
+?WHO :self ?WHOELSE
+fin.
+shouldbe
+Bob :self Bob.
+fin.
+thatsall
+
+
+query
+?WHO :self Bob
+fin.
+shouldbe
+Bob :self Bob.
+fin.
+thatsall
+
+
+query
+Bob :self ?WHOELSE
+fin.
+shouldbe
+Bob :self Bob.
+fin.
+thatsall
+
+
+query
+Bob :self Bob
+fin.
+shouldbe
+Bob :self Bob.
+fin.
+thatsall
+

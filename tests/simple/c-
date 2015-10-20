@@ -1,0 +1,35 @@
+kb
+T not F.
+F not T.
+{ ?x not ?nx. ?y not ?ny. ?z not ?nz} => { ?x fff ?y }.
+fin.
+
+query
+?banana fff ?orange.
+fin.
+
+shouldbe
+T fff T .
+fin.
+shouldbe
+T fff T .
+fin.
+shouldbe
+T fff F .
+fin.
+shouldbe
+T fff F .
+fin.
+shouldbe
+F fff T .
+fin.
+shouldbe
+F fff T .
+fin.
+shouldbe
+F fff F .
+fin.
+shouldbe
+F fff F .
+fin.
+thatsall

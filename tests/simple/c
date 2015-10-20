@@ -1,0 +1,34 @@
+kb
+T not F .
+F not T .
+{ ?x not ?nx. ?y not ?ny. ?z not ?nz} => { (?x ?y ?z) a SAT } .
+fin.
+query
+?banana a SAT .
+fin.
+
+shouldbe
+(T T T) a SAT .
+fin.
+shouldbe
+(T T F) a SAT .
+fin.
+shouldbe
+(T F T) a SAT .
+fin.
+shouldbe
+(T F F) a SAT .
+fin.
+shouldbe
+(F T T) a SAT .
+fin.
+shouldbe
+(F T F) a SAT .
+fin.
+shouldbe
+(F F T) a SAT .
+fin.
+shouldbe
+(F F F) a SAT .
+fin.
+thatsall

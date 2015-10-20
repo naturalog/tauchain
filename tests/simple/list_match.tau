@@ -1,0 +1,10 @@
+kb
+(1 2 3) :foo :bar.
+fin.
+query
+(1 2 3) :foo :bar.
+fin.
+shouldbe
+(1 2 3) :foo :bar.
+fin.
+thatsall
