@@ -57,7 +57,6 @@ int mktriple(int s, int p, int o) {
 }
 int mkrule(int *p, int *c) {
 	if (!(nrls % chunk)) rls = realloc(rls, chunk * sizeof(struct rule) * (nrls / chunk + 1));
-//	printts(p), puts(""), printts(c), puts("");
 	return rls[nrls].c = c, rls[nrls].p = p, nrls++;
 }
 
@@ -88,7 +87,6 @@ int gettriple() {
 	if (!((s = getres()) && (p = getres()) && (o = getres()))) return 0;
 	if (skip(), *input == L'.') ++input, skip();
 	int t = mktriple(s, p, o);
-//	printt(&ts[t]);
 	return t;
 }
 int getrule() {
@@ -100,8 +98,7 @@ int getrule() {
 	if (skip(), !*input) return 0;
 	if (*input != L'{') {
 		int *r = calloc(3, sizeof(int));
-		if (!(r[r[r[2] = 0] = 1] = gettriple()))
-			return 0;
+		if (!(r[r[r[2] = 0] = 1] = gettriple())) return 0;
 		return in_query ? mkrule(r, 0) : mkrule(0, r);
 	}
 	++input;
@@ -126,6 +123,48 @@ void parse() {
 	int r;
 	while ((r = getrule()))
 		printr(&rls[r]), pw(L'\n');
+}
+
+// using the following coros:
+// 'it' will return the iterated value.
+// state has to be initialized with zero and is for
+// the coro's internal use.
+// the coro return 0 after no more values to be read,
+// hence 'it' on this case should be ignored,
+// or 1 otherwise.
+// when coros are finished they set the state back to zero.
+
+// iterate resource, either returns itself or list members
+char res_coro(int r, int *it, int* state) {
+	switch (*state) {
+	case 0: return ++*state, *it = r;
+	case 1: if (rs[r].type != '.') return 0;
+	default:return rs[r].args[*state] ? *it = rs[r].args[*state++], 1 : (*state = 0);
+	}
+}
+// iterate resource with type too, without returning the 
+// resource itself if not a list
+char tres_coro(struct res* r, int *it, int *state) {
+	switch (*state) {
+	case 0: return *it = r->type, ++*state, 1;
+	case 1: if (r->type != '.') return 0;
+	default:return r->args[*state] ? *it = r->args[*state++], 1 : (*state = 0);
+	}
+}
+
+#define eithervar(x, y) ((x).type == '?' || (y).type == '?')
+
+char canmatch(int x, int y) {
+	struct res s = rs[x], d = rs[y];
+	if (!eithervar(s, d)) {
+		if (s.type != d.type) return 0;
+		if (s.type != '.') return x == y ? 1 : 0;
+		if (*s.args++ != *d.args++) return 0;
+		while (*s.args) if (!canmatch(*s.args++, *d.args++)) return 0;
+		return 1;
+	}
+//	return setcond(x, y);
+	return 1;
 }
 
 int _main(int argc, char** argv) {
