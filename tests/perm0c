@@ -1,9 +1,0 @@
-kb
-b x a .
-{ ?local y ?heads } => { ?heads y ?heado }.
-fin.
-query
-c y b .
-fin.
-shouldbe
-fin.
