@@ -7,7 +7,9 @@
 #include <assert.h>
 #define pws(x)	for (const wchar_t *_pws_t = x; *_pws_t; ++_pws_t) putwchar(*_pws_t);
 #define putws(x) fputws(x, stdin)
-
+#define MALLOC(x, y) malloc(sizeof(x) * (y))
+#define CALLOC(x, y) calloc(y, sizeof(x))
+#define REALLOC(x, y, z) realloc(x, (y) * sizeof(z))
 wchar_t *input; // complete input is read into here first, then free'd after a parser pass
 char in_query = 0; // 1 after first "fin."
 const size_t buflen = 256, szwc = sizeof(wchar_t);
@@ -44,25 +46,25 @@ const size_t chunk = 64;
 
 int mkres(const wchar_t* s, char type) {
 	if (s && !type && *s == L'?') type = '?';
-	if (!(nrs % chunk)) rs = realloc(rs, chunk * sizeof(struct res) * (nrs / chunk + 1));
+	if (!(nrs % chunk)) rs = REALLOC(rs, chunk * (nrs / chunk + 1), struct res);
 	return rs[nrs].type = type, rs[nrs].value = s, nrs++;
 }
 int mktriple(int s, int p, int o) {
-	if (!(nts % chunk)) ts = realloc(ts, chunk * sizeof(struct triple) * (nts / chunk + 1));
+	if (!(nts % chunk)) ts = REALLOC(ts, chunk * (nts / chunk + 1), struct triple);
 	return ts[nts].s = s, ts[nts].p = p, ts[nts].o = o, nts++;
 }
 int mkrule(int *p, int *c) {
-	if (!(nrls % chunk)) rls = realloc(rls, chunk * sizeof(struct rule) * (nrls / chunk + 1));
+	if (!(nrls % chunk)) rls = REALLOC(rls, chunk * (nrls / chunk + 1), struct rule);
 	return rls[nrls].c = c, rls[nrls].p = p, nrls++;
 }
 
 // get* are parsers
 int* getlist(int (*f)(), wchar_t till) {
-	int t, *args = calloc(2, sizeof(int)), sz;
+	int t, *args = CALLOC(int, 2), sz;
 	while (skip(), *input != till) {
 		if (!(t = f())) putws(L"Unexpected item: "), putws(input), exit(1);
 		sz = args ? *args : 0;
-		args = realloc(args, (++sz + 2) * sizeof(int));
+		args = REALLOC(args, ++sz + 2, int);
 		args[*args = sz] = t;
 		args[sz + 1] = 0;
 	}
@@ -93,7 +95,7 @@ int getrule() {
 	}
 	if (skip(), !*input) return 0;
 	if (*input != L'{') {
-		int *r = calloc(3, sizeof(int));
+		int *r = CALLOC(int, 3);
 		if (!(r[r[r[2] = 0] = 1] = gettriple())) return 0;
 		return in_query ? mkrule(r, 0) : mkrule(0, r);
 	}
@@ -159,44 +161,47 @@ char tres_coro(struct res* r, int *it, int *state) {
 // the n'th equivalence class. the classes therefore
 // begin from index 1.
 
-// highest element that is still less or equal to x
-#define FWD(a, x) while (*(a) && *(a) < (x)) ++(a);
-
 int** makeset(int **c, int x, int y) {
-	int *r = malloc(sizeof(int) * 3);
+	int *r = MALLOC(int, 3), c00 = **c;
 	if (x > y) r[0] = y, r[1] = x;
 	else r[0] = x, r[1] = y;
 	r[2] = 0;
-	c = realloc(c, ++**c * sizeof(int*)), c[**c] = r;
-	*c = realloc(*c, **c * sizeof(int*)), (*c)[**c - 1] = 3;
+	(c = REALLOC(c, 1 + c00, int*), c)[c00] = r,
+	**c = ++c00,
+	(*c = REALLOC(*c, c00, int*))[c00] = 3;
 	return c;
 }
 
-int** insert_sorted(int **c, int **rx, int y) { }
-int** merge_sorted(int **c, int **rx, int **ry) { }
+// add x to row i in c
+int** insert_sorted(int **c, int i, int x) {
+	int *p = c[i] = REALLOC(c[i], ++c[0][i], int), t;
+	while (*p && *p < x) ++p;
+	if (!*p) return *p++ = x, *p = 0, c;
+	do { t = *p, *p = x; } while (*p); 
+}
+int** merge_sorted(int **c, int i, int j) { }
+#define swap(t, x, y) { t tt = y; y = x, x = tt; }
+
+void find(int **c, int x, int y, int *i, int *j) {
+	if (x > y) { find(**c, y, x, j, i); return; }
+	int **_c = c, **rx = c, **ry = c, t;
+	for (int *p = *c; p = *c;) {
+		while (*p && *p < x) ++p; if (*p == x) rx = c;
+		while (*p && *p < y) ++p; if (*p == y) ry = c;
+		if (**++c > t) { if (t == x) t = y; else break; }
+	}
+	*i = rx - c, *j = ry - c;
+}
 
 int** require(int** c, int x, int y) {
 	assert(x != y);
-	int **_c = c, **rx = 0, **ry = 0, *p, t = x;
-	if (x > y) { t = y, y = x, x = t; }
-	while ((p = *c)) {
-		while (*p && *p < x) ++p;
-		if (*p == x) rx = c;
-		while (*p && *p < y) ++p;
-		if (*p == y) ry = c;
-		if (**++c > t) {
-			if (t == x) t = y;
-			else break;
-		}
-	}
-	if (!rx && !ry) return makeset(c, x, y);
-	c = _c;
-	if (rx == ry) return c;
-	if (rx && ry && **rx < 0 && **ry < 0) return 0;
-	if (!rx) return	insert_sorted(c, ry, x);
-	if (!ry) return	insert_sorted(c, rx, y);
-	if (**rx > **ry) { int **rr = ry; ry = rx, rx = rr; }
-	return merge_sorted(c, rx, ry);
+	assert(x > 0 || y > 0); // at least one var
+	int i, j;
+	find(c, x, y, &i, &j);
+	if (!i)		return j ? insert_sorted(c, j, x) : makeset(c, x, y);
+	if (!j)		return insert_sorted(c, i, y);
+	if (i == j)	return c;
+	return (*c[i] < 0 && *c[j] < 0) ? 0 : merge_sorted(c, i, j);
 }
 int** merge(const int** x, const int** y) { }
 
@@ -218,11 +223,11 @@ int _main(int argc, char** argv) {
 	setlocale(LC_ALL, "");
 	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0); // reserve zero indices to signal failure
 	int pos = 0;
-	input = malloc(szwc * buflen);
+	input = MALLOC(wchar_t, buflen);
 	while (!feof(stdin)) { // read whole doc into mem
 		if ((input[pos++] = getwchar()) == WEOF) break;
 		if (!(pos % buflen))
-			input = realloc(input, buflen * szwc * (1 + pos / buflen));
+			input = REALLOC(input, buflen * (1 + pos / buflen), wchar_t);
 	}
 	input[--pos] = 0;
 	wchar_t *_input = input;
