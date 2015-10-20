@@ -422,7 +422,9 @@ public:
 			ASSERT(op->_terms.equals(term, x->term) == r);
 			return r;
 		}
-		else if (type == UNBOUND && x->type == UNBOUND)
+		else if (type == UNBOUND && (x->type == UNBOUND || x->type == NODE || x->type == LIST))
+			return true;
+		else if (x->type == UNBOUND && (type == UNBOUND || type == NODE || type == LIST))
 			return true;
 		else if (type == LIST && x->type == LIST)
 		{
@@ -1226,7 +1228,8 @@ void yprover::query(const old::qdb& goal){
 			Thing &s = get_thing(i->s, locals, consts, lm, cm);
 			Thing &o = get_thing(i->o, locals, consts, lm, cm);
 
-			dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;
+			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
+			dout << s.getValue()->str() << " " << old::dict[i->p] << " "  << o.getValue()->str() << endl;
 			add_result(r, &s, &o, i->p);
 
 		}
