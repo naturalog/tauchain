@@ -70,7 +70,8 @@ old::prover *op;
 std::vector<ep_t*> eps;
 vector<Locals*> constss;
 vector<Locals*> locals_templates;
-
+long steps = 0;
+long unifys = 0;
 
 
 coro unbound_succeed(Thing *x, Thing *y);
@@ -619,8 +620,8 @@ coro listunifycoro(Thing *a, Thing *b)
 	(returns an iterator)
 */
 coro unify(Thing *a, Thing *b){
-	setproc(L"unify");
-	TRACE(dout << "..." << endl;)
+	FUN;
+	unifys++;
 
 	if (a == b) {
 		TRACE(dout << "a == b" << endl;)
@@ -1050,10 +1051,6 @@ rule_t compile_rule(termid head, prover::termset body)
 		switch (entry) {
 			case 0: 
 
-				if (has_body && find_ep(ep, s, o)) {
-					goto end;
-				}
-
 				locals = (Thing*)malloc(locals_bytes);
 				memcpy(locals, locals_data, locals_bytes);
 			
@@ -1068,6 +1065,13 @@ rule_t compile_rule(termid head, prover::termset body)
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
+						if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
+							++steps;
+
+						if (has_body && find_ep(ep, s, o)) {
+							goto end;
+						}
+
 						j = jg();
 						while (j(s, o, locals)) {
 							TRACE(dout << "After c0() -- " << endl;)
@@ -1079,15 +1083,17 @@ rule_t compile_rule(termid head, prover::termset body)
 				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
+
+						if(has_body) {
+							ASSERT(ep->size());
+							ep->pop_back();
+						}
+
 					}
 				}
+				end:
 				TRACE(dout << "DONE." << endl;)
-				if(has_body) {
-					ASSERT(ep->size());
-					ep->pop_back();
-				}
 				free(locals);
-			end:
 				END
 		}
 	};
@@ -1113,13 +1119,8 @@ rule_t compile_rule(termid head, prover::termset body)
 
 
 void thatsAllFolks(int nresults){
-	dout << "That's all, folks, ";
-	if(nresults == 0){
-		dout << KRED;
-	}else{
-		dout << KCYN;
-	}
-	dout << nresults << KNRM << " results." << endl;
+	dout << "That's all, folks, " << nresults << " results." << endl;
+	dout << unifys << " unifys, " << steps << " steps." << endl;
 }
 
 
