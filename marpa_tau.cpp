@@ -23,9 +23,11 @@ extern "C" {
 #include <boost/algorithm/string/predicate.hpp>
 
 
+extern bool irc;
+
 namespace old {
 
-	extern bool irc;
+
 
 	typedef Marpa_Symbol_ID sym;
 	typedef Marpa_Rule_ID rule;
