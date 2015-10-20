@@ -13,6 +13,7 @@ void putcs(char* x) {for (const char *_putws_t = x; *_putws_t; ++_putws_t) putch
 #define swap(t, x, y) { t tt = y; y = x, x = tt; }
 #define ROW(x, y) x[y]
 #define ROWLEN(x, y) x[0][y]
+#define eithervar(x, y) ((x).type == '?' || (y).type == '?')
 
 wchar_t *input; // complete input is read into here first, then free'd after a parser pass
 char in_query = 0; // 1 after first "fin."
@@ -121,40 +122,22 @@ void print(const struct res* r) {
 void printt(const struct triple* t) { print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.'); }
 void printts(const int *t) { if (!t) return; putws(L"{ "); while (*++t) printt(&ts[*t]); putwchar(L'}'); }
 void printr(const struct rule* r) { printts(r->p); putws(L" => "); printts(r->c), putws(L""); }
+void printc(int **c) {
+	static wchar_t s[1024], ss[1024];
+	for (int r = *s = 0; r < **c; ++r) {
+		*s = 0;
+		swprintf(s, 1024, L"row %d:\t", r);
+		for (int n = 0; n < ROWLEN(c, r); ++n)
+			swprintf(ss, 1024, L"%d\t", ROW(c, r)[n]), wcscat(s, ss);
+		putws(s);
+	}
+}
 
 void parse() {
 	int r;
 	while ((r = getrule())) printr(&rls[r]), putwchar(L'\n');
 }
-/*
-// using the following coros:
-// 'it' will return the iterated value.
-// state has to be initialized with zero and is for
-// the coro's internal use.
-// the coro return 0 after no more values to be read,
-// hence 'it' on this case should be ignored,
-// or 1 otherwise.
-// when coros are finished they set the state back to zero.
 
-// iterate resource, either returns itself or list members
-char res_coro(int r, int *it, int* state) {
-	switch (*state) {
-	case 0: return ++*state, *it = r;
-	case 1: if (rs[r].type != '.') return 0;
-	default:return rs[r].args[*state] ? *it = rs[r].args[*state++], 1 : (*state = 0);
-	}
-}
-// iterate resource with type too, without returning the 
-// resource itself if not a list
-char tres_coro(struct res* r, int *it, int *state) {
-	switch (*state) {
-	case 0: return *it = r->type, ++*state, 1;
-	case 1: if (r->type != '.') return 0;
-	default:return r->args[*state] ? *it = r->args[*state++], 1 : (*state = 0);
-	}
-}
-*/
-#define eithervar(x, y) ((x).type == '?' || (y).type == '?')
 
 // Conditions have the form x=y=z=...=t.
 // and represented as int** c, two dimensional array
@@ -189,32 +172,29 @@ int** insert_sorted(int **c, int i, int x) {
 	return c;
 }
 
-void printc(int **c) {
-	int rows = **c;
-	wchar_t s[1024], ss[1024];
-	*s = *ss = 0;
-	for (int r = 0; r < rows; ++r) {
-		swprintf(s, 1024, L"row %d:\t", r);
-		for (int n = 0; n < ROWLEN(c, r); ++n)
-			swprintf(ss, 1024, L"%d\t", ROW(c, r)[n]), wcscat(s, ss);
-		putws(s);
-		*s = 0;
-	}
-}
-
 int** merge_sorted(int **c, int i, int j) {
-	c=c,i=i,j=j;return c;
+	if (i > j) return merge_sorted(c, j, i);
+	int li = ROWLEN(c, i), lj = ROWLEN(c, j), l = li + lj - 1;
+	int *row = MALLOC(int, l), *r = row;
+	const int *x = ROW(c, i), *y = ROW(c, j);
+	while (*x && *y) *r++ = (*x < *y ? *x++ : *y++);
+       	while (*x) *r++ = *x++;
+       	while (*y) *r++ = *y++;
+	return *r = 0, free(c[i]), c[i] = row,
+		free(c[j]), memcpy(&c[j], &c[j+1], **c-j-1),
+		ROWLEN(c, i) = l, --**c, c;
 }
 
 void find(int **c, int x, int y, int *i, int *j) {
 	if (x > y) { find(c, y, x, j, i); return; }
 	*i = *j = 0;
 	for (int row = 1, rows = **c; row < rows; ++row) {
-		const int *p = ROW(c, row);
+		const int *p = ROW(c, row), l = ROWLEN(c, row);
 		int col = 0;
-		for (; (col < ROWLEN(c, row) - 1) && p[col] >= x; ++col)
-		if (p[col--] == x) *i = row;
-		for (; (col < ROWLEN(c, row) - 1) && p[col] >= y; ++col)
+		for (; (col < l - 1) && p[col] < x; ++col);
+		if (p[col] == x) *i = row;
+//		if (col) --col;
+		for (; (col < l - 1) && p[col] < y; ++col);
 		if (p[col] == y) *j = row;
 		if (*i && *j) return;
 	}
@@ -251,14 +231,16 @@ void test() {
 	for (int n = 0; n < 3; ++n) c[n] = MALLOC(int, 4);
 	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3,
 	c[1][0] = 4, c[1][1] = 6, c[1][2] = 7, c[1][3] = 0,
-	c[2][0] = 8, c[2][1] = 9, c[2][2] = 0;
-	putws(L"before:\n"), printc(c), insert_sorted(c, 1, 5),
-	putws(L"after:\n"), printc(c), fflush(stdout);
+	c[2][0] = 2, c[2][1] = 9, c[2][2] = 0;
+	putws(L"before:"), printc(c), insert_sorted(c, 1, 5),
+	putws(L"after:"), printc(c), fflush(stdout);
 	int i, j;
 	find(c, 6, 4, &i, &j), assert(i == 1 && j == 1);
 	find(c, 6, 7, &i, &j), assert(i == 1 && j == 1);
 	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
+	merge_sorted(c, 1, 2);
+	putws(L"merge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
 }
 
 int _main(/*int argc, char** argv*/) {
