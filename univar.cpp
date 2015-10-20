@@ -1065,6 +1065,8 @@ rule_t compile_rule(termid head, prover::termset body)
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
+						ASSERT(round == 1);
+
 						if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
 							++steps;
 
@@ -1088,10 +1090,9 @@ rule_t compile_rule(termid head, prover::termset body)
 							ASSERT(ep->size());
 							ep->pop_back();
 						}
-
+				end:;
 					}
 				}
-				end:
 				TRACE(dout << "DONE." << endl;)
 				free(locals);
 				END
