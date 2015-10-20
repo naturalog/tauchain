@@ -1,7 +1,7 @@
 #CC=clang++-3.6
 CC=g++
-CXXFLAGS=-c -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -DDEBUG -O0 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include -DJSON #-DPREDVARS -DNOPARSER
-#CXXFLAGS= -c -std=c++11 -Wall -Wextra -I/usr/local/include -DNDEBUG -O3 -I/usr/include -I/usr/local/linuxbrew/include -I/usr/include -I/usr/local/linuxbrew/include #-DJSON -DNOPARSER
+#CXXFLAGS=-c -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -DDEBUG -O0 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include -DJSON #-DPREDVARS -DNOPARSER
+CXXFLAGS= -c -std=c++11 -Wall -Wextra -I/usr/local/include -DNDEBUG -O3 -I/usr/include -I/usr/local/linuxbrew/include -I/usr/include -I/usr/local/linuxbrew/include #-DJSON -DNOPARSER
 LDFLAGS= -L/usr/local/lib #-ldl -pthread -lrt
 #OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 OBJECTS= prover.o unifiers.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
@@ -53,7 +53,10 @@ dimacs2tau: dimacs2tau.cpp
 	$(CC) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb
 pcpp: p.cpp p.h containers.h
 	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG p.cpp -opcpp -g -std=c++11 -O3
-jit: jit.cpp containers.h triples.h vm.h
-	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG jit.cpp -ojit -ggdb -std=c++11
+mltt: mltt.cpp
+	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG mltt.cpp -omltt -g -std=c++11 -O3
+jit: jit.c dict.cpp
+	gcc -W -Wall -Wpedantic -Wextra jit.c -ojit.o -c -g
+	g++ -W -Wall -Wpedantic -Wextra jit.o dict.cpp -ojit -g
 comp: comp.cpp
 	$(CC) -W -Wall -Wpedantic -Wextra -std=c++11 comp.cpp -ocomp -g -rdynamic
