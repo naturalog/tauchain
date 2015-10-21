@@ -127,7 +127,7 @@ void printc(int **c) {
 	for (int r = *s = 0; r < **c; ++r) {
 		*s = 0;
 		swprintf(s, 1024, L"row %d:\t", r);
-		for (int n = 0; n < ROWLEN(c, r); ++n)
+		for (int n = 0; n < (r ? ROWLEN(c, r) : 1+**c); ++n)
 			swprintf(ss, 1024, L"%d\t", ROW(c, r)[n]), wcscat(s, ss);
 		putws(s);
 	}
@@ -147,7 +147,8 @@ void parse() {
 // c[0] contains lengths only: **c contains the number
 // of arrays in c, and (*c)[n] contains the length of
 // the n'th equivalence class. the classes therefore
-// begin from index 1.
+// begin from index 1. the last element of c[0] contains
+// the sum of all sizes of all rows (except row 0)
 
 void makeset(int ***c, int x, int y) {
 	int *r = MALLOC(int, 3), c00 = ***c;
@@ -156,12 +157,14 @@ void makeset(int ***c, int x, int y) {
 	r[2] = 0;
 	(*c = REALLOC(*c, 1 + c00, int*))[c00] = r, // add row
 	***c = ++c00, // update row count
-	(**c = REALLOC(**c, c00, int*))[c00 - 1] = 3; // update row size
+	(**c = REALLOC(**c, 1+c00, int*))[c00 - 1] = 3; // update row size
+	++c[0][0][c00];
 }
 
 // add x to row i in c
 void insert_sorted(int **c, int i, int x) {
 	int *p = ROW(c, i) = REALLOC(ROW(c, i), ++ROWLEN(c, i), int); // increase i'th row's space
+	++c[0][**c];
 	while (*p && *p < x) ++p; // walk till row gets geq x
 	if (!*p) *p++ = x, *p = 0; // push new largest member
 	else { // up till end of row
@@ -197,13 +200,11 @@ int bfind(int x, const int *a, int l) {
 void find(int **c, int x, int y, int *i, int *j) {
 	if (x > y) { find(c, y, x, j, i); return; }
 	*i = *j = 0;
-	for (int row = 1, rows = **c; row < rows; ++row) {
+	for (int row = 1, col, rows = **c; row < rows; ++row) {
 		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
-		int col = bfind(x, p, l);
-		if (col != -1) {
+		if ((col = bfind(x, p, l)) != -1) {
 			*i = row;
-			if (bfind(y, p + col, l - col) != -1)
-				*j = row;
+			if (bfind(y, p + col, l - col) != -1) *j = row;
 		}
 		if (!*j) { if (bfind(y, p, l) != -1) { *j = row; if (*i) return; } }
 		else if (*i) return;
@@ -246,7 +247,7 @@ char canmatch(int x, int y) {
 void test() {
 	int **c = MALLOC(int*, 3);
 	for (int n = 0; n < 3; ++n) c[n] = MALLOC(int, 4);
-	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3,
+	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3, c[0][3] = 10,
 	c[1][0] = 4, c[1][1] = 6, c[1][2] = 7, c[1][3] = 0,
 	c[2][0] = 2, c[2][1] = 9, c[2][2] = 0;
 	putws(L"before:"), printc(c), insert_sorted(c, 1, 5),
