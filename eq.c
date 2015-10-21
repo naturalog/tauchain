@@ -4,7 +4,6 @@
 #include "eq.h"
 
 #ifdef DEBUG
-// various very expensive assertions, for debug/unittest only
 void check(int **c) {
 	int s = 0;
 	printc(c); fflush(stdout);

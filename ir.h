@@ -1,13 +1,27 @@
 #include <wchar.h>
 
 // Following 3 structs store the kb&query.
-// res::type is '.' for list, '?' for var, and 0 otherwise.
-// All three int* below (args, c, p) have first int as length,
-// and last int always null. Hence empty list consists of two
+// All int* arrays below (args, c, p) have first int as length,
+// and are also zero terminated. Hence empty list consists of two
 // integers, zero each.
-struct res { char type; union { const wchar_t *value; const int *args; }; };
-struct triple { int s, p, o; }; 
-struct rule { int *p, *c; }; // premises and conclusions
+struct res { // resource (IRI/literal/variable/list)
+	char type; // '.' for list, '?' for var, else otherwise
+	union {
+		const wchar_t *value; // resource's value
+		const int *args; // list's elements ids
+	};
+};
+struct triple {
+	int s, p, o; // subject predicate object
+};
+struct rule {
+	int *p; // premises
+	int *c; // conclusions
+	int *** **e; // equality relations (calculated from p&c)
+		// e[n][k][r] is the int** equality relation of
+		// the k'th conclusion of the n'th premise
+		// in the r's rule
+};
 extern struct res *rs;
 extern struct triple* ts;
 extern struct rule* rls;

@@ -1,4 +1,3 @@
-
 // Conditions have the form x=y=z=...=t.
 // and represented as int** c, two dimensional array
 // where both arrays are ordered in ascending order,
