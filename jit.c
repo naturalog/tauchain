@@ -323,14 +323,8 @@ void merge_sorted(int **c, int ***d, int i, int j) {
 		return;
 	}
 	int *row = merge_rows(c[i], c[j], li, lj, &e);
-	l -= e,
-	delrow(c, j),
-	c[0][**c] += l - c[0][i],//e - c[0][j] + 1, // update total count
-	free(c[i]), c[i] = row, 
-	//free(c[j]), // put new row and free old ones
-//	memmove(&c[j], &c[j + 1], (csz - j - 1) * sizeof(int*)), // shift rows down
-//	memmove(&c[0][j], &c[0][j + 1], (csz - j) * sizeof(int)); // shift sizes down
-	c[0][i] = l;//, --**c; // update row and rows size
+	l -= e, delrow(c, j), c[0][**c] += l - c[0][i], 
+	free(c[i]), c[i] = row, c[0][i] = l;
 	if (d) check(*d);
 }
 
@@ -376,7 +370,7 @@ void merge(int** x, int** y, int ***r) {
 					check(*r);
 					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
 					check(*r);
-					merge(cprm(x, row), cprm(y, cc), r);
+//					merge(cprm(x, row), cprm(y, cc), r);
 				}
 }
 
