@@ -93,7 +93,7 @@ void makeset(int ***_c, int x, int y) {
 }
 
 // add x to row i in c
-void insert_sorted(int **c, int i, int x) {
+void put_in_row(int **c, int i, int x) {
 	int *p = c[i] = REALLOC(c[i], ++c[0][i], int); // increase i'th row's space
 	++c[0][**c];
 	while (*p && *p < x) ++p; // walk till row gets geq x
@@ -110,7 +110,7 @@ void insert_sorted(int **c, int i, int x) {
 }
 
 // add a row of length l to given location
-void insertto(int ***_d, int *r, int l, int row) {
+void put_row_to(int ***_d, int *r, int l, int row) {
 	int dsz = ***_d, **d = *_d = REALLOC(*_d, 1 + dsz, int*), s = _d[0][0][dsz];
 	d[0] = REALLOC(d[0], 2 + dsz, int);
 	if (dsz == 1) {
@@ -128,13 +128,12 @@ void insertto(int ***_d, int *r, int l, int row) {
 int insert(int ***d, int *r, int l) {
 	int n = 0;
 	while (n < ***d && *d[0][n] < *r) ++n;
-	insertto(d, r, l, n);
+	put_row_to(d, r, l, n);
 	return n;
 }
 
-// set union
 // e returns the number of equal items
-int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
+int* set_union(int *x, int *y, int lx, int ly, int *e) {
 	int l = lx + ly - 1;
 	int *row = MALLOC(int, l), *r = row;
 	*e = 0;
@@ -158,15 +157,15 @@ void delrow(int **c, int r) {
 
 // merge rows x,y and store merged row in another
 // equivalence relation d
-int merge_into(int *x, int *y, int lx, int ly, int ***d) {
+int merge_rows_to(int *x, int *y, int lx, int ly, int ***d) {
 	int e, row, n;
-	int *r = merge_rows(x, y, lx, ly, &e);
+	int *r = set_union(x, y, lx, ly, &e);
 	int s = lx + ly - 1 - e;
 	for (n = 0; n < s - 1; ++n)
 		if ((row = find1(*d, r[n])) && d[0][row] != r) {
 			if (d[0][row][0] < 0 && r[0] < 0 && d[0][row][0] != r[0])
 				return 0;
-			r = merge_rows(r, d[0][row], s, d[0][0][row], &e),
+			r = set_union(r, d[0][row], s, d[0][0][row], &e),
 			(s += d[0][0][row] - 1 - e), delrow(*d, row), n = 0;
 		}
 	insert(d, r, s);
@@ -176,16 +175,16 @@ int merge_into(int *x, int *y, int lx, int ly, int ***d) {
 
 // merge rows i,j in c.
 // if d!=0, merge into a new row in d.
-void merge_sorted(int **c, int ***d, int i, int j) {
-	if (i > j) { merge_sorted(c, d, j, i); return; }
+void merge_rows(int **c, int ***d, int i, int j) {
+	if (i > j) { merge_rows(c, d, j, i); return; }
 	int li = c[0][i], lj = c[0][j], l = li + lj - 1, e;
 	check(c);
 	if (d) {
-		merge_into(c[i], c[j], li, lj, d);
+		merge_rows_to(c[i], c[j], li, lj, d);
 		check(*d);
 		return;
 	}
-	int *row = merge_rows(c[i], c[j], li, lj, &e);
+	int *row = set_union(c[i], c[j], li, lj, &e);
 	l -= e, delrow(c, j), c[0][**c] += l - c[0][i], 
 	free(c[i]), c[i] = row, c[0][i] = l;
 	if (d) check(*d);
@@ -199,11 +198,11 @@ char require(int*** _c, int x, int y) {
 	int **c = *_c, i, j;
 	check(c);
 	find(c, x, y, &i, &j);
-	if (!i)	{ if (j) insert_sorted(c, j, x); else makeset(_c, x, y); }
+	if (!i)	{ if (j) put_in_row(c, j, x); else makeset(_c, x, y); }
 	else if (i == j) return 1; // x,y appear at the same row
-	else if (!j) insert_sorted(c, i, y); // x appears and y doesnt, add y to x's row
+	else if (!j) put_in_row(c, i, y); // x appears and y doesnt, add y to x's row
 	else if (!(*c[i] < 0 && *c[j] < 0)) // both exist, at least one var
-		merge_sorted(c, 0, i, j); // merge their rows
+		merge_rows(c, 0, i, j); // merge their rows
 	else return 0; // can't match two different nonvars
 	return 1;
 }
@@ -233,7 +232,7 @@ char merge(int** x, int** y, int ***r) {
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
 					putws(L"found!");
 					check(*r);
-					if (!merge_into(y[cc], x[row], y[0][cc], x[0][row], r))
+					if (!merge_rows_to(y[cc], x[row], y[0][cc], x[0][row], r))
 						return 0;
 					check(*r);
 				}
@@ -261,7 +260,7 @@ void test() {
 	c[1][0] = 4, c[1][1] = 6, c[1][2] = 7, c[1][3] = 0,
 	c[2][0] = 2, c[2][1] = 9, c[2][2] = 0;
 	check(c);
-	putws(L"before:"), printc(c), insert_sorted(c, 1, 5),
+	putws(L"before:"), printc(c), put_in_row(c, 1, 5),
 	putws(L"after:"), printc(c), fflush(stdout);
 	check(c);
 	int i, j;
@@ -270,9 +269,9 @@ void test() {
 	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
 	check(c);
-	merge_sorted(c, 0, 1, 2);
+	merge_rows(c, 0, 1, 2);
 	check(c);
-	putws(L"merge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
+	putws(L"merge_rows(c, 1, 2):"), printc(c), fflush(stdout);
 	int **d = MALLOC(int*, 1);
 	*d = MALLOC(int, 2);
 	d[0][0] = 1, d[0][1] = 0, printc(d);
