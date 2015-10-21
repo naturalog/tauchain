@@ -34,6 +34,8 @@ void find(int **c, int x, int y, int *i, int *j);
 // add a new class to existing relation, specifying
 // its first two members
 void makeset(int ***c, int x, int y);
+// allocates new empty relation
+int** create_relation();
 // add x to row i in c
 void put_in_row(int **c, int i, int x);
 // add a row of length l to given location

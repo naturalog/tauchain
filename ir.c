@@ -1,27 +1,27 @@
 #include "defs.h"
 #include "ir.h"
 
-struct res *rs = 0;
-struct triple *ts = 0; 
-struct rule *rls = 0; 
-size_t nrs = 0, nts = 0, nrls = 0;
+res *rs = 0;
+triple *ts = 0; 
+rule *rls = 0; 
+int nrs = 0, nts = 0, nrls = 0;
 const size_t chunk = 64;
 
 int mkres(const wchar_t* s, char type) {
 	if (s && !type && *s == L'?') type = '?';
-	if (!(nrs % chunk)) rs = REALLOC(rs, chunk * (nrs / chunk + 1), struct res);
+	if (!(nrs % chunk)) rs = REALLOC(rs, chunk * (nrs / chunk + 1), res);
 	return rs[nrs].type = type, rs[nrs].value = s, nrs++;
 }
 int mktriple(int s, int p, int o) {
-	if (!(nts % chunk)) ts = REALLOC(ts, chunk * (nts / chunk + 1), struct triple);
+	if (!(nts % chunk)) ts = REALLOC(ts, chunk * (nts / chunk + 1), triple);
 	return ts[nts].s = s, ts[nts].p = p, ts[nts].o = o, nts++;
 }
-int mkrule(int *p, int *c) {
-	if (!(nrls % chunk)) rls = REALLOC(rls, chunk * (nrls / chunk + 1), struct rule);
+int mkrule(premise *p, int *c) {
+	if (!(nrls % chunk)) rls = REALLOC(rls, chunk * (nrls / chunk + 1), rule);
 	return rls[nrls].c = c, rls[nrls].p = p, nrls++;
 }
 
-void print(const struct res* r) {
+void print(const res* r) {
 	if (!r) return;
 	if (r->type != '.') { putws(r->value); return; }
 	putws(L"( ");
@@ -29,7 +29,7 @@ void print(const struct res* r) {
 	while (*++a) print(&rs[*a]), putwchar(L' ');
 	putwchar(L')');
 }
-void printt(const struct triple* t) {
+void printt(const triple* t) {
 	print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.');
 }
 void printts(const int *t) {
@@ -37,9 +37,20 @@ void printts(const int *t) {
 	putws(L"{ ");
 	while (*++t) printt(&ts[*t]); putwchar(L'}');
 }
-void printr(const struct rule* r) {
-	printts(r->p);
-	putws(L" => "); printts(r->c), putws(L"");
+void printps(const premise *p, int np) {
+	if (!p) return;
+	putws(L"{ ");
+	for (int n = 0; n < np; ++n) {
+		printt(&ts[p[n].p]), putws(L" e: ");
+		for (int k = 0; k < nrls; ++k)
+			for (int c = 0; c < rls[k].c[c]; ++c)
+			       	printc(p[n].e[k][c]);
+	}
+	putwchar(L'}');
+}
+void printr(const rule* r) {
+	printps(r->p, r->np);
+	putws(L" => "); printts(r->c), putws(L"equality relations:");
 }
 void printa(int *a, int l) {
 	for (int n = 0; n < l; ++n) wprintf(L"%d ", a[n]);
@@ -63,4 +74,11 @@ void putcs(char* x) {
 	for (const char *_putws_t = x; *_putws_t; ++_putws_t)
 		putchar(*_putws_t);
 	putchar('\n');
+}
+
+premise* topremises(int* p) {
+	premise *r = MALLOC(premise, *p - 1);
+	for (int n = 1; n < *p - 1; ++n) r[n].p = p[n];
+	free(p);
+	return r;
 }

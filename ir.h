@@ -14,25 +14,35 @@ struct res { // resource (IRI/literal/variable/list)
 struct triple {
 	int s, p, o; // subject predicate object
 };
-struct rule {
-	int *p; // premises
-	int *c; // conclusions
-	int *** **e; // equality relations (calculated from p&c)
-		// e[n][k][r] is the int** equality relation of
-		// the k'th conclusion of the n'th premise
-		// in the r's rule
+struct premise {
+	int p;
+	// equality relations (calculated from premises
+	// and conclusions). e[r][k] is the int** equality 
+	// relation of the k'th conclusion in the r's rule.
+	int ** **e;
 };
-extern struct res *rs;
-extern struct triple* ts;
-extern struct rule* rls;
-extern size_t nrs, nts, nrls;
+struct rule {
+	int *c; // conclusions
+	struct premise *p; // premises
+	int np; // number of premises
+};
+typedef struct res res;
+typedef struct triple triple;
+typedef struct rule rule;
+typedef struct premise premise;
+extern res *rs;
+extern triple* ts;
+extern rule* rls;
+extern int nrs, nts, nrls;
 
 int mkres(const wchar_t* s, char type);
 int mktriple(int s, int p, int o);
-int mkrule(int *p, int *c);
-void print(const struct res* r);
-void printt(const struct triple* t);
+int mkrule(premise *p, int *c);
+void print(const res* r);
+void printt(const triple* t);
 void printts(const int *t);
-void printr(const struct rule* r);
+void printps(const premise *p, int np);
+void printr(const rule* r);
 void printa(int *a, int l);
 void printc(int **c);
+premise* topremises(int* p); // deletes p

@@ -208,6 +208,11 @@ char merge(int** x, int** y, int ***r) {
 	return 1;
 }
 
+int** create_relation() {
+	int **e = MALLOC(int*, 1);
+	return *e = MALLOC(int, 2), e[0][0] = 1, e[0][1] = 0, e;
+}
+
 void test() {
 	int **c = MALLOC(int*, 3);
 	for (int n = 0; n < 3; ++n) c[n] = MALLOC(int, 4);
@@ -227,9 +232,7 @@ void test() {
 	merge_rows(c, 0, 1, 2);
 	check(c);
 	putws(L"merge_rows(c, 1, 2):"), printc(c), fflush(stdout);
-	int **d = MALLOC(int*, 1);
-	*d = MALLOC(int, 2);
-	d[0][0] = 1, d[0][1] = 0, printc(d);
+	int **d = create_relation();
 	require(&d, 1, 2), putws(L"require 1,2:"), printc(d);
 	require(&d, 3, 5), putws(L"require 3,5:"), printc(d);
 	require(&d, 4, 2), putws(L"require 4,2:"), printc(d);

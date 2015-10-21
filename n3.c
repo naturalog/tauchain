@@ -52,7 +52,8 @@ int gettriple() {
 	return t;
 }
 int getrule() {
-	static int *p, r;
+	int r;
+	premise *p;
 	if (skip(), peek(L"fin.")) {
 		if (!in_query) return in_query = 1, input += 4, getrule();
 		return 0;
@@ -61,10 +62,10 @@ int getrule() {
 	if (*input != L'{') {
 		int *r = CALLOC(int, 3);
 		if (!(r[r[r[2] = 0] = 1] = gettriple())) return 0;
-		return in_query ? mkrule(r, 0) : mkrule(0, r);
+		return in_query ? mkrule(topremises(r), 0) : mkrule(0, r);
 	}
 	++input;
-	p = getlist(gettriple, L'}'), expect(L"=>"), skip(), expect(L"{"), r = mkrule(p, getlist(gettriple, L'}'));
+	p = topremises(getlist(gettriple, L'}')), expect(L"=>"), skip(), expect(L"{"), r = mkrule(p, getlist(gettriple, L'}'));
 	if (*input == L'.') ++input;
 	return r;
 }
