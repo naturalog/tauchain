@@ -159,7 +159,7 @@ void makeset(int ***_c, int x, int y) {
 	c[rows] = r, // add row
 	**c = ++rows, // update row count
 	(*c = REALLOC(*c, 1 + rows, int*))[rows - 1] = 3; // update row size
-	c[0][rows] = t + 2;
+	c[0][rows] = t + 2; // update total count
 }
 
 // add x to row i in c
@@ -176,34 +176,57 @@ void insert_sorted(int **c, int i, int x) {
 	}
 }
 
+// add a row of length l
 void insert(int ***_d, int *r, int l) {
 	int n = 1, **d = *_d = REALLOC(*_d, ++***_d, int*);
 	while (n < l && *d[n] < *r) ++n;
 	if (n != l) memcpy(&d[n], &d[n+1], (l - n - 1) * sizeof(int));
-	d[n] = r;
-	d[0][**d] += l;
+	d[n] = r, d[0][**d] += l;
 }
 
-void merge_sorted(int **c, int ***d, int i, int j) {
-	if (i > j) { merge_sorted(c, d, j, i); return; }
-	int li = ROWLEN(c, i), lj = ROWLEN(c, j), l = li + lj - 1;
+// set union
+int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
+	int l = lx + ly - 1;
 	int *row = MALLOC(int, l), *r = row;
-	const int *x = ROW(c, i), *y = ROW(c, j);
-	while (*x && *y) 
-		if (*x == *y) (*r++ = *x++), *y++, (d ? --d[0][0][***d] : --c[0][**c]);
+	*e = 0;
+	while (*x && *y)
+		if (*x == *y) (*r++ = *x++), *y++, ++*e;
+		else *r++ = (*x < *y ? *x++ : *y++);
+       	while (*x) *r++ = *x++;
+       	while (*y) *r++ = *y++;
+	return *r = 0, row;
+}
+
+void merge_into(int *x, int *y, int lx, int ly, int ***d) {
+	int l = lx + ly - 1;
+	int *row = MALLOC(int, l), *r = row;
+	while (*x && *y)
+		if (*x == *y) (*r++ = *x++), *y++;
 		else *r++ = (*x < *y ? *x++ : *y++);
        	while (*x) *r++ = *x++;
        	while (*y) *r++ = *y++;
 	*r = 0;
-       	if (!d) {
-		free(c[i]), c[i] = row,
-		free(c[j]), memcpy(&c[j], &c[j + 1], (**c - j - 1) * sizeof(int*)),
-		(ROWLEN(c, i) = l), --**c,
-		memcpy(&c[0][j], &c[0][j + 1], (**c - j + 1) * sizeof(int));
-	} else insert(d, row, l);
-//	--c[0][**c];
+	insert(d, row, l);
 }
 
+
+// if d!=0, merge into a new row in d
+void merge_sorted(int **c, int ***d, int i, int j) {
+	if (i > j) { merge_sorted(c, d, j, i); return; }
+	int li = ROWLEN(c, i), lj = ROWLEN(c, j), l = li + lj - 1, e;
+	if (d) {
+		merge_into(c[i], c[j], li, lj, d);
+		return;
+	}
+	int *row = merge_rows(c[i], c[j], li, lj, &e);
+	c[0][**c] -= e;
+	free(c[i]), c[i] = row, free(c[j]), // put new row and free old ones
+	memcpy(&c[j], &c[j + 1], (**c - j - 1) * sizeof(int*)), // shift rows down
+	(ROWLEN(c, i) = l), --**c, // update row and rows size
+	memcpy(&c[0][j], &c[0][j + 1], (**c - j + 1) * sizeof(int)); // shift sizes down
+}
+
+// simple binary search over integer array of length l
 int bfind(int x, const int *a, int l) {
 	int f = 0, m = l / 2;
 	while (f <= l)
@@ -213,6 +236,8 @@ int bfind(int x, const int *a, int l) {
 	return -1;
 }
 
+// find rows for two given labels/vars. it's
+// slightly more efficient than searching each separately
 void find(int **c, int x, int y, int *i, int *j) {
 	if (x > y) { find(c, y, x, j, i); return; }
 	*i = *j = 0;
@@ -235,21 +260,24 @@ char require(int*** _c, int x, int y) {
 	int **c = *_c, i, j;
 	find(c, x, y, &i, &j);
 	if (!i)	{ if (j) insert_sorted(c, j, x); else makeset(_c, x, y); }
-	else if (i == j) return 1;
-	else if (!j) insert_sorted(c, i, y);
-	else if (!(*c[i] < 0 && *c[j] < 0)) merge_sorted(c, 0, i, j);
-	else return 0;
+	else if (i == j) return 1; // x,y appear at the same row
+	else if (!j) insert_sorted(c, i, y); // x appears and y doesnt, add y to x's row
+	else if (!(*c[i] < 0 && *c[j] < 0)) // both exist, at least one var
+		merge_sorted(c, 0, i, j); // merge their rows
+	else return 0; // can't match two different nonvars
 	return 1;
 }
-/*
-const int** merge(const int** x, const int** y) {
+
+int** merge(int** x, int** y) {
 	if (x[0][**x] > y[0][**y]) return merge(y, x);
 	int **r = MALLOC(int*, **x + **y);
 	for (int row = 1, rows = **x; row < rows; ++row)
 		for (int col = 0, cols = ROWLEN(x, row); col < cols; ++col)
 			for (int cc = 0, e = **y; cc < e; ++cc)
-				if (bfind(y[cc], x[row][col]) != -1)
-}*/
+				if (bfind(x[row][col], y[cc], y[0][cc]) != -1)
+					merge_into(y[cc], x[row], y[0][cc], x[0][row], &r);
+	return r;
+}
 
 char canmatch(int x, int y) {
 	struct res s = rs[x], d = rs[y];
