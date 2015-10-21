@@ -197,6 +197,7 @@ int bfind(int x, const int *a, int l) {
 }
 
 int find1(int **c, int x) {
+	assert(x);
 	for (int row = 1, col, rows = **c; row < rows; ++row) {
 		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
 		if ((col = bfind(x, p, l)) != -1) return row;
@@ -220,6 +221,8 @@ void find(int **c, int x, int y, int *i, int *j) {
 	}
 }
 
+// add a new class to existing relation, specifying
+// its first two members
 void makeset(int ***_c, int x, int y) {
 	int *r = MALLOC(int, 3), rows = ***_c;
 	if (x > y) r[0] = y, r[1] = x; else r[0] = x, r[1] = y;
@@ -246,7 +249,7 @@ void insert_sorted(int **c, int i, int x) {
 		*t = x;
 	}
 #ifdef DEBUG	
-//	check(c), assert(i == find1(c, x));
+	check(c), assert(i == find1(c, x));
 #endif	
 }
 
@@ -274,6 +277,7 @@ int insert(int ***d, int *r, int l) {
 }
 
 // set union
+// e returns the number of equal items
 int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
 	int l = lx + ly - 1;
 	int *row = MALLOC(int, l), *r = row;
@@ -296,19 +300,22 @@ void delrow(int **c, int r) {
 	check(c);
 }
 
-void merge_sorted(int **c, int ***d, int i, int j);
-void merge_into(int *x, int *y, int lx, int ly, int ***d) {
+// merge rows x,y and store merged row in another
+// equivalence relation d
+int merge_into(int *x, int *y, int lx, int ly, int ***d) {
 	int e, row, n;
 	int *r = merge_rows(x, y, lx, ly, &e);
 	int s = lx + ly - 1 - e;
-	for (n = 0; n < s; ++n)
-		if ((row = find1(*d, r[n]))) { 
+	for (n = 0; n < s - 1; ++n)
+		if ((row = find1(*d, r[n])) && d[0][row] != r) {
+			if (d[0][row][0] < 0 && r[0] < 0 && d[0][row][0] != r[0])
+				return 0;
 			r = merge_rows(r, d[0][row], s, d[0][0][row], &e),
-			s += d[0][0][row] - e;
-			return;
+			(s += d[0][0][row] - 1 - e), delrow(*d, row), n = 0;
 		}
 	insert(d, r, s);
 	check(*d);
+	return 1;
 }
 
 // merge rows i,j in c.
@@ -359,19 +366,22 @@ int **cprm(int **c, int r) {
 	return a;
 }
 
-void merge(int** x, int** y, int ***r) {
+// merge two equivalence relations into one
+// if possible
+char merge(int** x, int** y, int ***r) {
 	check(x); check(y);
-	if (x[0][**x] > y[0][**y]) { merge(y, x, r); return; }
+	if (x[0][**x] > y[0][**y]) return merge(y, x, r);
 	for (int row = 1, rows = **x; row < rows; ++row)
 		for (int col = 0, cols = ROWLEN(x, row) - 1; col < cols; ++col)
 			for (int cc = 1, e = **y; cc < e; ++cc)
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
 					putws(L"found!");
 					check(*r);
-					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
+					if (!merge_into(y[cc], x[row], y[0][cc], x[0][row], r))
+						return 0;
 					check(*r);
-//					merge(cprm(x, row), cprm(y, cc), r);
 				}
+	return 1;
 }
 
 char canmatch(int x, int y) {
