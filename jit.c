@@ -5,6 +5,13 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <assert.h>
+
+#ifdef DEBUG
+#define TRACE(x) x
+#else
+#define TRACE(x)
+#endif
+
 void putws(const wchar_t* x) {for (const wchar_t *_putws_t = x; *_putws_t; ++_putws_t) putwchar(*_putws_t); putwchar(L'\n');}
 void putcs(char* x) {for (const char *_putws_t = x; *_putws_t; ++_putws_t) putchar(*_putws_t); putchar('\n');}
 #define MALLOC(x, y) malloc(sizeof(x) * (y))
@@ -128,7 +135,7 @@ void printc(int **c) {
 	for (int r = *s = 0; r < **c; ++r) {
 		*s = 0;
 		swprintf(s, 1024, L"row %d:\t", r);
-		for (int n = 0; n < (r ? ROWLEN(c, r) : **c); ++n)
+		for (int n = 0; n < (r ? ROWLEN(c, r) : **c + 1); ++n)
 			swprintf(ss, 1024, L"%d\t", ROW(c, r)[n]), wcscat(s, ss);
 		putws(s);
 	}
@@ -138,7 +145,6 @@ void parse() {
 	int r;
 	while ((r = getrule())) printr(&rls[r]), putwchar(L'\n');
 }
-
 
 // Conditions have the form x=y=z=...=t.
 // and represented as int** c, two dimensional array
@@ -150,43 +156,93 @@ void parse() {
 // the n'th equivalence class. the classes therefore
 // begin from index 1. the last element of c[0] contains
 // the sum of all sizes of all rows (except row 0)
+#ifdef DEBUG
+void check(int **c) {
+	int s = 0;
+	for (int n = 0; n < **c; ++n) assert(c[n][0] && c[0][n]), s += c[0][n];
+	assert(s - 2 * **c == c[0][**c] - 1);
+}
+#else
+#define check(x)
+#endif
+
+// simple binary search over integer array of length l
+int bfind(int x, const int *a, int l) {
+	int f = 0, m = l / 2;
+	while (f <= l)
+		if (a[m] < x) f = m + 1, m = (f + l) / 2;
+		else if (a[m] == x) return m;
+		else l = m - 1, m = (f + l) / 2;
+	return -1;
+}
+
+int find1(int **c, int x) {
+	check(c);
+	for (int row = 1, col, rows = **c; row < rows; ++row) {
+		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
+		if ((col = bfind(x, p, l)) != -1) return row;
+	}
+	return 0;
+}
+
+// find rows for two given labels/vars. it's
+// slightly more efficient than searching each separately
+void find(int **c, int x, int y, int *i, int *j) {
+	if (x > y) { find(c, y, x, j, i); return; }
+	*i = *j = 0;
+	for (int row = 1, col, rows = **c; row < rows; ++row) {
+		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
+		if ((col = bfind(x, p, l)) != -1) {
+			*i = row;
+			if (bfind(y, p + col, l - col) != -1) *j = row;
+		}
+		if (!*j) { if (bfind(y, p, l) != -1) { *j = row; if (*i) return; } }
+		else if (*i) return;
+	}
+	check(c);
+}
 
 void makeset(int ***_c, int x, int y) {
 	int *r = MALLOC(int, 3), rows = ***_c;
-	if (x > y) r[0] = y, r[1] = x;
-	else r[0] = x, r[1] = y;
+	if (x > y) r[0] = y, r[1] = x; else r[0] = x, r[1] = y;
 	r[2] = 0;
-	int **c = *_c = REALLOC(*_c, 1 + rows, int*), t = c[0][**c];
-	c[rows] = r, // add row
-	**c = ++rows, // update row count
+	int **c = *_c = REALLOC(*_c, 1 + rows, int*), t = c[0][rows];
+	c[rows] = r, **c = ++rows, // add row and update rows count
 	(*c = REALLOC(*c, 2 + rows, int*))[rows - 1] = 3; // update row size
 	c[0][rows] = t + 2; // update total count
+#ifdef DEBUG	
+	int i, j; check(c), find(*_c, x, y, &i, &j), assert(i == j);
+#endif	
 }
 
 // add x to row i in c
 void insert_sorted(int **c, int i, int x) {
-	int *p = ROW(c, i) = REALLOC(ROW(c, i), ++ROWLEN(c, i), int); // increase i'th row's space
+	int *p = c[i] = REALLOC(c[i], ++c[0][i], int); // increase i'th row's space
 	++c[0][**c];
 	while (*p && *p < x) ++p; // walk till row gets geq x
 	if (!*p) *p++ = x, *p = 0; // push new largest member
 	else { // up till end of row
-		int *t = ROW(c, i) + ROWLEN(c, i) - 1; 
+		int *t = c[i] + c[0][i] - 1; 
 		*t-- = 0;
 		do { *t = *(t - 1); } while (*--t != *p);
 		*t = x;
 	}
+#ifdef DEBUG	
+	check(c), assert(i == find1(c, x));
+#endif	
 }
 
 // add a row of length l
 void insert(int ***_d, int *r, int l) {
-	int n = 1, **d = *_d = REALLOC(*_d, 1 + ***_d, int*);
-	d[0] = REALLOC(d[0], 2 + **d, int);
+	int dsz = ***_d, n = 1, **d = *_d = REALLOC(*_d, 1 + dsz, int*), s = _d[0][0][dsz];
+	d[0] = REALLOC(d[0], 2 + dsz, int);
 	while (n < **d && *d[n] < *r) ++n;
-	if (n != **d) {
-		memcpy(&d[n + 1], &d[n], sizeof(int*) * (**d - n + 1));
-		memcpy(&d[0][n + 1], &d[0][n], sizeof(int) * (**d - n + 2));
+	if (n != dsz) {
+		memmove(&d[n + 1], &d[n], sizeof(int*) * (dsz - n));
+		memmove(&d[0][n + 1], &d[0][n], sizeof(int) * (dsz - n + 1));
 	}
-	d[n] = r, d[0][n] = l, (d[0][1 + **d] += l - 1), ++**d;
+	d[n] = r, d[0][n] = l, (d[0][1 + dsz] = s + l - 1), ++**d;
+	check(d);
 }
 
 // set union
@@ -204,6 +260,7 @@ int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
 
 void merge_into(int *x, int *y, int lx, int ly, int ***d) {
 	int e, *r = merge_rows(x, y, lx, ly, &e);
+	check(*d);
 	insert(d, r, lx + ly - 1 - e);
 }
 
@@ -218,35 +275,10 @@ void merge_sorted(int **c, int ***d, int i, int j) {
 	int *row = merge_rows(c[i], c[j], li, lj, &e);
 	c[0][**c] -= e;
 	free(c[i]), c[i] = row, free(c[j]), // put new row and free old ones
-	memcpy(&c[j], &c[j + 1], (**c - j - 1) * sizeof(int*)), // shift rows down
+	memmove(&c[j], &c[j + 1], (**c - j - 1) * sizeof(int*)), // shift rows down
 	(ROWLEN(c, i) = l), --**c, // update row and rows size
-	memcpy(&c[0][j], &c[0][j + 1], (**c - j + 1) * sizeof(int)); // shift sizes down
-}
-
-// simple binary search over integer array of length l
-int bfind(int x, const int *a, int l) {
-	int f = 0, m = l / 2;
-	while (f <= l)
-		if (a[m] < x) f = m + 1, m = (f + l) / 2;
-		else if (a[m] == x) return m;
-		else l = m - 1, m = (f + l) / 2;
-	return -1;
-}
-
-// find rows for two given labels/vars. it's
-// slightly more efficient than searching each separately
-void find(int **c, int x, int y, int *i, int *j) {
-	if (x > y) { find(c, y, x, j, i); return; }
-	*i = *j = 0;
-	for (int row = 1, col, rows = **c; row < rows; ++row) {
-		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
-		if ((col = bfind(x, p, l)) != -1) {
-			*i = row;
-			if (bfind(y, p + col, l - col) != -1) *j = row;
-		}
-		if (!*j) { if (bfind(y, p, l) != -1) { *j = row; if (*i) return; } }
-		else if (*i) return;
-	}
+	memmove(&c[0][j], &c[0][j + 1], (**c - j + 1) * sizeof(int)); // shift sizes down
+	check(c);
 }
 
 // require() assumes that canmatch() returned true
@@ -255,6 +287,7 @@ void find(int **c, int x, int y, int *i, int *j) {
 char require(int*** _c, int x, int y) {
 	assert(x != y && (x > 0 || y > 0)); // at least one var
 	int **c = *_c, i, j;
+	check(c);
 	find(c, x, y, &i, &j);
 	if (!i)	{ if (j) insert_sorted(c, j, x); else makeset(_c, x, y); }
 	else if (i == j) return 1; // x,y appear at the same row
@@ -265,25 +298,34 @@ char require(int*** _c, int x, int y) {
 	return 1;
 }
 
+// copy while omitting one row
 int **cprm(int **c, int r) {
-	int **a = MALLOC(int, **c), n = 0;
-	for (; n < r; ++n) a[n] = c[n], a[0][n] = c[0][n];
-	for (++n; n < **c; ++n) a[n - 1] = c[n], a[0][n - 1] = c[0][n];
-	**a = **c, --**a, a[0][**a] -= c[0][r] - 1;
+	int csz = **c, **a = MALLOC(int*, csz - 1);
+	assert(csz), assert(csz - 1);
+	*(*a = MALLOC(int, csz)) = csz - 1;
+	memmove(&a[1],		&c[1], 		sizeof(int*)* (r - 1));
+	memmove(&a[0][1],	&c[0][1], 	sizeof(int) * (r - 1));
+	memmove(&a[r],		&c[r + 1], 	sizeof(int*)* (csz - r - 1));
+	memmove(&a[0][r],	&c[0][r + 1], 	sizeof(int) * (csz - r));
+	a[0][**a] -= c[0][r] - 1;
+	check(a);
 	return a;
 }
 
 void merge(int** x, int** y, int ***r) {
+	check(x); check(y);
 	if (x[0][**x] > y[0][**y]) { merge(y, x, r); return; }
 	for (int row = 1, rows = **x; row < rows; ++row)
 		for (int col = 0, cols = ROWLEN(x, row) - 1; col < cols; ++col)
 			for (int cc = 1, e = **y; cc < e; ++cc)
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
+					check(x), check(y), check(*r);
 					putws(L"found!");
 					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
+					check(x); check(y); check(*r);
 					printc(*r);
 					merge(cprm(x, row), cprm(y, cc), r);
-					return;
+					check(x); check(y); check(*r);
 				}
 }
 
@@ -307,14 +349,18 @@ void test() {
 	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3, c[0][3] = 5,
 	c[1][0] = 4, c[1][1] = 6, c[1][2] = 7, c[1][3] = 0,
 	c[2][0] = 2, c[2][1] = 9, c[2][2] = 0;
+	check(c);
 	putws(L"before:"), printc(c), insert_sorted(c, 1, 5),
 	putws(L"after:"), printc(c), fflush(stdout);
+	check(c);
 	int i, j;
 	find(c, 6, 4, &i, &j), assert(i == 1 && j == 1);
 	find(c, 6, 7, &i, &j), assert(i == 1 && j == 1);
 	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
+	check(c);
 	merge_sorted(c, 0, 1, 2);
+	check(c);
 	putws(L"merge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
 	int **d = MALLOC(int*, 1);
 	*d = MALLOC(int, 2);
@@ -329,6 +375,7 @@ void test() {
 	int **r = MALLOC(int*, 1);
 	*r = MALLOC(int, 2);
 	r[0][0] = 1, r[0][1] = 0;
+	check(r);
 	printc(r);
 	merge(c, d, &r);
 	putws(L"result:"), printc(r), putws(L""), fflush(stdout);
