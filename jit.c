@@ -160,6 +160,7 @@ void parse() {
 // various very expensive assertions, for debug/unittest only
 void check(int **c) {
 	int s = 0;
+	printc(c); fflush(stdout);
 	// recalc total size
 	for (int n = 0; n < **c; ++n) assert(c[n][0] && c[0][n]), s += c[0][n];
 	assert(s - 2 * **c == c[0][**c] - 1); // assert total size
@@ -167,7 +168,13 @@ void check(int **c) {
 		char bound = c[n][0] < 0 ? 1 : 0;
 		assert(c[n][c[0][n] - 1] == 0); // assert zero termination matching the sizes vector
 		for (int k = 0; k < c[0][n] - 1; ++k) {
-			if (!bound || k) assert(c[n][k] > 0); // assert only one nonvar binding
+			assert(c[n][k]); // verify nonzero
+			if (!bound || k) {
+				if (!c[n][k])
+					wprintf(L"n=%d,k=%d,bound=%d,c[n][k]=%d\n", n, k, (int)bound, c[n][k]),
+					fflush(stdout);
+				assert(c[n][k] > 0); // assert only one nonvar binding
+			}
 			for (int n1 = 1; n < **c; ++n)
 				for (int k1 = 0; k < c[0][n] - 1; ++k)
 					if (n != n1 && k != k1)
@@ -190,7 +197,6 @@ int bfind(int x, const int *a, int l) {
 }
 
 int find1(int **c, int x) {
-	check(c);
 	for (int row = 1, col, rows = **c; row < rows; ++row) {
 		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
 		if ((col = bfind(x, p, l)) != -1) return row;
@@ -212,7 +218,6 @@ void find(int **c, int x, int y, int *i, int *j) {
 		if (!*j) { if (bfind(y, p, l) != -1) { *j = row; if (*i) return; } }
 		else if (*i) return;
 	}
-	check(c);
 }
 
 void makeset(int ***_c, int x, int y) {
@@ -241,26 +246,30 @@ void insert_sorted(int **c, int i, int x) {
 		*t = x;
 	}
 #ifdef DEBUG	
-	check(c), assert(i == find1(c, x));
+//	check(c), assert(i == find1(c, x));
 #endif	
 }
 
-// add a row of length l, return row num
-int insert(int ***_d, int *r, int l) {
-	int dsz = ***_d, n = 1, **d = *_d = REALLOC(*_d, 1 + dsz, int*), s = _d[0][0][dsz];
+// add a row of length l to given location
+void insertto(int ***_d, int *r, int l, int row) {
+	int dsz = ***_d, **d = *_d = REALLOC(*_d, 1 + dsz, int*), s = _d[0][0][dsz];
 	d[0] = REALLOC(d[0], 2 + dsz, int);
 	if (dsz == 1) {
 		d[0][0] = 2, d[0][2] = (d[0][1] = l) - 1, d[1] = r;
-		check(d);
-		return 1;
+		return;
 	}
-	while (n < **d && *d[n] < *r) ++n;
-	if (n != dsz) {
-		memmove(&d[n + 1], &d[n], sizeof(int*) * (dsz - n));
-		memmove(&d[0][n + 1], &d[0][n], sizeof(int) * (dsz - n + 1));
+	if (row != dsz) {
+		memmove(&d[row + 1], &d[row], sizeof(int*) * (dsz - row));
+		memmove(&d[0][row + 1], &d[0][row], sizeof(int) * (dsz - row + 1));
 	}
-	d[n] = r, d[0][n] = l, (d[0][1 + dsz] = s + l - 1), ++**d;
-	check(*_d);
+	d[row] = r, d[0][row] = l, (d[0][1 + dsz] = s + l - 1), ++**d;
+}
+
+// add a row of length l, return row num
+int insert(int ***d, int *r, int l) {
+	int n = 0;
+	while (n < ***d && *d[0][n] < *r) ++n;
+	insertto(d, r, l, n);
 	return n;
 }
 
@@ -277,15 +286,25 @@ int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
 	return *r = 0, row;
 }
 
+void delrow(int **c, int r) {
+	check(c);
+	free(c[r]),
+	c[0][**c] -= c[0][r] - 1,
+	memmove(&c[r], &c[r + 1], (**c - r - 1) * sizeof(int*)), // shift rows down
+	memmove(&c[0][r], &c[0][r + 1], (**c - r) * sizeof(int)), // shift sizes down
+	--**c; // update row and rows size
+	check(c);
+}
+
 void merge_sorted(int **c, int ***d, int i, int j);
 void merge_into(int *x, int *y, int lx, int ly, int ***d) {
 	int e, row, n;
 	int *r = merge_rows(x, y, lx, ly, &e);
 	int s = lx + ly - 1 - e;
-	check(*d);
 	for (n = 0; n < s; ++n)
-		if ((row = find1(*d, r[n]))) {
-			merge_sorted(*d, 0, row, insert(d, r, s));
+		if ((row = find1(*d, r[n]))) { 
+			r = merge_rows(r, d[0][row], s, d[0][0][row], &e),
+			s += d[0][0][row] - e;
 			return;
 		}
 	insert(d, r, s);
@@ -297,18 +316,22 @@ void merge_into(int *x, int *y, int lx, int ly, int ***d) {
 void merge_sorted(int **c, int ***d, int i, int j) {
 	if (i > j) { merge_sorted(c, d, j, i); return; }
 	int li = c[0][i], lj = c[0][j], l = li + lj - 1, e;
+	check(c);
 	if (d) {
 		merge_into(c[i], c[j], li, lj, d);
 		check(*d);
 		return;
 	}
-	int *row = merge_rows(c[i], c[j], li, lj, &e), csz = **c;
-	c[0][**c] -= e, // update total count
-	free(c[i]), c[i] = row, free(c[j]), // put new row and free old ones
-	memmove(&c[j], &c[j + 1], (csz - j - 1) * sizeof(int*)), // shift rows down
-	memmove(&c[0][j], &c[0][j + 1], (csz - j) * sizeof(int)); // shift sizes down
-	c[0][i] = l, --**c; // update row and rows size
-	check(c);
+	int *row = merge_rows(c[i], c[j], li, lj, &e);
+	l -= e,
+	delrow(c, j),
+	c[0][**c] += l - c[0][i],//e - c[0][j] + 1, // update total count
+	free(c[i]), c[i] = row, 
+	//free(c[j]), // put new row and free old ones
+//	memmove(&c[j], &c[j + 1], (csz - j - 1) * sizeof(int*)), // shift rows down
+//	memmove(&c[0][j], &c[0][j + 1], (csz - j) * sizeof(int)); // shift sizes down
+	c[0][i] = l;//, --**c; // update row and rows size
+	if (d) check(*d);
 }
 
 // require() assumes that canmatch() returned true
@@ -350,11 +373,8 @@ void merge(int** x, int** y, int ***r) {
 			for (int cc = 1, e = **y; cc < e; ++cc)
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
 					putws(L"found!");
-					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
 					check(*r);
-					printc(*r);
-					check(x);
-					check(y);
+					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
 					check(*r);
 					merge(cprm(x, row), cprm(y, cc), r);
 				}
