@@ -149,40 +149,40 @@ void parse() {
 // the n'th equivalence class. the classes therefore
 // begin from index 1.
 
-int** makeset(int **c, int x, int y) {
-	int *r = MALLOC(int, 3), c00 = **c;
+void makeset(int ***c, int x, int y) {
+	int *r = MALLOC(int, 3), c00 = ***c;
 	if (x > y) r[0] = y, r[1] = x;
 	else r[0] = x, r[1] = y;
 	r[2] = 0;
-	(c = REALLOC(c, 1 + c00, int*))[c00] = r, // add row
-	**c = ++c00, // update row count
-	(*c = REALLOC(*c, c00, int*))[c00 - 1] = 3; // update row size
-	return c;
+	(*c = REALLOC(*c, 1 + c00, int*))[c00] = r, // add row
+	***c = ++c00, // update row count
+	(**c = REALLOC(**c, c00, int*))[c00 - 1] = 3; // update row size
 }
 
 // add x to row i in c
-int** insert_sorted(int **c, int i, int x) {
+void insert_sorted(int **c, int i, int x) {
 	int *p = ROW(c, i) = REALLOC(ROW(c, i), ++ROWLEN(c, i), int); // increase i'th row's space
 	while (*p && *p < x) ++p; // walk till row gets geq x
-	if (!*p) return *p++ = x, *p = 0, c; // push new largest member
-	int *t = ROW(c, i) + ROWLEN(c, i) - 1; // up till end of row
-	*t-- = 0;
-	do { *t = *(t - 1); } while (*--t != *p);
-	*t = x;
-	return c;
+	if (!*p) *p++ = x, *p = 0; // push new largest member
+	else { // up till end of row
+		int *t = ROW(c, i) + ROWLEN(c, i) - 1; 
+		*t-- = 0;
+		do { *t = *(t - 1); } while (*--t != *p);
+		*t = x;
+	}
 }
 
-int** merge_sorted(int **c, int i, int j) {
-	if (i > j) return merge_sorted(c, j, i);
+void merge_sorted(int **c, int i, int j) {
+	if (i > j) { merge_sorted(c, j, i); return; }
 	int li = ROWLEN(c, i), lj = ROWLEN(c, j), l = li + lj - 1;
 	int *row = MALLOC(int, l), *r = row;
 	const int *x = ROW(c, i), *y = ROW(c, j);
 	while (*x && *y) *r++ = (*x < *y ? *x++ : *y++);
        	while (*x) *r++ = *x++;
        	while (*y) *r++ = *y++;
-	return *r = 0, free(c[i]), c[i] = row,
-		free(c[j]), memcpy(&c[j], &c[j+1], **c-j-1),
-		ROWLEN(c, i) = l, --**c, c;
+	*r = 0, free(c[i]), c[i] = row,
+	free(c[j]), memcpy(&c[j], &c[j + 1], **c - j - 1),
+	ROWLEN(c, i) = l, --**c;
 }
 
 void find(int **c, int x, int y, int *i, int *j) {
@@ -193,24 +193,32 @@ void find(int **c, int x, int y, int *i, int *j) {
 		int col = 0;
 		for (; (col < l - 1) && p[col] < x; ++col);
 		if (p[col] == x) *i = row;
-//		if (col) --col;
 		for (; (col < l - 1) && p[col] < y; ++col);
 		if (p[col] == y) *j = row;
 		if (*i && *j) return;
 	}
 }
 
-int** require(int** c, int x, int y) {
-	assert(x != y);
-	assert(x > 0 || y > 0); // at least one var
+// require() assumes that canmatch() returned true
+// hence does not perform checks for the validity
+// of the requirement.
+char require(int*** _c, int x, int y) {
+	assert(x != y && (x > 0 || y > 0)); // at least one var
+	int **c = *_c;
 	int i, j;
+	char r = 1;
 	find(c, x, y, &i, &j);
-	if (!i)		return j ? insert_sorted(c, j, x) : makeset(c, x, y);
-	if (!j)		return insert_sorted(c, i, y);
-	if (i == j)	return c;
-	return (*c[i] < 0 && *c[j] < 0) ? 0 : merge_sorted(c, i, j);
+	if (!i)	{ if (j) insert_sorted(c, j, x); else makeset(_c, x, y); }
+	else if (i == j) return 1;
+	else if (!j) insert_sorted(c, i, y);
+	else if (!(*c[i] < 0 && *c[j] < 0)) merge_sorted(c, i, j);
+	else r = 0;
+	return r;
 }
-const int** merge(const int** x, const int** y) { return x == y ? x : y; }
+
+const int** merge(const int** x, const int** y) {
+	return x=y;
+}
 
 char canmatch(int x, int y) {
 	struct res s = rs[x], d = rs[y];
@@ -240,13 +248,20 @@ void test() {
 	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
 	merge_sorted(c, 1, 2);
-	putws(L"merge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
+	putws(L"erge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
+	c[0][0] = 1, printc(c);
+	require(&c, 1, 2), putws(L"require 1,2:"), printc(c);
+	require(&c, 3, 5), putws(L"require 3,5:"), printc(c);
+	require(&c, 4, 2), putws(L"require 4,2:"), printc(c);
+	require(&c, -1, 1), putws(L"require -1,1:"), printc(c);
+	require(&c, 5, 2), putws(L"require 5,2:"), printc(c);
 }
 
 int _main(/*int argc, char** argv*/) {
 	setlocale(LC_ALL, "");
 	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0); // reserve zero indices to signal failure
 	test();
+	return 0;
 	int pos = 0;
 	input = MALLOC(wchar_t, buflen);
 	while (!feof(stdin)) { // read whole doc into mem
