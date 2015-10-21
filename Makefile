@@ -59,6 +59,7 @@ jit: jit.c dict.cpp ir.h ir.c n3.h n3.c
 	gcc -Wall -Wpedantic -Wextra jit.c -ojit.o -c -g -DDEBUG
 	gcc -Wall -Wpedantic -Wextra n3.c -on3.o -c -g -DDEBUG
 	gcc -Wall -Wpedantic -Wextra ir.c -oir.o -c -g -DDEBUG
-	g++ -W -Wall -Wpedantic -Wextra jit.o n3.o ir.o dict.cpp -ojit -g
+	gcc -Wall -Wpedantic -Wextra eq.c -oeq.o -c -g -DDEBUG
+	g++ -W -Wall -Wpedantic -Wextra jit.o n3.o ir.o eq.o dict.cpp -ojit -g
 comp: comp.cpp
 	$(CC) -W -Wall -Wpedantic -Wextra -std=c++11 comp.cpp -ocomp -g -rdynamic
