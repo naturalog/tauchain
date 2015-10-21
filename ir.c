@@ -29,10 +29,21 @@ void print(const struct res* r) {
 	while (*++a) print(&rs[*a]), putwchar(L' ');
 	putwchar(L')');
 }
-void printt(const struct triple* t) { print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.'); }
-void printts(const int *t) { if (!t) return; putws(L"{ "); while (*++t) printt(&ts[*t]); putwchar(L'}'); }
-void printr(const struct rule* r) { printts(r->p); putws(L" => "); printts(r->c), putws(L""); }
-void printa(int *a, int l) { for (int n = 0; n < l; ++n) wprintf(L"%d ", a[n]); }
+void printt(const struct triple* t) {
+	print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.');
+}
+void printts(const int *t) {
+	if (!t) return;
+	putws(L"{ ");
+	while (*++t) printt(&ts[*t]); putwchar(L'}');
+}
+void printr(const struct rule* r) {
+	printts(r->p);
+	putws(L" => "); printts(r->c), putws(L"");
+}
+void printa(int *a, int l) {
+	for (int n = 0; n < l; ++n) wprintf(L"%d ", a[n]);
+}
 void printc(int **c) {
 	static wchar_t s[1024], ss[1024];
 	for (int r = *s = 0; r < **c; ++r) {
@@ -43,5 +54,13 @@ void printc(int **c) {
 		putws(s);
 	}
 }
-void putws(const wchar_t* x) {for (const wchar_t *_putws_t = x; *_putws_t; ++_putws_t) putwchar(*_putws_t); putwchar(L'\n');}
-void putcs(char* x) {for (const char *_putws_t = x; *_putws_t; ++_putws_t) putchar(*_putws_t); putchar('\n');}
+void putws(const wchar_t* x) {
+	for (const wchar_t *_putws_t = x; *_putws_t; ++_putws_t)
+		putwchar(*_putws_t);
+	putwchar(L'\n');
+}
+void putcs(char* x) {
+	for (const char *_putws_t = x; *_putws_t; ++_putws_t)
+		putchar(*_putws_t);
+	putchar('\n');
+}

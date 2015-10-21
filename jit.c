@@ -1,9 +1,5 @@
 #include "defs.h"
 #include "ir.h"
-
-int getres(); 
-void printts(const int *t);
-void printc(int **c);
 #include "n3.h"
 
 // Conditions have the form x=y=z=...=t.
