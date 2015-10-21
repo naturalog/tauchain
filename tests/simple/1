@@ -3,7 +3,7 @@ kb
 fin.
 
 query
-?x :foo :y.
+?x :foo ?y.
 fin.
 
 shouldbe

@@ -7,6 +7,5 @@ query
 fin.
 
 shouldbe
-:baz :foo :bar.
 fin.
 thatsall

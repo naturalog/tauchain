@@ -412,7 +412,6 @@ public:
 	{
 		FUN;
 		ASSERT(type != OFFSET);
-		ASSERT(type != BOUND);
 		ASSERT(x->type != OFFSET);
 		ASSERT(x->type != BOUND);
 		if(type == NODE && x->type == NODE)
@@ -422,9 +421,7 @@ public:
 			ASSERT(op->_terms.equals(term, x->term) == r);
 			return r;
 		}
-		else if (type == UNBOUND && (x->type == UNBOUND || x->type == NODE || x->type == LIST))
-			return true;
-		else if (x->type == UNBOUND && (type == UNBOUND || type == NODE || type == LIST))
+		else if (type == BOUND || type == UNBOUND) // we must have been an unbound var
 			return true;
 		else if (type == LIST && x->type == LIST)
 		{
@@ -992,15 +989,14 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	for (auto i: *ep) 
 	{
 		TRACE(dout << "---------------------" << endl);
-		auto os = i.first->getValue();
-		auto oo = i.second->getValue();
-		TRACE(dout << s->str() << "    VS     " << os->str() << endl << o->str() << "    VS    " << oo->str() << endl;)
-		TRACE(dout << "s:" << s->type << endl << "o:" << o->type << endl);
-		TRACE(dout << "os:" << os->type << endl << "oo:" << oo->type << endl);
-		if (s->would_unify(os))
+		auto os = i.first;
+		auto oo = i.second;
+		TRACE(dout << endl << s->str() << "    VS     " << os->str() << endl << o->str() << "    VS    " << oo->str() << endl;)
+		TRACE(dout << "s:" << s->type << endl << "o:" << o->type << "   os:" << os->type << endl << "oo:" << oo->type << endl);
+		if (os->would_unify(s))
 		{
-			TRACE(dout << "..");
-			if(o->would_unify(oo)) {
+			TRACE(dout << ".." << endl);
+			if(oo->would_unify(o)) {
 				TRACE(dout << "EP." << endl;)
 				return true;
 			}
