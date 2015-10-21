@@ -150,15 +150,16 @@ void parse() {
 // begin from index 1. the last element of c[0] contains
 // the sum of all sizes of all rows (except row 0)
 
-void makeset(int ***c, int x, int y) {
-	int *r = MALLOC(int, 3), c00 = ***c;
+void makeset(int ***_c, int x, int y) {
+	int *r = MALLOC(int, 3), rows = ***_c;
 	if (x > y) r[0] = y, r[1] = x;
 	else r[0] = x, r[1] = y;
 	r[2] = 0;
-	(*c = REALLOC(*c, 1 + c00, int*))[c00] = r, // add row
-	***c = ++c00, // update row count
-	(**c = REALLOC(**c, 1+c00, int*))[c00 - 1] = 3; // update row size
-	++c[0][0][c00];
+	int **c = *_c = REALLOC(*_c, 1 + rows, int*), t = c[0][**c];
+	c[rows] = r, // add row
+	**c = ++rows, // update row count
+	(*c = REALLOC(*c, 1 + rows, int*))[rows - 1] = 3; // update row size
+	c[0][rows] = t + 2;
 }
 
 // add x to row i in c
@@ -175,17 +176,32 @@ void insert_sorted(int **c, int i, int x) {
 	}
 }
 
-void merge_sorted(int **c, int i, int j) {
-	if (i > j) { merge_sorted(c, j, i); return; }
+void insert(int ***_d, int *r, int l) {
+	int n = 1, **d = *_d = REALLOC(*_d, ++***_d, int*);
+	while (n < l && *d[n] < *r) ++n;
+	if (n != l) memcpy(&d[n], &d[n+1], (l - n - 1) * sizeof(int));
+	d[n] = r;
+	d[0][**d] += l;
+}
+
+void merge_sorted(int **c, int ***d, int i, int j) {
+	if (i > j) { merge_sorted(c, d, j, i); return; }
 	int li = ROWLEN(c, i), lj = ROWLEN(c, j), l = li + lj - 1;
 	int *row = MALLOC(int, l), *r = row;
 	const int *x = ROW(c, i), *y = ROW(c, j);
-	while (*x && *y) *r++ = (*x < *y ? *x++ : *y++);
+	while (*x && *y) 
+		if (*x == *y) (*r++ = *x++), *y++, (d ? --d[0][0][***d] : --c[0][**c]);
+		else *r++ = (*x < *y ? *x++ : *y++);
        	while (*x) *r++ = *x++;
        	while (*y) *r++ = *y++;
-	*r = 0, free(c[i]), c[i] = row,
-	free(c[j]), memcpy(&c[j], &c[j + 1], **c - j - 1),
-	ROWLEN(c, i) = l, --**c;
+	*r = 0;
+       	if (!d) {
+		free(c[i]), c[i] = row,
+		free(c[j]), memcpy(&c[j], &c[j + 1], (**c - j - 1) * sizeof(int*)),
+		(ROWLEN(c, i) = l), --**c,
+		memcpy(&c[0][j], &c[0][j + 1], (**c - j + 1) * sizeof(int));
+	} else insert(d, row, l);
+//	--c[0][**c];
 }
 
 int bfind(int x, const int *a, int l) {
@@ -221,14 +237,19 @@ char require(int*** _c, int x, int y) {
 	if (!i)	{ if (j) insert_sorted(c, j, x); else makeset(_c, x, y); }
 	else if (i == j) return 1;
 	else if (!j) insert_sorted(c, i, y);
-	else if (!(*c[i] < 0 && *c[j] < 0)) merge_sorted(c, i, j);
+	else if (!(*c[i] < 0 && *c[j] < 0)) merge_sorted(c, 0, i, j);
 	else return 0;
 	return 1;
 }
-
+/*
 const int** merge(const int** x, const int** y) {
-	return x=y;
-}
+	if (x[0][**x] > y[0][**y]) return merge(y, x);
+	int **r = MALLOC(int*, **x + **y);
+	for (int row = 1, rows = **x; row < rows; ++row)
+		for (int col = 0, cols = ROWLEN(x, row); col < cols; ++col)
+			for (int cc = 0, e = **y; cc < e; ++cc)
+				if (bfind(y[cc], x[row][col]) != -1)
+}*/
 
 char canmatch(int x, int y) {
 	struct res s = rs[x], d = rs[y];
@@ -247,7 +268,7 @@ char canmatch(int x, int y) {
 void test() {
 	int **c = MALLOC(int*, 3);
 	for (int n = 0; n < 3; ++n) c[n] = MALLOC(int, 4);
-	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3, c[0][3] = 10,
+	c[0][0] = 3, c[0][1] = 4, c[0][2] = 3, c[0][3] = 5,
 	c[1][0] = 4, c[1][1] = 6, c[1][2] = 7, c[1][3] = 0,
 	c[2][0] = 2, c[2][1] = 9, c[2][2] = 0;
 	putws(L"before:"), printc(c), insert_sorted(c, 1, 5),
@@ -257,9 +278,9 @@ void test() {
 	find(c, 6, 7, &i, &j), assert(i == 1 && j == 1);
 	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
-	merge_sorted(c, 1, 2);
+	merge_sorted(c, 0, 1, 2);
 	putws(L"merge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
-	c[0][0] = 1, printc(c);
+	c[0][0] = 1, c[0][1] = 0, printc(c);
 	require(&c, 1, 2), putws(L"require 1,2:"), printc(c);
 	require(&c, 3, 5), putws(L"require 3,5:"), printc(c);
 	require(&c, 4, 2), putws(L"require 4,2:"), printc(c);
