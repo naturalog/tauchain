@@ -13,6 +13,12 @@
 // the first row include the zero, except the total size
 // on the last int on the first row, (*c)[**c] or c[0][c[0][0]].
 
+// terminolog: int** is an equivalence relation, where
+// every row is an equivalence class, and the first item
+// is the representative of this class. negative int if
+// appears in a class, then it must be the only negative one,
+// and must be the representative (since negative represent nonvars).
+
 #ifdef DEBUG
 // various very expensive assertions, for debug/unittest only
 void check(int **c);
@@ -21,19 +27,20 @@ void check(int **c);
 #endif
 // simple binary search over integer array of length l
 int bfind(int x, const int *a, int l);
+// find one element in whole equivalence relation
 int find1(int **c, int x);
 // find rows for two given labels/vars. it's
 // slightly more efficient than searching each separately
 void find(int **c, int x, int y, int *i, int *j);
 // add a new class to existing relation, specifying
 // its first two members
-void makeset(int ***_c, int x, int y);
+void makeset(int ***c, int x, int y);
 // add x to row i in c
 void put_in_row(int **c, int i, int x);
 // add a row of length l to given location
-void put_row_to(int ***_d, int *r, int l, int row);
+void put_row_to(int ***c, int *r, int l, int row);
 // add a row of length l, return row num
-int put_row(int ***d, int *r, int l);
+int put_row(int ***c, int *r, int l);
 // returns union taking into account equal items.
 // e returns the number of equal items.
 int* set_union(int *x, int *y, int lx, int ly, int *e);
@@ -47,7 +54,7 @@ void merge_rows(int **c, int ***d, int i, int j);
 // require() assumes that canmatch() returned true
 // hence does not perform checks for the validity
 // of the requirement.
-char require(int*** _c, int x, int y);
+char require(int*** c, int x, int y);
 // copy while omitting one row
 int **cprm(int **c, int r);
 // merge two equivalence relations into one
