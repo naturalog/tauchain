@@ -181,10 +181,12 @@ void insert(int ***_d, int *r, int l) {
 	int n = 1, **d = *_d = REALLOC(*_d, 1 + ***_d, int*);
 	d[0] = REALLOC(d[0], 2 + **d, int);
 	while (n < **d && *d[n] < *r) ++n;
-	if (n != **d)
+	if (n != **d) {
+		d[0][**d + 1] = d[0][**d];
 		for (int k = **d - n - 1; k >= 0; --k)
 			d[n + k + 1] = d[n + k],
-			d[0][n + k + 1] = d[0][n + k],
+			d[0][n + k + 1] = d[0][n + k];
+	}
 	d[n] = r, d[0][n] = l, d[0][++(**d)] += l;
 }
 
@@ -275,10 +277,7 @@ int **cprm(int **c, int r) {
 	int **a = MALLOC(int, **c), n = 0;
 	for (; n < r; ++n) a[n] = c[n], a[0][n] = c[0][n];
 	for (++n; n < **c; ++n) a[n - 1] = c[n], a[0][n - 1] = c[0][n];
-//	a[0][**c - 1] = c[0][**c];
-	**a = **c;
-	--**a;
-       	a[0][**a] -= c[0][r] - 1;
+	**a = **c, --**a, a[0][**a] -= c[0][r] - 1;
 	return a;
 }
 
@@ -288,7 +287,7 @@ void merge(int** x, int** y, int ***r) {
 		for (int col = 0, cols = ROWLEN(x, row) - 1; col < cols; ++col)
 			for (int cc = 1, e = **y; cc < e; ++cc)
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
-					printc(*r);
+					putws(L"found!");
 					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
 					printc(*r);
 					merge(cprm(x, row), cprm(y, cc), r);
