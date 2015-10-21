@@ -122,12 +122,13 @@ void print(const struct res* r) {
 void printt(const struct triple* t) { print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.'); }
 void printts(const int *t) { if (!t) return; putws(L"{ "); while (*++t) printt(&ts[*t]); putwchar(L'}'); }
 void printr(const struct rule* r) { printts(r->p); putws(L" => "); printts(r->c), putws(L""); }
+void printa(int *a, int l) { for (int n = 0; n < l; ++n) wprintf(L"%d ", a[n]); }
 void printc(int **c) {
 	static wchar_t s[1024], ss[1024];
 	for (int r = *s = 0; r < **c; ++r) {
 		*s = 0;
 		swprintf(s, 1024, L"row %d:\t", r);
-		for (int n = 0; n < (r ? ROWLEN(c, r) : 1+**c); ++n)
+		for (int n = 0; n < (r ? ROWLEN(c, r) : **c); ++n)
 			swprintf(ss, 1024, L"%d\t", ROW(c, r)[n]), wcscat(s, ss);
 		putws(s);
 	}
@@ -182,12 +183,10 @@ void insert(int ***_d, int *r, int l) {
 	d[0] = REALLOC(d[0], 2 + **d, int);
 	while (n < **d && *d[n] < *r) ++n;
 	if (n != **d) {
-		d[0][**d + 1] = d[0][**d];
-		for (int k = **d - n - 1; k >= 0; --k)
-			d[n + k + 1] = d[n + k],
-			d[0][n + k + 1] = d[0][n + k];
+		memcpy(&d[n + 1], &d[n], sizeof(int*) * (**d - n + 1));
+		memcpy(&d[0][n + 1], &d[0][n], sizeof(int) * (**d - n + 2));
 	}
-	d[n] = r, d[0][n] = l, d[0][++(**d)] += l;
+	d[n] = r, d[0][n] = l, (d[0][1 + **d] += l - 1), ++**d;
 }
 
 // set union
@@ -204,15 +203,8 @@ int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
 }
 
 void merge_into(int *x, int *y, int lx, int ly, int ***d) {
-	int l = lx + ly - 1;
-	int *row = MALLOC(int, l), *r = row, e = 0;
-	while (*x && *y)
-		if (*x == *y) (*r++ = *x++), *y++, ++e;
-		else *r++ = (*x < *y ? *x++ : *y++);
-       	while (*x) *r++ = *x++;
-       	while (*y) *r++ = *y++;
-	*r = 0;
-	insert(d, row, l - e);
+	int e, *r = merge_rows(x, y, lx, ly, &e);
+	insert(d, r, lx + ly - 1 - e);
 }
 
 // if d!=0, merge into a new row in d
