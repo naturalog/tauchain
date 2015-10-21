@@ -245,17 +245,23 @@ void insert_sorted(int **c, int i, int x) {
 #endif	
 }
 
-// add a row of length l
-void insert(int ***_d, int *r, int l) {
+// add a row of length l, return row num
+int insert(int ***_d, int *r, int l) {
 	int dsz = ***_d, n = 1, **d = *_d = REALLOC(*_d, 1 + dsz, int*), s = _d[0][0][dsz];
 	d[0] = REALLOC(d[0], 2 + dsz, int);
+	if (dsz == 1) {
+		d[0][0] = 2, d[0][2] = (d[0][1] = l) - 1, d[1] = r;
+		check(d);
+		return 1;
+	}
 	while (n < **d && *d[n] < *r) ++n;
 	if (n != dsz) {
 		memmove(&d[n + 1], &d[n], sizeof(int*) * (dsz - n));
 		memmove(&d[0][n + 1], &d[0][n], sizeof(int) * (dsz - n + 1));
 	}
 	d[n] = r, d[0][n] = l, (d[0][1 + dsz] = s + l - 1), ++**d;
-	check(d);
+	check(*_d);
+	return n;
 }
 
 // set union
@@ -271,10 +277,19 @@ int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
 	return *r = 0, row;
 }
 
+void merge_sorted(int **c, int ***d, int i, int j);
 void merge_into(int *x, int *y, int lx, int ly, int ***d) {
-	int e, *r = merge_rows(x, y, lx, ly, &e);
+	int e, row, n;
+	int *r = merge_rows(x, y, lx, ly, &e);
+	int s = lx + ly - 1 - e;
 	check(*d);
-	insert(d, r, lx + ly - 1 - e);
+	for (n = 0; n < s; ++n)
+		if ((row = find1(*d, r[n]))) {
+			merge_sorted(*d, 0, row, insert(d, r, s));
+			return;
+		}
+	insert(d, r, s);
+	check(*d);
 }
 
 // merge rows i,j in c.
@@ -282,7 +297,11 @@ void merge_into(int *x, int *y, int lx, int ly, int ***d) {
 void merge_sorted(int **c, int ***d, int i, int j) {
 	if (i > j) { merge_sorted(c, d, j, i); return; }
 	int li = c[0][i], lj = c[0][j], l = li + lj - 1, e;
-	if (d) { merge_into(c[i], c[j], li, lj, d); return; }
+	if (d) {
+		merge_into(c[i], c[j], li, lj, d);
+		check(*d);
+		return;
+	}
 	int *row = merge_rows(c[i], c[j], li, lj, &e), csz = **c;
 	c[0][**c] -= e, // update total count
 	free(c[i]), c[i] = row, free(c[j]), // put new row and free old ones
@@ -332,8 +351,11 @@ void merge(int** x, int** y, int ***r) {
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
 					putws(L"found!");
 					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
+					check(*r);
 					printc(*r);
-					check(x); check(y); check(*r);
+					check(x);
+					check(y);
+					check(*r);
 					merge(cprm(x, row), cprm(y, cc), r);
 				}
 }
