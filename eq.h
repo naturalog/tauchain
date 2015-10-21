@@ -8,7 +8,10 @@
 // of arrays in c, and (*c)[n] contains the length of
 // the n'th equivalence class. the classes therefore
 // begin from index 1. the last element of c[0] contains
-// the sum of all sizes of all rows (except row 0)
+// the sum of all sizes of all rows (except row 0). all rows
+// except the first are zero-terminated, and the sizes on
+// the first row include the zero, except the total size
+// on the last int on the first row, (*c)[**c] or c[0][c[0][0]].
 
 #ifdef DEBUG
 // various very expensive assertions, for debug/unittest only
@@ -31,7 +34,8 @@ void put_in_row(int **c, int i, int x);
 void put_row_to(int ***_d, int *r, int l, int row);
 // add a row of length l, return row num
 int put_row(int ***d, int *r, int l);
-// e returns the number of equal items
+// returns union taking into account equal items.
+// e returns the number of equal items.
 int* set_union(int *x, int *y, int lx, int ly, int *e);
 void delrow(int **c, int r);
 // merge rows x,y and store merged row in another
