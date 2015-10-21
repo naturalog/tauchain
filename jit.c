@@ -157,10 +157,23 @@ void parse() {
 // begin from index 1. the last element of c[0] contains
 // the sum of all sizes of all rows (except row 0)
 #ifdef DEBUG
+// various very expensive assertions, for debug/unittest only
 void check(int **c) {
 	int s = 0;
+	// recalc total size
 	for (int n = 0; n < **c; ++n) assert(c[n][0] && c[0][n]), s += c[0][n];
-	assert(s - 2 * **c == c[0][**c] - 1);
+	assert(s - 2 * **c == c[0][**c] - 1); // assert total size
+	for (int n = 1; n < **c; ++n) {
+		char bound = c[n][0] < 0 ? 1 : 0;
+		assert(c[n][c[0][n] - 1] == 0); // assert zero termination matching the sizes vector
+		for (int k = 0; k < c[0][n] - 1; ++k) {
+			if (!bound || k) assert(c[n][k] > 0); // assert only one nonvar binding
+			for (int n1 = 1; n < **c; ++n)
+				for (int k1 = 0; k < c[0][n] - 1; ++k)
+					if (n != n1 && k != k1)
+						assert(c[n][k] != c[n1][k1]); // assert global uniqueness
+		}
+	}
 }
 #else
 #define check(x)
@@ -168,7 +181,7 @@ void check(int **c) {
 
 // simple binary search over integer array of length l
 int bfind(int x, const int *a, int l) {
-	int f = 0, m = l / 2;
+	int f = 0, m = --l / 2;
 	while (f <= l)
 		if (a[m] < x) f = m + 1, m = (f + l) / 2;
 		else if (a[m] == x) return m;
@@ -264,20 +277,18 @@ void merge_into(int *x, int *y, int lx, int ly, int ***d) {
 	insert(d, r, lx + ly - 1 - e);
 }
 
-// if d!=0, merge into a new row in d
+// merge rows i,j in c.
+// if d!=0, merge into a new row in d.
 void merge_sorted(int **c, int ***d, int i, int j) {
 	if (i > j) { merge_sorted(c, d, j, i); return; }
-	int li = ROWLEN(c, i), lj = ROWLEN(c, j), l = li + lj - 1, e;
-	if (d) {
-		merge_into(c[i], c[j], li, lj, d);
-		return;
-	}
-	int *row = merge_rows(c[i], c[j], li, lj, &e);
-	c[0][**c] -= e;
+	int li = c[0][i], lj = c[0][j], l = li + lj - 1, e;
+	if (d) { merge_into(c[i], c[j], li, lj, d); return; }
+	int *row = merge_rows(c[i], c[j], li, lj, &e), csz = **c;
+	c[0][**c] -= e, // update total count
 	free(c[i]), c[i] = row, free(c[j]), // put new row and free old ones
-	memmove(&c[j], &c[j + 1], (**c - j - 1) * sizeof(int*)), // shift rows down
-	(ROWLEN(c, i) = l), --**c, // update row and rows size
-	memmove(&c[0][j], &c[0][j + 1], (**c - j + 1) * sizeof(int)); // shift sizes down
+	memmove(&c[j], &c[j + 1], (csz - j - 1) * sizeof(int*)), // shift rows down
+	memmove(&c[0][j], &c[0][j + 1], (csz - j) * sizeof(int)); // shift sizes down
+	c[0][i] = l, --**c; // update row and rows size
 	check(c);
 }
 
@@ -319,13 +330,11 @@ void merge(int** x, int** y, int ***r) {
 		for (int col = 0, cols = ROWLEN(x, row) - 1; col < cols; ++col)
 			for (int cc = 1, e = **y; cc < e; ++cc)
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
-					check(x), check(y), check(*r);
 					putws(L"found!");
 					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
-					check(x); check(y); check(*r);
 					printc(*r);
-					merge(cprm(x, row), cprm(y, cc), r);
 					check(x); check(y); check(*r);
+					merge(cprm(x, row), cprm(y, cc), r);
 				}
 }
 
@@ -370,6 +379,7 @@ void test() {
 	require(&d, 4, 2), putws(L"require 4,2:"), printc(d);
 	require(&d, -1, 1), putws(L"require -1,1:"), printc(d);
 	require(&d, 5, 2), putws(L"require 5,2:"), printc(d);
+	require(&d, -2, 5), putws(L"require -2,5:"), printc(d);
 	putws(L"merging:"), printc(c), putws(L""),
 	putws(L"with:"), printc(d), putws(L"");
 	int **r = MALLOC(int*, 1);
