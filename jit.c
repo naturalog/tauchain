@@ -185,17 +185,28 @@ void merge_sorted(int **c, int i, int j) {
 	ROWLEN(c, i) = l, --**c;
 }
 
+int bfind(int x, const int *a, int l) {
+	int f = 0, m = l / 2;
+	while (f <= l)
+		if (a[m] < x) f = m + 1, m = (f + l) / 2;
+		else if (a[m] == x) return m;
+		else l = m - 1, m = (f + l) / 2;
+	return -1;
+}
+
 void find(int **c, int x, int y, int *i, int *j) {
 	if (x > y) { find(c, y, x, j, i); return; }
 	*i = *j = 0;
 	for (int row = 1, rows = **c; row < rows; ++row) {
-		const int *p = ROW(c, row), l = ROWLEN(c, row);
-		int col = 0;
-		for (; (col < l - 1) && p[col] < x; ++col);
-		if (p[col] == x) *i = row;
-		for (; (col < l - 1) && p[col] < y; ++col);
-		if (p[col] == y) *j = row;
-		if (*i && *j) return;
+		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
+		int col = bfind(x, p, l);
+		if (col != -1) {
+			*i = row;
+			if (bfind(y, p + col, l - col) != -1)
+				*j = row;
+		}
+		if (!*j) { if (bfind(y, p, l) != -1) { *j = row; if (*i) return; } }
+		else if (*i) return;
 	}
 }
 
@@ -204,16 +215,14 @@ void find(int **c, int x, int y, int *i, int *j) {
 // of the requirement.
 char require(int*** _c, int x, int y) {
 	assert(x != y && (x > 0 || y > 0)); // at least one var
-	int **c = *_c;
-	int i, j;
-	char r = 1;
+	int **c = *_c, i, j;
 	find(c, x, y, &i, &j);
 	if (!i)	{ if (j) insert_sorted(c, j, x); else makeset(_c, x, y); }
 	else if (i == j) return 1;
 	else if (!j) insert_sorted(c, i, y);
 	else if (!(*c[i] < 0 && *c[j] < 0)) merge_sorted(c, i, j);
-	else r = 0;
-	return r;
+	else return 0;
+	return 1;
 }
 
 const int** merge(const int** x, const int** y) {
@@ -248,7 +257,7 @@ void test() {
 	find(c, 6, 0, &i, &j), assert(i == 1 && j == 0);
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
 	merge_sorted(c, 1, 2);
-	putws(L"erge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
+	putws(L"merge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
 	c[0][0] = 1, printc(c);
 	require(&c, 1, 2), putws(L"require 1,2:"), printc(c);
 	require(&c, 3, 5), putws(L"require 3,5:"), printc(c);
