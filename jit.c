@@ -158,7 +158,7 @@ void makeset(int ***_c, int x, int y) {
 	int **c = *_c = REALLOC(*_c, 1 + rows, int*), t = c[0][**c];
 	c[rows] = r, // add row
 	**c = ++rows, // update row count
-	(*c = REALLOC(*c, 1 + rows, int*))[rows - 1] = 3; // update row size
+	(*c = REALLOC(*c, 2 + rows, int*))[rows - 1] = 3; // update row size
 	c[0][rows] = t + 2; // update total count
 }
 
@@ -178,10 +178,14 @@ void insert_sorted(int **c, int i, int x) {
 
 // add a row of length l
 void insert(int ***_d, int *r, int l) {
-	int n = 1, **d = *_d = REALLOC(*_d, ++***_d, int*);
-	while (n < l && *d[n] < *r) ++n;
-	if (n != l) memcpy(&d[n], &d[n+1], (l - n - 1) * sizeof(int));
-	d[n] = r, d[0][**d] += l;
+	int n = 1, **d = *_d = REALLOC(*_d, 1 + ***_d, int*);
+	d[0] = REALLOC(d[0], 2 + **d, int);
+	while (n < **d && *d[n] < *r) ++n;
+	if (n != **d)
+		for (int k = **d - n - 1; k >= 0; --k)
+			d[n + k + 1] = d[n + k],
+			d[0][n + k + 1] = d[0][n + k],
+	d[n] = r, d[0][n] = l, d[0][++(**d)] += l;
 }
 
 // set union
@@ -199,16 +203,15 @@ int* merge_rows(int *x, int *y, int lx, int ly, int *e) {
 
 void merge_into(int *x, int *y, int lx, int ly, int ***d) {
 	int l = lx + ly - 1;
-	int *row = MALLOC(int, l), *r = row;
+	int *row = MALLOC(int, l), *r = row, e = 0;
 	while (*x && *y)
-		if (*x == *y) (*r++ = *x++), *y++;
+		if (*x == *y) (*r++ = *x++), *y++, ++e;
 		else *r++ = (*x < *y ? *x++ : *y++);
        	while (*x) *r++ = *x++;
        	while (*y) *r++ = *y++;
 	*r = 0;
-	insert(d, row, l);
+	insert(d, row, l - e);
 }
-
 
 // if d!=0, merge into a new row in d
 void merge_sorted(int **c, int ***d, int i, int j) {
@@ -268,15 +271,29 @@ char require(int*** _c, int x, int y) {
 	return 1;
 }
 
-int** merge(int** x, int** y) {
-	if (x[0][**x] > y[0][**y]) return merge(y, x);
-	int **r = MALLOC(int*, **x + **y);
+int **cprm(int **c, int r) {
+	int **a = MALLOC(int, **c), n = 0;
+	for (; n < r; ++n) a[n] = c[n], a[0][n] = c[0][n];
+	for (++n; n < **c; ++n) a[n - 1] = c[n], a[0][n - 1] = c[0][n];
+//	a[0][**c - 1] = c[0][**c];
+	**a = **c;
+	--**a;
+       	a[0][**a] -= c[0][r] - 1;
+	return a;
+}
+
+void merge(int** x, int** y, int ***r) {
+	if (x[0][**x] > y[0][**y]) { merge(y, x, r); return; }
 	for (int row = 1, rows = **x; row < rows; ++row)
-		for (int col = 0, cols = ROWLEN(x, row); col < cols; ++col)
-			for (int cc = 0, e = **y; cc < e; ++cc)
-				if (bfind(x[row][col], y[cc], y[0][cc]) != -1)
-					merge_into(y[cc], x[row], y[0][cc], x[0][row], &r);
-	return r;
+		for (int col = 0, cols = ROWLEN(x, row) - 1; col < cols; ++col)
+			for (int cc = 1, e = **y; cc < e; ++cc)
+				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
+					printc(*r);
+					merge_into(y[cc], x[row], y[0][cc], x[0][row], r);
+					printc(*r);
+					merge(cprm(x, row), cprm(y, cc), r);
+					return;
+				}
 }
 
 char canmatch(int x, int y) {
@@ -308,12 +325,22 @@ void test() {
 	find(c, 9, 7, &i, &j), assert(i == 2 && j == 1);
 	merge_sorted(c, 0, 1, 2);
 	putws(L"merge_sorted(c, 1, 2):"), printc(c), fflush(stdout);
-	c[0][0] = 1, c[0][1] = 0, printc(c);
-	require(&c, 1, 2), putws(L"require 1,2:"), printc(c);
-	require(&c, 3, 5), putws(L"require 3,5:"), printc(c);
-	require(&c, 4, 2), putws(L"require 4,2:"), printc(c);
-	require(&c, -1, 1), putws(L"require -1,1:"), printc(c);
-	require(&c, 5, 2), putws(L"require 5,2:"), printc(c);
+	int **d = MALLOC(int*, 1);
+	*d = MALLOC(int, 2);
+	d[0][0] = 1, d[0][1] = 0, printc(d);
+	require(&d, 1, 2), putws(L"require 1,2:"), printc(d);
+	require(&d, 3, 5), putws(L"require 3,5:"), printc(d);
+	require(&d, 4, 2), putws(L"require 4,2:"), printc(d);
+	require(&d, -1, 1), putws(L"require -1,1:"), printc(d);
+	require(&d, 5, 2), putws(L"require 5,2:"), printc(d);
+	putws(L"merging:"), printc(c), putws(L""),
+	putws(L"with:"), printc(d), putws(L"");
+	int **r = MALLOC(int*, 1);
+	*r = MALLOC(int, 2);
+	r[0][0] = 1, r[0][1] = 0;
+	printc(r);
+	merge(c, d, &r);
+	putws(L"result:"), printc(r), putws(L""), fflush(stdout);
 }
 
 int _main(/*int argc, char** argv*/) {
