@@ -16,15 +16,15 @@ int mktriple(int s, int p, int o) {
 	if (!(nts % chunk)) ts = REALLOC(ts, chunk * (nts / chunk + 1), triple);
 	return ts[nts].s = s, ts[nts].p = p, ts[nts].o = o, nts++;
 }
-int mkrule(premise *p, int *c) {
+int mkrule(premise *p, int np, int *c) {
 	if (!(nrls % chunk)) rls = REALLOC(rls, chunk * (nrls / chunk + 1), rule);
-	return rls[nrls].c = c, rls[nrls].p = p, nrls++;
+	return rls[nrls].c = c, rls[nrls].p = p, rls[nrls].np = np, nrls++;
 }
 
 void print(const res* r) {
 	if (!r) return;
-	if (r->type != '.') { putws(r->value); return; }
-	putws(L"( ");
+	if (r->type != '.') { wprintf(r->value); return; }
+	wprintf(L"( ");
 	const int *a = r->args;
 	while (*++a) print(&rs[*a]), putwchar(L' ');
 	putwchar(L')');
@@ -34,28 +34,26 @@ void printt(const triple* t) {
 }
 void printts(const int *t) {
 	if (!t) return;
-	putws(L"{ ");
+	wprintf(L"{ ");
 	while (*++t) printt(&ts[*t]); putwchar(L'}');
 }
 void printps(const premise *p, int np) {
 	if (!p) return;
-	putws(L"{ ");
-	for (int n = 0; n < np; ++n) {
-		printt(&ts[p[n].p]), putws(L" e: ");
-		for (int k = 0; k < nrls; ++k)
-			for (int c = 0; c < rls[k].c[c]; ++c)
-			       	printc(p[n].e[k][c]);
-	}
+	wprintf(L"{ ");
+	for (int n = 0; n < np; ++n) printt(&ts[p[n].p]);
 	putwchar(L'}');
 }
 void printr(const rule* r) {
-	printps(r->p, r->np);
-	putws(L" => "); printts(r->c), putws(L"equality relations:");
+	if (!r) return;
+	if (r->p) printps(r->p, r->np);
+	wprintf(L" => ");
+	if (r->c) printts(r->c);
 }
 void printa(int *a, int l) {
 	for (int n = 0; n < l; ++n) wprintf(L"%d ", a[n]);
 }
 void printc(int **c) {
+	if (!c) return;
 	static wchar_t s[1024], ss[1024];
 	for (int r = *s = 0; r < **c; ++r) {
 		*s = 0;
@@ -74,11 +72,4 @@ void putcs(char* x) {
 	for (const char *_putws_t = x; *_putws_t; ++_putws_t)
 		putchar(*_putws_t);
 	putchar('\n');
-}
-
-premise* topremises(int* p) {
-	premise *r = MALLOC(premise, *p - 1);
-	for (int n = 1; n < *p - 1; ++n) r[n].p = p[n];
-	free(p);
-	return r;
 }

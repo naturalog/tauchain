@@ -25,9 +25,14 @@ char compile_pc(int r, int p, int r1, int c) {
 	struct triple d = ts[rls[r1].c[c]];
 	int ***e = &rls[r].p[p].e[r1][c];
 	*e = create_relation();
-	return 	compile_res(*e, s.p, d.p) &&
+	if (! 	compile_res(*e, s.p, d.p) &&
 		compile_res(*e, s.s, d.s) &&
-		compile_res(*e, s.o, d.o);
+		compile_res(*e, s.o, d.o))
+		return 0;
+	wprintf(L"equality relation for "), printt(&s),
+	wprintf(L" vs "), printt(&d),
+	wprintf(L" is:\n"), printc(*e);
+	return 1;
 }
 void compile_premise(int r, int p) {
 	for (int r1 = 0; r1 < nrls; ++r1)
@@ -44,9 +49,9 @@ void compile() {
 int _main(/*int argc, char** argv*/) {
 	const size_t buflen = 256;
 	setlocale(LC_ALL, "");
-	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0); // reserve zero indices to signal failure
+	mkres(0, 0), mktriple(0, 0, 0), mkrule(0, 0, 0); // reserve zero indices to signal failure
 //	test();
-	return 0;
+//	return 0;
 	int pos = 0;
 	input = MALLOC(wchar_t, buflen);
 	while (!feof(stdin)) { // read whole doc into mem

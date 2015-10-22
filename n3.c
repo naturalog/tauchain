@@ -51,6 +51,13 @@ int gettriple() {
 	int t = mktriple(s, p, o);
 	return t;
 }
+premise* topremises(int* p) {
+	premise *r = MALLOC(premise, *p);
+	for (int n = 1; n <= *p; ++n) r[n - 1].p = p[n], r[n - 1].e = 0;
+	assert(p[1 + *p] == 0);
+	free(p);
+	return r;
+}
 int getrule() {
 	int r;
 	premise *p;
@@ -60,12 +67,21 @@ int getrule() {
 	}
 	if (skip(), !*input) return 0;
 	if (*input != L'{') {
-		int *r = CALLOC(int, 3);
-		if (!(r[r[r[2] = 0] = 1] = gettriple())) return 0;
-		return in_query ? mkrule(topremises(r), 0) : mkrule(0, r);
+		int r;
+		if (!(r = gettriple())) return 0;
+		if (in_query) {
+			(p = MALLOC(premise, 1))->p = r, p->e = 0;		
+			return mkrule(p, 1, 0);
+		}
+		int *rr = CALLOC(int, 3);
+		rr[rr[rr[2] = 0] = 1] = r;
+		return mkrule(0, 0, rr);
 	}
 	++input;
-	p = topremises(getlist(gettriple, L'}')), expect(L"=>"), skip(), expect(L"{"), r = mkrule(p, getlist(gettriple, L'}'));
+	int *pp = getlist(gettriple, L'}');
+	expect(L"=>"), skip(), expect(L"{");
+	int *cc = getlist(gettriple, L'}');
+	r = mkrule(topremises(pp), *pp, cc);
 	if (*input == L'.') ++input;
 	return r;
 }
