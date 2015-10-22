@@ -64,7 +64,9 @@ void find(int **c, int x, int y, int *i, int *j) {
 
 void makeset(int ***_c, int x, int y) {
 	int *r = MALLOC(int, 3), rows = ***_c;
-	if (x > y) r[0] = y, r[1] = x; else r[0] = x, r[1] = y;
+	assert(rows && x && y);
+	if (x > y) r[0] = y, r[1] = x;
+	else r[0] = x, r[1] = y;
 	r[2] = 0;
 	int **c = *_c = REALLOC(*_c, 1 + rows, int*), t = c[0][rows];
 	c[rows] = r, **c = ++rows, // add row and update rows count
@@ -174,7 +176,7 @@ char require(int*** c, int x, int y) {
 	else if (i == j) return 1; // x,y appear at the same row
 	else if (!j) put_in_row(*c, i, y); // x appears and y doesnt, add y to x's row
 	else if (!(*c[0][i] < 0 && *c[0][j] < 0)) // both exist, at least one var
-		merge_rows(c, 0, i, j); // merge their rows
+		merge_rows(*c, 0, i, j); // merge their rows
 	else return 0; // can't match two different nonvars
 	return 1;
 }
