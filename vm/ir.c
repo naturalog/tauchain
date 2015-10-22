@@ -7,7 +7,7 @@ int nts = 0, nrs = 0;
 const size_t chunk = 64;
 
 int mkterm(const wchar_t* s, char type) {
-	if (s) {
+	if (s && !type) {
 		if (*s == L'?') type = '?';
 		else if (*s == L'_') type = '_';
 	}
@@ -15,9 +15,8 @@ int mkterm(const wchar_t* s, char type) {
 	return terms[nts].type = type, terms[nts].value = s, nts++;
 }
 int mktriple(int s, int p, int o) {
-	int t = mkterm(0, '.'), *a;
-	term *tt = &terms[t];
-	tt->args = a = MALLOC(int, 3), a[0] = p, a[1] = s, a[2] = o;
+	int t = mkterm(0, 'T'), *a;
+	terms[t].args = a = MALLOC(int, 3), a[0] = p, a[1] = s, a[2] = o;
 	return t;
 }
 int mkrule(premise *p, int np, int *c) {
@@ -30,18 +29,19 @@ premise* mkpremise(int r) {
 	return p;
 }
 
+void _print(int t) { print(&terms[t]); }
 void print(const term* r) {
 	if (!r) return;
+	if (r->type == 'T') {
+		_print(r->args[1]), putwchar(L' '), _print(r->args[0]),
+		putwchar(L' '), _print(r->args[2]), putwchar(L'.');
+		return;
+	}
 	if (r->type != '.') { wprintf(r->value); return; }
 	wprintf(L"( ");
 	const int *a = r->args;
 	while (*++a) print(&terms[*a]), putwchar(L' ');
 	putwchar(L')');
-}
-void printts(const int *t) {
-	if (!t) return;
-	wprintf(L"{ ");
-	while (*++t) print(&terms[*t]); putwchar(L'}');
 }
 void printps(const premise *p, int np) {
 	if (!p) return;
@@ -51,9 +51,9 @@ void printps(const premise *p, int np) {
 }
 void printr(const rule* r) {
 	if (!r) return;
-	if (r->p) printps(r->p, r->np);
-	wprintf(L" => ");
-	if (r->c) printts(r->c);
+	printps(r->p, r->np), wprintf(L" => {"); 
+	if (r->c) for (int* t = r->c; *t; ++t) _print(*t);
+	putwchar(L'}');
 }
 void printa(int *a, int l) {
 	for (int n = 0; n < l; ++n) wprintf(L"%d ", a[n]);

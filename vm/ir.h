@@ -2,7 +2,7 @@
 
 // Following 3 structs store the kb&query.
 //
-// All int* arrays below (args, c, p) have first int as length,
+// int* arrays below (args, c) have first int as length,
 // and are also zero terminated. Hence empty list consists of two
 // integers, zero each.
 //
@@ -53,9 +53,9 @@ extern term *terms;
 extern rule *rules;
 extern int nts, nrs;
 
-int mkterm(const wchar_t* s, char type);
-int mktriple(int s, int p, int o);
-int mkrule(premise *p, int np, int *c);
+int mkterm(const wchar_t* s, char type); // constucts a nonlist term
+int mkrule(premise *premises, int num_of_premises, int *conclusions);
+int mktriple(int s, int p, int o); // returns a list term with spo as its items
 // allocate premise with its e member.
 // since e is indexed by rules id and
 // its conclusions, the rule id is given
