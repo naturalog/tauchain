@@ -37,16 +37,13 @@ char compile_pc(int r, int p, int r1, int c) {
 	wprintf(L" is:\n"), printc(*e);
 	return 1;
 }
-void compile_premise(int r, int p) {
-	for (int r1 = 1; r1 < nrls; ++r1)
-		if (rls[r].c) for (int c = 0; c < *rls[r].c; ++c)
-			compile_pc(r, p, r1, c);
-}
-void compile_rule(int r) {
-	for (int p = 0; p < rls[r].np; ++p) compile_premise(r, p);
-}
 void compile() {
-	for (int r = 1; r < nrls; ++r) compile_rule(r);
+	for (int r = 1; r < nrls; ++r)
+		for (int p = 0; p < rls[r].np; ++p)
+			for (int r1 = 1; r1 < nrls; ++r1)
+				if (rls[r].c)
+					for (int c = 0; c < *rls[r].c; ++c)
+						compile_pc(r, p, r1, c);
 }
 
 int _main(/*int argc, char** argv*/) {
