@@ -1,46 +1,52 @@
 #include "defs.h"
 #include "ir.h"
 
-res *rs = 0;
-triple *ts = 0; 
-rule *rls = 0; 
-int nrs = 0, nts = 0, nrls = 0;
+term *terms = 0;
+rule *rules = 0; 
+int nts = 0, nrs = 0;
 const size_t chunk = 64;
 
-int mkres(const wchar_t* s, char type) {
-	if (s && !type && *s == L'?') type = '?';
-	if (!(nrs % chunk)) rs = REALLOC(rs, chunk * (nrs / chunk + 1), res);
-	return rs[nrs].type = type, rs[nrs].value = s, nrs++;
+int mkterm(const wchar_t* s, char type) {
+	if (s) {
+		if (*s == L'?') type = '?';
+		else if (*s == L'_') type = '_';
+	}
+	if (!(nts % chunk)) terms = REALLOC(terms, chunk * (nts / chunk + 1), term);
+	return terms[nts].type = type, terms[nts].value = s, nts++;
 }
 int mktriple(int s, int p, int o) {
-	if (!(nts % chunk)) ts = REALLOC(ts, chunk * (nts / chunk + 1), triple);
-	return ts[nts].s = s, ts[nts].p = p, ts[nts].o = o, nts++;
+	int t = mkterm(0, '.'), *a;
+	term *tt = &terms[t];
+	tt->args = a = MALLOC(int, 3), a[0] = p, a[1] = s, a[2] = o;
+	return t;
 }
 int mkrule(premise *p, int np, int *c) {
-	if (!(nrls % chunk)) rls = REALLOC(rls, chunk * (nrls / chunk + 1), rule);
-	return rls[nrls].c = c, rls[nrls].p = p, rls[nrls].np = np, nrls++;
+	if (!(nrs % chunk)) rules = REALLOC(rules, chunk * (nrs / chunk + 1), rule);
+	return rules[nrs].c = c, rules[nrs].p = p, rules[nrs].np = np, nrs++;
+}
+premise* mkpremise(int r) {
+	premise *p = MALLOC(premise, 1);
+	p->p = 0, p->e = MALLOC(int***, nrs), p->e[r] = MALLOC(int**, *rules[r].c);
+	return p;
 }
 
-void print(const res* r) {
+void print(const term* r) {
 	if (!r) return;
 	if (r->type != '.') { wprintf(r->value); return; }
 	wprintf(L"( ");
 	const int *a = r->args;
-	while (*++a) print(&rs[*a]), putwchar(L' ');
+	while (*++a) print(&terms[*a]), putwchar(L' ');
 	putwchar(L')');
-}
-void printt(const triple* t) {
-	print(&rs[t->s]), putwchar(L' '), print(&rs[t->p]), putwchar(L' '), print(&rs[t->o]), putwchar(L'.');
 }
 void printts(const int *t) {
 	if (!t) return;
 	wprintf(L"{ ");
-	while (*++t) printt(&ts[*t]); putwchar(L'}');
+	while (*++t) print(&terms[*t]); putwchar(L'}');
 }
 void printps(const premise *p, int np) {
 	if (!p) return;
 	wprintf(L"{ ");
-	for (int n = 0; n < np; ++n) printt(&ts[p[n].p]);
+	for (int n = 0; n < np; ++n) print(&terms[p[n].p]);
 	putwchar(L'}');
 }
 void printr(const rule* r) {

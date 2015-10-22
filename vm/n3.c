@@ -40,8 +40,8 @@ int getres() {
 	switch (input[p]) {
 	case 0: return 0;
 	case L'{': putws(L"Unexpected {:"), putws(input); exit(1);
-	case L'(': return ++input, mkres(getlist(getres, L')'), '.');
-	default: return mkres(take(p), 0);
+	case L'(': return ++input, mkterm(getlist(getres, L')'), '.');
+	default: return mkterm(take(p), 0);
 	}
 }
 int gettriple() {

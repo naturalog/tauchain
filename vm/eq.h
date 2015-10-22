@@ -42,8 +42,8 @@ void put_in_row(int **c, int i, int x);
 void put_row_to(int ***c, int *r, int l, int row);
 // add a row of length l, return row num
 int put_row(int ***c, int *r, int l);
-// returns union taking into account equal items.
-// e returns the number of equal items.
+// returns union taking into account equal items
+// e returns the number of equal items
 int* set_union(int *x, int *y, int lx, int ly, int *e);
 void delrow(int **c, int r);
 // merge rows x,y and store merged row in another
