@@ -8,7 +8,10 @@ OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o 
 
 
 all: tau
-tau: $(OBJECTS) $(EXECUTABLE)
+tau: $(OBJECTS)
+	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
+tau-new: CXXFLAGS += -DNEW
+tau-new: $(OBJECTS) 
 	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
 
 %.o: %.cpp `${CXX} -std=c++11 $(CXXFLAGS) -M %.cpp`

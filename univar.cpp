@@ -7,6 +7,8 @@
 using namespace std;
 using namespace old;
 
+extern int result_limit ;
+
 #define FUN setproc(__FUNCTION__);
 
 #define EEE char entry = 0
@@ -31,11 +33,18 @@ const char LAST = 33;
 #define END return false;
 #endif
 
+#ifdef NEW
+#define oneword
+#endif
 
-extern int result_limit ;
 
-
+#ifdef oneword
+typedef size_t Thing;
+#else
 class Thing;
+#endif
+
+
 typedef vector<Thing> Locals;
 
 typedef std::pair</*const*/ Thing*,/*const*/ Thing*> thingthingpair;
@@ -414,25 +423,28 @@ public:
 		ASSERT(type != OFFSET);
 		ASSERT(x->type != OFFSET);
 		ASSERT(x->type != BOUND);
-		if(type == NODE && x->type == NODE)
+		if (type == BOUND || type == UNBOUND) // we must have been an unbound var
+			return true;
+		else if (type != x->type)
+			return false;
+		else if(type == NODE)
 		{
 			TRACE(dout << op->format(term) << " =?= " << op->format(x->term) << endl;)
 			bool r = term == x->term;
 			ASSERT(op->_terms.equals(term, x->term) == r);
 			return r;
 		}
-		else if (type == BOUND || type == UNBOUND) // we must have been an unbound var
-			return true;
-		else if (type == LIST && x->type == LIST)
+		else
 		{
+			ASSERT(type == LIST);
 			if(size != x->size) return false;
 			for (size_t i = 1; i <= size; i++) 
 				if (!(this+i)->getValue()->would_unify((x+i)->getValue()))
 					return false;
 			return true;
 		}
-		return false;
 	}
+	-/*In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min) */
 };
 
 
@@ -1378,5 +1390,20 @@ bool ep_check(Thing *a, Thing *b){
 			return unify(this, arg);
 		}
 	*/
+
+
+
+/*
+Arranging switch statement cases by probability of occurrence improves performance when the
+switch statement is translated as a comparison chain; this arrangement has no negative impact when
+the statement is translated as a jump table.
+
+In general, use prototypes for all functions.
+Prototypes can convey additional information to the compiler that might enable more aggressive
+optimizations.
+
+
+
+*/
 
 #endif
