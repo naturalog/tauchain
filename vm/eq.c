@@ -1,7 +1,5 @@
-#include "defs.h"
-#include "ir.h"
-#include "n3.h"
 #include "eq.h"
+#include "vm.h"
 
 #ifdef DEBUG
 void check(int **c) {
@@ -42,7 +40,7 @@ int bfind(int x, const int *a, int l) {
 int find1(int **c, int x) {
 	assert(x);
 	for (int row = 1, col, rows = **c; row < rows; ++row) {
-		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
+		const int *p = c[row], l = c[0][row] - 1;
 		if ((col = bfind(x, p, l)) != -1) return row;
 	}
 	return 0;
@@ -52,7 +50,7 @@ void find(int **c, int x, int y, int *i, int *j) {
 	if (x > y) { find(c, y, x, j, i); return; }
 	*i = *j = 0;
 	for (int row = 1, col, rows = **c; row < rows; ++row) {
-		const int *p = ROW(c, row), l = ROWLEN(c, row) - 1;
+		const int *p = c[row], l = c[0][row] - 1;
 		if ((col = bfind(x, p, l)) != -1) {
 			*i = row;
 			if (bfind(y, p + col, l - col) != -1) *j = row;
@@ -198,7 +196,7 @@ char merge(int** x, int** y, int ***r) {
 	check(x); check(y);
 	if (x[0][**x] > y[0][**y]) return merge(y, x, r);
 	for (int row = 1, rows = **x; row < rows; ++row)
-		for (int col = 0, cols = ROWLEN(x, row) - 1; col < cols; ++col)
+		for (int col = 0, cols = x[0][row] - 1; col < cols; ++col)
 			for (int cc = 1, e = **y; cc < e; ++cc)
 				if (bfind(x[row][col], y[cc], y[0][cc]) != -1) {
 					putws(L"found!");

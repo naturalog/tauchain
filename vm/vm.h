@@ -1,4 +1,22 @@
+#include <locale.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
 #include <wchar.h>
+#include <wctype.h>
+
+#ifdef DEBUG
+#define TRACE(x) x
+#else
+#define TRACE(x)
+#endif
+
+void putws(const wchar_t* x);
+void putcs(char* x);
+#define MALLOC(x, y) malloc(sizeof(x) * (y))
+#define CALLOC(x, y) calloc(y, sizeof(x))
+#define REALLOC(x, y, z) realloc(x, (y) * sizeof(z))
 
 // Following 3 structs store the kb&query.
 //
@@ -62,9 +80,21 @@ int mktriple(int s, int p, int o); // returns a list term with spo as its items
 // to allocate the premise accordingly
 premise* mkpremise(int r);
 
-void print(const term* r);
-void printts(const int *t);
-void printps(const premise *p, int np);
-void printr(const rule* r);
-void printa(int *a, int l);
-void printc(int **c);
+void print(const term* r); // print term
+void printts(const int *t); // print array of terms
+void printps(const premise *p, int num); // print premises
+void printr(const rule* r); // print rule
+void printa(int *a, int sz); // print array of integers
+void printc(int **c); // print equivalence relation
+// complete input is read into here first, then free'd by the callse after a parser pass
+extern wchar_t *input; 
+
+void parse();
+
+// compile matching two resources into
+// an equivalence relation
+char compile_res(int ***e, int x, int y);
+// compile equivalence class representing
+// conditions of given premise to match
+// given conclusion
+char compile_pc(int r, int p, int r1, int c);

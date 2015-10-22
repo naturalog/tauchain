@@ -1,5 +1,4 @@
-#include "defs.h"
-#include "ir.h"
+#include "vm.h"
 
 term *terms = 0;
 rule *rules = 0; 
@@ -64,8 +63,8 @@ void printc(int **c) {
 	for (int r = *s = 0; r < **c; ++r) {
 		*s = 0;
 		swprintf(s, 1024, L"row %d:\t", r);
-		for (int n = 0; n < (r ? ROWLEN(c, r) : **c + 1); ++n)
-			swprintf(ss, 1024, L"%d\t", ROW(c, r)[n]), wcscat(s, ss);
+		for (int n = 0; n < (r ? c[0][r] : **c + 1); ++n)
+			swprintf(ss, 1024, L"%d\t", c[r][n], wcscat(s, ss));
 		putws(s);
 	}
 }

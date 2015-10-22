@@ -1,6 +1,4 @@
-#include "defs.h"
-#include "ir.h"
-#include "n3.h"
+#include "vm.h"
 
 wchar_t *input;
 char in_query = 0; // 1 after first "fin."
