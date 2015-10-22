@@ -8,9 +8,16 @@
 char compile_term(int ***e, int x, int y) {
 	term s = terms[x], d = terms[y];
 	if (!eithervar(s, d)) {
-		if (s.type != d.type) return 0;
-		if (s.type != '.' && s.type != 'T') return x == y ? 1 : 0;
-		if (*s.args++ != *d.args++) return 0;
+		if (s.type != d.type)
+			return 0;
+		if (s.type != '.') {
+			if (s.type != 'T') return !wcscmp(s.value, d.value);
+			return 	compile_term(e, s.args[0], d.args[0]) &&
+				compile_term(e, s.args[1], d.args[1]) &&
+				compile_term(e, s.args[2], d.args[2]);
+		}
+		if (*s.args++ != *d.args++)
+			return 0;
 		while (*s.args)
 			if (!compile_term(e, *s.args++, *d.args++))
 				return 0;
@@ -21,23 +28,18 @@ char compile_term(int ***e, int x, int y) {
 
 // compile single premise vs single conclusion
 char compile_pc(int r, int p, int r1, int c) {
-	assert(c && r && r1);
-	assert(r < nrs && r1 < nrs);
-	assert(p < rules[r].np);
+	assert(c && r && r1 && r < nrs && r1 < nrs && p < rules[r].np);
 	if (!rules[r1].c) return 0; // r1 is query
-	assert(c <= *rules[r1].c);
 	premise* prem = &rules[r].p[p];
-	assert(prem->p);
 	int *conc = &rules[r1].c[c];
-	assert(*conc);
+	assert(c <= *rules[r1].c && prem->p && *conc);
 	term s = terms[prem->p], d = terms[*conc];
-	if (!prem->e)
-		(prem->e = CALLOC(int***, nrs))[r1] = CALLOC(int**, *rules[r1].c);
+	assert(s.type == 'T' && d.type == 'T');
+	if (!prem->e) prem->e = CALLOC(int***, nrs);
+	if (!prem->e[r1]) prem->e[r1] = CALLOC(int**, *rules[r1].c);
 	int ***e = &prem->e[r1][c - 1];
-	wprintf(L"r:%d p:%d r1:%d c:%d r[r1].c[0]:%d\n", r, p, r1, c, *rules[r1].c), fflush(stdout);
-	assert(e);
-	if (!*e)
-		*e = create_relation();
+	//wprintf(L"r:%d p:%d r1:%d c:%d r[r1].c[0]:%d\n", r, p, r1, c, *rules[r1].c), fflush(stdout);
+	if (!*e) *e = create_relation();
 	if (!compile_term(e, prem->p, *conc))
 		return free(**e), free(*e), *e = 0, 0;
 	wprintf(L"equality constraints for "), print(&s),
