@@ -323,7 +323,7 @@ public:
 	}*/
 
 
-	Thing *getValue () 
+	Thing *getValue ()
 	/*
 		# If this Variable is unbound, then just return this Variable.^M
 		# Otherwise, if this has been bound to a value with unify, return the value.^M
@@ -801,7 +801,7 @@ PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, te
 	}
 }
 
-//return reference to thing by termid
+//find thing in locals or consts by termid
 Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
 	size_t i;
@@ -811,7 +811,7 @@ Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, local
 	else if (pp == CONST)
 		return consts[i];
 	else
-		ASSERT(false);
+		assert(false);
 }
 
 
@@ -1142,7 +1142,7 @@ pnode thing2node(Thing *t, qdb &r) {
 
 	dout << "thing2node: Wtf did you send me?, " << t->type << " " << t->offset << endl;
 	
-	ASSERT(false);
+	assert(false);
 }
 
 
