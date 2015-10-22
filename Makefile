@@ -55,7 +55,7 @@ pcpp: p.cpp p.h containers.h
 	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG p.cpp -opcpp -g -std=c++11 -O3
 mltt: mltt.cpp
 	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG mltt.cpp -omltt -g -std=c++11 -O3
-jit: jit.c dict.cpp ir.h ir.c n3.h n3.c
+jit: jit.c dict.cpp ir.h ir.c n3.h n3.c eq.c eq.h defs.h
 	gcc -Wall -Wpedantic -Wextra jit.c -ojit.o -c -g -DDEBUG
 	gcc -Wall -Wpedantic -Wextra n3.c -on3.o -c -g -DDEBUG
 	gcc -Wall -Wpedantic -Wextra ir.c -oir.o -c -g -DDEBUG

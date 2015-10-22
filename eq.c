@@ -165,15 +165,15 @@ void merge_rows(int **c, int ***d, int i, int j) {
 	if (d) check(*d);
 }
 
-char require(int*** _c, int x, int y) {
+char require(int*** c, int x, int y) {
 	assert(x != y && (x > 0 || y > 0)); // at least one var
-	int **c = *_c, i, j;
-	check(c);
-	find(c, x, y, &i, &j);
-	if (!i)	{ if (j) put_in_row(c, j, x); else makeset(_c, x, y); }
+	int i, j;
+	check(*c);
+	find(*c, x, y, &i, &j);
+	if (!i)	{ if (j) put_in_row(*c, j, x); else makeset(c, x, y); }
 	else if (i == j) return 1; // x,y appear at the same row
-	else if (!j) put_in_row(c, i, y); // x appears and y doesnt, add y to x's row
-	else if (!(*c[i] < 0 && *c[j] < 0)) // both exist, at least one var
+	else if (!j) put_in_row(*c, i, y); // x appears and y doesnt, add y to x's row
+	else if (!(*c[0][i] < 0 && *c[0][j] < 0)) // both exist, at least one var
 		merge_rows(c, 0, i, j); // merge their rows
 	else return 0; // can't match two different nonvars
 	return 1;

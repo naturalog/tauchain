@@ -87,5 +87,5 @@ int getrule() {
 }
 void parse() {
 	int r;
-	while ((r = getrule())) printr(&rls[r]), putwchar(L'\n');
+	while ((r = getrule()));// printr(&rls[r]), putwchar(L'\n');
 }

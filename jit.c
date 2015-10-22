@@ -23,6 +23,8 @@ char compile_res(int **e, int x, int y) {
 char compile_pc(int r, int p, int r1, int c) {
 	struct triple s = ts[rls[r].p[p].p];
 	struct triple d = ts[rls[r1].c[c]];
+	if (!rls[r].p[p].e) rls[r].p[p].e = MALLOC(int***, nrls);
+	rls[r].p[p].e[r1] = MALLOC(int**, *rls[r1].c);
 	int ***e = &rls[r].p[p].e[r1][c];
 	*e = create_relation();
 	if (! 	compile_res(*e, s.p, d.p) &&
@@ -35,15 +37,15 @@ char compile_pc(int r, int p, int r1, int c) {
 	return 1;
 }
 void compile_premise(int r, int p) {
-	for (int r1 = 0; r1 < nrls; ++r1)
-		for (int c = 0; c < *rls[p].c; ++c)
+	for (int r1 = 1; r1 < nrls; ++r1)
+		for (int c = 0; c < *rls[r].c; ++c)
 			compile_pc(r, p, r1, c);
 }
 void compile_rule(int r) {
-	for (int p = 0; p < rls[p].np; ++p) compile_premise(r, p);
+	for (int p = 0; p < rls[r].np; ++p) compile_premise(r, p);
 }
 void compile() {
-	for (int r = 0; r < nrls; ++r) compile_rule(r);
+	for (int r = 1; r < nrls; ++r) compile_rule(r);
 }
 
 int _main(/*int argc, char** argv*/) {
@@ -64,6 +66,15 @@ int _main(/*int argc, char** argv*/) {
 	parse();
 	free(_input); // input doc can be free'd right after parse
 	compile();
-	for (int n = 0; n < nrls; ++n) printr(&rls[n]);
+	for (int n = 1; n < nrls; ++n) {
+		printr(&rls[n]);
+		for (int b = 0; b < rls[n].np; ++b)
+			for (int k = 0; k < nrls; ++k)
+				if (rls[k].c) for (int m = 0; m < *rls[k].c; ++m)
+					if(rls[n].p[b].e)
+						if(rls[n].p[b].e[k])
+							printc(rls[n].p[b].e[k][m]);
+		putws(L"");
+	}
 	return 0;
 }
