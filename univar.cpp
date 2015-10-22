@@ -7,7 +7,7 @@
 using namespace std;
 using namespace old;
 
-typedef signed long offset_t;
+typedef signed long offset_t;//ptrdiff_t
 
 extern int result_limit ;
 
@@ -271,13 +271,32 @@ public:
 #define get_size(thing) (thing.size)
 #define get_thing(thing) (thing.thing)
 #define get_offset(thing) (thing.offset)
+#define is_offset(thing) (get_type(thing) == OFFSET)
+#define is_bound(thing)  (get_type(thing) == BOUND)
+static inline create_bound(Thing * val)
+{
+	Thing x;
+	x.type = BOUND;
+	x.thing = val;
+	return x;
+}
 
+#else
+
+static inline create_bound(Thing * val)
+{
+	return val;
+}
+
+static inline make_this_unbound(Thing * this)
+{
+	*this =
 
 #endif
 //static inline ThingType
 wstring str(const Thing *_x) const
 {
-	Thing &x = *_x;
+	Thing x = *_x;
 	switch (get_type(x)) {
 		case BOUND: {
 			const Thing *thing = get_thing(x);
@@ -341,14 +360,14 @@ static Thing *getValue (const Thing *_x)
 	*/
 {
 	ASSERT(_x);
-	Thing&x = *_x;
+	Thing x = *_x;
 
-	if (is_BOUND(x)) {
+	if (is_bound(x)) {
 		const Thing * thing = get_thing(x);
 		ASSERT(thing);
 		return getValue(thing);
 	}
-	else if (is_OFFSET(x))
+	else if (is_offset(x))
 	{
 		const offset_t offset = get_offset(x);
 		ASSERT(offset); // 0 would point to itself
@@ -361,6 +380,8 @@ static Thing *getValue (const Thing *_x)
 
 
 
+
+
 	/*  # If this Variable is bound, then just call YP.unify to unify this with arg.
 		# (Note that if arg is an unbound Variable, then YP.unify will bind it to
 		# this Variable's value.)
@@ -368,11 +389,11 @@ static Thing *getValue (const Thing *_x)
 		# yield, return this Variable to the unbound state.
 		# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
 	*/
-	function<bool()> unboundunifycoro(Thing *arg)
-	{
+function<bool()> unboundunifycoro(Thing * this, Thing *arg)
+{
 		TRACE(dout << "!Bound" << endl;)
-		Thing *argv = arg->getValue();
-		TRACE(dout << "value=" << argv << "/" << argv->str() << endl;)
+		Thing *argv = getValue(arg);
+		TRACE(dout << "value=" << argv << "/" << str(argv) << endl;)
 
 		if (argv == this) {
 			TRACE(dout << "argv == this" << endl;)
@@ -390,20 +411,20 @@ static Thing *getValue (const Thing *_x)
 			return [this, entry, argv]() mutable {
 				setproc(L"unify lambda 2");
 				TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" <<
-					  argv->str() << endl;)
+					  str(argv) << endl;)
 				switch (entry) {
 					case 0:
-						TRACE(dout << "binding " << this << "/" << this->str() << " to " << argv << "/" <<
-							  argv->str() << endl;)
-						ASSERT(type == UNBOUND);
-						type = BOUND;
-						thing = argv;
+						TRACE(dout << "binding " << this << "/" << str(this) << " to " << argv << "/" <<
+							  str(argv) << endl;)
+						ASSERT(is_unbound(*this));
+						Thing n = make_bound(argv);
+						*this = n;
 						entry = LAST;
 						return true;
 					case_LAST:
 						TRACE(dout << "unbinding " << this << "/" << this->str() << endl;)
 						ASSERT(type == BOUND);
-						type = UNBOUND;
+						make_this_unbound(this);
 						END
 				}
 			};
