@@ -7,6 +7,8 @@
 using namespace std;
 using namespace old;
 
+typedef signed long offset_t;
+
 extern int result_limit ;
 
 #define FUN setproc(__FUNCTION__);
@@ -102,7 +104,7 @@ pred_t compile_pred(old::nodeid pr);
 
 
 //yield once
-coro gen_succeed()
+static coro gen_succeed()
 {
 	EEE;
 	return [entry]() mutable{
@@ -117,7 +119,7 @@ coro gen_succeed()
 	};
 }
 
-join_t succeed_with_args()
+static join_t succeed_with_args()
 {
 	EEE;
 	return [entry](Thing *Ds, Thing *Do, Thing* _) mutable{
@@ -135,7 +137,7 @@ join_t succeed_with_args()
 	};
 }
 
-join_gen succeed_with_args_gen()
+static join_gen succeed_with_args_gen()
 {
 	return []() {
 		return succeed_with_args();
@@ -144,14 +146,14 @@ join_gen succeed_with_args_gen()
 
 #ifndef DEBUG
 
-bool fail()
+static bool fail()
 {
 	setproc(L"fail");
 	TRACE(dout << "..." << endl;)
 	return false;
 }
 
-bool fail_with_args(Thing *_s, Thing *_o)
+static bool fail_with_args(Thing *_s, Thing *_o)
 {
 	(void)_s;
 	(void)_o;
@@ -241,98 +243,82 @@ we have two distinct lists in this rule, each contains ?y
 the lists themselves will be just consecutive things in the locals vector
 */
 
+/* oneword:
+ 00 = bound      // address left intact
+ 01 = node       // we mostly just compare these
+ 10 = offset     // gotta shift it
+011 = list(size) //
+111 = unbound
+ */
 
-enum ThingType {UNBOUND, BOUND, NODE, LIST, OFFSET};
+
+#ifndef oneword
+
+enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
 class Thing {
 public:
 	ThingType type;
 	union {
-		Thing *thing; // for bound var
+		Thing *thing;     // for bound var
 		old::termid term; // for node
-		size_t size;  // for list
-		signed long offset; // for offset
+		size_t size;      // for list
+		offset_t offset;
 	};
-	wstring str() const
-	{
-		switch (type)
-		{
-			case UNBOUND:
-				return L"var()";
-			case BOUND:
-				ASSERT(thing);
-				return L"var(" + thing->str() + L")";
-			case NODE:
-				ASSERT(term);
-				return op->format(term);
-			case LIST: {
-				wstringstream r;
-				r << L"{" << size << L"}(";
-				for (size_t i = 0; i < size; i++) {
-					if (i != 0) r << " ";
-					r << (this + 1 + i)->str();
-				}
-				if(!size)
-					r << " ";
-				return r.str() + L")";
-			}
-			case OFFSET:
-				wstringstream r;
-				r << L"{";
-				if (offset >= 0)
-					r << L"+";
-				r << offset << L"}->";
-				r << (this + offset)->str();
-				return r.str();
-		}
-		ASSERT(false);
-	}/*
-	wstring dbgstr() const
-	{
-		static int d = 0;
-		if (d++ == 15) {
-			d = 0;
-			return L"break";
-		}
-		wstringstream r;
-		r << "[" << this << "]";
-		switch (type)
-		{
-			case UNBOUND:
-				r << L"var()";
-				break;
-			case BOUND:
-				ASSERT(thing);
-				r << L"var(" << thing << L")";
-				break;
-			case NODE:
-				ASSERT(term);
-				r << op->format(term);
-				break;
-			case LIST: {
-				r << L"{" << size << L"}(";
-				for (size_t i = 1; i < size; i++) {
-					if (i != 0) r << " ";
-					r << (this + i)->dbgstr();
-				}
-				if(!size)
-					r << " ";
-				r << L")";
-				break;
-			}
-			case OFFSET:
-				wstringstream r;
-				r << L"{";
-				if (offset >= 0)
-					r << L"+";
-				r << offset << L"}->";
-				r << (this + offset)->dbgstr();
-				break;
-		}
-		return r.str();
-	}*/
+}
+
+#define get_type(thing) (thing.type)
+#define get_term(thing) (thing.term)
+#define get_size(thing) (thing.size)
+#define get_thing(thing) (thing.thing)
+#define get_offset(thing) (thing.offset)
 
 
-	Thing *getValue ()
+#endif
+//static inline ThingType
+wstring str(const Thing *_x) const
+{
+	Thing &x = *_x;
+	switch (get_type(x)) {
+		case BOUND: {
+			const Thing *thing = get_thing(x);
+			ASSERT(thing);
+			return L"var(" + str(thing) + L")";
+		}
+		case UNBOUND:
+			return L"var()";
+		case NODE: {
+			const termid term = get_term(x);
+			ASSERT(term);
+			return op->format(term);
+		}
+		case LIST: {
+			const size_t size = get_size(x);
+			wstringstream r;
+			r << L"{" << size << L"}(";
+			for (size_t i = 0; i < size; i++) {
+				if (i != 0) r << " ";
+				r << str(_x + 1 + i);
+			}
+			if (!size)
+				r << " ";
+			return r.str() + L")";
+		}
+		case OFFSET: {
+			const offset_t offset = get_offset(x);
+			wstringstream r;
+			r << L"{";
+			if (offset >= 0)
+				r << L"+";
+			r << offset << L"}->";
+			r << str(_x + offset);
+			return r.str();
+		}
+	}
+	ASSERT(false);
+}
+
+
+static Thing *getValue (const Thing *_x)
 	/*
 		# If this Variable is unbound, then just return this Variable.^M
 		# Otherwise, if this has been bound to a value with unify, return the value.^M
@@ -353,19 +339,27 @@ public:
 
 			return result^M
 	*/
-	{
-		if (type == BOUND) {
-					ASSERT(thing);
-			return thing->getValue();
-		}
-		else if (type == OFFSET)
-		{
-			ASSERT(offset);
-			return (this + offset)->getValue();
-		}
-		else
-			return this;
+{
+	ASSERT(_x);
+	Thing&x = *_x;
+
+	if (is_BOUND(x)) {
+		const Thing * thing = get_thing(x);
+		ASSERT(thing);
+		return getValue(thing);
 	}
+	else if (is_OFFSET(x))
+	{
+		const offset_t offset = get_offset(x);
+		ASSERT(offset); // 0 would point to itself
+		return getValue(_x + offset);
+	}
+	else
+		return _x;
+}
+
+
+
 
 	/*  # If this Variable is bound, then just call YP.unify to unify this with arg.
 		# (Note that if arg is an unbound Variable, then YP.unify will bind it to
@@ -578,9 +572,11 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 	TRACE(dout << "..." << endl;)
 	EEE;
 	coro uc;
-	return [a,b,c, uc, entry]() mutable{
+	TRC(int round = 0;)
+	return [a,b,c, uc, entry TRCCAP(round)]() mutable{
 		setproc(L"unifjoin lambda");
 		TRACE(dout << "entry = " << entry << endl;)
+		TRC(round++;)
 
 		switch(entry)
 		{
@@ -588,15 +584,21 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 			uc = unify(a,b);
 			entry = LAST;
 			while(uc()){
+				ASSERT(round == 1);
 				while(c()){
+					ASSERT(round == 1);
 					return true;
 		case_LAST:;
+					ASSERT(round == 2);
 				};
+				ASSERT(round == 2);
 			}
+			ASSERT(round == 2);
 			END;
 		}
 	};
 }
+
 
 
 coro listunifycoro(Thing *a, Thing *b)
@@ -1069,12 +1071,12 @@ rule_t compile_rule(termid head, prover::termset body)
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
+					ASSERT(round == 1);
 
 					ouc = unify(o, ITEM(&locals,ho));
 					while (ouc()) {
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-
 						ASSERT(round == 1);
 
 						if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
@@ -1402,8 +1404,59 @@ In general, use prototypes for all functions.
 Prototypes can convey additional information to the compiler that might enable more aggressive
 optimizations.
 
+http://stackoverflow.com/questions/6434549/does-c11-add-the-c99-restrict-specifier-if-not-why-not
+
 
 
 */
+
+
+/*
+	wstring dbgstr() const
+	{
+		static int d = 0;
+		if (d++ == 15) {
+			d = 0;
+			return L"break";
+		}
+		wstringstream r;
+		r << "[" << this << "]";
+		switch (type)
+		{
+			case UNBOUND:
+				r << L"var()";
+				break;
+			case BOUND:
+				ASSERT(thing);
+				r << L"var(" << thing << L")";
+				break;
+			case NODE:
+				ASSERT(term);
+				r << op->format(term);
+				break;
+			case LIST: {
+				r << L"{" << size << L"}(";
+				for (size_t i = 1; i < size; i++) {
+					if (i != 0) r << " ";
+					r << (this + i)->dbgstr();
+				}
+				if(!size)
+					r << " ";
+				r << L")";
+				break;
+			}
+			case OFFSET:
+				wstringstream r;
+				r << L"{";
+				if (offset >= 0)
+					r << L"+";
+				r << offset << L"}->";
+				r << (this + offset)->dbgstr();
+				break;
+		}
+		return r.str();
+	}*/
+
+
 
 #endif
