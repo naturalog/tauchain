@@ -40,11 +40,127 @@ const char LAST = 33;
 #endif
 
 
-#ifdef oneword
-typedef size_t Thing;
+
+#ifndef oneword
+
+/*so, the idea behind this new data structuring is that each little thing doesnt have to be allocated separately,
+we can put them in one big array per rule, and we can initialize such locals array from a template simply by memcpy
+most importantly, this is just an attempt at optimization, it isnt a change needed for the correct functioning
+
+	UNBOUND, 	// unbound var
+	BOUND,  	// bound var
+	NODE, 		// nodeid - atom
+	LIST, 		// has size, is followed by its items
+	OFFSET		// pointer offset to another item in the vector
+
+so, a rule needs local variables shared among its body joins.
+these will be in one contiguous vector of things
+a link is an offset, it points to another thing within the vector
+its like a rule-local var
+the reason for this is that vars may occur multiple times, for example:
+{(?z ?y) a b. (?y ?x) a b} => ...
+we have two distinct lists in this rule, each contains ?y
+the lists themselves will be just consecutive things in the locals vector
+*/
+
+enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
+class Thing {
+public:
+	ThingType type;
+	union {
+		Thing *thing;     // for bound var
+		old::termid term; // for node
+		size_t size;      // for list
+		offset_t offset;
+	};
+};
+
+#define get_type(thing) ((thing).type)
+#define get_term(thing) ((thing).term)
+#define get_size(thing) ((thing).size)
+#define get_thing(ttttt) ((ttttt).thing)
+#define get_offset(thing) ((thing).offset)
+#define is_offset(thing) (get_type(thing) == OFFSET)
+#define is_bound(thing)  (get_type(thing) == BOUND)
+#define is_var(thing)  (get_type(thing) == BOUND || get_type(thing) == UNBOUND)
+#define is_list(thing)  (get_type(thing) == LIST)
+#define is_node(thing)  (get_type(thing) == NODE)
+#define types_differ(x, y) (x.type != y.type)
+#define sizes_differ(x, y) (x.size != y.size)
+#define are_equal(x, y) (x.type == y.type && x.size == y.size)
+
+static inline Thing create_bound(Thing * val)
+{
+	Thing x;
+	x.type = BOUND;
+	x.thing = val;
+	return x;
+}
+
+static inline void make_this_unbound(Thing * me)
+{
+	me->type = UNBOUND;
+}
+
+
 #else
-class Thing;
+
+typedef size_t Thing;
+
+
+/* oneword:
+kinda like http://software-lab.de/doc/ref.html#cell
+
+ 00 = var        // address left intact or zero
+ 01 = node       // we mostly just compare these
+010 = positive offset
+110 = negative offset
+ 11 = list(size)
+*/
+
+static inline create_bound(Thing * val)
+{
+	return val;
+}
+
+static inline make_this_unbound(Thing * me)
+{
+	*me = 0;
+}
+
+static inline offset_t get_offset(Thing x)
+{
+	byte sign = (x >> 1) & 2;
+	offset_t val = x >> 3;
+	ASSERT(val);
+	val -= (sign * val);
+	return val;
+}
+
+static inline bool types_differ(Thing a, Thing b)
+{
+	return ((a ^ b) & 0b11);
+}
+
+#define sizes_differ(x, y) (x != y)
+
+static inline bool is_bound(Thing x)
+{
+	return (((x & 0b11) == 0) && x);
+}
+
+#define is_var(thing) (!(thing & 0b11))
+#define is_node(thing) ((thing & 0b11) == 1)
+#define is_offset(thing) ((thing & 0b11) == 0b10)
+#define is_list(thing) ((thing & 0b11) == 0b11)
+#define are_equal(x, y) (x == y)
+
 #endif
+
+#define is_unbound(x) (!is_bound(x))
+
+
+//region types, globals, funcs
 
 
 typedef vector<Thing> Locals;
@@ -95,7 +211,7 @@ pred_t compile_pred(old::nodeid pr);
 
 
 
-
+//endregion
 
 
 
@@ -220,81 +336,7 @@ pred_t dbg_fail_with_args()
 
 
 
-
-
-
-/*so, the idea behind this new data structuring is that each little thing doesnt have to be allocated separately, 
-we can put them in one big array per rule, and we can initialize such locals array from a template simply by memcpy
-most importantly, this is just an attempt at optimization, it isnt a change needed for the correct functioning
-
-	UNBOUND, 	// unbound var
-	BOUND,  	// bound var
-	NODE, 		// nodeid - atom
-	LIST, 		// has size, is followed by its items
-	OFFSET		// pointer offset to another item in the vector
-
-so, a rule needs local variables shared among its body joins.
-these will be in one contiguous vector of things
-a link is an offset, it points to another thing within the vector
-its like a rule-local var
-the reason for this is that vars may occur multiple times, for example:
-{(?z ?y) a b. (?y ?x) a b} => ...
-we have two distinct lists in this rule, each contains ?y
-the lists themselves will be just consecutive things in the locals vector
-*/
-
-/* oneword:
- 00 = bound      // address left intact
- 01 = node       // we mostly just compare these
- 10 = offset     // gotta shift it
-011 = list(size) //
-111 = unbound
- */
-
-
-#ifndef oneword
-
-enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
-class Thing {
-public:
-	ThingType type;
-	union {
-		Thing *thing;     // for bound var
-		old::termid term; // for node
-		size_t size;      // for list
-		offset_t offset;
-	};
-}
-
-#define get_type(thing) (thing.type)
-#define get_term(thing) (thing.term)
-#define get_size(thing) (thing.size)
-#define get_thing(thing) (thing.thing)
-#define get_offset(thing) (thing.offset)
-#define is_offset(thing) (get_type(thing) == OFFSET)
-#define is_bound(thing)  (get_type(thing) == BOUND)
-static inline create_bound(Thing * val)
-{
-	Thing x;
-	x.type = BOUND;
-	x.thing = val;
-	return x;
-}
-
-#else
-
-static inline create_bound(Thing * val)
-{
-	return val;
-}
-
-static inline make_this_unbound(Thing * this)
-{
-	*this =
-
-#endif
-//static inline ThingType
-wstring str(const Thing *_x) const
+wstring str(const Thing *_x)
 {
 	Thing x = *_x;
 	switch (get_type(x)) {
@@ -336,8 +378,8 @@ wstring str(const Thing *_x) const
 	ASSERT(false);
 }
 
-
-static Thing *getValue (const Thing *_x)
+static Thing *getValue (Thing *_x) __attribute__ ((pure));
+static Thing *getValue (Thing *_x)
 	/*
 		# If this Variable is unbound, then just return this Variable.^M
 		# Otherwise, if this has been bound to a value with unify, return the value.^M
@@ -363,15 +405,23 @@ static Thing *getValue (const Thing *_x)
 	Thing x = *_x;
 
 	if (is_bound(x)) {
-		const Thing * thing = get_thing(x);
+		Thing * thing = get_thing(x);
 		ASSERT(thing);
 		return getValue(thing);
 	}
 	else if (is_offset(x))
 	{
 		const offset_t offset = get_offset(x);
-		ASSERT(offset); // 0 would point to itself
-		return getValue(_x + offset);
+		Thing * z = _x + offset;
+		/*
+		#ifdef oneword
+		*_x = z;
+		#else
+		_x->type = BOUND;
+		_x->thing = z;
+		#endif
+		*/
+		return getValue(z);
 	}
 	else
 		return _x;
@@ -382,85 +432,90 @@ static Thing *getValue (const Thing *_x)
 
 
 
-	/*  # If this Variable is bound, then just call YP.unify to unify this with arg.
-		# (Note that if arg is an unbound Variable, then YP.unify will bind it to
-		# this Variable's value.)
-		# Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
-		# yield, return this Variable to the unbound state.
-		# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html
-	*/
-function<bool()> unboundunifycoro(Thing * this, Thing *arg)
+/*  # If this Variable is bound, then just call YP.unify to unify this with arg.
+	# (Note that if arg is an unbound Variable, then YP.unify will bind it to
+	# this Variable's value.)
+	# Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
+	# yield, return this Variable to the unbound state.
+	# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html */
+function<bool()> unboundunifycoro(Thing * me, Thing *arg)
 {
 		TRACE(dout << "!Bound" << endl;)
 		Thing *argv = getValue(arg);
 		TRACE(dout << "value=" << argv << "/" << str(argv) << endl;)
 
-		if (argv == this) {
-			TRACE(dout << "argv == this" << endl;)
+		if (argv == me) {
+			TRACE(dout << "argv == me" << endl;)
 			//# We are unifying this unbound variable with itself, so leave it unbound.^M
 #ifdef DEBUG
-			return unbound_succeed(this, argv);
+			return unbound_succeed(me, argv);
 #else
 			return gen_succeed();
 #endif
 		}
 		else {
-			TRACE(dout << "argv != this" << endl;)
+			TRACE(dout << "argv != me" << endl;)
 
 			EEE;
-			return [this, entry, argv]() mutable {
+			return [me, entry, argv]() mutable {
 				setproc(L"unify lambda 2");
 				TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" <<
 					  str(argv) << endl;)
 				switch (entry) {
-					case 0:
-						TRACE(dout << "binding " << this << "/" << str(this) << " to " << argv << "/" <<
-							  str(argv) << endl;)
-						ASSERT(is_unbound(*this));
-						Thing n = make_bound(argv);
-						*this = n;
+					case 0: {
+						TRACE(dout << "binding " << me << "/" << str(me) << " to " << argv << "/" << str(argv) << endl;)
+						ASSERT(is_unbound(*me));
+						Thing n = create_bound(argv);
+						*me = n;
 						entry = LAST;
 						return true;
+					}
 					case_LAST:
-						TRACE(dout << "unbinding " << this << "/" << this->str() << endl;)
-						ASSERT(type == BOUND);
-						make_this_unbound(this);
+						TRACE(dout << "unbinding " << me << "/" << str(me) << endl;)
+						ASSERT(is_bound(*me));
+						make_this_unbound(me);
 						END
 				}
 			};
 		}
 	}
-	bool would_unify(/*const*/ Thing *x)
-	/*ep check is supposed to determine equality by seeing if the values would unify
-	* (but not actually doing the unifying assignment)*/
-	{
+
+
+bool would_unify(Thing *this_, Thing *x_)
+/*ep check is supposed to determine equality by seeing if the values would unify
+* (but not actually doing the unifying assignment)*/
+{
 		FUN;
-		ASSERT(type != OFFSET);
-		ASSERT(x->type != OFFSET);
-		ASSERT(x->type != BOUND);
-		if (type == BOUND || type == UNBOUND) // we must have been an unbound var
-			return true;
-		else if (type != x->type)
+		const Thing me = *this_;
+		const Thing x = *x_;
+		ASSERT(!is_offset(me));
+		ASSERT(!is_offset(x));
+		ASSERT(!is_bound(x));
+		if (is_var(me))
+			return true;// we must have been an unbound var
+		else if (types_differ(me, x))
 			return false;
-		else if(type == NODE)
+		else if(is_node(me))
 		{
-			TRACE(dout << op->format(term) << " =?= " << op->format(x->term) << endl;)
-			bool r = term == x->term;
-			ASSERT(op->_terms.equals(term, x->term) == r);
+			/*const auto this_term = get_term(this);
+			const auto x_term = get_term(x);
+			TRACE(dout << op->format(this_term) << " =?= " << op->format(x_term) << endl;)*/
+			bool r = are_equal(me, x);
+			ASSERT(op->_terms.equals(get_term(me), get_term(x)) == r);
 			return r;
 		}
 		else
 		{
-			ASSERT(type == LIST);
-			if(size != x->size) return false;
+			ASSERT(is_list(me));
+			const auto size = get_size(me);
+			if(size != get_size(x)) return false;
 			for (size_t i = 1; i <= size; i++) 
-				if (!(this+i)->getValue()->would_unify((x+i)->getValue()))
+				if (!would_unify(getValue(this_+i),getValue(x_+i)))
 					return false;
 			return true;
 		}
-	}
-	-/*In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min) */
-};
+}
+
 
 
 #ifdef DEBUG
@@ -468,7 +523,7 @@ coro unbound_succeed(Thing *x, Thing *y)
 {
 	EEE;
 	return [entry, x, y]() mutable {
-		ASSERT(x->type == UNBOUND);
+		ASSERT(is_unbound(*x));
 		setproc(L"unbound_succeed lambda");
 		TRACE(dout << x << " " << y << "entry:" << entry << endl);
 		switch (entry) {
@@ -487,7 +542,7 @@ coro unbound_succeed(Thing *x, Thing *y)
 
 wstring sprintVar(wstring label, Thing *v){
 	wstringstream wss;
-	wss << label << ": (" << v << ")" << v->str();
+	wss << label << ": (" << v << ")" << str(v);
 	return wss.str();
 }
 
@@ -499,7 +554,7 @@ wstring sprintPred(wstring label, old::nodeid pred){
 
 wstring sprintThing(wstring label, Thing *t){
 	wstringstream wss;
-	wss << label << ": [" << t << "]" << t->str();
+	wss << label << ": [" << t << "]" << str(t);
 	return wss.str();
 }
 
@@ -622,22 +677,26 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 
 
 
-coro listunifycoro(Thing *a, Thing *b)
+coro listunifycoro(Thing *a_, Thing *b_)
 {
 	setproc(L"listunifycoro");
 	TRACE(dout << "..." << endl;)
-	ASSERT(a->type == LIST);
-	ASSERT(b->type == LIST);
+
+	const Thing a = *a_;
+	const Thing b = *b_;
+
+	ASSERT(is_list(a));
+	ASSERT(is_list(b));
 
 	//gotta join up unifcoros of vars in the lists
-	if(a->size != b->size)
+	if(sizes_differ(a,b))
 		return GEN_FAIL ;
 
 	coro r = gen_succeed();
 
-	for(int i = b->size;i > 0; i--)
+	for(int i = get_size(b);i > 0; i--)
 	{
-		r = unifjoin(a+i, b+i, r);
+		r = unifjoin(a_+i, b_+i, r);
 	}
 
 	return r;
@@ -653,55 +712,47 @@ coro listunifycoro(Thing *a, Thing *b)
 	# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
 	(returns an iterator)
 */
-coro unify(Thing *a, Thing *b){
+coro unify(Thing *a_, Thing *b_){
 	FUN;
 	unifys++;
 
-	if (a == b) {
+	if (a_ == b_) {//?
 		TRACE(dout << "a == b" << endl;)
 		return gen_succeed();
 	}
 
-	//# First argument is a variable
-	TRACE(dout << "a: " << a << ", " << a->getValue() << endl;)	
-	a = a->getValue();
-	if (a->type == BOUND) {
-		ASSERT(0);// result of getvalue a bound var?
-		return unify(a, b);
-	}
-	else if (a->type == UNBOUND)
-		return a->unboundunifycoro(b);
+	//TRACE(dout << "a:[" << a_ << "]" << getValue(a_) << endl;)
 
-	//# Second argument is a variable
-	b = b->getValue();
-	if (b->type == BOUND) {
-		ASSERT(0);// result of getvalue a bound var?
-		return unify(b, a);
-	}
-	else if (b->type == UNBOUND)
-		return b->unboundunifycoro(a);
+	a_ = getValue(a_);
+	Thing a = *a_;
 
-	//# Both arguments are nodes.
-	if(a->type == NODE && b->type == NODE)
-	{
-		TRACE(dout << "Both args are nodes." << endl;)
-		if(a->term == b->term) ////////eq needed?
+	ASSERT(!is_bound(a));
+
+	if (is_unbound(a))
+		return unboundunifycoro(a_,b_);
+
+	b_ = getValue(b_);
+
+	Thing b = *b_;
+	ASSERT(!is_bound(b));
+
+	if (is_unbound(b))
+		return unboundunifycoro(b_, a_);
+
+	if(are_equal(a,b)) {
+		if (is_node(a)) {
+					ASSERT(op->_terms.equals(get_term(a), get_term(b)));
 			return gen_succeed();
-		else
-			return GEN_FAIL;
-	}
-	
-	//# Both arguments are lists
-	if(a->type == LIST && b->type == LIST)
-	{
-		TRACE(dout << "Both args are lists." << endl;)
-		return listunifycoro(a, b);
-	}
+		}
 
-
+		if (is_list(a)) {
+			TRACE(dout << "Both args are lists." << endl;)
+			return listunifycoro(a_, b_);
+		}
+	}
 
 	//# Other combinations cannot unify. Fail.
-	TRACE(dout << "Some non-unifying combination. Fail.(" << a->type << "," << b->type << ")" << endl;)
+	TRACE(dout << "Some non-unifying combination. Fail.(" << a_ << "," << b_ << ")" << endl;)
 	return GEN_FAIL;
 }
 
@@ -837,7 +888,7 @@ PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, te
 }
 
 //find thing in locals or consts by termid
-Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
+Thing &find_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
 	size_t i;
 	auto pp = thing_key(x, i, lm, cm, 0);
@@ -855,10 +906,10 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 	(void)head;
 	TRACE(dout << "locals:" << endl);
 	for (auto x: lm)
-		dout << op->format(x.first) << " : : " << x.second << "  --> " << locals.at(x.second).str() << endl;
+		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&locals.at(x.second)) << endl;
 	TRACE(dout << "consts:" << endl);
 	for (auto x: cm)
-		dout << op->format(x.first) << " : : " << x.second << "  --> " << consts.at(x.second).str() << endl;
+		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&consts.at(x.second)) << endl;
 }
 
 
@@ -1018,20 +1069,19 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
 	FUN;
-	s = s->getValue();
-	o = o->getValue();
+	s = getValue(s);
+	o = getValue(o);
 	TRACE(dout << ep->size() << " ep items:" << endl);
 	for (auto i: *ep) 
 	{
 		TRACE(dout << "---------------------" << endl);
 		auto os = i.first;
 		auto oo = i.second;
-		TRACE(dout << endl << s->str() << "    VS     " << os->str() << endl << o->str() << "    VS    " << oo->str() << endl;)
-		TRACE(dout << "s:" << s->type << endl << "o:" << o->type << "   os:" << os->type << endl << "oo:" << oo->type << endl);
-		if (os->would_unify(s))
+		TRACE(dout << endl << str(s) << "    VS     " << str(os) << endl << str(o) << "    VS    " << str(oo) << endl;)
+		if (would_unify(os,s))
 		{
 			TRACE(dout << ".." << endl);
-			if(oo->would_unify(o)) {
+			if(would_unify(oo,o)) {
 				TRACE(dout << "EP." << endl;)
 				return true;
 			}
@@ -1088,13 +1138,16 @@ rule_t compile_rule(termid head, prover::termset body)
 				memcpy(locals, locals_data, locals_bytes);
 			
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-				suc = unify(s, ITEM(&locals,hs));
+				ASSERT(hs < locals_bytes / sizeof(Thing));
+				ASSERT(ho < locals_bytes / sizeof(Thing));
+
+				suc = unify(s, &locals[hs]);
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 					ASSERT(round == 1);
 
-					ouc = unify(o, ITEM(&locals,ho));
+					ouc = unify(o, &locals[ho]);
 					while (ouc()) {
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
@@ -1159,23 +1212,25 @@ void thatsAllFolks(int nresults){
 
 
 
-pnode thing2node(Thing *t, qdb &r) {
-	t = t->getValue();
+pnode thing2node(Thing *t_, qdb &r) {
+	t_ = getValue(t_);
 
-	if (t->type == LIST)
+	auto t = *t_;
+
+	if (is_list(t))
 	{
 		const wstring head = listid();
-		for (size_t i = 1; i <= t->size; i++) {
-			auto x = (t + i);
+		for (size_t i = 1; i <= get_size(t); i++) {
+			auto x = (t_ + i);
 			r.second[head].emplace_back(thing2node(x, r));
 		}
 		return mkbnode(pstr(head));
 	}
 
-	if (t->type == NODE)
-		return std::make_shared<old::node>(old::dict[t->term->p]);
+	if (is_node(t))
+		return std::make_shared<old::node>(old::dict[get_term(t)->p]);
 
-	dout << "thing2node: Wtf did you send me?, " << t->type << " " << t->offset << endl;
+	dout << "thing2node: Wtf did you send me?, " << t_ << endl;
 	
 	assert(false);
 }
@@ -1256,11 +1311,11 @@ void yprover::query(const old::qdb& goal){
 
 		for(auto i: g)
 		{
-			Thing &s = get_thing(i->s, locals, consts, lm, cm);
-			Thing &o = get_thing(i->o, locals, consts, lm, cm);
+			Thing &s = find_thing(i->s, locals, consts, lm, cm);
+			Thing &o = find_thing(i->o, locals, consts, lm, cm);
 
 			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
-			dout << s.getValue()->str() << " " << old::dict[i->p] << " "  << o.getValue()->str() << endl;
+			dout << str(getValue(&s)) << " " << old::dict[i->p] << " "  << str(getValue(&o)) << endl;
 			add_result(r, &s, &o, i->p);
 
 		}
@@ -1427,7 +1482,19 @@ optimizations.
 
 http://stackoverflow.com/questions/6434549/does-c11-add-the-c99-restrict-specifier-if-not-why-not
 
+artificial
+This attribute is useful for small inline wrappers that if possible should appear during debugging as a unit. Depending on the debug info format it either means marking the function as artificial or using the caller location for all instructions within the inlined body.
 
+The preferred type for array indices is ptrdiff_t.
+Application
+This optimization applies to:
+• 32-bit software
+• 64-bit software
+Rationale
+Array indices are often used with pointers while doing arithmetic. Using ptrdiff_t produces more
+portable code and will generally provide good performance.
+
+/*In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min) */
 
 */
 
