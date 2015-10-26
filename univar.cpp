@@ -7,7 +7,7 @@
 using namespace std;
 using namespace old;
 
-typedef signed long offset_t;//ptrdiff_t
+typedef intptr_t offset_t;//ptrdiff_t
 
 extern int result_limit ;
 
@@ -39,7 +39,8 @@ const char LAST = 33;
 #define oneword
 #endif
 
-
+#define is_unbound(x) (!is_bound(x))
+enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
 
 #ifndef oneword
 
@@ -63,7 +64,6 @@ we have two distinct lists in this rule, each contains ?y
 the lists themselves will be just consecutive things in the locals vector
 */
 
-enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
 class Thing {
 public:
 	ThingType type;
@@ -105,8 +105,9 @@ static inline void make_this_unbound(Thing * me)
 
 #else
 
-typedef size_t Thing;
-
+typedef unsigned char byte;
+typedef uintptr_t *Thing;
+static_assert(sizeof(uintptr_t) == sizeof(size_t), "damn");
 
 /* oneword:
 kinda like http://software-lab.de/doc/ref.html#cell
@@ -118,28 +119,40 @@ kinda like http://software-lab.de/doc/ref.html#cell
  11 = list(size)
 */
 
-static inline create_bound(Thing * val)
+static inline Thing create_bound(Thing * val)
 {
-	return val;
+	ASSERT(((size_t)val & 0b11) == 0);
+	return (Thing)val;
 }
 
-static inline make_this_unbound(Thing * me)
+static inline void make_this_unbound(Thing * me)
 {
 	*me = 0;
 }
 
 static inline offset_t get_offset(Thing x)
 {
-	byte sign = (x >> 1) & 2;
-	offset_t val = x >> 3;
+	long xx = (long)x;
+	byte sign = (xx >> 1) & 2;
+	offset_t val = xx >> 3;
 	ASSERT(val);
 	val -= (sign * val);
 	return val;
 }
 
+static inline Thing* get_thing(Thing x)
+{
+	return (Thing*)x;
+}
+
+static inline termid get_term(Thing x)
+{
+	return (termid)(((uintptr_t)x) & ~0b11);
+}
+
 static inline bool types_differ(Thing a, Thing b)
 {
-	return ((a ^ b) & 0b11);
+	return (((long)a ^ (long)b) & 0b11);
 }
 
 #define sizes_differ(x, y) (x != y)
@@ -155,9 +168,22 @@ static inline bool is_bound(Thing x)
 #define is_list(thing) ((thing & 0b11) == 0b11)
 #define are_equal(x, y) (x == y)
 
+static inline ThingType get_type(Thing x)
+{
+	if(is_bound(x))
+		return BOUND;
+	if(is_unbound(x))
+		return UNBOUND;
+	if(is_list(x))
+		return LIST;
+	if(is_node(x))
+		return NODE;
+	if(is_offset(x))
+		return OFFSET;
+}
+
 #endif
 
-#define is_unbound(x) (!is_bound(x))
 
 
 //region types, globals, funcs
@@ -493,7 +519,7 @@ bool would_unify(Thing *this_, Thing *x_)
 		ASSERT(!is_bound(x));
 		if (is_var(me))
 			return true;// we must have been an unbound var
-		else if (types_differ(me, x))
+		else if (types_differ(me, x)) // in oneword mode doesnt differentiate between bound and unbound!
 			return false;
 		else if(is_node(me))
 		{
@@ -1104,6 +1130,16 @@ rule_t compile_rule(termid head, prover::termset body)
 	locals_map lm, cm;
 	Locals &locals_template = *new Locals();
 	locals_templates.push_back(&locals_template);
+	Locals &locals_template = *new Locals();
+	locals_templates.push_back(&locals_template);
+	/*LocalsQueue &locals_queue = *new LocalsQueue();
+	locals_queues.push_back(&locals_template);
+	 http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
+	 http://man7.org/linux/man-pages/man3/alloca.3.html
+	 http://www.boost.org/doc/libs/1_39_0/libs/pool/doc/index.html
+
+	 */
+
 	Locals *consts_ = new Locals();
 	constss.push_back(consts_);
 	Locals &consts = *consts_;
@@ -1230,7 +1266,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 	if (is_node(t))
 		return std::make_shared<old::node>(old::dict[get_term(t)->p]);
 
-	dout << "thing2node: Wtf did you send me?, " << t_ << endl;
+	dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
 	
 	assert(false);
 }
@@ -1313,11 +1349,9 @@ void yprover::query(const old::qdb& goal){
 		{
 			Thing &s = find_thing(i->s, locals, consts, lm, cm);
 			Thing &o = find_thing(i->o, locals, consts, lm, cm);
-
-			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
 			dout << str(getValue(&s)) << " " << old::dict[i->p] << " "  << str(getValue(&o)) << endl;
+			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
 			add_result(r, &s, &o, i->p);
-
 		}
 
 		results.emplace_back(r);
@@ -1335,7 +1369,7 @@ void yprover::query(const old::qdb& goal){
 
 //endregion
 
-#ifdef notes
+#ifdef notes65465687
 
 
 /*so it seems we have 3 variants to start with:
@@ -1494,7 +1528,19 @@ Rationale
 Array indices are often used with pointers while doing arithmetic. Using ptrdiff_t produces more
 portable code and will generally provide good performance.
 
-/*In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min) */
+In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min)
+
+Assembly/Compiler Coding Rule 4. (MH impact, MH generality) Near calls must be matched with
+near returns, and far calls must be matched with far returns. Pushing the return address on the stack
+and jumping to the routine to be called is not recommended since it creates a mismatch in calls and
+returns.
+
+When using ld, include the following command line option:
+-Bsymbolic
+If using gcc to build a library, add this option to the command-line:
+-Wl,-Bsymbolic
+
+
 
 */
 

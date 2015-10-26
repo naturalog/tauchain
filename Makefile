@@ -1,8 +1,8 @@
 CXX=clang++
 
-ASAN=  -fno-omit-frame-pointer -fno-optimize-sibling-calls  -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow 
-DBG= $(ASAN) -DDEBUG -g -ggdb -O1
-CXXFLAGS= -c -O3 $(DBG) -std=c++11 -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
+ASAN= -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow 
+DBG= $(ASAN) -DDEBUG -g -ggdb -O1 -fno-omit-frame-pointer -fno-optimize-sibling-calls 
+CXXFLAGS= -c -O3 $(DBG) -std=c++1y -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
 LDFLAGS=  $(DBG) -L/usr/local/lib #-ldl -pthread -lrt
 OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
 
