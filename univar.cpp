@@ -3,11 +3,19 @@
 #include <queue>
 #include "univar.h"
 #include <string.h>
+#include <limits>
 
 using namespace std;
 using namespace old;
 
 typedef intptr_t offset_t;//ptrdiff_t
+
+intptr_t ofst(size_t target, size_t me)
+{
+	assert(target < numeric_limits<int>::max());
+	assert(me < numeric_limits<int>::max());
+	return (int)target - (int)me;
+}
 
 extern int result_limit ;
 
@@ -39,7 +47,6 @@ const char LAST = 33;
 #define oneword
 #endif
 
-#define is_unbound(x) (!is_bound(x))
 enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
 
 #ifndef oneword
@@ -80,11 +87,12 @@ public:
 #define get_size(thing) ((thing).size)
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
-#define is_offset(thing) (get_type(thing) == OFFSET)
-#define is_bound(thing)  (get_type(thing) == BOUND)
-#define is_var(thing)  (get_type(thing) == BOUND || get_type(thing) == UNBOUND)
-#define is_list(thing)  (get_type(thing) == LIST)
-#define is_node(thing)  (get_type(thing) == NODE)
+#define is_offset(thing)	(get_type(thing) == OFFSET)
+#define is_unbound(thing)	(get_type(thing) == UNBOUND)
+#define is_bound(thing)		(get_type(thing) == BOUND)
+#define is_var(thing)		(get_type(thing) == BOUND || get_type(thing) == UNBOUND)
+#define is_list(thing)		(get_type(thing) == LIST)
+#define is_node(thing)		(get_type(thing) == NODE)
 #define types_differ(x, y) (x.type != y.type)
 #define sizes_differ(x, y) (x.size != y.size)
 #define are_equal(x, y) (x.type == y.type && x.size == y.size)
@@ -97,16 +105,44 @@ static inline Thing create_bound(Thing * val)
 	return x;
 }
 
+static inline Thing create_unbound()
+{
+	Thing x;
+	x.type = UNBOUND;
+	DBG(x.thing = (Thing *)666;)
+	return x;
+}
+
+static inline Thing create_node(termid v)
+{
+	Thing x;
+	x.type = NODE;
+	x.term = v;
+	return x;
+}
+
 static inline void make_this_unbound(Thing * me)
 {
 	me->type = UNBOUND;
 }
 
+void make_this_offset(Thing &t, offset_t o) {
+	t.type = OFFSET;
+	t.offset = o;
+}// we are getting a strange warning from asan here
+
+void make_this_list(Thing &i0, size_t size)
+{
+	i0.type = LIST;
+	i0.size = size;
+}
 
 #else
 
 typedef unsigned char byte;
 typedef uintptr_t *Thing;
+#define databits(x) (((uintptr_t)x) & ~0b11)
+#define typebits(t) ((uintptr_t)t & (uintptr_t)0b11)
 static_assert(sizeof(uintptr_t) == sizeof(size_t), "damn");
 
 /* oneword:
@@ -119,10 +155,21 @@ kinda like http://software-lab.de/doc/ref.html#cell
  11 = list(size)
 */
 
-static inline Thing create_bound(Thing * val)
+static inline Thing create_bound(Thing * v)
 {
-	ASSERT(((size_t)val & 0b11) == 0);
-	return (Thing)val;
+	ASSERT(((uintptr_t)v & 0b11) == 0);
+	return (Thing)v;
+}
+
+static inline Thing create_unbound()
+{
+	return 0;
+}
+
+static inline Thing create_node(termid v)
+{
+	ASSERT(((uintptr_t)v & 0b11) == 0);
+	return (Thing)((uintptr_t)v | 0b01);
 }
 
 static inline void make_this_unbound(Thing * me)
@@ -130,10 +177,30 @@ static inline void make_this_unbound(Thing * me)
 	*me = 0;
 }
 
+void make_this_offset(Thing &t, offset_t o) {
+	byte sign = 0;
+	if (o < 0)
+	{
+		sign = 1;
+		o = -o;
+	}
+	uintptr_t r = o;
+	r = r << 1;
+	r |= sign;
+	r = r << 2;
+	r |= 0b10;
+	t = (Thing)r;
+}
+
+void make_this_list(Thing &i0, size_t size)
+{
+	i0 = (Thing)((size << 2) | 0b11);
+}
+
 static inline offset_t get_offset(Thing x)
 {
-	long xx = (long)x;
-	byte sign = (xx >> 1) & 2;
+	uintptr_t xx = (uintptr_t)x;
+	byte sign = (xx >> 1) & 0b10;
 	offset_t val = xx >> 3;
 	ASSERT(val);
 	val -= (sign * val);
@@ -147,7 +214,12 @@ static inline Thing* get_thing(Thing x)
 
 static inline termid get_term(Thing x)
 {
-	return (termid)(((uintptr_t)x) & ~0b11);
+	return (termid)databits(x);
+}
+
+static inline size_t get_size(Thing x)
+{
+	return (size_t)((uintptr_t)x >> 2);
 }
 
 static inline bool types_differ(Thing a, Thing b)
@@ -159,13 +231,19 @@ static inline bool types_differ(Thing a, Thing b)
 
 static inline bool is_bound(Thing x)
 {
-	return (((x & 0b11) == 0) && x);
+	return ((((uintptr_t)x & (uintptr_t)0b11) == 0) && x);
 }
 
-#define is_var(thing) (!(thing & 0b11))
-#define is_node(thing) ((thing & 0b11) == 1)
-#define is_offset(thing) ((thing & 0b11) == 0b10)
-#define is_list(thing) ((thing & 0b11) == 0b11)
+static inline bool is_unbound(Thing x)
+{
+	return x == 0;
+}
+
+#define is_var(thing) 		(typebits(thing) 	== 0b00)
+#define is_node(thing) 		(typebits(thing) 	== 0b01)
+#define is_offset(thing) 	(typebits(thing) 	== 0b10)
+#define is_list(thing) 		(typebits(thing) 	== 0b11)
+
 #define are_equal(x, y) (x == y)
 
 static inline ThingType get_type(Thing x)
@@ -174,13 +252,16 @@ static inline ThingType get_type(Thing x)
 		return BOUND;
 	if(is_unbound(x))
 		return UNBOUND;
-	if(is_list(x))
-		return LIST;
 	if(is_node(x))
 		return NODE;
-	if(is_offset(x))
-		return OFFSET;
+	if(is_list(x))
+		return LIST;
+	ASSERT(is_offset(x));
+	return OFFSET;
 }
+
+
+
 
 #endif
 
@@ -693,9 +774,7 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 		case_LAST:;
 					ASSERT(round == 2);
 				};
-				ASSERT(round == 2);
 			}
-			ASSERT(round == 2);
 			END;
 		}
 	};
@@ -883,6 +962,10 @@ a join captures two indexes into the locals/consts table, which it may or may no
 bool islist(termid t)
 {
 	ASSERT(t);
+	dout << t << endl;
+	dout << t->p << endl;
+	dout << &old::dict << endl;
+	dout << " " << old::dict[t->p].value  << endl;
 	return *old::dict[t->p].value == L".";
 }
 
@@ -939,13 +1022,6 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 }
 
 
-void make_offset(Locals &locals, Thing &t, size_t pos) {
-	t.type = OFFSET;
-	t.offset = pos - locals.size();
-}// we are getting a strange warning from asan here
-
-
-
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
 	FUN;
@@ -958,8 +1034,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			lq.pop();
 			auto lst = op->get_dotstyle_list(l);
 			Thing i0; // list size item
-			i0.type = LIST;
-			i0.size = lst.size();
+			make_this_list(i0, lst.size());
 			lm[l] = locals.size();
 			locals.push_back(i0);
 			for (auto li: lst) {
@@ -968,17 +1043,15 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				if (li->p < 0) { //its a var
 					auto it = lm.find(li); //is it already in locals?
 					if (it == lm.end()) { //no? create a fresh var
-						t.type = UNBOUND;
-						t.thing = (Thing *) 666;
+						t = create_unbound();
 						lm[li] = locals.size();
 					}
 					else { //just point to it
-						make_offset(locals, t, it->second); 
+						make_this_offset(t, ofst(it->second, locals.size()));
 					}
 				}
 				else { //its a node
-					t.type = NODE;
-					t.term = li;
+					t = create_node(li);
 					if (islist(li))
 						lq.push(li);
 				}
@@ -991,9 +1064,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	auto link_lists = [&locals, &lm]() {
 		for (size_t i = 0; i < locals.size(); i++) {
 			Thing &x = locals[i];
-			if (x.type == NODE && islist(x.term)) {
-				x.type = OFFSET;
-				x.offset = lm.at(x.term) - i;
+			if (is_node(x) && islist(get_term(x))) {
+				make_this_offset(x, ofst(lm.at(get_term(x)), i));
 			}
 		}
 	};
@@ -1001,9 +1073,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	auto add_var = [](old::termid x, Locals &vec, locals_map &m) {
 		setproc("add_var");		
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
-		Thing t;
-		t.type = UNBOUND;
-		t.thing = (Thing *) 666;
+		Thing t = create_unbound();
 		auto it = m.find(x);
 		if (it == m.end()) {
 			m[x] = vec.size();
@@ -1015,9 +1085,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	auto add_node = [](old::termid x, Locals &vec, locals_map &m) {
 		setproc("add_node");
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
-		Thing t;
-		t.type = NODE;
-		t.term = x;
+		Thing t = create_node(x);
 		auto it = m.find(x);
 		if (it == m.end()) {
 			m[x] = vec.size();
@@ -1130,14 +1198,12 @@ rule_t compile_rule(termid head, prover::termset body)
 	locals_map lm, cm;
 	Locals &locals_template = *new Locals();
 	locals_templates.push_back(&locals_template);
-	Locals &locals_template = *new Locals();
-	locals_templates.push_back(&locals_template);
-	/*LocalsQueue &locals_queue = *new LocalsQueue();
+	/*lets task a second thread with copying the template?
+	 * LocalsQueue &locals_queue = *new LocalsQueue();
 	locals_queues.push_back(&locals_template);
 	 http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
 	 http://man7.org/linux/man-pages/man3/alloca.3.html
 	 http://www.boost.org/doc/libs/1_39_0/libs/pool/doc/index.html
-
 	 */
 
 	Locals *consts_ = new Locals();
