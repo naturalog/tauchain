@@ -55,7 +55,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
 
 clean:
-	rm -rf tau $(OBJECTS) ubi/client.o marpa.o marpa_tau.o
+	rm -rf tau $(OBJECTS) ubi/client.o marpa.o marpa_tau.o m-tau tau-new a.out 
 
 ppjson: ppjson.cpp
 	$(CXX) -std=c++11 ppjson.cpp -oppjson -Wall -ggdb

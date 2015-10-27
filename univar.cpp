@@ -520,14 +520,7 @@ static Thing *getValue (Thing *_x)
 	{
 		const offset_t offset = get_offset(x);
 		Thing * z = _x + offset;
-		/*
-		#ifdef oneword
-		*_x = z;
-		#else
-		_x->type = BOUND;
-		_x->thing = z;
-		#endif
-		*/
+		*_x = create_bound(z);
 		return getValue(z);
 	}
 	else
@@ -1181,10 +1174,6 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 			}
 		}
 	}
-	ep->push_back(thingthingpair(s, o));
-	/*TRACE(dout << "paths:" << endl;
-	for (auto ttp: *ep)
-		  dout << ttp.first << " " << ttp.second << endl;)*/
 	return false;
 }
 
@@ -1261,17 +1250,25 @@ rule_t compile_rule(termid head, prover::termset body)
 						if (has_body && find_ep(ep, s, o)) {
 							goto end;
 						}
+						if (has_body ) ep->push_back(thingthingpair(s, o));
 
 						j = jg();
 						while (j(s, o, locals)) {
 							TRACE(dout << "After c0() -- " << endl;)
 							//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
+							if(has_body) {
+								ASSERT(ep->size());
+								ep->pop_back();
+							}
+
+							TRACE(dout << "MATCH." << endl;)
 							entry = LAST;
 							return true;
-							TRACE(dout << "MATCH." << endl;)
+
 				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
+							if (has_body ) ep->push_back(thingthingpair(s, o));
 						}
 
 						if(has_body) {
@@ -1281,6 +1278,7 @@ rule_t compile_rule(termid head, prover::termset body)
 				end:;
 					}
 				}
+
 				TRACE(dout << "DONE." << endl;)
 				free(locals);
 				END
