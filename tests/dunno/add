@@ -1,0 +1,18 @@
+kb
+z a nat.
+z succ o.
+o succ two.
+(z z) add z.
+{ ?x a nat. ?y a nat. (?x ?y) add ?z } => { ?z a nat }.
+{ ?x a nat. ?x succ ?y } => { ?y a nat }.
+{ ?x a nat. } => { ?x eq ?x }.
+{ ?x eq ?y } => { ?x eq ?y }.
+{ ?x succ ?y. ?x succ ?z } => { ?y eq ?z }.
+{ ?y succ ?x. ?z succ ?x } => { ?y eq ?z }.
+{ ?z eq ?y } => { ?y eq ?z }.
+{ (?x ?y) add ?cc. ?x succ ?ss. ?cc succ ?dd } => { (?ss ?y) add ?dd }.
+fin.
+query
+(z o) add ?c.
+fin.
+

@@ -297,7 +297,11 @@ namespace old {
 			for (sym s: rhs)
 				TRACE(dout << sym2str(s));
 			TRACE(dout << std::endl);
-			rules[check_int(marpa_g_rule_new(g, lhs, &rhs[0], rhs.size()))] = lhs;
+			auto s = rhs.size();
+			auto a = s ? &rhs[0] : 0;
+			auto r = marpa_g_rule_new(g, lhs, a, s);
+			auto c = check_int(r);
+			rules[c] = lhs;
 			/*if (r == -2)
 			{
 				int e = marpa_g_error(g, NULL);

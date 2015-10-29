@@ -954,11 +954,11 @@ a join captures two indexes into the locals/consts table, which it may or may no
 
 bool islist(termid t)
 {
-	ASSERT(t);
+	ASSERT(t);/*
 	dout << t << endl;
 	dout << t->p << endl;
 	dout << &old::dict << endl;
-	dout << " " << old::dict[t->p].value  << endl;
+	dout << " " << old::dict[t->p].value  << endl;*/
 	return *old::dict[t->p].value == L".";
 }
 
