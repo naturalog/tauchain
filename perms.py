@@ -32,9 +32,8 @@ for w in PP:
 	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
 		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join coro");
-			TRC(round++;)
-			TRACE(dout << "round: " << round << endl;)
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)

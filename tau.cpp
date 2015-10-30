@@ -701,9 +701,10 @@ int main ( int argc, char** argv) {
 			if(token != L"") {
 				std::wifstream is(ws(token));
 				if (!is.is_open()) {
-					dout << "failed to open \"" << token << "\"." << std::endl;
+					dout << "[cli]failed to open \"" << token << "\"." << std::endl;
 				}
 				else {
+					dout << "[cli]loading \"" << token << "\"." << std::endl;
 					std::wstringstream ss;
 					ss << is.rdbuf();
 					input_buffer += ss.str() + L"\n";
@@ -757,10 +758,10 @@ int main ( int argc, char** argv) {
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
-		
-			dout << "[cli]that doesnt parse, try again" << std::endl;
+			//dout << "[cli]that doesnt parse, try again" << std::endl;
 			if (mode == COMMANDS && trimmed_data == L"")
-				dout << "[cli]and theres no such command: \"" << token << "\"." << endl;
+				if(token != L"")
+					dout << "[cli]no such command: \"" << token << "\"." << endl;
 		}
 		_argstream.clear();
 	}

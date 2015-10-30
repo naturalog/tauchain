@@ -22,6 +22,7 @@ extern int result_limit ;
 #define FUN setproc(__FUNCTION__);
 
 #define EEE char entry = 0
+#define TRCEEE TRACE(dout << "entry = " << (int)entry << endl)
 const char LAST = 33;
 
 #ifdef DEBUG
@@ -311,7 +312,7 @@ long unifys = 0;
 coro unbound_succeed(Thing *x, Thing *y);
 coro unify(Thing *, Thing *);
 void check_pred(old::nodeid pr);
-rule_t compile_rule(termid head, prover::termset body);
+rule_t compile_rule(old::prover::ruleid r);
 pred_t compile_pred(old::nodeid pr);
 
 
@@ -395,7 +396,7 @@ coro dbg_fail()
 	int entry = 0;
 	return [entry]() mutable{
 		setproc(L"dbg_fail lambda");
-		TRACE(dout << "..." << endl;)
+		TRCEEE;
 
 		switch(entry)
 		{
@@ -413,7 +414,7 @@ pred_t dbg_fail_with_args()
 	int entry = 0;
 	return [entry](Thing *_s, Thing *_o) mutable{
 		setproc(L"dbg_fail_with_args lambda");
-		TRACE(dout << "..." << endl;)
+		TRCEEE;
 
 		(void)_s;
 		(void)_o;
@@ -558,9 +559,9 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg)
 
 			EEE;
 			return [me, entry, argv]() mutable {
-				setproc(L"unify lambda 2");
-				TRACE(dout << "im in ur var unify lambda, entry = " << entry << ", argv=" << argv << "/" <<
-					  str(argv) << endl;)
+				setproc(L"var unify lambda");
+				TRCEEE;
+				TRACE(dout << "argv=[" << argv << "]" << str(argv) << endl;)
 				switch (entry) {
 					case 0: {
 						TRACE(dout << "binding " << me << "/" << str(me) << " to " << argv << "/" << str(argv) << endl;)
@@ -625,7 +626,8 @@ coro unbound_succeed(Thing *x, Thing *y)
 	return [entry, x, y]() mutable {
 		ASSERT(is_unbound(*x));
 		setproc(L"unbound_succeed lambda");
-		TRACE(dout << x << " " << y << "entry:" << entry << endl);
+		TRACE(dout << x << " " << y << endl);
+		TRCEEE;
 		switch (entry) {
 			case 0:
 				entry = LAST;
@@ -750,8 +752,8 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 	coro uc;
 	TRC(int round = 0;)
 	return [a,b,c, uc, entry TRCCAP(round)]() mutable{
-		setproc(L"unifjoin lambda");
-		TRACE(dout << "entry = " << entry << endl;)
+		setproc(L"unifjoin1");
+		TRCEEE;
 		TRC(round++;)
 
 		switch(entry)
@@ -777,11 +779,12 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 
 coro listunifycoro(Thing *a_, Thing *b_)
 {
-	setproc(L"listunifycoro");
-	TRACE(dout << "..." << endl;)
+	FUN;
 
 	const Thing a = *a_;
 	const Thing b = *b_;
+
+	//TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
 	ASSERT(is_list(a));
 	ASSERT(is_list(b));
@@ -814,6 +817,8 @@ coro unify(Thing *a_, Thing *b_){
 	FUN;
 	unifys++;
 
+	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
+
 	if (a_ == b_) {//?
 		TRACE(dout << "a == b" << endl;)
 		return gen_succeed();
@@ -844,23 +849,23 @@ coro unify(Thing *a_, Thing *b_){
 		}
 
 		if (is_list(a)) {
-			TRACE(dout << "Both args are lists." << endl;)
+			//TRACE(dout << "Both args are lists." << endl;)
 			return listunifycoro(a_, b_);
 		}
 	}
 
 	//# Other combinations cannot unify. Fail.
-	TRACE(dout << "Some non-unifying combination. Fail.(" << a_ << "," << b_ << ")" << endl;)
+	TRACE(dout << "non-unifying combination. Fail."<< endl;)//(" << str(a) << " X " << str(b) << ")" << endl;)
 	return GEN_FAIL;
 }
 
 rule_t seq(rule_t a, rule_t b){
-	setproc(L"seq");
+	FUN;
 	TRACE(dout << ".." << endl;)
 	EEE;
 	TRC(int round = 0;)
 	return [a, b, entry TRCCAP(round)](Thing *Ds, Thing *Do) mutable{
-		setproc(L"seq lambda");	
+		setproc(L"seq1");
 		TRC(round++;)
 		TRACE(dout << "round: " << round << endl;)
 		switch(entry){
@@ -896,13 +901,8 @@ pred_t compile_pred(old::nodeid pr)
 	bool first = true;
 	//compile each rule with the pred in the head, seq them up
 	for (auto r: rs) {
-		rule_t x
-				=
-				//op->bodies[r].size()
-				//?
-				compile_rule(op->heads[r], op->bodies[r])
-		//:
-		/*fact(op->heads[r])*/;
+		//rule_t x = op->bodies[r].size() ? compile_rule(r) : compile_fact(r);
+		rule_t x = compile_rule(r);
 		if (first) {
 			first = false;
 			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
@@ -1180,9 +1180,12 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 
 
 
-rule_t compile_rule(termid head, prover::termset body)
+rule_t compile_rule(old::prover::ruleid r)
 {
 	FUN;
+
+	termid head = op->heads[r];
+	prover::termset body = op->bodies[r];
 
 	locals_map lm, cm;
 	Locals &locals_template = *new Locals();
@@ -1208,15 +1211,14 @@ rule_t compile_rule(termid head, prover::termset body)
 	auto locals_data = locals_template.data();
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
 	Thing * locals=0;
-	bool has_body = body.size();
+	const bool has_body = body.size();
 
-	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(round)](Thing *s, Thing *o) mutable {
-		setproc(L"rule coro");
-		TRC(round++;)
-		TRACE(dout << "round=" << round << endl;)
+	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(round) TRCCAP(r)](Thing *s, Thing *o) mutable {
+		setproc(L"rule");
+		TRACE(dout << op->formatr(r) << endl;)
+		TRACE(dout << "round=" << ++round << endl;)
 		switch (entry) {
 			case 0: 
-
 				locals = (Thing*)malloc(locals_bytes);
 				memcpy(locals, locals_data, locals_bytes);
 			
