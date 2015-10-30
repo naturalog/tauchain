@@ -81,6 +81,10 @@ public:
 		size_t size;      // for list
 		offset_t offset;
 	};
+#ifdef KBDBG
+	nodeid kbdbg_nodeid;
+	old::prover::ruleid kbdbg_ruleid;
+#endif
 };
 
 #define get_type(thing) ((thing).type)
@@ -98,15 +102,13 @@ public:
 #define sizes_differ(x, y) (x.size != y.size)
 #define are_equal(x, y) (x.type == y.type && x.size == y.size)
 
-static inline Thing create_bound(Thing * val)
+inline void make_this_bound(Thing *me, Thing *val)
 {
-	Thing x;
-	x.type = BOUND;
-	x.thing = val;
-	return x;
+	me->type = BOUND;
+	me->thing = val;
 }
 
-static inline Thing create_unbound()
+inline Thing create_unbound()
 {
 	Thing x;
 	x.type = UNBOUND;
@@ -114,7 +116,7 @@ static inline Thing create_unbound()
 	return x;
 }
 
-static inline Thing create_node(termid v)
+inline Thing create_node(termid v)
 {
 	Thing x;
 	x.type = NODE;
@@ -122,7 +124,7 @@ static inline Thing create_node(termid v)
 	return x;
 }
 
-static inline void make_this_unbound(Thing * me)
+inline void make_this_unbound(Thing * me)
 {
 	me->type = UNBOUND;
 }
@@ -156,10 +158,10 @@ kinda like http://software-lab.de/doc/ref.html#cell
  11 = list(size)
 */
 
-static inline Thing create_bound(Thing * v)
+static inline void make_this_bound(Thing * me, Thing * v)
 {
 	ASSERT(((uintptr_t)v & 0b11) == 0);
-	return (Thing)v;
+	*me = (Thing)v;
 }
 
 static inline Thing create_unbound()
@@ -388,6 +390,7 @@ static bool fail_with_args(Thing *_s, Thing *_o)
 
 #define GEN_FAIL (fail)
 #define GEN_FAIL_WITH_ARGS (fail_with_args)
+#define UNIFY_FAIL(a,b) GEN_FAIL
 
 #else
 
@@ -433,6 +436,29 @@ pred_t dbg_fail_with_args()
 #define GEN_FAIL (dbg_fail())
 #define GEN_FAIL_WITH_ARGS (dbg_fail_with_args())
 
+
+old::string kbdbg_str(const Thing * x)
+{
+	return L"xxxx";
+}
+
+coro kbdbg_unify_fail(const Thing *a, const Thing *b)
+{
+	int entry = 0;
+	return [entry, a, b]() mutable{
+		switch(entry)
+		{
+		case 0:
+			entry = 1;
+			dout << "{\"type\":\"fail\", \"a\":" << kbdbg_str(a) << ", \"b\":" << kbdbg_str(b) << "}" << endl;
+			return false;
+		default:
+			ASSERT(false);
+		}
+	};
+}
+
+#define UNIFY_FAIL(a,b) kbdbg_unify_fail(a,b)
 #endif
 
 
@@ -521,7 +547,7 @@ static Thing *getValue (Thing *_x)
 	{
 		const offset_t offset = get_offset(x);
 		Thing * z = _x + offset;
-		*_x = create_bound(z);
+		make_this_bound(_x, z);
 		return getValue(z);
 	}
 	else
@@ -566,8 +592,7 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg)
 					case 0: {
 						TRACE(dout << "binding " << me << "/" << str(me) << " to " << argv << "/" << str(argv) << endl;)
 						ASSERT(is_unbound(*me));
-						Thing n = create_bound(argv);
-						*me = n;
+						make_this_bound(me, argv);
 						entry = LAST;
 						return true;
 					}
@@ -817,6 +842,9 @@ coro unify(Thing *a_, Thing *b_){
 	FUN;
 	unifys++;
 
+	DBG(auto origa = a_;)
+	DBG(auto origb = b_;)
+
 	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
 	if (a_ == b_) {//?
@@ -856,7 +884,7 @@ coro unify(Thing *a_, Thing *b_){
 
 	//# Other combinations cannot unify. Fail.
 	TRACE(dout << "non-unifying combination. Fail."<< endl;)//(" << str(a) << " X " << str(b) << ")" << endl;)
-	return GEN_FAIL;
+	return UNIFY_FAIL(origa, origb);
 }
 
 rule_t seq(rule_t a, rule_t b){
@@ -1298,14 +1326,6 @@ rule_t compile_rule(old::prover::ruleid r)
 
 
 
-
-void thatsAllFolks(int nresults){
-	dout << "That's all, folks, " << nresults << " results." << endl;
-	dout << unifys << " unifys, " << steps << " steps." << endl;
-}
-
-
-
 pnode thing2node(Thing *t_, qdb &r) {
 	t_ = getValue(t_);
 
@@ -1377,11 +1397,22 @@ yprover::~yprover()
 	delete op;
 }
 
+
+void yprover::thatsAllFolks(int nresults){
+	dout << "That's all, folks, " << nresults << " results." << endl;
+	dout << unifys << " unifys, " << steps << " steps." << endl;
+	steps_ = steps;
+}
+
+
 void yprover::query(const old::qdb& goal){
 	FUN;
+
 	dout << KGRN << "compile query." << KNRM << endl;
 	results.clear();
 	const old::prover::termset g = op->qdb2termset(goal);
+	steps = 0;
+	unifys = 0;
 	int nresults = 0;
 	//TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl;)
 	locals_map lm, cm;

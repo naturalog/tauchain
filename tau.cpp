@@ -695,6 +695,10 @@ int main ( int argc, char** argv) {
 				thatsall();
 				continue;
 			}
+			if (token == L"shouldbesteps") {
+				test_result(std::stoi(read_arg()) == tauProver->steps_);
+				continue;
+			}
 			if (token == L"quit") {
 				break;
 			}
