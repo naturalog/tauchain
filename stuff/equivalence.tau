@@ -1,0 +1,136 @@
+kb
+zero :a Nat.
+0 :a Nat.
+nada :a Nat.
+
+0 :eq zero.
+nada :eq 0.
+
+#The three defining properties of an equivalence relation:
+#Reflexivity
+{?x :a Nat} => {?x :eq ?x}.
+
+#Symmetry
+{?x :a Nat. ?y :a Nat. ?x :eq ?y} => {?y :eq ?x}.
+
+#Transitivity
+{?x :a Nat. ?y :a Nat. ?z :a Nat. ?x :eq ?y. ?y :eq ?z} => {?x :eq ?z}.
+
+fin.
+
+query
+?WHAT :eq ?WHATELSE.
+fin.
+
+#expected matches:
+#?WHAT = nada
+#?WHAT = 0
+#?WHAT = zero
+#
+#possibly matching these in multiple ways
+
+
+#a = seq(
+#1	fact(zero,Nat)
+#2	fact(0,Nat)
+#3	fact(nada,Nat)
+#)
+
+#eq = seq(
+#1	fact(0,zero)
+#2	fact(nada,0)
+#3	rule(head(?x,?x), body a(?x,Nat))
+#4	rule(head(?y,?x), body join( a(?x,Nat), a(?y,Nat), eq(?x,?y)))
+#5	rule(head(?x,?z), body join( a(?x,Nat), a(?y,Nat), a(?x,Nat), eq(?x,?y), eq(?y,?z)))
+#)
+
+# 0 eq zero	<= eq.1
+
+# nada eq 0	<= eq.2
+
+
+# zero eq zero	<= eq.3 	<= a.1
+# 0 eq 0	<= eq.3 	<= a.2
+# nada eq nada	<= eq.3 	<= a.3
+
+
+
+# FAIL		<= eq.4
+#			<= eq.4.1	<= a.1	?x\zero
+#			<= eq.4.2	<= a.1	?y\zero
+#				   calling: eq(zero,zero)
+					eq.1 = fact(0,zero) FAIL oh god
+#			<= eq.4.3	<= eq.1 ?x\0 ?y\zero FAIL
+
+# FAIL		<= eq.4		
+#			<= eq.4.1	<= a.1 	?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.2 ?x\nada ?y\0 FAIL
+
+#zero eq zero	<= eq.4		
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.3 	<= a.1 ?x\zero, ?y\zero
+
+# FAIL		<= eq.4		
+#			<= eq.4.1	<= a.1 	?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.3		<= a.2 ?x\0, ?y\0 FAIL
+
+# FAIL		<= eq.4		
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.3		<= a.3 ?x\nada, ?y\nada FAIL
+
+# FAIL		<= eq.4	(?what,?whatelse)	
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.4 (zero,zero)	
+#						<= eq.4.1	<= a.1	?x\zero
+#						<= eq.4.2	<= a.1  ?y\zero
+#						<= eq.4.3	<= eq.1  ?x\0, ?y\zero FAIL
+
+							
+#		<= eq.4	(?what, ?whatelse)	
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.4 (zero,zero)
+#						<= eq.4.1 	<= a.1	?x\zero
+#						<= eq.4.2	<= a.1  ?y\zero
+#						<= eq.4.3	<= eq.2  ?x\nada, ?y\0 FAIL
+
+
+#zero eq zero	<= eq.4	(?what, ?whatelse)	
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.4 (zero,zero)
+#						<= eq.4.1	<= a.1	?x\zero
+#						<= eq.4.2	<= a.1  ?y\zero
+#						<= eq.4.3	<= eq.3  <= a.1 ?x\zero, ?y\zero
+
+
+# FAIL		<= eq.4	(?what, ?whatelse)	
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.4 (zero,zero)
+#						<= eq.4.1	<= a.1	?x\zero
+#						<= eq.4.2	<= a.1  ?y\zero
+#						<= eq.4.3	<= eq.3  <= a.2 ?x\0, ?y\0 FAIL
+
+
+# FAIL		<= eq.4	(?what, ?whatelse)	
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.4 (zero,zero)
+#						<= eq.4.1	<= a.1	?x\zero
+#						<= eq.4.2	<= a.1  ?y\zero
+#						<= eq.4.3	<= eq.3  <= a.3 ?x\nada, ?y\nada FAIL
+
+
+# FAIL		<= eq.4 (?what, ?whatelse)		
+#			<= eq.4.1	<= a.1  ?x\zero
+#			<= eq.4.2	<= a.1  ?y\zero
+#			<= eq.4.3	<= eq.4 (zero, zero)
+#						<= eq.4.1	<= a.1	?x\zero
+#						<= eq.4.2	<= a.1  ?y\zero
+#						<= eq.4.3	<= eq.4 (zero,zero) EP!
