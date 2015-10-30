@@ -2,16 +2,15 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -21,17 +20,14 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -40,16 +36,15 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -59,17 +54,14 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -78,16 +70,15 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -97,17 +88,14 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -116,16 +104,15 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -135,17 +122,14 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -154,16 +138,15 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -173,17 +156,14 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -192,16 +172,15 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -211,17 +190,14 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -230,16 +206,15 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -249,17 +224,14 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -268,16 +240,15 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -287,17 +258,14 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -306,16 +274,15 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -325,17 +292,14 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -344,16 +308,15 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -363,17 +326,14 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -382,16 +342,15 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -401,17 +360,14 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -420,16 +376,15 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -439,17 +394,14 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -458,16 +410,15 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -477,17 +428,14 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -496,16 +444,15 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -515,17 +462,14 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -534,16 +478,15 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -553,17 +496,14 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};
@@ -572,16 +512,15 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
-	int entry = 0;
-	int round = 0;
+	EEE;
+	TRC(int round = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry, round, ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry, round, ac, bc, &consts](Thing *s, Thing *o, Locals &locals)mutable {
-			setproc(L"join coro");
-			round++;
-			TRACE(dout << "round: " << round << endl;)
+		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+			setproc(L"join");
+			TRACE(dout << "round: " << ++round << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -591,17 +530,14 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 						bc = b();
 						while (bc(s, o, locals)) {
 							TRACE(dout << "MATCH." << endl;)
-							entry = 1;
+							entry = LAST;
 							return true;
-							case 1:;
+				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
 					}
-					entry = 666;
 					TRACE(dout << "DONE." << endl;)
-					return false;
-				default:
-					assert(false);
+					END
 			}
 		};
 	};

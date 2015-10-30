@@ -1,0 +1,11 @@
+kb
+{ a b c } => { :baz :foo :bar } 
+fin.
+
+query
+?x :foo :y.
+fin.
+
+shouldbe
+fin.
+thatsall

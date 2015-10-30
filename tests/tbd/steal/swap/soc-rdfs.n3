@@ -1,0 +1,10 @@
+@prefix : <socrates#>.
+@prefix s: <http://www.w3.org/2000/01/rdf-schema#> .
+
+:socrates a :Man.
+:Man s:subClassOf :Mortal.
+
+{ ?S a [s:subClassOf ?C] } => { ?S a ?C }.
+
+#ends
+

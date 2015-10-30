@@ -1,0 +1,12 @@
+kb
+:baz :foo :bar.
+fin.
+
+query
+?x :foo ?y.
+fin.
+
+shouldbe
+:baz :foo :bar.
+fin.
+thatsall

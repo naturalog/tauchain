@@ -1,3 +1,4 @@
+--limit 0
 kb
 zero :a Nat.
 0 :a Nat.

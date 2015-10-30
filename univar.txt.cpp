@@ -807,4 +807,252 @@ function<bool()> nodeComp(Node *n){
 }*/
 
 //actually maybe only the join combinators need to do a lookup
+
+
+
+
+
+
+/*so it seems we have 3 variants to start with:
+ 1: parameterless joins, with extra rule lambda and unify's,
+ 2: all joins have two parameters, there are permutations,
+ 3: joins have only as many parameters as they need, there are even more permutations
+so i guess we start with 1?
+*/
+
+
+
+
+
+/*
+bool ep_check(Thing *a, Thing *b){
+	List *l1 = dynamic_cast<List*>(a);
+	List *l2 = dynamic_cast<List*>(b);
+	if(l1&&l2){
+		if(l1->nodes.size() == l2->nodes.size()){
+			for(size_t i=0;i<l1->nodes.size();i++){
+				if(!ep_check(l1->nodes[i],l2->nodes[i])){
+					return false;
+				}
+			}
+			return true;
+		}else{
+			return false;
+		}
+	}else if(!l1 && l2){
+		return false;
+	}else if(l1 && !l2){
+		return false;
+	}else{
+		return a->ep_value == b->ep_value;
+	}
+}
+*/
+
+
+
+			bool hit = false;
+
+			switch(entry)
+			{
+			case 0:
+
+				TRACE(dout << "check ep table" << endl;)
+				for (auto x: ep[pr])
+				{
+					TRACE(dout << x.first->ep_value << "=?=" << Ds->ep_value << endl;)
+					TRACE(dout << x.second->ep_value << "=?=" << Do->ep_value << endl;)
+					/*auto ucs = generalunifycoro(x.first, Ds);
+					while(ucs())
+					{
+						auto uco = unify(x.second, Do);
+						while(uco())
+							hit = true;
+					}*/
+					//while(x.first == Ds)
+					//	while(x.second == Do)
+					hit = ep_check(x.first,Ds) && ep_check(x.second,Do);
+					//hit = (x.first->ep_value == Ds->ep_value) && (x.second->ep_value == Do->ep_value);
+
+					if(hit)
+						break;
+				}
+				if(hit)
+				{
+					TRACE(dout << "ep! ep!" << endl;)
+					entry = 666;
+					return false;
+				}
+
+				//add:
+				index = ep[pr].size();
+				TRACE(dout << "store " << Ds->ep_value << " " << Do->ep_value << endl;)
+				ep[pr].push_back(thingthingpair(Ds, Do));
+				//ep[pr].push_back(thingthingpair(Ds->getValue(), Do->getValue()));
+
+				//loop over pred results:
+				while(y(Ds, Do))
+				{
+					entry = 1;
+					return true;
+			case 1: ;
+				}
+
+				//remove:
+				ASSERT(ep[pr].size() > index);
+				{
+					auto xxx = ep[pr][index];
+					TRACE(dout << "erase " << xxx.first << " " << xxx.second << endl);
+				}
+
+				ep[pr].erase(ep[pr].begin()+index);
+				entry = 666;
+				return false;
+			default: ;
+				ASSERT(false);
+			}
+		};
+	};
+}
+
+
+
+
+
+
+
+	/*
+	function<bool()> varunifycoro(Thing *arg)
+	{
+		if (type == BOUND)
+			return boundunifycoro(arg);
+		else if (type == UNBOUND)
+			return unboundunifycoro(arg);
+		else
+			ASSERT(false);
+	}
+	*/
+
+
+	/*
+		function<bool()> boundunifycoro(Thing *arg){
+			setproc(L"boundunifycoro");
+			//TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
+			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
+			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
+			return unify(this, arg);
+		}
+	*/
+
+
+
+/*
+Arranging switch statement cases by probability of occurrence improves performance when the
+switch statement is translated as a comparison chain; this arrangement has no negative impact when
+the statement is translated as a jump table.
+
+In general, use prototypes for all functions.
+Prototypes can convey additional information to the compiler that might enable more aggressive
+optimizations.
+
+http://stackoverflow.com/questions/6434549/does-c11-add-the-c99-restrict-specifier-if-not-why-not
+
+artificial
+This attribute is useful for small inline wrappers that if possible should appear during debugging as a unit. Depending on the debug info format it either means marking the function as artificial or using the caller location for all instructions within the inlined body.
+
+The preferred type for array indices is ptrdiff_t.
+Application
+This optimization applies to:
+• 32-bit software
+• 64-bit software
+Rationale
+Array indices are often used with pointers while doing arithmetic. Using ptrdiff_t produces more
+portable code and will generally provide good performance.
+
+In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min)
+
+Assembly/Compiler Coding Rule 4. (MH impact, MH generality) Near calls must be matched with
+near returns, and far calls must be matched with far returns. Pushing the return address on the stack
+and jumping to the routine to be called is not recommended since it creates a mismatch in calls and
+returns.
+^cps?
+
+When using ld, include the following command line option:
+-Bsymbolic
+If using gcc to build a library, add this option to the command-line:
+-Wl,-Bsymbolic
+https://docs.oracle.com/cd/E19957-01/806-0641/chapter4-16/index.html
+https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-14824
+
+
+*/
+
+
+/*
+	wstring dbgstr() const
+	{
+		static int d = 0;
+		if (d++ == 15) {
+			d = 0;
+			return L"break";
+		}
+		wstringstream r;
+		r << "[" << this << "]";
+		switch (type)
+		{
+			case UNBOUND:
+				r << L"var()";
+				break;
+			case BOUND:
+				ASSERT(thing);
+				r << L"var(" << thing << L")";
+				break;
+			case NODE:
+				ASSERT(term);
+				r << op->format(term);
+				break;
+			case LIST: {
+				r << L"{" << size << L"}(";
+				for (size_t i = 1; i < size; i++) {
+					if (i != 0) r << " ";
+					r << (this + i)->dbgstr();
+				}
+				if(!size)
+					r << " ";
+				r << L")";
+				break;
+			}
+			case OFFSET:
+				wstringstream r;
+				r << L"{";
+				if (offset >= 0)
+					r << L"+";
+				r << offset << L"}->";
+				r << (this + offset)->dbgstr();
+				break;
+		}
+		return r.str();
+	}*/
+
+	/*lets task a second thread with copying the template?
+	 * LocalsQueue &locals_queue = *new LocalsQueue();
+	locals_queues.push_back(&locals_template);
+	 http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
+	 http://www.boost.org/doc/libs/1_39_0/libs/pool/doc/index.html
+
+	 http://man7.org/linux/man-pages/man3/alloca.3.html
+	 nope, we cant have locals on stack
+	 	 
+	http://en.cppreference.com/w/cpp/thread/future
+	https://gist.github.com/rmartinho/5231565
+	 */
+
+
+
+
+
+
+
+
+
 #endif

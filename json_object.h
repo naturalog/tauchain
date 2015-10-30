@@ -26,7 +26,7 @@ using std::endl;
 
 extern std::set<string> silence;
 #ifdef DEBUG
-#define TRACE(x) if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) { dout << old::indent(); x; }
+#define TRACE(x) if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) { dout << KYEL << old::indent() << KNRM; x; }
 #else
 #define TRACE(X)
 #endif

@@ -1,0 +1,9 @@
+@keywords is, of, a.
+@prefix : <pfbug#>.
+
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+@prefix log: <http://www.w3.org/2000/10/swap/log#>.
+
+{
+  ?X log:uri "http://example#abc"
+} => { ?X owl:differentFrom ?X }.

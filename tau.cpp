@@ -43,8 +43,9 @@ const int COMPLETE = 2;
 string format = L"";
 string base = L"";
 
+int result_limit = 123;
 bool irc = false;
-std::set<string> silence;// = *new std::set<string>;
+std::set<string> silence;
 
 std::map<string,bool*> _flags = {
 		{L"nocolor",&nocolor}
@@ -335,24 +336,36 @@ bool check_option(string s){
 	if(_option == L"level"){
 		if(_argstream.size() != 0){
 			string token = read_arg();
-			int tmpLevel = level;
+			int tmpLevel;
 			try{
 				tmpLevel = std::stoi(token);
 			}catch(const std::invalid_argument& e){
 				_argstream.push_front(token);
 				return true;
 			}
-	
-			if(tmpLevel < 1) 
+			if(tmpLevel < 1)
 				level = 1;
-			/*else if(tmpLevel > 100) 
-				level = 100;why?*/
 			else
 				level = tmpLevel;
 			dout << "level:" << level << std::endl;
 		}
 		return true;
 	}
+
+	if(_option == L"limit"){
+		if(_argstream.size() != 0){
+			string token = read_arg();
+			try{
+				result_limit = std::stoi(token);
+			}catch(const std::invalid_argument& e){
+				_argstream.push_front(token);
+				return true;
+			}
+			dout << "limit:" << result_limit << std::endl;
+		}
+		return true;
+	}
+
 	return false;
 }
 
@@ -688,9 +701,10 @@ int main ( int argc, char** argv) {
 			if(token != L"") {
 				std::wifstream is(ws(token));
 				if (!is.is_open()) {
-					dout << "failed to open \"" << token << "\"." << std::endl;
+					dout << "[cli]failed to open \"" << token << "\"." << std::endl;
 				}
 				else {
+					dout << "[cli]loading \"" << token << "\"." << std::endl;
 					std::wstringstream ss;
 					ss << is.rdbuf();
 					input_buffer += ss.str() + L"\n";
@@ -744,10 +758,10 @@ int main ( int argc, char** argv) {
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
-		
-			dout << "[cli]that doesnt parse, try again" << std::endl;
+			//dout << "[cli]that doesnt parse, try again" << std::endl;
 			if (mode == COMMANDS && trimmed_data == L"")
-				dout << "[cli]and theres no such command: \"" << token << "\"." << endl;
+				if(token != L"")
+					dout << "[cli]no such command: \"" << token << "\"." << endl;
 		}
 		_argstream.clear();
 	}

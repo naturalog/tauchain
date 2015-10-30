@@ -34,3 +34,7 @@
 tags
 testJsonLdUrl
 tau
+
+build
+CMakeFiles
+scan

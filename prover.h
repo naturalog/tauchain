@@ -310,5 +310,6 @@ public:
 	ruleset::r2id_t::const_iterator rit;
 	shared_ptr<proof> lastp = 0;
 };
-#endif
 }
+
+#endif

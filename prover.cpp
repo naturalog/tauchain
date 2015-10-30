@@ -916,8 +916,8 @@ termid prover::force_one_t(termids r) {
 /*get_list wrapper useful in marpa*/
 prover::nodeids prover::get_list(nodeid head)
 {
-	proof* hack = new proof(nullptr, 0);
-    auto r = get_list(make(head), hack);
+	proof hack(nullptr, 0);
+    auto r = get_list(make(head), &hack);
     nodeids rr;
     for (auto rrr: r)
         rr.push_back(rrr->p);
