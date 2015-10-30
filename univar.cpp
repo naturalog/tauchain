@@ -1402,6 +1402,7 @@ void yprover::thatsAllFolks(int nresults){
 	dout << "That's all, folks, " << nresults << " results." << endl;
 	dout << unifys << " unifys, " << steps << " steps." << endl;
 	steps_ = steps;
+	unifys_ = unifys;
 }
 
 

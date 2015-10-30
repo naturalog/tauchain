@@ -699,6 +699,10 @@ int main ( int argc, char** argv) {
 				test_result(std::stoi(read_arg()) == tauProver->steps_);
 				continue;
 			}
+			if (token == L"shouldbeunifys") {
+				test_result(std::stoi(read_arg()) == tauProver->unifys_);
+				continue;
+			}
 			if (token == L"quit") {
 				break;
 			}

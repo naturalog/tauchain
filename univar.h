@@ -7,6 +7,7 @@ public:
 	typedef std::list<old::qdb> results_t;
 	results_t results;
 	long steps_;
+	long unifys_;
 
 	yprover(old::qdb qkb, bool check_consistency = false);
 	~yprover();
