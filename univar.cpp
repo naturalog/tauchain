@@ -17,6 +17,9 @@ intptr_t ofst(size_t target, size_t me)
 	return (int)target - (int)me;
 }
 
+unsigned long kbdbg_part;
+unsigned long kbdbg_part_max;
+
 extern int result_limit ;
 
 #define FUN setproc(__FUNCTION__);
@@ -47,6 +50,19 @@ const char LAST = 33;
 #ifdef NEW
 #define oneword
 #endif
+
+#ifdef KBDBG
+#ifdef oneword
+nope
+#endif
+#define IFKBDBG(x) x
+#endif
+
+
+//for kbdbg
+typedef vector<unsigned long> Markup;
+typedef std::pair<termid, Markup> toadd;
+
 
 enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
 
@@ -82,10 +98,16 @@ public:
 		offset_t offset;
 	};
 #ifdef KBDBG
-	nodeid kbdbg_nodeid;
-	old::prover::ruleid kbdbg_ruleid;
+	Markup markup;
 #endif
 };
+
+#ifdef KBDBG
+void add_kbdbg_info(Thing &t, Markup markup)
+{
+	t.kdbdg_markup = markup;
+}
+#endif
 
 #define get_type(thing) ((thing).type)
 #define get_term(thing) ((thing).term)
@@ -990,12 +1012,11 @@ bool islist(termid t)
 	return *old::dict[t->p].value == L".";
 }
 
-
 //return term's PredParam and possibly also its index into the corresponding vector
-PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, termid head)
+PredParam find_thing (termid x, long part, size_t &index, locals_map &lm, locals_map &cm, termid head)
 {
 	if (head)
-		ASSERT(head->s && head->o);
+		assert(head->s && head->o);
 	if (head && x == head->s) {
 		index = lm.at(head->s);
 		return HEAD_S;
@@ -1018,10 +1039,10 @@ PredParam thing_key (termid x, size_t &index, locals_map &lm, locals_map &cm, te
 }
 
 //find thing in locals or consts by termid
-Thing &find_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
+Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
 	size_t i;
-	auto pp = thing_key(x, i, lm, cm, 0);
+	auto pp = find_thing(x, i, lm, cm, 0);
 	if (pp == LOCAL)
 		return locals[i];
 	else if (pp == CONST)
@@ -1042,32 +1063,46 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&consts.at(x.second)) << endl;
 }
 
-
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
 	FUN;
-	std::queue<termid> lq;
+
+	std::queue<toadd> lq;
+	TRACE(dout << "head:" << op->format(head) << endl);
 
 	auto expand_lists = [&lq, &locals, &lm]() {
 		setproc("expand_lists");
 		while (!lq.empty()) {
-			termid l = lq.front();
+			toadd ll = lq.front();
 			lq.pop();
+
+			termid l = ll.first;
+
 			auto lst = op->get_dotstyle_list(l);
-			Thing i0; // list size item
+
+			Thing i0; // list size item, a sort of header / pascal string (array?) style thing
+#ifdef KBDKG
+			add_kbdbg_info(i0, ll.second);
+			unsigned long list_part = 0;
+#endif
 			make_this_list(i0, lst.size());
-			lm[l] = locals.size();
 			locals.push_back(i0);
+			lm[l] = locals.size()-1; // register us in the locals map
+
 			for (auto li: lst) {
 				TRACE(dout << "item..." << endl;)
 				Thing t;
+#ifdef KBDKG
+				add_kbdbg_info(t, ll.second);
+				t.markup.push_back(list_part++);
+#endif
 				if (li->p < 0) { //its a var
 					auto it = lm.find(li); //is it already in locals?
 					if (it == lm.end()) { //no? create a fresh var
 						t = create_unbound();
 						lm[li] = locals.size();
 					}
-					else { //just point to it
+					else { //yes? just point to it
 						make_this_offset(t, ofst(it->second, locals.size()));
 					}
 				}
@@ -1091,67 +1126,79 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		}
 	};
 
-	auto add_var = [](old::termid x, Locals &vec, locals_map &m) {
-		setproc("add_var");		
-		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
-		Thing t = create_unbound();
-		auto it = m.find(x);
-		if (it == m.end()) {
-			m[x] = vec.size();
-			vec.push_back(t);
-		}
-
-	};
-
-	auto add_node = [](old::termid x, Locals &vec, locals_map &m) {
+	auto add_node = [](bool var, toadd xx, Locals &vec, locals_map &m) {
 		setproc("add_node");
+		Thing t;
+#ifdef KBDKG
+		add_kbdbg_info(t, xx.second);
+#endif
+		termid x = xx.first;
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
-		Thing t = create_node(x);
 		auto it = m.find(x);
 		if (it == m.end()) {
 			m[x] = vec.size();
+			if(var)
+				t = create_unbound();
+			else
+				t = create_node(x);
 			vec.push_back(t);
 		}
-
+#ifdef KBDKG
+		else
+		{
+			make_this_offset(t, ofst(it->second, vec.size()));
+			vec.push_back(t);
+		}
+#endif
 	};
 
-	vector<termid> terms;
-	TRACE(dout << "head:" << op->format(head) << endl);
+	vector<toadd> terms;
+
+	unsigned long old_kbdbg_part = kbdbg_part;
 
 	if (head) {
-		terms.push_back(head->s);
-		terms.push_back(head->o);
+		terms.push_back(toadd(head->s, {kbdbg_part++}));
+		terms.push_back(toadd(head->o, {kbdbg_part++}));
 	}
 	for (termid bi: body) {
-		terms.push_back(bi->s);
-		terms.push_back(bi->o);
+		terms.push_back(toadd(bi->s, {kbdbg_part++}));
+		terms.push_back(toadd(bi->o, {kbdbg_part++}));
 	}
-	TRACE(dout << terms.size() << "terms." << endl);
-	for (termid x: terms) {
+	//TRACE(dout << "terms.size:" << terms.size() << endl);
+
+	for (toadd xx: terms) {
+		termid x = xx.first;
 		if (x->p > 0 && !islist(x)) {
+#ifndef KBDBG
 			//force rule s and o into locals for now
 			if (head && (x == head->s || x == head->o))
-				add_node(x, locals, lm);
+				add_node(false, xx, locals, lm);
 			else
-				add_node(x, consts, cm);
+				add_node(false, xx, consts, cm);
+#else
+			add_node(false, xx, locals, lm);
+#endif
 		}
 		else if (x->p < 0)
-			add_var(x, locals, lm);
+			add_node(true, xx, locals, lm);
+		else if (x->p > 0 && islist(x))
+			lq.push(xx);
+		else
+			assert(false);
 	}
-	for (termid x: terms)
-		if (x->p > 0 && islist(x))
-			lq.push(x);
 
 	expand_lists();
 	link_lists();
 
 	print_locals(locals, consts, lm, cm, head);
 
+	kbdbg_part_max = kbdbg_part;
+	kbdbg_part = old_kbdbg_part;
 }
 
 
 
-join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+join_gen compile_body(IFKBDBG(Locals &locals,) Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
 	FUN;
 
@@ -1167,8 +1214,14 @@ join_gen compile_body(Locals &consts, locals_map &lm, locals_map &cm, termid hea
 		termid s = bi->s;
 		termid o = bi->o;
 		size_t i1, i2;
-		PredParam sk = thing_key(s, i1, lm, cm, head);
-		PredParam ok = thing_key(o, i2, lm, cm, head);
+		PredParam sk, ok;
+#ifdef KBDBG
+		ok = kbdbg_find_thing(--kbdbg_part_max, i2, locals);
+		sk = kbdbg_find_thing(--kbdbg_part_max, i1, locals);
+#else
+		sk = find_thing(s, i1, lm, cm, head);
+		ok = find_thing(o, i2, lm, cm, head);
+#endif
 		TRACE(dout <<"perm " << permname.at(sk) << " " << permname.at(ok) << endl );
 		jg = perms.at(sk).at(ok)(bi->p, jg, i1, i2, consts);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
@@ -1223,11 +1276,18 @@ rule_t compile_rule(old::prover::ruleid r)
 	Locals &consts = *consts_;
 
 	make_locals(locals_template, consts, lm, cm, head, body);
-	join_gen jg = compile_body(consts, lm, cm, head, body);
+	join_gen jg = compile_body(IFKBDBG(locals,) consts, lm, cm, head, body);
 
 	size_t hs, ho;
-	thing_key(head->s, hs, lm, cm, head);
-	thing_key(head->o, ho, lm, cm, head);
+#ifdef KBDBG
+	kbdbg_find_thing(part++, hs, locals);
+	kbdbg_find_thing(part++, ho, locals);
+	assert(part == kbdbg_part_max + 1);//statistically proven to be true
+#else
+	//ignoring key, because head s and o go into locals always
+	find_thing(head->s, hs, lm, cm, head);
+	find_thing(head->o, ho, lm, cm, head);
+#endif
 
 	EEE;
 	join_t j;
@@ -1375,7 +1435,16 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 
 
 
+void print_kb_json()
+{
+	dout << "{\"rules\":[" << endl;
+	for(auto pi: pred_index){
+		for(auto rid: pi){
 
+
+
+	dout << "\".\"]}" << endl;
+}
 
 
 
@@ -1387,6 +1456,7 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 	make_perms();
 	compile_kb();
 	if(check_consistency) dout << "consistency: mushy" << endl;
+	print_kb_json();
 }
 
 
@@ -1405,31 +1475,89 @@ void yprover::thatsAllFolks(int nresults){
 	unifys_ = unifys;
 }
 
+old::string html_escape(old::string s)
+{
+	return s;
+}
+
+void print_kbdbg_part(wstringstream &o, termid t, unsigned long part)
+{
+	o << "<span class=\"part\" id=" << part << ">";
+	if (islist(t)) {
+		o << "(";
+		unsigned long p = 0;
+		auto lst = op->get_dotstyle_list(l);
+		for (auto i: lst)
+			print_kbdbg_part(o, i, p++);
+		o << ")";
+	}
+	else
+		o << html_escape(*old::dict[t->p].value);
+	o << "</span>";
+}
+
+void print_kbdbg_term(wstringstream &o, termid t, unsigned long &part)
+{
+	print_kbdbg_part(o, t->s, part++);
+	o << html_escape(*old::dict[t->p].value);
+	print_kbdbg_part(o, t->o, part++);
+}
+
+void print_kbdbg_termset(wstringstream &o, old::prover::termset b, unsigned long &part)
+{
+	size_t i = 0;
+	for (auto bi: b) {
+		print_kbdbg_term(o, bi, part);
+		if (i++ != b.size() - 1)
+			o << ". ";
+	}
+}
+
+
+void print_kbdbg(old::prover::termset query)
+{
+	unsigned long part = 0;
+	for (auto rules: pred_index) {
+		for (auto rule: rules) {
+			auto h = op->heads[rule];
+			o << "{";
+			print_kbdbg_term(o, h, part);
+			o << "}";
+			auto b = op->bodies[rule];
+			if (b.size()) {
+				o << " <= {";
+				print_kbdbg_termset(o, b, part);
+				o << "}<br>" << endl;
+			}
+		}
+	}
+	print_kbdbg_termset(o, query, part);
+}
+
+
+};
 
 void yprover::query(const old::qdb& goal){
 	FUN;
-
-	dout << KGRN << "compile query." << KNRM << endl;
 	results.clear();
-	const old::prover::termset g = op->qdb2termset(goal);
+
+	const old::prover::termset q = op->qdb2termset(goal);
+
+	print_kbdbg(q);
+
 	steps = 0;
 	unifys = 0;
 	int nresults = 0;
-	//TRACE(dout << sprintPred(L"Making pred",pr) << "..." << endl;)
 	locals_map lm, cm;
 	Locals locals, consts;
 
-	make_locals(locals, consts, lm, cm, 0, g);
-	join_gen jg = compile_body(consts, lm, cm, 0, g);
-
-	//TRACE(dout << sprintPred(L"Run pred: ",pr) << " with " << sprintVar(L"Subject",s) << ", " << sprintVar(L"Object",o) << endl;)
-	// this is weird, passing the args over and over
+	dout << KGRN << "COMPILE QUERY" << KNRM << endl;
+	make_locals(locals, consts, lm, cm, 0, q);
+	join_gen jg = compile_body(IFKBDBG(locals,) consts, lm, cm, 0, q);
 
 	join_t coro = jg();
-
-	dout << KGRN << "run." << KNRM << endl;
-
-	while (coro((Thing*)666,(Thing*)666,locals.data())) {
+	dout << KGRN << "RUN" << KNRM << endl;
+	while (coro( (Thing*)666,(Thing*)666, locals.data() )) {
 		nresults++;
 		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 		qdb r;
@@ -1437,8 +1565,8 @@ void yprover::query(const old::qdb& goal){
 
 		for(auto i: g)
 		{
-			Thing &s = find_thing(i->s, locals, consts, lm, cm);
-			Thing &o = find_thing(i->o, locals, consts, lm, cm);
+			Thing &s = get_thing(i->s, locals, consts, lm, cm);
+			Thing &o = get_thing(i->o, locals, consts, lm, cm);
 			dout << str(getValue(&s)) << " " << old::dict[i->p] << " "  << str(getValue(&o)) << endl;
 			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
 			add_result(r, &s, &o, i->p);
