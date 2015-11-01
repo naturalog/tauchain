@@ -3,14 +3,14 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -37,14 +37,14 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -71,14 +71,14 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -105,14 +105,14 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -139,14 +139,14 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -173,14 +173,14 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -207,14 +207,14 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -241,14 +241,14 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -275,14 +275,14 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -309,14 +309,14 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -343,14 +343,14 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -377,14 +377,14 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -411,14 +411,14 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -445,14 +445,14 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -479,14 +479,14 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
@@ -513,14 +513,14 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)

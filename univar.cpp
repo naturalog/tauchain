@@ -815,11 +815,11 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 	TRACE(dout << "..." << endl;)
 	EEE;
 	coro uc;
-	TRC(int round = 0;)
-	return [a,b,c, uc, entry TRCCAP(round)]() mutable{
+	TRC(int call = 0;)
+	return [a,b,c, uc, entry TRCCAP(call)]() mutable{
 		setproc(L"unifjoin1");
 		TRCEEE;
-		TRC(round++;)
+		TRC(call++;)
 
 		switch(entry)
 		{
@@ -827,12 +827,12 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 			uc = unify(a,b);
 			entry = LAST;
 			while(uc()){
-				ASSERT(round == 1);
+				ASSERT(call == 1);
 				while(c()){
-					ASSERT(round == 1);
+					ASSERT(call == 1);
 					return true;
 		case_LAST:;
-					ASSERT(round == 2);
+					ASSERT(call == 2);
 				};
 			}
 			END;
@@ -912,7 +912,7 @@ coro unify(Thing *a_, Thing *b_){
 
 	if(are_equal(a,b)) {
 		if (is_node(a)) {
-					ASSERT(op->_terms.equals(get_term(a), get_term(b)));
+			ASSERT(op->_terms.equals(get_term(a), get_term(b)));
 			return gen_succeed();
 		}
 
@@ -931,11 +931,11 @@ rule_t seq(rule_t a, rule_t b){
 	FUN;
 	TRACE(dout << ".." << endl;)
 	EEE;
-	TRC(int round = 0;)
-	return [a, b, entry TRCCAP(round)](Thing *Ds, Thing *Do) mutable{
+	TRC(int call = 0;)
+	return [a, b, entry TRCCAP(call)](Thing *Ds, Thing *Do) mutable{
 		setproc(L"seq1");
-		TRC(round++;)
-		TRACE(dout << "round: " << round << endl;)
+		TRC(call++;)
+		TRACE(dout << "call: " << call << endl;)
 		switch(entry){
 		case 0:
 			entry = 1;
@@ -1071,7 +1071,7 @@ PredParam kbdbg_find_thing (unsigned long part, size_t &index, Locals &locals)
 }
 #endif
 //find thing in locals or consts by termid
-Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
+Thing &fetch_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
 	size_t i;
 	auto pp = find_thing(x, i, lm, cm);
@@ -1328,7 +1328,7 @@ rule_t compile_rule(old::prover::ruleid r)
 	EEE;
 	join_t j;
 	coro suc, ouc;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	ep_t *ep = new ep_t();
 	eps.push_back(ep);
 
@@ -1337,10 +1337,11 @@ rule_t compile_rule(old::prover::ruleid r)
 	Thing * locals=0;
 	const bool has_body = body.size();
 
-	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(round) TRCCAP(r)](Thing *s, Thing *o) mutable {
+	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc(L"rule");
+		TRC(++call;)
 		TRACE(dout << op->formatr(r) << endl;)
-		TRACE(dout << "round=" << ++round << endl;)
+		TRACE(dout << "call=" << call << endl;)
 		switch (entry) {
 			case 0: 
 				locals = (Thing*)malloc(locals_bytes);
@@ -1354,13 +1355,13 @@ rule_t compile_rule(old::prover::ruleid r)
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-					ASSERT(round == 1);
+					ASSERT(call == 1);
 
 					ouc = unify(o, &locals[ho]);
 					while (ouc()) {
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
-						ASSERT(round == 1);
+						ASSERT(call == 1);
 
 						if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
 							++steps;
@@ -1585,8 +1586,8 @@ void yprover::query(const old::qdb& goal){
 
 		for(auto i: q)
 		{
-			Thing &s = get_thing(i->s, locals, consts, lm, cm);
-			Thing &o = get_thing(i->o, locals, consts, lm, cm);
+			Thing &s = fetch_thing(i->s, locals, consts, lm, cm);
+			Thing &o = fetch_thing(i->o, locals, consts, lm, cm);
 			dout << str(getValue(&s)) << " " << old::dict[i->p] << " "  << str(getValue(&o)) << endl;
 			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
 			add_result(r, &s, &o, i->p);

@@ -26,14 +26,14 @@ for w in PP:
 	FUN;
 	TRACE(dout << "making a join" << endl;)
 	EEE;
-	TRC(int round = 0;)
+	TRC(int call = 0;)
 	pred_t ac;
 	join_t bc;
-	return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts]()mutable {
+	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
 		setproc(L"join gen");
-		return [a, b, wi, xi, entry TRCCAP(round), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
+		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
 			setproc(L"join");
-			TRACE(dout << "round: " << ++round << endl;)
+			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
 					//TRACE( dout << sprintPred(L"a()",a) << endl;)
