@@ -48,7 +48,7 @@ const char LAST = 33;
 #endif
 
 #ifdef NEW
-#define oneword
+//#define oneword
 #endif
 
 #ifdef KBDBG
@@ -56,6 +56,8 @@ const char LAST = 33;
 nope
 #endif
 #define IFKBDBG(x) x
+#else
+#define IFKBDBG(x)
 #endif
 
 
@@ -418,7 +420,7 @@ static bool fail_with_args(Thing *_s, Thing *_o)
 
 coro dbg_fail()
 {
-	int entry = 0;
+	byte entry = 0;
 	return [entry]() mutable{
 		setproc(L"dbg_fail lambda");
 		TRCEEE;
@@ -426,7 +428,7 @@ coro dbg_fail()
 		switch(entry)
 		{
 		case 0:
-			entry = 666;
+			entry = 66;
 			return false;
 		default:
 			ASSERT(false);
@@ -459,9 +461,20 @@ pred_t dbg_fail_with_args()
 #define GEN_FAIL_WITH_ARGS (dbg_fail_with_args())
 
 
+
+#ifdef KBDBG
+
 old::string kbdbg_str(const Thing * x)
 {
-	return L"xxxx";
+	wstringstream o;
+	o << "[";
+	size_t c;
+	for (auto i: x->markup) {
+		o << i;
+		if (++c != x->markup.size())
+			o << ", ";
+	}
+	return o.str();
 }
 
 coro kbdbg_unify_fail(const Thing *a, const Thing *b)
@@ -481,7 +494,12 @@ coro kbdbg_unify_fail(const Thing *a, const Thing *b)
 }
 
 #define UNIFY_FAIL(a,b) kbdbg_unify_fail(a,b)
-#endif
+#else
+#define UNIFY_FAIL(a,b) GEN_FAIL
+
+
+#endif // kbdbg
+#endif // debug
 
 
 
@@ -864,8 +882,8 @@ coro unify(Thing *a_, Thing *b_){
 	FUN;
 	unifys++;
 
-	DBG(auto origa = a_;)
-	DBG(auto origb = b_;)
+	IFKBDBG(auto origa = a_;)
+	IFKBDBG(auto origb = b_;)
 
 	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
@@ -1012,37 +1030,51 @@ bool islist(termid t)
 	return *old::dict[t->p].value == L".";
 }
 
-//return term's PredParam and possibly also its index into the corresponding vector
-PredParam find_thing (termid x, long part, size_t &index, locals_map &lm, locals_map &cm, termid head)
+PredParam maybe_head(PredParam pp, termid head, termid x)
 {
-	if (head)
+	if (head) {
 		assert(head->s && head->o);
-	if (head && x == head->s) {
-		index = lm.at(head->s);
-		return HEAD_S;
+		if (x == head->s)
+			return HEAD_S;
+		if (x == head->o)
+			return HEAD_O;
 	}
-	else if (head && x == head->o) {
-		index = lm.at(head->o);
-		return HEAD_O;
+	return pp;
+}
+
+//return term's PredParam and possibly also its index into the corresponding vector
+PredParam find_thing (termid x, size_t &index, locals_map &lm, locals_map &cm)
+{
+	auto it = lm.find(x);
+	if (it != lm.end()) {
+		index = it->second;
+		return LOCAL;
 	}
 	else {
-		auto it = lm.find(x);
-		if (it != lm.end()) {
-			index = it->second;
-			return LOCAL;
-		}
-		else {
-			index = cm.at(x);
-			return CONST;
-		}
+		index = cm.at(x);
+		return CONST;
 	}
 }
 
+#ifdef KBDBG
+PredParam kbdbg_find_thing (unsigned long part, size_t &index, Locals &locals)
+{
+	size_t r = 0;
+	for(auto i: locals)
+	{
+		if (i.markup.size() == 1 && i.markup.at(0) == part) {
+			index = r;
+			return LOCAL;
+		}
+		r++;
+	}
+}
+#endif
 //find thing in locals or consts by termid
 Thing &get_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
 	size_t i;
-	auto pp = find_thing(x, i, lm, cm, 0);
+	auto pp = find_thing(x, i, lm, cm);
 	if (pp == LOCAL)
 		return locals[i];
 	else if (pp == CONST)
@@ -1109,7 +1141,11 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				else { //its a node
 					t = create_node(li);
 					if (islist(li))
-						lq.push(li);
+						#ifdef KBDKG
+						lq.push(toadd(li, t.markup));
+						#else
+						lq.push(toadd(li, {}));
+						#endif
 				}
 				locals.push_back(t);
 			}
@@ -1198,12 +1234,11 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 
 
-join_gen compile_body(IFKBDBG(Locals &locals,) Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+
+join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
 	FUN;
-
 	join_gen jg = succeed_with_args_gen();
-
 	//for (int i = body.size() - 1; i >= 0; i--) {
 		//termid &bi = body[i];
 	auto b2 = body;
@@ -1216,11 +1251,12 @@ join_gen compile_body(IFKBDBG(Locals &locals,) Locals &consts, locals_map &lm, l
 		size_t i1, i2;
 		PredParam sk, ok;
 #ifdef KBDBG
-		ok = kbdbg_find_thing(--kbdbg_part_max, i2, locals);
-		sk = kbdbg_find_thing(--kbdbg_part_max, i1, locals);
+		ok = maybe_head(kbdbg_find_thing(--kbdbg_part_max, i2, locals), head, o);
+		sk = maybe_head(kbdbg_find_thing(--kbdbg_part_max, i1, locals), head, s);
 #else
-		sk = find_thing(s, i1, lm, cm, head);
-		ok = find_thing(o, i2, lm, cm, head);
+		(void)locals;
+		sk = maybe_head(find_thing(s, i1, lm, cm), head, s);
+		ok = maybe_head(find_thing(o, i2, lm, cm), head, o);
 #endif
 		TRACE(dout <<"perm " << permname.at(sk) << " " << permname.at(ok) << endl );
 		jg = perms.at(sk).at(ok)(bi->p, jg, i1, i2, consts);
@@ -1276,7 +1312,7 @@ rule_t compile_rule(old::prover::ruleid r)
 	Locals &consts = *consts_;
 
 	make_locals(locals_template, consts, lm, cm, head, body);
-	join_gen jg = compile_body(IFKBDBG(locals,) consts, lm, cm, head, body);
+	join_gen jg = compile_body(locals_template, consts, lm, cm, head, body);
 
 	size_t hs, ho;
 #ifdef KBDBG
@@ -1285,8 +1321,8 @@ rule_t compile_rule(old::prover::ruleid r)
 	assert(part == kbdbg_part_max + 1);//statistically proven to be true
 #else
 	//ignoring key, because head s and o go into locals always
-	find_thing(head->s, hs, lm, cm, head);
-	find_thing(head->o, ho, lm, cm, head);
+	find_thing(head->s, hs, lm, cm);
+	find_thing(head->o, ho, lm, cm);
 #endif
 
 	EEE;
@@ -1434,29 +1470,12 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 
 
 
-
-void print_kb_json()
-{
-	dout << "{\"rules\":[" << endl;
-	for(auto pi: pred_index){
-		for(auto rid: pi){
-
-
-
-	dout << "\".\"]}" << endl;
-}
-
-
-
-
-
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	TRACE(dout << "constructing old prover" << endl;)
 	op = new old::prover(qkb, false);
 	make_perms();
 	compile_kb();
 	if(check_consistency) dout << "consistency: mushy" << endl;
-	print_kb_json();
 }
 
 
@@ -1475,6 +1494,9 @@ void yprover::thatsAllFolks(int nresults){
 	unifys_ = unifys;
 }
 
+#ifdef KBDBG
+
+
 old::string html_escape(old::string s)
 {
 	return s;
@@ -1486,7 +1508,7 @@ void print_kbdbg_part(wstringstream &o, termid t, unsigned long part)
 	if (islist(t)) {
 		o << "(";
 		unsigned long p = 0;
-		auto lst = op->get_dotstyle_list(l);
+		auto lst = op->get_dotstyle_list(t);
 		for (auto i: lst)
 			print_kbdbg_part(o, i, p++);
 		o << ")";
@@ -1518,7 +1540,7 @@ void print_kbdbg(old::prover::termset query)
 {
 	unsigned long part = 0;
 	for (auto rules: pred_index) {
-		for (auto rule: rules) {
+		for (auto rule: rules.second) {
 			auto h = op->heads[rule];
 			o << "{";
 			print_kbdbg_term(o, h, part);
@@ -1533,18 +1555,16 @@ void print_kbdbg(old::prover::termset query)
 	}
 	print_kbdbg_termset(o, query, part);
 }
-
-
-};
+#endif
 
 void yprover::query(const old::qdb& goal){
 	FUN;
 	results.clear();
 
 	const old::prover::termset q = op->qdb2termset(goal);
-
+#ifdef KBDBG
 	print_kbdbg(q);
-
+#endif
 	steps = 0;
 	unifys = 0;
 	int nresults = 0;
@@ -1553,7 +1573,7 @@ void yprover::query(const old::qdb& goal){
 
 	dout << KGRN << "COMPILE QUERY" << KNRM << endl;
 	make_locals(locals, consts, lm, cm, 0, q);
-	join_gen jg = compile_body(IFKBDBG(locals,) consts, lm, cm, 0, q);
+	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);
 
 	join_t coro = jg();
 	dout << KGRN << "RUN" << KNRM << endl;
@@ -1563,7 +1583,7 @@ void yprover::query(const old::qdb& goal){
 		qdb r;
 		r.first[L"@default"] = old::mk_qlist();
 
-		for(auto i: g)
+		for(auto i: q)
 		{
 			Thing &s = get_thing(i->s, locals, consts, lm, cm);
 			Thing &o = get_thing(i->o, locals, consts, lm, cm);
