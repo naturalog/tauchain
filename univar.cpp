@@ -472,7 +472,7 @@ pred_t dbg_fail_with_args()
 old::string kbdbg_str(const Thing * x)
 {
 	wstringstream o;
-	o << "[";
+	o << "[" << x << ", ";
 	size_t c=0;
 	for (auto i: x->markup) {
 		o << i;

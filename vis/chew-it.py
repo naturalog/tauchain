@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json
+import json, sys
 
 stepid = -1
-toremove = Null
+toremove = None
 
-def print_step():
-	global stepid
+def step():
+	global stepid, toremove
 	stepid += 1
 	print (json.dumps({"type":"step", "id": stepid},))
+	print (",")
 	if toremove:
-		print (json.dumps({"type":"remove", "id":toremove}))
-		toremove = Null
+		print (json.dumps({"type":"remove", "a": x.a, "b": x.b}))
+		print (",")
+		toremove = None
 		
 
 print ("[")
@@ -22,24 +24,31 @@ step()
 for line in sys.stdin:
 	if len(line) == 0:
 		print()
-	else if line[0] != '{':
+	elif line[0] != '{':
 		print (json.dumps(line))
 		print (",")
-	else
-		x = json.loads(line)
+	else:
+		try:
+			x = json.loads(line)
+		except:
+			print ("error:" + str(line))
+			raise
 		if x.type == 'bind':
 			step()
-			print (json.dumps({"type":"add", "a": x.a, "b": x.b, "id": x.id}))
+			print (json.dumps({"type":"add", "a": x.a, "b": x.b}))
+			print (",")
 		if x.type == 'unbind':
 			step()
-			print (json.dumps({"type":"remove", "id":x.id}))
+			print (json.dumps({"type":"remove", "a": x.a, "b": x.b}))
+			print (",")
 		if x.type == 'fail':
 			step()
-			print (json.dumps({"type":"add", "a": x.a, "b": x.b, "id": x.id}))
-			toremove = x.id
-			 
+			print (json.dumps({"type":"add", "a": x.a, "b": x.b}))
+			print (",")
+			toremove = x
+		else:
+			print (json.dumps(x))
+			print (",")
 		
 
-
-
-print (""" "end" ])
+print (""" "end" ] """)
