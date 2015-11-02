@@ -645,6 +645,9 @@ int main ( int argc, char** argv) {
 
 		dout << L"<\"" << line << "\"" << std::endl;
 
+		if (startsWith(line, L"#"))
+			continue;
+
 		string token;
 		if (mode == COMMANDS && trimmed_data == L"") {
 

@@ -9,20 +9,22 @@ toremove = Null
 def print_step():
 	global stepid
 	stepid += 1
-	print (json.dumps({"type":"step", "id": stepid}))
+	print (json.dumps({"type":"step", "id": stepid},))
 	if toremove:
-		toremove = Null
 		print (json.dumps({"type":"remove", "id":toremove}))
+		toremove = Null
 		
 
-print ("""[""")
-print_step()
+print ("[")
+
+step()
 
 for line in sys.stdin:
 	if len(line) == 0:
 		print()
 	else if line[0] != '{':
 		print (json.dumps(line))
+		print (",")
 	else
 		x = json.loads(line)
 		if x.type == 'bind':

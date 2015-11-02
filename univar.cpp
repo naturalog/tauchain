@@ -9,6 +9,7 @@ using namespace std;
 using namespace old;
 
 typedef intptr_t offset_t;//ptrdiff_t
+typedef unsigned char byte;
 
 intptr_t ofst(size_t target, size_t me)
 {
@@ -36,7 +37,7 @@ const char LAST = 33;
 #define ITEM(x,y) x[y]
 #define ASSERT assert
 #define case_LAST case LAST
-#define END entry = 66; return false; default: ASSERT(false);
+#define END entry = 66; return false; default: assert(false);
 #else
 #define DBG(x)
 #define TRC(x)
@@ -48,11 +49,14 @@ const char LAST = 33;
 #endif
 
 #ifdef NEW
-//#define oneword
+#define KBDBG
 #endif
 
 #ifdef KBDBG
 #ifdef oneword
+nope
+#endif
+#ifndef DEBUG
 nope
 #endif
 #define IFKBDBG(x) x
@@ -104,12 +108,15 @@ public:
 #endif
 };
 
-#ifdef KBDBG
-void add_kbdbg_info(Thing &t, Markup markup)
+inline void add_kbdbg_info(Thing &t, Markup markup)
 {
-	t.kdbdg_markup = markup;
-}
+	(void) t;
+	(void) markup;
+#ifdef KBDBG
+	t.markup = markup;
 #endif
+}
+
 
 #define get_type(thing) ((thing).type)
 #define get_term(thing) ((thing).term)
@@ -166,7 +173,6 @@ void make_this_list(Thing &i0, size_t size)
 
 #else
 
-typedef unsigned char byte;
 typedef uintptr_t *Thing;
 #define databits(x) (((uintptr_t)x) & ~0b11)
 #define typebits(t) ((uintptr_t)t & (uintptr_t)0b11)
@@ -415,7 +421,6 @@ static bool fail_with_args(Thing *_s, Thing *_o)
 #define GEN_FAIL (fail)
 #define GEN_FAIL_WITH_ARGS (fail_with_args)
 #define UNIFY_FAIL(a,b) GEN_FAIL
-
 #else
 
 coro dbg_fail()
@@ -468,12 +473,14 @@ old::string kbdbg_str(const Thing * x)
 {
 	wstringstream o;
 	o << "[";
-	size_t c;
+	size_t c=0;
 	for (auto i: x->markup) {
 		o << i;
 		if (++c != x->markup.size())
 			o << ", ";
 	}
+	o << "]";
+	assert(c);
 	return o.str();
 }
 
@@ -502,7 +509,47 @@ coro kbdbg_unify_fail(const Thing *a, const Thing *b)
 #endif // debug
 
 
+inline void kbdbg_bind(const Thing *a, bool bind, const Thing *b)
+{
+	(void)a;
+	(void)b;
+	(void)bind;
+#ifdef KBDBG
+	dout << "{\"type\":\"";
+	if(!bind) dout << "un";
+	dout << "bind\", \"a\":" << kbdbg_str(a) << ", \"b\":" << kbdbg_str(b) << "}" << endl;
+#endif
+}
 
+
+#ifndef KBDBG
+
+#define UNIFY_SUCCEED(a,b) gen_succeed()
+
+#else
+
+static coro UNIFY_SUCCEED(const Thing *a, const Thing *b)
+{
+	EEE;
+	return [entry, a ,b]() mutable{
+		switch(entry)
+		{
+		case 0:
+			entry = LAST;
+			kbdbg_bind(a, true, b);
+			return true;
+		case_LAST:
+			kbdbg_bind(a, false, b);
+			entry = 66;
+			return false;
+		default:
+			assert(false);
+		}
+	};
+}
+
+
+#endif
 
 
 //endregion
@@ -633,6 +680,7 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg)
 						TRACE(dout << "binding " << me << "/" << str(me) << " to " << argv << "/" << str(argv) << endl;)
 						ASSERT(is_unbound(*me));
 						make_this_bound(me, argv);
+						kbdbg_bind(me, true, argv);
 						entry = LAST;
 						return true;
 					}
@@ -640,6 +688,7 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg)
 						TRACE(dout << "unbinding " << me << "/" << str(me) << endl;)
 						ASSERT(is_bound(*me));
 						make_this_unbound(me);
+						kbdbg_bind(me, false, argv);
 						END
 				}
 			};
@@ -685,19 +734,26 @@ bool would_unify(Thing *this_, Thing *x_)
 
 
 #ifdef DEBUG
+
 coro unbound_succeed(Thing *x, Thing *y)
 {
 	EEE;
 	return [entry, x, y]() mutable {
 		ASSERT(is_unbound(*x));
 		setproc(L"unbound_succeed lambda");
-		TRACE(dout << x << " " << y << endl);
+		TRACE(dout << str(x) << " " << str(y) << endl);
 		TRCEEE;
 		switch (entry) {
 			case 0:
 				entry = LAST;
+				kbdbg_bind(x,true,y);
 				return true;
-			case_LAST: END
+			case_LAST:
+				kbdbg_bind(x,false,y);
+				entry = 66;
+				return false;
+			default:
+				assert(false);
 		}
 	};
 }
@@ -889,7 +945,7 @@ coro unify(Thing *a_, Thing *b_){
 
 	if (a_ == b_) {//?
 		TRACE(dout << "a == b" << endl;)
-		return gen_succeed();
+		return UNIFY_SUCCEED(origa, origb);
 	}
 
 	//TRACE(dout << "a:[" << a_ << "]" << getValue(a_) << endl;)
@@ -913,7 +969,7 @@ coro unify(Thing *a_, Thing *b_){
 	if(are_equal(a,b)) {
 		if (is_node(a)) {
 			ASSERT(op->_terms.equals(get_term(a), get_term(b)));
-			return gen_succeed();
+			return UNIFY_SUCCEED(origa, origb);
 		}
 
 		if (is_list(a)) {
@@ -1068,6 +1124,7 @@ PredParam kbdbg_find_thing (unsigned long part, size_t &index, Locals &locals)
 		}
 		r++;
 	}
+	assert(false);
 }
 #endif
 //find thing in locals or consts by termid
@@ -1087,10 +1144,14 @@ Thing &fetch_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, loc
 void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head)
 {
 	(void)head;
-	TRACE(dout << "locals:" << endl);
+	dout << endl << "locals:" << endl;
 	for (auto x: lm)
 		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&locals.at(x.second)) << endl;
-	TRACE(dout << "consts:" << endl);
+#ifdef KBDBG
+	for (auto &x: locals)
+		dout << kbdbg_str(&x) << " ::: " << str(&x) << endl;
+#endif
+	dout << "consts:" << endl;
 	for (auto x: cm)
 		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&consts.at(x.second)) << endl;
 }
@@ -1113,7 +1174,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			auto lst = op->get_dotstyle_list(l);
 
 			Thing i0; // list size item, a sort of header / pascal string (array?) style thing
-#ifdef KBDKG
+#ifdef KBDBG
 			add_kbdbg_info(i0, ll.second);
 			unsigned long list_part = 0;
 #endif
@@ -1123,11 +1184,11 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 			for (auto li: lst) {
 				TRACE(dout << "item..." << endl;)
-				Thing t;
-#ifdef KBDKG
-				add_kbdbg_info(t, ll.second);
-				t.markup.push_back(list_part++);
+#ifdef KBDBG
+				Markup m = ll.second;
+				m.push_back(list_part++);
 #endif
+				Thing t;
 				if (li->p < 0) { //its a var
 					auto it = lm.find(li); //is it already in locals?
 					if (it == lm.end()) { //no? create a fresh var
@@ -1141,12 +1202,15 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				else { //its a node
 					t = create_node(li);
 					if (islist(li))
-						#ifdef KBDKG
-						lq.push(toadd(li, t.markup));
+						#ifdef KBDBG
+						lq.push(toadd(li, m));
 						#else
 						lq.push(toadd(li, {}));
 						#endif
 				}
+#ifdef KBDBG
+				add_kbdbg_info(t, m);
+#endif
 				locals.push_back(t);
 			}
 		}
@@ -1165,9 +1229,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	auto add_node = [](bool var, toadd xx, Locals &vec, locals_map &m) {
 		setproc("add_node");
 		Thing t;
-#ifdef KBDKG
 		add_kbdbg_info(t, xx.second);
-#endif
 		termid x = xx.first;
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
 		auto it = m.find(x);
@@ -1177,12 +1239,14 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				t = create_unbound();
 			else
 				t = create_node(x);
+			add_kbdbg_info(t, xx.second);
 			vec.push_back(t);
 		}
-#ifdef KBDKG
+#ifdef KBDBG
 		else
 		{
 			make_this_offset(t, ofst(it->second, vec.size()));
+			add_kbdbg_info(t, xx.second);
 			vec.push_back(t);
 		}
 #endif
@@ -1226,10 +1290,11 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	expand_lists();
 	link_lists();
 
-	print_locals(locals, consts, lm, cm, head);
-
 	kbdbg_part_max = kbdbg_part;
 	kbdbg_part = old_kbdbg_part;
+
+	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
+	TRACE(print_locals(locals, consts, lm, cm, head);)
 }
 
 
@@ -1251,9 +1316,12 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 		size_t i1, i2;
 		PredParam sk, ok;
 #ifdef KBDBG
+		(void)lm;
+		(void)cm;
 		ok = maybe_head(kbdbg_find_thing(--kbdbg_part_max, i2, locals), head, o);
 		sk = maybe_head(kbdbg_find_thing(--kbdbg_part_max, i1, locals), head, s);
-#else
+		TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
+		#else
 		(void)locals;
 		sk = maybe_head(find_thing(s, i1, lm, cm), head, s);
 		ok = maybe_head(find_thing(o, i2, lm, cm), head, o);
@@ -1316,9 +1384,10 @@ rule_t compile_rule(old::prover::ruleid r)
 
 	size_t hs, ho;
 #ifdef KBDBG
-	kbdbg_find_thing(part++, hs, locals);
-	kbdbg_find_thing(part++, ho, locals);
-	assert(part == kbdbg_part_max + 1);//statistically proven to be true
+	kbdbg_find_thing(kbdbg_part++, hs, locals_template);
+	kbdbg_find_thing(kbdbg_part++, ho, locals_template);
+	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
+	assert(kbdbg_part == kbdbg_part_max);//statistically proven to be true
 #else
 	//ignoring key, because head s and o go into locals always
 	find_thing(head->s, hs, lm, cm);
@@ -1539,6 +1608,7 @@ void print_kbdbg_termset(wstringstream &o, old::prover::termset b, unsigned long
 
 void print_kbdbg(old::prover::termset query)
 {
+	wstringstream o;
 	unsigned long part = 0;
 	for (auto rules: pred_index) {
 		for (auto rule: rules.second) {
@@ -1555,6 +1625,7 @@ void print_kbdbg(old::prover::termset query)
 		}
 	}
 	print_kbdbg_termset(o, query, part);
+	dout << o.str() << endl;
 }
 #endif
 
