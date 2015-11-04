@@ -6,13 +6,18 @@ import json, sys
 stepid = -1
 toremove = None
 
+
+def pr(x, t):
+	print (json.dumps({"type":t, "a": x["a"], "b": x["b"]}))
+
+
 def step():
-	global stepid, toremove
-	stepid += 1
-	print (json.dumps({"type":"step", "id": stepid},))
+	global toremove
+	
+	print (json.dumps({"type":"step"}))
 	print (",")
 	if toremove:
-		print (json.dumps({"type":"remove", "a": x.a, "b": x.b}))
+		pr(x, "remove")
 		print (",")
 		toremove = None
 		
@@ -21,34 +26,35 @@ print ("[")
 
 step()
 
+
 for line in sys.stdin:
-	if len(line) == 0:
-		print()
-	elif line[0] != '{':
-		print (json.dumps(line))
-		print (",")
-	else:
+#	if len(line) == 0:
+#		print()
+	if line[0] == '[':
+		json.loads(line)
+		print (line)
+	elif line[0] == '{':
 		try:
 			x = json.loads(line)
 		except:
 			print ("error:" + str(line))
 			raise
-		if x.type == 'bind':
+		t = x["type"]
+		if t == 'bind':
 			step()
-			print (json.dumps({"type":"add", "a": x.a, "b": x.b}))
-			print (",")
-		if x.type == 'unbind':
+			pr(x, "add")
+		elif t == 'unbind':
 			step()
-			print (json.dumps({"type":"remove", "a": x.a, "b": x.b}))
-			print (",")
-		if x.type == 'fail':
+			pr(x, "remove")
+		elif t == 'fail':
 			step()
-			print (json.dumps({"type":"add", "a": x.a, "b": x.b}))
-			print (",")
+			pr(x, "add")
 			toremove = x
 		else:
 			print (json.dumps(x))
-			print (",")
+	else:
+		print (json.dumps(line))
+	print (",")
 		
 
 print (""" "end" ] """)

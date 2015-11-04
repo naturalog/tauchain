@@ -472,7 +472,7 @@ pred_t dbg_fail_with_args()
 old::string kbdbg_str(const Thing * x)
 {
 	wstringstream o;
-	o << "[" << x << ", ";
+	o << "[" << "\"" << x << "\""  << ", ";
 	size_t c=0;
 	for (auto i: x->markup) {
 		o << i;
@@ -1567,31 +1567,29 @@ void yprover::thatsAllFolks(int nresults){
 #ifdef KBDBG
 
 
-old::string html_escape(old::string s)
-{
-	return s;
-}
-
 void print_kbdbg_part(wstringstream &o, termid t, unsigned long part)
 {
-	o << "<span class=\"part\" id=" << part << ">";
+	o << part << ",";
 	if (islist(t)) {
-		o << "(";
+		o << "\"(\",";
 		unsigned long p = 0;
 		auto lst = op->get_dotstyle_list(t);
 		for (auto i: lst)
+		{
 			print_kbdbg_part(o, i, p++);
-		o << ")";
+			o << ",";
+		}
+		o << "\")\",-1";
 	}
 	else
-		o << html_escape(*old::dict[t->p].value);
-	o << "</span>";
+		o << "\"" << dstr(t->p, true) << "\"";
+	o << ",-1";
 }
 
 void print_kbdbg_term(wstringstream &o, termid t, unsigned long &part)
 {
 	print_kbdbg_part(o, t->s, part++);
-	o << html_escape(*old::dict[t->p].value);
+	o << ",\" " << dstr(t->p, true) << " \",";
 	print_kbdbg_part(o, t->o, part++);
 }
 
@@ -1601,7 +1599,7 @@ void print_kbdbg_termset(wstringstream &o, old::prover::termset b, unsigned long
 	for (auto bi: b) {
 		print_kbdbg_term(o, bi, part);
 		if (i++ != b.size() - 1)
-			o << ". ";
+			o << ", \". \", ";
 	}
 }
 
@@ -1613,19 +1611,20 @@ void print_kbdbg(old::prover::termset query)
 	for (auto rules: pred_index) {
 		for (auto rule: rules.second) {
 			auto h = op->heads[rule];
-			o << "{";
+			o << "\"{\",";
 			print_kbdbg_term(o, h, part);
-			o << "}";
+			o << ",\"}\"";
 			auto b = op->bodies[rule];
 			if (b.size()) {
-				o << " <= {";
+				o << ",\" <= {\",";
 				print_kbdbg_termset(o, b, part);
-				o << "}<br>" << endl;
+				o << ",\"}\"";
 			}
+			o << ",\"\\n\",";
 		}
 	}
 	print_kbdbg_termset(o, query, part);
-	dout << o.str() << endl;
+	dout << "[" << o.str() << "]" << endl;
 }
 #endif
 
