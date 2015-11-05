@@ -11,7 +11,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 clean:
 	rm -rf vm vm.o n3.o ir.o eq.o
-vm: vm.c dict.cpp vm.h n3.c eq.c
+vm: vm.c dict.cpp vm.h n3.c cfpds.c
 	gcc vm.c -ovm.o -c $(CFLAGS)
 	gcc n3.c -on3.o -c $(CFLAGS)
 	gcc ir.c -oir.o -c $(CFLAGS)

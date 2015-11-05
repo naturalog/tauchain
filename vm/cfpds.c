@@ -6,38 +6,24 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include "cfpds.h"
 
-typedef struct arr arr;
-typedef struct diff diff;
-typedef union data data;
-typedef struct parr parr;
-typedef struct uf uf;
-typedef struct aux aux;
+struct aux  { parr *rep; int r;		};
 
-struct arr  { int s,*a; 		};
-struct diff { int i, v; parr* t;	};
-union  data { arr  a;	diff d; 	};
-struct parr { data d;	bool isdiff;	};
-struct uf   { parr *rank, *rep;		};
-struct aux { parr *rep; int r; };
-
-parr mkarr(int *a, int s);
-parr *alloc_arr(int *a, int s);
-parr mkdiff(int i, int v, parr* t);
-void reroot(parr *t);
-int get(parr *t, int i);
+parr  mkarr(int *a, int s);
+parr* alloc_arr(int *a, int s);
+parr  mkdiff(int i, int v, parr* t);
+void  reroot(parr *t);
+int   get(parr *t, int i);
 parr* set(parr *t, int i, int v);
-uf create(int n);
-aux find_aux(parr *f, int i);
-int find(uf* h, int x);
-uf* unio(uf *h, int x, int y);
+aux   find_aux(parr *f, int i);
 
-uf create(int n) {
-	uf r;
+uf* create(int n) {
+	uf *r = malloc(sizeof(uf));
 	int *t = malloc(n * sizeof(int)), k = n;
 	while (k--) t[k] = k;
-	r.rep = alloc_arr(t, n);
-	r.rank = alloc_arr(calloc(n, sizeof(int)), n);
+	r->rep = alloc_arr(t, n);
+	r->rank = alloc_arr(calloc(n, sizeof(int)), n);
 	return r;
 }
 
@@ -114,7 +100,6 @@ void reroot(parr *t) {
 
 int get(parr *t, int i) {
 	if (t->isdiff) reroot(t);
-	assert(i < t->d.a.s);
 	return t->d.a.a[i];
 }
 
@@ -138,16 +123,17 @@ void print(parr *t, int n) {
 }
 
 int main() {
-	const int s = 10;
-	parr *p = calloc(1, sizeof(parr));
-	*p = mkarr(calloc(s, sizeof(int)), s);
-	print(p, 10);
-	p = set(p, 0, 3), print(p, 10);
-	p = set(p, 1, 1), print(p, 10);
-	p = set(p, 2, 7), print(p, 10);
-	p = set(p, 1, 5), print(p, 10);
-	p = set(p, 2, 2), print(p, 10);
-	p = set(p, 3, -3), print(p, 10);
-	p = set(p, 4, 9), print(p, 10);
+// c&f's original ocaml unit test
+	uf *t = create(10);
+	assert(find(t, 0) != find(t, 1));
+	t = unio(t, 0, 1);
+	assert(find(t, 0) == find(t, 1));
+	assert(find(t, 0) != find(t, 2));
+	t = unio(t, 2, 3);
+	t = unio(t, 0, 3);
+	assert(find(t, 1) == find(t, 2));
+	t = unio(t, 4, 4);
+	assert(find(t, 4) != find(t, 3));
+
 	return 0;
 }

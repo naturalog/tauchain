@@ -1,5 +1,4 @@
 #include "vm.h"
-#include "eq.h"
 
 #define eithervar(x, y) ((x).type == '?' || (y).type == '?')
 

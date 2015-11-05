@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <wchar.h>
 #include <wctype.h>
+#include "cfpds.h"
 
 #ifdef DEBUG
 #define TRACE(x) x
@@ -20,24 +21,17 @@ void putcs(char* x);
 
 // Following 3 structs store the kb&query.
 //
-// int* arrays below (args, c) have first int as length,
-// and are also zero terminated. Hence empty list consists of two
-// integers, zero each.
-//
-// struct term encapsulates triples as well, for efficiency reasons.
-// hence when the term repterments a triple, we'll sometimes emphasize
-// it on the comments as "term (triple)"
+// int* arrays below (args, c) have first int as length, and
+// are also zero terminated. hence empty list consists of two zeros.
+// struct term encapsulates triples as well, for efficiency and other reasons.
 
-// termource (IRI/literal/variable/list) or triple (where args contain spo)
-struct term { 
-	// types:
-	// '.' list
-	// '?' var
-	// '_' bnode
-	// 'I' IRI
-	// 'L' literal
-	// 'T' triple
-	char type; 
+enum etype { 	LIST 	= '.',	VAR 	= '?',
+		BNODE 	= '_',	IRI 	= 'I',
+		LITERAL = 'L',	TRIPLE 	= 'T' };
+typedef enum etype etype;
+// resource (IRI/literal/variable/list) or triple (where args contain spo)
+struct term {
+	etype type; 
 	union {
 		const wchar_t *value; // termource's value
 		const int *args; // list's elements ids
@@ -47,21 +41,13 @@ struct premise {
 	// term (triple) id
 	int p; 
 	// equality relations (calculated from premises
-	// and conclusions). e[r][k] is the int** equality 
-	// relation of the k'th conclusion in the r's rule.
-	int ** **e;
+	// and conclusions). e[r][k] is the union-find data 
+	// structure of the k'th conclusion in the r's rule.
+	int **uf;
 };
 struct rule {
-	int *c; // conclusions. every int is a term (triple) id.
-		// having multiple conclusions encapsulated
-		// in a rule has two advantages: First, naturally and efficiently
-		// expterms generalized modus ponens (with both conjuncions
-		// and disjunctions). Second, and more important, is that
-		// once conclusions are grouped by premises, all ground
-		// rules (aka facts) are grouped within one rule. So identifying
-		// ground can be done by saving memory and indirections, or searches.
-		// also for saving separation of compilation code.
-	struct premise *p; // premises
+	int *c; // conclusions, disjuncted. every int is a term (triple) id
+	struct premise *p; // premises, conjuncted
 	int np; // number of premises
 };
 typedef struct term term;

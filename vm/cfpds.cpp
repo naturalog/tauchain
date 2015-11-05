@@ -1,6 +1,7 @@
 #include <functional>
 #include <utility>
 #include <iostream>
+#include <cassert>
 using namespace std;
 // Conchon&Filliatre persistent data structures from "A Persistent Union-Find
 // Data Structure" published on "Proceeding ML '07 Proceedings of the 2007
@@ -9,16 +10,56 @@ using namespace std;
 struct cfpds {
 	template<typename alpha>
 	class arr {
-		int n;
-		function<alpha(int)> f;
+		struct arr_t {
+			int n;
+			function<alpha(int)> f;
+			void set(int m, int k) {
+				auto ff = f;
+				f = [ff, m, k](int n) { return n == m ? k : ff(n); };
+			}
+			alpha operator()(int k) { return f(k); }
+		};
+		struct diff_t {
+			int i;
+			alpha v;
+			arr<alpha> *t;
+		};
+
+		bool isdiff;
+//		union {
+			arr_t a;
+			diff_t d;
+//		};	
 	public:
-		arr(int _n, function<alpha(int)> _f) : n(_n), f(_f) {}
-		alpha		get(int k) { return f(k); }
+		arr(int n, function<alpha(int)> f) : isdiff(false) { a.n = n; a.f = f; }
+		arr(int i, alpha v, arr<alpha> *t) : isdiff(true) { d.i = i; d.v = v; d.t = t; }
+/*		
+		alpha		get(int k) { return a.f(k); }
 		arr<alpha>*	set(int k, alpha aa) {
-			return new arr<alpha>(n, [this, k, aa](int n) {
+			auto f = a.f;
+			int n = a.n;
+			return new arr<alpha>(a.n, [n, f, k, aa](int n) {
 					return n == k ? aa : f(n);
 				});
 		}
+*/
+		alpha get(int i) {
+			if (!isdiff) return assert(i < a.n), a(i);
+			return d.i == i ? d.v : d.t->get(i);
+		}
+		static void set(arr<alpha> **res, int i, alpha v) {
+			arr<alpha>& t = **res;
+			if (t.isdiff) {
+				*res = new arr<alpha>(i, v, &t);
+				return;
+			}
+			arr_t &a = t.a, &n = *res;
+			alpha old = a(i);
+			a.set(i, v);
+
+//			return (isdiff = true, d.i = i, d.v = v), (d.t = new arr<alpha>(i, v, this));
+		}
+
 
 		pair<arr<int>*, int> find_aux(int i) {
 			int fi = get(i);
@@ -26,14 +67,13 @@ struct cfpds {
 			pair<arr<int>*, int> fr = find_aux(fi);
 			return make_pair(fr.first->set(i, fr.second), fr.second);
 		}
-		void print() {
-			for (int k = 0; k < n; ++k)
-				cout << k << '\t' << f(k) << endl;
-		}
+		void print() { for (int k = 0; k < a.n; ++k) cout << k << '\t' << get(k) << endl; }
 	};
 	struct uf {
 		arr<int> *rank, *rep;
-		uf(int n): rank(new arr<int>(n,[](int){return 0;})), rep(new arr<int>(n,[](int n){return n;})){}
+		uf(int n)
+			: rank(new arr<int>(n,[](int  ){return 0;}))
+			, rep (new arr<int>(n,[](int n){return n;})) {}
 		uf(uf* u, arr<int>* reps) : rank(u->rank), rep(reps) {}
 		uf(arr<int>* ranks, arr<int>* reps) : rank(ranks), rep(reps) {}
 		int find(int x) {
