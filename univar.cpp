@@ -706,6 +706,7 @@ bool would_unify(Thing *this_, Thing *x_)
 		ASSERT(!is_offset(me));
 		ASSERT(!is_offset(x));
 		ASSERT(!is_bound(x));
+	//return type_bits(me) &&
 		if (is_var(me))
 			return true;// we must have been an unbound var
 		else if (types_differ(me, x)) // in oneword mode doesnt differentiate between bound and unbound!
@@ -1419,6 +1420,8 @@ rule_t compile_rule(old::prover::ruleid r)
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				ASSERT(hs < locals_bytes / sizeof(Thing));
 				ASSERT(ho < locals_bytes / sizeof(Thing));
+
+				
 
 				suc = unify(s, &locals[hs]);
 				while (suc()) {

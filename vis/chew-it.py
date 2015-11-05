@@ -13,11 +13,10 @@ def pr(x, t):
 
 def step():
 	global toremove
-	
 	print (json.dumps({"type":"step"}))
 	print (",")
 	if toremove:
-		pr(x, "remove")
+		pr(toremove, "remove")
 		print (",")
 		toremove = None
 		
