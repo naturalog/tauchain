@@ -1431,10 +1431,10 @@ rule_t compile_rule(old::prover::ruleid r)
 
 						if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
 							++steps;
-/*
+
 						o = getValue(o);
 						s = getValue(s);
-*/
+
 						if (has_body && find_ep(ep, s, o)) {
 							goto end;
 						}
