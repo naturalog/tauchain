@@ -34,9 +34,9 @@ char compile_pc(int r, int p, int r1, int c) {
 	assert(	c && r && r1 && r < nrs && r1 < nrs && p < rules[r].np &&
 		c <= *rules[r1].c && prem->p && *conc && s.type == 'T' && d.type == 'T');
 
-	if (!prem->e) prem->e = CALLOC(int***, nrs);
-	if (!prem->e[r1]) prem->e[r1] = CALLOC(int**, *rules[r1].c);
-	uf *e = prem->e[r1][c - 1];
+	if (!prem->e) prem->e = calloc(nrs, sizeof(int***));
+	if (!prem->e[r1]) prem->e[r1] = calloc(*rules[r1].c, sizeof(int**));
+//	uf *e = prem->e[r1][c - 1];
 	//wprintf(L"r:%d p:%d r1:%d c:%d r[r1].c[0]:%d\n", r, p, r1, c, *rules[r1].c), fflush(stdout);
 //	if (!*e) *e = create_relation();
 //	if (!compile_term(e, prem->p, *conc))
@@ -65,11 +65,11 @@ void compile() {
 wchar_t* readall() {
 	const size_t buflen = 256;
 	int pos = 0;
-	input = MALLOC(wchar_t, buflen);
+	input = malloc(sizeof(wchar_t) * buflen);
 	while (!feof(stdin)) { // read whole doc into mem
 		if ((input[pos++] = getwchar()) == (wchar_t)WEOF) break;
 		if (!(pos % buflen))
-			input = REALLOC(input, buflen * (1 + pos / buflen), wchar_t);
+			input = realloc(input, (1 + pos / buflen) * (sizeof(wchar_t) * buflen));
 	}
 	return input[--pos] = 0, input;
 }

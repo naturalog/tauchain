@@ -22,11 +22,11 @@ void expect(const wchar_t *s) {
 }
 
 int* getlist(int (*f)(), wchar_t till) {
-	int t, *args = CALLOC(int, 2), sz;
+	int t, *args = calloc(2, sizeof(int)), sz;
 	while (skip(), *input != till) {
 		if (!(t = f())) puts("Unexpected item: "), fputws(input, stdout), exit(1);
 		sz = args ? *args : 0;
-		args = REALLOC(args, ++sz + 2, int);
+		args = realloc(args, (++sz + 2) * sizeof(int));
 		args[*args = sz] = t;
 		args[sz + 1] = 0;
 	}
@@ -50,7 +50,7 @@ int gettriple() {
 	return t;
 }
 premise* to_prems(int* p) {
-	premise *r = MALLOC(premise, *p);
+	premise *r = malloc(sizeof(premise) * *p);
 	for (int n = 1; n <= *p; ++n) r[n - 1].p = p[n], r[n - 1].e = 0;
 	assert(p[1 + *p] == 0);
 	free(p);
@@ -68,10 +68,10 @@ int getrule() {
 		int r;
 		if (!(r = gettriple())) return 0;
 		if (in_query) {
-			(p = MALLOC(premise, 1))->p = r, p->e = 0;		
+			(p = malloc(sizeof(premise)))->p = r, p->e = 0;		
 			return mkrule(p, 1, 0);
 		}
-		int *rr = CALLOC(int, 3);
+		int *rr = calloc(3, sizeof(int));
 		rr[rr[rr[2] = 0] = 1] = r;
 		return mkrule(0, 0, rr);
 	}

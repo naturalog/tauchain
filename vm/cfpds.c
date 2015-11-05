@@ -8,7 +8,9 @@
 #include <assert.h>
 #include "cfpds.h"
 
-struct aux  { parr *rep; int r;		};
+PARR_IMPL(int, parr)
+
+struct aux { parr *rep; int r; };
 typedef struct aux aux;
 
 parr  mkarr(int *a, int s);
@@ -20,8 +22,9 @@ parr* set(parr *t, int i, int v);
 aux   find_aux(parr *f, int i);
 
 uf* create(int n) {
+	void *buf = malloc(sizeof(uf) + 2 * sizeof(int) * n);
 	uf *r = malloc(sizeof(uf));
-	int *t = malloc(n * sizeof(int)), k = n;
+	int k = n, *t = malloc(n * sizeof(int));
 	while (k--) t[k] = k;
 	r->rep = alloc_arr(t, n);
 	r->rank = alloc_arr(calloc(n, sizeof(int)), n);
@@ -57,63 +60,6 @@ uf* unio(uf *h, int x, int y) {
 		r->rank = set(h->rank, cx, rx + 1),
 		r->rep = set(h->rep, cy, cx);
 	return r;
-}
-
-parr mkarr(int *a, int s) {
-	assert(a && s);
-	parr r;
-	r.isdiff = false;
-	r.a.a = a;
-	r.a.s = s;
-	return r;
-}
-
-parr* alloc_arr(int *a, int s) {
-	parr *r = malloc(sizeof(parr));
-	return r->isdiff = false, r->a.a = a, r->a.s = s, r;
-}
-
-parr mkdiff(int i, int v, parr* t) {
-	parr r;
-	r.isdiff = true;
-	r.d.i = i;
-	r.d.v = v;
-	r.d.t = t;
-	return r;
-}
-
-void reroot(parr *t) {
-	if (!t->isdiff) return;
-	int i = t->d.i, v = t->d.v;
-	parr *tt = t->d.t;
-
-	reroot(tt);
-
-	assert(!tt->isdiff);
-	int vv = tt->a.a[i];
-	tt->a.a[i] = v;
-	*t = *tt;
-	*tt = mkdiff(i, vv, t);
-
-	assert(!t->isdiff);
-	assert(tt->isdiff);
-}
-
-int get(parr *t, int i) {
-	if (t->isdiff) reroot(t);
-	return t->a.a[i];
-}
-
-parr* set(parr *t, int i, int v) {
-	if (t->isdiff) reroot(t);
-	arr n = t->a;
-	int old = n.a[i];
-	if (old == v) return t;
-	parr *res = calloc(1, sizeof(parr));
-	*res = mkarr(n.a, n.s);
-	n.a[i] = v;
-	*t = mkdiff(i, old, res);
-	return res;
 }
 
 void uftest() {

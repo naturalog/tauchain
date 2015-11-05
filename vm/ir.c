@@ -10,26 +10,20 @@ int mkterm(const wchar_t* s, char type) {
 		if (*s == L'?') type = '?';
 		else if (*s == L'_') type = '_';
 	}
-	if (!(nts % chunk)) terms = REALLOC(terms, chunk * (nts / chunk + 1), term);
+	if (!(nts % chunk)) terms = realloc(terms, chunk * (nts / chunk + 1) * sizeof(term));
 	return terms[nts].type = type, terms[nts].value = s, nts++;
 }
 
 int mktriple(int s, int p, int o) {
 	int t = mkterm(0, 'T'), *a;
-	terms[t].args = a = MALLOC(int, 3), a[0] = p, a[1] = s, a[2] = o;
+	terms[t].args = a = malloc(sizeof(int) * 3), a[0] = p, a[1] = s, a[2] = o;
 	return t;
 }
 
 int mkrule(premise *p, int np, int *c) {
-	if (!(nrs % chunk)) rules = REALLOC(rules, chunk * (nrs / chunk + 1), rule);
+	if (!(nrs % chunk)) rules = realloc(rules, chunk * (nrs / chunk + 1) * sizeof(rule));
 	return rules[nrs].c = c, rules[nrs].p = p, rules[nrs].np = np, nrs++;
 }
-
-//premise* mkpremise(int r) {
-//	premise *p = MALLOC(premise, 1);
-//	p->p = 0, p->e = MALLOC(int***, nrs), p->e[r] = MALLOC(int**, *rules[r].c);
-//	return p;
-//}
 
 void _print(int t) { print(&terms[t]); }
 

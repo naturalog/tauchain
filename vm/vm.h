@@ -20,12 +20,6 @@ extern int nts, nrs;
 #define TRACE(x)
 #endif
 
-//void putws(const wchar_t* x);
-//void putcs(char* x);
-#define MALLOC(x, y) malloc(sizeof(x) * (y))
-#define CALLOC(x, y) calloc(y, sizeof(x))
-#define REALLOC(x, y, z) realloc(x, (y) * sizeof(z))
-
 // Following 3 structs store the kb&query.
 //
 // int* arrays below (args, c) have first int as length, and
@@ -41,14 +35,14 @@ typedef enum etype etype;
 struct term {
 	etype type; 
 	union {
-		const wchar_t *value; // termource's value
+		const wchar_t *value; // resource's value
 		const int *args; // list's elements ids
 	};
 };
 
 struct premise {
-	int p;	// term (triple) id
-	uf ***e;// equality relations (calculated from premises
+	int p; 	// term (triple) id
+	uf **e;	// equality relations (calculated from premises
 		// and conclusions). e[r][k] is the union-find data 
 		// structure of the k'th conclusion in the r's rule.
 };
@@ -59,13 +53,10 @@ struct rule {
 	int np; // number of premises
 };
 
+// in ir.c
 int mkterm(const wchar_t* s, char type); // constucts a nonlist term
 int mkrule(premise *premises, int num_of_premises, int *conclusions);
 int mktriple(int s, int p, int o); // returns a list term with spo as its items
-// allocate premise with its e member. since e is indexed by rules id and
-// its conclusions, the rule id is given to allocate the premise accordingly
-//premise* mkpremise(int r);
-
 void print(const term* r); // print term
 void printts(const int *t); // print array of terms
 void printps(const premise *p, int num); // print premises
@@ -74,13 +65,5 @@ void printa(int *a, int sz); // print array of integers
 void printc(int **c); // print equivalence relation
 // complete input is read into here first, then free'd by the callse after a parser pass
 extern wchar_t *input; 
-
+// in n3.c
 void parse();
-
-// compile matching two resources into
-// an equivalence relation
-char compile_res(int ***e, int x, int y);
-// compile equivalence class representing
-// conditions of given premise to match
-// given conclusion
-char compile_pc(int r, int p, int r1, int c);
