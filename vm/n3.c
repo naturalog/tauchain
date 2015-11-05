@@ -24,7 +24,7 @@ void expect(const wchar_t *s) {
 int* getlist(int (*f)(), wchar_t till) {
 	int t, *args = CALLOC(int, 2), sz;
 	while (skip(), *input != till) {
-		if (!(t = f())) putws(L"Unexpected item: "), putws(input), exit(1);
+		if (!(t = f())) puts("Unexpected item: "), fputws(input, stdout), exit(1);
 		sz = args ? *args : 0;
 		args = REALLOC(args, ++sz + 2, int);
 		args[*args = sz] = t;
@@ -37,7 +37,7 @@ int getres() {
 	int p = wcscspn(input, L" \r\n\t(){}.");
 	switch (input[p]) {
 	case 0: return 0;
-	case L'{': putws(L"Unexpected {:"), putws(input); exit(1);
+	case L'{': fputws(L"Unexpected {:", stdout), fputws(input, stdout); exit(1);
 	case L'(': return ++input, mkterm(getlist(getres, L')'), '.');
 	default: return mkterm(take(p), 0);
 	}
@@ -49,7 +49,7 @@ int gettriple() {
 	int t = mktriple(s, p, o);
 	return t;
 }
-premise* topremises(int* p) {
+premise* to_prems(int* p) {
 	premise *r = MALLOC(premise, *p);
 	for (int n = 1; n <= *p; ++n) r[n - 1].p = p[n], r[n - 1].e = 0;
 	assert(p[1 + *p] == 0);
@@ -79,7 +79,7 @@ int getrule() {
 	int *pp = getlist(gettriple, L'}');
 	expect(L"=>"), skip(), expect(L"{");
 	int *cc = getlist(gettriple, L'}');
-	r = mkrule(topremises(pp), *pp, cc);
+	r = mkrule(to_prems(pp), *pp, cc);
 	if (*input == L'.') ++input;
 	return r;
 }

@@ -9,6 +9,7 @@
 #include "cfpds.h"
 
 struct aux  { parr *rep; int r;		};
+typedef struct aux aux;
 
 parr  mkarr(int *a, int s);
 parr* alloc_arr(int *a, int s);
@@ -62,35 +63,35 @@ parr mkarr(int *a, int s) {
 	assert(a && s);
 	parr r;
 	r.isdiff = false;
-	r.d.a.a = a;
-	r.d.a.s = s;
+	r.a.a = a;
+	r.a.s = s;
 	return r;
 }
 
 parr* alloc_arr(int *a, int s) {
 	parr *r = malloc(sizeof(parr));
-	return r->isdiff = false, r->d.a.a = a, r->d.a.s = s, r;
+	return r->isdiff = false, r->a.a = a, r->a.s = s, r;
 }
 
 parr mkdiff(int i, int v, parr* t) {
 	parr r;
 	r.isdiff = true;
-	r.d.d.i = i;
-	r.d.d.v = v;
-	r.d.d.t = t;
+	r.d.i = i;
+	r.d.v = v;
+	r.d.t = t;
 	return r;
 }
 
 void reroot(parr *t) {
 	if (!t->isdiff) return;
-	int i = t->d.d.i, v = t->d.d.v;
-	parr *tt = t->d.d.t;
+	int i = t->d.i, v = t->d.v;
+	parr *tt = t->d.t;
 
 	reroot(tt);
 
 	assert(!tt->isdiff);
-	int vv = tt->d.a.a[i];
-	tt->d.a.a[i] = v;
+	int vv = tt->a.a[i];
+	tt->a.a[i] = v;
 	*t = *tt;
 	*tt = mkdiff(i, vv, t);
 
@@ -100,12 +101,12 @@ void reroot(parr *t) {
 
 int get(parr *t, int i) {
 	if (t->isdiff) reroot(t);
-	return t->d.a.a[i];
+	return t->a.a[i];
 }
 
 parr* set(parr *t, int i, int v) {
 	if (t->isdiff) reroot(t);
-	arr n = t->d.a;
+	arr n = t->a;
 	int old = n.a[i];
 	if (old == v) return t;
 	parr *res = calloc(1, sizeof(parr));
@@ -115,14 +116,7 @@ parr* set(parr *t, int i, int v) {
 	return res;
 }
 
-void print(parr *t, int n) {
-	int i = 0;
-	for (; i < n; ++i)
-		printf("%d, ", get(t, i)), fflush(stdout);
-	puts("");
-}
-
-int main() {
+void uftest() {
 // c&f's original ocaml unit test
 	uf *t = create(10);
 	assert(find(t, 0) != find(t, 1));
@@ -134,6 +128,4 @@ int main() {
 	assert(find(t, 1) == find(t, 2));
 	t = unio(t, 4, 4);
 	assert(find(t, 4) != find(t, 3));
-
-	return 0;
 }
