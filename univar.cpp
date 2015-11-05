@@ -1053,11 +1053,6 @@ void check_pred(old::nodeid pr)
 		dout << "Predicate '" << old::dict[pr] << "' not found." << endl;
 		preds[pr] = GEN_FAIL_WITH_ARGS;
 	}
-	/*else return [pr]() mutable {
-		setproc(L"pred lookup");
-		TRACE(dout << "nodeid: " << pr << endl;)
-		return preds.at(pr);
-	};*/
  }
 
 
@@ -1150,7 +1145,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&locals.at(x.second)) << endl;
 #ifdef KBDBG
 	for (auto &x: locals)
-		dout << kbdbg_str(&x) << " ::: " << str(&x) << endl;
+		dout << " " << kbdbg_str(&x) << " ::: " << str(&x) << endl;
 #endif
 	dout << "consts:" << endl;
 	for (auto x: cm)
@@ -1347,18 +1342,19 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	TRACE(dout << ep->size() << " ep items:" << endl);
 	for (auto i: *ep) 
 	{
-		TRACE(dout << "---------------------" << endl);
 		auto os = i.first;
 		auto oo = i.second;
-		TRACE(dout << endl << str(s) << "    VS     " << str(os) << endl << str(o) << "    VS    " << str(oo) << endl;)
+		TRACE(dout << endl << " " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
 		if (would_unify(os,s))
 		{
-			TRACE(dout << ".." << endl);
+			//TRACE(dout << ".." << endl);
 			if(would_unify(oo,o)) {
-				TRACE(dout << "EP." << endl;)
+				TRACE(dout << endl << "EP." << endl;)
 				return true;
 			}
 		}
+			TRACE(dout << endl << "---------------------" << endl);
+
 	}
 	return false;
 }
@@ -1421,8 +1417,6 @@ rule_t compile_rule(old::prover::ruleid r)
 				ASSERT(hs < locals_bytes / sizeof(Thing));
 				ASSERT(ho < locals_bytes / sizeof(Thing));
 
-				
-
 				suc = unify(s, &locals[hs]);
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
@@ -1437,7 +1431,10 @@ rule_t compile_rule(old::prover::ruleid r)
 
 						if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
 							++steps;
-
+/*
+						o = getValue(o);
+						s = getValue(s);
+*/
 						if (has_body && find_ep(ep, s, o)) {
 							goto end;
 						}
@@ -1572,7 +1569,7 @@ void yprover::thatsAllFolks(int nresults){
 
 void print_kbdbg_part(wstringstream &o, termid t, unsigned long part)
 {
-	o << part << ",";
+	o << "[";
 	if (islist(t)) {
 		o << "\"(\",";
 		unsigned long p = 0;
@@ -1582,11 +1579,11 @@ void print_kbdbg_part(wstringstream &o, termid t, unsigned long part)
 			print_kbdbg_part(o, i, p++);
 			o << ",";
 		}
-		o << "\")\",-1";
+		o << "\")\"";
 	}
 	else
 		o << "\"" << dstr(t->p, true) << "\"";
-	o << ",-1";
+	o << "]";
 }
 
 void print_kbdbg_term(wstringstream &o, termid t, unsigned long &part)
@@ -1609,10 +1606,10 @@ void print_kbdbg_termset(wstringstream &o, old::prover::termset b, unsigned long
 
 void print_kbdbg(old::prover::termset query)
 {
-	wstringstream o;
 	unsigned long part = 0;
 	for (auto rules: pred_index) {
 		for (auto rule: rules.second) {
+			wstringstream o;
 			auto h = op->heads[rule];
 			o << "\"{\",";
 			print_kbdbg_term(o, h, part);
@@ -1623,9 +1620,12 @@ void print_kbdbg(old::prover::termset query)
 				print_kbdbg_termset(o, b, part);
 				o << ",\"}\"";
 			}
-			o << ",\"\\n\",";
+			o << ",\"\\n\"";
+			dout << "[" << o.str() << "]" << endl;
+
 		}
 	}
+	wstringstream o;
 	print_kbdbg_termset(o, query, part);
 	dout << "[" << o.str() << "]" << endl;
 }
