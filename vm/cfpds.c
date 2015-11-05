@@ -7,25 +7,70 @@
 #include <stdio.h>
 #include <assert.h>
 
-struct arr {
-	int *a, s;
-};
 typedef struct arr arr;
-struct diff {
-	int i, v;
-	struct parr* _t;
-};
 typedef struct diff diff;
-union data {
-	arr a;
-	diff d;
-};
 typedef union data data;
-struct parr {
-	bool isdiff;
-	data d;
-};
 typedef struct parr parr;
+typedef struct uf uf;
+typedef struct aux aux;
+
+struct arr  { int s,*a; 		};
+struct diff { int i, v; parr* t;	};
+union  data { arr  a;	diff d; 	};
+struct parr { data d;	bool isdiff;	};
+struct uf   { parr *rank, *rep;		};
+struct aux { parr *rep; int r; };
+
+parr mkarr(int *a, int s);
+parr *alloc_arr(int *a, int s);
+parr mkdiff(int i, int v, parr* t);
+void reroot(parr *t);
+int get(parr *t, int i);
+parr* set(parr *t, int i, int v);
+uf create(int n);
+aux find_aux(parr *f, int i);
+int find(uf* h, int x);
+uf* unio(uf *h, int x, int y);
+
+uf create(int n) {
+	uf r;
+	int *t = malloc(n * sizeof(int)), k = n;
+	while (k--) t[k] = k;
+	r.rep = alloc_arr(t, n);
+	r.rank = alloc_arr(calloc(n, sizeof(int)), n);
+	return r;
+}
+
+aux find_aux(parr *f, int i) {
+	aux fr;
+	int fi = get(f, i);
+	if (fi == i)
+		return fr.rep = f, fr.r = i, fr;
+	fr = find_aux(f, fi), *f = *set(f, i, fr.r);
+	return fr;
+}
+
+int find(uf* h, int x) {
+	aux fcx = find_aux(h->rep, x);
+	h->rep = fcx.rep;
+	return fcx.r;
+}
+
+uf* unio(uf *h, int x, int y) {
+	int cx = find(h, x), cy = find(h, y);
+	if (cx == cy) return h;
+	uf *r = malloc(sizeof(uf));
+	r->rank = h->rank;
+	int rx = get(h->rank, cx), ry = get(h->rank, cy);
+	if (rx > ry) 
+		r->rep = set(h->rep, cy, cx);
+	else if (rx < ry) 
+		r->rep = set(h->rep, cx, cy);
+	else
+		r->rank = set(h->rank, cx, rx + 1),
+		r->rep = set(h->rep, cy, cx);
+	return r;
+}
 
 parr mkarr(int *a, int s) {
 	assert(a && s);
@@ -35,19 +80,25 @@ parr mkarr(int *a, int s) {
 	r.d.a.s = s;
 	return r;
 }
+
+parr* alloc_arr(int *a, int s) {
+	parr *r = malloc(sizeof(parr));
+	return r->isdiff = false, r->d.a.a = a, r->d.a.s = s, r;
+}
+
 parr mkdiff(int i, int v, parr* t) {
 	parr r;
 	r.isdiff = true;
 	r.d.d.i = i;
 	r.d.d.v = v;
-	r.d.d._t = t;
+	r.d.d.t = t;
 	return r;
 }
 
 void reroot(parr *t) {
 	if (!t->isdiff) return;
 	int i = t->d.d.i, v = t->d.d.v;
-	parr *tt = t->d.d._t;
+	parr *tt = t->d.d.t;
 
 	reroot(tt);
 
@@ -86,7 +137,7 @@ void print(parr *t, int n) {
 	puts("");
 }
 
-void main() {
+int main() {
 	const int s = 10;
 	parr *p = calloc(1, sizeof(parr));
 	*p = mkarr(calloc(s, sizeof(int)), s);
@@ -98,4 +149,5 @@ void main() {
 	p = set(p, 2, 2), print(p, 10);
 	p = set(p, 3, -3), print(p, 10);
 	p = set(p, 4, 9), print(p, 10);
+	return 0;
 }
