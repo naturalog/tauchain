@@ -1304,6 +1304,9 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 		//termid &bi = body[i];
 	auto b2 = body;
 	reverse(b2.begin(), b2.end());
+#ifdef KBDBG
+	auto max = kbdbg_part_max;
+#endif
 	for (termid bi: b2)
 	{
 		check_pred(bi->p);
@@ -1314,8 +1317,8 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 #ifdef KBDBG
 		(void)lm;
 		(void)cm;
-		ok = maybe_head(kbdbg_find_thing(--kbdbg_part_max, i2, locals), head, o);
-		sk = maybe_head(kbdbg_find_thing(--kbdbg_part_max, i1, locals), head, s);
+		ok = maybe_head(kbdbg_find_thing(--max, i2, locals), head, o);
+		sk = maybe_head(kbdbg_find_thing(--max, i1, locals), head, s);
 		TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
 		#else
 		(void)locals;
@@ -1384,7 +1387,7 @@ rule_t compile_rule(old::prover::ruleid r)
 	kbdbg_find_thing(kbdbg_part++, hs, locals_template);
 	kbdbg_find_thing(kbdbg_part++, ho, locals_template);
 	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
-	assert(kbdbg_part == kbdbg_part_max);//statistically proven to be true
+	kbdbg_part = kbdbg_part_max;
 #else
 	//ignoring key, because head s and o go into locals always
 	find_thing(head->s, hs, lm, cm);
@@ -1571,13 +1574,14 @@ void print_kbdbg_part(wstringstream &o, termid t, unsigned long part)
 {
 	o << "[";
 	if (islist(t)) {
-		o << "\"(\",";
+		o << "\"( \",";
 		unsigned long p = 0;
 		auto lst = op->get_dotstyle_list(t);
+		
 		for (auto i: lst)
 		{
 			print_kbdbg_part(o, i, p++);
-			o << ",";
+			o << ",\" \",";
 		}
 		o << "\")\"";
 	}

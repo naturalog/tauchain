@@ -8,7 +8,7 @@ toremove = None
 
 
 def pr(x, t):
-	print (json.dumps({"type":t, "a": x["a"], "b": x["b"]}))
+	print (json.dumps({"type":t, "style":x["style"], "a": x["a"], "b": x["b"]}))
 
 
 def step():
@@ -23,7 +23,7 @@ def step():
 
 print ("[")
 
-step()
+#step()
 
 
 for line in sys.stdin:
@@ -39,6 +39,7 @@ for line in sys.stdin:
 			print ("error:" + str(line))
 			raise
 		t = x["type"]
+		x["style"] = "normal"
 		if t == 'bind':
 			step()
 			pr(x, "add")
@@ -47,6 +48,7 @@ for line in sys.stdin:
 			pr(x, "remove")
 		elif t == 'fail':
 			step()
+			x["style"] = "fail"
 			pr(x, "add")
 			toremove = x
 		else:
