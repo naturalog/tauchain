@@ -341,7 +341,7 @@ long steps = 0;
 long unifys = 0;
 
 
-coro unbound_succeed(Thing *x, Thing *y);
+coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb);
 coro unify(Thing *, Thing *);
 void check_pred(old::nodeid pr);
 rule_t compile_rule(old::prover::ruleid r);
@@ -652,43 +652,55 @@ static Thing *getValue (Thing *_x)
 	# Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
 	# yield, return this Variable to the unbound state.
 	# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html */
-function<bool()> unboundunifycoro(Thing * me, Thing *arg)
+function<bool()> unboundunifycoro(Thing * me, Thing *arg
+#ifdef DEBUG
+, Thing * origa, Thing * origb
+#endif
+)
 {
+		FUN;
 		TRACE(dout << "!Bound" << endl;)
 		Thing *argv = getValue(arg);
-		TRACE(dout << "value=" << argv << "/" << str(argv) << endl;)
+		TRACE(dout << "unify with [" << argv << "]" << str(argv) << endl;)
 
 		if (argv == me) {
 			TRACE(dout << "argv == me" << endl;)
 			//# We are unifying this unbound variable with itself, so leave it unbound.^M
 #ifdef DEBUG
-			return unbound_succeed(me, argv);
+			return unbound_succeed(me, argv, origa, origb);
 #else
 			return gen_succeed();
 #endif
 		}
 		else {
-			TRACE(dout << "argv != me" << endl;)
+			TRACE(dout << "!= me" << endl;)
 
 			EEE;
-			return [me, entry, argv]() mutable {
+			return [me, entry, argv
+			#ifdef DEBUG
+			, origa, origb
+			#endif
+			]() mutable {
 				setproc(L"var unify lambda");
 				TRCEEE;
-				TRACE(dout << "argv=[" << argv << "]" << str(argv) << endl;)
 				switch (entry) {
 					case 0: {
-						TRACE(dout << "binding " << me << "/" << str(me) << " to " << argv << "/" << str(argv) << endl;)
+						TRACE(dout << "binding [" << me << "]" << str(me) << " to [" << argv << "]" << str(argv) << endl;)
 						ASSERT(is_unbound(*me));
 						make_this_bound(me, argv);
-						kbdbg_bind(me, true, argv);
+						#ifdef KBDBG
+						kbdbg_bind(origa, true, origb);
+						#endif
 						entry = LAST;
 						return true;
 					}
 					case_LAST:
-						TRACE(dout << "unbinding " << me << "/" << str(me) << endl;)
+						TRACE(dout << "unbinding [" << me << "]" << str(me) << " from [" << argv << "]" << str(argv) << endl;)
 						ASSERT(is_bound(*me));
 						make_this_unbound(me);
-						kbdbg_bind(me, false, argv);
+						#ifdef KBDBG
+						kbdbg_bind(origa, false, origb);
+						#endif
 						END
 				}
 			};
@@ -736,10 +748,10 @@ bool would_unify(Thing *this_, Thing *x_)
 
 #ifdef DEBUG
 
-coro unbound_succeed(Thing *x, Thing *y)
+coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb)
 {
 	EEE;
-	return [entry, x, y]() mutable {
+	return [entry, x, y, origa, origb]() mutable {
 		ASSERT(is_unbound(*x));
 		setproc(L"unbound_succeed lambda");
 		TRACE(dout << str(x) << " " << str(y) << endl);
@@ -747,10 +759,10 @@ coro unbound_succeed(Thing *x, Thing *y)
 		switch (entry) {
 			case 0:
 				entry = LAST;
-				kbdbg_bind(x,true,y);
+				kbdbg_bind(origa,true,origb);
 				return true;
 			case_LAST:
-				kbdbg_bind(x,false,y);
+				kbdbg_bind(origa,false,origb);
 				entry = 66;
 				return false;
 			default:
@@ -952,14 +964,22 @@ coro unify(Thing *a_, Thing *b_){
 	ASSERT(!is_bound(a));
 	ASSERT(!is_offset(a));
 	if (is_unbound(a))
-		return unboundunifycoro(a_, b_);
+		return unboundunifycoro(a_, b_
+		#ifdef KBDBG
+		,origa, origb
+		#endif
+		);
 
 	b_ = getValue(b_);
 	Thing b = *b_;
 	ASSERT(!is_bound(b));
 	ASSERT(!is_offset(b));
 	if (is_unbound(b))
-		return unboundunifycoro(b_, a_);
+		return unboundunifycoro(b_, a_
+		#ifdef KBDBG
+		,origb, origa
+		#endif
+		);
 
 	if(are_equal(a,b)) {
 		if (is_node(a)) {
@@ -973,7 +993,7 @@ coro unify(Thing *a_, Thing *b_){
 	}
 
 	//# Other combinations cannot unify. Fail.
-	TRACE(dout << "non-unifying combination. Fail."<< endl;)//(" << str(a) << " X " << str(b) << ")" << endl;)
+	TRACE(dout << "non-unifying combination. Fail. origa:[" << origa << "] origb: [" << origb << "] a: ["<< a_ << "]" << str(a_) << " b: [" << b_ << "]" << str(b_) << endl;)
 	return UNIFY_FAIL(origa, origb);
 }
 
