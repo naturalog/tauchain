@@ -588,10 +588,10 @@ wstring str(const Thing *_x)
 		case OFFSET: {
 			const offset_t offset = get_offset(x);
 			wstringstream r;
-			r << L"{";
+			r << L"<";
 			if (offset >= 0)
 				r << L"+";
-			r << offset << L"}->";
+			r << offset << L">->";
 			r << str(_x + offset);
 			return r.str();
 		}
@@ -950,8 +950,8 @@ coro listunifycoro(Thing *a_, Thing *b_)
 coro unify(Thing *a_, Thing *b_){
 	FUN;
 	unifys++;
-	IFKBDBG(auto origa = a_;)
-	IFKBDBG(auto origb = b_;)
+	DBG(auto origa = a_;)
+	DBG(auto origb = b_;)
 	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
 	if (a_ == b_) {//?
@@ -965,7 +965,7 @@ coro unify(Thing *a_, Thing *b_){
 	ASSERT(!is_offset(a));
 	if (is_unbound(a))
 		return unboundunifycoro(a_, b_
-		#ifdef KBDBG
+		#ifdef DEBUG
 		,origa, origb
 		#endif
 		);
@@ -976,7 +976,7 @@ coro unify(Thing *a_, Thing *b_){
 	ASSERT(!is_offset(b));
 	if (is_unbound(b))
 		return unboundunifycoro(b_, a_
-		#ifdef KBDBG
+		#ifdef DEBUG
 		,origb, origa
 		#endif
 		);
