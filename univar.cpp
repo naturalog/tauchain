@@ -108,14 +108,6 @@ public:
 #endif
 };
 
-inline void add_kbdbg_info(Thing &t, Markup markup)
-{
-	(void) t;
-	(void) markup;
-#ifdef KBDBG
-	t.markup = markup;
-#endif
-}
 
 
 #define get_type(thing) ((thing).type)
@@ -294,9 +286,17 @@ static inline ThingType get_type(Thing x)
 }
 
 
-
-
 #endif
+
+
+inline void add_kbdbg_info(Thing &t, Markup markup)
+{
+	(void) t;
+	(void) markup;
+#ifdef KBDBG
+	t.markup = markup;
+#endif
+}
 
 
 
@@ -830,11 +830,11 @@ void compile_kb()
 	free_eps();
 
 	//old::prover --> pred_index (preprocessing step)
-	for (int i = op->heads.size()-1; i >= 0; i--)
+	for (int i = op->heads.size(); i > 0; i--)
 	{
-		old::nodeid pr = op->heads[i]->p;
+		old::nodeid pr = op->heads[i - 1]->p;
 		TRACE(dout << "adding rule for pred [" << pr << "] " << old::dict[pr] << "'" << endl;)
-		pred_index[pr].push_back(i);
+		pred_index[pr].push_back(i - 1);
 	}
 
 	//pred_index --> preds (compilation step)
@@ -938,10 +938,8 @@ coro listunifycoro(Thing *a_, Thing *b_)
 coro unify(Thing *a_, Thing *b_){
 	FUN;
 	unifys++;
-
 	IFKBDBG(auto origa = a_;)
 	IFKBDBG(auto origb = b_;)
-
 	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
 	if (a_ == b_) {//?
@@ -949,21 +947,17 @@ coro unify(Thing *a_, Thing *b_){
 		return UNIFY_SUCCEED(origa, origb);
 	}
 
-	//TRACE(dout << "a:[" << a_ << "]" << getValue(a_) << endl;)
-
 	a_ = getValue(a_);
 	Thing a = *a_;
-
 	ASSERT(!is_bound(a));
-
+	ASSERT(!is_offset(a));
 	if (is_unbound(a))
-		return unboundunifycoro(a_,b_);
+		return unboundunifycoro(a_, b_);
 
 	b_ = getValue(b_);
-
 	Thing b = *b_;
 	ASSERT(!is_bound(b));
-
+	ASSERT(!is_offset(b));
 	if (is_unbound(b))
 		return unboundunifycoro(b_, a_);
 
@@ -972,7 +966,6 @@ coro unify(Thing *a_, Thing *b_){
 			ASSERT(op->_terms.equals(get_term(a), get_term(b)));
 			return UNIFY_SUCCEED(origa, origb);
 		}
-
 		if (is_list(a)) {
 			//TRACE(dout << "Both args are lists." << endl;)
 			return listunifycoro(a_, b_);
@@ -1084,6 +1077,7 @@ bool islist(termid t)
 
 PredParam maybe_head(PredParam pp, termid head, termid x)
 {
+#ifndef KBDBG
 	if (head) {
 		assert(head->s && head->o);
 		if (x == head->s)
@@ -1091,6 +1085,7 @@ PredParam maybe_head(PredParam pp, termid head, termid x)
 		if (x == head->o)
 			return HEAD_O;
 	}
+#endif
 	return pp;
 }
 
@@ -1140,16 +1135,23 @@ Thing &fetch_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, loc
 void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head)
 {
 	(void)head;
-	dout << endl << "locals:" << endl;
+	dout << endl << "locals map: (termid, pos, thing, kbdbg)" << endl;
 	for (auto x: lm)
-		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&locals.at(x.second)) << endl;
+		dout << " " << op->format(x.first) << "     " << x.second << "     " << str(&locals.at(x.second)) <<
 #ifdef KBDBG
-	for (auto &x: locals)
-		dout << " " << kbdbg_str(&x) << " ::: " << str(&x) << endl;
+		"     " << kbdbg_str(&locals.at(x.second)) <<
 #endif
-	dout << "consts:" << endl;
-	for (auto x: cm)
-		dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&consts.at(x.second)) << endl;
+		endl;
+#ifdef KBDBG
+	dout << "locals: (pos, thing, kbdbg)" << endl;
+	for (size_t i = 0; i<locals.size(); i++)
+		dout << " " << i << "     " << str(&locals.at(i)) << "     " << kbdbg_str(&locals.at(i)) << endl;
+#endif
+	if (cm.size()) {
+		dout << "consts:" << endl;
+		for (auto x: cm)
+			dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&consts.at(x.second)) << endl;
+	}
 }
 
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
@@ -1318,9 +1320,11 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 		(void)lm;
 		(void)cm;
 		ok = maybe_head(kbdbg_find_thing(--max, i2, locals), head, o);
+		TRACE(dout<<"max:"<<max<<endl);
 		sk = maybe_head(kbdbg_find_thing(--max, i1, locals), head, s);
-		TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
-		#else
+		TRACE(dout<<"max:"<<max<<endl);
+
+#else
 		(void)locals;
 		sk = maybe_head(find_thing(s, i1, lm, cm), head, s);
 		ok = maybe_head(find_thing(o, i2, lm, cm), head, o);
@@ -1329,6 +1333,7 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 		jg = perms.at(sk).at(ok)(bi->p, jg, i1, i2, consts);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
+	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
 	return jg;
 }
 
