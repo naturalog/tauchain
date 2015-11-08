@@ -13,6 +13,6 @@ o succ two.
 { (?x ?y) add ?cc. ?x succ ?ss. ?cc succ ?dd } => { (?ss ?y) add ?dd }.
 fin.
 query
-(z o) add ?c.
+(o z) add ?c.
 fin.
 
