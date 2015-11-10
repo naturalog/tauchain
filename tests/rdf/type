@@ -1,0 +1,19 @@
+kb
+fin.
+query
+:foo <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#Resource>.
+fin.
+shouldbe
+:foo <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#Resource>.
+fin.
+query
+?x <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#Resource>.
+fin.
+shouldbe
+fin.
+query
+:bar <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?y.
+fin.
+shouldbe
+:bar <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2000/01/rdf-schema#Resource>.
+fin.

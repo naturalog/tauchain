@@ -322,6 +322,8 @@ enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
 typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
 
+map<nodeid, vector<pred_t>> builtins;
+
 
 Perms perms;
 map<PredParam, old::string> permname;
@@ -344,11 +346,9 @@ long unifys = 0;
 coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb);
 coro unify(Thing *, Thing *);
 void check_pred(old::nodeid pr);
+rule_t seq(rule_t a, rule_t b);
 rule_t compile_rule(old::prover::ruleid r);
-pred_t compile_pred(old::nodeid pr);
-
-
-
+void build_in();
 
 
 //endregion
@@ -480,7 +480,7 @@ old::string kbdbg_str(const Thing * x)
 			o << ", ";
 	}
 	o << "]";
-	assert(c);
+	//assert(c);
 	return o.str();
 }
 
@@ -833,10 +833,54 @@ void free_eps_nonassert()
 	eps.clear();
 }
 
+void add_rule(nodeid pr, const rule_t &x)
+{
+	if (preds.find(pr) == preds.end())
+		preds[pr] = x;
+	else {
+		TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+		preds[pr] = seq(x, preds[pr]);
+	}
+}
+
+void compile_pred(old::nodeid pr)
+{
+	FUN; TRACE(dout << old::dict[pr] << "{" << endl;)
+
+	if (preds.find(pr) != preds.end())
+		return;
+
+	if (builtins.find(pr) != builtins.end()) {
+		for (auto b: builtins[pr])
+			add_rule(pr, b);
+		return;
+	}
+
+	vector<size_t> rs = pred_index.at(pr);
+	TRACE(dout << "# of rules: " << rs.size() << endl;)
+	for (auto r: rs)
+		add_rule(pr, compile_rule(r));
+
+	TRACE(dout << "}" << old::dict[pr] << endl;)
+}
+
+
+
+void check_pred(old::nodeid pr)
+{
+	FUN;
+	rule_t y;
+	if (pred_index.find(pr) == pred_index.end() && builtins.find(pr) == builtins.end()) {
+		dout << KRED << "Predicate '" << KNRM << old::dict[pr] << "' not found." << endl;
+		preds[pr] = GEN_FAIL_WITH_ARGS;
+	}
+ }
+
+
 void compile_kb()
 {
-	FUN
-	TRACE(dout << "# of rules: " << op->heads.size() << endl;)
+	FUN;
+	//TRACE(dout << "# of rules: " << op->heads.size() << endl;)
 	pred_index.clear();
 	preds.clear();
 	free_eps();
@@ -850,13 +894,14 @@ void compile_kb()
 	}
 
 	//pred_index --> preds (compilation step)
+
+	for(auto x: builtins){
+		compile_pred(x.first);
+	}
 	for(auto x: pred_index){
-		reverse(x.second.begin(), x.second.end());
-		TRACE(dout << "Compling pred: " << old::dict[x.first] << endl;)
-		preds[x.first] = compile_pred(x.first);
+		compile_pred(x.first);
 	}
 }
-
 
 
 
@@ -936,8 +981,6 @@ coro listunifycoro(Thing *a_, Thing *b_)
 
 	return r;
 }
-
-
 /*
 	# If arg1 or arg2 is an object with a unify method (such as Variable or^M
 	# Functor) then just call its unify with the other argument.  The object's^M
@@ -1027,48 +1070,6 @@ rule_t seq(rule_t a, rule_t b){
 		ASSERT(false);
 	};
 }
-
-
-
-pred_t compile_pred(old::nodeid pr)
-{
-	FUN;
-	rule_t y;
-	vector<size_t> rs = pred_index.at(pr);
-	TRACE(dout << "# of rules: " << rs.size() << endl;)
-	bool first = true;
-	//compile each rule with the pred in the head, seq them up
-	for (auto r: rs) {
-		//rule_t x = op->bodies[r].size() ? compile_rule(r) : compile_fact(r);
-		rule_t x = compile_rule(r);
-		if (first) {
-			first = false;
-			TRACE(dout << "first, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-			y = x;
-		}
-		else {
-			TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
-			y = seq(x, y);
-		}
-	}
-	ASSERT(!first);
-	return y;
-}
-
-
-
-void check_pred(old::nodeid pr)
-{
-	FUN;
-	rule_t y;
-	auto it = pred_index.find(pr);
-	if (it == pred_index.end()) {
-		dout << "Predicate '" << old::dict[pr] << "' not found." << endl;
-		preds[pr] = GEN_FAIL_WITH_ARGS;
-	}
- }
-
-
 
 
 /*
@@ -1572,6 +1573,7 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 	TRACE(dout << "constructing old prover" << endl;)
 	op = new old::prover(qkb, false);
 	make_perms();
+	build_in();
 	compile_kb();
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
@@ -1709,6 +1711,55 @@ void yprover::query(const old::qdb& goal){
 }
 
 //endregion
+
+#define BUILTIN(x) 	\
+	ep_t *ep = new ep_t();\
+	eps.push_back(ep);\
+	builtins[x].push_back([entry, suc, ouc](Thing *s, Thing *o) mutable
+
+void build_in()
+{
+	EEE;
+	coro suc, ouc;
+	Thing *s, *o;
+
+	Thing c_rdfsType = create_node(op->make(rdfsType));
+	Thing c_rdfsResource = create_node(op->make(rdfsResource));
+
+	ep_t *ep = new ep_t();
+	eps.push_back(ep);
+	builtins[rdfsType].push_back([ep, c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable
+	{
+		(void) s;
+		switch (entry) {
+			case 0:
+				s = getValue(s_);
+				if(is_var(*s)) {
+					entry = 66;
+					return false;
+				}
+				ASSERT(!is_offset(*s));
+				o = getValue(o_);
+				ASSERT(!is_offset(*o));
+				ouc = unify(o, &c_rdfsResource);
+				if (ouc()) {
+					entry = LAST;
+					return true;
+				}
+				else {
+					entry = 66;
+					return false;
+				}
+			case_LAST:
+				assert(!ouc());
+				END
+		}
+	});
+}
+
+
+//	BUILTIN(rdfsType)
+
 
 #ifdef notes65465687
 
