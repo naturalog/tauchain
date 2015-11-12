@@ -78,7 +78,7 @@ enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
 
 /*so, the idea behind this new data structuring is that each little thing doesnt have to be allocated separately,
 we can put them in one big array per rule, and we can initialize such locals array from a template simply by memcpy
-most importantly, this is just an attempt at optimization, it isnt a change needed for the correct functioning
+this is just an attempt at optimization, it isnt a change needed for the correct functioning
 
 	UNBOUND, 	// unbound var
 	BOUND,  	// bound var
@@ -157,7 +157,7 @@ inline void make_this_unbound(Thing * me)
 void make_this_offset(Thing &t, offset_t o) {
 	t.type = OFFSET;
 	t.offset = o;
-}// we are getting a strange warning from asan here
+}
 
 void make_this_list(Thing &i0, size_t size)
 {
@@ -167,20 +167,21 @@ void make_this_list(Thing &i0, size_t size)
 
 #else
 
+/* oneword:
+kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointees
+
+ 00 = var        // address left intact or zero
+ 01 = node       // we mostly just compare these anyway
+010 = positive offset
+110 = negative offset
+ 11 = list(size)
+*/
+
 typedef uintptr_t *Thing;
 #define databits(x) (((uintptr_t)x) & ~0b11)
 #define typebits(t) ((uintptr_t)t & (uintptr_t)0b11)
 static_assert(sizeof(uintptr_t) == sizeof(size_t), "damn");
 
-/* oneword:
-kinda like http://software-lab.de/doc/ref.html#cell
-
- 00 = var        // address left intact or zero
- 01 = node       // we mostly just compare these
-010 = positive offset
-110 = negative offset
- 11 = list(size)
-*/
 
 static inline void make_this_bound(Thing * me, Thing * v)
 {
@@ -288,7 +289,7 @@ static inline ThingType get_type(Thing x)
 }
 
 
-#endif
+#endif //ndef oneword
 
 
 inline void add_kbdbg_info(Thing &t, Markup markup)
@@ -338,13 +339,20 @@ std::unordered_map<old::nodeid, pred_t> preds;
 typedef unordered_map<old::termid, size_t> locals_map;
 #endif
 old::prover *op;
+
+
+//garbage
 std::vector<ep_t*> eps;
 vector<Locals*> constss;
 vector<Locals*> locals_templates;
+
+
+//counters
 long steps = 0;
 long unifys = 0;
 
 
+//some forward declarations
 coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb);
 coro unify(Thing *, Thing *);
 void check_pred(old::nodeid pr);
@@ -810,7 +818,7 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 
 //region kb
 
-void free_eps()
+void take_out_garbage()
 {
 	for (auto x: eps)
 	{
@@ -885,7 +893,7 @@ void compile_kb()
 	//TRACE(dout << "# of rules: " << op->heads.size() << endl;)
 	pred_index.clear();
 	preds.clear();
-	free_eps();
+	take_out_garbage();
 
 	//old::prover --> pred_index (preprocessing step)
 	for (int i = op->heads.size(); i > 0; i--)
@@ -1141,6 +1149,7 @@ PredParam kbdbg_find_thing (unsigned long part, size_t &index, Locals &locals)
 	assert(false);
 }
 #endif
+
 //find thing in locals or consts by termid
 Thing &fetch_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
@@ -1184,6 +1193,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	std::queue<toadd> lq;
 	TRACE(dout << "head:" << op->format(head) << endl);
 
+	//i miss nested functions
 	auto expand_lists = [&lq, &locals, &lm]() {
 		setproc("expand_lists");
 		while (!lq.empty()) {
@@ -1583,7 +1593,7 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 
 yprover::~yprover()
 {
-	free_eps();
+	take_out_garbage();
 	TRACE(dout << "deleting old prover" << endl;)
 	delete op;
 }

@@ -12,7 +12,7 @@ using namespace std;
 
 int main()
 {
-	LLL
+LLL
 	{
 		int i;
 		for (i = 0; i < 3; i++)
@@ -22,7 +22,7 @@ int main()
 			}();
 	}
 LLL
-	{/*
+	{/*//crash
 		vector<function<void()>> zzz;
 		int xxx;
 		auto a = [xxx, zzz]()mutable {
@@ -75,7 +75,7 @@ LLL
 		b();
 		c();
 	}
-	LLL
+LLL
 	{
 		int state = 0;
 		function<void()> xxx = [state]()mutable { cout << state++ << endl; };
@@ -106,7 +106,7 @@ LLL
 
 
 
-#ifdef fffffffff
+#ifdef fffffffffold
 
 how stuff works:
 
