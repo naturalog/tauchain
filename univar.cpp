@@ -1730,12 +1730,12 @@ void yprover::query(const old::qdb& goal){
 }
 
 //endregion
-
+/*
 #define BUILTIN(x) 	\
 	ep_t *ep = new ep_t();\
 	eps.push_back(ep);\
 	builtins[x].push_back([entry, suc, ouc](Thing *s, Thing *o) mutable
-
+*/
 void build_in()
 {
 	EEE;
@@ -1874,7 +1874,7 @@ void build_in()
 						s = getValue(s_);
 						ss = *s;
 						if (!is_list(ss)) {
-							dout << bu << ": " << str(s) << " not a list";
+							dout << bu << ": " << str(s) << " not a list" << endl;
 							DONE;
 						}
 						long total = 0;
@@ -1882,12 +1882,12 @@ void build_in()
 						for (size_t i = 0; i < size; i++) {
 							Thing item = *(s + 1 + i);
 							if (!is_node(item)) {
-								dout << bu << ": " << str(s) << " not a node";
+								dout << bu << ": " << str(s) << " not a node" << endl;
 								DONE;
 							}
 							node p = dict[get_term(item)->p];
 							if (p.datatype != XSD_INTEGER) {
-								dout << bu << ": " << p.tostring() << " not an int";
+								dout << bu << ": " << p.tostring() << " not an int" << endl;
 								DONE;
 							}
 							total += atol(ws(*p.value).c_str());
@@ -1927,14 +1927,17 @@ void build_in()
 					case 0: {
 						auto s = getValue(s_);
 						Thing s2 = *s;
-						if (!is_node(s2))
-							dout << bu << ": " << str(s) << " not a node";
-						DONE;
+						if (!is_node(s2)) {
+							dout << bu << ": " << str(s) << " not a node" << endl;
+							DONE;
+						}
 						auto o = getValue(o_);
 						Thing o2 = *o;
 						if (!is_node(o2))
-							dout << bu << ": " << str(o) << " not a node";
-						DONE;
+						{
+							dout << bu << ": " << str(o) << " not a node" << endl;
+							DONE;
+						}
 						auto sss = dict[get_term(s2)->p].tostring();
 						auto ooo = dict[get_term(o2)->p].tostring();
 

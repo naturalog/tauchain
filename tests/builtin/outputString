@@ -1,7 +1,7 @@
 kb
-{ "AAA" <http://www.w3.org/2000/10/swap/log#outputString> "AAA" } => { b b b } .
-{ "BBB" <http://www.w3.org/2000/10/swap/log#outputString> "AAA" } => { b b b } .
-{ "CCC" <http://www.w3.org/2000/10/swap/log#outputString> "AAA" } => { b b b } .
+{ "AAAa" <http://www.w3.org/2000/10/swap/log#outputString> "AAA1" } => { b b b } .
+{ "CCCc" <http://www.w3.org/2000/10/swap/log#outputString> "AAA3" } => { b b b } .
+{ "BBBb" <http://www.w3.org/2000/10/swap/log#outputString> "AAA2" } => { b b b } .
 { ("nope") <http://www.w3.org/2000/10/swap/log#outputString> 123 } => { b b b } .
 fin.
 query
