@@ -1,0 +1,19 @@
+kb
+{ "AAA" <http://www.w3.org/2000/10/swap/log#outputString> "AAA" } => { b b b } .
+{ "BBB" <http://www.w3.org/2000/10/swap/log#outputString> "AAA" } => { b b b } .
+{ "CCC" <http://www.w3.org/2000/10/swap/log#outputString> "AAA" } => { b b b } .
+{ ("nope") <http://www.w3.org/2000/10/swap/log#outputString> 123 } => { b b b } .
+fin.
+query
+b b b .
+fin.
+shouldbe
+b b b .
+fin.
+shouldbe
+b b b .
+fin.
+shouldbe
+b b b .
+fin.
+thatsall

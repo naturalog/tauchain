@@ -177,7 +177,7 @@ kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointee
  11 = list(size)
 */
 
-typedef uintptr_t *Thing;
+typedef uintptr_t *Thing; // unsigned int that is capable of storing a pointer
 #define databits(x) (((uintptr_t)x) & ~0b11)
 #define typebits(t) ((uintptr_t)t & (uintptr_t)0b11)
 static_assert(sizeof(uintptr_t) == sizeof(size_t), "damn");
@@ -326,6 +326,7 @@ typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
 
 map<nodeid, vector<pred_t>> builtins;
+map<old::string, old::string> log_outputString;
 
 
 Perms perms;
@@ -1719,6 +1720,12 @@ void yprover::query(const old::qdb& goal){
 
 	}
 	thatsAllFolks(nresults);
+	if (log_outputString.size()) {
+		dout << "log#outputString:" << endl;
+		for (const auto x:log_outputString)
+			dout << x.first << ": " << x.second << endl;
+		log_outputString.clear();
+	}
 	out:;
 }
 
@@ -1906,6 +1913,43 @@ void build_in()
 				}
 			}
 	);
+
+
+	//@prefix log: <http://www.w3.org/2000/10/swap/log#>.
+
+	//outputString	The subject is a key and the object is a string, where the strings are to be output in the order of the keys. See cwm --strings in cwm --help.
+
+	bu = L"http://www.w3.org/2000/10/swap/log#outputString";
+	bui = dict.set(mkiri(pstr(bu)));
+	builtins[bui].push_back(
+			[bu, entry](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0: {
+						auto s = getValue(s_);
+						Thing s2 = *s;
+						if (!is_node(s2))
+							dout << bu << ": " << str(s) << " not a node";
+						DONE;
+						auto o = getValue(o_);
+						Thing o2 = *o;
+						if (!is_node(o2))
+							dout << bu << ": " << str(o) << " not a node";
+						DONE;
+						auto sss = dict[get_term(s2)->p].tostring();
+						auto ooo = dict[get_term(o2)->p].tostring();
+
+						log_outputString[sss] = ooo;
+						entry = LAST;
+						return true;
+					}
+					case_LAST:;
+						END;
+				}
+			}
+	);
+
+
+
 }
 
 
