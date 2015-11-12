@@ -1,0 +1,19 @@
+kb
+fin.
+query
+(1 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
+(60 60) <http://www.w3.org/2000/10/swap/math#sum> ?x120 .
+fin.
+shouldbe
+(1 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
+(60 60) <http://www.w3.org/2000/10/swap/math#sum> 120 .
+fin.
+thatsall
+
+query
+(?x 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
+fin.
+shouldbe
+fin.
+thatsall
+

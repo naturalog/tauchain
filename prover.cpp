@@ -152,14 +152,14 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 	//TODO: correctly, so that subqery proof trace not opaque?
 	int r = -1;
 	//rdfs:Resource(?x)
-	if ((t.p == A || t.p == rdfsType) && t0 && t1 && t1->p == rdfsResource)
+	if ((t.p == A || t.p == rdfType) && t0 && t1 && t1->p == rdfsResource)
 		r = 1;
 	else if (t.p == rdfssubClassOf && t1->p == rdfsResource) {
 		r = 0;
 		// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
 		{
 			prover copy(*this);
-			auto ps = copy.askt(t0, rdfsType, make(rdfsClass, 0, 0));
+			auto ps = copy.askt(t0, rdfType, make(rdfsClass, 0, 0));
 			if (ps.size())
 				return 1;
 		}
@@ -181,13 +181,13 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		if (t1->p == rdfsLiteral) {
 			{
 				prover copy(*this);
-				auto ps = copy.askt(t0, rdfsType, make(rdfsDatatype, 0, 0));
+				auto ps = copy.askt(t0, rdfType, make(rdfsDatatype, 0, 0));
 				if (ps.size())
 					return 1;
 			}
 		}
 	}
-	else if (t.p == A || t.p == rdfsType) {
+	else if (t.p == A || t.p == rdfType) {
 		r = 0;
 		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		{
@@ -223,7 +223,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 			prover copy(*this);
 			auto as = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
 			for (termid a: as) {
-				auto xx = copy.askt(t0, rdfsType, a);
+				auto xx = copy.askt(t0, rdfType, a);
 				if (xx.size() > 0) {
 					dout << "\n\nYay even more\n\n" << std::endl;
 					return 1;
@@ -238,7 +238,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		//#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
 		if (t1 && t1->p == rdfsmember) {
 			prover copy(*this);
-			auto ps = copy.askt(copy.tmpvar(), rdfsType, make(rdfsContainerMembershipProperty, 0, 0));
+			auto ps = copy.askt(copy.tmpvar(), rdfType, make(rdfsContainerMembershipProperty, 0, 0));
 			if (ps.size())
 				return 1;
 		}
@@ -367,7 +367,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 	////RDFS
 		//first some old stuff
 	/*
-	else if (t.p == rdfsType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	else if (t.p == rdfType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		termset ts(2);
 		termid p = tmpvar();
 		termid o = tmpvar();
@@ -377,7 +377,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 	}
 	else if ((
 		 t.p == A // parser kludge
-		 || t.p == rdfsType || t.p == rdfssubClassOf) && t.s && t.o) {
+		 || t.p == rdfType || t.p == rdfssubClassOf) && t.s && t.o) {
 		//termset ts(2,0,*alloc);
 		termset ts(2);
 		termid va = tmpvar();

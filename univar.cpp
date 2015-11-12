@@ -37,7 +37,8 @@ const char LAST = 33;
 #define ITEM(x,y) x[y]
 #define ASSERT assert
 #define case_LAST case LAST
-#define END entry = 66; return false; default: assert(false);
+#define DONE {entry = 66; return false; }
+#define END DONE; default: assert(false);
 #else
 #define DBG(x)
 #define TRC(x)
@@ -45,7 +46,8 @@ const char LAST = 33;
 #define ITEM(x,y) x[y]
 #define ASSERT(x)
 #define case_LAST default
-#define END return false;
+#define DONE return false
+#define END DONE;
 #endif
 
 #ifdef NEW
@@ -845,14 +847,16 @@ void add_rule(nodeid pr, const rule_t &x)
 
 void compile_pred(old::nodeid pr)
 {
-	FUN; TRACE(dout << old::dict[pr] << "{" << endl;)
+	FUN;
 
 	if (preds.find(pr) != preds.end())
 		return;
 
 	if (builtins.find(pr) != builtins.end()) {
-		for (auto b: builtins[pr])
+		for (auto b: builtins[pr]) {
+			TRACE(dout << "builtin: " << old::dict[pr] << endl;)
 			add_rule(pr, b);
+		}
 		return;
 	}
 
@@ -860,8 +864,6 @@ void compile_pred(old::nodeid pr)
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
 	for (auto r: rs)
 		add_rule(pr, compile_rule(r));
-
-	TRACE(dout << "}" << old::dict[pr] << endl;)
 }
 
 
@@ -1721,26 +1723,29 @@ void build_in()
 {
 	EEE;
 	coro suc, ouc;
-	Thing *s, *o;
-
-	Thing c_rdfsType = create_node(op->make(rdfsType));
+	Thing *s = nullptr, *o = nullptr;
+	Thing ss, oo;
+	Thing *r = nullptr;
+	Thing c_rdfsType = create_node(op->make(rdfType));
 	Thing c_rdfsResource = create_node(op->make(rdfsResource));
+	Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 
-	ep_t *ep = new ep_t();
-	eps.push_back(ep);
-	builtins[rdfsType].push_back([ep, c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable
-	{
+	/*ep_t *ep = new ep_t();
+	eps.push_back(ep)*/
+
+	//rdfs:Resource(?x)
+	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
 		(void) s;
 		switch (entry) {
 			case 0:
 				s = getValue(s_);
-				if(is_var(*s)) {
+				if (is_var(*s)) {
 					entry = 66;
 					return false;
 				}
-				ASSERT(!is_offset(*s));
+						ASSERT(!is_offset(*s));
 				o = getValue(o_);
-				ASSERT(!is_offset(*o));
+						ASSERT(!is_offset(*o));
 				ouc = unify(o, &c_rdfsResource);
 				if (ouc()) {
 					entry = LAST;
@@ -1755,10 +1760,154 @@ void build_in()
 				END
 		}
 	});
+	/*
+	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+	builtins[rdfssubClassOf].push_back(
+			[c_rdfsResource, c_rdfsClass, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+				pred_t ac;
+				switch (entry) {
+					case 0:
+						ouc = unify(o, &c_rdfsResource);
+						while (ouc()) {
+							ac = ITEM(preds, rdfType);
+							entry = LAST;
+							return true;
+						}
+						else {
+					entry = 66;
+					return false;
+				}
+					case_LAST:
+						assert(!ouc());
+						END
+				}
+			});
+	*/
+	/*
+	<HMC_a> koo7: you mean if one queries "?x a rdf:Resource" should they get every known subject as a result?
+	<HMC_a> the answer would be yes. :-)
+	* nilli (6dbab769@gateway/web/freenode/ip.109.186.183.105) has joined #zennet
+	<nilli>  hi
+	<nilli> HMC what did you think of the LTB interview with Ohad?
+	<nilli>  HMC_a not hmc
+	<HMC_a> the first half was excellent
+	<HMC_a> the second half shouldve been edited down more.  Listening to people talk about code verbally is quite uninteresting XD
+	<nilli> well it is interesting for people who really dont know and want to understand a bit more
+	<koo7> HMC_a, every known subject and object, right?
+	<nilli> its not exactly what is expected on LTB but its ok I think
+	<koo7> or....every nodeid in the kb thats not in the pred position...where do we draw the line?
+	<HMC_a> well, when i say "known subject" i don't really mean everything in the subject position, i mean every node useable as a subject (non-literal)
+	<koo7> ok
+	<koo7> what do you mean non-literal?
+	<HMC_a> you wouldn't bind each int as a result, for example
+	<HMC_a> if you returned "0 a Resource" "1 a Resource" "2 a Resource"..... this would be a bit of a problem ;-)
+	<koo7> yeah, so everything that explicitly appears in the kb
+	<koo7> traverse lists too
+	<HMC_a> yes remember that lists are logically just triples as well...
+	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
+	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
+	<HMC_a> yes, the bnode names as well
+	<nilli> HMC_a can you give me your IRC channel full link?
+	<koo7> ok, i guess i will put this builtin aside for some time
+	<HMC_a> nilli: not sure what you ask
+	*/
+
+
+	/*
+<HMC_a> koo7: for the moment I'm less concerned about getting rdfs going and more interested in facilities like log:outputString and math:sum and etc
+<HMC_a> really even just those two would be enough to get some useful results out of the fuzzer, lol :-)
+<koo7> HMC_a, i cant get too far without you being specific/providing some specs
+<HMC_a> well
+<koo7> so far all your input was "like in master"
+<HMC_a> http://www.w3.org/2000/10/swap/doc/CwmBuiltins <-- "not quite specs" XD
+<koo7> Dump :s to stdout ordered by :k whereever { :k log:outputString :s }
+<HMC_a> so math:* and string:* should be pretty straightforward, list:* nearly so...
+<koo7> so this means it waits until the query is done?
+<HMC_a> yes, it caches up the output strings until the end
+<koo7> ok
+<koo7> as on list, list:append seems a misnomer
+<HMC_a> then sorts them by subject
+<HMC_a> then prints
+<HMC_a> koo7: you mean it is more aptly called "concat"? ;-)
+<koo7> yeah something like that
+<HMC_a> I don't think you're the first to mention it, hehe
+* HMC_a shrugs
+<koo7> alright
+<koo7> its fully namespaced, after all
+<nilli> I used the link koo7 gave me and changed the name but its going on #zennet. anyway never mind
+<nilli> ill just sit in the dark
+<HMC_a> sure, and I'm not against doubling up on some builtins later... maybe in the end we have list:append, tau:append, and tau:concat, with tau:append taking just a subject of a pair list of a list and a literal and doing an actual "append" and the other two both being "concat"...
+<HMC_a> but we want list:append to be there and to match cwm, in any case, so that any existing logic "out there" that calls upon cwm's list:append will do the right thing
+<HMC_a> ;-)
+<koo7> cool*/
+
+
+
+	//@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+
+	//sum: The subject is a list of numbers. The object is calculated as the arithmentic sum of those numbers.
+
+	old::string bu = L"http://www.w3.org/2000/10/swap/math#sum";
+	auto bui = dict.set(mkiri(pstr(bu)));
+	builtins[bui].push_back(
+			[r, bu, entry, ouc, s, ss](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0: {
+
+						s = getValue(s_);
+						ss = *s;
+						if (!is_list(ss)) {
+							dout << bu << ": " << str(s) << " not a list";
+							DONE;
+						}
+						long total = 0;
+						const size_t size = get_size(ss);
+						for (size_t i = 0; i < size; i++) {
+							Thing item = *(s + 1 + i);
+							if (!is_node(item)) {
+								dout << bu << ": " << str(s) << " not a node";
+								DONE;
+							}
+							node p = dict[get_term(item)->p];
+							if (p.datatype != XSD_INTEGER) {
+								dout << bu << ": " << p.tostring() << " not an int";
+								DONE;
+							}
+							total += atol(ws(*p.value).c_str());
+						}
+
+						std::stringstream ss;
+						ss << total;
+
+						r = new(Thing);
+						*r = create_node(op->make(dict[mkliteral(pstr(ss.str()), pstr(L"XSD_INTEGER"), 0)], 0, 0));
+
+						ouc = unify(o_, r);
+					}
+						while (ouc()) {
+							TRACE(dout << "MATCH." << endl;)
+							entry = LAST;
+							return true;
+					case_LAST:;
+							TRACE(dout << "RE-ENTRY" << endl;)
+						}
+						delete(r);
+						END;
+				}
+			}
+	);
 }
 
 
-//	BUILTIN(rdfsType)
+/*log:equalTo a rdf:Property;
+    rdfs:comment
+"""True if the subject and object are the same RDF node (symbol or literal).
+Do not confuse with owl:sameAs.
+A cwm built-in logical operator, RDF graph level.
+""".
+*/
+
+//	BUILTIN(rdfType)
 
 
 #ifdef notes65465687

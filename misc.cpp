@@ -10,7 +10,7 @@ bool deref = true, shorten = false;
 int level = 1;
 
 extern int _indent;
-nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfnil, False;
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfType, GND, rdfnil, False;
 nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
 //nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
@@ -32,7 +32,7 @@ void bidict::init() {
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	Dot = set(mkiri(pstr(L".")));
 
-	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
 	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
 	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
