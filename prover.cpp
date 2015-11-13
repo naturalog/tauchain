@@ -445,7 +445,7 @@ void prover::pushev(shared_ptr<proof> p) {
 			subs_workardound[x.first].push_back(x.second);
 
 		e[t->p].emplace_back(t, p->g(this));
-		if (level > 10) dout << "proved: " << format(t) << endl;
+		//if (level > 10) dout << "proved: " << format(t) << endl;
 	}
 }
 

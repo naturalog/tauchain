@@ -27,7 +27,7 @@ extern int result_limit ;
 
 #define EEE char entry = 0
 #define TRCEEE TRACE(dout << "entry = " << (int)entry << endl)
-const char LAST = 33;
+const char LAST = 33; // last in the sense of a last case in release mode, not of a last entry into the coro
 
 #ifdef DEBUG
 #define DBG(x) x
@@ -1046,8 +1046,7 @@ coro unify(Thing *a_, Thing *b_){
 		}
 	}
 
-	//# Other combinations cannot unify. Fail.
-	TRACE(dout << "non-unifying combination. Fail. origa:[" << origa << "] origb: [" << origb << "] a: ["<< a_ << "]" << str(a_) << " b: [" << b_ << "]" << str(b_) << endl;)
+	TRACE(dout << "Fail. origa:[" << origa << "] origb:[" << origb << "] a:["<< a_ << "]" << str(a_) << " b:[" << b_ << "]" << str(b_) << endl;)
 	return UNIFY_FAIL(origa, origb);
 }
 
@@ -1741,15 +1740,17 @@ void build_in()
 	EEE;
 	coro suc, ouc;
 	Thing *s = nullptr, *o = nullptr;
-	Thing ss, oo;
+	Thing ss;
+	//Thing oo;
 	Thing *r = nullptr;
-	Thing c_rdfsType = create_node(op->make(rdfType));
+	//Thing c_rdfsType = create_node(op->make(rdfType));
 	Thing c_rdfsResource = create_node(op->make(rdfsResource));
-	Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
+	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 
 	/*ep_t *ep = new ep_t();
 	eps.push_back(ep)*/
 
+	/*
 	//rdfs:Resource(?x)
 	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
 		(void) s;
@@ -1777,6 +1778,7 @@ void build_in()
 				END
 		}
 	});
+	 */
 	/*
 	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
 	builtins[rdfssubClassOf].push_back(
@@ -1952,6 +1954,35 @@ void build_in()
 	);
 
 
+	//@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+	//list last item
+	bu = L"http://www.w3.org/2000/10/swap/list#last";
+	bui = dict.set(mkiri(pstr(bu)));
+	builtins[bui].push_back(
+			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0:
+					{
+						auto s = getValue(s_);
+						Thing s2 = *s;
+						if (!is_list(s2)) {
+							dout << bu << ": " << str(s) << " not a list" << endl;
+							DONE;
+						}
+
+						auto size = get_size(s2);
+						if (size == 0) DONE;
+						ouc = unify(s+size, o_);
+					}
+						while (ouc()) {
+							entry = LAST;
+							return true;
+					case_LAST:;
+						}
+						END;
+				}
+			}
+	);
 
 }
 
