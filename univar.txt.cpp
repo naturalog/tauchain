@@ -1049,8 +1049,66 @@ https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-1482
 
 
 
+gcc  -O3 -Q --help=optimizers
 
 
+
+
+
+
+
+
+
+
+
+
+
+Counting bits set, Brian Kernighan's way
+
+unsigned int v; // count the number of bits set in v
+unsigned int c; // c accumulates the total bits set in v
+for (c = 0; v; c++)
+{
+  v &= v - 1; // clear the least significant bit set
+}
+
+
+
+ Counting bits set in 14, 24, or 32-bit words using 64-bit instructions
+
+unsigned int v; // count the number of bits set in v
+unsigned int c; // c accumulates the total bits set in v
+
+// option 1, for at most 14-bit values in v:
+c = (v * 0x200040008001ULL & 0x111111111111111ULL) % 0xf;
+
+
+
+ A generalization of the best bit counting method to integers of bit-widths upto 128 (parameterized by type T) is this:
+
+v = v - ((v >> 1) & (T)~(T)0/3);                           // temp
+v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);      // temp
+v = (v + (v >> 4)) & (T)~(T)0/255*15;                      // temp
+c = (T)(v * ((T)~(T)0/255)) >> (sizeof(T) - 1) * CHAR_BIT; // count
+
+
+
+ Swapping values with XOR
+
+#define SWAP(a, b) (((a) ^= (b)), ((b) ^= (a)), ((a) ^= (b)))
+
+This is an old trick to exchange the values of the variables a and b without using extra space for a temporary variable.
+
+On January 20, 2005, Iain A. Fleming pointed out that the macro above doesn't work when you swap with the same memory location, such as SWAP(a[i], a[j]) with i == j. So if that may occur, consider defining the macro as (((a) == (b)) || (((a) ^= (b)), ((b) ^= (a)), ((a) ^= (b)))). On July 14, 2009, Hallvard Furuseth suggested that on some machines, (((a) ^ (b)) && ((b) ^= (a) ^= (b), (a) ^= (b))) might be faster, since the (a) ^ (b) expression is reused.
+
+
+
+
+ Reverse the bits in a byte with 4 operations (64-bit multiply, no division):
+
+unsigned char b; // reverse this byte
+
+b = ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 
 
 

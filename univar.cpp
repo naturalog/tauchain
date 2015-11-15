@@ -1736,7 +1736,7 @@ void yprover::query(const old::qdb& goal){
 	builtins[x].push_back([entry, suc, ouc](Thing *s, Thing *o) mutable
 */
 void build_in()
-{
+{//under construction
 	EEE;
 	coro suc, ouc;
 	Thing *s = nullptr, *o = nullptr;
@@ -1884,7 +1884,7 @@ void build_in()
 						for (size_t i = 0; i < size; i++) {
 							Thing item = *(s + 1 + i);
 							if (!is_node(item)) {
-								dout << bu << ": " << str(s) << " not a node" << endl;
+								dout << bu << ": " << str(&item) << " not a node" << endl;
 								DONE;
 							}
 							node p = dict[get_term(item)->p];
@@ -1983,6 +1983,59 @@ void build_in()
 				}
 			}
 	);
+
+
+	/*nope
+	//item in list
+	bu = L"http://www.w3.org/2000/10/swap/list#in";
+	bui = dict.set(mkiri(pstr(bu)));
+	builtins[bui].push_back(
+			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0: {
+						auto s = getValue(s_);
+						Thing s2 = *s;
+						if (!is_node(s2)) {
+							dout << bu << ": " << str(s) << " not a node" << endl;
+							DONE;
+						}
+						auto t = get_term(s2);
+
+						auto o = getValue(o_);
+						Thing o2 = *o;
+						if (!is_list(o2)) {
+							dout << bu << ": " << str(o) << " not a list" << endl;
+							DONE;
+						}
+
+						const auto size = get_size(o2);
+						bool found = false;
+
+						for (size_t i = 0; i < size; i++) {
+							Thing item = *(o + 1 + i);
+							if (is_node(item)) {
+								if (t == get_term(item)) {
+									entry = LAST;
+									return true;
+								}
+							}
+						}
+					}
+					case_LAST:;
+						END;
+				}
+			}
+	);
+*/
+
+
+/*
+	//rdffirst
+	builtins[rdffirst].push_back(
+			[entry, ouc](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0: {
+*/
 
 }
 
