@@ -1,0 +1,6 @@
+# 2003-08 changed list anmespace name to RDF
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+<#x> rdf:first 1; rdf:rest (2 3).
+

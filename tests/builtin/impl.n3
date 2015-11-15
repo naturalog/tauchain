@@ -1,0 +1,14 @@
+# Author: sbp
+#  $Id$
+
+@prefix : <#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+
+
+(1 2) a :ListOfTwoNumbers.
+
+{ ?x a :ListOfTwoNumbers.
+  ?x math:sum ?y } => { ?x :SUMSTO ?y }.
+
+#ends
