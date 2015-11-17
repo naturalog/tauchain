@@ -3,11 +3,12 @@
 #include <tuple>
 #include <iostream>
 #include <queue>
-#include "univar.h"
+#include <stack>
 #include <set>
-
-#include "cli.h"
 #include <stdexcept>
+
+#include "univar.h"
+#include "cli.h"
 #ifdef with_marpa
 #include "marpa_tau.h"
 #endif
@@ -30,15 +31,10 @@ std::wistream& din = std::wcin;
 
 std::deque<string> _argstream;
 
-int mode = 0;
-const int COMMANDS = 0;
-const int KB = 1;
-const int QUERY = 2;
-const int SHOULDBE = 3;
+enum mode_t {COMMANDS, KB , QUERY ,SHOULDBE};
+mode_t mode = 0;
 
-const int FAIL = 0;
-//const int INCOMPLETE = 1;
-const int COMPLETE = 2;
+enum ParsingResult {FAIL , /*INCOMPLETE ,*/COMPLETE };
 
 string format = L"";
 string base = L"";
@@ -588,14 +584,18 @@ void mode_kb(){
 
 int main ( int argc, char** argv) {
 	dict.init();
+
+	stack<struct {std::string name, std::wistream stream}> inputs;
+
 	string input_buffer, data_buffer;
 
 	for(int i=1;i<argc;i++){
-		input_buffer += ws(argv[i]) + L" ";
+			inputs.emplate({"args", wistringstream(ws(argv[i])));
 	}
 
 	for(ever){
-		CLI_TRACE(dout << "argstream.size=" << _argstream.size() << std::endl;)
+		CLI_TRACE(dout << "inputs.size=" << inputs.size() << std::endl;)
+		std::wistream &input = inputs.
 
 		if (irc || isatty(fileno(stdin))) {
 			string prompt;
@@ -725,7 +725,7 @@ int main ( int argc, char** argv) {
 
 		string new_buffer = data_buffer + line;
 
-		int fins;
+		int fins = count_fins(;
 		qdb kb, query;
 		std::wstringstream ss(new_buffer);
 		int pr = parse(kb, query, ss, L"", fins);

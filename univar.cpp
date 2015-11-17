@@ -610,7 +610,7 @@ wstring str(const Thing *_x)
 	ASSERT(false);
 }
 
-static Thing *getValue (Thing *_x) __attribute__ ((pure));
+static Thing *getValue (Thing *_x) __attribute__ ((pure, returns_nonnull));
 static Thing *getValue (Thing *_x)
 	/*
 		# If this Variable is unbound, then just return this Variable.^M
