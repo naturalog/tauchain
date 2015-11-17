@@ -1,10 +1,26 @@
 --n3
 kb
-# test list built in
+
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix : <#>.
 @prefix list: <http://www.w3.org/2000/10/swap/list#>.
-#@keywords a.
+
+
+
+
+### support
+{?L rdf:first ?I; a rdf:List} => {?I list:in ?L}.
+{?L rdf:rest ?R; a rdf:List. ?I list:in ?R} => {?I list:in ?L}.
+{?L a rdf:List} => {?L :subListOf ?L}.
+{?L rdf:rest ?R; a rdf:List. ?X :subListOf ?R} => {?X :subListOf ?L}.
+{?L rdf:first ?A; a rdf:List. ?X a ?A. ?L rdf:rest rdf:nil} => {?X :inAllOf ?L}.
+{?L rdf:first ?A; a rdf:List. ?X a ?A. ?L rdf:rest ?R. ?X :inAllOf ?R} => {?X :inAllOf ?L}.
+{?L rdf:first ?A; a rdf:List. ?X a ?A} => {?X :inSomeOf ?L}.
+{?L rdf:rest ?R; a rdf:List. ?X :inSomeOf ?R} => {?X :inSomeOf ?L}.
+
+
+
+
 
 { ( 1 2 3 4 5 6 ) list:last 6 } => { test1 a SUCCESS }.
 

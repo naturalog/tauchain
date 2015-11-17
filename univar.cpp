@@ -55,9 +55,6 @@ const char LAST = 33; // last in the sense of a last case in release mode, not o
 #endif
 
 #ifdef KBDBG
-#ifdef oneword
-nope
-#endif
 #ifndef DEBUG
 nope
 #endif
@@ -72,9 +69,7 @@ typedef vector<unsigned long> Markup;
 typedef std::pair<termid, Markup> toadd;
 
 
-enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
-
-#ifndef oneword
+enum ThingType {BOUND, NODE, OFFSET, LIST, LISTNODE, UNBOUND};
 
 /*so, the idea behind this new data structuring is that each little thing doesnt have to be allocated separately,
 we can put them in one big array per rule, and we can initialize such locals array from a template simply by memcpy
@@ -164,133 +159,6 @@ void make_this_list(Thing &i0, size_t size)
 	i0.type = LIST;
 	i0.size = size;
 }
-
-#else
-
-/* oneword:
-kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointees
-
- 00 = var        // address left intact or zero
- 01 = node       // we mostly just compare these anyway
-010 = positive offset
-110 = negative offset
- 11 = list(size)
-*/
-
-typedef uintptr_t *Thing; // unsigned int that is capable of storing a pointer
-#define databits(x) (((uintptr_t)x) & ~0b11)
-#define typebits(t) ((uintptr_t)t & (uintptr_t)0b11)
-static_assert(sizeof(uintptr_t) == sizeof(size_t), "damn");
-
-
-static inline void make_this_bound(Thing * me, Thing * v)
-{
-	ASSERT(((uintptr_t)v & 0b11) == 0);
-	*me = (Thing)v;
-}
-
-static inline Thing create_unbound()
-{
-	return 0;
-}
-
-static inline Thing create_node(termid v)
-{
-	ASSERT(((uintptr_t)v & 0b11) == 0);
-	return (Thing)((uintptr_t)v | 0b01);
-}
-
-static inline void make_this_unbound(Thing * me)
-{
-	*me = 0;
-}
-
-void make_this_offset(Thing &t, offset_t o) {
-	byte sign = 0;
-	if (o < 0)
-	{
-		sign = 1;
-		o = -o;
-	}
-	uintptr_t r = o;
-	r = r << 1;
-	r |= sign;
-	r = r << 2;
-	r |= 0b10;
-	t = (Thing)r;
-}
-
-void make_this_list(Thing &i0, size_t size)
-{
-	i0 = (Thing)((size << 2) | 0b11);
-}
-
-static inline offset_t get_offset(Thing x)
-{
-	uintptr_t xx = (uintptr_t)x;
-	byte sign = (xx >> 1) & 0b10;
-	offset_t val = xx >> 3;
-	ASSERT(val);
-	val -= (sign * val);
-	return val;
-}
-
-static inline Thing* get_thing(Thing x)
-{
-	return (Thing*)x;
-}
-
-static inline termid get_term(Thing x)
-{
-	return (termid)databits(x);
-}
-
-static inline size_t get_size(Thing x)
-{
-	return (size_t)((uintptr_t)x >> 2);
-}
-
-static inline bool types_differ(Thing a, Thing b)
-{
-	return (((long)a ^ (long)b) & 0b11);
-}
-
-#define sizes_differ(x, y) (x != y)
-
-static inline bool is_bound(Thing x)
-{
-	return ((((uintptr_t)x & (uintptr_t)0b11) == 0) && x);
-}
-
-static inline bool is_unbound(Thing x)
-{
-	return x == 0;
-}
-
-#define is_var(thing) 		(typebits(thing) 	== 0b00)
-#define is_node(thing) 		(typebits(thing) 	== 0b01)
-#define is_offset(thing) 	(typebits(thing) 	== 0b10)
-#define is_list(thing) 		(typebits(thing) 	== 0b11)
-
-#define are_equal(x, y) (x == y)
-
-static inline ThingType get_type(Thing x)
-{
-	if(is_bound(x))
-		return BOUND;
-	if(is_unbound(x))
-		return UNBOUND;
-	if(is_node(x))
-		return NODE;
-	if(is_list(x))
-		return LIST;
-	ASSERT(is_offset(x));
-	return OFFSET;
-}
-
-
-#endif //ndef oneword
-
 
 inline void add_kbdbg_info(Thing &t, Markup markup)
 {
@@ -595,6 +463,9 @@ wstring str(const Thing *_x)
 			if (!size)
 				r << " ";
 			return r.str() + L")";
+		}
+		case LISTNODE: {
+			return L"N";
 		}
 		case OFFSET: {
 			const offset_t offset = get_offset(x);
