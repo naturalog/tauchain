@@ -1,3 +1,14 @@
+http://ccodearchive.net/info/json.html
+https://github.com/tobami/codespeed/
+http://www.boost.org/doc/libs/1_55_0/doc/html/property_tree.html
+http://git.ozlabs.org/?p=ccan;a=blob;f=ccan/idtree/idtree.c;h=e8873926a79c07a21b7b843f06b3b4cfaa7078c9;hb=HEAD
+http://www.pjsip.org/pjlib/docs/html/group__PJ__POOL__BUFFER.htm
+http://www.ninebynine.org/RDFNotes/Swish/Intro.html
+http://www.gnu.org/software/libc/manual/html_node/Obstacks.html
+http://ccodearchive.net/info/block_pool.html
+
+
+
 the nodes talk, as long as it is some valid encoding of quads?
 <HMC_A_> json-ld is just an "easy" one
 <HMC_A_> the nodes could talk n3logic at eachother, I guess, but it much harder to work with?
