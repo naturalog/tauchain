@@ -3,13 +3,14 @@ before_script:
   - apt-get install -y -qq valgrind cmake python2
   - apt-get install -y -qq libboost-regex-dev libboost-dev 
   - cd tests; cat cli/* dunno/* ep/* simple/* slower/* vis/* builtin/* > t; cd ..
-  #- ./perms.py > perms.cpp
+
+#- ./perms.py > perms.cpp
 
 make_with_marpa:
   script:
     - make clean
     - ASAN="" make -e with_marpa  
-    - LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so valgrind ./tau  --silence addrules --silence readcurly --silence quad::ctor --silence N3  < tests/t | grep test:
+    - "LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so valgrind ./tau  --silence addrules --silence readcurly --silence quad::ctor --silence N3  < tests/t | grep test:"
 
 cmake_m-tau:
   script:
