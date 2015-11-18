@@ -1,8 +1,8 @@
 before_script:
+  - apt-get update -q
+  - apt-get install -y clang valgrind cmake python2.7 libboost-regex-dev libboost-dev 
   - ./build-libmarpa.sh
-  - apt-get install -y -qq valgrind cmake python2
-  - apt-get install -y -qq libboost-regex-dev libboost-dev 
-  - cd tests; cat cli/* dunno/* ep/* simple/* slower/* vis/* builtin/* > t; cd ..
+  - cd tests; cat cli/* ep/* simple/* slower/* > t; cd ..
 
 #- ./perms.py > perms.cpp
 
@@ -17,10 +17,10 @@ cmake_m-tau:
     - mkdir build; cd build; cmake ..; make m-tau ; cd ..
     - LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so build/m-tau   --silence addrules --silence readcurly --silence quad::ctor --silence N3    < tests/t
 
-cmake_tau:
-  script:
-    - mkdir build; cd build; cmake ..; make tau 
-    - ./tau < tests/simple/1
+#cmake_tau:
+#  script:
+#    - mkdir build; cd build; cmake ..; make tau 
+#    - ./tau < tests/simple/1
 
 release:
   script:
