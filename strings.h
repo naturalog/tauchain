@@ -67,8 +67,14 @@ const string str_explicit = L"@explicit";
 const string str_set = L"@set";
 const string str_embedChildren = L"@embedChildren";
 #endif
-const string RDF_SYNTAX_NS = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+
+
+
 const string RDF_SCHEMA_NS = L"http://www.w3.org/2000/01/rdf-schema#";
+
+
+
+/* XSD Data types */
 const string XSD_NS = L"http://www.w3.org/2001/XMLSchema#";
 const pstring XSD_ANYTYPE = pstr(XSD_NS + L"anyType");
 const pstring XSD_BOOLEAN = pstr(XSD_NS + L"boolean");
@@ -78,6 +84,11 @@ const pstring XSD_FLOAT = pstr(XSD_NS + L"float");
 const pstring XSD_DECIMAL = pstr(XSD_NS + L"decimal");
 const pstring XSD_ANYURI = pstr(XSD_NS + L"anyURIstring");
 const pstring XSD_STRING = pstr(XSD_NS + L"string");
+
+
+
+/* RDF strings */
+const string RDF_SYNTAX_NS = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 const pstring RDF_TYPE = pstr(RDF_SYNTAX_NS + L"type");
 const pstring RDF_FIRST = pstr(RDF_SYNTAX_NS + L"first");
 const pstring RDF_REST = pstr(RDF_SYNTAX_NS + L"rest");
@@ -213,6 +224,7 @@ inline pstring gen_bnode_id ( string id = L"" ) {
 	return pstr(bnode_id_map[id] = ss.str());
 }
 
+//Colors
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
 extern int level;
 

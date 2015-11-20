@@ -8,8 +8,12 @@
 
 namespace old{
 
+
 typedef std::map<string, string> ssmap;
 typedef std::shared_ptr<ssmap> pssmap;
+
+
+
 
 class node;
 typedef std::shared_ptr<node> pnode;
@@ -18,41 +22,87 @@ typedef std::shared_ptr<snmap> psnmap;
 
 class node {
 public:
-	node() {}
-	pstring value, datatype, lang;
+	pstring value, datatype, lang;	
+	pnode next = 0;
+	
 	enum node_type { LITERAL, IRI, BNODE } _type;
+	
+	
+	node() {}	
 	node ( const node_type& t ) : _type ( t ) { }
+	
+	
 	string tostring() const;
+
+
 	bool operator<(const node& x) const { return tostring() < x.tostring(); }
 	bool operator==(const node& x) const { 
-		return tostring()==x.tostring();//*value == *x.value && *datatype == *x.datatype && *lang == *x.lang && _type == x._type;
+		return tostring()==x.tostring();
+		//*value == *x.value && *datatype == *x.datatype && *lang == *x.lang && _type == x._type;
 	}
-	pnode next = 0;
 };
+
+
+
+
 inline std::wostream& operator<<(std::wostream& o, const node& n) { return o << n.tostring(); }
+
+
+
+
 
 pnode mkliteral ( pstring value, pstring datatype, pstring language );
 pnode mkiri ( pstring iri );
 pnode mkbnode ( pstring attribute );
 
+
+
+
+
+
 class quad {
 	quad ( string subj, string pred, pnode object, string graph );
+
 public:
+	//Definition
 	pnode subj, pred, object, graph;
 
+	//Constructors
 	quad ( string subj, string pred, string object, string graph );
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph );
 	quad ( pnode subj, pnode pred, pnode object, string graph = L"@default" );
 	quad ( pnode subj, pnode pred, pnode object, pnode graph);
+
 	quad(){}
 	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
+
+
 	string tostring ( ) const;
 };
+
+
+
+//typedef std::shared_ptr<quad> p_quad;
+//typedef std::list<pquad> lp_quad;
+//typedef std::shared_ptr<lp_quad> plp_quad;
+
+//typedef std::list<pnode> qdbList;
+
+//typedef string contextName;
+//typedef string listBNodeName;
+
+//typedef std::map<contextName, plp_quad> qdbQuads;
+//typedef std::map<listBNodeName, qdbList> qdbLists;
+
+//typedef std::pair<qdb_quads,qdb_lists> qdb;
 
 typedef std::shared_ptr<quad> pquad;
 typedef std::list<pquad> qlist;
 typedef std::shared_ptr<qlist> pqlist;
 typedef std::pair<std::map<string, pqlist>, std::map<string, std::list<pnode>>> qdb;
+
+
+
 
 qdb merge_qdbs(const std::vector<qdb> qdbs);
 
@@ -95,15 +145,24 @@ private:
 
 typedef std::shared_ptr<rdf_db> prdf_db;
 #endif
+
+//Does this need it's own class?
 #ifndef NOPARSER
 class nqparser {
 private:
+	typedef std::list<pnode> plist;
+
 	wchar_t *t;
 	const wchar_t *s;
 	std::list<quad> r;
-	typedef std::list<pnode> plist;
 	int pos;
+	
+	std::map<string, pnode> prefixes;
+	std::map<string, std::list<pnode>> qlists;
 	std::list<std::tuple<pnode, pnode, pnode>> lists;
+
+	int nq_to_qdb(qdb& kb, std::wistream& is);
+
 	pnode readcurly();
 	pnode readlist();
 	pnode readany(bool lit = true);
@@ -112,12 +171,11 @@ private:
 	pnode readvar();
 	pnode readbnode();
 	void readprefix();
-	std::map<string, pnode> prefixes;
-	std::map<string, std::list<pnode>> qlists;
 public:
 	nqparser();
 	~nqparser();
-	std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
+	int nq_to_qdb(qdb& kb, std::wistream& is);
+	//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );
 

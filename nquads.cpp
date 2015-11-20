@@ -165,10 +165,55 @@ pnode nqparser::readany(bool lit){
 }
 
 
-std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
+int nqparser::nq_readfile(std::wistream& is, std::wstringstream& ss){
+	int fins=0;
+        string s; //get lines from is into s.
+
+        //Make a function out of this
+        //Iterate over lines coming from is, placing them into s, and
+	//accumulating these strings into ss.
+        while (getline(is, s)) {
+                //dout << "line:\"" << s << "\"" << std::endl;
+
+                //Trim white-space on the line.
+                //(in what specific manner?)
+                trim(s);
+
+                //If it's an empty line or a comment then continue.
+                if (!s.size() || s[0] == '#') continue;
+
+                //Check to see if the line is "fin." or some variation where
+                //white-space separates "fin" from "." (...?), and if so
+                //break.
+                if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L"."){
+                        fins++;
+                        break;
+                }
+//              dout << s << endl;
+
+                //Otherwise, add this line into ss. 
+                //(more trailing white-space).
+                ss << ' ' << s<< ' ';
+	}
+
+	return fins;	
+}
+
+int nq_to_qdb(qdb& kb, std::wistream& is){
+
+	std::wstringstream ss; //accumulate processed lines into ss
+	//Read an nq file in is into the wstringstream ss.
+	int fins = nq_readfile(is,ss);
+
+
+//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
+	
+	const wchar_t* _s = (wchar_t*)ss.str().c_str();
+	string ctx;
 	std::list<std::pair<pnode, plist>> preds;
+	std::pair<std::list<quad>,std::map<string, std::list<pnode>>> rr;
 	s = _s;
-	if (!s || !*s) return {{},{}};
+	if (!s || !*s) rr = {{},{}};
 	string graph;
 	pnode subject, pn;
 	pos = 0;
@@ -212,10 +257,19 @@ std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operato
 		while (iswspace(*s)) ++s;
 		while (*s == '.') ++s;
 		while (iswspace(*s)) ++s;
-		if (*s == L'}') { ++s; return { r, qlists }; }
+		if (*s == L'}') { ++s; rr = { r, qlists }; }
 		if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
 	}
-	return { r, qlists };
+	rr = { r, qlists };
+
+
+        kb.second = rr.second;
+        for (quad q : r/.first) {
+                string c = *q.graph->value;
+                if (kb.first.find(c) == kb.first.end()) kb.first[c] = make_shared<qlist>();
+                kb.first[c]->push_back(make_shared<quad>(q));
+        }
+        return fins;
 }
 }
 #endif

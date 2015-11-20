@@ -5,14 +5,44 @@
 using namespace boost::algorithm;
 namespace old{
 
-bidict& dict = *new bidict;
 bool deref = true, shorten = false;
 int level = 1;
-
 extern int _indent;
+<<<<<<< Updated upstream
 nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfType, GND, rdfnil, False;
+=======
+
+
+//misc
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfnil, False;
+
+//RDFS
+>>>>>>> Stashed changes
 nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
 //nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
+
+
+
+
+
+bidict& dict = *new bidict;
+
+void initRDFS(){
+
+	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
+	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
+	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
+	rdfsClass = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Class")));
+	rdfssubClassOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subClassOf")));
+	rdfssubPropertyOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
+	rdfsContainerMembershipProperty = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
+	rdfsmember = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#member")));
+	rdfsDatatype = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Datatype")));
+	rdfsLiteral = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Literal")));
+	rdfProperty = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
+}
+
 
 void bidict::init() {
 #ifdef with_marpa
@@ -32,6 +62,7 @@ void bidict::init() {
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	Dot = set(mkiri(pstr(L".")));
 
+<<<<<<< Updated upstream
 	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
 	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
@@ -44,6 +75,9 @@ void bidict::init() {
 	rdfsDatatype = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Datatype")));
 	rdfsLiteral = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Literal")));
 	rdfProperty = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
+=======
+	initRDFS();
+>>>>>>> Stashed changes
 
 //	rdfList = set(mkiri(pstr(L"rdf:List")));
 //	_dlopen = set(mkiri(pstr(L"dlfcn:dlopen")));
@@ -59,13 +93,29 @@ void bidict::set ( const std::vector<node>& v ) {
 
 nodeid bidict::set ( node v ) {
 	if (!v.value) throw std::runtime_error("bidict::set called with a node containing null value");
+	//#bidict.pi : std::map<node,nodeid>
+	//Check if the node already exists in the dictionary,
+	//if so, assert that the node in the dictionary has the
+	//same type as the argument node. If the assert passes, 
+	//return the nodeid of the node in the dictionary.
 	auto it = pi.find ( v );
 	if ( it != pi.end() )
 	{
 		assert (v._type == it->first._type);
 		return it->second;
 	}
-	nodeid k = pi.size() + 1;
+	
+	//Otherwise, if the node is not in the dictionary, then
+	//generate a new ID for it by adding one to the size of
+	//the current dictionary. Then check to see if the node is a
+	//variable. A node is taken to be a variable if it's type is 
+	//node::IRI and the first character in it's value is '?'.
+	//If it's a variable, then negate it's nodeid. Negative nodeid's
+	//represent variables.
+	//Add the node to dict.pi with the nodeid as the value and
+	//add the nodeid to dict.ip with the node as the value.
+	//Return the nodeid.
+	nodeid k = pi.size() + 1; 
 	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
@@ -359,9 +409,13 @@ pstring wstrim(string s) {
 
 pstring pstrtrim ( const string& s ) { string ss = s; trim(ss);return std::make_shared<string> ( ss ); } 
 pstring pstrtrim ( const wchar_t* s ) { if (!s) return 0; return pstrtrim ( string(s) ); }
+
+/* ws() converts std::wstring to std::string and back */
 string ws(const std::string& s) { return string(s.begin(), s.end()); }
 std::string ws(const string& s) { return std::string(s.begin(), s.end()); }
 std::string ws(pstring s) { return ws(*s); }
+
+
 pstring wstrim(const wchar_t* w) { string s = w; return wstrim(s); }
 
 struct cmpstr { 
@@ -374,6 +428,8 @@ struct cmpstr {
 };
 
 pstring pstr ( const string& s ) {
+	//Use the static std::set to prevent from making the
+	//same string multiple times.
 	static std::set<pstring, cmpstr> strings;
 	auto ps = std::make_shared<string> ( s );
 	auto it = strings.find(ps);

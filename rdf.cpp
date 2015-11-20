@@ -26,15 +26,43 @@ string node::tostring() const {
 	return ss.str();
 }
 
+
+pnode set_dict(node r){	
+	//If the dictionary already contains a node with this name,
+	//return that one.
+	//#dict.nodes : std::map<string,pnode>;
+	auto it = dict.nodes.find(r.tostring());
+	if (it != dict.nodes.end()) {
+		assert(it->second->_type == r._type);
+		return it->second;
+	}	
+	//Otherwise put it into the dictionary and return
+	//a shared pointer to it. Why is putting it into
+	//dict.nodes not part of dict.set?
+	pnode pr = make_shared<node>(r);
+	dict.set(pr);
+	return dict.nodes[r.tostring()] = pr;
+}
+
+//Could just make all these constructors for the node class:
+//	mkliteral, mkiri, and mkbnode, that is.
 pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	setproc(L"mkliteral");
 //	TRACE(dout << *value << endl);
 	if (!value) throw std::runtime_error("mkliteral: null value given");
+
+
 	node r ( node::LITERAL );
 	r.value = value;
 	if (!datatype) r.datatype = XSD_STRING;
 	else {
 		const string& dt = *datatype;
+		//--do we need these cases? looks like we're usually
+		//just sending it the global XSD_* anyway
+//well the point of those chained ifs is to point it to one shared string instead of leave each node carry its own datatype string
+		//--in any case, maybe better to put these in an 
+		//associative array
+//sure
 		if (dt == L"XSD_STRING") r.datatype = XSD_STRING;
 		else if (dt == L"XSD_INTEGER") r.datatype = XSD_INTEGER;
 		else if (dt == L"XSD_DOUBLE") r.datatype = XSD_DOUBLE;
@@ -45,15 +73,10 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		else if (dt == L"XSD_ANYURI") r.datatype = XSD_ANYURI;
 		else r.datatype = datatype;
 	}
+
 	if ( language ) r.lang = language;
-	auto it = dict.nodes.find(r.tostring());
-	if (it != dict.nodes.end()) {
-		assert(it->second->_type == r._type);
-		return it->second;
-	}
-	pnode pr = make_shared<node>(r);
-	dict.set(pr);
-	return dict.nodes[r.tostring()] = pr;
+
+	return set_dict(r);
 }
 
 pnode mkiri ( pstring iri ) {
@@ -62,14 +85,7 @@ pnode mkiri ( pstring iri ) {
 //	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
 	r.value = iri;
-	auto it =  dict.nodes.find(r.tostring());
-	if (it != dict.nodes.end()) {
-		assert(it->second->_type == r._type);
-		return it->second;
-	}
-	pnode pr = make_shared<node>(r);
-	dict.set(pr);
-	return dict.nodes[r.tostring()] = pr;
+	return set_dict(r);
 }
 
 pnode mkbnode ( pstring attribute ) {
@@ -78,16 +94,14 @@ pnode mkbnode ( pstring attribute ) {
 //	TRACE(dout << *attribute << endl);
 	node r ( node::BNODE );
 	r.value = attribute;
-	auto it =  dict.nodes.find(r.tostring());
-	if (it != dict.nodes.end()) {
-		assert(it->second->_type == r._type);
-//		TRACE(dout<<" returned existing node" << endl);
-		return it->second;
-	}
-	pnode pr = make_shared<node>(r); 
-	dict.set(pr);
-	return dict.nodes[r.tostring()] = pr;
+	return set_dict(r);
 }
+
+
+
+
+
+
 std::wostream& operator<< ( std::wostream& o, const qlist& x ) {
 	for ( pquad q : x )
 		o << q->tostring ( ) << std::endl;
@@ -107,6 +121,10 @@ std::wostream& operator<< ( std::wostream& o, const qdb& q ) {
 		o << x.first << ": " << std::endl << x.second << std::endl;
 	return o;
 }
+
+
+
+
 #ifdef JSON
 rdf_db::rdf_db ( jsonld_api& api_ ) :
 	qdb(), api ( api_ ) {
@@ -158,6 +176,10 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 		else if ( !keyword ( key ) ) setNamespace ( key, val );
 	}
 }
+
+
+
+
 
 void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	qlist triples;
@@ -213,6 +235,13 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 	else first[graph_name]->insert ( first[graph_name]->end() , triples.begin(), triples.end() );
 }
 
+
+
+
+
+
+
+
 pnode rdf_db::obj_to_rdf ( pobj item ) {
 	if ( isvalue ( item ) ) {
 		pobj value = getvalue ( item ), datatype = sgettype ( item );
@@ -243,17 +272,29 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 }
 #endif
 
+
+
+
+
+
 quad::quad ( string subj, string pred, pnode object, string graph ) :
 	quad ( startsWith ( subj, L"_:" ) ? mkbnode ( pstr(subj) ) : mkiri ( pstr(subj) ), mkiri ( pstr(pred) ), object, graph ) {
 }
+
+
 
 quad::quad ( string subj, string pred, string object, string graph ) :
 	quad ( subj, pred,
 	       startsWith ( object, L"_:" ) ? mkbnode ( pstr(object) ) : mkiri ( pstr(object) ),
 	       graph ) {}
 
+
+
 quad::quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph ) :
 	quad ( subj, pred, mkliteral ( pstr(value), datatype, language ), graph ) { }
+
+
+
 
 quad::quad ( pnode s, pnode p, pnode o, string c ) :
 	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ) {
@@ -261,7 +302,14 @@ quad::quad ( pnode s, pnode p, pnode o, string c ) :
 		TRACE(dout<<tostring()<<endl);
 	}
 
+
+
+
 quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
+
+
+
+
 
 string quad::tostring ( ) const {
 	std::wstringstream ss;
@@ -281,36 +329,25 @@ string quad::tostring ( ) const {
 	return ss.str();
 }
 
+
+
+
+
+
+
 using namespace boost::algorithm;
+/*
 #ifndef NOPARSER
 int readqdb (qdb& r, std::wistream& is) {
-	int fins = 0;
-	string s;
-	string c;
-	quad q;
-	nqparser p;
-	std::wstringstream ss;
-	while (getline(is, s)) {
-		//dout << "line:\"" << s << "\"" << std::endl;
-		trim(s);
-		if (!s.size() || s[0] == '#') continue;
-		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L"."){
-			fins++;
-			break;
-		}
-//		dout << s << endl;
-		ss << ' ' << s << ' ';
-	}
-	auto rr = p((wchar_t*)ss.str().c_str());
-	r.second = rr.second;
-	for (quad q : rr.first) {
-		c = *q.graph->value;
-		if (r.first.find(c) == r.first.end()) r.first[c] = make_shared<qlist>();
-		r.first[c]->push_back(make_shared<quad>(q));
-	}
-	return fins;
+	return parse_nq(r,is);
 }
 #endif
+*/
+
+
+
+
+
 #ifdef JSON
 std::string convert_cmd::desc() const {
 	return "Convert JSON-LD to quads including all dependent algorithms.";

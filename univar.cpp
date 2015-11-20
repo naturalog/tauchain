@@ -819,6 +819,7 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 
 //region kb
 
+
 void take_out_garbage()
 {
 	for (auto x: eps)
@@ -836,6 +837,9 @@ void take_out_garbage()
 		delete x;
 	constss.clear();
 }
+
+
+
 
 void free_eps_nonassert()
 {
@@ -1685,7 +1689,7 @@ void yprover::query(const old::qdb& goal){
 #endif
 	steps = 0;
 	unifys = 0;
-	int nresults = 0;
+	int nresults = 0; 
 	locals_map lm, cm;
 	Locals locals, consts;
 

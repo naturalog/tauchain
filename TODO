@@ -1,0 +1,53 @@
+Nov. 19th:
+*What specification of n3 are we supporting
+n3-grammar.n3
+15:49 < koo7> im not planning to support full n3
+15:50 < koo7> it also doesnt support bnodes, its still unclear to me how they 
+              would be represented in tau
+15:50 < koo7> and our support of unicode sucks on all levels
+15:51 < koo7> i also noticed some bug with multiline formulas
+
+
+*Tau command-line input stack switch
+working on it..
+*Simplify tau command-line processing code
+possibly employ a state machine? could we export one from mbeddr?
+
+
+*What's up with bnodes
+no idea, ask hmc
+
+
+*Fix Unicode support (find out what's wrong with it)
+the reasoner is or should be agnostic to string encoding, 
+where this matters is:
+ when doing regexes in the n3 parser
+ possibly in some builtins
+http://cppwhispers.blogspot.cz/2012/11/unicode-and-your-application-3-of-n.html
+http://unicode.org/resources/libraries.html
+http://utf8everywhere.org/
+we should drop the "w" strings because they arent well supported, or rather,
+it should be possible to compile with as well as without w
+it seems theres only one way to do unicode properly and that is the ICU library
+it is quite heavyweight, so it should be an optional dependency
+
+
+*Find out what the multi-line formulas bug is
+*What's up with our quoted strings
+nq parser?
+*Change parse_nq to just generate a qdb instead of going round-about at it.
+*What's wrong with our list reasoning
+*Strip out old::prover stuff
+*Organize univar.cpp
+*Do we really need all those permutations?
+yes, and there will be more
+*Formal verification
+*Implement RDFS
+*Implement built-ins
+*Implement consistency check
+
+
+--------------------------
+*Tokens <--> Definitions
+*Abstract syntax tree
+*Annotations/comments
