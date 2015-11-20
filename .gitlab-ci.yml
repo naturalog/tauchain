@@ -26,5 +26,5 @@ release:
   script:
     - make clean
     - ./r
-    - valgrind ./tau  < tests/slower/einstein.n3
-    - time ./tau  < tests/slower/einstein.n3
+    - valgrind ./tau  < tests/t
+    - time ./tau  < tests/t

@@ -942,8 +942,9 @@ namespace old {
 		{
 			nodeid a0 = q(decl, marpa->arg0);
 			assert(a0);
-			TRACE(dout << L"DECLARATION:" << *dict[a0].value << std::endl;)
-			if (*dict[a0].value == L"@prefix") {
+			old::string dec = *dict[a0].value;
+			TRACE(dout << L"DECLARATION:" << dec << std::endl;)
+			if (dec == L"@prefix") {
 				nodeid p = q(decl, n3prefix);
 				nodeid uri = q(decl, n3explicituri);
 				string uri_s = get_value(uri);
@@ -956,6 +957,7 @@ namespace old {
 				prefixes[prefix] = expluri;
 				TRACE(dout << "@prefix\"" << p_s << "\": \"" << uri_s << "\"" << std::endl;)
 			}
+			else throw std::wruntime_error("not supported: " + dec);
 			//else if(*dict[a0].value == L"@keywords")
 		}
 

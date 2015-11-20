@@ -858,15 +858,16 @@ void compile_pred(old::nodeid pr)
 {
 	FUN;
 
-	if (preds.find(pr) != preds.end())
-		return;
+	//if (preds.find(pr) != preds.end())
+	//	return;
 
 	if (builtins.find(pr) != builtins.end()) {
 		for (auto b: builtins[pr]) {
 			TRACE(dout << "builtin: " << old::dict[pr] << endl;)
 			add_rule(pr, b);
 		}
-		return;
+		if (pr != rdfType)
+			return;
 	}
 
 	vector<size_t> rs = pred_index.at(pr);
@@ -1750,7 +1751,7 @@ void build_in()
 	/*ep_t *ep = new ep_t();
 	eps.push_back(ep)*/
 
-	/*
+
 	//rdfs:Resource(?x)
 	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
 		(void) s;
@@ -1778,7 +1779,7 @@ void build_in()
 				END
 		}
 	});
-	 */
+
 	/*
 	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
 	builtins[rdfssubClassOf].push_back(
