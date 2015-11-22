@@ -16,6 +16,8 @@
 #include <iostream>
 #include <list>
 
+
+#include "misc.h"
 using namespace old;
 
 typedef std::nullptr_t null;
@@ -26,7 +28,22 @@ using std::endl;
 
 extern std::set<string> silence;
 #ifdef DEBUG
-#define TRACE(x) if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) { dout << KYEL << old::indent() << KNRM; x; }
+extern bool in_silent_part = false;
+#define TRACE(x) \
+  if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) \
+  { \
+  	in_silent_part = false; \
+  	dout << KYEL << old::indent() << KNRM; \
+  	x; \
+  } \
+  else \
+  { \
+  	if(!in_silent_part) \
+  	{ \
+  		dout << "..." << endl; \
+	  	in_silent_part = true; \
+	} \
+  }
 #else
 #define TRACE(X)
 #endif

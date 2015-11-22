@@ -504,13 +504,36 @@ string prover::ruleset::format() const {
 	return ss.str();
 }
 
-    //generate a hopefully unique bnode name for a new list
-    string listid()
-    {
-        static int curid = 0;
+
+int unique_list_id = 0;
+//generate a hopefully unique bnode name for a new list
+/*string _listid()
+{
         std::wstringstream ss;
-        ss << L"_:list" << curid++;
+        ss << L"_:list" << unique_list_id;
         return ss.str();
-    };
+};
+string list_bnode_name(int item) 
+{ 
+        std::wstringstream ss;
+        ss << _listid();
+        ss << L"." << item;        
+        return ss.str();
+};*/
+string _listid()
+{
+        return L"_:list" + itoa(unique_list_id);
+};
+string list_bnode_name(int item) 
+{ 
+        return(_listid() + L"." + itoa(item));
+};
+string listid()
+{
+	unique_list_id++;
+        return _listid();
+};
+
+    
 }
 

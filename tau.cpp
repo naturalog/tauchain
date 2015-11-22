@@ -24,25 +24,15 @@
 #define CLI_TRACE(x)
 #endif
 
-#define ever ;;
-
 std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 std::wistream& din = std::wcin;
 
 std::deque<string> _argstream;
 
-const int COMMANDS = 0;
-const int KB = 1;
-const int QUERY = 2;
-const int SHOULDBE = 3;
+enum mode_t {COMMANDS, KB, QUERY, SHOULDBE, OLD};
+mode_t mode = COMMANDS;
 
-enum mode_t {COMMANDS, KB, QUERY, SHOULDBE};
-mode_t mode = 0;
-
-const int FAIL = 0;
-//const int INCOMPLETE = 1;
-const int COMPLETE = 2;
 enum ParsingResult {FAIL, /* INCOMPLETE, */ COMPLETE};
 
 string format = L"";
@@ -51,6 +41,7 @@ string base = L"";
 int result_limit = 123;
 bool irc = false;
 std::set<string> silence;
+bool in_silent_part = false;
 
 std::map<string,bool*> _flags = {
 		{L"nocolor",&nocolor}
@@ -104,9 +95,16 @@ void set_mode(int m)
 }
 
 void help(string help_arg){
-	if(help_arg == L""){
-		dout << L"Help -- commands: kb, query, help, quit; use \"help <command>\" for more detail." << endl;
-	}else{
+	if(input.end()){
+		dout << L"Help -- commands: kb, query, help, quit; use \"help <topic>\" for more detail." << endl;
+		dout << L"command 'kb': load a knowledge-base." << endl;
+		dout << L"command 'query': load a query and run." << endl;
+		dout << L"command 'help': Tau will help you solve all your problems." << endl;
+		dout << L"command 'quit': exit Tau back to terminal" << endl;
+		dout << "\"fin.\" is part of the kb/query-loading, it denotes the end of your rule-base" << endl;
+	}
+	else{
+		old::string help_arg = input.pop();
 		string help_str = L"";
 		if(help_arg == L"kb"){
 			help_str = L"command 'kb': load a knowledge-base.";
@@ -121,14 +119,12 @@ void help(string help_arg){
 			help_str = L"command 'quit': exit Tau back to terminal";
 		}
 		else if(help_arg == L"fin"){
-			help_str = L"fin is part of the kb/query-loading, it denotes the end of your rule-base";
+			help_str = L"\"fin.\" is part of the kb/query-loading, it denotes the end of your rule-base";
 		}else{
 			dout << "No command \"" << help_arg << "\"." << endl;
 			return;
 		}
 		dout << "Help -- " << help_str << endl;
-
-
 	}
 }
 
@@ -148,20 +144,26 @@ void switch_color(){
 	}
 }
 
-int get_qdb(qdb &kb, string fname){
+ParsingResult get_qdb(qdb &kb, string fname){
 	std::wifstream is(ws(fname));
+
 	if (!is.is_open()) {
 		dout << "failed to open file." << std::endl;
-		return 0;
+		return FAIL;
 	}
+
 	qdb dummy_query;
 	int dummy_fins;
 	int r = parse(kb, dummy_query, is, fname, dummy_fins);
 	dout << "qdb graphs count:"<< kb.first.size() << std::endl;
+	
+	/*
 	int nrules = 0;
 	for ( pquad quad :*kb.first[L"@default"])
 		nrules++;
 	dout << "rules:" << nrules << std::endl;
+	*/
+	
 	return r;
 }
 
@@ -400,7 +402,7 @@ bool dash_arg(string token, string pattern){
 }
 
 
-string read_token(){
+string peek(){
 	string t;
 	for line in input:
         	std::wstringstream ss(line);                                                        
@@ -411,26 +413,28 @@ string read_token(){
 }
 
 
+void get_int(int &i, const string &tok)
+{
+	try
+	{
+		i = std::stoi(tok);
+	}
+	catch
+	{
+		dout << "bad int, ";
+	}
+}
+		
+
 bool read_option(string s){
-	if(s.length() == 0){
+	if(s.length() < 2 || s.at(0) != L'-' ||	s == L"-" || s == L"--")
 		return false;
-	}
-	if(s.at(0) != L'-' || s.length() < 2){
-		return false;
-	}
-	int dash = 1;
-	if(s == L"-" || s == L"--"){
-		return false;
-	}
 	
 	if(s.at(1) == L'-'){
-		if(s.length() == 2){
-			return false;
-		}
-		dash = 2;
+		s = s.substr(1, s.length()-1);
 	}
 
-	string _option = s.substr(dash,s.length()-dash);
+	string _option = s;
 
 	for( std::pair<string,bool*> x : _flags){
 		if(x.first == _option){
@@ -443,54 +447,37 @@ bool read_option(string s){
 	for(string x : _formats){
 		if(x == _option){
 			format = x;
-			dout << "format:"<<format<<std::endl;
+			dout << "input format:"<<format<<std::endl;
 			return true;
 		}
 	}
 
-	if(_option == L"silence") {
-		if (_argstream.size() != 0) {
-			string token = read_arg();
+	if (!input.end()) {
+		string token = input.pop();
+	
+		if(_option == L"silence") {
 			silence.emplace(token);
-			dout << "silence:";
+			/*dout << "silence:";
 			for(auto x: silence)
 				dout << x << " ";
-			dout << endl;
+			dout << endl;*/
+			return true;
 		}
-		return true;
-	}
+	
 
-	if(_option == L"level"){
-		if(_argstream.size() != 0){
-			string token = read_token();
-			int tmpLevel;
-			try{
-				tmpLevel = std::stoi(token);
-			}catch(const std::invalid_argument& e){
-				_argstream.push_front(token);
-				return true;
-			}
-			if(tmpLevel < 1)
-				level = 1;
-			else
-				level = tmpLevel;
-			dout << "level:" << level << std::endl;
+		if(_option == L"level"){
+			get_int(level, token);
+			dout << "debug level:" << level << std::endl;
+			return true;
 		}
-		return true;
-	}
 
-	if(_option == L"limit"){
-		if(_argstream.size() != 0){
-			string token = read_token();
-			try{
-				result_limit = std::stoi(token);
-			}catch(const std::invalid_argument& e){
-				_argstream.push_front(token);
-				return true;
-			}
-			dout << "limit:" << result_limit << std::endl;
+		if(_option == L"limit"){
+			get_int(result_limit, token);
+			dout << "result limit:" << result_limit << std::endl;
+			return true;
 		}
-		return true;
+		
+		input.take_back();
 	}
 
 	return false;
@@ -503,34 +490,26 @@ void mode_shouldbe() {
 }
 
 
-void mode_query(){
+void do_query(qdb &q_in)
+{
+	dout << "query size: " << q_in.first.size() << std::endl;
+	tauProver->query(q_in);
+}
+
+
+void cmd_query(){
 	if(kbs.size() == 0){
 		dout << L"No kb; cannot query." << endl;
 	}else{
-		if(_argstream.size() == 0){
+		if(input.end()){
 			set_mode(QUERY);
 		}else{
-			while(_argstream.size() > 0){
-				string token = read_arg();
-				if(is_command(token)){
-					_argstream.push_front(token);
-					break;
-				}
-				if(check_option(token)){
-					continue;
-				}
+			if(!input.end()){
+				string fn = input.pop_long();
 				qdb q_in;
-				int r = get_qdb(q_in,token);
-				if(r == 2){
-					dout << "query size: " << q_in.first.size() << std::endl;
-					(*tauProver).query(q_in);
-					//(*tauProver).e.clear();
-				}else if(r == 1 || r == 0){
-					dout << L"Error parsing query file \"" << token << "\"" << endl;
-				}else{
-					dout << L"Return code from get_qdb(): '" << r << L"', is unrecognized. Exiting." << endl;
-					assert(false);
-				}
+				ParsingResult r = get_qdb(q_in,fn);
+				if (r != FAIL)
+					do_query(q_in);
 			}
 		}
 	}
@@ -538,61 +517,27 @@ void mode_query(){
 
 
 
-void mode_kb(){
-	if(_argstream.size() == 0){
+void cmd_kb(){
+	if(input.end()){
 		clear_kb();
 		set_mode(KB);
 	}else{
-		string token = read_arg();
+		old::string token = input.pop();
 		if(dash_arg(token,L"clear")){
 			clear_kb();
 			return;
 		}
-		else if(dash_arg(token,L"set")){
+		/*else if(dash_arg(token,L"set")){
 			clear_kb();
-		}
+		}*/
 		else if(dash_arg(token,L"add")){
+			//dont clear,
+			if (input.end())
+				throw std::runtime_error("add what?");
+			else
+				add_kb(input.pop_long());
 		}else{
-			_argstream.push_front(token);
-			//clear_kb();
-		}
-	
-		if(_argstream.size() == 0){
-			qdb kb_in;
-			int r = get_qdb(kb_in,L"");
-			if(r == 2){
-				kbs.push_back(kb_in);
-				fresh_prover();
-			}else if(r == 1 || r==0){
-				dout << L"Error parsing kb input." << endl;
-			}else{
-				dout << L"Return value, '" << r << L"', of get_qdb() not recognized. Exiting." << endl;
-				assert(false);
-			}
-		}else{
-			while(_argstream.size() > 0){
-				string token = read_arg();
-
-				if(is_command(token)){
-					_argstream.push_front(token);
-					break;
-				}
-				if(check_option(token)){
-					continue;
-				}
-
-				qdb kb_in;
-				int r = get_qdb(kb_in, token);	
-				if(r == 2){
-					kbs.push_back(kb_in);
-					fresh_prover();
-				}else if(r == 1 || r == 0){
-					dout<< L"Error parsing kb file: \"" << token << L"\"" << endl;
-				}else{
-					dout << L"Return value, '" << r << L"', of get_qdb() not recognized. Exiting." << endl;
-					assert(false);
-				}
-			}
+			load_kb(token);
 		}	
 	}
 }
@@ -603,6 +548,8 @@ void displayPrompt(){
 		//Set the prompt string differently to
 		//specify current mode:
 		string prompt;
+		if (mode == OLD)
+			prompt = L"tau";
 		if (mode == COMMANDS)
 			prompt = L"Tau";
 		else if (mode == KB)
@@ -621,136 +568,146 @@ void displayPrompt(){
 	}
 }
 
+struct input_t
+{
+	std::string name;
+	old::string pop();
+	old::string pop_long();
+	void take_back();
+	void readline()	{};
+	bool end();
+}	
+
+struct args_input_t:input_t
+{
+	int argc;
+	char **argv;
+	unsigned int counter = 1;
+	args_input_t(int argc_, char**argv_)
+	{
+		argc = argc_;
+		argv = argv_;
+		name = L"args";
+	}
+	bool end()
+	{
+		return counter == argc;
+	}
+	old::string pop()
+	{
+		assert(!end());
+		return argv[counter++];
+	}
+	old::string pop_long()
+	{
+		return pop();
+	}
+	void take_back()
+	{
+		counter--;
+		assert(counter);
+	}
+}
+	
+
+
+/*		{
+			string line;
+			std::getline(input_stream, line);
+			input += line + L"\n";
+		}
+					//is.rdbuf()+L"\n";
+
+*/	
+
+
+stack<struct { input_t*}> inputs;
+
+
+void emplace_stdin()
+{
+	inputs.emplace(new stream_input_t("stdin", std::wcin));
+}
+
+
 int main ( int argc, char** argv) {
-	//Initialize the dictionary with hard-coded nodes.
+	//Initialize the prover strings dictionary with hard-coded nodes.
 	dict.init();
 
-	stack<struct {std::string name, std::wistream *stream}> inputs;
-
-	// to hold a kb/query
-	string qdb_buffer;
-
-
-	//Read in the terminal command-line into our inputs stack.
-	//The name "args" does not matter we're just using it because
-	//that's what they are.
-	old::string argsies;
-
-	for(int i=0;i<argc;i++){
-		argsies += ws(argv[i]) + L"\n";
-	}
-
-	inputs.emplace({"args", new wistringstream(argsies)});
+	if (argc == 1)
+		emplace_stdin();
+	else
+		inputs.emplace(new args_input_t(argv, argc));
 
 
+	// to hold a kb/query string
+	old::string qdb_buffer;
 
-	while(inputs.size()){
-		input_name = inputs.back().name;
-		input = inputs.back().stream;
-		inputs.pop();
-	
-		/*
-		CLI_TRACE(dout << "argstream.size=" << _argstream.size() << std::endl;)
-		displayPrompt();
-		if (input_buffer.size() == 0 && _argstream.size() == 0)
+
+	while(true){
+
+		input.readline();
+		while (input.end())
 		{
-			if (std::wcin.eof())
-				break;
-			string line;
-			std::getline(std::wcin, line);
-			input_buffer += line + L"\n";
+			if (!inputs.size())
+				goto end;
+			input = inputs.back();
+			inputs.pop();		
+			input.readline();
 		}
-		size_t nlpos = input_buffer.find(L"\n");
-		size_t end;
-		if (nlpos == input_buffer.npos)
-			end = input_buffer.size();
-		else
-			end = nlpos + 1;
-		CLI_TRACE(dout << L"nlpos=" << nlpos << " end=" << end << std::endl;)
-		string line = string(input_buffer.begin(), input_buffer.begin() + end);
-		input_buffer = string(input_buffer.begin() + end, input_buffer.end());
-		CLI_TRACE(
-		dout << L"line is \"" << line << "\"" << std::endl;
-		dout << L"input buffer: \"" << input_buffer << "\"" << std::endl;
-		dout << L"data buffer: \"" << data_buffer << "\"" << std::endl;
-		dout << L"mode: \"" << mode << "\"" << std::endl;
-		)
-		string trimmed_data = data_buffer;
-		boost::algorithm::trim(trimmed_data);
-
-		dout << L"<\"" << line << "\"" << std::endl;
-		*/
-
-		if (startsWith(peek(), L"#"))
-		{
-			pop();
-			continue;
-		}
-
-		else if (mode == COMMANDS) {
-
-			if (read_option()) continue;
 			
-
-			if (token == L"help") {
-				help(read_token());
+			
+	
+		displayPrompt();
+		
+		
+		if (mode == COMMANDS) {
+			old::string token = input.pop();
+			if (startsWith(token, L"#") || token == L"")
 				continue;
-			}
-
-			if (token == L"kb") {
-				mode_kb();
+			else if (read_option(token)) 
 				continue;
-			}
-
-			if (token == L"query") {
-				mode_query();
-				continue;
-			}
-			if (token == L"shouldbe") {
-				mode_shouldbe();
-				continue;
-			}
-			if (token == L"thatsall") {
+			else if (token == L"help")
+				help();
+			else if (token == L"kb") 
+				cmd_kb();
+			else if (token == L"query") 
+				cmd_query();
+			else if (token == L"shouldbe")
+				cmd_shouldbe();
+			else if (token == L"thatsall")
 				thatsall();
-				pop();
-				continue;
+			else if (token == L"shouldbesteps") {
+				//test_result(std::stoi(read_arg()) == tauProver->steps_);
 			}
-			if (token == L"shouldbesteps") {
-				test_result(std::stoi(read_arg()) == tauProver->steps_);
-				pop();				
-				continue;
+			else if (token == L"shouldbeunifys") {
+				//test_result(std::stoi(read_arg()) == tauProver->unifys_);
 			}
-			if (token == L"shouldbeunifys") {
-				test_result(std::stoi(read_arg()) == tauProver->unifys_);
-				pop();
-				continue;
-			}
-			else if (token == L"quit") {
+			else if (token == L"quit")
 				break;
-			}
 			else if (token == L"-")
-			{
-				inputs.emplace_back({"stdin", &std::wcin});
-				pop();
-			}
-			else if(token != L"") {
-			//maybe its a filename
-				string fn = ws(peek_line())
-				std::wifstream is(fn);
+				emplace_stdin();
+			else {
+				input.take_back();
+				//maybe its a filename
+				string fn = ws(input.pop_long())
+				auto &is = new std::wifstream(fn);
 				if (!is.is_open()) {
 					dout << "[cli]failed to open \"" << fn << "\"." << std::endl;
 				}
 				else {
 					dout << "[cli]loading \"" << fn << "\"." << std::endl;
-					//is.rdbuf()+L"\n";
-					pop_line();
-					inputs.emplace_back({fn, is});
+					inputs.emplace_back(new stream_input_t(fn, is));
 				}
 			}
 		}
 
 		if (std::wcin == input && isatty(fileno(stdin)))
 		{
+			/*interactive mode, we read in a line and do a reparse
+			if it succeeds we add the line to the qdb_buffer,
+			otherwise we print error and throw it away*/
+		
 			string new_buffer = data_buffer + line;
 			int fins;
 			qdb kb, query;
@@ -758,9 +715,16 @@ int main ( int argc, char** argv) {
 			int pr = parse(kb, query, ss, L"", fins);
 			CLI_TRACE(dout << "parsing result:"<<pr<<std::endl);
 			if (pr) {
-				data_buffer += line;
+				qdb_buffer += line;
 				CLI_TRACE(dout << "fins:" << fins << std::endl);
 			}
+		}
+		else
+		{
+			qdb_buffer += line;
+			count_fins();
+		}
+			
 		if(pr == COMPLETE)
 		{
 			if (mode == KB && fins > 0) {

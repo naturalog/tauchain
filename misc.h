@@ -93,6 +93,7 @@ struct _setproc {
 
 
 string listid();
+string list_bnode_name(int item);
 
 }
 
