@@ -288,7 +288,7 @@ static inline ThingType get_type(Thing x)
 	return OFFSET;
 }
 
-
+//</oneword>
 #endif //ndef oneword
 
 
@@ -587,10 +587,10 @@ wstring str(const Thing *_x)
 		case LIST: {
 			const size_t size = get_size(x);
 			wstringstream r;
-			r << L"{" << size << L"}(";
+			r << L"{" << size << L" items}(";
 			for (size_t i = 0; i < size; i++) {
 				if (i != 0) r << " ";
-				r << str(_x + 1 + i);
+				r << str(_x + 1 + (i*2));
 			}
 			if (!size)
 				r << " ";
@@ -599,7 +599,7 @@ wstring str(const Thing *_x)
 		case OFFSET: {
 			const offset_t offset = get_offset(x);
 			wstringstream r;
-			r << L"<";
+			r << L"<offset ";
 			if (offset >= 0)
 				r << L"+";
 			r << offset << L">->";
@@ -748,8 +748,8 @@ bool would_unify(Thing *this_, Thing *x_)
 			ASSERT(is_list(me));
 			const auto size = get_size(me);
 			if(size != get_size(x)) return false;
-			for (size_t i = 1; i <= size; i++) 
-				if (!would_unify(getValue(this_+i),getValue(x_+i)))
+			for (size_t i = 0; i < size; i++)
+				if (!would_unify(getValue(this_+1+(i*2)) , getValue(x_+1+(i*2))))
 					return false;
 			return true;
 		}
@@ -989,9 +989,9 @@ coro listunifycoro(Thing *a_, Thing *b_)
 
 	coro r = gen_succeed();
 
-	for(int i = get_size(b);i > 0; i--)
+	for(int i = get_size(b)-1;i >= 0; i--)
 	{
-		r = unifjoin(a_+i, b_+i, r);
+		r = unifjoin(a_+1+(i*2), b_+1+(i*2), r);
 	}
 
 	return r;
@@ -1197,7 +1197,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	std::queue<toadd> lq;
 	TRACE(dout << "head:" << op->format(head) << endl);
 
-	//i miss nested functions
+	//in add_node we ignored lists, we just added them as nodes and queued them up
 	auto expand_lists = [&lq, &locals, &lm]() {
 		setproc("expand_lists");
 		while (!lq.empty()) {
@@ -1217,6 +1217,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			locals.push_back(i0);
 			lm[l] = locals.size()-1; // register us in the locals map
 
+			size_t bnode_counter = lst.size();
 			for (auto li: lst) {
 				TRACE(dout << "item..." << endl;)
 #ifdef KBDBG
@@ -1247,7 +1248,20 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				add_kbdbg_info(t, m);
 #endif
 				locals.push_back(t);
+
+				{
+					Thing bnode;
+					make_this_list(bnode, --bnode_counter);
+					locals.push_back(bnode);
+				}
 			}
+
+			{
+				Thing nil = create_node(op->make(rdfnil,0,0));
+				locals.push_back(nil);
+			}
+
+
 		}
 	};
 
@@ -1545,8 +1559,8 @@ pnode thing2node(Thing *t_, qdb &r) {
 	if (is_list(t))
 	{
 		const wstring head = listid();
-		for (size_t i = 1; i <= get_size(t); i++) {
-			auto x = (t_ + i);
+		for (size_t i = 0; i < get_size(t); i++) {
+			auto x = (t_ + 1 + (i*2));
 			r.second[head].emplace_back(thing2node(x, r));
 		}
 		return mkbnode(pstr(head));
@@ -1555,9 +1569,9 @@ pnode thing2node(Thing *t_, qdb &r) {
 	if (is_node(t))
 		return std::make_shared<old::node>(old::dict[get_term(t)->p]);
 
-	dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
-	
-	assert(false);
+	//dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
+	assert(is_unbound(t));
+	return mkiri(pstr("?V?A?R?"));
 }
 
 
@@ -1612,6 +1626,7 @@ void yprover::thatsAllFolks(int nresults){
 
 #ifdef KBDBG
 
+/*kbdbg fell to the wayside, it needs to be adapted to bnodes in lists and to builtins*/
 
 void print_kbdbg_part(wstringstream &o, termid t, unsigned long part)
 {
@@ -1911,10 +1926,10 @@ void build_in()
 							TRACE(dout << "MATCH." << endl;)
 							entry = LAST;
 							return true;
-					case_LAST:;
+							case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
-						delete(r);
+						delete (r);
 						END;
 				}
 			}
@@ -1939,8 +1954,7 @@ void build_in()
 						}
 						auto o = getValue(o_);
 						Thing o2 = *o;
-						if (!is_node(o2))
-						{
+						if (!is_node(o2)) {
 							dout << bu << ": " << str(o) << " not a node" << endl;
 							DONE;
 						}
@@ -1965,8 +1979,7 @@ void build_in()
 	builtins[bui].push_back(
 			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
 				switch (entry) {
-					case 0:
-					{
+					case 0: {
 						auto s = getValue(s_);
 						Thing s2 = *s;
 						if (!is_list(s2)) {
@@ -1976,12 +1989,12 @@ void build_in()
 
 						auto size = get_size(s2);
 						if (size == 0) DONE;
-						ouc = unify(s+size, o_);
+						ouc = unify(s + size, o_);
 					}
 						while (ouc()) {
 							entry = LAST;
 							return true;
-					case_LAST:;
+							case_LAST:;
 						}
 						END;
 				}
@@ -2033,16 +2046,54 @@ void build_in()
 */
 
 
-/*
-	//rdffirst
+	//if the subject is bound, and bound to a list just take it's first item.
+	// If it is bound to something that is not a list, fail.
+	// If it is unbound, do a trivial yield (no new binding first).
 	builtins[rdffirst].push_back(
-			[entry, ouc](Thing *s_, Thing *o_) mutable {
+			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
 				switch (entry) {
-					case 0: {
-*/
+					case 0:
+						s = getValue(s_);
+						o = getValue(o_);
+						if (is_unbound(*s))
+							ouc = gen_succeed();
+						else if (is_list(*s))
+							ouc = unify(o, s + 1);
+						else
+							ouc = GEN_FAIL;
+						entry = LAST;
+						while (ouc())
+						{
+							return true;
+							case_LAST:;
+						}
+						END
+				}
+			}
+	);
+
+	builtins[rdfrest].push_back(
+			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0:
+						s = getValue(s_);
+						o = getValue(o_);
+						if (is_list(*s) && get_size(*s))
+							ouc = unify(o, s + 2);
+						else
+							ouc = GEN_FAIL;
+						entry = LAST;
+						while (ouc())
+						{
+							return true;
+							case_LAST:;
+						}
+						END
+				}
+			}
+	);
 
 }
-
 
 /*log:equalTo a rdf:Property;
     rdfs:comment
