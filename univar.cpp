@@ -858,8 +858,8 @@ void compile_pred(old::nodeid pr)
 {
 	FUN;
 
-	//if (preds.find(pr) != preds.end())
-	//	return;
+	if (preds.find(pr) != preds.end())
+		return;
 
 	if (builtins.find(pr) != builtins.end()) {
 		for (auto b: builtins[pr]) {
@@ -869,6 +869,9 @@ void compile_pred(old::nodeid pr)
 		if (pr != rdfType)
 			return;
 	}
+
+	if (pred_index.find(pr) == pred_index.end())
+		return;
 
 	vector<size_t> rs = pred_index.at(pr);
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
