@@ -162,8 +162,14 @@ const auto Ex17 = wruntime_error ( LIST_OF_LISTS + tab + string ( L"A list may n
 const auto Ex18 = wruntime_error ( INVALID_REVERSE_VALUE + tab + string ( L"@reverse value must be an object" ) );
 const auto Ex19 = wruntime_error ( LIST_OF_LISTS + tab + string ( L"lists of lists are not permitted." ) );
 #endif
+
+
+
 const string implication = L"http://www.w3.org/2000/10/swap/log#implies";
 const pstring pimplication = pstr(implication);
+
+
+
 
 template<typename T> inline bool is ( const T& s, const std::vector<T>& v, const string& exception = string() ) {
 	bool rc = std::find ( v.begin(), v.end(), s ) != v.end();

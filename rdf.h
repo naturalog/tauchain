@@ -161,7 +161,7 @@ private:
 	std::map<string, std::list<pnode>> qlists;
 	std::list<std::tuple<pnode, pnode, pnode>> lists;
 
-	int nq_to_qdb(qdb& kb, std::wistream& is);
+	qdb& _kb;
 
 	pnode readcurly();
 	pnode readlist();
@@ -171,10 +171,11 @@ private:
 	pnode readvar();
 	pnode readbnode();
 	void readprefix();
+	void preprocess(std::wistream& is, std::wstringstream& ss);
 public:
 	nqparser();
 	~nqparser();
-	int nq_to_qdb(qdb& kb, std::wistream& is);
+	void nq_to_qdb(qdb& kb, std::wistream& is);
 	//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
 };
 qlist merge ( const qdb& q );

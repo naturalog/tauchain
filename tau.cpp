@@ -641,7 +641,7 @@ int main ( int argc, char** argv) {
 
 
 	// to hold a kb/query string
-	old::string qdb_buffer;
+	old::string qdb_text;
 
 
 	while(true){
@@ -689,8 +689,10 @@ int main ( int argc, char** argv) {
 				emplace_stdin();
 			else {
 				input.take_back();
+				old::string line = input.pop_long()
+
 				//maybe its a filename
-				string fn = ws(input.pop_long())
+				string fn = ws(line)
 				auto &is = new std::wifstream(fn);
 				if (!is.is_open()) {
 					dout << "[cli]failed to open \"" << fn << "\"." << std::endl;
@@ -698,35 +700,16 @@ int main ( int argc, char** argv) {
 				else {
 					dout << "[cli]loading \"" << fn << "\"." << std::endl;
 					inputs.emplace_back(new stream_input_t(fn, is));
+					continue;
 				}
+				
+				//maybe its old-style input
+				try to parse the line, if it works,
+				set_mode(OLD) and add it to qdb_text
 			}
+			continue;
 		}
 
-		if (std::wcin == input && isatty(fileno(stdin)))
-		{
-			/*interactive mode, we read in a line and do a reparse
-			if it succeeds we add the line to the qdb_buffer,
-			otherwise we print error and throw it away*/
-		
-			string new_buffer = data_buffer + line;
-			int fins;
-			qdb kb, query;
-			std::wstringstream ss(new_buffer);
-			int pr = parse(kb, query, ss, L"", fins);
-			CLI_TRACE(dout << "parsing result:"<<pr<<std::endl);
-			if (pr) {
-				qdb_buffer += line;
-				CLI_TRACE(dout << "fins:" << fins << std::endl);
-			}
-		}
-		else
-		{
-			qdb_buffer += line;
-			count_fins();
-		}
-			
-		if(pr == COMPLETE)
-		{
 			if (mode == KB && fins > 0) {
 				kbs.push_back(kb);
 				fresh_prover();
@@ -744,7 +727,12 @@ int main ( int argc, char** argv) {
 				data_buffer=L"";
 				set_mode(COMMANDS);
 			}
-			else if(mode == COMMANDS && fins == 2) {
+			else
+			{
+				assert(mode == OLD);
+				
+				
+				 //&& fins == 2) {
 				dout << "querying" << std::endl;
 				kbs.push_back(kb);
 				fresh_prover();
@@ -752,6 +740,36 @@ int main ( int argc, char** argv) {
 				//(*tauProver).e.clear();
 				data_buffer=L"";
 			}
+			
+
+
+		if (std::wcin == input && isatty(fileno(stdin)))
+		{
+			/*interactive mode, we read in a line and do a reparse
+			if it succeeds we add the line to the qdb_buffer,
+			otherwise we print error and throw it away*/
+		
+			string new_buffer = data_buffer + line;
+			int fins;
+			qdb kb, query;
+			std::wstringstream ss(new_buffer);
+			int pr = parse(kb, query, ss, L"", fins);
+			CLI_TRACE(dout << "parsing result:"<<pr<<std::endl);
+			if (pr) 
+			{
+				qdb_buffer += line;
+				CLI_TRACE(dout << "fins:" << fins << std::endl);
+			}
+		}
+		else
+		{
+			qdb_buffer += line;
+			count_fins();
+		}
+			
+		if(pr == COMPLETE)
+		{
+
 		}
 		else if (pr == FAIL)
 		{
@@ -765,7 +783,9 @@ int main ( int argc, char** argv) {
 				if(token != L"")
 					dout << "[cli]no such command: \"" << token << "\"." << endl;
 		}
-		_argstream.clear();
+		
+		
+		input.forget();
 	}
 	if (tauProver)
 		delete tauProver;

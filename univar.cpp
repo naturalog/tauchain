@@ -308,7 +308,7 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 
 typedef vector<Thing> Locals;
 
-typedef std::pair</*const*/ Thing*,/*const*/ Thing*> thingthingpair;
+typedef const std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
 typedef function<bool()> coro;
@@ -1585,13 +1585,23 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 
 
 
-
+//
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	TRACE(dout << "constructing old prover" << endl;)
+
+	//
 	op = new old::prover(qkb, false);
+
+	//
 	make_perms();
+
+	//
 	build_in();
+
+	//
 	compile_kb();
+
+	//
 	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
