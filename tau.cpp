@@ -709,37 +709,40 @@ int main ( int argc, char** argv) {
 			}
 			continue;
 		}
+		else if (mode == KB)
+		{
+			try to parse the line, if it works, add it to qdb_text.
+			if (fins > 0) {
+				kbs.push_back(kb);
+				fresh_prover();
+				qdb_text = L"";
+				set_mode(COMMANDS);
+			}
+		}
+		if (mode == QUERY && fins > 0) {
+			(*tauProver).query(kb);//why not -> ?
+			//(*tauProver).e.clear();
+			data_buffer=L"";
+			set_mode(COMMANDS);
+		}
+		if (mode == SHOULDBE && fins > 0) {
+			shouldbe(kb);
+			data_buffer=L"";
+			set_mode(COMMANDS);
+		}
+		else
+		{
+			assert(mode == OLD);
 
-			if (mode == KB && fins > 0) {
-				kbs.push_back(kb);
-				fresh_prover();
-				data_buffer=L"";
-				set_mode(COMMANDS);
-			}
-			if (mode == QUERY && fins > 0) {
-				(*tauProver).query(kb);//why not -> ?
-				//(*tauProver).e.clear();
-				data_buffer=L"";
-				set_mode(COMMANDS);
-			}
-			if (mode == SHOULDBE && fins > 0) {
-				shouldbe(kb);
-				data_buffer=L"";
-				set_mode(COMMANDS);
-			}
-			else
-			{
-				assert(mode == OLD);
-				
-				
-				 //&& fins == 2) {
-				dout << "querying" << std::endl;
-				kbs.push_back(kb);
-				fresh_prover();
-				(*tauProver).query(query);
-				//(*tauProver).e.clear();
-				data_buffer=L"";
-			}
+
+			 //&& fins == 2) {
+			dout << "querying" << std::endl;
+			kbs.push_back(kb);
+			fresh_prover();
+			(*tauProver).query(query);
+			//(*tauProver).e.clear();
+			data_buffer=L"";
+		}
 			
 
 
