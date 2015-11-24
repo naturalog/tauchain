@@ -1715,12 +1715,27 @@ void yprover::query(const old::qdb& goal){
 		qdb r;
 		r.first[L"@default"] = old::mk_qlist();
 
+		//go over the triples of the query to print them out
 		for(auto i: q)
 		{
-			Thing &s = fetch_thing(i->s, locals, consts, lm, cm);
-			Thing &o = fetch_thing(i->o, locals, consts, lm, cm);
-			dout << str(getValue(&s)) << " " << old::dict[i->p] << " "  << str(getValue(&o)) << endl;
+			Thing *s = &fetch_thing(i->s, locals, consts, lm, cm);
+			Thing *o = &fetch_thing(i->o, locals, consts, lm, cm);
+
 			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
+
+			//lets try to get the original names of unbound vars
+			Thing n1, n2;
+			if (is_unbound(*s)) {
+				s = &n1;
+				n1 = create_node(i->s);
+			}
+			if (is_unbound(*o)) {
+				o = &n2;
+				n2 = create_node(i->o);
+			}
+
+			dout << str(getValue(&s)) << " " << old::dict[i->p] << " "  << str(getValue(&o)) << endl;
+
 			add_result(r, &s, &o, i->p);
 		}
 
