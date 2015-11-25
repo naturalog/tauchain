@@ -14,6 +14,10 @@ nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotE
 nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
 //nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
+
+
+//considering that mkiri, mkliteral and mkbnode already run set() on themselves, then
+//to convernt pnode to nodeid we should just be able to do a lookup in pi
 void bidict::init() {
 #ifdef with_marpa
 	file_contents_iri = set(mkiri(pstr(L"http://idni.org/marpa#file_contents")));
@@ -32,7 +36,7 @@ void bidict::init() {
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	Dot = set(mkiri(pstr(L".")));
 
-	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));//should not be capitalized, i will refactor it in clion later
 	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
 	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
@@ -57,6 +61,15 @@ void bidict::set ( const std::vector<node>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
+
+//Search the bidict to see if node v is already present. If so, just
+//return the nodeid of the one that's already there (make sure both
+//have the same type). If it's not there, generate a new nodeid by adding
+//1 to pi.size(), which is theoretically the number of nodes we have in
+//the dictionary. If the node is an IRI that begins with L'?', then it's
+//a variable, so we negate the nodeid (because negative nodeids is our
+//representation of variables). Add the node/nodeid pair to pi and ip for
+//lookup, and return the new nodeid.
 nodeid bidict::set ( node v ) {
 	if (!v.value) throw std::runtime_error("bidict::set called with a node containing null value");
 	auto it = pi.find ( v );
@@ -71,6 +84,7 @@ nodeid bidict::set ( node v ) {
 	ip[k] = v;
 	return k;
 }
+
 
 node bidict::operator[] ( nodeid k ) {
 //	if (!has(k)) set(::tostr(k));
@@ -373,6 +387,10 @@ struct cmpstr {
 	}
 };
 
+
+//Take a string and return a pointer to it. Store a static set of
+//strings already converted so that if we get a string that's already
+//been converted, we can just return the pointer to the original one.
 pstring pstr ( const string& s ) {
 	static std::set<pstring, cmpstr> strings;
 	auto ps = std::make_shared<string> ( s );
@@ -380,7 +398,10 @@ pstring pstr ( const string& s ) {
 	if (it != strings.end()) return *it;
 	strings.insert(ps);
 	return ps;
-} 
+}
+
+
+ 
 #ifdef JSON
 pobj prover::json(const termset& ts) const {
 	polist_obj l = mk_olist_obj(); 

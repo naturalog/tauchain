@@ -121,6 +121,7 @@ public:
 	std::vector<termid> get_list(termid head, proof*);
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
+
 	void get_dotstyle_list(termid, std::list<nodeid>&);
 	void get_dotstyle_list(termid id, std::vector<termid> &list);
 	std::vector<termid> get_dotstyle_list(termid id);
@@ -154,6 +155,11 @@ public:
 			if (x->p == y->p) return equals(x->s, y->s) && equals(x->o, y->o);
 			return false;
 		}
+
+		//Check if the term defined by this (p,s,o) is already in the
+		//p2id_t. If so, just return the one that's already there. Otherwise
+		//make the term for this (p,s,o) and add that to p2id[p].
+		//**Can we just use t instead of making r?
 		inline termid add(nodeid p, termid s, termid o) {
 			auto& pp = p2id[p];
 			term t(p, s, o);
