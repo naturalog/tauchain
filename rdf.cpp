@@ -56,8 +56,11 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	return dict.nodes[r.tostring()] = pr;
 }
 
+
+
 pnode mkiri ( pstring iri ) {
 	setproc(L"mkiri");
+
 	if (!iri) throw std::runtime_error("mkiri: null iri given");
 //	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
@@ -71,6 +74,30 @@ pnode mkiri ( pstring iri ) {
 	dict.set(pr);
 	return dict.nodes[r.tostring()] = pr;
 }
+
+/*
+//Should use this one instead:
+
+
+pnode mkiri ( pstring iri ) {
+	setproc(L"mkiri");
+
+	if(!iri) throw std::runtime_error("mkiri: null iri given");
+	auto it = dict.nodes.find(*iri);
+	if(it != dict.nodes.end()){
+		assert(it->second->_type == node::IRI);
+		return it->second;
+	}
+	node r ( node::IRI);
+	r.value = iri;
+	pnode pr = make_shared<node>(r);
+	dict.set(pr);
+	return dict.nodes[r.tostring()] = pr;
+}
+
+*/
+
+
 
 pnode mkbnode ( pstring attribute ) {
 	setproc(L"mkbnode");

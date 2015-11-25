@@ -29,6 +29,7 @@ extern int result_limit ;
 #define TRCEEE TRACE(dout << "entry = " << (int)entry << endl)
 const char LAST = 33; // last in the sense of a last case in release mode, not of a last entry into the coro
 
+//#define ITEM(x,y) x[y] in both execution paths
 #ifdef DEBUG
 #define DBG(x) x
 #define TRC(x) x
@@ -49,6 +50,8 @@ const char LAST = 33; // last in the sense of a last case in release mode, not o
 #define DONE return false
 #define END DONE;
 #endif
+
+
 
 #ifdef NEW
 #define KBDBG
@@ -100,6 +103,7 @@ class Thing {
 public:
 	ThingType type;
 	union {
+		//maybe call this value?
 		Thing *thing;     // for bound var
 		old::termid term; // for node
 		size_t size;      // for list
@@ -111,12 +115,15 @@ public:
 };
 
 
-
+//we could add some assertions here maybe
+//this seems like overkill, but we can use either one i guess
 #define get_type(thing) ((thing).type)
 #define get_term(thing) ((thing).term)
 #define get_size(thing) ((thing).size)
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
+
+//these make sense
 #define is_offset(thing)	(get_type(thing) == OFFSET)
 #define is_unbound(thing)	(get_type(thing) == UNBOUND)
 #define is_bound(thing)		(get_type(thing) == BOUND)
@@ -342,11 +349,13 @@ typedef unordered_map<old::termid, size_t> locals_map;
 old::prover *op;
 
 
-//garbage
+
+typedef map<nodeid, vector<pair<Thing, Thing>>> ths_t;
+//garbage //todo rename
 std::vector<ep_t*> eps;
 vector<Locals*> constss;
 vector<Locals*> locals_templates;
-
+ths_t *ths_garbage;
 
 //counters
 long steps = 0;
@@ -401,6 +410,15 @@ static join_t succeed_with_args()
 		case_LAST:
 			END
 		}
+		/*
+		Macros resolve to:
+		case 0:
+			entry = 33;
+			return true;
+		case 33:
+			{entry = 66; return false}; default: assert(false); 
+
+		*/
 	};
 }
 
@@ -641,6 +659,7 @@ static Thing *getValue (Thing *_x)
 		ASSERT(thing);
 		return getValue(thing);
 	}
+	//Need to understand this whole offset thing better
 	else if (is_offset(x))
 	{
 		const offset_t offset = get_offset(x);
@@ -819,41 +838,64 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 
 //region kb
 
-void take_out_garbage()
+void free_garbage()
 {
-	for (auto x: eps)
+	for (auto x: garbage2)
 	{
 		ASSERT(!x->size());
 		delete x;
 	}
-	eps.clear();
+	garbage2.clear();
 
-	for (auto x: locals_templates)
+	for (auto x: garbage)
 		delete x;
-	locals_templates.clear();
-
-	for (auto x: constss)
-		delete x;
-	constss.clear();
+	garbage.clear();
 }
 
-void free_eps_nonassert()
+
+void free_garbage_nonassert()
 {
-	for (auto x: eps)
+	for (auto x: garbage2)
 		delete x;
-	eps.clear();
+	garbage2.clear();
 }
+
+
+
 
 void add_rule(nodeid pr, const rule_t &x)
 {
+	//If the nodeid is not already in preds then make this
+	//rule_t (pred_t?) its pred function. 
 	if (preds.find(pr) == preds.end())
 		preds[pr] = x;
+	//Otherwise, sequence this pred function with what's
+	//already in preds.
 	else {
 		TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
 		preds[pr] = seq(x, preds[pr]);
 	}
 }
 
+//Check preds to see if the pred has already been compiled.
+//Don't compile preds that have already been compiled. Return instead.
+//Check builtins to see if the pred is a built-in. If we do find that
+//node-id, then do add_rule for each pred_t in the associated
+//std::vector<pred_t> in the builtins table. Return unless the
+//builtin pred is 'rdfType'.
+
+// What's up with that return?
+
+//If it was rdfType or is not in the builtins table, then check to
+//see if it's in pred_index. If it's not, then return, otherwise,
+//get the list of rules in which this node is the predicate for the
+//head. For each rule in the list, compile the rule and add it to the
+//rule for that predicate using add_rule. 
+
+//add_rule is simple, it just checks to see if the pred has already been 
+//compiled, if not, then the rule_t we pass it becomes the rule_t for
+//that pred. If the pred is already partially compiled, then the
+//rule_t we pass it just gets sequenced with what's already there (using seq).
 void compile_pred(old::nodeid pr)
 {
 	FUN;
@@ -866,6 +908,7 @@ void compile_pred(old::nodeid pr)
 			TRACE(dout << "builtin: " << old::dict[pr] << endl;)
 			add_rule(pr, b);
 		}
+		//What's up with this return?
 		if (pr != rdfType)
 			return;
 	}
@@ -873,8 +916,10 @@ void compile_pred(old::nodeid pr)
 	if (pred_index.find(pr) == pred_index.end())
 		return;
 
+	//All the rules with that pred in the head
 	vector<size_t> rs = pred_index.at(pr);
 	TRACE(dout << "# of rules: " << rs.size() << endl;)
+	//For each of those rules, compile it, and add the result to preds.
 	for (auto r: rs)
 		add_rule(pr, compile_rule(r));
 }
@@ -884,7 +929,7 @@ void compile_pred(old::nodeid pr)
 void check_pred(old::nodeid pr)
 {
 	FUN;
-	rule_t y;
+
 	if (pred_index.find(pr) == pred_index.end() && builtins.find(pr) == builtins.end()) {
 		dout << KRED << "Predicate '" << KNRM << old::dict[pr] << "' not found." << endl;
 		preds[pr] = GEN_FAIL_WITH_ARGS;
@@ -896,11 +941,22 @@ void compile_kb()
 {
 	FUN;
 	//TRACE(dout << "# of rules: " << op->heads.size() << endl;)
+
+	//pred_index :	std::map<nodeid, vector<size_t>>
 	pred_index.clear();
+
+	//pred_t :	function<bool(Thing*,Thing*)>	
+	//preds : 	std::map<old::nodeid, pred_t>
 	preds.clear();
+
+	//eps, locals_templates, constss
 	take_out_garbage();
 
-	//old::prover --> pred_index (preprocessing step)
+	//Loop over the heads starting from the end and going backwards.
+	//Pred_index maps the nodeid for each unique pred to a list of rules
+	//that use that pred, so at pred_index[pr] we'll add the index of the
+	//rule (i.e. the index into heads/bodies).
+	//old::prover->heads/bodies --> pred_index, we group rules by their pred
 	for (int i = op->heads.size(); i > 0; i--)
 	{
 		old::nodeid pr = op->heads[i - 1]->p;
@@ -1190,6 +1246,17 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 	}
 }
 
+
+
+
+//think {?a x ?a. (?a) x b} => b x b
+//locals: var (thats the ?a) | list header (size 1) | offset - 2 (pointing to the first var)  | nil 
+//consts:  b (node - a constant)
+//a const in a list wont go into consts but stay in the list:
+//{?a x ?a. (?a b) x b} => b x b 
+//locals: var (thats the ?a) | list header (size 2) | offset - 2 (pointing to the first var) | list bnode ("size" 1) | node b | nil 
+//consts: the node b
+
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
 {
 	FUN;
@@ -1197,7 +1264,16 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	std::queue<toadd> lq;
 	TRACE(dout << "head:" << op->format(head) << endl);
 
+	/* Function definition region */
+	//We make 3 function which we then apply later, so in reading this make_locals function,
+	//treat this as if they're just some functions and skip past them until needed.
+
+
+
 	//in add_node we ignored lists, we just added them as nodes and queued them up
+	//more like we don't pass lists to add_node in the first place
+
+	//As long as there's still terms in lq, pop the 1st one off the list and 
 	auto expand_lists = [&lq, &locals, &lm]() {
 		setproc("expand_lists");
 		while (!lq.empty()) {
@@ -1218,6 +1294,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			lm[l] = locals.size()-1; // register us in the locals map
 
 			size_t bnode_counter = lst.size();
+
+			//For each item in the list, 
 			for (auto li: lst) {
 				TRACE(dout << "item..." << endl;)
 #ifdef KBDBG
@@ -1249,18 +1327,16 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 #endif
 				locals.push_back(t);
 
-				{
-					Thing bnode;
-					make_this_list(bnode, --bnode_counter);
-					locals.push_back(bnode);
-				}
+				//we add bnodes that simulate rdf list structure
+				Thing bnode;
+				make_this_list(bnode, --bnode_counter);
+				locals.push_back(bnode);
+				
 			}
 
-			{
-				Thing nil = create_node(op->make(rdfnil,0,0));
-				locals.push_back(nil);
-			}
-
+			//final nil
+			Thing nil = create_node(op->make(rdfnil,0,0));
+			locals.push_back(nil);
 
 		}
 	};
@@ -1275,15 +1351,27 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		}
 	};
 
+
+	//vec is a vector of Things, and m is a map from termid's to indexes into
+	//that vector.
 	auto add_node = [](bool var, toadd xx, Locals &vec, locals_map &m) {
 		setproc("add_node");
 		Thing t;
 		add_kbdbg_info(t, xx.second);
 		termid x = xx.first;
 		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
+
+		//Check to see if the termid is already in m (locals/consts).
+		//If it's not then add it.
 		auto it = m.find(x);
 		if (it == m.end()) {
+			//This will give the position in vec that the Thing
+			//will go, and m will map termid's to their position in
+			//vec.
 			m[x] = vec.size();
+
+			//Create a Thing for this termid and push it to the back
+			//of vec.
 			if(var)
 				t = create_unbound();
 			else
@@ -1301,10 +1389,16 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 #endif
 	};
 
+
+	/* Execution region */ 
+
 	vector<toadd> terms;
 
+//Need to understand this kbdbg stuff
 	unsigned long old_kbdbg_part = kbdbg_part;
 
+	//Make toadds out of the head and all terms in the body and push these
+	//into terms.
 	if (head) {
 		terms.push_back(toadd(head->s, {kbdbg_part++}));
 		terms.push_back(toadd(head->o, {kbdbg_part++}));
@@ -1315,6 +1409,10 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	}
 	//TRACE(dout << "terms.size:" << terms.size() << endl);
 
+	//For all our terms (toadds) in terms, if the term is not
+	//a variable or a list, then "add_node(false, xx, locals, lm)".
+	//If the term is a variable, then "add_node(true, xx, locals, lm)".
+	//If it's a list, then push it to lq to be processed later.
 	for (toadd xx: terms) {
 		termid x = xx.first;
 		if (x->p > 0 && !islist(x)) {
@@ -1360,6 +1458,10 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 #ifdef KBDBG
 	auto max = kbdbg_part_max;
 #endif
+
+	//For every term in the body, check the pred to see if there's a head
+	//with this pred. If not we'll set the pred-function for that pred to
+	//fail_with_args. 
 	for (termid bi: b2)
 	{
 		check_pred(bi->p);
@@ -1425,20 +1527,28 @@ rule_t compile_rule(old::prover::ruleid r)
 {
 	FUN;
 
+	//Get the head and body associated with the ruleid.
 	termid head = op->heads[r];
 	prover::termset body = op->bodies[r];
 
+	//What do each of these do?
+
+	//should draw a picture of the data structure(s)
+	//maps from termids to indexes into locals/consts
 	locals_map lm, cm;
+	//they will be needed after this func is over so we allocate them on the heap
 	Locals &locals_template = *new Locals();
-	locals_templates.push_back(&locals_template);
+	locals_templates.push_back(&locals_template);//and register them for garbage collection
 	Locals *consts_ = new Locals();
 	constss.push_back(consts_);
 	Locals &consts = *consts_;
 
 	make_locals(locals_template, consts, lm, cm, head, body);
+
+
 	join_gen jg = compile_body(locals_template, consts, lm, cm, head, body);
 
-	size_t hs, ho;
+	size_t hs, ho; // indexes of head subject and object in locals
 #ifdef KBDBG
 	kbdbg_find_thing(kbdbg_part++, hs, locals_template);
 	kbdbg_find_thing(kbdbg_part++, ho, locals_template);
@@ -1446,7 +1556,7 @@ rule_t compile_rule(old::prover::ruleid r)
 	kbdbg_part = kbdbg_part_max;
 #else
 	//ignoring key, because head s and o go into locals always
-	find_thing(head->s, hs, lm, cm);
+	find_thing(head->s, hs, lm, cm);//sets hs
 	find_thing(head->o, ho, lm, cm);
 #endif
 
@@ -1454,13 +1564,14 @@ rule_t compile_rule(old::prover::ruleid r)
 	join_t j;
 	coro suc, ouc;
 	TRC(int call = 0;)
-	ep_t *ep = new ep_t();
+	ep_t *ep = new ep_t();//ep is one per rule just as locals_template and consts
 	eps.push_back(ep);
 
+	//where to memcpy locals from and what length
 	auto locals_data = locals_template.data();
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
-	Thing * locals=0;
-	const bool has_body = body.size();
+	Thing * locals=0; //to be malloced inside the lambda
+	const bool has_body = body.size(); // does this rule have a body or is it a fact?
 
 	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc(L"rule");
@@ -1476,7 +1587,7 @@ rule_t compile_rule(old::prover::ruleid r)
 				ASSERT(hs < locals_bytes / sizeof(Thing));
 				ASSERT(ho < locals_bytes / sizeof(Thing));
 
-				suc = unify(s, &locals[hs]);
+				suc = unify(s, &locals[hs]); // try to match head subject
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
@@ -1593,16 +1704,127 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 
 
 
+void add_facts(vector<vector<nodeid>> facts)
+{
+	///std::sort(myList.begin(), myList.end(), [](int x, int y){ return std::abs(x) < std::abs(y); });
+	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
+
+	auto ths = new ths_t;;
+	ths_garbage = ths;///.push_back(ths);
+	
+	for (auto f: facts)
+		ths[f[1]].push_back({
+			create_node(op->make(f[0])),
+			create_node(op->make(f[2])));
+	
+	coro suc, ouc;
+	for (auto ff:ths)
+	{
+		const auto &pairs = ff.second;
+		builtins[ff.first].push_back([suc,ouc,const pairs](Thing *s_, Thing *o_) 
+		mutable{
+		switch(entry){
+		case 0:
+			for(auto &p : pairs){
+				suc = unify(s_,&p.first);
+				while(suc()){
+					ouc = unify(o_,&p.second);
+					while(ouc())
+					{
+						entry = LAST;
+						return true;
+		case_LAST:;
+					}
+				}
+			}
+			END; 
+		}
+		}
+	} 
+}
+	
+
+void build_in_facts()
+{
+add_facts({
+
+{rdfAlt, rdfssubClassOf, rdfsContainer},
+{rdfBag, rdfssubClassOf, rdfsContainer},
+{rdfsContainerMembershipProperty, rdfssubClassOf, rdfProperty},
+{rdfsDatatype, rdfssubClassOf, rdfsClass},
+{rdfSeq, rdfssubClassOf, rdfsContainer},
+{rdfXMLLiteral, rdfssubClassOf, rdfsLiteral},
+{rdfXMLLiteral, rdfType, rdfsDatatype},
+
+{rdfscomment, rdfsdomain, rdfsResource},
+{rdfscomment, rdfsrange, rdfsLiteral},
+{rdfsdomain, rdfsdomain, rdfProperty},
+{rdfsdomain, rdfsrange, rdfsClass},
+{rdffirst, rdfsdomain, rdfList},
+{rdffirst, rdfsrange, rdfsResource},
+{rdffirst, rdfType, owlFunctionalProperty},
+{rdfsisDefinedBy, rdfsdomain, rdfsResource},
+{rdfsisDefinedBy, rdfsrange, rdfsResource},
+{rdfsisDefinedBy, rdfssubPropertyOf, rdfsseeAlso},
+{mkiri(pstr(L":HMC")), rdfType, mkiri(pstr(L":banana"))},
+{rdfslabel, rdfsdomain, rdfsResource},
+{rdfslabel, rdfsrange, rdfsLiteral},
+{rdfsmember, rdfsdomain, rdfsContainer},
+{rdfsmember, rdfsrange, rdfsResource},
+{rdfobject, rdfsdomain, rdfStatement},
+{rdfobject, rdfs:range, rdfsResource},
+{rdfpredicate, rdfsdomain, rdfStatement},
+{rdfpredicate, rdfsrange, rdfProperty},
+{rdfsrange, rdfsdomain, rdfProperty},
+{rdfsrange, rdfsrange, rdfsClass},
+{rdfrest, rdfsdomain, rdfList},
+{rdfrest, rdfsrange, rdfList},
+{rdfrest, rdfType owlFunctionalProperty},
+{rdfsseeAlso, rdfsdomain, rdfsResource},
+{rdfsseeAlso, rdfsrange rdfsResource},
+{rdfssubClassOf, rdfsdomain, rdfsClass},
+{rdfssubClassOf, rdfsrange, rdfsClass},
+{rdfssubPropertyOf, rdfsdomain, rdfProperty},
+{rdfssubPropertyOf, rdfsrange, rdfProperty},
+{rdfsubject, rdfsdomain, rdfStatement},
+{rdfsubject, rdfsrange, rdfsResource},
+{rdfType, rdfsdomain, rdfsResource},
+{rdfType, rdfsrange, rdfsClass},
+{rdfvalue, rdfsdomain, rdfsResource},
+{rdfvalue, rdfsrange, rdfsResource},
+
+{rdfnil, rdfType, rdfList}
+
+});}
 
 
+//LBase
+//http://www.w3.org/TR/lbase/
+
+//RDF
+//http://www.w3.org/TR/2013/WD-rdf11-mt-20130409/
+//http://www.w3.org/TR/rdf11-new/
+//http://www.w3.org/TR/rdf11-concepts/
+
+//RIF
+//http://www.w3.org/standards/techs/rif#w3c_all
+//http://www.w3.org/TR/2013/REC-rif-dtb-20130205/
+
+//Cwm Builtins
+//http://www.w3.org/2000/10/swap/doc/CwmBuiltins   	--< HMC_a_> not all but most
+//which?
+
+//DTLC
+//http://rbjones.com/rbjpub/logic/cl/tlc001.htm
+//http://ceur-ws.org/Vol-354/p63.pdf
 
 
-
-
+//make our semantics conform to them! ^
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	TRACE(dout << "constructing old prover" << endl;)
 	op = new old::prover(qkb, false);
 	make_perms();
+	build_in_facts();
 	build_in();
 	compile_kb();
 	if(check_consistency) dout << "consistency: mushy" << endl;
@@ -1765,74 +1987,96 @@ void build_in()
 	//Thing c_rdfsType = create_node(op->make(rdfType));
 	Thing c_rdfsResource = create_node(op->make(rdfsResource));
 	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
-
+	Thing a,b;
+	create_unbound(a);
+	create_unbound(b);
 	/*ep_t *ep = new ep_t();
 	eps.push_back(ep)*/
 
 
-	//rdfs:Resource(?x)
-	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
-		(void) s;
-		switch (entry) {
-			case 0:
-				s = getValue(s_);
-				if (is_var(*s)) {
-					entry = 66;
-					return false;
+/*
+
+
+	/*tobuild = [{rdfsRange, [
+		{rdfsClass,[rdfs:range, rdfs:domain, rdf:Type, rdfs:subClassOf]},
+		{rdfProperty,[rdfs:subPropertyOf]},
+		{rdfsLiteral,[rdfs:Label, rdfs:Comment]},
+		{rdfsResource,[rdfs:Member,rdf:First, rdfs:seeAlso, rdfs:isDefinedBy,
+			rdfValue, rdf:subject, rdf:predicate, rdf:object]}
+		]},
+	   {rdfsDomain, ... },
+	   {rdfType, ...}
+	];	
+	*/
+	builtins[rdfsRange].push_back([](Thing *s_, Thing *o_) mutable {
+		switch(entry){
+		case 0:
+			for(auto x : rangeItems){
+				ouc = unify(o,x.first);
+				while(ouc()){
+					for(auto y : x.second){
+						suc = unify(s,y);
+						while(suc()){
+							entry = 1;
+							return true;
+		case 1:;
+						}
+					}
 				}
-						ASSERT(!is_offset(*s));
-				o = getValue(o_);
-						ASSERT(!is_offset(*o));
-				ouc = unify(o, &c_rdfsResource);
-				if (ouc()) {
-					entry = LAST;
-					return true;
-				}
-				else {
-					entry = 66;
-					return false;
-				}
-			case_LAST:
-				assert(!ouc());
-				END
+			}
+			entry = 2;
+			return false;
+		case 2:;
+			assert(false);	
+		}
+	
+	});
+	
+	
+	builtins[rdfsDomain].push_back([](Thing *s_, Thing *o_) mutable {
+		switch(entry){
+		case 0:
+			o = getValue(o_);                                                                    │·
+                        ASSERT(!is_offset(*o));
+               		/*rdfProperty
+               			rdfsRange
+               			rdfsDomain
+               			rdfssubPropertyOf
+				
+			
+			/*rdfs:Resource
+				/*
+				rdf:Type
+				rdfs:Label
+				rdfs:Comment
+				rdfs:Member	
+				rdfs:SeeAlso
+				rdfs:IsDefinedBy
+				rdfs:Value
+					
+				*/
+			
+			/*rdfs:Class
+				rdfs:subClassOf	
+			*/
+			
+			/*rdf:Statement
+				rdf:subject
+				rdf:predicate
+				rdf:object
+			
+			*/
+			
 		}
 	});
 
-	/*
-	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
-	builtins[rdfssubClassOf].push_back(
-			[c_rdfsResource, c_rdfsClass, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
-				pred_t ac;
-				switch (entry) {
-					case 0:
-						ouc = unify(o, &c_rdfsResource);
-						while (ouc()) {
-							ac = ITEM(preds, rdfType);
-							entry = LAST;
-							return true;
-						}
-						else {
-					entry = 66;
-					return false;
-				}
-					case_LAST:
-						assert(!ouc());
-						END
-				}
-			});
-	*/
+
+
+	//rdfs:Resource(?x)
 	/*
 	<HMC_a> koo7: you mean if one queries "?x a rdf:Resource" should they get every known subject as a result?
 	<HMC_a> the answer would be yes. :-)
-	* nilli (6dbab769@gateway/web/freenode/ip.109.186.183.105) has joined #zennet
-	<nilli>  hi
-	<nilli> HMC what did you think of the LTB interview with Ohad?
-	<nilli>  HMC_a not hmc
-	<HMC_a> the first half was excellent
-	<HMC_a> the second half shouldve been edited down more.  Listening to people talk about code verbally is quite uninteresting XD
-	<nilli> well it is interesting for people who really dont know and want to understand a bit more
 	<koo7> HMC_a, every known subject and object, right?
-	<nilli> its not exactly what is expected on LTB but its ok I think
 	<koo7> or....every nodeid in the kb thats not in the pred position...where do we draw the line?
 	<HMC_a> well, when i say "known subject" i don't really mean everything in the subject position, i mean every node useable as a subject (non-literal)
 	<koo7> ok
@@ -1845,10 +2089,174 @@ void build_in()
 	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
 	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
 	<HMC_a> yes, the bnode names as well
-	<nilli> HMC_a can you give me your IRC channel full link?
-	<koo7> ok, i guess i will put this builtin aside for some time
-	<HMC_a> nilli: not sure what you ask
 	*/
+
+	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+		(void) s;
+		switch (entry) {
+			case 0:
+				o = getValue(o_);
+				ASSERT(!is_offset(*o));
+				ouc = unify(o, &c_rdfsResource);
+				while (ouc()) 
+				{	
+					s = getValue(s_);
+					if(!is_unbound(s))
+					{
+						entry = 1;
+						return true;
+					}
+			case 1:		
+					if(is_unbound(s))
+					{
+						for (auto &x: preds)
+						{
+							p = x;//a coro-permanent copy
+							while(p(a, b))
+							suc = unify(s, a);
+							while(suc())
+							{	
+								entry = 2;
+								return true;
+								case 2:;				
+							}
+							suc2 = unify(s, b);
+							while(suc2())
+							{		
+								entry = 3;						entry = 3;
+								return true;
+								case 3:;
+							}
+						}
+			
+					}	
+				}
+				
+				entry = 66;
+				return false;
+				END
+		}
+	});
+
+
+
+				/*rdfs:Class
+					/*
+					rdfsResource
+					rdfsClass //reflexivity
+					rdfsLiteral
+					rdfsDataType
+					rdfProperty
+					*/
+				
+				/*rdfs:DataType
+				
+					/*
+					rdf:langString
+					rdf:HTML
+					rdf:XMLLiteral
+					
+					*/
+				
+				/*rdf:Property
+					/*
+					rdfs:range
+					rdfs:domain
+					rdf:type
+					rdfs:subClassOf
+					rdfs:subPropertyOf
+					rdfs:label
+					rdfs:comment
+					rdfs:ContainerMembershipProperty
+					rdfs:member
+					rdf:first
+					rdf:rest
+					rdf:subject
+					rdf:predicate
+					rdf:object
+					rdfs:seeAlso
+					rdfs:isDefinedBy
+					rdf:value
+					*/
+					
+				}
+			
+				
+			//{?p rdfs:range ?c. ?x ?p ?y} => {?y rdf:Type ?c}
+			//{?p rdfs:domain ?c. ?x ?p ?y} => {?x rdf:Type ?c}
+			//{?x rdf:type ?c} => {?c rdf:type rdfs:Class}
+			//{?c1 rdfs:subClassOf ?c2} => {?c1 rdf:Type rdfs:Class}
+			//{?c1 rdfs:subClassOf ?c2} => {?c2 rdf:Type rdfs:Class}
+			//{?p1 rdfs:subPropertyOf ?p2} => {?p1 rdf:Type rdf:Property}
+			//{?p1 rdfs:subPropertyOf ?p2} => {?p2 rdf:Type rdf:Property}	
+			
+
+
+	
+	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+	//rdfs:DataType rdfs:subClassOf rdfs:Class.
+	//{?D a DataType} => {?D rdfs:subClassOf rdfs:Literal}.
+	//{?c1 rdfs:subClassOf ?c2. ?c2 rdfs:subClassOf ?c3} => {?c1 rdfs:subClassOf ?c3}.
+	builtins[rdfssubClassOf].push_back(
+			[c_rdfsResource, c_rdfsClass, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+				//pred_t ac;
+				switch (entry) {
+					case 0:
+						ouc = unify(o, &c_rdfsResource);
+						while (ouc()) {
+							//then try
+					
+							//while(rdfType(s,&c_rdfsClass)){;
+							//*This covers rdfs:Literal
+						/*
+							ac = ITEM(preds, rdfType);
+							entry = LAST;
+							return true;
+						}
+						else {
+						*/
+						}
+					
+					
+						/*rdfs:Class
+							/*
+							rdfs:DataType
+							*/	
+						
+						ouc = unify(o, &c_rdfsLiteral);
+						while(ouc()){
+							/*
+							while(rdfType(s,&c_rdfsDataType)){
+								entry = 2;
+								return true;
+					case 2:;
+							}
+							*/
+							//*This covers:
+							//**rdf:langstring
+							//**rdf:HTML
+							//**rdf:XMLLiteral
+							
+						}
+					entry = 66;
+					return false;
+				}
+					case_LAST:
+						assert(!ouc());
+						END
+				}
+			}
+	);
+	
+	//{?p1 rdfs:subPropertyOf ?p2. ?p2 rdfs:subPropertyOf ?p3} => {?p1 rdfs:subPropertyOf ?p3}.
+	builtins[rdfssubPropertyOf].push_back([](Thing *_s, Thing *_o){
+		switch(entry){
+		case 0:
+		}
+	});
+	
+	
+	
 
 
 	/*
@@ -1879,7 +2287,18 @@ void build_in()
 <HMC_a> ;-)
 <koo7> cool*/
 
-
+/*
+	old::string link = L"http://www.w3.org/TR/rdf-schema/#ch_range";
+	auto link_node = dict.set(mkiri(pstr(link)));
+	builtins[link_node].push_back(
+		[entry, ... ](Thing *s_, Thing *o_) mutable {
+			switch(entry){
+			case 0:  
+				
+			}
+		}
+	);
+*/
 
 	//@prefix math: <http://www.w3.org/2000/10/swap/math#>.
 
@@ -2107,6 +2526,171 @@ A cwm built-in logical operator, RDF graph level.
 
 
 #ifdef notes65465687
+
+
+int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
+	//TODO: correctly, so that subqery proof trace not opaque?
+	int r = -1;
+	//rdfs:Resource(?x)
+	if ((t.p == A || t.p == rdfType) && t0 && t1 && t1->p == rdfsResource)
+		r = 1;
+	else if (t.p == rdfssubClassOf && t1->p == rdfsResource) {
+		r = 0;
+		// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+		{
+			prover copy(*this);
+			auto ps = copy.askt(t0, rdfType, make(rdfsClass, 0, 0));
+			if (ps.size())
+				return 1;
+		}
+	}
+	else if (t.p == rdfssubClassOf) {
+		r = 0;
+		//#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
+		{
+			prover copy(*this);
+			auto bs = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
+			for (auto b: bs) {
+				prover copy(*this);
+				auto xs = copy.askt(t0, rdfssubClassOf, b);
+				if (xs.size())
+					return 1;
+			}
+		}
+		//#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
+		if (t1->p == rdfsLiteral) {
+			{
+				prover copy(*this);
+				auto ps = copy.askt(t0, rdfType, make(rdfsDatatype, 0, 0));
+				if (ps.size())
+					return 1;
+			}
+		}
+	}
+	else if (t.p == A || t.p == rdfType) {
+		r = 0;
+		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+		{
+			prover copy(*this);
+			//TRACE(dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;)
+			auto ps = copy.askt(copy.tmpvar(), rdfsdomain, t1);
+			for (termid p: ps) {
+				dout << "\n\nYAYdomain!!\n\n" << std::endl;
+				auto xx = copy.askt(t0, p->p, copy.tmpvar());
+				if (xx.size() > 0) {
+					dout << "\n\nYay even more\n\n" << std::endl;
+					return 1;
+				}
+			}
+		}
+		//{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+		{
+			prover copy(*this);
+			auto ps = copy.askt(copy.tmpvar(), rdfsrange, make(t1->p, 0, 0));
+			dout << "yays:" << ps.size() << std::endl;
+			for (termid p: ps) {
+				dout << "p:" << p << std::endl;
+				dout << "\n\nYAYrange!!\n\n" << std::endl;
+				auto xx = copy.askt(copy.tmpvar(), p->p, make(t0->p, 0, 0));
+				if (xx.size() > 0) {
+					dout << "\n\nYay even more\n\n" << std::endl;
+					return 1;
+				}
+			}
+		}
+		//#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+		{
+			prover copy(*this);
+			auto as = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
+			for (termid a: as) {
+				auto xx = copy.askt(t0, rdfType, a);
+				if (xx.size() > 0) {
+					dout << "\n\nYay even more\n\n" << std::endl;
+					return 1;
+				}
+			}
+		}
+
+
+	}
+	else if (t.p == rdfssubPropertyOf) {
+		r = 0;
+		//#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
+		if (t1 && t1->p == rdfsmember) {
+			prover copy(*this);
+			auto ps = copy.askt(copy.tmpvar(), rdfType, make(rdfsContainerMembershipProperty, 0, 0));
+			if (ps.size())
+				return 1;
+		}
+		//#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+		{
+			prover copy(*this);
+			auto qs = copy.askt(copy.tmpvar(), rdfssubPropertyOf, t1);
+			for (termid q: qs) {
+				auto ps = copy.askt(t0, rdfssubPropertyOf, q);
+				if (ps.size())
+					return 1;
+			}
+		}
+	}
+	//#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+	{
+		prover copy(*this);
+		auto ps = copy.askt(copy.tmpvar(), rdfssubPropertyOf, make(t.p, 0, 0));
+		for (termid p: ps) {
+			auto xs = copy.askt(t0, p->p, t1);
+			if (ps.size())
+				return 1;
+		}
+	}
+	return r;
+}
+
+
+
+
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#>.
+
+### Resource Description Framework RDF(S)
+
+
+### inference rules for RDF(S)
+
+
+not too sure about the stuff above but these rules is whats implemented in the old builtins above
+
+
+#{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+#{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+
+
+#{?S ?P ?O} => {?S a rdfs:Resource}.
+#{?S ?P ?O} => {?O a rdfs:Resource}.
+^^this is the everythings a resource
+
+
+
+#{?S ?P ?O} => {?P a rdf:Property}.
+
+
+#{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
+
+
+#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
+
+
+#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
+
+
+and finally theres http://www.w3.org/TR/lbase/
+
+
 
 
 
