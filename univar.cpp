@@ -1704,122 +1704,6 @@ void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
 
 
 
-void add_facts(vector<vector<nodeid>> facts)
-{
-	///std::sort(myList.begin(), myList.end(), [](int x, int y){ return std::abs(x) < std::abs(y); });
-	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
-
-	auto ths = new ths_t;;
-	ths_garbage = ths;///.push_back(ths);
-	
-	for (auto f: facts)
-		ths[f[1]].push_back({
-			create_node(op->make(f[0])),
-			create_node(op->make(f[2])));
-	
-	coro suc, ouc;
-	for (auto ff:ths)
-	{
-		const auto &pairs = ff.second;
-		builtins[ff.first].push_back([suc,ouc,const pairs](Thing *s_, Thing *o_) 
-		mutable{
-		switch(entry){
-		case 0:
-			for(auto &p : pairs){
-				suc = unify(s_,&p.first);
-				while(suc()){
-					ouc = unify(o_,&p.second);
-					while(ouc())
-					{
-						entry = LAST;
-						return true;
-		case_LAST:;
-					}
-				}
-			}
-			END; 
-		}
-		}
-	} 
-}
-	
-
-void build_in_facts()
-{
-add_facts({
-
-{rdfAlt, rdfssubClassOf, rdfsContainer},
-{rdfBag, rdfssubClassOf, rdfsContainer},
-{rdfsContainerMembershipProperty, rdfssubClassOf, rdfProperty},
-{rdfsDatatype, rdfssubClassOf, rdfsClass},
-{rdfSeq, rdfssubClassOf, rdfsContainer},
-{rdfXMLLiteral, rdfssubClassOf, rdfsLiteral},
-{rdfXMLLiteral, rdfType, rdfsDatatype},
-
-{rdfscomment, rdfsdomain, rdfsResource},
-{rdfscomment, rdfsrange, rdfsLiteral},
-{rdfsdomain, rdfsdomain, rdfProperty},
-{rdfsdomain, rdfsrange, rdfsClass},
-{rdffirst, rdfsdomain, rdfList},
-{rdffirst, rdfsrange, rdfsResource},
-{rdffirst, rdfType, owlFunctionalProperty},
-{rdfsisDefinedBy, rdfsdomain, rdfsResource},
-{rdfsisDefinedBy, rdfsrange, rdfsResource},
-{rdfsisDefinedBy, rdfssubPropertyOf, rdfsseeAlso},
-{mkiri(pstr(L":HMC")), rdfType, mkiri(pstr(L":banana"))},
-{rdfslabel, rdfsdomain, rdfsResource},
-{rdfslabel, rdfsrange, rdfsLiteral},
-{rdfsmember, rdfsdomain, rdfsContainer},
-{rdfsmember, rdfsrange, rdfsResource},
-{rdfobject, rdfsdomain, rdfStatement},
-{rdfobject, rdfs:range, rdfsResource},
-{rdfpredicate, rdfsdomain, rdfStatement},
-{rdfpredicate, rdfsrange, rdfProperty},
-{rdfsrange, rdfsdomain, rdfProperty},
-{rdfsrange, rdfsrange, rdfsClass},
-{rdfrest, rdfsdomain, rdfList},
-{rdfrest, rdfsrange, rdfList},
-{rdfrest, rdfType owlFunctionalProperty},
-{rdfsseeAlso, rdfsdomain, rdfsResource},
-{rdfsseeAlso, rdfsrange rdfsResource},
-{rdfssubClassOf, rdfsdomain, rdfsClass},
-{rdfssubClassOf, rdfsrange, rdfsClass},
-{rdfssubPropertyOf, rdfsdomain, rdfProperty},
-{rdfssubPropertyOf, rdfsrange, rdfProperty},
-{rdfsubject, rdfsdomain, rdfStatement},
-{rdfsubject, rdfsrange, rdfsResource},
-{rdfType, rdfsdomain, rdfsResource},
-{rdfType, rdfsrange, rdfsClass},
-{rdfvalue, rdfsdomain, rdfsResource},
-{rdfvalue, rdfsrange, rdfsResource},
-
-{rdfnil, rdfType, rdfList}
-
-});}
-
-
-//LBase
-//http://www.w3.org/TR/lbase/
-
-//RDF
-//http://www.w3.org/TR/2013/WD-rdf11-mt-20130409/
-//http://www.w3.org/TR/rdf11-new/
-//http://www.w3.org/TR/rdf11-concepts/
-
-//RIF
-//http://www.w3.org/standards/techs/rif#w3c_all
-//http://www.w3.org/TR/2013/REC-rif-dtb-20130205/
-
-//Cwm Builtins
-//http://www.w3.org/2000/10/swap/doc/CwmBuiltins   	--< HMC_a_> not all but most
-//which?
-
-//DTLC
-//http://rbjones.com/rbjpub/logic/cl/tlc001.htm
-//http://ceur-ws.org/Vol-354/p63.pdf
-
-
-//make our semantics conform to them! ^
 yprover::yprover ( qdb qkb, bool check_consistency)  {
 	TRACE(dout << "constructing old prover" << endl;)
 	op = new old::prover(qkb, false);
@@ -1970,6 +1854,154 @@ void yprover::query(const old::qdb& goal){
 }
 
 //endregion
+
+
+void add_facts(vector<vector<nodeid>> facts)
+{
+	///std::sort(myList.begin(), myList.end(), [](int x, int y){ return std::abs(x) < std::abs(y); });
+	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
+
+	auto ths = new ths_t;;
+	ths_garbage = ths;///.push_back(ths);
+	
+	for (auto f: facts)
+		ths[f[1]].push_back({
+			create_node(op->make(f[0])),
+			create_node(op->make(f[2])));
+	
+	coro suc, ouc;
+	for (auto ff:ths)
+	{
+		const auto &pairs = ff.second;
+		builtins[ff.first].push_back([suc,ouc,const pairs](Thing *s_, Thing *o_) 
+		mutable{
+		switch(entry){
+		case 0:
+			for(auto &p : pairs){
+				suc = unify(s_,&p.first);
+				while(suc()){
+					ouc = unify(o_,&p.second);
+					while(ouc())
+					{
+						entry = LAST;
+						return true;
+		case_LAST:;
+					}
+				}
+			}
+			END; 
+		}
+		}
+	} 
+}
+	
+
+void build_in_facts()
+{
+add_facts({
+
+{rdfAlt, rdfssubClassOf, rdfsContainer},
+{rdfBag, rdfssubClassOf, rdfsContainer},
+{rdfsContainerMembershipProperty, rdfssubClassOf, rdfProperty},
+{rdfsDatatype, rdfssubClassOf, rdfsClass},
+{rdfSeq, rdfssubClassOf, rdfsContainer},
+{rdfXMLLiteral, rdfssubClassOf, rdfsLiteral},
+{rdfXMLLiteral, rdfType, rdfsDatatype},
+
+{rdfscomment, rdfsdomain, rdfsResource},
+{rdfscomment, rdfsrange, rdfsLiteral},
+{rdfsdomain, rdfsdomain, rdfProperty},
+{rdfsdomain, rdfsrange, rdfsClass},
+{rdffirst, rdfsdomain, rdfList},
+{rdffirst, rdfsrange, rdfsResource},
+{rdffirst, rdfType, owlFunctionalProperty},
+{rdfsisDefinedBy, rdfsdomain, rdfsResource},
+{rdfsisDefinedBy, rdfsrange, rdfsResource},
+{rdfsisDefinedBy, rdfssubPropertyOf, rdfsseeAlso},
+{mkiri(pstr(L":HMC")), rdfType, mkiri(pstr(L":banana"))},
+{rdfslabel, rdfsdomain, rdfsResource},
+{rdfslabel, rdfsrange, rdfsLiteral},
+{rdfsmember, rdfsdomain, rdfsContainer},
+{rdfsmember, rdfsrange, rdfsResource},
+{rdfobject, rdfsdomain, rdfStatement},
+{rdfobject, rdfs:range, rdfsResource},
+{rdfpredicate, rdfsdomain, rdfStatement},
+{rdfpredicate, rdfsrange, rdfProperty},
+{rdfsrange, rdfsdomain, rdfProperty},
+{rdfsrange, rdfsrange, rdfsClass},
+{rdfrest, rdfsdomain, rdfList},
+{rdfrest, rdfsrange, rdfList},
+{rdfrest, rdfType owlFunctionalProperty},
+{rdfsseeAlso, rdfsdomain, rdfsResource},
+{rdfsseeAlso, rdfsrange rdfsResource},
+{rdfssubClassOf, rdfsdomain, rdfsClass},
+{rdfssubClassOf, rdfsrange, rdfsClass},
+{rdfssubPropertyOf, rdfsdomain, rdfProperty},
+{rdfssubPropertyOf, rdfsrange, rdfProperty},
+{rdfsubject, rdfsdomain, rdfStatement},
+{rdfsubject, rdfsrange, rdfsResource},
+{rdfType, rdfsdomain, rdfsResource},
+{rdfType, rdfsrange, rdfsClass},
+{rdfvalue, rdfsdomain, rdfsResource},
+{rdfvalue, rdfsrange, rdfsResource},
+
+{rdfnil, rdfType, rdfList}
+
+});}
+
+
+//http://wifo5-03.informatik.uni-mannheim.de/bizer/SWTSGuide/carroll-ISWC2004.pdf
+
+//Unicode
+
+//XML Schema
+//http://www.w3.org/TR/2009/CR-xmlschema11-2-20090430/
+
+//LBase
+//http://www.w3.org/TR/lbase/
+
+//RDF
+//http://www.w3.org/2011/rdf-wg/wiki/Main_Page
+//http://www.w3.org/TR/2014/NOTE-rdf11-primer-20140225/
+//http://www.w3.org/TR/2013/WD-rdf11-mt-20130409/
+//http://www.w3.org/TR/rdf11-new/
+//http://www.w3.org/TR/rdf11-concepts/
+//http://www.w3.org/TR/rdf-syntax-grammar/
+//http://www.w3.org/TR/2014/NOTE-rdf11-datasets-20140225/
+
+//N-Quads
+//http://www.w3.org/TR/2014/REC-n-quads-20140225/
+
+//N-Triples
+//http://www.w3.org/TR/n-triples/
+
+//JSON
+
+//JSON-LD
+//http://www.w3.org/TR/json-ld/
+
+//Notation 3
+//
+
+//RIF
+//http://www.w3.org/standards/techs/rif#w3c_all
+//http://www.w3.org/TR/rif-dtb/
+//http://www.w3.org/TR/2013/REC-rif-dtb-20130205/
+
+//Cwm Builtins
+//http://www.w3.org/2000/10/swap/doc/CwmBuiltins   	--< HMC_a_> not all but most
+//which?
+
+//DTLC
+//http://rbjones.com/rbjpub/logic/cl/tlc001.htm
+//http://ceur-ws.org/Vol-354/p63.pdf
+
+//OWL
+//http://www.w3.org/TR/owl2-overview/
+
+//make our semantics conform to them! ^
+
+
 /*
 #define BUILTIN(x) 	\
 	ep_t *ep = new ep_t();\
@@ -1994,20 +2026,59 @@ void build_in()
 	eps.push_back(ep)*/
 
 
-/*
 
 
-	/*tobuild = [{rdfsRange, [
-		{rdfsClass,[rdfs:range, rdfs:domain, rdf:Type, rdfs:subClassOf]},
-		{rdfProperty,[rdfs:subPropertyOf]},
-		{rdfsLiteral,[rdfs:Label, rdfs:Comment]},
-		{rdfsResource,[rdfs:Member,rdf:First, rdfs:seeAlso, rdfs:isDefinedBy,
-			rdfValue, rdf:subject, rdf:predicate, rdf:object]}
-		]},
-	   {rdfsDomain, ... },
-	   {rdfType, ...}
-	];	
-	*/
+
+#{?S ?P ?O} => {?P a rdf:Property}.
+
+
+#{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
+#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
+
+
+#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
+#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
+
+
+//this one looks tricky but no problem
+#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+
+
+#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
+#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
+
+
+	//{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	//check_pred(rdfsdomain);
+	builtins[rdfsType].push_back([p1,p2](Thing *s, Thing *c) mutable {
+		switch(entry){
+		case 0:
+
+			p1 = ITEM(preds,rdfsdomain);
+			Thing p = create_unbound();
+			while (dom(p, c))
+			{
+				ASSERT(is_node(p));
+				pp = get_term(p)->p;
+				if (preds.find(pp) != preds.end())
+				{
+					p2 = ITEM(preds, pp);
+					Thing o = create_unbound();
+					while(p2(s, o)
+					{
+						entry = LAST;
+						return true;
+		case_LAST:;		
+					}
+				}
+			}
+			return false;
+			END;
+		}
+	});
+
+
+	//#{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
 	builtins[rdfsRange].push_back([](Thing *s_, Thing *o_) mutable {
 		switch(entry){
 		case 0:
@@ -2032,48 +2103,12 @@ void build_in()
 	
 	});
 	
-	
-	builtins[rdfsDomain].push_back([](Thing *s_, Thing *o_) mutable {
-		switch(entry){
-		case 0:
-			o = getValue(o_);                                                                    │·
-                        ASSERT(!is_offset(*o));
-               		/*rdfProperty
-               			rdfsRange
-               			rdfsDomain
-               			rdfssubPropertyOf
-				
-			
-			/*rdfs:Resource
-				/*
-				rdf:Type
-				rdfs:Label
-				rdfs:Comment
-				rdfs:Member	
-				rdfs:SeeAlso
-				rdfs:IsDefinedBy
-				rdfs:Value
-					
-				*/
-			
-			/*rdfs:Class
-				rdfs:subClassOf	
-			*/
-			
-			/*rdf:Statement
-				rdf:subject
-				rdf:predicate
-				rdf:object
-			
-			*/
-			
-		}
-	});
 
 
-
-	//rdfs:Resource(?x)
 	/*
+	rdfs:Resource(?x)
+	{?S ?P ?O} => {?S a rdfs:Resource}.
+	{?S ?P ?O} => {?O a rdfs:Resource}.
 	<HMC_a> koo7: you mean if one queries "?x a rdf:Resource" should they get every known subject as a result?
 	<HMC_a> the answer would be yes. :-)
 	<koo7> HMC_a, every known subject and object, right?
@@ -2421,7 +2456,7 @@ void build_in()
 	);
 
 
-	/*nope
+	//nope
 	//item in list
 	bu = L"http://www.w3.org/2000/10/swap/list#in";
 	bui = dict.set(mkiri(pstr(bu)));
@@ -2462,7 +2497,6 @@ void build_in()
 				}
 			}
 	);
-*/
 
 
 	//if the subject is bound, and bound to a list just take it's first item.
@@ -2526,6 +2560,19 @@ A cwm built-in logical operator, RDF graph level.
 
 
 #ifdef notes65465687
+	}
+
+
+Thing p = create_unbound();
+dom = preds[rdfsDomain];
+while (dom(p, c))
+{
+	pp = get_term(p)->p;
+	if (preds.find(pp) != preds.end())
+	{
+		p2 = preds[pp];
+		while(p2(...
+
 
 
 int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
@@ -2566,7 +2613,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 					return 1;
 			}
 		}
-	}
+
 	else if (t.p == A || t.p == rdfType) {
 		r = 0;
 		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
@@ -2645,52 +2692,6 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 	}
 	return r;
 }
-
-
-
-
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
-@prefix owl: <http://www.w3.org/2002/07/owl#>.
-
-### Resource Description Framework RDF(S)
-
-
-### inference rules for RDF(S)
-
-
-not too sure about the stuff above but these rules is whats implemented in the old builtins above
-
-
-#{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
-#{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
-
-
-#{?S ?P ?O} => {?S a rdfs:Resource}.
-#{?S ?P ?O} => {?O a rdfs:Resource}.
-^^this is the everythings a resource
-
-
-
-#{?S ?P ?O} => {?P a rdf:Property}.
-
-
-#{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
-#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
-
-
-#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
-#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
-
-
-#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
-#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
-#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
-
-
-and finally theres http://www.w3.org/TR/lbase/
-
-
 
 
 
