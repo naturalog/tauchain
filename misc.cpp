@@ -11,7 +11,7 @@ extern int _indent;
 
 
 //misc
-nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfsType, GND, rdfnil, False;
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfType, GND, rdfnil, False;
 
 //RDFS
 nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
@@ -22,10 +22,10 @@ nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPr
 
 
 bidict& dict = *new bidict;
-
+/*
 void initRDFS(){
 
-	rdfsType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
 	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
 	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
@@ -38,7 +38,7 @@ void initRDFS(){
 	rdfsLiteral = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Literal")));
 	rdfProperty = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
 }
-
+*/
 
 void bidict::init() {
 #ifdef with_marpa
@@ -515,11 +515,15 @@ string list_bnode_name(int item)
 };*/
 string _listid()
 {
-        return L"_:list" + itoa(unique_list_id);
+	std::wstringstream ss;
+	ss << L"_:list" << unique_list_id;
+	return ss.str();
 };
 string list_bnode_name(int item) 
-{ 
-        return(_listid() + L"." + itoa(item));
+{
+	std::wstringstream ss;
+	ss << _listid() << L"." << item;
+	return ss.str();
 };
 string listid()
 {

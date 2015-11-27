@@ -17,8 +17,10 @@
 #include <list>
 
 
-#include "misc.h"
+
 using namespace old;
+//#include "misc.h"
+
 
 typedef std::nullptr_t null;
 typedef std::shared_ptr<bool> pbool;
@@ -28,7 +30,7 @@ using std::endl;
 
 extern std::set<string> silence;
 #ifdef DEBUG
-extern bool in_silent_part = false;
+extern bool in_silent_part;
 #define TRACE(x) \
   if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) \
   { \

@@ -28,7 +28,8 @@ std::wostream& dout = std::wcout;
 std::wostream& derr = std::wcerr;
 std::wistream& din = std::wcin;
 
-std::deque<string> _argstream;
+// to hold a kb/query string
+old::string qdb_text;
 
 enum mode_t {COMMANDS, KB, QUERY, SHOULDBE, OLD};
 mode_t mode = COMMANDS;
@@ -419,6 +420,7 @@ int count_fins()
 	int fins = 0;
 	std::wstringstream ss(qdb_text);
 	do {
+		old::string l;
 		getline(ss, l);
 		if(ss.end())break;
 		trim(l);
@@ -473,7 +475,6 @@ struct args_input_t:input_t
 
 struct stream_input_t:input_t
 {
-	string fn;
 	std::wistream stream;
 	old::string line;
 	size_t pos;
@@ -495,7 +496,7 @@ struct stream_input_t:input_t
 
 	stream_input_t(string fn_, std::wifstream is_)
 	{
-		fn = fn_;
+		name = fn_;
 		stream = is_;
 		figure_out_interactivity();
 	}
@@ -700,7 +701,7 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 {
 	old::string x = qdb_text + input.pop_long() + "\n";
 
-	if (!interactive) {
+	if (!input.interactive) {
 		qdb_text = x;
 	}
 	else {
@@ -711,6 +712,8 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 		if (pr) {
 			qdb_text = x;
 		}
+		else
+			dout << "[cli]that doesnt parse, try again" << std::endl;
 	}
 }
 
@@ -722,7 +725,6 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 				data_buffer = L"";
 				set_mode(COMMANDS);
 			}
-			//dout << "[cli]that doesnt parse, try again" << std::endl;
 			if (mode == COMMANDS && trimmed_data == L"") if (token != L"")
 				dout << "[cli]no such command: \"" << token << "\"." << endl;
 		}
@@ -745,10 +747,6 @@ int main ( int argc, char** argv)
 		emplace_stdin();
 	else
 		inputs.emplace(new args_input_t(argv, argc));
-
-
-	// to hold a kb/query string
-	old::string qdb_text;
 
 
 	while (true) {
@@ -820,16 +818,26 @@ int main ( int argc, char** argv)
 			try_to_parse_the_line__if_it_works__add_it_to_qdb_text();
 			int fins = count_fins();
 			if (fins > 0) {
-				if (mode == KB) {
-					kbs.push_back(kb);
-					fresh_prover();
+
+				qdb kb,kb2;
+				int dummy_fins;
+				std::wstringstream ss(qdb_text);
+				auto pr = parse(kb, kb2, ss, input.name, dummy_fins);
+
+				if(pr == COMPLETE) {
+					if (mode == KB) {
+						kbs.push_back(kb);
+						fresh_prover();
+					}
+					else if (mode == QUERY) {
+						tauProver->query(kb);
+					}
+					else if (mode == SHOULDBE) {
+						shouldbe(kb);
+					}
 				}
-				else if (mode == QUERY) {
-					tauProver->query(kb);
-				}
-				else if (mode == SHOULDBE) {
-					shouldbe(kb);
-				}
+				else
+					dout << "error" << endl;
 				qdb_text = L"";
 				set_mode(COMMANDS);
 			}
