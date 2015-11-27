@@ -402,17 +402,6 @@ bool dash_arg(string token, string pattern){
 }
 
 
-string peek(){
-	string t;
-	for line in input:
-        	std::wstringstream ss(line);                                                        
-	        while (std::getline(ss, t, L' ')) {//split on spaces                               
-                   return t;                                            
-                }
-	CLITRACE(dout << "empty." << endl;)
-}
-
-
 void get_int(int &i, const string &tok)
 {
 	try
@@ -424,7 +413,143 @@ void get_int(int &i, const string &tok)
 		dout << "bad int, ";
 	}
 }
-		
+
+int count_fins()
+{
+	int fins = 0;
+	std::wstringstream ss(qdb_text);
+	do {
+		getline(ss, l);
+		if(ss.end())break;
+		trim(l);
+		if (l == "fin.") fins++;
+	}
+	return fins;
+}
+
+struct input_t
+{
+	bool interactive = true;
+	std::string name;
+	old::string pop();
+	old::string pop_long();
+	void take_back();
+	void readline()	{};
+	bool end();
+}
+
+struct args_input_t:input_t
+{
+	int argc;
+	char **argv;
+	unsigned int counter = 1;
+	args_input_t(int argc_, char**argv_)
+	{
+		argc = argc_;
+		argv = argv_;
+		name = L"args";
+	}
+	bool end()
+	{
+		return counter == argc;
+	}
+	old::string pop()
+	{
+		assert(!end());
+		return argv[counter++];
+	}
+	old::string pop_long()
+	{
+		return pop();
+	}
+	void take_back()
+	{
+		counter--;
+		assert(counter);
+	}
+}
+
+
+
+struct stream_input_t:input_t
+{
+	string fn;
+	std::wistream stream;
+	old::string line;
+	size_t pos;
+	std::stack<size_t> starts;
+
+	void figure_out_interactivity()
+	{
+		//if its a file
+		auto s = dynamic_cast<std::wifstream>(stream);
+		interactive = !s;
+		//else its stdin
+		if (!s) {
+			assert(stream == std::wcin);
+			//but its not attached to a tty
+			if (!isatty(fileno(stdin)))
+				interactive = false;
+		}
+	}
+
+	stream_input_t(string fn_, std::wifstream is_)
+	{
+		fn = fn_;
+		stream = is_;
+		figure_out_interactivity();
+	}
+	bool end()
+	{
+		return stream.eof();
+	}
+
+	void readline()
+	{
+		std::getline(stream, line);
+		starts.clear();
+		pos = 0;
+	}
+	old::string pop_x(wchar_t x)
+	{
+		size_t start = pos;
+		while(line[pos] == ' ') pos++;
+		while(line[pos] != x && line[pos] != '\n' && line[pos] != 0) pos++;
+		size_t end = pos;
+		old::string t = line.substr(start, end);
+		starts.push(start);
+		return t;
+	}
+	old::string pop()
+	{
+		return pop_x(' ');
+	}
+	old::string pop_long()
+	{
+		return pop_x(0);
+	}
+	void take_back()
+	{
+		assert(starts.size());
+		pos = starts.back();
+		starts.pop();
+	}
+}
+
+
+/*		{
+			string line;
+
+			input += line + L"\n";
+		}
+					//is.rdbuf()+L"\n";
+*/
+
+
+stack<struct { input_t*}> inputs;
+input_t* input;
+
+
 
 bool read_option(string s){
 	if(s.length() < 2 || s.at(0) != L'-' ||	s == L"-" || s == L"--")
@@ -568,61 +693,42 @@ void displayPrompt(){
 	}
 }
 
-struct input_t
-{
-	std::string name;
-	old::string pop();
-	old::string pop_long();
-	void take_back();
-	void readline()	{};
-	bool end();
-}	
 
-struct args_input_t:input_t
+
+
+void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 {
-	int argc;
-	char **argv;
-	unsigned int counter = 1;
-	args_input_t(int argc_, char**argv_)
-	{
-		argc = argc_;
-		argv = argv_;
-		name = L"args";
+	old::string x = qdb_text + input.pop_long() + "\n";
+
+	if (!interactive) {
+		qdb_text = x;
 	}
-	bool end()
-	{
-		return counter == argc;
-	}
-	old::string pop()
-	{
-		assert(!end());
-		return argv[counter++];
-	}
-	old::string pop_long()
-	{
-		return pop();
-	}
-	void take_back()
-	{
-		counter--;
-		assert(counter);
+	else {
+		qdb kb, query;
+		std::wstringstream ss(x);
+		int pr = parse(kb, query, ss, L"");
+		CLI_TRACE(dout << "parsing result:" << pr << std::endl);
+		if (pr) {
+			qdb_text = x;
+		}
 	}
 }
-	
 
-
-/*		{
-			string line;
-			std::getline(input_stream, line);
-			input += line + L"\n";
+/*
+	if (pr == COMPLETE) {
 		}
-					//is.rdbuf()+L"\n";
-
-*/	
-
-
-stack<struct { input_t*}> inputs;
-
+		else if (pr == FAIL) {
+			if (line == L"fin.\n") {
+				data_buffer = L"";
+				set_mode(COMMANDS);
+			}
+			//dout << "[cli]that doesnt parse, try again" << std::endl;
+			if (mode == COMMANDS && trimmed_data == L"") if (token != L"")
+				dout << "[cli]no such command: \"" << token << "\"." << endl;
+		}
+	}
+}
+*/
 
 void emplace_stdin()
 {
@@ -630,7 +736,8 @@ void emplace_stdin()
 }
 
 
-int main ( int argc, char** argv) {
+int main ( int argc, char** argv)
+{
 	//Initialize the prover strings dictionary with hard-coded nodes.
 	dict.init();
 
@@ -644,34 +751,32 @@ int main ( int argc, char** argv) {
 	old::string qdb_text;
 
 
-	while(true){
+	while (true) {
 
 		input.readline();
-		while (input.end())
-		{
+		while (input.end()) {
 			if (!inputs.size())
 				goto end;
 			input = inputs.back();
-			inputs.pop();		
+			inputs.pop();
 			input.readline();
 		}
-			
-			
-	
+
+
 		displayPrompt();
-		
-		
+
+
 		if (mode == COMMANDS) {
 			old::string token = input.pop();
 			if (startsWith(token, L"#") || token == L"")
 				continue;
-			else if (read_option(token)) 
+			else if (read_option(token))
 				continue;
 			else if (token == L"help")
 				help();
-			else if (token == L"kb") 
+			else if (token == L"kb")
 				cmd_kb();
-			else if (token == L"query") 
+			else if (token == L"query")
 				cmd_query();
 			else if (token == L"shouldbe")
 				cmd_shouldbe();
@@ -702,94 +807,46 @@ int main ( int argc, char** argv) {
 					inputs.emplace_back(new stream_input_t(fn, is));
 					continue;
 				}
-				
+
 				//maybe its old-style input
-				try to parse the line, if it works,
-				set_mode(OLD) and add it to qdb_text
+				if (try_to_parse_the_line__if_it_works__add_it_to_qdb_text())
+					set_mode(OLD);
+				else
+					dout << "[cli]that doesnt parse, try again" << std::endl;
+				continue;
 			}
-			continue;
 		}
-		else if (mode == KB)
-		{
-			try to parse the line, if it works, add it to qdb_text.
+		else if (mode == KB || mode == QUERY || mode == SHOULDBE) {
+			try_to_parse_the_line__if_it_works__add_it_to_qdb_text();
+			int fins = count_fins();
 			if (fins > 0) {
-				kbs.push_back(kb);
-				fresh_prover();
+				if (mode == KB) {
+					kbs.push_back(kb);
+					fresh_prover();
+				}
+				else if (mode == QUERY) {
+					tauProver->query(kb);
+				}
+				else if (mode == SHOULDBE) {
+					shouldbe(kb);
+				}
 				qdb_text = L"";
 				set_mode(COMMANDS);
 			}
 		}
-		if (mode == QUERY && fins > 0) {
-			(*tauProver).query(kb);//why not -> ?
-			//(*tauProver).e.clear();
-			data_buffer=L"";
-			set_mode(COMMANDS);
-		}
-		if (mode == SHOULDBE && fins > 0) {
-			shouldbe(kb);
-			data_buffer=L"";
-			set_mode(COMMANDS);
-		}
-		else
-		{
+		else {
 			assert(mode == OLD);
-
-
-			 //&& fins == 2) {
-			dout << "querying" << std::endl;
-			kbs.push_back(kb);
-			fresh_prover();
-			(*tauProver).query(query);
-			//(*tauProver).e.clear();
-			data_buffer=L"";
-		}
-			
-
-
-		if (std::wcin == input && isatty(fileno(stdin)))
-		{
-			/*interactive mode, we read in a line and do a reparse
-			if it succeeds we add the line to the qdb_buffer,
-			otherwise we print error and throw it away*/
-		
-			string new_buffer = data_buffer + line;
-			int fins;
-			qdb kb, query;
-			std::wstringstream ss(new_buffer);
-			int pr = parse(kb, query, ss, L"", fins);
-			CLI_TRACE(dout << "parsing result:"<<pr<<std::endl);
-			if (pr) 
-			{
-				qdb_buffer += line;
-				CLI_TRACE(dout << "fins:" << fins << std::endl);
+			try_to_parse_the_line__if_it_works__add_it_to_qdb_text();
+			int fins = count_fins();
+			if (fins > 1) {
+				dout << "querying" << std::endl;
+				kbs.push_back(kb);
+				fresh_prover();
+				tauProver->query(query);
 			}
 		}
-		else
-		{
-			qdb_buffer += line;
-			count_fins();
-		}
-			
-		if(pr == COMPLETE)
-		{
-
-		}
-		else if (pr == FAIL)
-		{
-			if (line == L"fin.\n")
-			{
-				data_buffer=L"";
-				set_mode(COMMANDS);
-			}
-			//dout << "[cli]that doesnt parse, try again" << std::endl;
-			if (mode == COMMANDS && trimmed_data == L"")
-				if(token != L"")
-					dout << "[cli]no such command: \"" << token << "\"." << endl;
-		}
-		
-		
-		input.forget();
 	}
+	end:
 	if (tauProver)
 		delete tauProver;
 }
