@@ -908,7 +908,7 @@ void compile_pred(old::nodeid pr)
 			TRACE(dout << "builtin: " << old::dict[pr] << endl;)
 			add_rule(pr, b);
 		}
-		//What's up with this return?
+		//lets not shadow rdfType by builtins for now
 		if (pr != rdfType)
 			return;
 	}
@@ -932,7 +932,7 @@ void check_pred(old::nodeid pr)
 
 	if (pred_index.find(pr) == pred_index.end() && builtins.find(pr) == builtins.end()) {
 		dout << KRED << "Predicate '" << KNRM << old::dict[pr] << "' not found." << endl;
-		preds[pr] = GEN_FAIL_WITH_ARGS;
+		preds[pr] = predvar;
 	}
  }
 
@@ -1896,6 +1896,9 @@ void add_facts(vector<vector<nodeid>> facts)
 }
 	
 
+
+
+
 void build_in_facts()
 {
 add_facts({
@@ -1950,64 +1953,6 @@ add_facts({
 });}
 
 
-//http://wifo5-03.informatik.uni-mannheim.de/bizer/SWTSGuide/carroll-ISWC2004.pdf
-
-//Unicode
-
-//XML Schema
-//http://www.w3.org/TR/2009/CR-xmlschema11-2-20090430/
-
-//LBase
-//http://www.w3.org/TR/lbase/
-
-//RDF
-//http://www.w3.org/2011/rdf-wg/wiki/Main_Page
-//http://www.w3.org/TR/2014/NOTE-rdf11-primer-20140225/
-//http://www.w3.org/TR/2013/WD-rdf11-mt-20130409/
-//http://www.w3.org/TR/rdf11-new/
-//http://www.w3.org/TR/rdf11-concepts/
-//http://www.w3.org/TR/rdf-syntax-grammar/
-//http://www.w3.org/TR/2014/NOTE-rdf11-datasets-20140225/
-
-//N-Quads
-//http://www.w3.org/TR/2014/REC-n-quads-20140225/
-
-//N-Triples
-//http://www.w3.org/TR/n-triples/
-
-//JSON
-
-//JSON-LD
-//http://www.w3.org/TR/json-ld/
-
-//Notation 3
-//
-
-//RIF
-//http://www.w3.org/standards/techs/rif#w3c_all
-//http://www.w3.org/TR/rif-dtb/
-//http://www.w3.org/TR/2013/REC-rif-dtb-20130205/
-
-//Cwm Builtins
-//http://www.w3.org/2000/10/swap/doc/CwmBuiltins   	--< HMC_a_> not all but most
-//which?
-
-//DTLC
-//http://rbjones.com/rbjpub/logic/cl/tlc001.htm
-//http://ceur-ws.org/Vol-354/p63.pdf
-
-//OWL
-//http://www.w3.org/TR/owl2-overview/
-
-//make our semantics conform to them! ^
-
-
-/*
-#define BUILTIN(x) 	\
-	ep_t *ep = new ep_t();\
-	eps.push_back(ep);\
-	builtins[x].push_back([entry, suc, ouc](Thing *s, Thing *o) mutable
-*/
 void build_in()
 {//under construction
 	EEE;
@@ -2027,36 +1972,88 @@ void build_in()
 
 
 
+	//http://www.w3.org/TR/lbase/#using
 
 
-#{?S ?P ?O} => {?P a rdf:Property}.
+	//rdfs:Resource(?x)
+	/*<HMC_a> koo7: you mean if one queries "?x a rdf:Resource" should they get every known subject as a result?
+	<HMC_a> the answer would be yes. :-)
+	<koo7> HMC_a, every known subject and object, right?
+	<koo7> or....every nodeid in the kb thats not in the pred position...where do we draw the line?
+	<HMC_a> well, when i say "known subject" i don't really mean everything in the subject position, i mean every node useable as a subject (non-literal)
+	<koo7> ok
+	<koo7> what do you mean non-literal?
+	<HMC_a> you wouldn't bind each int as a result, for example
+	<HMC_a> if you returned "0 a Resource" "1 a Resource" "2 a Resource"..... this would be a bit of a problem ;-)
+	<koo7> yeah, so everything that explicitly appears in the kb
+	<koo7> traverse lists too
+	<HMC_a> yes remember that lists are logically just triples as well...
+	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
+	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
+	<HMC_a> yes, the bnode names as well*/
+	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+		(void) s;
+		switch (entry) {
+			case 0:
+				o = getValue(o_);
+				ASSERT(!is_offset(*o));
+				ouc = unify(o, &c_rdfsResource);
+				while (ouc())
+				{
+					s = getValue(s_);
+					if(!is_unbound(s))
+					{
+						entry = 1;
+						return true;
+					}
+			case 1:
+					if(is_unbound(s))
+					{
+						for (auto &x: preds)
+						{
+							p = x;//a coro-permanent copy
+							while(p(a, b))
+							suc = unify(s, a);
+							while(suc())
+							{
+								entry = 2;
+								return true;
+								case 2:;
+							}
+							suc2 = unify(s, b);
+							while(suc2())
+							{
+								entry = 3;						entry = 3;
+								return true;
+								case 3:;
+							}
+						}
+
+					}
+				}
+
+				entry = 66;
+				return false;
+				END
+		}
+	});
 
 
-#{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
-#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
 
 
-#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
-#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
+
+	//todo rdfs:Class(?y) implies (?y(?x) iff rdf:type(?x ?y))
 
 
-//this one looks tricky but no problem
-#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
 
-
-#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
-#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
-
-
-	//{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
-	//check_pred(rdfsdomain);
+	//rdfs:domain(?x ?y) implies ( ?x(?u ?v)) implies ?y(?u) )
+	//rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
 	builtins[rdfsType].push_back([p1,p2](Thing *s, Thing *c) mutable {
 		switch(entry){
 		case 0:
-
 			p1 = ITEM(preds,rdfsdomain);
 			Thing p = create_unbound();
-			while (dom(p, c))
+			while (p1(p, c))
 			{
 				ASSERT(is_node(p));
 				pp = get_term(p)->p;
@@ -2068,7 +2065,7 @@ void build_in()
 					{
 						entry = LAST;
 						return true;
-		case_LAST:;		
+		case_LAST:;
 					}
 				}
 			}
@@ -2076,9 +2073,6 @@ void build_in()
 			END;
 		}
 	});
-
-
-	//#{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
 	builtins[rdfsRange].push_back([](Thing *s_, Thing *o_) mutable {
 		switch(entry){
 		case 0:
@@ -2098,203 +2092,68 @@ void build_in()
 			entry = 2;
 			return false;
 		case 2:;
-			assert(false);	
+			assert(false);
 		}
-	
 	});
-	
 
 
-	/*
-	rdfs:Resource(?x)
-	{?S ?P ?O} => {?S a rdfs:Resource}.
-	{?S ?P ?O} => {?O a rdfs:Resource}.
-	<HMC_a> koo7: you mean if one queries "?x a rdf:Resource" should they get every known subject as a result?
-	<HMC_a> the answer would be yes. :-)
-	<koo7> HMC_a, every known subject and object, right?
-	<koo7> or....every nodeid in the kb thats not in the pred position...where do we draw the line?
-	<HMC_a> well, when i say "known subject" i don't really mean everything in the subject position, i mean every node useable as a subject (non-literal)
-	<koo7> ok
-	<koo7> what do you mean non-literal?
-	<HMC_a> you wouldn't bind each int as a result, for example
-	<HMC_a> if you returned "0 a Resource" "1 a Resource" "2 a Resource"..... this would be a bit of a problem ;-)
-	<koo7> yeah, so everything that explicitly appears in the kb
-	<koo7> traverse lists too
-	<HMC_a> yes remember that lists are logically just triples as well...
-	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
-	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
-	<HMC_a> yes, the bnode names as well
-	*/
 
-	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
-		(void) s;
-		switch (entry) {
-			case 0:
-				o = getValue(o_);
-				ASSERT(!is_offset(*o));
-				ouc = unify(o, &c_rdfsResource);
-				while (ouc()) 
-				{	
-					s = getValue(s_);
-					if(!is_unbound(s))
-					{
-						entry = 1;
+
+
+
+
+
+
+
+
+
+
+	wildcard_pred = [](nodeid r){
+		EEE;
+		return [entry, r](Thing *s, Thing *o) mutable {
+			//just iterate over wildcard
+			switch (entry) {
+				case 0:
+					p1 = wildcard;
+					while (p1(s, r, o)) {
+						entry = LAST;
 						return true;
+						case_LAST:;
 					}
-			case 1:		
-					if(is_unbound(s))
-					{
-						for (auto &x: preds)
-						{
-							p = x;//a coro-permanent copy
-							while(p(a, b))
-							suc = unify(s, a);
-							while(suc())
-							{	
-								entry = 2;
-								return true;
-								case 2:;				
-							}
-							suc2 = unify(s, b);
-							while(suc2())
-							{		
-								entry = 3;						entry = 3;
-								return true;
-								case 3:;
-							}
-						}
-			
-					}	
-				}
-				
-				entry = 66;
-				return false;
-				END
-		}
-	});
-
-
-
-				/*rdfs:Class
-					/*
-					rdfsResource
-					rdfsClass //reflexivity
-					rdfsLiteral
-					rdfsDataType
-					rdfProperty
-					*/
-				
-				/*rdfs:DataType
-				
-					/*
-					rdf:langString
-					rdf:HTML
-					rdf:XMLLiteral
-					
-					*/
-				
-				/*rdf:Property
-					/*
-					rdfs:range
-					rdfs:domain
-					rdf:type
-					rdfs:subClassOf
-					rdfs:subPropertyOf
-					rdfs:label
-					rdfs:comment
-					rdfs:ContainerMembershipProperty
-					rdfs:member
-					rdf:first
-					rdf:rest
-					rdf:subject
-					rdf:predicate
-					rdf:object
-					rdfs:seeAlso
-					rdfs:isDefinedBy
-					rdf:value
-					*/
-					
-				}
-			
-				
-			//{?p rdfs:range ?c. ?x ?p ?y} => {?y rdf:Type ?c}
-			//{?p rdfs:domain ?c. ?x ?p ?y} => {?x rdf:Type ?c}
-			//{?x rdf:type ?c} => {?c rdf:type rdfs:Class}
-			//{?c1 rdfs:subClassOf ?c2} => {?c1 rdf:Type rdfs:Class}
-			//{?c1 rdfs:subClassOf ?c2} => {?c2 rdf:Type rdfs:Class}
-			//{?p1 rdfs:subPropertyOf ?p2} => {?p1 rdf:Type rdf:Property}
-			//{?p1 rdfs:subPropertyOf ?p2} => {?p2 rdf:Type rdf:Property}	
-			
-
-
-	
-	// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
-	//rdfs:DataType rdfs:subClassOf rdfs:Class.
-	//{?D a DataType} => {?D rdfs:subClassOf rdfs:Literal}.
-	//{?c1 rdfs:subClassOf ?c2. ?c2 rdfs:subClassOf ?c3} => {?c1 rdfs:subClassOf ?c3}.
-	builtins[rdfssubClassOf].push_back(
-			[c_rdfsResource, c_rdfsClass, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
-				//pred_t ac;
-				switch (entry) {
-					case 0:
-						ouc = unify(o, &c_rdfsResource);
-						while (ouc()) {
-							//then try
-					
-							//while(rdfType(s,&c_rdfsClass)){;
-							//*This covers rdfs:Literal
-						/*
-							ac = ITEM(preds, rdfType);
-							entry = LAST;
-							return true;
-						}
-						else {
-						*/
-						}
-					
-					
-						/*rdfs:Class
-							/*
-							rdfs:DataType
-							*/	
-						
-						ouc = unify(o, &c_rdfsLiteral);
-						while(ouc()){
-							/*
-							while(rdfType(s,&c_rdfsDataType)){
-								entry = 2;
-								return true;
-					case 2:;
-							}
-							*/
-							//*This covers:
-							//**rdf:langstring
-							//**rdf:HTML
-							//**rdf:XMLLiteral
-							
-						}
-					entry = 66;
-					return false;
-				}
-					case_LAST:
-						assert(!ouc());
-						END
-				}
+					END;
 			}
-	);
-	
-	//{?p1 rdfs:subPropertyOf ?p2. ?p2 rdfs:subPropertyOf ?p3} => {?p1 rdfs:subPropertyOf ?p3}.
-	builtins[rdfssubPropertyOf].push_back([](Thing *_s, Thing *_o){
+		}
+
+	//{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+	wildcard = [p1,p2,](Thing *s, nodeid r, Thing *o) mutable {
 		switch(entry){
 		case 0:
+			p1 = ITEM(preds,rdfssubPropertyOf);
+			Thing r = create_unbound();
+			while (p1(p, r))
+			{
+				ASSERT(is_node(p));
+				pp = get_term(p)->p;
+				if (preds.find(pp) != preds.end())
+				{
+					p2 = ITEM(preds, pp);
+					Thing o = create_unbound();
+					while(p2(s, o)
+					{
+						entry = LAST;
+						return true;
+		case_LAST:;
+					}
+				}
+			}
+			return false;
+			END;
 		}
 	});
-	
-	
-	
 
 
-	/*
+
+/*
 <HMC_a> koo7: for the moment I'm less concerned about getting rdfs going and more interested in facilities like log:outputString and math:sum and etc
 <HMC_a> really even just those two would be enough to get some useful results out of the fuzzer, lol :-)
 <koo7> HMC_a, i cant get too far without you being specific/providing some specs
@@ -2548,30 +2407,92 @@ void build_in()
 
 }
 
-/*log:equalTo a rdf:Property;
-    rdfs:comment
-"""True if the subject and object are the same RDF node (symbol or literal).
-Do not confuse with owl:sameAs.
-A cwm built-in logical operator, RDF graph level.
-""".
-*/
-
-//	BUILTIN(rdfType)
-
 
 #ifdef notes65465687
-	}
 
 
-Thing p = create_unbound();
-dom = preds[rdfsDomain];
-while (dom(p, c))
-{
-	pp = get_term(p)->p;
-	if (preds.find(pp) != preds.end())
-	{
-		p2 = preds[pp];
-		while(p2(...
+
+
+
+
+
+
+
+
+
+
+
+
+//http://wifo5-03.informatik.uni-mannheim.de/bizer/SWTSGuide/carroll-ISWC2004.pdf
+
+//Unicode
+
+//XML Schema
+//http://www.w3.org/TR/2009/CR-xmlschema11-2-20090430/
+
+//LBase
+//http://www.w3.org/TR/lbase/
+
+//RDF
+//http://www.w3.org/2011/rdf-wg/wiki/Main_Page
+//http://www.w3.org/TR/2014/NOTE-rdf11-primer-20140225/
+//http://www.w3.org/TR/2013/WD-rdf11-mt-20130409/
+//http://www.w3.org/TR/rdf11-new/
+//http://www.w3.org/TR/rdf11-concepts/
+//http://www.w3.org/TR/rdf-syntax-grammar/
+//http://www.w3.org/TR/2014/NOTE-rdf11-datasets-20140225/
+
+//N-Quads
+//http://www.w3.org/TR/2014/REC-n-quads-20140225/
+
+//N-Triples
+//http://www.w3.org/TR/n-triples/
+
+//JSON
+
+//JSON-LD
+//http://www.w3.org/TR/json-ld/
+
+//Notation 3
+//
+
+//RIF
+//http://www.w3.org/standards/techs/rif#w3c_all
+//http://www.w3.org/TR/rif-dtb/
+//http://www.w3.org/TR/2013/REC-rif-dtb-20130205/
+
+//Cwm Builtins
+//http://www.w3.org/2000/10/swap/doc/CwmBuiltins   	--< HMC_a_> not all but most
+//which?
+
+//DTLC
+//http://rbjones.com/rbjpub/logic/cl/tlc001.htm
+//http://ceur-ws.org/Vol-354/p63.pdf
+
+//OWL
+//http://www.w3.org/TR/owl2-overview/
+
+//make our semantics conform to them! ^
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*log:equalTo a rdf:Property;
+True if the subject and object are the same RDF node (symbol or literal).
+Do not confuse with owl:sameAs.
+A cwm built-in logical operator, RDF graph level.
+*/
+
 
 
 
