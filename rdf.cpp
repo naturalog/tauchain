@@ -13,7 +13,7 @@ pqlist mk_qlist() {
 }
 
 string node::tostring() const {
-	std::wstringstream ss;
+	std::stringstream ss;
 //	if ( _type == IRI && (*value)[0] != L'?' ) ss << L'<';
 	if ( _type == LITERAL ) ss << L'\"';
 	ss << *value;
@@ -79,14 +79,41 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	return set_dict(r);
 }
 
+
+
 pnode mkiri ( pstring iri ) {
 	setproc(L"mkiri");
+
 	if (!iri) throw std::runtime_error("mkiri: null iri given");
 //	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
 	r.value = iri;
 	return set_dict(r);
 }
+
+/*
+//Should use this one instead:
+
+
+pnode mkiri ( pstring iri ) {
+	setproc(L"mkiri");
+
+	if(!iri) throw std::runtime_error("mkiri: null iri given");
+	auto it = dict.nodes.find(*iri);
+	if(it != dict.nodes.end()){
+		assert(it->second->_type == node::IRI);
+		return it->second;
+	}
+	node r ( node::IRI);
+	r.value = iri;
+	pnode pr = make_shared<node>(r);
+	dict.set(pr);
+	return dict.nodes[r.tostring()] = pr;
+}
+
+*/
+
+
 
 pnode mkbnode ( pstring attribute ) {
 	setproc(L"mkbnode");
@@ -133,7 +160,7 @@ rdf_db::rdf_db ( jsonld_api& api_ ) :
 
 
 string rdf_db::tostring() {
-	std::wstringstream s;
+	std::stringstream s;
 	s << *this;
 	return s.str();
 }
@@ -312,7 +339,7 @@ quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
 
 
 string quad::tostring ( ) const {
-	std::wstringstream ss;
+	std::stringstream ss;
 	bool _shorten = shorten;
 	auto f = [_shorten] ( pnode n ) {
 		if ( n ) {

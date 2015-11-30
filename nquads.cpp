@@ -458,7 +458,7 @@ pnode nqparser::readany(bool lit){
 }
 
 
-void nqparser::preprocess(std::wistream& is, std::wstringstream& ss){
+void nqparser::preprocess(std::wistream& is, std::stringstream& ss){
         string s; //get lines from is into s.
 
         //Make a function out of this
@@ -494,8 +494,8 @@ void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
 
 //std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
 
-	//Read an nq file in is into the wstringstream ss.
-	std::wstringstream ss;
+	//Read an nq file in is into the stringstream ss.
+	std::stringstream ss;
 
 	preprocess(is,ss);
 

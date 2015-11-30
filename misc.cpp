@@ -20,7 +20,6 @@ nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPr
 
 
 
-
 bidict& dict = *new bidict;
 /*
 void initRDFS(){
@@ -40,6 +39,10 @@ void initRDFS(){
 }
 */
 
+
+//considering that mkiri, mkliteral and mkbnode already run set() on themselves, then
+//to convernt pnode to nodeid we should just be able to do a lookup in pi
+
 void bidict::init() {
 #ifdef with_marpa
 	file_contents_iri = set(mkiri(pstr(L"http://idni.org/marpa#file_contents")));
@@ -58,7 +61,7 @@ void bidict::init() {
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
 	Dot = set(mkiri(pstr(L".")));
 
-	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));//should not be capitalized, i will refactor it in clion later
 	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
 	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
@@ -84,6 +87,15 @@ void bidict::set ( const std::vector<node>& v ) {
 	for ( auto x : v ) set ( x );
 }
 
+
+//Search the bidict to see if node v is already present. If so, just
+//return the nodeid of the one that's already there (make sure both
+//have the same type). If it's not there, generate a new nodeid by adding
+//1 to pi.size(), which is theoretically the number of nodes we have in
+//the dictionary. If the node is an IRI that begins with L'?', then it's
+//a variable, so we negate the nodeid (because negative nodeids is our
+//representation of variables). Add the node/nodeid pair to pi and ip for
+//lookup, and return the new nodeid.
 nodeid bidict::set ( node v ) {
 	if (!v.value) throw std::runtime_error("bidict::set called with a node containing null value");
 	//#bidict.pi : std::map<node,nodeid>
@@ -115,6 +127,7 @@ nodeid bidict::set ( node v ) {
 	return k;
 }
 
+
 node bidict::operator[] ( nodeid k ) {
 //	if (!has(k)) set(::tostr(k));
 #ifdef DEBUG
@@ -137,7 +150,7 @@ bool bidict::has ( node v ) const {
 }
 
 string bidict::tostr() {
-	std::wstringstream s;
+	std::stringstream s;
 	for ( auto x : pi ) s << x.first.tostring() << L" := " << x.second << endl;
 	return s.str();
 }
@@ -192,13 +205,13 @@ string prover::format(termid id, bool json) {
 
 string prover::format(const term& p, bool json) {
 	if (!json) {
-		std::wstringstream ss;
+		std::stringstream ss;
 		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
 		ss << dstr(p.p, false);
 		if (p.s) ss << L'('<< prover::format(p.s) << L',' << prover::format(p.o) << L')';
 		return ss.str();
 	}
-	std::wstringstream ss;
+	std::stringstream ss;
 	ss << L"{pred:\"" << dstr(p.p, true) << L"\",args:[";
 	if (p.s) ss << format (p.s, true) << L",";
 	if (p.o) ss << format (p.o, true);
@@ -207,7 +220,7 @@ string prover::format(const term& p, bool json) {
 }
 
 string prover::formatp(shared_ptr<proof> p) {
-	std::wstringstream ss;
+	std::stringstream ss;
 	ss 	<< L"rule:   " << formatr(p->rule) << endl
 		<< L"prev:   " << p->prev << endl
 		<< L"subst:  " << formats(p->s) << endl
@@ -228,7 +241,7 @@ void prover::printp(shared_ptr<proof> p) {
 
 string prover::formats(const subs & s, bool json) {
 	if (s.empty()) return L"";
-	std::wstringstream ss;
+	std::stringstream ss;
 	std::map<string, string> r;
 	for (auto x : s)
 		r[dstr(x.first)] = format(x.second, json);
@@ -243,7 +256,7 @@ void prover::prints(const subs & s) {
 }
 
 string prover::format(const termset& l, bool json) {
-	std::wstringstream ss;
+	std::stringstream ss;
 	auto x = l.begin();
 	if (json) ss << L'[';
 	while (x != l.end()) {
@@ -287,7 +300,7 @@ void prover::printr_subs(ruleid r, const subs & s) {
 }
 */
 string prover::formatr(ruleid r, bool json) {
-	std::wstringstream ss;
+	std::stringstream ss;
 	if (!json) {
 		ss << L"{ ";
 		if (!kb.body()[r].empty()) ss << format(kb.body()[r]);
@@ -306,7 +319,7 @@ string prover::formatr(ruleid r, bool json) {
 }
 
 string prover::formatkb(bool json) {
-	std::wstringstream ss;
+	std::stringstream ss;
 	if (json) ss << L'[';
 	for (uint n = 0; n < kb.size(); ++n) {
 		ss << formatr(n, json);
@@ -318,7 +331,7 @@ string prover::formatkb(bool json) {
 }
 
 string prover::formatg(const ground& g, bool json) {
-	std::wstringstream ss;
+	std::stringstream ss;
 	for (auto x : g) {
 		ss << formatr(x.first, json) << tab << formats(x.second, json);
 		ss << endl;
@@ -368,7 +381,7 @@ std::list<string>& proc = *new std::list<string>;
 
 string indent() {
 	if (!_indent) return string();
-	std::wstringstream ss;
+	std::stringstream ss;
 //	size_t sz = proc.size();
 	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
 		string str = L"(";
@@ -420,6 +433,10 @@ struct cmpstr {
 	}
 };
 
+
+//Take a string and return a pointer to it. Store a static set of
+//strings already converted so that if we get a string that's already
+//been converted, we can just return the pointer to the original one.
 pstring pstr ( const string& s ) {
 	//Use the static std::set to prevent from making the
 	//same string multiple times.
@@ -429,7 +446,10 @@ pstring pstr ( const string& s ) {
 	if (it != strings.end()) return *it;
 	strings.insert(ps);
 	return ps;
-} 
+}
+
+
+ 
 #ifdef JSON
 pobj prover::json(const termset& ts) const {
 	polist_obj l = mk_olist_obj(); 
@@ -481,7 +501,7 @@ pobj prover::ejson() const {
 */
 string prover::ruleset::format() const {
 	setproc(L"ruleset::format");
-	std::wstringstream ss;
+	std::stringstream ss;
 	ss << L'['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
 		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
@@ -502,26 +522,26 @@ int unique_list_id = 0;
 //generate a hopefully unique bnode name for a new list
 /*string _listid()
 {
-        std::wstringstream ss;
+        std::stringstream ss;
         ss << L"_:list" << unique_list_id;
         return ss.str();
 };
 string list_bnode_name(int item) 
 { 
-        std::wstringstream ss;
+        std::stringstream ss;
         ss << _listid();
         ss << L"." << item;        
         return ss.str();
 };*/
 string _listid()
 {
-	std::wstringstream ss;
+	std::stringstream ss;
 	ss << L"_:list" << unique_list_id;
 	return ss.str();
 };
 string list_bnode_name(int item) 
 {
-	std::wstringstream ss;
+	std::stringstream ss;
 	ss << _listid() << L"." << item;
 	return ss.str();
 };

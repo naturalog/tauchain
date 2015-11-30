@@ -996,7 +996,7 @@ https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-1482
 			d = 0;
 			return L"break";
 		}
-		wstringstream r;
+		stringstream r;
 		r << "[" << this << "]";
 		switch (type)
 		{
@@ -1023,7 +1023,7 @@ https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-1482
 				break;
 			}
 			case OFFSET:
-				wstringstream r;
+				stringstream r;
 				r << L"{";
 				if (offset >= 0)
 					r << L"+";

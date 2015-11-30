@@ -406,7 +406,7 @@ int count_fins()
 {
 	int fins = 0;
 	string line;
-	wstringstream ss(qdb_text);
+	stringstream ss(qdb_text);
 	while (!ss.eof()) {
 		getline(ss, line);
 		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".")
@@ -435,7 +435,7 @@ void get_int(int &i, const string &tok)
 int count_fins()
 {
 	int fins = 0;
-	std::wstringstream ss(qdb_text);
+	std::stringstream ss(qdb_text);
 	do {
 		string l;
 		getline(ss, l);
@@ -725,7 +725,7 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 	}
 	else {
 		qdb kb, query;
-		std::wstringstream ss(x);
+		std::stringstream ss(x);
 		int pr = parse(kb, query, ss, L"");
 		CLI_TRACE(dout << "parsing result:" << pr << std::endl);
 		if (pr) {
@@ -840,7 +840,7 @@ int main ( int argc, char** argv)
 
 				qdb kb,kb2;
 				int dummy_fins;
-				std::wstringstream ss(qdb_text);
+				std::stringstream ss(qdb_text);
 				auto pr = parse(kb, kb2, ss, input.name, dummy_fins);
 
 				if(pr == COMPLETE) {

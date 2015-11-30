@@ -1,0 +1,8 @@
+kb
+zero :a Nat.
+{?x :a Nat} => {?x :eq ?x}.
+fin.
+
+query
+?WHAT :eq ?WHAT
+fin.

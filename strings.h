@@ -208,12 +208,12 @@ pstring pstrtrim ( const wchar_t* s );
 inline pstring pstr(const std::string& s) { return pstr(ws(s)); }
 inline pstring pstr(const char* s) { return pstr(std::string(s)); }
 template<typename T> pstring tostr ( T t ) {
-	std::wstringstream s;
+	std::stringstream s;
 	s << t;
 	return pstr(s.str());
 }
 template<typename T> string _tostr ( T t ) {
-	std::wstringstream s;
+	std::stringstream s;
 	s << t;
 	return s.str();
 }
@@ -224,7 +224,7 @@ inline pstring gen_bnode_id ( string id = L"" ) {
 	if (id.size())
 		if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) 
 			return pstr(bnode_id_map[id]);
-	std::wstringstream ss;
+	std::stringstream ss;
 	ss << L"_:b" << ( blankNodeCounter++ );
 	return pstr(bnode_id_map[id] = ss.str());
 }

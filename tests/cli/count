@@ -3,8 +3,8 @@ fin.
 query
 a b c.
 fin.
-shouldbeunifys 0
-shouldbesteps 0
+#shouldbeunifys 0
+#shouldbesteps 0
 
 
 kb
@@ -14,5 +14,5 @@ query
 a b c.
 fin.
 #shouldbeunifys 1
-shouldbesteps 1
+#shouldbesteps 1
 

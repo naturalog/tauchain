@@ -169,7 +169,7 @@ private:
 	pnode readvar();
 	pnode readbnode();
 	void readprefix();
-	void preprocess(std::wistream& is, std::wstringstream& ss);
+	void preprocess(std::wistream& is, std::stringstream& ss);
 public:
 	nqparser();
 	~nqparser();

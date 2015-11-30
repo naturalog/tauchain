@@ -1,27 +1,15 @@
 CXX=clang++
 ###NEW= -DNEW
-ASAN= -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow -fsanitize-undefined-trap-on-error
+ASAN= -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow #-fsanitize-undefined-trap-on-error
 DBG= $(ASAN) -DDEBUG -g -ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls 
 CXXFLAGS= -c -O3 $(DBG) $(NEW) -std=c++1y -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
 LDFLAGS=  $(DBG) -L/usr/local/lib #-ldl -pthread -lrt
 OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
 
 
-all: tau
-tau: $(OBJECTS)
-	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
-#tau-new: CXXFLAGS += -DNEW
-#tau-new: $(OBJECTS) 
-#	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
+all: with_marpa
 
-%.o: %.cpp `${CXX} -std=c++11 $(CXXFLAGS) -M %.cpp`
-
-
-test1: univar.txt.cpp
-	clang++ $(ASAN) -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O3   univar.txt.cpp
-
-
-with_marpa: marpa_tau.o libmarpa/dist/.libs/libmarpa.so
+with_marpa: libmarpa/dist/.libs/libmarpa.so marpa_tau.o 
 
 libmarpa/dist/.libs/libmarpa.so:
 	git submodule init
@@ -31,6 +19,21 @@ libmarpa/dist/.libs/libmarpa.so:
 with_marpa: OBJECTS += marpa_tau.o
 with_marpa: CXXFLAGS += -Dwith_marpa  -I libmarpa/dist
 with_marpa: LDFLAGS += -Llibmarpa/dist/.libs -lmarpa  -lboost_regex
+
+
+tau: $(OBJECTS)
+	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
+#tau-new: CXXFLAGS += -DNEW
+#tau-new: $(OBJECTS) 
+#	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
+
+%.o: %.cpp `${CXX} -std=c++11 $(CXXFLAGS) -M %.cpp`
+
+
+univar.txt: univar.txt.cpp
+	clang++ $(ASAN) -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O3   univar.txt.cpp
+
+
 
 debug: CXXFLAGS += -DDEBUG
 release: CXXFLAGS -= -DDEBUG CXXFLAGS -= -ggdb CXXFLAGS += -O3 -NDEBUG

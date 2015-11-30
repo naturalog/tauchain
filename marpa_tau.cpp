@@ -132,7 +132,7 @@ extern bool irc;
 
 		string sym2str(sym s)
 		{
-			std::wstringstream sss;
+			std::stringstream sss;
 			if (!irc)
 				sss << L"(" << s << L")";
 			sss << sym2str_(s);
@@ -565,7 +565,7 @@ extern bool irc;
 								if (literals.find(arg_sym) == literals.end())
 									prvr->kb.add(prvr->make(sym2resid(arg_sym), xx, arg));
 
-								std::wstringstream arg_pred;
+								std::stringstream arg_pred;
 								arg_pred << L"http://idni.org/marpa#arg" << i;
 
 								prvr->kb.add(prvr->make(mkiri(pstr(arg_pred.str())), xx, arg));
@@ -975,7 +975,7 @@ extern bool irc;
 
 	string load_file(std::wistream &f)
 	{
-		std::wstringstream ss;
+		std::stringstream ss;
 		ss << f.rdbuf();
 		return ss.str();
 	}
