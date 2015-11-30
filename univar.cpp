@@ -5,7 +5,7 @@
 #include <string.h>
 #include <limits>
 
-//using namespace std;
+using namespace std;
 
 typedef intptr_t offset_t;//ptrdiff_t
 typedef unsigned char byte;
@@ -350,11 +350,11 @@ prover *op;
 
 
 typedef map<nodeid, vector<pair<Thing, Thing>>> ths_t;
-//garbage //todo rename
-std::vector<ep_t*> eps;
-vector<Locals*> constss;
-vector<Locals*> locals_templates;
-ths_t *ths_garbage;
+
+std::vector<ep_t*> eps_garbage;
+vector<Locals*> consts_garbage;
+vector<Locals*> locals_templates_garbage;
+ths_t * ths_garbage;
 
 //counters
 long steps = 0;
@@ -368,7 +368,7 @@ void check_pred(nodeid pr);
 rule_t seq(rule_t a, rule_t b);
 rule_t compile_rule(prover::ruleid r);
 void build_in();
-
+void build_in_facts();
 
 //endregion
 
@@ -432,7 +432,7 @@ static join_gen succeed_with_args_gen()
 
 static bool fail()
 {
-	setproc(L"fail");
+	setproc("fail");
 	TRACE(dout << "..." << endl;)
 	return false;
 }
@@ -441,7 +441,7 @@ static bool fail_with_args(Thing *_s, Thing *_o)
 {
 	(void)_s;
 	(void)_o;
-	setproc(L"fail_with_args");
+	setproc("fail_with_args");
 	TRACE(dout << "..." << endl;)
 	return false;
 }
@@ -455,7 +455,7 @@ coro dbg_fail()
 {
 	byte entry = 0;
 	return [entry]() mutable{
-		setproc(L"dbg_fail lambda");
+		setproc("dbg_fail lambda");
 		TRCEEE;
 
 		switch(entry)
@@ -473,7 +473,7 @@ pred_t dbg_fail_with_args()
 {
 	int entry = 0;
 	return [entry](Thing *_s, Thing *_o) mutable{
-		setproc(L"dbg_fail_with_args lambda");
+		setproc("dbg_fail_with_args lambda");
 		TRCEEE;
 
 		(void)_s;
@@ -592,10 +592,10 @@ string str(const Thing *_x)
 		case BOUND: {
 			const Thing *thing = get_thing(x);
 			ASSERT(thing);
-			return L"var(" + str(thing) + L")";
+			return "var(" + str(thing) + ")";
 		}
 		case UNBOUND:
-			return L"var()";
+			return "var()";
 		case NODE: {
 			const termid term = get_term(x);
 			ASSERT(term);
@@ -604,22 +604,22 @@ string str(const Thing *_x)
 		case LIST: {
 			const size_t size = get_size(x);
 			stringstream r;
-			r << L"{" << size << L" items}(";
+			r << "{" << size << " items}(";
 			for (size_t i = 0; i < size; i++) {
 				if (i != 0) r << " ";
 				r << str(_x + 1 + (i*2));
 			}
 			if (!size)
 				r << " ";
-			return r.str() + L")";
+			return r.str() + ")";
 		}
 		case OFFSET: {
 			const offset_t offset = get_offset(x);
 			stringstream r;
-			r << L"<offset ";
+			r << "<offset ";
 			if (offset >= 0)
-				r << L"+";
-			r << offset << L">->";
+				r << "+";
+			r << offset << ">->";
 			r << str(_x + offset);
 			return r.str();
 		}
@@ -710,7 +710,7 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg
 			, origa, origb
 			#endif
 			]() mutable {
-				setproc(L"var unify lambda");
+				setproc("var unify lambda");
 				TRCEEE;
 				switch (entry) {
 					case 0: {
@@ -782,7 +782,7 @@ coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb)
 	EEE;
 	return [entry, x, y, origa, origb]() mutable {
 		ASSERT(is_unbound(*x));
-		setproc(L"unbound_succeed lambda");
+		setproc("unbound_succeed lambda");
 		TRACE(dout << str(x) << " " << str(y) << endl);
 		TRCEEE;
 		switch (entry) {
@@ -805,28 +805,28 @@ coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb)
 
 //region sprint
 
-wstring sprintVar(wstring label, Thing *v){
+string sprintVar(string label, Thing *v){
 	stringstream wss;
 	wss << label << ": (" << v << ")" << str(v);
 	return wss.str();
 }
 
-wstring sprintPred(wstring label, nodeid pred){
+string sprintPred(string label, nodeid pred){
 	stringstream wss;
 	wss << label << ": (" << pred << ")" << dict[pred];
 	return wss.str();
 }
 
-wstring sprintThing(wstring label, Thing *t){
+string sprintThing(string label, Thing *t){
 	stringstream wss;
 	wss << label << ": [" << t << "]" << str(t);
 	return wss.str();
 }
 
-wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
+string sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 	stringstream wss;
-	wss << sprintThing(L"Ds", Ds) << ", " << sprintThing(L"s",s) << endl;
-	wss << sprintThing(L"Do", Do) << ", " << sprintThing(L"o",o);
+	wss << sprintThing("Ds", Ds) << ", " << sprintThing("s",s) << endl;
+	wss << sprintThing("Do", Do) << ", " << sprintThing("o",o);
 	return wss.str();
 }
 
@@ -839,24 +839,28 @@ wstring sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 
 void free_garbage()
 {
-	for (auto x: garbage2)
+	for (auto x: eps_garbage)
 	{
 		ASSERT(!x->size());
 		delete x;
 	}
-	garbage2.clear();
+	eps_garbage.clear();
 
-	for (auto x: garbage)
+	for (auto x: consts_garbage)
 		delete x;
-	garbage.clear();
+	consts_garbage.clear();
+	for (auto x: locals_templates_garbage)
+		delete x;
+	locals_templates_garbage.clear();
+
 }
 
 
 void free_garbage_nonassert()
 {
-	for (auto x: garbage2)
+	for (auto x: eps_garbage)
 		delete x;
-	garbage2.clear();
+
 }
 
 
@@ -947,8 +951,8 @@ void compile_kb()
 	//preds : 	std::map<old::nodeid, pred_t>
 	preds.clear();
 
-	//eps, locals_templates, constss
-	take_out_garbage();
+	//eps, locals_templates_garbage, consts_garbage
+	free_garbage();
 
 	//Loop over the heads starting from the end and going backwards.
 	//Pred_index maps the nodeid for each unique pred to a list of rules
@@ -1000,7 +1004,7 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 	coro uc;
 	TRC(int call = 0;)
 	return [a,b,c, uc, entry TRCCAP(call)]() mutable{
-		setproc(L"unifjoin1");
+		setproc("unifjoin1");
 		TRCEEE;
 		TRC(call++;)
 
@@ -1114,7 +1118,7 @@ rule_t seq(rule_t a, rule_t b){
 	EEE;
 	TRC(int call = 0;)
 	return [a, b, entry TRCCAP(call)](Thing *Ds, Thing *Do) mutable{
-		setproc(L"seq1");
+		setproc("seq1");
 		TRC(call++;)
 		TRACE(dout << "call: " << call << endl;)
 		switch(entry){
@@ -1161,7 +1165,7 @@ bool islist(termid t)
 	dout << t->p << endl;
 	dout << &dict << endl;
 	dout << " " << dict[t->p].value  << endl;*/
-	return *dict[t->p].value == L".";
+	return *dict[t->p].value == ".";
 }
 
 PredParam maybe_head(PredParam pp, termid head, termid x)
@@ -1536,9 +1540,9 @@ rule_t compile_rule(prover::ruleid r)
 	locals_map lm, cm;
 	//they will be needed after this func is over so we allocate them on the heap
 	Locals &locals_template = *new Locals();
-	locals_templates.push_back(&locals_template);//and register them for garbage collection
+	locals_templates_garbage.push_back(&locals_template);//and register them for garbage collection
 	Locals *consts_ = new Locals();
-	constss.push_back(consts_);
+	consts_garbage.push_back(consts_);
 	Locals &consts = *consts_;
 
 	make_locals(locals_template, consts, lm, cm, head, body);
@@ -1563,7 +1567,7 @@ rule_t compile_rule(prover::ruleid r)
 	coro suc, ouc;
 	TRC(int call = 0;)
 	ep_t *ep = new ep_t();//ep is one per rule just as locals_template and consts
-	eps.push_back(ep);
+	eps_garbage.push_back(ep);
 
 	//where to memcpy locals from and what length
 	auto locals_data = locals_template.data();
@@ -1572,7 +1576,7 @@ rule_t compile_rule(prover::ruleid r)
 	const bool has_body = body.size(); // does this rule have a body or is it a fact?
 
 	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
-		setproc(L"rule");
+		setproc("rule");
 		TRC(++call;)
 		TRACE(dout << op->formatr(r) << endl;)
 		TRACE(dout << "call=" << call << endl;)
@@ -1667,7 +1671,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 
 	if (is_list(t))
 	{
-		const wstring head = listid();
+		const string head = listid();
 		for (size_t i = 0; i < get_size(t); i++) {
 			auto x = (t_ + 1 + (i*2));
 			r.second[head].emplace_back(thing2node(x, r));
@@ -1686,7 +1690,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 
 void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
 {
-	r.first[L"@default"]->push_back(
+	r.first["@default"]->push_back(
 		make_shared<quad>(
 			quad(
 				thing2node(s, r),
@@ -1723,7 +1727,7 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 
 yprover::~yprover()
 {
-	take_out_garbage();
+	free_garbage();
 	TRACE(dout << "deleting old prover" << endl;)
 	delete op;
 }
@@ -1827,9 +1831,9 @@ void yprover::query(const qdb& goal){
 	dout << KGRN << "RUN" << KNRM << endl;
 	while (coro( (Thing*)666,(Thing*)666, locals.data() )) {
 		nresults++;
-		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
+		dout << KCYN << "RESULT " << KNRM << nresults << ":";
 		qdb r;
-		r.first[L"@default"] = mk_qlist();
+		r.first["@default"] = mk_qlist();
 
 		//go over the triples of the query to print them out
 		for(auto i: q)
@@ -1837,7 +1841,7 @@ void yprover::query(const qdb& goal){
 			Thing *s = &fetch_thing(i->s, locals, consts, lm, cm);
 			Thing *o = &fetch_thing(i->o, locals, consts, lm, cm);
 
-			TRACE(dout << sprintThing(L"Subject", s) << " Pred: " << dict[i->p] << " "  << sprintThing(L"Object", o) << endl;)
+			TRACE(dout << sprintThing("Subject", s) << " Pred: " << dict[i->p] << " "  << sprintThing("Object", o) << endl;)
 
 			//lets try to get the original names of unbound vars
 			Thing n1, n2;
@@ -1859,7 +1863,7 @@ void yprover::query(const qdb& goal){
 
 		if (result_limit && nresults == result_limit) {
 			dout << "STOPPING at " << KRED << nresults << KNRM << " results."<< endl;
-			free_eps_nonassert();
+			free_garbage_nonassert();
 			goto out;
 		}
 
@@ -1882,37 +1886,40 @@ void add_facts(vector<vector<nodeid>> facts)
 	///std::sort(myList.begin(), myList.end(), [](int x, int y){ return std::abs(x) < std::abs(y); });
 	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
 
-	auto ths = new ths_t;;
-	ths_garbage = ths;///.push_back(ths);
-	
+	ths_t &ths = *new ths_t;
+	ths_garbage = &ths;///.push_back(ths);
+
 	for (auto f: facts)
 		ths[f[1]].push_back({
 			create_node(op->make(f[0])),
-			create_node(op->make(f[2])));
+			create_node(op->make(f[2]))});
 	
 	coro suc, ouc;
 	for (auto ff:ths)
 	{
-		const auto &pairs = ff.second;
-		builtins[ff.first].push_back([suc,ouc,const pairs](Thing *s_, Thing *o_) 
-		mutable{
-		switch(entry){
-		case 0:
-			for(auto &p : pairs){
-				suc = unify(s_,&p.first);
-				while(suc()){
-					ouc = unify(o_,&p.second);
-					while(ouc())
-					{
-						entry = LAST;
-						return true;
-		case_LAST:;
+		auto &pairs = ff.second;
+		EEE;
+		size_t pi = 0;
+		builtins[ff.first].push_back([suc,ouc,pi,pairs,entry](Thing *s_, Thing *o_)	mutable{
+			switch(entry)
+			{
+			case 0:
+				if (pi < pairs.size())
+				{
+					suc = unify(s_,&pairs[pi].first);
+					while(suc()){
+						ouc = unify(o_,&pairs[pi].second);
+						while(ouc())
+						{
+							entry = LAST;
+							return true;
+			case_LAST:;
+						}
 					}
 				}
+			END;
 			}
-			END; 
-		}
-		}
+		});
 	} 
 }
 	
@@ -1942,7 +1949,7 @@ add_facts({
 {rdfsisDefinedBy, rdfsdomain, rdfsResource},
 {rdfsisDefinedBy, rdfsrange, rdfsResource},
 {rdfsisDefinedBy, rdfssubPropertyOf, rdfsseeAlso},
-{mkiri(pstr(L":HMC")), rdfType, mkiri(pstr(L":banana"))},
+{mkiri(pstr(":HMC")), rdfType, mkiri(pstr(":banana"))},
 {rdfslabel, rdfsdomain, rdfsResource},
 {rdfslabel, rdfsrange, rdfsLiteral},
 {rdfsmember, rdfsdomain, rdfsContainer},
@@ -2203,7 +2210,7 @@ void build_in()
 <koo7> cool*/
 
 /*
-	old::string link = L"http://www.w3.org/TR/rdf-schema/#ch_range";
+	old::string link = "http://www.w3.org/TR/rdf-schema/#ch_range";
 	auto link_node = dict.set(mkiri(pstr(link)));
 	builtins[link_node].push_back(
 		[entry, ... ](Thing *s_, Thing *o_) mutable {
@@ -2219,7 +2226,7 @@ void build_in()
 
 	//sum: The subject is a list of numbers. The object is calculated as the arithmentic sum of those numbers.
 
-	string bu = L"http://www.w3.org/2000/10/swap/math#sum";
+	string bu = "http://www.w3.org/2000/10/swap/math#sum";
 	auto bui = dict.set(mkiri(pstr(bu)));
 	builtins[bui].push_back(
 			[r, bu, entry, ouc, s, ss](Thing *s_, Thing *o_) mutable {
@@ -2252,7 +2259,7 @@ void build_in()
 						ss << total;
 
 						r = new(Thing);
-						*r = create_node(op->make(dict[mkliteral(pstr(ss.str()), pstr(L"XSD_INTEGER"), 0)], 0, 0));
+						*r = create_node(op->make(dict[mkliteral(pstr(ss.str()), pstr("XSD_INTEGER"), 0)], 0, 0));
 
 						ouc = unify(o_, r);
 					}
@@ -2274,7 +2281,7 @@ void build_in()
 
 	//outputString	The subject is a key and the object is a string, where the strings are to be output in the order of the keys. See cwm --strings in cwm --help.
 
-	bu = L"http://www.w3.org/2000/10/swap/log#outputString";
+	bu = "http://www.w3.org/2000/10/swap/log#outputString";
 	bui = dict.set(mkiri(pstr(bu)));
 	builtins[bui].push_back(
 			[bu, entry](Thing *s_, Thing *o_) mutable {
@@ -2308,7 +2315,7 @@ void build_in()
 
 	//@prefix list: <http://www.w3.org/2000/10/swap/list#>.
 	//list last item
-	bu = L"http://www.w3.org/2000/10/swap/list#last";
+	bu = "http://www.w3.org/2000/10/swap/list#last";
 	bui = dict.set(mkiri(pstr(bu)));
 	builtins[bui].push_back(
 			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
@@ -2338,7 +2345,7 @@ void build_in()
 
 	//nope
 	//item in list
-	bu = L"http://www.w3.org/2000/10/swap/list#in";
+	bu = "http://www.w3.org/2000/10/swap/list#in";
 	bui = dict.set(mkiri(pstr(bu)));
 	builtins[bui].push_back(
 			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {

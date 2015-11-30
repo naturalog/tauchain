@@ -24,18 +24,18 @@ bidict& dict = *new bidict;
 /*
 void initRDFS(){
 
-	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
-	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
-	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
-	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
-	rdfsClass = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Class")));
-	rdfssubClassOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subClassOf")));
-	rdfssubPropertyOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
-	rdfsContainerMembershipProperty = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
-	rdfsmember = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#member")));
-	rdfsDatatype = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Datatype")));
-	rdfsLiteral = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Literal")));
-	rdfProperty = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
+	rdfType = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
+	rdfsResource = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Resource")));
+	rdfsdomain = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#domain")));
+	rdfsrange =  set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#range")));
+	rdfsClass = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Class")));
+	rdfssubClassOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subClassOf")));
+	rdfssubPropertyOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
+	rdfsContainerMembershipProperty = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
+	rdfsmember = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#member")));
+	rdfsDatatype = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Datatype")));
+	rdfsLiteral = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Literal")));
+	rdfProperty = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
 }
 */
 
@@ -45,42 +45,42 @@ void initRDFS(){
 
 void bidict::init() {
 #ifdef with_marpa
-	file_contents_iri = set(mkiri(pstr(L"http://idni.org/marpa#file_contents")));
-	marpa_parser_iri = set(mkiri(pstr(L"http://idni.org/marpa#parser")));
-	marpa_parse_iri = set(mkiri(pstr(L"http://idni.org/marpa#parse")));
+	file_contents_iri = set(mkiri(pstr("http://idni.org/marpa#file_contents")));
+	marpa_parser_iri = set(mkiri(pstr("http://idni.org/marpa#parser")));
+	marpa_parse_iri = set(mkiri(pstr("http://idni.org/marpa#parse")));
 #endif
-	GND = set (mkiri(pstr( L"GND" )));
-	A = set(mkiri(pstr(L"a")));
+	GND = set (mkiri(pstr( "GND" )));
+	A = set(mkiri(pstr("a")));
 
-	logequalTo = set (mkiri(pstr( L"http://www.w3.org/2000/10/swap/log#equalTo")));
-	lognotEqualTo = set (mkiri(pstr(L"http://www.w3.org/2000/10/swap/log#notEqualTo")));
-	False = set(mkliteral(pstr(L"false"), XSD_BOOLEAN, 0));
+	logequalTo = set (mkiri(pstr( "http://www.w3.org/2000/10/swap/log#equalTo")));
+	lognotEqualTo = set (mkiri(pstr("http://www.w3.org/2000/10/swap/log#notEqualTo")));
+	False = set(mkliteral(pstr("false"), XSD_BOOLEAN, 0));
 
-	rdffirst = set(mkiri(RDF_FIRST/*Tpstr(L"rdf:first")*/));
-	rdfrest = set(mkiri(RDF_REST/*pstr(L"rdf:rest")*/));
-	rdfnil = set(mkiri(RDF_NIL/*Tpstr(L"rdf:nil")*/));
-	Dot = set(mkiri(pstr(L".")));
+	rdffirst = set(mkiri(RDF_FIRST/*Tpstr("rdf:first")*/));
+	rdfrest = set(mkiri(RDF_REST/*pstr("rdf:rest")*/));
+	rdfnil = set(mkiri(RDF_NIL/*Tpstr("rdf:nil")*/));
+	Dot = set(mkiri(pstr(".")));
 
-	rdfType = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));//should not be capitalized, i will refactor it in clion later
-	rdfsResource = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Resource")));
-	rdfsdomain = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#domain")));
-	rdfsrange =  set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#range")));
-	rdfsClass = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Class")));
-	rdfssubClassOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subClassOf")));
-	rdfssubPropertyOf = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
-	rdfsContainerMembershipProperty = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
-	rdfsmember = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#member")));
-	rdfsDatatype = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Datatype")));
-	rdfsLiteral = set(mkiri(pstr(L"http://www.w3.org/2000/01/rdf-schema#Literal")));
-	rdfProperty = set(mkiri(pstr(L"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
+	rdfType = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));//should not be capitalized, i will refactor it in clion later
+	rdfsResource = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Resource")));
+	rdfsdomain = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#domain")));
+	rdfsrange =  set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#range")));
+	rdfsClass = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Class")));
+	rdfssubClassOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subClassOf")));
+	rdfssubPropertyOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
+	rdfsContainerMembershipProperty = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
+	rdfsmember = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#member")));
+	rdfsDatatype = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Datatype")));
+	rdfsLiteral = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Literal")));
+	rdfProperty = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
 //	initRDFS();
 
-//	rdfList = set(mkiri(pstr(L"rdf:List")));
-//	_dlopen = set(mkiri(pstr(L"dlfcn:dlopen")));
-//	_dlerror = set(mkiri(pstr(L"dlfcn:dlerror")));
-//	_dlsym = set(mkiri(pstr(L"dlfcn:dlsym")));
-//	_dlclose = set(mkiri(pstr(L"dlfcn:dlclose")));
-//	_invoke = set(mkiri(pstr(L"dlfcn:invoke")));
+//	rdfList = set(mkiri(pstr("rdf:List")));
+//	_dlopen = set(mkiri(pstr("dlfcn:dlopen")));
+//	_dlerror = set(mkiri(pstr("dlfcn:dlerror")));
+//	_dlsym = set(mkiri(pstr("dlfcn:dlsym")));
+//	_dlclose = set(mkiri(pstr("dlfcn:dlclose")));
+//	_invoke = set(mkiri(pstr("dlfcn:invoke")));
 }
 
 void bidict::set ( const std::vector<node>& v ) {
@@ -151,7 +151,7 @@ bool bidict::has ( node v ) const {
 
 string bidict::tostr() {
 	std::stringstream s;
-	for ( auto x : pi ) s << x.first.tostring() << L" := " << x.second << endl;
+	for ( auto x : pi ) s << x.first.tostring() << " := " << x.second << endl;
 	return s.str();
 }
 
@@ -159,9 +159,9 @@ string dstr ( nodeid p, bool escape ) {
 	if (!deref) return *tostr(p);
 	string s = dict[p].tostring();
 	if (escape) {
-		replace_all(s, L"\\", L"\\\\");
-		replace_all(s, L"\"", L"\\\"");
-		replace_all(s, L"'", L"\\'");
+		replace_all(s, "\\", "\\\\");
+		replace_all(s, "\"", "\\\"");
+		replace_all(s, "'", "\\'");
 	}
 	if (dict[p]._type == node::IRI)
 		return maybe_shorten_uri(s);
@@ -170,8 +170,8 @@ string dstr ( nodeid p, bool escape ) {
 }
 string maybe_shorten_uri(string s)
 {
-	if ( !shorten ||  s.find ( L"#" ) == string::npos ) return s;
-	return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
+	if ( !shorten ||  s.find ( "#" ) == string::npos ) return s;
+	return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
 }
 
 bool endsWith ( const string& x, const string& y ) {
@@ -188,17 +188,17 @@ string lower ( const string& s_ ) {
 	return s;
 }
 
-string KNRM = L"\x1B[0m";
-string KRED = L"\x1B[31m";
-string KGRN = L"\x1B[32m";
-string KYEL = L"\x1B[33m";
-string KBLU = L"\x1B[34m";
-string KMAG = L"\x1B[35m";
-string KCYN = L"\x1B[36m";
-string KWHT = L"\x1B[37m";
+string KNRM = "\x1B[0m";
+string KRED = "\x1B[31m";
+string KGRN = "\x1B[32m";
+string KYEL = "\x1B[33m";
+string KBLU = "\x1B[34m";
+string KMAG = "\x1B[35m";
+string KCYN = "\x1B[36m";
+string KWHT = "\x1B[37m";
 
 string prover::format(termid id, bool json) {
-	if (!id) return L"{}";
+	if (!id) return "{}";
 	if (!id->p) throw 0;
 	return format(*id,json);
 }
@@ -206,33 +206,33 @@ string prover::format(termid id, bool json) {
 string prover::format(const term& p, bool json) {
 	if (!json) {
 		std::stringstream ss;
-		if (level > 100) ss << L" [" <</* id << ':' <<*/ p.p << ']';
+		if (level > 100) ss << " [" <</* id << ':' <<*/ p.p << ']';
 		ss << dstr(p.p, false);
 		if (p.s) ss << L'('<< prover::format(p.s) << L',' << prover::format(p.o) << L')';
 		return ss.str();
 	}
 	std::stringstream ss;
-	ss << L"{pred:\"" << dstr(p.p, true) << L"\",args:[";
-	if (p.s) ss << format (p.s, true) << L",";
+	ss << "{pred:\"" << dstr(p.p, true) << "\",args:[";
+	if (p.s) ss << format (p.s, true) << ",";
 	if (p.o) ss << format (p.o, true);
-	ss << L"]}";
+	ss << "]}";
 	return ss.str();
 }
 
 string prover::formatp(shared_ptr<proof> p) {
 	std::stringstream ss;
-	ss 	<< L"rule:   " << formatr(p->rule) << endl
-		<< L"prev:   " << p->prev << endl
-		<< L"subst:  " << formats(p->s) << endl
-		<< L"ground: " << endl << formatg(p->g(this)) << endl;
+	ss 	<< "rule:   " << formatr(p->rule) << endl
+		<< "prev:   " << p->prev << endl
+		<< "subst:  " << formats(p->s) << endl
+		<< "ground: " << endl << formatg(p->g(this)) << endl;
 	return ss.str();
 }
 void prover::printp(shared_ptr<proof> p) {
-	dout << KCYN /*<< indent()*/ << L"rule:   " << formatr(p->rule) <<endl<<indent();
-	if (p->prev) dout << L"prev:   " << p->prev <<endl<<indent()<< L"subst:  ";
-	else dout << L"prev:   (null)"<<endl<<indent()<<"subst:  ";
+	dout << KCYN /*<< indent()*/ << "rule:   " << formatr(p->rule) <<endl<<indent();
+	if (p->prev) dout << "prev:   " << p->prev <<endl<<indent()<< "subst:  ";
+	else dout << "prev:   (null)"<<endl<<indent()<<"subst:  ";
 	prints(p->s);
-	dout <<endl<<indent()<< L"ground: " << endl;
+	dout <<endl<<indent()<< "ground: " << endl;
 	++_indent;
 	printg(p->g(this));
 	--_indent;
@@ -240,7 +240,7 @@ void prover::printp(shared_ptr<proof> p) {
 }
 
 string prover::formats(const subs & s, bool json) {
-	if (s.empty()) return L"";
+	if (s.empty()) return "";
 	std::stringstream ss;
 	std::map<string, string> r;
 	for (auto x : s)
@@ -252,7 +252,7 @@ string prover::formats(const subs & s, bool json) {
 void prover::prints(const subs & s) {
 	dout << formats(s, false);
 //	for (auto x : s)
-//		dout << dstr(x.first) << L" / " << format(x.second) << ' ';
+//		dout << dstr(x.first) << " / " << format(x.second) << ' ';
 }
 
 string prover::format(const termset& l, bool json) {
@@ -275,7 +275,7 @@ void prover::printterm_subs(termid id, const subs & s) {
 		dout << L' ';
 	}
 	if(s.find(p.p) != s.end()) {
-		dout << L" (" << format(s.get(p.p)) << L" )";
+		dout << " (" << format(s.get(p.p)) << " )";
 	}
 	if (p.o) {
 		dout << L',';
@@ -295,26 +295,26 @@ void prover::printl_subs(const termset& l, const subs & s) {
 
 void prover::printr_subs(ruleid r, const subs & s) {
 	printl_subs(kb.body()[r], s);
-	dout << L" => ";
+	dout << " => ";
 	printterm_subs(kb.head()[r], s);
 }
 */
 string prover::formatr(ruleid r, bool json) {
 	std::stringstream ss;
 	if (!json) {
-		ss << L"{ ";
+		ss << "{ ";
 		if (!kb.body()[r].empty()) ss << format(kb.body()[r]);
-		ss  << L"} => ";
+		ss  << "} => ";
 		if (kb.head()[r]) ss << format(kb.head()[r]);
-	 	ss << L".";
+	 	ss << ".";
 		return ss.str();
 	}
-	ss << L"{head:" << format(kb.head()[r],true) << L",body:";
+	ss << "{head:" << format(kb.head()[r],true) << ",body:";
 //	for (size_t n = 0; n < kb.bodies().size(); ++n) {
 		ss << format(kb.body()[r], true);
 //		if (n != (kb.bodies().size()-1)) ss << L',';
 //	}
- 	ss << L"}";
+ 	ss << "}";
 	return ss.str();
 }
 
@@ -346,8 +346,8 @@ void prover::printg(const ground& g) {
 #ifdef JSON
 pobj term::json(const prover& pr) const {
 	pobj r = mk_somap_obj(), l;
-	(*r->MAP())[L"pred"] = mk_str_obj(dict[p].tostring());
-	(*r->MAP())[L"args"] = l = mk_olist_obj();
+	(*r->MAP())["pred"] = mk_str_obj(dict[p].tostring());
+	(*r->MAP())["args"] = l = mk_olist_obj();
 	if (s) l->LIST()->push_back(s->json(pr));
 	if (o) l->LIST()->push_back(o->json(pr));
 	return r;
@@ -369,7 +369,7 @@ void prover::printe() {
 			dout << indent() << format(x.first) << " under subst: " << fsubs(x.second);
 			TRACE(MARPA(if (x.second.size() > 1))
 				  {
-						  dout << L" <= " << endl;
+						  dout << " <= " << endl;
 						  printg(x.second);
 				  }
 				dout << endl
@@ -384,9 +384,9 @@ string indent() {
 	std::stringstream ss;
 //	size_t sz = proc.size();
 	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
-		string str = L"(";
+		string str = "(";
 		str += *it;
-		str += L") ";
+		str += ") ";
 		ss << std::setw(8) << str;
 	}
 	ss << "    " << std::setw(_indent * 2);
@@ -395,11 +395,6 @@ string indent() {
 
 _setproc:: _setproc(const string& p) {
 	proc.push_front(p);
-	++_indent;
-}
-
-_setproc:: _setproc(const std::string& p) {
-	proc.push_front(ws(p));
 	++_indent;
 }
 
@@ -414,15 +409,14 @@ pstring wstrim(string s) {
 }
 
 pstring pstrtrim ( const string& s ) { string ss = s; trim(ss);return std::make_shared<string> ( ss ); } 
-pstring pstrtrim ( const wchar_t* s ) { if (!s) return 0; return pstrtrim ( string(s) ); }
+pstring pstrtrim ( const char* s ) { if (!s) return 0; return pstrtrim ( string(s) ); }
 
 /* ws() converts std::wstring to std::string and back */
 string ws(const std::string& s) { return string(s.begin(), s.end()); }
-std::string ws(const string& s) { return std::string(s.begin(), s.end()); }
 std::string ws(pstring s) { return ws(*s); }
 
 
-pstring wstrim(const wchar_t* w) { string s = w; return wstrim(s); }
+pstring wstrim(const char* w) { string s = w; return wstrim(s); }
 
 struct cmpstr { 
 	bool operator()(const pstring& x, const pstring& y) const {
@@ -466,8 +460,8 @@ pobj prover::json(const subs & s) const {
 
 pobj prover::json(ruleid t) const {
 	pobj m = mk_somap_obj();
-	(*m->MAP())[L"head"] = kb.head()[t]->json(*this);
-	(*m->MAP())[L"body"] = json(kb.body()[t]);
+	(*m->MAP())["head"] = kb.head()[t]->json(*this);
+	(*m->MAP())["body"] = json(kb.body()[t]);
 	return m;
 }
 
@@ -475,8 +469,8 @@ pobj prover::json(const ground& g) const {
 	pobj l = mk_olist_obj();
 	for (auto x : g) {
 		psomap_obj o = mk_somap_obj();
-		(*o->MAP())[L"src"] = json(x.first);
-		if (x.second) (*o->MAP())[L"env"] = json(*x.second);
+		(*o->MAP())["src"] = json(x.first);
+		if (x.second) (*o->MAP())["env"] = json(*x.second);
 		l->LIST()->push_back(o);
 	}
 	return l;
@@ -488,10 +482,10 @@ pobj prover::ejson() const {
 		polist_obj l = mk_olist_obj();
 		for (auto y : x.second) {
 			psomap_obj t = mk_somap_obj(), t1;
-			(*t->MAP())[L"head"] = y.first->json(*this);
-			(*t->MAP())[L"body"] = t1 = mk_somap_obj();
-			(*t1->MAP())[L"pred"] = mk_str_obj(L"GND");
-			(*t1->MAP())[L"args"] = json(y.second);
+			(*t->MAP())["head"] = y.first->json(*this);
+			(*t->MAP())["body"] = t1 = mk_somap_obj();
+			(*t1->MAP())["pred"] = mk_str_obj("GND");
+			(*t1->MAP())["args"] = json(y.second);
 			l->LIST()->push_back(t);
 		}
 		(*o->MAP())[dstr(x.first)] = l;
@@ -500,17 +494,17 @@ pobj prover::ejson() const {
 }
 */
 string prover::ruleset::format() const {
-	setproc(L"ruleset::format");
+	setproc("ruleset::format");
 	std::stringstream ss;
 	ss << L'['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
-		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : L"")<<L"\":[";
+		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : "")<<"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
 			ss << p->formatr(*iit, true);
 			if (++iit != it->second.end()) ss << L',';
 			ss << endl;
 		}
-		ss << L"]}";
+		ss << "]}";
 		if (++it != r2id.end()) ss << L',';
 	}
 	ss << L']';
@@ -523,26 +517,26 @@ int unique_list_id = 0;
 /*string _listid()
 {
         std::stringstream ss;
-        ss << L"_:list" << unique_list_id;
+        ss << "_:list" << unique_list_id;
         return ss.str();
 };
 string list_bnode_name(int item) 
 { 
         std::stringstream ss;
         ss << _listid();
-        ss << L"." << item;        
+        ss << "." << item;
         return ss.str();
 };*/
 string _listid()
 {
 	std::stringstream ss;
-	ss << L"_:list" << unique_list_id;
+	ss << "_:list" << unique_list_id;
 	return ss.str();
 };
 string list_bnode_name(int item) 
 {
 	std::stringstream ss;
-	ss << _listid() << L"." << item;
+	ss << _listid() << "." << item;
 	return ss.str();
 };
 string listid()

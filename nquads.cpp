@@ -29,7 +29,7 @@ iswspace:
 //ws*,'{',ws*,'}',return
 //ws*,'{',ws*,{~'}'}, << (*this)(s,*r) >>
 pnode nqparser::readcurly() {
-	setproc(L"readcurly");
+	setproc("readcurly");
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
 
@@ -73,7 +73,7 @@ pnode nqparser::readcurly() {
 // L'(',ws*,{~L')'},X,ws*,{~L')'},readany_success,ws*,((L'.',ws*)|{~(L'.' | L'}'}),{L')'},ws*
 
 pnode nqparser::readlist() {
-	setproc(L"readlist");
+	setproc("readlist");
 
 	//We don't skip over any white-space here?
 
@@ -112,7 +112,7 @@ pnode nqparser::readlist() {
 		//Attempt to readany(true) into pn. If we fail, throw an error.
 		if (!(pn = readany(true)))
 			//or literal apparently?
-			throw wruntime_error(string(L"expected iri or bnode or list in list: ") + string(s,0,48));
+			throw runtime_error(string("expected iri or bnode or list in list: ") + string(s,0,48));
 		
 		//**needs comments**
 		pnode cons = mkbnode(pstr(list_bnode_name()));
@@ -144,7 +144,7 @@ pnode nqparser::readlist() {
 
 		//If the next character is L'}', then throw a run-time error.
 		//**needs comments**
-		if (*s == L'}') throw wruntime_error(string(L"expected { inside list: ") + string(s,0,48));
+		if (*s == L'}') throw runtime_error(string("expected { inside list: ") + string(s,0,48));
 
 	}
 	//Can we encounter an infinite loop here? Let's find out.
@@ -163,16 +163,16 @@ pnode nqparser::readlist() {
 
 //iswspace*, 0, error
 //iswspace*, {!0}, L'<',!(L'>')*,L'>', return
-//iswspace*, {!0}, {!L'<'}, L"=>", return
-//iswspace*, {!0}, {!L'<'}, !{L"=>"}, (~special)*, {L"true"}, return
-//iswspace*, ..., (~special)*, {~(L"true")}, {L"false"}, return
-//iswspace*, ..., (~special)*, {~(L"true" | L"false")}, {atoi}, return
-//iswspace*, ..., (~special)*, {~(L"true" | L"false" | atoi)}, {atof}, return
-//iswspace*, ..., (~special)*, {~(L"true" | L"false" | atoi | atof)}...other tokenization,
+//iswspace*, {!0}, {!L'<'}, "=>", return
+//iswspace*, {!0}, {!L'<'}, !{"=>"}, (~special)*, {"true"}, return
+//iswspace*, ..., (~special)*, {~("true")}, {"false"}, return
+//iswspace*, ..., (~special)*, {~("true" | "false")}, {atoi}, return
+//iswspace*, ..., (~special)*, {~("true" | "false" | atoi)}, {atof}, return
+//iswspace*, ..., (~special)*, {~("true" | "false" | atoi | atof)}...other tokenization,
 //		**the string-pointer has already advanced as far as it will go in
 //		**readiri(), the rest is tokenization.
 pnode nqparser::readiri() {
-	setproc(L"readiri");
+	setproc("readiri");
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
 
@@ -215,15 +215,15 @@ pnode nqparser::readiri() {
 
 	//Check if the string you found represents one of these literal values:
 	//Why literals when we're doing readiri?
-	if (lower(*iri) == L"true")
-		return mkliteral(pstr(L"true"), XSD_BOOLEAN, 0);
-	if (lower(*iri) == L"false")
-		return mkliteral(pstr(L"false"), XSD_BOOLEAN, 0);
+	if (lower(*iri) == "true")
+		return mkliteral(pstr("true"), XSD_BOOLEAN, 0);
+	if (lower(*iri) == "false")
+		return mkliteral(pstr("false"), XSD_BOOLEAN, 0);
 	if (std::atoi(ws(*iri).c_str()))
 		return mkliteral(iri, XSD_INTEGER, 0);
 	if (std::atof(ws(*iri).c_str()))
 		return mkliteral(iri, XSD_DOUBLE, 0);
-	//??if (*iri == L"0") return mkliteral(iri, XSD_INTEGER, 0);
+	//??if (*iri == "0") return mkliteral(iri, XSD_INTEGER, 0);
 
 
 	//So we didn't determine it to be a literal. Check if the string contains ':',
@@ -259,10 +259,10 @@ pnode nqparser::readiri() {
 
 //(iswspace | L',' | L';' | L'.' | L'}' | L'{' | L')') as special.
 
-//iswspace*, {~(L"_:")}, return
-//iswspace*, L"_:",(~special)*, return.
+//iswspace*, {~("_:")}, return
+//iswspace*, "_:",(~special)*, return.
 pnode nqparser::readbnode() {
-	setproc(L"readbnode");
+	setproc("readbnode");
 
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
@@ -291,13 +291,13 @@ pnode nqparser::readbnode() {
 
 
 //iswspace*, <!(L'@')>, return
-//iswspace*, L'@', <!(L"@prefix ")>, error
-//iswspace*, L"@prefix ", (~(L':'|0|'\n'))*,(0|\n),error
-//iswspace*, L"@prefix ", (~(L':'|0|'\n'))*, L':',(0|\n),error
-//iswspace*, L"@prefix ", (~(L':'|0|'\n'))*, L':',~(0|\n), readiri()_error, error
-//iswspace*, L"@prefix ", (~(L':'|0|'\n'))*, L':',~(0|\n), readiri()_success,(~('.'|'\n'|0))*,('.'|'\n'|0).
+//iswspace*, L'@', <!("@prefix ")>, error
+//iswspace*, "@prefix ", (~(L':'|0|'\n'))*,(0|\n),error
+//iswspace*, "@prefix ", (~(L':'|0|'\n'))*, L':',(0|\n),error
+//iswspace*, "@prefix ", (~(L':'|0|'\n'))*, L':',~(0|\n), readiri()_error, error
+//iswspace*, "@prefix ", (~(L':'|0|'\n'))*, L':',~(0|\n), readiri()_success,(~('.'|'\n'|0))*,('.'|'\n'|0).
 void nqparser::readprefix() {
-	setproc(L"readprefix");
+	setproc("readprefix");
 
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
@@ -305,27 +305,27 @@ void nqparser::readprefix() {
 	//If the next char is not L'@'. Then it's not a '@prefix' tag, so return.
 	if (*s != L'@') return;
 
-	//Otherwise, check to see if the next 8 characters match L"@prefix ". If
+	//Otherwise, check to see if the next 8 characters match "@prefix ". If
 	//not, then the appearance of L'@' is apparently syntactically incorrect
 	//because we're throwing an error about it.
-	if (memcmp(s, L"@prefix ", 8*sizeof(*s)))
-			throw wruntime_error(string(L"\"@prefix \" expected: ") + string(s,0,48));
+	if (memcmp(s, "@prefix ", 8*sizeof(*s)))
+			throw runtime_error(string("\"@prefix \" expected: ") + string(s,0,48));
 
-	//We didn't throw a run-time error, so the 8 characters must have matched L"@prefix ".
-	//Advance the string-pointer by 8, i.e. past the L"@prefix ".
+	//We didn't throw a run-time error, so the 8 characters must have matched "@prefix ".
+	//Advance the string-pointer by 8, i.e. past the "@prefix ".
 	s += 8;
 
 
 	//Copy the string from s into t until reaching ":".		
 	while (*s != L':' && *s!= 0 && *s!='\n') t[pos++] = *s++;
 	if (!(*s!= 0 && *s!='\n'))
-		throw wruntime_error(L"hm");
+		throw runtime_error("hm");
 
 	t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	
         if (!(*s!= 0 && *s!='\n'))
-                throw wruntime_error(L"hm");
+                throw runtime_error("hm");
 
 	//Trim the resulting string
 	pstring tt = wstrim(t);
@@ -351,7 +351,7 @@ void nqparser::readprefix() {
 //iswspace*, L'?', (~special)*,{L'?'},error
 //iswspace*, L'?', (~special)*,{special2},return.
 pnode nqparser::readvar() {
-	setproc(L"readvar");
+	setproc("readvar");
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
 
@@ -363,7 +363,7 @@ pnode nqparser::readvar() {
 	//Copy characters from s into t until reaching either a whitespace character
 	//or one of the special characters ",;.}{)".
 	while (!iswspace(*s) && *s != L'?' && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
-	if(*s == L'?') throw wruntime_error(string(L"bad variable name") + string(s,0,48));
+	if(*s == L'?') throw runtime_error(string("bad variable name") + string(s,0,48));
 
 	t[pos] = 0; pos = 0;
 
@@ -376,11 +376,11 @@ pnode nqparser::readvar() {
 //(!iswspace | L',' | L';' | L'.' | L'}' | L'{' | L')') as special
 
 //iswspace*, {~L'\"'}, return
-//iswspace*, L'\"',((~(L'\\' | L'\"')) | (L'\\', $))*, L'\"',L"^^",L'<',(~L'>')*,L'>'
+//iswspace*, L'\"',((~(L'\\' | L'\"')) | (L'\\', $))*, L'\"',"^^",L'<',(~L'>')*,L'>'
 //iswspace*, L'\"',((~(L'\\' | L'\"')) | (L'\\', $))*, L'\"',L'@',(~iswspace)*
 //iswspace*, L'\"',((~(L'\\' | L'\"')) | (L'\\', $))*, L'\"',~(special | "^^" | L'@'), error
 pnode nqparser::readlit() {
-	setproc(L"readlit");
+	setproc("readlit");
 
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
@@ -432,13 +432,13 @@ pnode nqparser::readlit() {
 		}
 
 		//Otherwise we didn't receive either a langtag or an iri, so throw an error:
-		else throw wruntime_error(string(L"expected langtag or iri:") + string(s,0,48));
+		else throw runtime_error(string("expected langtag or iri:") + string(s,0,48));
 	}
 	//Append a null character to t and set pos back to 0.
 	t[pos] = 0; pos = 0;
-	//Copy t into t1 and replace all occurrences of L"\\\\" with L"\\".
+	//Copy t into t1 and replace all occurrences of "\\\\" with "\\".
 	string t1 = t;
-	boost::replace_all(t1, L"\\\\", L"\\");
+	boost::replace_all(t1, "\\\\", "\\");
 
 	//Make a literal node from the value, the IRI and the langtag, and return this node.
 	return mkliteral(wstrim(t1), pstrtrim(dt), pstrtrim(lang));
@@ -458,7 +458,7 @@ pnode nqparser::readany(bool lit){
 }
 
 
-void nqparser::preprocess(std::wistream& is, std::stringstream& ss){
+void nqparser::preprocess(std::istream& is, std::stringstream& ss){
         string s; //get lines from is into s.
 
         //Make a function out of this
@@ -477,7 +477,7 @@ void nqparser::preprocess(std::wistream& is, std::stringstream& ss){
                 //Check to see if the line is "fin." or some variation where
                 //white-space separates "fin" from "." (...?), and if so
                 //break.
-                if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L"."){
+                if (startsWith(s, "fin") && *wstrim(s.c_str() + 3) == "."){
                         break;
                 }
 		//dout << s << endl;
@@ -489,10 +489,10 @@ void nqparser::preprocess(std::wistream& is, std::stringstream& ss){
 }
 
 
-void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
+void nqparser::nq_to_qdb(qdb& kb, std::istream& is){
 	_kb = kb;
 
-//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = L"@default"*/) {
+//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = "@default"*/) {
 
 	//Read an nq file in is into the stringstream ss.
 	std::stringstream ss;
@@ -522,7 +522,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
 		//Try to read any node except a literal into subject. RDF subjects can only
 		//be IRIs or blank-nodes. If we fail to read a node, then throw an error.
 		if (!(subject = readany(false)))
-			throw wruntime_error(string(L"expected iri or bnode subject:") + string(s,0,48));
+			throw runtime_error(string("expected iri or bnode subject:") + string(s,0,48));
 
 		//This is expecting to be looping over the predicate-object pairs given for this subject,
 		//separated by L';' i.e. like "subject pred1 obj1; pred2 obj2;" or
@@ -549,7 +549,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
 				pos1 = preds.rbegin();
 			}
 			//If both readiri() and readcurly() fail, then throw an error.
-			else throw wruntime_error(string(L"expected iri predicate:") + string(s,0,48));
+			else throw runtime_error(string("expected iri predicate:") + string(s,0,48));
 
 			//This loop is over the objects for each predicate, and you can see
 			//in the do-condition that it iterates on ending up at a L','.
@@ -572,7 +572,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
 				}
 
 				//If we can't read a node using readany(true), then throw an error.
-				else throw wruntime_error(string(L"expected iri or bnode or literal object:") + string(s,0,48));
+				else throw runtime_error(string("expected iri or bnode or literal object:") + string(s,0,48));
 				//Skip any more white-space following this.
 				while (iswspace(*s)) ++s;
 
@@ -599,7 +599,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
 			//or an IRI node into pn. We're attempting to read a context label. If that 
 			//fails, we throw an error, otherwise we copy the value of this node into 'graph'.
 			if (!(pn = readbnode()) && !(pn = readiri()))
-				throw wruntime_error(string(L"expected iri or bnode graph:") + string(s,0,48));
+				throw runtime_error(string("expected iri or bnode graph:") + string(s,0,48));
 
 			graph = *pn->value;
 		} else
@@ -637,7 +637,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
 		//Okay we're past the white-space and the '.', 
 		//return here?
 		if (*s == L'}') { ++s; /*rr = { r, qlists };*/ }
-		if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
+		if (*s == L')') throw runtime_error(string("expected ) outside list: ") + string(s,0,48));
 	}
 	}
 }

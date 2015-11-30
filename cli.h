@@ -14,7 +14,7 @@ typedef std::vector<string> strings;
 class cmd_t {
 protected:
 #ifdef JSON
-	pobj load_json ( string fname = L"", bool print = false );
+	pobj load_json ( string fname = "", bool print = false );
 	pobj load_json ( const strings& args );
 	pobj nodemap ( const strings& args );
 	pobj nodemap ( pobj o );

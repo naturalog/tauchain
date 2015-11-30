@@ -24,9 +24,9 @@
 #define CLI_TRACE(x)
 #endif
 
-std::wostream& dout = std::wcout;
-std::wostream& derr = std::wcerr;
-std::wistream& din = std::wcin;
+std::ostream& dout = std::cout;
+std::ostream& derr = std::cerr;
+std::istream& din = std::cin;
 
 // to hold a kb/query string
 string qdb_text;
@@ -36,8 +36,8 @@ Mode mode = COMMANDS;
 
 enum ParsingResult {FAIL, /* INCOMPLETE, */ COMPLETE};
 
-string format = L"";
-string base = L"";
+string format = "";
+string base = "";
 
 int result_limit = 123;
 bool irc = false;
@@ -45,26 +45,26 @@ std::set<string> silence;
 bool in_silent_part = false;
 
 std::map<string,bool*> _flags = {
-		{L"nocolor",&nocolor}
-		,{L"deref",&deref}
-		,{L"irc",&irc}
-		,{L"shorten",&shorten}
-		,{L"base",&fnamebase}
+		{"nocolor",&nocolor}
+		,{"deref",&deref}
+		,{"irc",&irc}
+		,{"shorten",&shorten}
+		,{"base",&fnamebase}
 };
 
-std::vector<string> extensions = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
+std::vector<string> extensions = {"jsonld", "natural3", "natq", "n3", "nq"};
 std::vector<string> _formats = {
 								#ifndef NOPARSER
-								L"nq",
+								"nq",
 								#endif
 								#ifdef with_marpa
-								L"n3",
+								"n3",
 								#endif
 								#ifdef JSON
-								L"jsonld"
+								"jsonld"
 								#endif
 };
-std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
+std::vector<string> _commands = {"kb", "query","run","quit"};
 
 yprover *tauProver = 0;
 
@@ -79,9 +79,9 @@ void fresh_prover()
 }
 
 
-void set_mode(int m)
+void set_mode(Mode m)
 {
-	dout << L"mode = ";
+	dout << "mode = ";
 	switch(m) {
 		case COMMANDS:
 			dout << "commands";
@@ -95,6 +95,9 @@ void set_mode(int m)
 		case SHOULDBE:
 			dout << "shouldbe";
 			break;
+		case OLD:
+			dout << "old";
+			break;
 	}
 	dout << endl;
 	mode = m;
@@ -102,30 +105,30 @@ void set_mode(int m)
 
 void help(string help_arg){
 	if(input.end()){
-		dout << L"Help -- commands: kb, query, help, quit; use \"help <topic>\" for more detail." << endl;
-		dout << L"command 'kb': load a knowledge-base." << endl;
-		dout << L"command 'query': load a query and run." << endl;
-		dout << L"command 'help': Tau will help you solve all your problems." << endl;
-		dout << L"command 'quit': exit Tau back to terminal" << endl;
+		dout << "Help -- commands: kb, query, help, quit; use \"help <topic>\" for more detail." << endl;
+		dout << "command 'kb': load a knowledge-base." << endl;
+		dout << "command 'query': load a query and run." << endl;
+		dout << "command 'help': Tau will help you solve all your problems." << endl;
+		dout << "command 'quit': exit Tau back to terminal" << endl;
 		dout << "\"fin.\" is part of the kb/query-loading, it denotes the end of your rule-base" << endl;
 	}
 	else{
 		string help_arg = input.pop();
-		string help_str = L"";
-		if(help_arg == L"kb"){
-			help_str = L"command 'kb': load a knowledge-base.";
+		string help_str = "";
+		if(help_arg == "kb"){
+			help_str = "command 'kb': load a knowledge-base.";
 		}
-		else if(help_arg == L"query"){
-			help_str = L"command 'query': load a query and run.";
+		else if(help_arg == "query"){
+			help_str = "command 'query': load a query and run.";
 		}
-		else if(help_arg == L"help"){
-			help_str = L"command 'help': Tau will help you solve all your problems.";
+		else if(help_arg == "help"){
+			help_str = "command 'help': Tau will help you solve all your problems.";
 		}
-		else if(help_arg == L"quit") {
-			help_str = L"command 'quit': exit Tau back to terminal";
+		else if(help_arg == "quit") {
+			help_str = "command 'quit': exit Tau back to terminal";
 		}
-		else if(help_arg == L"fin"){
-			help_str = L"\"fin.\" is part of the kb/query-loading, it denotes the end of your rule-base";
+		else if(help_arg == "fin"){
+			help_str = "\"fin.\" is part of the kb/query-loading, it denotes the end of your rule-base";
 		}else{
 			dout << "No command \"" << help_arg << "\"." << endl;
 			return;
@@ -137,16 +140,16 @@ void help(string help_arg){
 
 void switch_color(){
 	if(nocolor){
-                KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = L"";
+                KNRM = KRED = KGRN = KYEL = KBLU = KMAG = KCYN = KWHT = "";
 	}else{
-		KNRM = L"\x1B[0m";
-		KRED = L"\x1B[31m";
-		KGRN = L"\x1B[32m";
-		KYEL = L"\x1B[33m";
-		KBLU = L"\x1B[34m";
-		KMAG = L"\x1B[35m";
-		KCYN = L"\x1B[36m";
-		KWHT = L"\x1B[37m";
+		KNRM = "\x1B[0m";
+		KRED = "\x1B[31m";
+		KGRN = "\x1B[32m";
+		KYEL = "\x1B[33m";
+		KBLU = "\x1B[34m";
+		KMAG = "\x1B[35m";
+		KCYN = "\x1B[36m";
+		KWHT = "\x1B[37m";
 	}
 }
 
@@ -165,7 +168,7 @@ ParsingResult get_qdb(qdb &kb, string fname){
 	
 	/*
 	int nrules = 0;
-	for ( pquad quad :*kb.first[L"@default"])
+	for ( pquad quad :*kb.first["@default"])
 		nrules++;
 	dout << "rules:" << nrules << std::endl;
 	*/
@@ -174,7 +177,7 @@ ParsingResult get_qdb(qdb &kb, string fname){
 }
 
 bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
-	setproc(L"nodes_same");
+	setproc("nodes_same");
 	CLI_TRACE(dout << x->_type << ":" << x->tostring() << ", " <<
 					  y->_type << ":" << y->tostring()  << endl);
 	if(x->_type == node::BNODE && y->_type == node::BNODE)
@@ -216,8 +219,8 @@ bool qdbs_equal(qdb &a, qdb &b) {
 	dout << a;
 	dout << "B:" << endl;
 	dout << b;
-	auto ad = *a.first[L"@default"];
-	auto bd = *b.first[L"@default"];
+	auto ad = *a.first["@default"];
+	auto bd = *b.first["@default"];
 	auto i = ad.begin();
 	for (pquad x: bd) {
 		if (dict[x->pred] == rdffirst || dict[x->pred] == rdfrest)
@@ -255,7 +258,7 @@ void test_result(bool x) {
 	if (x)
 		dout << KGRN << "PASS" << KNRM << endl;
 	else
-		dout << KRED << "FAIL" << KNRM << endl;
+		dout << KRED << "FAI" << KNRM << endl;
 }
 
 
@@ -282,7 +285,7 @@ qdb merge_qdbs(const std::vector<qdb> qdbs)
 		else if (qdbs.size() == 1)
 			return qdbs[0];
 		else
-			dout << L"warning, kb merging is half-assed";
+			dout << "warning, kb merging is half-assed";
 
         for (auto x:qdbs) {
 			for (auto graph: x.first) {
@@ -300,7 +303,7 @@ qdb merge_qdbs(const std::vector<qdb> qdbs)
 				string name = list.first;
 				auto val = list.second;
 				r.second[name] = val;
-				dout << L"warning, lists may get overwritten";
+				dout << "warning, lists may get overwritten";
 			}
 		}
 
@@ -308,7 +311,7 @@ qdb merge_qdbs(const std::vector<qdb> qdbs)
 }
 
 #ifndef NOPARSER
-int parse_nq(qdb &kb, qdb &query, std::wistream &f, int &fins)
+int parse_nq(qdb &kb, qdb &query, std::istream &f, int &fins)
 {
 	//We can maybe remove this class eventually and just
 	//use functions? idk..
@@ -317,13 +320,13 @@ int parse_nq(qdb &kb, qdb &query, std::wistream &f, int &fins)
         try {
                 fins = parser.nq_to_qdb(kb, f);
         } catch (std::exception& ex) {
-                derr << L"[nq]Error reading quads: " << ex.what() << endl;
+                derr << "[nq]Error reading quads: " << ex.what() << endl;
                 return 0;
         }
         try {
                 fins += parser.nq_to_qdb(query, f);
         } catch (std::exception& ex) {
-                derr << L"[nq]Error reading quads: " << ex.what() << endl;
+                derr << "[nq]Error reading quads: " << ex.what() << endl;
                 return 2;
         }
         return 2;
@@ -331,22 +334,22 @@ int parse_nq(qdb &kb, qdb &query, std::wistream &f, int &fins)
 #endif
 
 
-int _parse(qdb &kb, qdb &query, std::wistream &f, string fmt, int &fins)
+int _parse(qdb &kb, qdb &query, std::istream &f, string fmt, int &fins)
 {
-	CLI_TRACE(dout << L"parse fmt: " << fmt << endl;)
+	CLI_TRACE(dout << "parse fmt: " << fmt << endl;)
 #ifdef with_marpa
-    if(fmt == L"natural3" || fmt == L"n3") {
-		//dout << L"Supported is a subset of n3 with our fin notation" << endl;
+    if(fmt == "natural3" || fmt == "n3") {
+		//dout << "Supported is a subset of n3 with our fin notation" << endl;
 		return parse_natural3(kb, query, f, fins, base);
 	}
 #endif
 #ifndef NOPARSER
-	if(fmt == L"natq" || fmt == L"nq" || fmt == L"nquads")
+	if(fmt == "natq" || fmt == "nq" || fmt == "nquads")
 		return parse_nq(kb, query, f, fins);
 #endif
 #ifdef JSON
-	if(fmt == L"jsonld"){
-		dout << L"[jsonld]somobody wire the json-ld parser into the cli" << endl;
+	if(fmt == "jsonld"){
+		dout << "[jsonld]somobody wire the json-ld parser into the cli" << endl;
 		return FAIL;
 	}
 #endif
@@ -361,14 +364,14 @@ string fmt_from_ext(string fn){
 		if (boost::ends_with(fn_lc, x))
 			return x;
 
-	return L"";
+	return "";
 }
 
-int parse(qdb &kb, qdb &query, std::wistream &f, string fn, int &fins) {
+int parse(qdb &kb, qdb &query, std::istream &f, string fn, int &fins) {
 	string fmt = format;
-	if (fmt == L"")
+	if (fmt == "")
 		fmt = fmt_from_ext(fn);
-	if (fmt != L"")
+	if (fmt != "")
 		return _parse(kb, query, f, fmt, fins);
 	else
 	{
@@ -409,14 +412,14 @@ int count_fins()
 	stringstream ss(qdb_text);
 	while (!ss.eof()) {
 		getline(ss, line);
-		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".")
+		if (startsWith(s, "fin") && *wstrim(s.c_str() + 3) == ".")
 			fins++;
 	}
 	return fins;
 }
 
 bool dash_arg(string token, string pattern){
-	return (token == pattern) || (token == L"-" + pattern) || (token == L"--" + pattern);
+	return (token == pattern) || (token == "-" + pattern) || (token == "--" + pattern);
 }
 
 
@@ -467,7 +470,7 @@ struct args_input_t:input_t
 	{
 		argc = argc_;
 		argv = argv_;
-		name = L"args";
+		name = "args";
 	}
 	bool end()
 	{
@@ -493,7 +496,7 @@ struct args_input_t:input_t
 
 struct stream_input_t:input_t
 {
-	std::wistream stream;
+	std::istream stream;
 	string line;
 	size_t pos;
 	std::stack<size_t> starts;
@@ -560,9 +563,9 @@ struct stream_input_t:input_t
 /*		{
 			string line;
 
-			input += line + L"\n";
+			input += line + "\n";
 		}
-					//is.rdbuf()+L"\n";
+					//is.rdbuf()+"\n";
 */
 
 
@@ -572,7 +575,7 @@ input_t* input;
 
 
 bool read_option(string s){
-	if(s.length() < 2 || s.at(0) != L'-' ||	s == L"-" || s == L"--")
+	if(s.length() < 2 || s.at(0) != L'-' ||	s == "-" || s == "--")
 		return false;
 	
 	if(s.at(1) == L'-'){
@@ -584,7 +587,7 @@ bool read_option(string s){
 	for( std::pair<string,bool*> x : _flags){
 		if(x.first == _option){
 			*x.second = !(*x.second);
-			if(x.first == L"nocolor") switch_color();
+			if(x.first == "nocolor") switch_color();
 			return true;
 		}
 	}
@@ -600,7 +603,7 @@ bool read_option(string s){
 	if (!input.end()) {
 		string token = input.pop();
 	
-		if(_option == L"silence") {
+		if(_option == "silence") {
 			silence.emplace(token);
 			/*dout << "silence:";
 			for(auto x: silence)
@@ -610,13 +613,13 @@ bool read_option(string s){
 		}
 	
 
-		if(_option == L"level"){
+		if(_option == "level"){
 			get_int(level, token);
 			dout << "debug level:" << level << std::endl;
 			return true;
 		}
 
-		if(_option == L"limit"){
+		if(_option == "limit"){
 			get_int(result_limit, token);
 			dout << "result limit:" << result_limit << std::endl;
 			return true;
@@ -644,7 +647,7 @@ void do_query(qdb &q_in)
 
 void cmd_query(){
 	if(kbs.size() == 0){
-		dout << L"No kb; cannot query." << endl;
+		dout << "No kb; cannot query." << endl;
 	}else{
 		if(input.end()){
 			set_mode(QUERY);
@@ -668,14 +671,14 @@ void cmd_kb(){
 		set_mode(KB);
 	}else{
 		string token = input.pop();
-		if(dash_arg(token,L"clear")){
+		if(dash_arg(token,"clear")){
 			clear_kb();
 			return;
 		}
-		/*else if(dash_arg(token,L"set")){
+		/*else if(dash_arg(token,"set")){
 			clear_kb();
 		}*/
-		else if(dash_arg(token,L"add")){
+		else if(dash_arg(token,"add")){
 			//dont clear,
 			if (input.end())
 				throw std::runtime_error("add what?");
@@ -694,21 +697,21 @@ void displayPrompt(){
 		//specify current mode:
 		string prompt;
 		if (mode == OLD)
-			prompt = L"tau";
+			prompt = "tau";
 		if (mode == COMMANDS)
-			prompt = L"Tau";
+			prompt = "Tau";
 		else if (mode == KB)
-			prompt = L"kb";
+			prompt = "kb";
 		else if (mode == QUERY)
-			prompt = L"query";
+			prompt = "query";
 		else if (mode == SHOULDBE)
-			prompt = L"shouldbe";
+			prompt = "shouldbe";
 		else
 			assert(false);
 		std::wcout << prompt;
-		if (format != L"")
-			std::wcout << L"["<<format<<L"]";
-		std::wcout << L"> ";
+		if (format != "")
+			std::wcout << "["<<format<<"]";
+		std::wcout << "> ";
 
 	}
 }
@@ -726,7 +729,7 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 	else {
 		qdb kb, query;
 		std::stringstream ss(x);
-		int pr = parse(kb, query, ss, L"");
+		int pr = parse(kb, query, ss, "");
 		CLI_TRACE(dout << "parsing result:" << pr << std::endl);
 		if (pr) {
 			qdb_text = x;
@@ -740,11 +743,11 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 	if (pr == COMPLETE) {
 		}
 		else if (pr == FAIL) {
-			if (line == L"fin.\n") {
-				data_buffer = L"";
+			if (line == "fin.\n") {
+				data_buffer = "";
 				set_mode(COMMANDS);
 			}
-			if (mode == COMMANDS && trimmed_data == L"") if (token != L"")
+			if (mode == COMMANDS && trimmed_data == "") if (token != "")
 				dout << "[cli]no such command: \"" << token << "\"." << endl;
 		}
 	}
@@ -785,29 +788,29 @@ int main ( int argc, char** argv)
 
 		if (mode == COMMANDS) {
 			string token = input.pop();
-			if (startsWith(token, L"#") || token == L"")
+			if (startsWith(token, "#") || token == "")
 				continue;
 			else if (read_option(token))
 				continue;
-			else if (token == L"help")
+			else if (token == "help")
 				help();
-			else if (token == L"kb")
+			else if (token == "kb")
 				cmd_kb();
-			else if (token == L"query")
+			else if (token == "query")
 				cmd_query();
-			else if (token == L"shouldbe")
+			else if (token == "shouldbe")
 				cmd_shouldbe();
-			else if (token == L"thatsall")
+			else if (token == "thatsall")
 				thatsall();
-			else if (token == L"shouldbesteps") {
+			else if (token == "shouldbesteps") {
 				//test_result(std::stoi(read_arg()) == tauProver->steps_);
 			}
-			else if (token == L"shouldbeunifys") {
+			else if (token == "shouldbeunifys") {
 				//test_result(std::stoi(read_arg()) == tauProver->unifys_);
 			}
-			else if (token == L"quit")
+			else if (token == "quit")
 				break;
-			else if (token == L"-")
+			else if (token == "-")
 				emplace_stdin();
 			else {
 				input.take_back();
@@ -857,7 +860,7 @@ int main ( int argc, char** argv)
 				}
 				else
 					dout << "error" << endl;
-				qdb_text = L"";
+				qdb_text = "";
 				set_mode(COMMANDS);
 			}
 		}

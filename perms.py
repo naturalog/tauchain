@@ -30,13 +30,13 @@ for w in PP:
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(""" + param(w, "w") + ", " + param(x, "x") + """)) {
 						TRACE(dout << "MATCH A." << endl;)

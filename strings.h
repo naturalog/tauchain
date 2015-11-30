@@ -21,10 +21,10 @@ typedef uint64_t u64;
 typedef int64_t i64;
 typedef uint8_t u8;
 typedef int8_t i8;
-typedef std::wstring string;
+typedef std::string string;
 typedef std::shared_ptr<string> pstring;
 pstring pstr ( const string& s );
-pstring pstr ( const wchar_t* s );
+//pstring pstr ( const wchar_t* s );
 
 #ifdef OPENCL
 #define CL(x) x
@@ -34,137 +34,137 @@ pstring pstr ( const wchar_t* s );
 
 
 
-class wruntime_error : public std::exception {
+class runtime_error : public std::exception {
 	string msg;
 public:
 	using std::exception::exception;
-	wruntime_error(string s) : msg(s){}
+	runtime_error(string s) : msg(s){}
 	virtual const char* what() const noexcept {
 		return std::string(msg.begin(), msg.end()).c_str();
 	}
 };
 
-const string tab = L"\t";
-const string str_default = L"@default";
+const string tab = "\t";
+const string str_default = "@default";
 #ifdef JSON
-const string str_base = L"@base";
-const string str_context = L"@context";
-const string str_embed = L"@embed";
-const string str_container = L"@container";
-const string str_graph = L"@graph";
-const string str_id = L"@id";
-const string str_list = L"@list";
-const string str_index = L"@index";
-const string str_lang = L"@language";
-const string str_reverse = L"@reverse";
-const string str_type = L"@type";
-const string str_value = L"@value";
-const string str_preserve = L"@preserve";
-const string str_omitDefault = L"@omitDefault";
-const string str_vocab = L"@vocab";
-const string str_explicit = L"@explicit";
-const string str_set = L"@set";
-const string str_embedChildren = L"@embedChildren";
+const string str_base = "@base";
+const string str_context = "@context";
+const string str_embed = "@embed";
+const string str_container = "@container";
+const string str_graph = "@graph";
+const string str_id = "@id";
+const string str_list = "@list";
+const string str_index = "@index";
+const string str_lang = "@language";
+const string str_reverse = "@reverse";
+const string str_type = "@type";
+const string str_value = "@value";
+const string str_preserve = "@preserve";
+const string str_omitDefault = "@omitDefault";
+const string str_vocab = "@vocab";
+const string str_explicit = "@explicit";
+const string str_set = "@set";
+const string str_embedChildren = "@embedChildren";
 #endif
 
 
 
-const string RDF_SCHEMA_NS = L"http://www.w3.org/2000/01/rdf-schema#";
+const string RDF_SCHEMA_NS = "http://www.w3.org/2000/01/rdf-schema#";
 
 
 
 /* XSD Data types */
-const string XSD_NS = L"http://www.w3.org/2001/XMLSchema#";
-const pstring XSD_ANYTYPE = pstr(XSD_NS + L"anyType");
-const pstring XSD_BOOLEAN = pstr(XSD_NS + L"boolean");
-const pstring XSD_DOUBLE = pstr(XSD_NS + L"double");
-const pstring XSD_INTEGER = pstr(XSD_NS + L"integer");
-const pstring XSD_FLOAT = pstr(XSD_NS + L"float");
-const pstring XSD_DECIMAL = pstr(XSD_NS + L"decimal");
-const pstring XSD_ANYURI = pstr(XSD_NS + L"anyURIstring");
-const pstring XSD_STRING = pstr(XSD_NS + L"string");
+const string XSD_NS = "http://www.w3.org/2001/XMLSchema#";
+const pstring XSD_ANYTYPE = pstr(XSD_NS + "anyType");
+const pstring XSD_BOOLEAN = pstr(XSD_NS + "boolean");
+const pstring XSD_DOUBLE = pstr(XSD_NS + "double");
+const pstring XSD_INTEGER = pstr(XSD_NS + "integer");
+const pstring XSD_FLOAT = pstr(XSD_NS + "float");
+const pstring XSD_DECIMAL = pstr(XSD_NS + "decimal");
+const pstring XSD_ANYURI = pstr(XSD_NS + "anyURIstring");
+const pstring XSD_STRING = pstr(XSD_NS + "string");
 
 
 
 /* RDF strings */
-const string RDF_SYNTAX_NS = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-const pstring RDF_TYPE = pstr(RDF_SYNTAX_NS + L"type");
-const pstring RDF_FIRST = pstr(RDF_SYNTAX_NS + L"first");
-const pstring RDF_REST = pstr(RDF_SYNTAX_NS + L"rest");
-const pstring RDF_NIL = pstr(RDF_SYNTAX_NS + L"nil");
-const string RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + L"PlainLiteral";
-const string RDF_XML_LITERAL = RDF_SYNTAX_NS + L"XMLLiteral";
-const string RDF_OBJECT = RDF_SYNTAX_NS + L"object";
-const string RDF_LANGSTRING = RDF_SYNTAX_NS + L"langString";
-const string RDF_LIST = RDF_SYNTAX_NS + L"List";
+const string RDF_SYNTAX_NS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+const pstring RDF_TYPE = pstr(RDF_SYNTAX_NS + "type");
+const pstring RDF_FIRST = pstr(RDF_SYNTAX_NS + "first");
+const pstring RDF_REST = pstr(RDF_SYNTAX_NS + "rest");
+const pstring RDF_NIL = pstr(RDF_SYNTAX_NS + "nil");
+const string RDF_PLAIN_LITERAL = RDF_SYNTAX_NS + "PlainLiteral";
+const string RDF_XML_LITERAL = RDF_SYNTAX_NS + "XMLLiteral";
+const string RDF_OBJECT = RDF_SYNTAX_NS + "object";
+const string RDF_LANGSTRING = RDF_SYNTAX_NS + "langString";
+const string RDF_LIST = RDF_SYNTAX_NS + "List";
 
 #ifdef JSON
-const string LOADING_DOCUMENT_FAILED = L"loading document failed";
-const string LIST_OF_LISTS = L"list of lists";
-const string INVALID_INDEX_VALUE = L"invalid @index value";
-const string CONFLICTING_INDEXES = L"conflicting indexes";
-const string INVALID_ID_VALUE = L"invalid @id value";
-const string INVALID_LOCAL_CONTEXT = L"invalid local context";
-const string MULTIPLE_CONTEXT_LINK_HEADERS = L"multiple context link headers";
-const string LOADING_REMOTE_CONTEXT_FAILED = L"loading remote context failed";
-const string INVALID_REMOTE_CONTEXT = L"invalid remote context";
-const string RECURSIVE_CONTEXT_INCLUSION = L"recursive context inclusion";
-const string INVALID_BASE_IRI = L"invalid base IRI";
-const string INVALID_VOCAB_MAPPING = L"invalid vocab mapping";
-const string INVALID_DEFAULT_LANGUAGE = L"invalid default language";
-const string KEYWORD_REDEFINITION = L"keyword redefinition";
-const string INVALID_TERM_DEFINITION = L"invalid term definition";
-const string INVALID_REVERSE_PROPERTY = L"invalid reverse property";
-const string INVALID_IRI_MAPPING = L"invalid IRI mapping";
-const string CYCLIC_IRI_MAPPING = L"cyclic IRI mapping";
-const string INVALID_KEYWORD_ALIAS = L"invalid keyword alias";
-const string INVALID_TYPE_MAPPING = L"invalid type mapping";
-const string INVALID_LANGUAGE_MAPPING = L"invalid language mapping";
-const string COLLIDING_KEYWORDS = L"colliding keywords";
-const string INVALID_CONTAINER_MAPPING = L"invalid container mapping";
-const string INVALID_TYPE_VALUE = L"invalid type value";
-const string INVALID_VALUE_OBJECT = L"invalid value object";
-const string INVALID_VALUE_OBJECT_VALUE = L"invalid value object value";
-const string INVALID_LANGUAGE_TAGGED_STRING = L"invalid language-tagged const String";
-const string INVALID_LANGUAGE_TAGGED_VALUE = L"invalid language-tagged value";
-const string INVALID_TYPED_VALUE = L"invalid typed value";
-const string INVALID_SET_OR_LIST_OBJECT = L"invalid set or list object";
-const string INVALID_LANGUAGE_MAP_VALUE = L"invalid language map value";
-const string COMPACTION_TO_LIST_OF_LISTS = L"compaction to list of lists";
-const string INVALID_REVERSE_PROPERTY_MAP = L"invalid reverse property map";
-const string INVALID_REVERSE_VALUE = L"invalid @reverse value";
-const string INVALID_REVERSE_PROPERTY_VALUE = L"invalid reverse property value";
-const string SYNTAX_ERROR = L"syntax error";
-const string NOT_IMPLEMENTED = L"not implemnted";
-const string UNKNOWN_FORMAT = L"unknown format";
-const string INVALID_INPUT = L"invalid input";
-const string PARSE_ERROR = L"parse error";
-const string UNKNOWN_ERROR = L"unknown error";
+const string LOADING_DOCUMENT_FAILED = "loading document failed";
+const string LIST_OF_LISTS = "list of lists";
+const string INVALID_INDEX_VALUE = "invalid @index value";
+const string CONFLICTING_INDEXES = "conflicting indexes";
+const string INVALID_ID_VALUE = "invalid @id value";
+const string INVALID_LOCAL_CONTEXT = "invalid local context";
+const string MULTIPLE_CONTEXT_LINK_HEADERS = "multiple context link headers";
+const string LOADING_REMOTE_CONTEXT_FAILED = "loading remote context failed";
+const string INVALID_REMOTE_CONTEXT = "invalid remote context";
+const string RECURSIVE_CONTEXT_INCLUSION = "recursive context inclusion";
+const string INVALID_BASE_IRI = "invalid base IRI";
+const string INVALID_VOCAB_MAPPING = "invalid vocab mapping";
+const string INVALID_DEFAULT_LANGUAGE = "invalid default language";
+const string KEYWORD_REDEFINITION = "keyword redefinition";
+const string INVALID_TERM_DEFINITION = "invalid term definition";
+const string INVALID_REVERSE_PROPERTY = "invalid reverse property";
+const string INVALID_IRI_MAPPING = "invalid IRI mapping";
+const string CYCLIC_IRI_MAPPING = "cyclic IRI mapping";
+const string INVALID_KEYWORD_ALIAS = "invalid keyword alias";
+const string INVALID_TYPE_MAPPING = "invalid type mapping";
+const string INVALID_LANGUAGE_MAPPING = "invalid language mapping";
+const string COLLIDING_KEYWORDS = "colliding keywords";
+const string INVALID_CONTAINER_MAPPING = "invalid container mapping";
+const string INVALID_TYPE_VALUE = "invalid type value";
+const string INVALID_VALUE_OBJECT = "invalid value object";
+const string INVALID_VALUE_OBJECT_VALUE = "invalid value object value";
+const string INVALID_LANGUAGE_TAGGED_STRING = "invalid language-tagged const String";
+const string INVALID_LANGUAGE_TAGGED_VALUE = "invalid language-tagged value";
+const string INVALID_TYPED_VALUE = "invalid typed value";
+const string INVALID_SET_OR_LIST_OBJECT = "invalid set or list object";
+const string INVALID_LANGUAGE_MAP_VALUE = "invalid language map value";
+const string COMPACTION_TO_LIST_OF_LISTS = "compaction to list of lists";
+const string INVALID_REVERSE_PROPERTY_MAP = "invalid reverse property map";
+const string INVALID_REVERSE_VALUE = "invalid @reverse value";
+const string INVALID_REVERSE_PROPERTY_VALUE = "invalid reverse property value";
+const string SYNTAX_ERROR = "syntax error";
+const string NOT_IMPLEMENTED = "not implemnted";
+const string UNKNOWN_FORMAT = "unknown format";
+const string INVALID_INPUT = "invalid input";
+const string PARSE_ERROR = "parse error";
+const string UNKNOWN_ERROR = "unknown error";
 
-const auto Ex1 = wruntime_error ( INVALID_IRI_MAPPING + string ( L"expected value of @id to be a string" ) );
-const auto Ex2 = wruntime_error ( INVALID_KEYWORD_ALIAS + string ( L"cannot alias @context" ) );
-const auto Ex3 = wruntime_error ( INVALID_IRI_MAPPING + string ( L"resulting IRI mapping should be a keyword, absolute IRI or blank node" ) );
-const auto Ex4 = wruntime_error ( INVALID_IRI_MAPPING + string ( L"relative term defn without vocab mapping" ) );
-const auto Ex5 = wruntime_error ( INVALID_IRI_MAPPING + tab + string ( L"Expected String for @reverse value." ) );
-const auto Ex6 = INVALID_REVERSE_PROPERTY + string ( L"reverse properties only support set- and index-containers" );
-const auto Ex7 = wruntime_error ( INVALID_VOCAB_MAPPING + tab + string ( L"@value must be an absolute IRI" ) );
-const auto Ex8 = wruntime_error ( INVALID_VOCAB_MAPPING + tab + string ( L"@vocab must be a string or null" ) );
-const auto Ex9 = wruntime_error ( INVALID_BASE_IRI + tab + string ( L"@base must be a string" ) );
-const auto Ex10 = INVALID_CONTAINER_MAPPING + string ( L"@container must be either @list, @set, @index, or @language" );
-const auto Ex11 = wruntime_error ( INVALID_LANGUAGE_MAPPING + string ( L"@language must be a string or null" ) );
-const auto Ex12 = wruntime_error ( INVALID_REVERSE_PROPERTY_MAP + string ( tab ) + string ( L"a keyword cannot be used as a @reverse propery" ) );
-const auto Ex13 = wruntime_error ( INVALID_ID_VALUE + tab + string ( L"value of @id must be a string" ) );
-const auto Ex14 = wruntime_error ( INVALID_TYPE_VALUE + tab + string ( L"@type value must be a string or array of strings" ) );
-const auto Ex15 = wruntime_error ( INVALID_TYPE_VALUE + tab + string ( L"@type value must be a an empty object for framing" ) );
-const auto Ex16 = wruntime_error ( INVALID_TYPE_VALUE + tab + string ( L"@type value must be a string or array of strings" ) );
-const auto Ex17 = wruntime_error ( LIST_OF_LISTS + tab + string ( L"A list may not contain another list" ) );
-const auto Ex18 = wruntime_error ( INVALID_REVERSE_VALUE + tab + string ( L"@reverse value must be an object" ) );
-const auto Ex19 = wruntime_error ( LIST_OF_LISTS + tab + string ( L"lists of lists are not permitted." ) );
+const auto Ex1 = runtime_error ( INVALID_IRI_MAPPING + string ( "expected value of @id to be a string" ) );
+const auto Ex2 = runtime_error ( INVALID_KEYWORD_ALIAS + string ( "cannot alias @context" ) );
+const auto Ex3 = runtime_error ( INVALID_IRI_MAPPING + string ( "resulting IRI mapping should be a keyword, absolute IRI or blank node" ) );
+const auto Ex4 = runtime_error ( INVALID_IRI_MAPPING + string ( "relative term defn without vocab mapping" ) );
+const auto Ex5 = runtime_error ( INVALID_IRI_MAPPING + tab + string ( "Expected String for @reverse value." ) );
+const auto Ex6 = INVALID_REVERSE_PROPERTY + string ( "reverse properties only support set- and index-containers" );
+const auto Ex7 = runtime_error ( INVALID_VOCAB_MAPPING + tab + string ( "@value must be an absolute IRI" ) );
+const auto Ex8 = runtime_error ( INVALID_VOCAB_MAPPING + tab + string ( "@vocab must be a string or null" ) );
+const auto Ex9 = runtime_error ( INVALID_BASE_IRI + tab + string ( "@base must be a string" ) );
+const auto Ex10 = INVALID_CONTAINER_MAPPING + string ( "@container must be either @list, @set, @index, or @language" );
+const auto Ex11 = runtime_error ( INVALID_LANGUAGE_MAPPING + string ( "@language must be a string or null" ) );
+const auto Ex12 = runtime_error ( INVALID_REVERSE_PROPERTY_MAP + string ( tab ) + string ( "a keyword cannot be used as a @reverse propery" ) );
+const auto Ex13 = runtime_error ( INVALID_ID_VALUE + tab + string ( "value of @id must be a string" ) );
+const auto Ex14 = runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a string or array of strings" ) );
+const auto Ex15 = runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a an empty object for framing" ) );
+const auto Ex16 = runtime_error ( INVALID_TYPE_VALUE + tab + string ( "@type value must be a string or array of strings" ) );
+const auto Ex17 = runtime_error ( LIST_OF_LISTS + tab + string ( "A list may not contain another list" ) );
+const auto Ex18 = runtime_error ( INVALID_REVERSE_VALUE + tab + string ( "@reverse value must be an object" ) );
+const auto Ex19 = runtime_error ( LIST_OF_LISTS + tab + string ( "lists of lists are not permitted." ) );
 #endif
 
 
 
-const string implication = L"http://www.w3.org/2000/10/swap/log#implies";
+const string implication = "http://www.w3.org/2000/10/swap/log#implies";
 const pstring pimplication = pstr(implication);
 
 
@@ -172,7 +172,7 @@ const pstring pimplication = pstr(implication);
 
 template<typename T> inline bool is ( const T& s, const std::vector<T>& v, const string& exception = string() ) {
 	bool rc = std::find ( v.begin(), v.end(), s ) != v.end();
-	if ( exception.size() && !rc ) throw wruntime_error ( exception );
+	if ( exception.size() && !rc ) throw runtime_error ( exception );
 	return rc;
 }
 
@@ -198,14 +198,12 @@ template<typename charT> inline std::vector<string> split ( const string& s, cha
 string ws(const std::string& s);
 std::string ws(const string& s);
 std::string ws(pstring s);
-pstring wstrim(const wchar_t* w);
-pstring wstrim(const std::string&);
+pstring wstrim(const char* w);
 pstring wstrim(string);
 pstring pstr ( const string& s );
 pstring pstr ( const wchar_t* s );
 pstring pstrtrim ( const string& s );
 pstring pstrtrim ( const wchar_t* s );
-inline pstring pstr(const std::string& s) { return pstr(ws(s)); }
 inline pstring pstr(const char* s) { return pstr(std::string(s)); }
 template<typename T> pstring tostr ( T t ) {
 	std::stringstream s;
@@ -218,14 +216,14 @@ template<typename T> string _tostr ( T t ) {
 	return s.str();
 }
 
-inline pstring gen_bnode_id ( string id = L"" ) {
+inline pstring gen_bnode_id ( string id = "" ) {
 	static size_t blankNodeCounter;
 	static map<string, string> bnode_id_map;
 	if (id.size())
 		if ( bnode_id_map.find ( id ) != bnode_id_map.end() ) 
 			return pstr(bnode_id_map[id]);
 	std::stringstream ss;
-	ss << L"_:b" << ( blankNodeCounter++ );
+	ss << "_:b" << ( blankNodeCounter++ );
 	return pstr(bnode_id_map[id] = ss.str());
 }
 

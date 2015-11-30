@@ -49,7 +49,7 @@ bool keyword ( const string& key );
 bool keyword ( pstring key );
 
 #define KW_SHORTCUTS(x) \
-const string kw##x = string(L"@") + ws(#x);\
+const string kw##x = string("@") + ws(#x);\
 template<typename T> inline bool has##x(T t) { return 	has(t, kw##x); } \
 inline const pobj& get##x(pobj p) { return 		p->MAP()->at(kw##x); } \
 inline const pobj& get##x(obj& p) { return		p.MAP()->at(kw##x); } \
@@ -157,7 +157,7 @@ public:
 	pcontext context = 0;
 
 	jsonld_api ( pobj input, jsonld_options opts );
-	jsonld_api ( jsonld_options opts_ = jsonld_options ( L"" ) ) :
+	jsonld_api ( jsonld_options opts_ = jsonld_options ( "" ) ) :
 		opts ( opts_ ) {
 	}
 private:

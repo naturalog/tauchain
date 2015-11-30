@@ -146,7 +146,7 @@ struct jsonld_options {
 	pstring base = 0;//pstr ( "http://tauchain.org/" );
 	pbool compactArrays = std::make_shared<bool> ( true );
 	std::shared_ptr<class obj> expandContext = 0;
-	pstring processingMode = pstr ( L"json-ld-1.0" );
+	pstring processingMode = pstr ( "json-ld-1.0" );
 	pbool embed = 0;
 	pbool isexplicit = std::make_shared<bool> ( true );
 	pbool omitDefault = 0;

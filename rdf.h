@@ -43,7 +43,7 @@ public:
 
 
 
-inline std::wostream& operator<<(std::wostream& o, const node& n) { return o << n.tostring(); }
+inline std::ostream& operator<<(std::ostream& o, const node& n) { return o << n.tostring(); }
 
 
 
@@ -68,7 +68,7 @@ public:
 	//Constructors
 	quad ( string subj, string pred, string object, string graph );
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph );
-	quad ( pnode subj, pnode pred, pnode object, string graph = L"@default" );
+	quad ( pnode subj, pnode pred, pnode object, string graph = "@default" );
 	quad ( pnode subj, pnode pred, pnode object, pnode graph);
 
 	quad(){}
@@ -110,10 +110,10 @@ extern const pnode nil;
 
 pqlist mk_qlist();
 
-std::wostream& operator<< ( std::wostream& o, const qdb& );
-std::wostream& operator<< ( std::wostream& o, const qlist& );
+std::ostream& operator<< ( std::ostream& o, const qdb& );
+std::ostream& operator<< ( std::ostream& o, const qlist& );
 #ifndef NOPARSER
-int readqdb (qdb& r, std::wistream& is);
+int readqdb (qdb& r, std::istream& is);
 #endif
 #ifdef JSON
 class jsonld_api;
@@ -169,12 +169,12 @@ private:
 	pnode readvar();
 	pnode readbnode();
 	void readprefix();
-	void preprocess(std::wistream& is, std::stringstream& ss);
+	void preprocess(std::istream& is, std::stringstream& ss);
 public:
 	nqparser();
 	~nqparser();
-	void nq_to_qdb(qdb& kb, std::wistream& is);
-	//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = L"@default");
+	void nq_to_qdb(qdb& kb, std::istream& is);
+	//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = "@default");
 };
 qlist merge ( const qdb& q );
 

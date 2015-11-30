@@ -203,14 +203,14 @@ private:
 	#define EVALPS(id, s) ((s.empty()) ? (EVALS(id, s)) : ((EVAL(id))))
 	termid evalvar(const term& x, const subs& s) {
 		PROFILE(++evals);
-		setproc(L"evalvar");
+		setproc("evalvar");
 		termid r = ((evvit = s.find(x.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
 		TRACE(dout<<format(x) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
 		return r;
 	}
 	inline termid evaluate(const term& p) {
 		PROFILE(++evals);
-		setproc(L"evaluate");
+		setproc("evaluate");
 		if (ISVAR(p)) return 0;
 		if (!p.s && !p.o) return &p;
 		termid a = evaluate(*p.s), b = evaluate(*p.o);
@@ -219,7 +219,7 @@ private:
 
 	inline termid evaluate(const term& p, const subs&  s) {
 		PROFILE(++evals);
-		setproc(L"evaluate");
+		setproc("evaluate");
 //		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
 		termid r;
 		if (ISVAR(p)) r = ((evvit = s.find(p.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);

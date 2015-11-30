@@ -44,8 +44,8 @@ extern bool in_silent_part;
 #define TRACE(X)
 #endif
 
-extern std::wostream& dout;
-extern std::wostream& derr;
+extern std::ostream& dout;
+extern std::ostream& derr;
 extern bool deref, shorten;
 
 
@@ -117,7 +117,7 @@ extern int _indent;
 
 struct _setproc {
 	string prev;
-	_setproc(const std::string& p);
+	//_setproc(const std::string& p);
 	_setproc(const string& p);
 	~_setproc();
 };

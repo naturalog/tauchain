@@ -111,8 +111,8 @@ LLL
 how stuff works:
 
 
-	auto T = atom(op->make(mkiri(pstr(L"T")), 0,0));
-	auto F = atom(op->make(mkiri(pstr(L"F")), 0,0));
+	auto T = atom(op->make(mkiri(pstr("T")), 0,0));
+	auto F = atom(op->make(mkiri(pstr("F")), 0,0));
 
 	auto tnf = fact(T, F);
 	auto fnt = fact(F, T);
@@ -798,7 +798,7 @@ function<bool()> nodeComp(Node *n){
 //pred_index, a map from preds to a vector of indexes of rules with that pred in the head
 /*void compile_kb()
 {
-	setproc(L"compile_kb");
+	setproc("compile_kb");
 	for (auto x: pred_index)
 	{
 		old::nodeid k = x.first;
@@ -936,7 +936,7 @@ bool ep_check(Thing *a, Thing *b){
 
 	/*
 		function<bool()> boundunifycoro(Thing *arg){
-			setproc(L"boundunifycoro");
+			setproc("boundunifycoro");
 			//TRACE(dout << this << "/" << this->str() << " unifcoro arg=" << arg << "/" << arg->str() <<  endl;)
 			TRACE(dout << "isBound: " << this << ", " << this->getValue() << endl;)
 			TRACE(dout << "arg: " << arg << "/" << arg->str() << endl;)
@@ -994,40 +994,40 @@ https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-1482
 		static int d = 0;
 		if (d++ == 15) {
 			d = 0;
-			return L"break";
+			return "break";
 		}
 		stringstream r;
 		r << "[" << this << "]";
 		switch (type)
 		{
 			case UNBOUND:
-				r << L"var()";
+				r << "var()";
 				break;
 			case BOUND:
 				ASSERT(thing);
-				r << L"var(" << thing << L")";
+				r << "var(" << thing << ")";
 				break;
 			case NODE:
 				ASSERT(term);
 				r << op->format(term);
 				break;
 			case LIST: {
-				r << L"{" << size << L"}(";
+				r << "{" << size << "}(";
 				for (size_t i = 1; i < size; i++) {
 					if (i != 0) r << " ";
 					r << (this + i)->dbgstr();
 				}
 				if(!size)
 					r << " ";
-				r << L")";
+				r << ")";
 				break;
 			}
 			case OFFSET:
 				stringstream r;
-				r << L"{";
+				r << "{";
 				if (offset >= 0)
-					r << L"+";
-				r << offset << L"}->";
+					r << "+";
+				r << offset << "}->";
 				r << (this + offset)->dbgstr();
 				break;
 		}
