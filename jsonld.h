@@ -19,7 +19,6 @@
 #include "strings.h"
 #include "rdf.h"
 
-namespace old{
 
 
 inline string resolve ( pstring base_, const string& ref ) {
@@ -150,7 +149,7 @@ public:
 
 typedef std::shared_ptr<context_t> pcontext;
 
-class rdf_db;
+//class rdf_db;
 class jsonld_api {
 public:
 	jsonld_options opts;
@@ -184,6 +183,6 @@ public:
 pobj expand ( pobj input, jsonld_options opts = jsonld_options() );
 
 
-}
+
 #endif
 #endif

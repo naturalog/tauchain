@@ -25,9 +25,6 @@ extern "C" {
 
 extern bool irc;
 
-namespace old {
-
-
 
 	typedef Marpa_Symbol_ID sym;
 	typedef Marpa_Rule_ID rule;
@@ -942,7 +939,7 @@ namespace old {
 		{
 			nodeid a0 = q(decl, marpa->arg0);
 			assert(a0);
-			old::string dec = *dict[a0].value;
+			string dec = *dict[a0].value;
 			TRACE(dout << L"DECLARATION:" << dec << std::endl;)
 			if (dec == L"@prefix") {
 				nodeid p = q(decl, n3prefix);
@@ -1024,7 +1021,6 @@ namespace old {
 		return success;
 	}
 
-}
 
 /*builtins*/
 /*

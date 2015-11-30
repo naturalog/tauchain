@@ -9,7 +9,6 @@
 #include "misc.h"
 using namespace boost::algorithm;
 
-namespace old{
 
 nqparser::nqparser() : t(new wchar_t[4096*4096]) { }
 nqparser::~nqparser() { delete[] t; }
@@ -641,6 +640,5 @@ void nqparser::nq_to_qdb(qdb& kb, std::wistream& is){
 		if (*s == L')') throw wruntime_error(string(L"expected ) outside list: ") + string(s,0,48));
 	}
 	}
-}
 }
 #endif

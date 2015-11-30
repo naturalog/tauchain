@@ -18,7 +18,7 @@
 #include <fstream>
 #endif
 
-namespace old{
+
 
 #define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
 
@@ -922,5 +922,4 @@ prover::nodeids prover::get_list(nodeid head)
     for (auto rrr: r)
         rr.push_back(rrr->p);
     return rr;
-}
 }

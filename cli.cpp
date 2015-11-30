@@ -4,19 +4,17 @@
 
 bool autobt = false, _pause = false, __printkb = false, fnamebase = true, nocolor = false;
 
-namespace old {
-
 
 #ifdef JSON
-jsonld_options opts;
+
 #include "json_spirit.h"
+
+jsonld_options opts;
+
 pobj convert ( const json_spirit::wmValue& v );
 json_spirit::wmValue convert ( obj& v );
 json_spirit::wmValue convert ( pobj v );
-#endif
-/*
-*/
-#ifdef JSON
+
 pobj cmd_t::load_json ( string fname, bool print ) {
 	json_spirit::wmValue v;
 	if ( fname == L"" ) json_spirit::read_stream ( std::wcin, v );
@@ -75,7 +73,4 @@ qdb cmd_t::convert ( const string& s ) {
 }
 
 #endif
-
-}
-
 

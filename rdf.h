@@ -1,12 +1,10 @@
-#ifndef __RDF_DATA__
-#define __RDF_DATA__
+#ifndef __RDF_H__
+#define __RDF_H__
 
 #include <list>
 #include <set>
 
 #include "json_object.h"
-
-namespace old{
 
 
 typedef std::map<string, string> ssmap;
@@ -182,8 +180,6 @@ qlist merge ( const qdb& q );
 
 #endif
 
-
-}
 
 
 #endif

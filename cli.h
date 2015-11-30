@@ -6,7 +6,7 @@
 extern bool fnamebase, nocolor;
 
 
-namespace old{
+
 
 typedef std::vector<string> strings;
 
@@ -46,6 +46,5 @@ public:
 };
 #endif
 
-}
 
 #endif

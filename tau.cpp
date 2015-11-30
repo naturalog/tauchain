@@ -29,7 +29,7 @@ std::wostream& derr = std::wcerr;
 std::wistream& din = std::wcin;
 
 // to hold a kb/query string
-old::string qdb_text;
+string qdb_text;
 
 enum Mode {COMMANDS, KB, QUERY, SHOULDBE, OLD};
 Mode mode = COMMANDS;
@@ -68,7 +68,6 @@ std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
 
 yprover *tauProver = 0;
 
-using namespace old;
 
 std::vector<qdb> kbs;
 
@@ -76,7 +75,7 @@ void fresh_prover()
 {
 	if (tauProver)
 		delete tauProver;
-	tauProver = new yprover(old::merge_qdbs(kbs));
+	tauProver = new yprover(merge_qdbs(kbs));
 }
 
 
@@ -111,7 +110,7 @@ void help(string help_arg){
 		dout << "\"fin.\" is part of the kb/query-loading, it denotes the end of your rule-base" << endl;
 	}
 	else{
-		old::string help_arg = input.pop();
+		string help_arg = input.pop();
 		string help_str = L"";
 		if(help_arg == L"kb"){
 			help_str = L"command 'kb': load a knowledge-base.";
@@ -275,7 +274,7 @@ void clear_kb(){
 
 
 
-qdb old::merge_qdbs(const std::vector<qdb> qdbs)
+qdb merge_qdbs(const std::vector<qdb> qdbs)
 {
         qdb r;
 		if (qdbs.size() == 0)
@@ -406,7 +405,7 @@ bool is_command(string s){
 int count_fins()
 {
 	int fins = 0;
-	old::string line;
+	string line;
 	wstringstream ss(qdb_text);
 	while (!ss.eof()) {
 		getline(ss, line);
@@ -438,7 +437,7 @@ int count_fins()
 	int fins = 0;
 	std::wstringstream ss(qdb_text);
 	do {
-		old::string l;
+		string l;
 		getline(ss, l);
 		if(ss.end())break;
 		trim(l);
@@ -452,8 +451,8 @@ struct input_t
 	bool interactive = true;
 	bool do_reparse = true;
 	std::string name;
-	old::string pop();
-	old::string pop_long();
+	string pop();
+	string pop_long();
 	void take_back();
 	void readline()	{};
 	bool end();
@@ -474,12 +473,12 @@ struct args_input_t:input_t
 	{
 		return counter == argc;
 	}
-	old::string pop()
+	string pop()
 	{
 		assert(!end());
 		return argv[counter++];
 	}
-	old::string pop_long()
+	string pop_long()
 	{
 		return pop();
 	}
@@ -495,7 +494,7 @@ struct args_input_t:input_t
 struct stream_input_t:input_t
 {
 	std::wistream stream;
-	old::string line;
+	string line;
 	size_t pos;
 	std::stack<size_t> starts;
 
@@ -531,21 +530,21 @@ struct stream_input_t:input_t
 		pos = 0;
 		do_reparse = interactive && stream.peek() == EOF;
 	}
-	old::string pop_x(wchar_t x)
+	string pop_x(wchar_t x)
 	{
 		size_t start = pos;
 		while(line[pos] == ' ') pos++;
 		while(line[pos] != x && line[pos] != '\n' && line[pos] != 0) pos++;
 		size_t end = pos;
-		old::string t = line.substr(start, end);
+		string t = line.substr(start, end);
 		starts.push(start);
 		return t;
 	}
-	old::string pop()
+	string pop()
 	{
 		return pop_x(' ');
 	}
-	old::string pop_long()
+	string pop_long()
 	{
 		return pop_x(0);
 	}
@@ -668,7 +667,7 @@ void cmd_kb(){
 		clear_kb();
 		set_mode(KB);
 	}else{
-		old::string token = input.pop();
+		string token = input.pop();
 		if(dash_arg(token,L"clear")){
 			clear_kb();
 			return;
@@ -719,7 +718,7 @@ void displayPrompt(){
 
 void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 {
-	old::string x = qdb_text + input.pop_long() + "\n";
+	string x = qdb_text + input.pop_long() + "\n";
 
 	if (!input.do_reparse) {
 		qdb_text = x;
@@ -785,7 +784,7 @@ int main ( int argc, char** argv)
 
 
 		if (mode == COMMANDS) {
-			old::string token = input.pop();
+			string token = input.pop();
 			if (startsWith(token, L"#") || token == L"")
 				continue;
 			else if (read_option(token))
@@ -812,7 +811,7 @@ int main ( int argc, char** argv)
 				emplace_stdin();
 			else {
 				input.take_back();
-				old::string line = input.pop_long()
+				string line = input.pop_long()
 
 				//maybe its a filename
 				string fn = ws(line)

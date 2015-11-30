@@ -18,7 +18,50 @@
 #endif
 
 
-namespace old{
+
+string indent();
+using std::endl;
+
+extern std::set<string> silence;
+#ifdef DEBUG
+extern bool in_silent_part;
+#define TRACE(x) \
+  if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) \
+  { \
+  	in_silent_part = false; \
+  	dout << KYEL << indent() << KNRM; \
+  	x; \
+  } \
+  else \
+  { \
+  	if(!in_silent_part) \
+  	{ \
+  		dout << "..." << endl; \
+	  	in_silent_part = true; \
+	} \
+  }
+#else
+#define TRACE(X)
+#endif
+
+extern std::wostream& dout;
+extern std::wostream& derr;
+extern bool deref, shorten;
+
+
+
+#ifdef DEBUG
+//logger _logger;
+extern bool autobt, _pause;
+void bt();
+void dopause();
+#define trace(x) std::wclog<<__FILE__<<':'<<__LINE__<<tab<<x; if (_pause) dopause()
+#else
+void bt();
+#define trace(x)
+#endif
+
+
 
 typedef i64 nodeid;
 
@@ -90,7 +133,5 @@ struct _setproc {
 
 string listid();
 string list_bnode_name(int item);
-
-}
 
 #endif

@@ -33,7 +33,7 @@
 #define PROFILE(x)
 #endif
 
-namespace old{
+
 
 struct term;
 class prover;
@@ -310,6 +310,6 @@ public:
 	ruleset::r2id_t::const_iterator rit;
 	shared_ptr<proof> lastp = 0;
 };
-}
+
 
 #endif

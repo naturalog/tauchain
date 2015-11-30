@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <boost/algorithm/string.hpp>
 using namespace boost::algorithm;
-namespace old{
+
 
 bool deref = true, shorten = false;
 int level = 1;
@@ -532,5 +532,3 @@ string listid()
 };
 
     
-}
-

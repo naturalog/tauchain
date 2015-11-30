@@ -5,7 +5,6 @@
 #include "cli.h"
 #include <istream>
 
-namespace old {
-	int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base = L"@default");
-}
+int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base = L"@default");
+
 #endif

@@ -15,7 +15,6 @@ using std::make_shared;
 using std::istream;
 
 
-namespace old{
 
 
 typedef uint64_t u64;
@@ -234,6 +233,5 @@ inline pstring gen_bnode_id ( string id = L"" ) {
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
 extern int level;
 
-}
 
 #endif

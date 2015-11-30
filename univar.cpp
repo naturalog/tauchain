@@ -5,8 +5,7 @@
 #include <string.h>
 #include <limits>
 
-using namespace std;
-using namespace old;
+//using namespace std;
 
 typedef intptr_t offset_t;//ptrdiff_t
 typedef unsigned char byte;
@@ -101,7 +100,7 @@ public:
 	ThingType type;
 	union {
 		Thing *thing;     // for bound var
-		old::termid term; // for node
+		termid term; // for node
 		size_t size;      // for list
 		offset_t offset;
 	};
@@ -326,20 +325,20 @@ typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
 
 map<nodeid, vector<pred_t>> builtins;
-map<old::string, old::string> log_outputString;
+map<string, string> log_outputString;
 
 
 Perms perms;
-map<PredParam, old::string> permname;
+map<PredParam, string> permname;
 map<nodeid, vector<size_t>> pred_index;
 #ifdef DEBUG
-std::map<old::nodeid, pred_t> preds;
-typedef map<old::termid, size_t> locals_map;
+std::map<nodeid, pred_t> preds;
+typedef map<termid, size_t> locals_map;
 #else
-std::unordered_map<old::nodeid, pred_t> preds;
-typedef unordered_map<old::termid, size_t> locals_map;
+std::unordered_map<nodeid, pred_t> preds;
+typedef unordered_map<termid, size_t> locals_map;
 #endif
-old::prover *op;
+prover *op;
 
 
 //garbage
@@ -356,9 +355,9 @@ long unifys = 0;
 //some forward declarations
 coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb);
 coro unify(Thing *, Thing *);
-void check_pred(old::nodeid pr);
+void check_pred(nodeid pr);
 rule_t seq(rule_t a, rule_t b);
-rule_t compile_rule(old::prover::ruleid r);
+rule_t compile_rule(prover::ruleid r);
 void build_in();
 
 
@@ -480,7 +479,7 @@ pred_t dbg_fail_with_args()
 
 #ifdef KBDBG
 
-old::string kbdbg_str(const Thing * x)
+string kbdbg_str(const Thing * x)
 {
 	wstringstream o;
 	o << "[" << "\"" << x << "\""  << ", ";
@@ -568,7 +567,7 @@ static coro UNIFY_SUCCEED(const Thing *a, const Thing *b)
 
 
 
-wstring str(const Thing *_x)
+string str(const Thing *_x)
 {
 	Thing x = *_x;
 	switch (get_type(x)) {
@@ -793,9 +792,9 @@ wstring sprintVar(wstring label, Thing *v){
 	return wss.str();
 }
 
-wstring sprintPred(wstring label, old::nodeid pred){
+wstring sprintPred(wstring label, nodeid pred){
 	wstringstream wss;
-	wss << label << ": (" << pred << ")" << old::dict[pred];
+	wss << label << ": (" << pred << ")" << dict[pred];
 	return wss.str();
 }
 
@@ -853,12 +852,12 @@ void add_rule(nodeid pr, const rule_t &x)
 	if (preds.find(pr) == preds.end())
 		preds[pr] = x;
 	else {
-		TRACE(dout << "seq, nodeid: " << pr << "(" << old::dict[pr] << ")" << endl;)
+		TRACE(dout << "seq, nodeid: " << pr << "(" << dict[pr] << ")" << endl;)
 		preds[pr] = seq(x, preds[pr]);
 	}
 }
 
-void compile_pred(old::nodeid pr)
+void compile_pred(nodeid pr)
 {
 	FUN;
 
@@ -867,7 +866,7 @@ void compile_pred(old::nodeid pr)
 
 	if (builtins.find(pr) != builtins.end()) {
 		for (auto b: builtins[pr]) {
-			TRACE(dout << "builtin: " << old::dict[pr] << endl;)
+			TRACE(dout << "builtin: " << dict[pr] << endl;)
 			add_rule(pr, b);
 		}
 		if (pr != rdfType)
@@ -882,12 +881,12 @@ void compile_pred(old::nodeid pr)
 
 
 
-void check_pred(old::nodeid pr)
+void check_pred(nodeid pr)
 {
 	FUN;
 	rule_t y;
 	if (pred_index.find(pr) == pred_index.end() && builtins.find(pr) == builtins.end()) {
-		dout << KRED << "Predicate '" << KNRM << old::dict[pr] << "' not found." << endl;
+		dout << KRED << "Predicate '" << KNRM << dict[pr] << "' not found." << endl;
 		preds[pr] = GEN_FAIL_WITH_ARGS;
 	}
  }
@@ -901,11 +900,11 @@ void compile_kb()
 	preds.clear();
 	take_out_garbage();
 
-	//old::prover --> pred_index (preprocessing step)
+	//prover --> pred_index (preprocessing step)
 	for (int i = op->heads.size(); i > 0; i--)
 	{
-		old::nodeid pr = op->heads[i - 1]->p;
-		TRACE(dout << "adding rule for pred [" << pr << "] " << old::dict[pr] << "'" << endl;)
+		nodeid pr = op->heads[i - 1]->p;
+		TRACE(dout << "adding rule for pred [" << pr << "] " << dict[pr] << "'" << endl;)
 		pred_index[pr].push_back(i - 1);
 	}
 
@@ -1106,9 +1105,9 @@ bool islist(termid t)
 	ASSERT(t);/*
 	dout << t << endl;
 	dout << t->p << endl;
-	dout << &old::dict << endl;
-	dout << " " << old::dict[t->p].value  << endl;*/
-	return *old::dict[t->p].value == L".";
+	dout << &dict << endl;
+	dout << " " << dict[t->p].value  << endl;*/
+	return *dict[t->p].value == L".";
 }
 
 PredParam maybe_head(PredParam pp, termid head, termid x)
@@ -1267,7 +1266,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		Thing t;
 		add_kbdbg_info(t, xx.second);
 		termid x = xx.first;
-		TRACE(dout << "termid:" << x << " p:" << old::dict[x->p] << "(" << x->p << ")" << endl;)
+		TRACE(dout << "termid:" << x << " p:" << dict[x->p] << "(" << x->p << ")" << endl;)
 		auto it = m.find(x);
 		if (it == m.end()) {
 			m[x] = vec.size();
@@ -1408,7 +1407,7 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 
 
 
-rule_t compile_rule(old::prover::ruleid r)
+rule_t compile_rule(prover::ruleid r)
 {
 	FUN;
 
@@ -1554,7 +1553,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 	}
 
 	if (is_node(t))
-		return std::make_shared<old::node>(old::dict[get_term(t)->p]);
+		return std::make_shared<node>(dict[get_term(t)->p]);
 
 	dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
 	
@@ -1562,13 +1561,13 @@ pnode thing2node(Thing *t_, qdb &r) {
 }
 
 
-void add_result(qdb &r, Thing *s, Thing *o, old::nodeid p)
+void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
 {
 	r.first[L"@default"]->push_back(
-		make_shared<old::quad>(
-			old::quad(
+		make_shared<quad>(
+			quad(
 				thing2node(s, r),
-				std::make_shared<old::node>(old::dict[p]),
+				std::make_shared<node>(dict[p]),
 				thing2node(o, r)
 			)
 		)
@@ -1590,7 +1589,7 @@ yprover::yprover ( qdb qkb, bool check_consistency)  {
 	TRACE(dout << "constructing old prover" << endl;)
 
 	//
-	op = new old::prover(qkb, false);
+	op = new prover(qkb, false);
 
 	//
 	make_perms();
@@ -1651,7 +1650,7 @@ void print_kbdbg_term(wstringstream &o, termid t, unsigned long &part)
 	print_kbdbg_part(o, t->o, part++);
 }
 
-void print_kbdbg_termset(wstringstream &o, old::prover::termset b, unsigned long &part)
+void print_kbdbg_termset(wstringstream &o, prover::termset b, unsigned long &part)
 {
 	size_t i = 0;
 	for (auto bi: b) {
@@ -1662,7 +1661,7 @@ void print_kbdbg_termset(wstringstream &o, old::prover::termset b, unsigned long
 }
 
 
-void print_kbdbg(old::prover::termset query)
+void print_kbdbg(prover::termset query)
 {
 	unsigned long part = 0;
 	for (auto rules: pred_index) {
@@ -1689,11 +1688,11 @@ void print_kbdbg(old::prover::termset query)
 }
 #endif
 
-void yprover::query(const old::qdb& goal){
+void yprover::query(const qdb& goal){
 	FUN;
 	results.clear();
 
-	const old::prover::termset q = op->qdb2termset(goal);
+	const prover::termset q = op->qdb2termset(goal);
 #ifdef KBDBG
 	print_kbdbg(q);
 #endif
@@ -1713,7 +1712,7 @@ void yprover::query(const old::qdb& goal){
 		nresults++;
 		dout << KCYN << L"RESULT " << KNRM << nresults << ":";
 		qdb r;
-		r.first[L"@default"] = old::mk_qlist();
+		r.first[L"@default"] = mk_qlist();
 
 		//go over the triples of the query to print them out
 		for(auto i: q)
@@ -1721,7 +1720,7 @@ void yprover::query(const old::qdb& goal){
 			Thing *s = &fetch_thing(i->s, locals, consts, lm, cm);
 			Thing *o = &fetch_thing(i->o, locals, consts, lm, cm);
 
-			TRACE(dout << sprintThing(L"Subject", s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", o) << endl;)
+			TRACE(dout << sprintThing(L"Subject", s) << " Pred: " << dict[i->p] << " "  << sprintThing(L"Object", o) << endl;)
 
 			//lets try to get the original names of unbound vars
 			Thing n1, n2;
@@ -1734,7 +1733,7 @@ void yprover::query(const old::qdb& goal){
 				n2 = create_node(i->o);
 			}
 
-			dout << str(getValue(s)) << " " << old::dict[i->p] << " "  << str(getValue(o)) << endl;
+			dout << str(getValue(s)) << " " << dict[i->p] << " "  << str(getValue(o)) << endl;
 
 			add_result(r, s, o, i->p);
 		}
@@ -1896,7 +1895,7 @@ void build_in()
 
 	//sum: The subject is a list of numbers. The object is calculated as the arithmentic sum of those numbers.
 
-	old::string bu = L"http://www.w3.org/2000/10/swap/math#sum";
+	string bu = L"http://www.w3.org/2000/10/swap/math#sum";
 	auto bui = dict.set(mkiri(pstr(bu)));
 	builtins[bui].push_back(
 			[r, bu, entry, ouc, s, ss](Thing *s_, Thing *o_) mutable {

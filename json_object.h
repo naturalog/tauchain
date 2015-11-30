@@ -1,5 +1,6 @@
 #ifndef __OBJ_H__
 #define __OBJ_H__
+#ifdef JSON
 
 #include <set>
 #include <map>
@@ -18,58 +19,12 @@
 
 
 
-using namespace old;
 //#include "misc.h"
 
 
 typedef std::nullptr_t null;
 typedef std::shared_ptr<bool> pbool;
 
-string indent();
-using std::endl;
-
-extern std::set<string> silence;
-#ifdef DEBUG
-extern bool in_silent_part;
-#define TRACE(x) \
-  if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) \
-  { \
-  	in_silent_part = false; \
-  	dout << KYEL << old::indent() << KNRM; \
-  	x; \
-  } \
-  else \
-  { \
-  	if(!in_silent_part) \
-  	{ \
-  		dout << "..." << endl; \
-	  	in_silent_part = true; \
-	} \
-  }
-#else
-#define TRACE(X)
-#endif
-
-extern std::wostream& dout;
-extern std::wostream& derr;
-
-
-namespace old{
-extern bool deref, shorten;
-
-
-#ifdef JSON
-
-#ifdef DEBUG
-//logger _logger;
-extern bool autobt, _pause;
-void bt();
-void dopause();
-#define trace(x) std::wclog<<__FILE__<<':'<<__LINE__<<tab<<x; if (_pause) dopause()
-#else
-void bt();
-#define trace(x)
-#endif
 
 
 class obj {
@@ -202,8 +157,7 @@ struct jsonld_options {
 	pbool useNamespaces = std::make_shared<bool> ( true );
 	pstring outputForm = 0;
 };
+
+
 #endif
-
-}
-
 #endif
