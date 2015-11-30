@@ -31,8 +31,8 @@ std::wistream& din = std::wcin;
 // to hold a kb/query string
 old::string qdb_text;
 
-enum mode_t {COMMANDS, KB, QUERY, SHOULDBE, OLD};
-mode_t mode = COMMANDS;
+enum Mode {COMMANDS, KB, QUERY, SHOULDBE, OLD};
+Mode mode = COMMANDS;
 
 enum ParsingResult {FAIL, /* INCOMPLETE, */ COMPLETE};
 
@@ -53,11 +53,17 @@ std::map<string,bool*> _flags = {
 };
 
 std::vector<string> extensions = {L"jsonld", L"natural3", L"natq", L"n3", L"nq"};
-std::vector<string> _formats = {L"nq",
+std::vector<string> _formats = {
+								#ifndef NOPARSER
+								L"nq",
+								#endif
 								#ifdef with_marpa
 								L"n3",
 								#endif
-								L"jsonld"};
+								#ifdef JSON
+								L"jsonld"
+								#endif
+};
 std::vector<string> _commands = {L"kb", L"query",L"run",L"quit"};
 
 yprover *tauProver = 0;
@@ -334,16 +340,18 @@ int _parse(qdb &kb, qdb &query, std::wistream &f, string fmt, int &fins)
 		//dout << L"Supported is a subset of n3 with our fin notation" << endl;
 		return parse_natural3(kb, query, f, fins, base);
 	}
-    else
 #endif
+#ifndef NOPARSER
 	if(fmt == L"natq" || fmt == L"nq" || fmt == L"nquads")
 		return parse_nq(kb, query, f, fins);
-	else if(fmt == L"jsonld"){
-		dout << L"[jsonld]Cannot yet read JSON-LD format" << endl;
+#endif
+#ifdef JSON
+	if(fmt == L"jsonld"){
+		dout << L"[jsonld]somobody wire the json-ld parser into the cli" << endl;
 		return FAIL;
 	}
-    else
-		return FAIL;
+#endif
+	return FAIL;
 }
 
 string fmt_from_ext(string fn){
@@ -395,8 +403,18 @@ bool is_command(string s){
 
 }
 
-
-
+int count_fins()
+{
+	int fins = 0;
+	old::string line;
+	wstringstream ss(qdb_text);
+	while (!ss.eof()) {
+		getline(ss, line);
+		if (startsWith(s, L"fin") && *wstrim(s.c_str() + 3) == L".")
+			fins++;
+	}
+	return fins;
+}
 
 bool dash_arg(string token, string pattern){
 	return (token == pattern) || (token == L"-" + pattern) || (token == L"--" + pattern);
@@ -432,6 +450,7 @@ int count_fins()
 struct input_t
 {
 	bool interactive = true;
+	bool do_reparse = true;
 	std::string name;
 	old::string pop();
 	old::string pop_long();
@@ -510,6 +529,7 @@ struct stream_input_t:input_t
 		std::getline(stream, line);
 		starts.clear();
 		pos = 0;
+		do_reparse = interactive && stream.peek() == EOF;
 	}
 	old::string pop_x(wchar_t x)
 	{
@@ -701,7 +721,7 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 {
 	old::string x = qdb_text + input.pop_long() + "\n";
 
-	if (!input.interactive) {
+	if (!input.do_reparse) {
 		qdb_text = x;
 	}
 	else {

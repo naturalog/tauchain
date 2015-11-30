@@ -308,7 +308,7 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 
 typedef vector<Thing> Locals;
 
-typedef const std::pair<Thing*,Thing*> thingthingpair;
+typedef std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
 typedef function<bool()> coro;
@@ -1721,7 +1721,7 @@ void yprover::query(const old::qdb& goal){
 			Thing *s = &fetch_thing(i->s, locals, consts, lm, cm);
 			Thing *o = &fetch_thing(i->o, locals, consts, lm, cm);
 
-			TRACE(dout << sprintThing(L"Subject", &s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", &o) << endl;)
+			TRACE(dout << sprintThing(L"Subject", s) << " Pred: " << old::dict[i->p] << " "  << sprintThing(L"Object", o) << endl;)
 
 			//lets try to get the original names of unbound vars
 			Thing n1, n2;
@@ -1734,9 +1734,9 @@ void yprover::query(const old::qdb& goal){
 				n2 = create_node(i->o);
 			}
 
-			dout << str(getValue(&s)) << " " << old::dict[i->p] << " "  << str(getValue(&o)) << endl;
+			dout << str(getValue(s)) << " " << old::dict[i->p] << " "  << str(getValue(o)) << endl;
 
-			add_result(r, &s, &o, i->p);
+			add_result(r, s, o, i->p);
 		}
 
 		results.emplace_back(r);
