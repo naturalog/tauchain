@@ -361,7 +361,7 @@ extern bool irc;
 		}
 
 
-		int parse(const string inp, termid &raw)
+		ParsingResult parse(const string inp, termid &raw)
 		{
 			if (!precomputed) {
 				check_int(marpa_g_precompute(g));
@@ -456,7 +456,7 @@ extern bool irc;
 						  " \"" << string(pos, pos + best_len) << "\" - " << sym2str(best_syms[0]) << std::endl);
 					if (MARPA_ERR_UNEXPECTED_TOKEN_ID ==
 						check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1)))
-						return 0;
+						return FAIL;
 					check_int(marpa_r_earleme_complete(r));
 					pos += best_len;
 				}
@@ -487,7 +487,7 @@ extern bool irc;
 						dout << sym2str(e) << ", ";
 						if (!irc) dout << std::endl;
 					}
-					return 0;
+					return FAIL;
 				}
 			}
 
@@ -497,7 +497,7 @@ extern bool irc;
 			Marpa_Bocage b = marpa_b_new(r, -1);
 			if (!b) {
 				TRACE(dout << "[n3]parsing failed, failed to create bocage" << std::endl);
-				return 0;
+				return FAIL;
 			}
 			Marpa_Order o = marpa_o_new(b);
 			check_null(o);
@@ -600,7 +600,7 @@ extern bool irc;
 
 			raw = stack[0];
 			TRACE(dout << "result0: " << prvr->format(raw) << std::endl);
-			return 2;
+			return COMPLETE;
 		}
 
 
@@ -981,7 +981,7 @@ extern bool irc;
 	}
 
 
-	int parse_natural3(qdb &kb, qdb &q, std::istream &f, int &fins, string base)
+	ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base)
 	{
 		setproc("N3");
 		static Marpa *parser = 0;
@@ -995,7 +995,7 @@ extern bool irc;
 			#ifndef NOPARSER
 			readqdb(gkb, gf);
 			#else
-			
+
 			#endif
 
 			static prover grmr(gkb);
@@ -1006,20 +1006,19 @@ extern bool irc;
 
 		string in = load_file(f);
 		termid raw;
-		int success = parser->parse(in, raw);
+		ParsingResult success = parser->parse(in, raw);
 
-		if (success == 2) {
+		if (success == COMPLETE) {
 			TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << parser->prvr->formatkb());
 
 			if (!raw)
-				return 0;
+				return FAIL;
 
 			TRACE(dout << "retrieving results." << std::endl);
 
 			N3 n3(*parser->prvr, kb, q, true);
 			n3.base = base;
 			n3.add_statements(raw, "@default");
-			fins = n3.fins;
 		}
 
 		return success;

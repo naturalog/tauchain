@@ -17,42 +17,24 @@ nodeid A, Dot, GND, False;
 //nodeid _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 //RDFS
-nodeid rdfType, rdfnil, rdffirst, rdfrest;
+nodeid rdftype, rdfnil, rdffirst, rdfrest;
 nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf;
 nodeid rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
 nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdfXMLLiteral, rdfscomment;
 nodeid rdfList, rdfsisDefinedBy, owlFunctionalProperty;
-
+nodeid rdfsseeAlso, rdfslabel, rdfobject, rdfStatement, rdfpredicate, rdfsubject, rdfvalue;
 
 bidict& dict = *new bidict;
-/*
-void initRDFS(){
-
-	rdfType = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
-	rdfsResource = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Resource")));
-	rdfsdomain = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#domain")));
-	rdfsrange =  set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#range")));
-	rdfsClass = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Class")));
-	rdfssubClassOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subClassOf")));
-	rdfssubPropertyOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
-	rdfsContainerMembershipProperty = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
-	rdfsmember = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#member")));
-	rdfsDatatype = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Datatype")));
-	rdfsLiteral = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Literal")));
-	rdfProperty = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
-}
-*/
-
+/*void initRDFS(){}*/
 
 //considering that mkiri, mkliteral and mkbnode already run set() on themselves, then
 //to convernt pnode to nodeid we should just be able to do a lookup in pi
 
 void bidict::init() {
-#ifdef with_marpa
 	file_contents_iri = set(mkiri(pstr("http://idni.org/marpa#file_contents")));
 	marpa_parser_iri = set(mkiri(pstr("http://idni.org/marpa#parser")));
 	marpa_parse_iri = set(mkiri(pstr("http://idni.org/marpa#parse")));
-#endif
+
 	GND = set (mkiri(pstr( "GND" )));
 	A = set(mkiri(pstr("a")));
 
@@ -65,7 +47,7 @@ void bidict::init() {
 	rdfnil = set(mkiri(RDF_NIL/*Tpstr("rdf:nil")*/));
 	Dot = set(mkiri(pstr(".")));
 
-	rdfType = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));//should not be capitalized, i will refactor it in clion later
+	rdftype = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
 	rdfsResource = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Resource")));
 	rdfsdomain = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#domain")));
 	rdfsrange =  set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#range")));
@@ -87,6 +69,14 @@ void bidict::init() {
  	rdfsisDefinedBy = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#isDefinedBy")));
 
 	owlFunctionalProperty = set(mkiri(pstr("owlFunctionalProperty")));
+
+	rdfsseeAlso = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#seeAlso")));
+	rdfslabel = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#label")));
+	rdfobject = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#object")));
+	rdfStatement = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement")));
+	rdfpredicate = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate")));
+	rdfsubject = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#subject")));
+	rdfvalue = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#value")));
 
 
 

@@ -3,8 +3,13 @@
 
 #include <list>
 #include <set>
+#include <map>
+#include "strings.h"
+
+
 
 #include "json_object.h"
+
 
 
 typedef std::map<string, string> ssmap;

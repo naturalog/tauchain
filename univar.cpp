@@ -893,11 +893,11 @@ void compile_pred(nodeid pr)
 //Check builtins to see if the pred is a built-in. If we do find that
 //node-id, then do add_rule for each pred_t in the associated
 //std::vector<pred_t> in the builtins table. Return unless the
-//builtin pred is 'rdfType'.
+//builtin pred is 'rdftype'.
 
 // What's up with that return?
 
-//If it was rdfType or is not in the builtins table, then check to
+//If it was rdftype or is not in the builtins table, then check to
 //see if it's in pred_index. If it's not, then return, otherwise,
 //get the list of rules in which this node is the predicate for the
 //head. For each rule in the list, compile the rule and add it to the
@@ -918,8 +918,8 @@ void compile_pred(nodeid pr)
 			TRACE(dout << "builtin: " << dict[pr] << endl;)
 			add_rule(pr, b);
 		}
-		//lets not shadow rdfType by builtins for now
-		if (pr != rdfType)
+		//lets not shadow rdftype by builtins for now
+		if (pr != rdftype)
 			return;
 	}
 
@@ -1938,50 +1938,50 @@ void build_in_facts()
 {
 	add_facts({
 
-		{rdfAlt, rdfssubClassOf, rdfsContainer},
-		{rdfBag, rdfssubClassOf, rdfsContainer},
-		{rdfsContainerMembershipProperty, rdfssubClassOf, rdfProperty},
-		{rdfsDatatype, rdfssubClassOf, rdfsClass},
-		{rdfSeq, rdfssubClassOf, rdfsContainer},
-		{rdfXMLLiteral, rdfssubClassOf, rdfsLiteral},
-		{rdfXMLLiteral, rdfType, rdfsDatatype},
-		{rdfscomment, rdfsdomain, rdfsResource},
-		{rdfscomment, rdfsrange, rdfsLiteral},
-		{rdfsdomain, rdfsdomain, rdfProperty},
-		{rdfsdomain, rdfsrange, rdfsClass},
-		{rdffirst, rdfsdomain, rdfList},
-		{rdffirst, rdfsrange, rdfsResource},
-		{rdffirst, rdfType, owlFunctionalProperty},
-		{rdfsisDefinedBy, rdfsdomain, rdfsResource},
-		{rdfsisDefinedBy, rdfsrange, rdfsResource},
-		{rdfsisDefinedBy, rdfssubPropertyOf, rdfsseeAlso},
-//		{mkiri(pstr(":HMC")), rdfType, mkiri(pstr(":banana"))},
-		{rdfslabel, rdfsdomain, rdfsResource},
-		{rdfslabel, rdfsrange, rdfsLiteral},
-		{rdfsmember, rdfsdomain, rdfsContainer},
-		{rdfsmember, rdfsrange, rdfsResource},
-		{rdfobject, rdfsdomain, rdfStatement},
-		{rdfobject, rdfsrange, rdfsResource},
-		{rdfpredicate, rdfsdomain, rdfStatement},
-		{rdfpredicate, rdfsrange, rdfProperty},
-		{rdfsrange, rdfsdomain, rdfProperty},
-		{rdfsrange, rdfsrange, rdfsClass},
-		{rdfrest, rdfsdomain, rdfList},
-		{rdfrest, rdfsrange, rdfList},
-		{rdfrest, rdfType, owlFunctionalProperty},
-		{rdfsseeAlso, rdfsdomain, rdfsResource},
-		{rdfsseeAlso, rdfsrange, rdfsResource},
-		{rdfssubClassOf, rdfsdomain, rdfsClass},
-		{rdfssubClassOf, rdfsrange, rdfsClass},
-		{rdfssubPropertyOf, rdfsdomain, rdfProperty},
-		{rdfssubPropertyOf, rdfsrange, rdfProperty},
-		{rdfsubject, rdfsdomain, rdfStatement},
-		{rdfsubject, rdfsrange, rdfsResource},
-		{rdfType, rdfsdomain, rdfsResource},
-		{rdfType, rdfsrange, rdfsClass},
-		{rdfvalue, rdfsdomain, rdfsResource},
-		{rdfvalue, rdfsrange, rdfsResource},
-		{rdfnil, rdfType, rdfList}
+		{rdfAlt,                          rdfssubClassOf,    rdfsContainer},
+		{rdfBag,                          rdfssubClassOf,    rdfsContainer},
+		{rdfsContainerMembershipProperty, rdfssubClassOf,    rdfProperty},
+		{rdfsDatatype,                    rdfssubClassOf,    rdfsClass},
+		{rdfSeq,                          rdfssubClassOf,    rdfsContainer},
+		{rdfXMLLiteral,                   rdfssubClassOf,    rdfsLiteral},
+		{rdfXMLLiteral,                   rdftype,           rdfsDatatype},
+		{rdfscomment,                     rdfsdomain,        rdfsResource},
+		{rdfscomment,                     rdfsrange,         rdfsLiteral},
+		{rdfsdomain,                      rdfsdomain,        rdfProperty},
+		{rdfsdomain,                      rdfsrange,         rdfsClass},
+		{rdffirst,                        rdfsdomain,        rdfList},
+		{rdffirst,                        rdfsrange,         rdfsResource},
+		{rdffirst,                        rdftype,           owlFunctionalProperty},
+		{rdfsisDefinedBy,                 rdfsdomain,        rdfsResource},
+		{rdfsisDefinedBy,                 rdfsrange,         rdfsResource},
+		{rdfsisDefinedBy,                 rdfssubPropertyOf, rdfsseeAlso},
+//		{mkiri(pstr(":HMC")), rdftype, mkiri(pstr(":banana"))},
+		{rdfslabel,                       rdfsdomain,        rdfsResource},
+		{rdfslabel,                       rdfsrange,         rdfsLiteral},
+		{rdfsmember,                      rdfsdomain,        rdfsContainer},
+		{rdfsmember,                      rdfsrange,         rdfsResource},
+		{rdfobject,                       rdfsdomain,        rdfStatement},
+		{rdfobject,                       rdfsrange,         rdfsResource},
+		{rdfpredicate,                    rdfsdomain,        rdfStatement},
+		{rdfpredicate,                    rdfsrange,         rdfProperty},
+		{rdfsrange,                       rdfsdomain,        rdfProperty},
+		{rdfsrange,                       rdfsrange,         rdfsClass},
+		{rdfrest,                         rdfsdomain,        rdfList},
+		{rdfrest,                         rdfsrange,         rdfList},
+		{rdfrest,                         rdftype,           owlFunctionalProperty},
+		{rdfsseeAlso,                     rdfsdomain,        rdfsResource},
+		{rdfsseeAlso,                     rdfsrange,         rdfsResource},
+		{rdfssubClassOf,                  rdfsdomain,        rdfsClass},
+		{rdfssubClassOf,                  rdfsrange,         rdfsClass},
+		{rdfssubPropertyOf,               rdfsdomain,        rdfProperty},
+		{rdfssubPropertyOf,               rdfsrange,         rdfProperty},
+		{rdfsubject,                      rdfsdomain,        rdfStatement},
+		{rdfsubject,                      rdfsrange,         rdfsResource},
+		{rdftype,                         rdfsdomain,        rdfsResource},
+		{rdftype,                         rdfsrange,         rdfsClass},
+		{rdfvalue,                        rdfsdomain,        rdfsResource},
+		{rdfvalue,                        rdfsrange,         rdfsResource},
+		{rdfnil,                          rdftype,           rdfList}
 	});
 }
 
@@ -2001,7 +2001,7 @@ void build_in()
 	eps.push_back(ep)*/
 	pred_t p1, p2;
 
-	//Thing c_rdfsType = create_node(op->make(rdfType));
+	//Thing c_rdfsType = create_node(op->make(rdftype));
 	//Thing c_rdfsResource = create_node(op->make(rdfsResource));
 	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 
@@ -2026,7 +2026,7 @@ void build_in()
 	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
 	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
 	<HMC_a> yes, the bnode names as well*/
-	/*builtins[rdfType].push_back([a, b, c_rdfsResource, entry, suc, suc2, ouc, s, o, p1](Thing *s_, Thing *o_) mutable {
+	/*builtins[rdftype].push_back([a, b, c_rdfsResource, entry, suc, suc2, ouc, s, o, p1](Thing *s_, Thing *o_) mutable {
 		switch (entry) {
 			case 0:
 				o = getValue(o_);
@@ -2539,14 +2539,14 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 	//TODO: correctly, so that subqery proof trace not opaque?
 	int r = -1;
 	//rdfs:Resource(?x)
-	if ((t.p == A || t.p == rdfType) && t0 && t1 && t1->p == rdfsResource)
+	if ((t.p == A || t.p == rdftype) && t0 && t1 && t1->p == rdfsResource)
 		r = 1;
 	else if (t.p == rdfssubClassOf && t1->p == rdfsResource) {
 		r = 0;
 		// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
 		{
 			prover copy(*this);
-			auto ps = copy.askt(t0, rdfType, make(rdfsClass, 0, 0));
+			auto ps = copy.askt(t0, rdftype, make(rdfsClass, 0, 0));
 			if (ps.size())
 				return 1;
 		}
@@ -2568,13 +2568,13 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		if (t1->p == rdfsLiteral) {
 			{
 				prover copy(*this);
-				auto ps = copy.askt(t0, rdfType, make(rdfsDatatype, 0, 0));
+				auto ps = copy.askt(t0, rdftype, make(rdfsDatatype, 0, 0));
 				if (ps.size())
 					return 1;
 			}
 		}
 
-	else if (t.p == A || t.p == rdfType) {
+	else if (t.p == A || t.p == rdftype) {
 		r = 0;
 		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		{
@@ -2610,7 +2610,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 			prover copy(*this);
 			auto as = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
 			for (termid a: as) {
-				auto xx = copy.askt(t0, rdfType, a);
+				auto xx = copy.askt(t0, rdftype, a);
 				if (xx.size() > 0) {
 					dout << "\n\nYay even more\n\n" << std::endl;
 					return 1;
@@ -2625,7 +2625,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		//#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
 		if (t1 && t1->p == rdfsmember) {
 			prover copy(*this);
-			auto ps = copy.askt(copy.tmpvar(), rdfType, make(rdfsContainerMembershipProperty, 0, 0));
+			auto ps = copy.askt(copy.tmpvar(), rdftype, make(rdfsContainerMembershipProperty, 0, 0));
 			if (ps.size())
 				return 1;
 		}

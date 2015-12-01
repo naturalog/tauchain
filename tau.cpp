@@ -34,8 +34,6 @@ string qdb_text;
 enum Mode {COMMANDS, KB, QUERY, SHOULDBE, OLD};
 Mode mode = COMMANDS;
 
-enum ParsingResult {FAIL, /* INCOMPLETE, */ COMPLETE};
-
 string format = "";
 string base = "";
 
@@ -71,24 +69,26 @@ yprover *tauProver = 0;
 std::vector<qdb> kbs;
 
 
-struct input_t
+class Input
 {
+public:
 	bool interactive = true;
 	bool do_reparse = true;
 	std::string name;
-	string pop();
-	string pop_long();
-	void take_back();
-	void readline()	{};
-	bool end();
+	virtual string pop() = 0;
+	virtual string pop_long() = 0;
+	virtual void take_back() = 0;
+	virtual void readline()	{};
+	virtual bool end() = 0;
 };
 
-struct args_input_t:input_t
+class ArgsInput : public Input
 {
+public:
 	int argc;
 	char **argv;
 	int counter = 1;
-	args_input_t(int argc_, char**argv_)
+	ArgsInput(int argc_, char**argv_)
 	{
 		argc = argc_;
 		argv = argv_;
@@ -116,9 +116,10 @@ struct args_input_t:input_t
 
 
 
-struct stream_input_t:input_t
+class StreamInput : public Input
 {
-	std::istream stream;
+public:
+	std::istream& stream;
 	string line;
 	size_t pos;
 	std::stack<size_t> starts;
@@ -126,7 +127,7 @@ struct stream_input_t:input_t
 	void figure_out_interactivity()
 	{
 		//if its a file
-		auto s = dynamic_cast<std::ifstream>(stream);
+		std::ifstream* s = dynamic_cast<std::ifstream*>(&stream);
 		interactive = !s;
 		//else its stdin
 		if (!s) {
@@ -137,10 +138,9 @@ struct stream_input_t:input_t
 		}
 	}
 
-	stream_input_t(string fn_, std::ifstream is_)
+	StreamInput(string fn_, std::istream& is_) : stream(is_)
 	{
 		name = fn_;
-		stream = is_;
 		figure_out_interactivity();
 	}
 	bool end()
@@ -151,7 +151,7 @@ struct stream_input_t:input_t
 	void readline()
 	{
 		std::getline(stream, line);
-		starts.clear();
+		while(!starts.empty()) starts.pop();
 		pos = 0;
 		do_reparse = interactive && stream.peek() == EOF;
 	}
@@ -176,13 +176,13 @@ struct stream_input_t:input_t
 	void take_back()
 	{
 		assert(starts.size());
-		pos = starts.back();
+		pos = starts.top();
 		starts.pop();
 	}
 };
 
-stack<struct { input_t*}> inputs;
-input_t* input;
+std::stack<Input *> inputs;
+Input * input;
 
 
 void fresh_prover()
@@ -218,7 +218,7 @@ void set_mode(Mode m)
 }
 
 void help(){
-	if(input.end()){
+	if(input->end()){
 		dout << "Help -- commands: kb, query, help, quit; use \"help <topic>\" for more detail." << endl;
 		dout << "command 'kb': load a knowledge-base." << endl;
 		dout << "command 'query': load a query and run." << endl;
@@ -227,7 +227,7 @@ void help(){
 		dout << "\"fin.\" is part of the kb/query-loading, it denotes the end of your rule-base" << endl;
 	}
 	else{
-		string help_arg = input.pop();
+		string help_arg = input->pop();
 		string help_str = "";
 		if(help_arg == "kb"){
 			help_str = "command 'kb': load a knowledge-base.";
@@ -265,29 +265,6 @@ void switch_color(){
 		KCYN = "\x1B[36m";
 		KWHT = "\x1B[37m";
 	}
-}
-
-ParsingResult get_qdb(qdb &kb, string fname){
-	std::ifstream is(ws(fname));
-
-	if (!is.is_open()) {
-		dout << "failed to open file." << std::endl;
-		return FAIL;
-	}
-
-	qdb dummy_query;
-	int dummy_fins;
-	int r = parse(kb, dummy_query, is, fname, dummy_fins);
-	dout << "qdb graphs count:"<< kb.first.size() << std::endl;
-	
-	/*
-	int nrules = 0;
-	for ( pquad quad :*kb.first["@default"])
-		nrules++;
-	dout << "rules:" << nrules << std::endl;
-	*/
-	
-	return r;
 }
 
 bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
@@ -425,41 +402,40 @@ qdb merge_qdbs(const std::vector<qdb> qdbs)
 }
 
 #ifndef NOPARSER
-int parse_nq(qdb &kb, qdb &query, std::istream &f, int &fins)
+ParsingResult parse_nq(qdb &kb, qdb &query, std::istream &f)
 {
 	//We can maybe remove this class eventually and just
 	//use functions? idk..
 	nqparser parser;
-	fins = 0;
         try {
-                fins = parser.nq_to_qdb(kb, f);
+                parser.nq_to_qdb(kb, f);
         } catch (std::exception& ex) {
                 derr << "[nq]Error reading quads: " << ex.what() << endl;
-                return 0;
+                return FAIL;
         }
         try {
-                fins += parser.nq_to_qdb(query, f);
+                parser.nq_to_qdb(query, f);
         } catch (std::exception& ex) {
                 derr << "[nq]Error reading quads: " << ex.what() << endl;
-                return 2;
+                return FAIL;
         }
-        return 2;
+        return COMPLETE;
 }
 #endif
 
 
-int _parse(qdb &kb, qdb &query, std::istream &f, string fmt, int &fins)
+ParsingResult _parse(qdb &kb, qdb &query, std::istream &f, string fmt)
 {
 	CLI_TRACE(dout << "parse fmt: " << fmt << endl;)
 #ifdef with_marpa
     if(fmt == "natural3" || fmt == "n3") {
 		//dout << "Supported is a subset of n3 with our fin notation" << endl;
-		return parse_natural3(kb, query, f, fins, base);
+		return parse_natural3(kb, query, f, base);
 	}
 #endif
 #ifndef NOPARSER
 	if(fmt == "natq" || fmt == "nq" || fmt == "nquads")
-		return parse_nq(kb, query, f, fins);
+		return parse_nq(kb, query, f);
 #endif
 #ifdef JSON
 	if(fmt == "jsonld"){
@@ -481,17 +457,17 @@ string fmt_from_ext(string fn){
 	return "";
 }
 
-int parse(qdb &kb, qdb &query, std::istream &f, string fn, int &fins) {
+ParsingResult parse(qdb &kb, qdb &query, std::istream &f, string fn) {
 	string fmt = format;
 	if (fmt == "")
 		fmt = fmt_from_ext(fn);
 	if (fmt != "")
-		return _parse(kb, query, f, fmt, fins);
+		return _parse(kb, query, f, fmt);
 	else
 	{
-		int best = 0;
+		ParsingResult best = FAIL;
 		for (auto x : _formats) {
-			int r = _parse(kb, query, f, x, fins);
+			ParsingResult r = _parse(kb, query, f, x);
 			if (r > best)
 			{
 				if (r==COMPLETE)
@@ -501,7 +477,31 @@ int parse(qdb &kb, qdb &query, std::istream &f, string fn, int &fins) {
 		}
 		return best;
 	}
-	return 0;
+	return FAIL;
+}
+
+
+ParsingResult get_qdb(qdb &kb, string fname){
+	std::ifstream is(fname);
+
+	if (!is.is_open()) {
+		dout << "failed to open file." << std::endl;
+		return FAIL;
+	}
+
+	qdb dummy_query;
+
+	auto r = parse(kb, dummy_query, is, fname);
+	dout << "qdb graphs count:"<< kb.first.size() << std::endl;
+
+	/*
+	int nrules = 0;
+	for ( pquad quad :*kb.first["@default"])
+		nrules++;
+	dout << "rules:" << nrules << std::endl;
+	*/
+
+	return r;
 }
 
 bool is_command(string s){
@@ -519,6 +519,21 @@ bool is_command(string s){
 
 }
 
+/*
+int count_fins()
+{
+	int fins = 0;
+	std::stringstream ss(qdb_text);
+	do {
+		string l;
+		getline(ss, l);
+		if(!ss.good())break;
+		std::trim(l);
+		if (l == "fin.") fins++;
+	}
+	return fins;
+}
+*/
 int count_fins()
 {
 	int fins = 0;
@@ -526,7 +541,7 @@ int count_fins()
 	stringstream ss(qdb_text);
 	while (!ss.eof()) {
 		getline(ss, line);
-		if (startsWith(s, "fin") && *wstrim(s.c_str() + 3) == ".")
+		if (startsWith(line, "fin") && *wstrim(line.c_str() + 3) == ".")
 			fins++;
 	}
 	return fins;
@@ -543,24 +558,10 @@ void get_int(int &i, const string &tok)
 	{
 		i = std::stoi(tok);
 	}
-	catch
+	catch (std::exception& ex)
 	{
 		dout << "bad int, ";
 	}
-}
-
-int count_fins()
-{
-	int fins = 0;
-	std::stringstream ss(qdb_text);
-	do {
-		string l;
-		getline(ss, l);
-		if(!ss.good())break;
-		std::trim(l);
-		if (l == "fin.") fins++;
-	}
-	return fins;
 }
 
 bool read_option(string s){
@@ -589,8 +590,8 @@ bool read_option(string s){
 		}
 	}
 
-	if (!input.end()) {
-		string token = input.pop();
+	if (!input->end()) {
+		string token = input->pop();
 	
 		if(_option == "silence") {
 			silence.emplace(token);
@@ -614,7 +615,7 @@ bool read_option(string s){
 			return true;
 		}
 		
-		input.take_back();
+		input->take_back();
 	}
 
 	return false;
@@ -622,7 +623,7 @@ bool read_option(string s){
 
 
 
-void mode_shouldbe() {
+void cmd_shouldbe() {
 	set_mode(SHOULDBE);
 }
 
@@ -638,11 +639,11 @@ void cmd_query(){
 	if(kbs.size() == 0){
 		dout << "No kb; cannot query." << endl;
 	}else{
-		if(input.end()){
+		if(input->end()){
 			set_mode(QUERY);
 		}else{
-			if(!input.end()){
-				string fn = input.pop_long();
+			if(!input->end()){
+				string fn = input->pop_long();
 				qdb q_in;
 				ParsingResult r = get_qdb(q_in,fn);
 				if (r != FAIL)
@@ -653,13 +654,21 @@ void cmd_query(){
 }
 
 
+void add_kb(string fn)
+{
+	dout << "todo" << endl;
+}
+void load_kb(string fn)
+{
+	dout << "todo" << endl;
+}
 
 void cmd_kb(){
-	if(input.end()){
+	if(input->end()){
 		clear_kb();
 		set_mode(KB);
 	}else{
-		string token = input.pop();
+		string token = input->pop();
 		if(dash_arg(token,"clear")){
 			clear_kb();
 			return;
@@ -669,10 +678,10 @@ void cmd_kb(){
 		}*/
 		else if(dash_arg(token,"add")){
 			//dont clear,
-			if (input.end())
+			if (input->end())
 				throw std::runtime_error("add what?");
 			else
-				add_kb(input.pop_long());
+				add_kb(input->pop_long());
 		}else{
 			load_kb(token);
 		}	
@@ -697,10 +706,10 @@ void displayPrompt(){
 			prompt = "shouldbe";
 		else
 			assert(false);
-		std::wcout << prompt;
+		std::cout << prompt;
 		if (format != "")
-			std::wcout << "["<<format<<"]";
-		std::wcout << "> ";
+			std::cout << "["<<format<<"]";
+		std::cout << "> ";
 
 	}
 }
@@ -708,11 +717,11 @@ void displayPrompt(){
 
 
 
-void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
+bool try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 {
-	string x = qdb_text + input.pop_long() + "\n";
+	string x = qdb_text + input->pop_long() + "\n";
 
-	if (!input.do_reparse) {
+	if (!input->do_reparse) {
 		qdb_text = x;
 	}
 	else {
@@ -723,9 +732,12 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 		if (pr) {
 			qdb_text = x;
 		}
-		else
+		else {
 			dout << "[cli]that doesnt parse, try again" << std::endl;
+			return false;
+		}
 	}
+	return true;
 }
 
 /*
@@ -745,7 +757,7 @@ void try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 
 void emplace_stdin()
 {
-	inputs.emplace(new stream_input_t("stdin", std::wcin));
+	inputs.emplace(new StreamInput("stdin", std::cin));
 }
 
 
@@ -757,18 +769,18 @@ int main ( int argc, char** argv)
 	if (argc == 1)
 		emplace_stdin();
 	else
-		inputs.emplace(new args_input_t(argv, argc));
+		inputs.emplace(new ArgsInput(argc, argv));
 
 
 	while (true) {
 
-		input.readline();
-		while (input.end()) {
+		input->readline();
+		while (input->end()) {
 			if (!inputs.size())
 				goto end;
-			input = inputs.back();
+			input = inputs.top();
 			inputs.pop();
-			input.readline();
+			input->readline();
 		}
 
 
@@ -776,7 +788,7 @@ int main ( int argc, char** argv)
 
 
 		if (mode == COMMANDS) {
-			string token = input.pop();
+			string token = input->pop();
 			if (startsWith(token, "#") || token == "")
 				continue;
 			else if (read_option(token))
@@ -802,18 +814,18 @@ int main ( int argc, char** argv)
 			else if (token == "-")
 				emplace_stdin();
 			else {
-				input.take_back();
-				string line = input.pop_long()
+				input->take_back();
+				string line = input->pop_long();
 
 				//maybe its a filename
 				string fn = line;
-				auto &is = new std::ifstream(fn);
+				std::ifstream &is = *new std::ifstream(fn);
 				if (!is.is_open()) {
 					dout << "[cli]failed to open \"" << fn << "\"." << std::endl;
 				}
 				else {
 					dout << "[cli]loading \"" << fn << "\"." << std::endl;
-					inputs.emplace_back(new stream_input_t(fn, is));
+					inputs.push(new StreamInput(fn, is));
 					continue;
 				}
 
@@ -831,9 +843,9 @@ int main ( int argc, char** argv)
 			if (fins > 0) {
 
 				qdb kb,kb2;
-				int dummy_fins;
+
 				std::stringstream ss(qdb_text);
-				auto pr = parse(kb, kb2, ss, input.name, dummy_fins);
+				auto pr = parse(kb, kb2, ss, input->name);
 
 				if(pr == COMPLETE) {
 					if (mode == KB) {
@@ -858,10 +870,13 @@ int main ( int argc, char** argv)
 			try_to_parse_the_line__if_it_works__add_it_to_qdb_text();
 			int fins = count_fins();
 			if (fins > 1) {
+				qdb kb,kb2;
+				std::stringstream ss(qdb_text);
+				auto pr = parse(kb, kb2, ss, input->name);
 				dout << "querying" << std::endl;
 				kbs.push_back(kb);
 				fresh_prover();
-				tauProver->query(query);
+				tauProver->query(kb2);
 			}
 		}
 	}

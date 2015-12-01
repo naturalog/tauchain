@@ -4,7 +4,8 @@
 #include "prover.h"
 #include "cli.h"
 #include <istream>
+#include "misc.h"
 
-int parse_natural3(qdb &kb, qdb &q, std::istream &f, int &fins, string base = "@default");
+ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base = "@default");
 
 #endif

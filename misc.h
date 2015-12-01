@@ -17,7 +17,7 @@
 #define MARPA(x)
 #endif
 
-
+enum ParsingResult {FAIL, /* INCOMPLETE, */ COMPLETE};
 
 string indent();
 using std::endl;
@@ -96,12 +96,12 @@ extern bidict& dict;
 
 
 //MISC?
-extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfType, GND, rdfnil, False;
+extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdftype, GND, rdfnil, False;
 
 //RDFS
 extern nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
 extern nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdfXMLLiteral, rdfscomment;
-extern nodeid rdfList, owlFunctionalProperty, rdfsisDefinedBy;
+extern nodeid rdfList, rdfsisDefinedBy, owlFunctionalProperty;
 extern nodeid rdfsseeAlso, rdfslabel, rdfobject, rdfStatement, rdfpredicate, rdfsrange, rdfsubject, rdfvalue;
 
 
