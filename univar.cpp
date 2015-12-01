@@ -334,6 +334,13 @@ typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 map<nodeid, vector<pred_t>> builtins;
 map<string, string> log_outputString;
 
+typedef function<pred_t(nodeid)> wildcard_pred_t;
+wildcard_pred_t wildcard_pred;
+
+typedef function<bool(Thing*,nodeid, Thing*)> wildcard_t;
+wildcard_t wildcard;
+
+
 
 Perms perms;
 map<PredParam, string> permname;
@@ -1929,74 +1936,74 @@ void add_facts(vector<vector<nodeid>> facts)
 
 void build_in_facts()
 {
-add_facts({
+	add_facts({
 
-{rdfAlt, rdfssubClassOf, rdfsContainer},
-{rdfBag, rdfssubClassOf, rdfsContainer},
-{rdfsContainerMembershipProperty, rdfssubClassOf, rdfProperty},
-{rdfsDatatype, rdfssubClassOf, rdfsClass},
-{rdfSeq, rdfssubClassOf, rdfsContainer},
-{rdfXMLLiteral, rdfssubClassOf, rdfsLiteral},
-{rdfXMLLiteral, rdfType, rdfsDatatype},
-
-{rdfscomment, rdfsdomain, rdfsResource},
-{rdfscomment, rdfsrange, rdfsLiteral},
-{rdfsdomain, rdfsdomain, rdfProperty},
-{rdfsdomain, rdfsrange, rdfsClass},
-{rdffirst, rdfsdomain, rdfList},
-{rdffirst, rdfsrange, rdfsResource},
-{rdffirst, rdfType, owlFunctionalProperty},
-{rdfsisDefinedBy, rdfsdomain, rdfsResource},
-{rdfsisDefinedBy, rdfsrange, rdfsResource},
-{rdfsisDefinedBy, rdfssubPropertyOf, rdfsseeAlso},
-{mkiri(pstr(":HMC")), rdfType, mkiri(pstr(":banana"))},
-{rdfslabel, rdfsdomain, rdfsResource},
-{rdfslabel, rdfsrange, rdfsLiteral},
-{rdfsmember, rdfsdomain, rdfsContainer},
-{rdfsmember, rdfsrange, rdfsResource},
-{rdfobject, rdfsdomain, rdfStatement},
-{rdfobject, rdfs:range, rdfsResource},
-{rdfpredicate, rdfsdomain, rdfStatement},
-{rdfpredicate, rdfsrange, rdfProperty},
-{rdfsrange, rdfsdomain, rdfProperty},
-{rdfsrange, rdfsrange, rdfsClass},
-{rdfrest, rdfsdomain, rdfList},
-{rdfrest, rdfsrange, rdfList},
-{rdfrest, rdfType owlFunctionalProperty},
-{rdfsseeAlso, rdfsdomain, rdfsResource},
-{rdfsseeAlso, rdfsrange rdfsResource},
-{rdfssubClassOf, rdfsdomain, rdfsClass},
-{rdfssubClassOf, rdfsrange, rdfsClass},
-{rdfssubPropertyOf, rdfsdomain, rdfProperty},
-{rdfssubPropertyOf, rdfsrange, rdfProperty},
-{rdfsubject, rdfsdomain, rdfStatement},
-{rdfsubject, rdfsrange, rdfsResource},
-{rdfType, rdfsdomain, rdfsResource},
-{rdfType, rdfsrange, rdfsClass},
-{rdfvalue, rdfsdomain, rdfsResource},
-{rdfvalue, rdfsrange, rdfsResource},
-
-{rdfnil, rdfType, rdfList}
-
-});}
+		{rdfAlt, rdfssubClassOf, rdfsContainer},
+		{rdfBag, rdfssubClassOf, rdfsContainer},
+		{rdfsContainerMembershipProperty, rdfssubClassOf, rdfProperty},
+		{rdfsDatatype, rdfssubClassOf, rdfsClass},
+		{rdfSeq, rdfssubClassOf, rdfsContainer},
+		{rdfXMLLiteral, rdfssubClassOf, rdfsLiteral},
+		{rdfXMLLiteral, rdfType, rdfsDatatype},
+		{rdfscomment, rdfsdomain, rdfsResource},
+		{rdfscomment, rdfsrange, rdfsLiteral},
+		{rdfsdomain, rdfsdomain, rdfProperty},
+		{rdfsdomain, rdfsrange, rdfsClass},
+		{rdffirst, rdfsdomain, rdfList},
+		{rdffirst, rdfsrange, rdfsResource},
+		{rdffirst, rdfType, owlFunctionalProperty},
+		{rdfsisDefinedBy, rdfsdomain, rdfsResource},
+		{rdfsisDefinedBy, rdfsrange, rdfsResource},
+		{rdfsisDefinedBy, rdfssubPropertyOf, rdfsseeAlso},
+//		{mkiri(pstr(":HMC")), rdfType, mkiri(pstr(":banana"))},
+		{rdfslabel, rdfsdomain, rdfsResource},
+		{rdfslabel, rdfsrange, rdfsLiteral},
+		{rdfsmember, rdfsdomain, rdfsContainer},
+		{rdfsmember, rdfsrange, rdfsResource},
+		{rdfobject, rdfsdomain, rdfStatement},
+		{rdfobject, rdfsrange, rdfsResource},
+		{rdfpredicate, rdfsdomain, rdfStatement},
+		{rdfpredicate, rdfsrange, rdfProperty},
+		{rdfsrange, rdfsdomain, rdfProperty},
+		{rdfsrange, rdfsrange, rdfsClass},
+		{rdfrest, rdfsdomain, rdfList},
+		{rdfrest, rdfsrange, rdfList},
+		{rdfrest, rdfType, owlFunctionalProperty},
+		{rdfsseeAlso, rdfsdomain, rdfsResource},
+		{rdfsseeAlso, rdfsrange, rdfsResource},
+		{rdfssubClassOf, rdfsdomain, rdfsClass},
+		{rdfssubClassOf, rdfsrange, rdfsClass},
+		{rdfssubPropertyOf, rdfsdomain, rdfProperty},
+		{rdfssubPropertyOf, rdfsrange, rdfProperty},
+		{rdfsubject, rdfsdomain, rdfStatement},
+		{rdfsubject, rdfsrange, rdfsResource},
+		{rdfType, rdfsdomain, rdfsResource},
+		{rdfType, rdfsrange, rdfsClass},
+		{rdfvalue, rdfsdomain, rdfsResource},
+		{rdfvalue, rdfsrange, rdfsResource},
+		{rdfnil, rdfType, rdfList}
+	});
+}
 
 
 void build_in()
 {//under construction
 	EEE;
-	coro suc, ouc;
+	coro suc, suc2, ouc;
 	Thing *s = nullptr, *o = nullptr;
 	Thing ss;
 	//Thing oo;
 	Thing *r = nullptr;
-	//Thing c_rdfsType = create_node(op->make(rdfType));
-	Thing c_rdfsResource = create_node(op->make(rdfsResource));
-	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 	Thing a,b;
-	create_unbound(a);
-	create_unbound(b);
+	a = create_unbound();
+	b = create_unbound();
 	/*ep_t *ep = new ep_t();
 	eps.push_back(ep)*/
+	pred_t p1, p2;
+
+	//Thing c_rdfsType = create_node(op->make(rdfType));
+	//Thing c_rdfsResource = create_node(op->make(rdfsResource));
+	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 
 
 
@@ -2019,8 +2026,7 @@ void build_in()
 	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
 	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
 	<HMC_a> yes, the bnode names as well*/
-	builtins[rdfType].push_back([c_rdfsResource, entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
-		(void) s;
+	/*builtins[rdfType].push_back([a, b, c_rdfsResource, entry, suc, suc2, ouc, s, o, p1](Thing *s_, Thing *o_) mutable {
 		switch (entry) {
 			case 0:
 				o = getValue(o_);
@@ -2029,19 +2035,19 @@ void build_in()
 				while (ouc())
 				{
 					s = getValue(s_);
-					if(!is_unbound(s))
+					if(!is_unbound(*s))
 					{
 						entry = 1;
 						return true;
 					}
 			case 1:
-					if(is_unbound(s))
+					if(is_unbound(*s))
 					{
 						for (auto &x: preds)
 						{
-							p = x;//a coro-permanent copy
-							while(p(a, b))
-							suc = unify(s, a);
+							p1 = x.second;//a coro-permanent copy
+							while(p1(&a, &b))
+							suc = unify(s, &a);
 							while(suc())
 							{
 								entry = 2;
@@ -2051,7 +2057,7 @@ void build_in()
 							suc2 = unify(s, b);
 							while(suc2())
 							{
-								entry = 3;						entry = 3;
+								entry = 3;
 								return true;
 								case 3:;
 							}
@@ -2059,12 +2065,11 @@ void build_in()
 
 					}
 				}
-
 				entry = 66;
 				return false;
 				END
 		}
-	});
+	});*/
 
 
 
@@ -2074,14 +2079,16 @@ void build_in()
 
 
 
+
+
 	//rdfs:domain(?x ?y) implies ( ?x(?u ?v)) implies ?y(?u) )
 	//rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
-	builtins[rdfsType].push_back([p1,p2](Thing *s, Thing *c) mutable {
+	/*builtins[rdfsType].push_back([entry,p1,p2](Thing *s, Thing *c) mutable {
 		switch(entry){
 		case 0:
 			p1 = ITEM(preds,rdfsdomain);
 			Thing p = create_unbound();
-			while (p1(p, c))
+			while (p1(&p, c))
 			{
 				ASSERT(is_node(p));
 				pp = get_term(p)->p;
@@ -2101,7 +2108,7 @@ void build_in()
 			END;
 		}
 	});
-	builtins[rdfsRange].push_back([](Thing *s_, Thing *o_) mutable {
+	builtins[rdfsRange].push_back([entry](Thing *s_, Thing *o_) mutable {
 		switch(entry){
 		case 0:
 			for(auto x : rangeItems){
@@ -2122,7 +2129,7 @@ void build_in()
 		case 2:;
 			assert(false);
 		}
-	});
+	});*/
 
 
 
@@ -2135,25 +2142,28 @@ void build_in()
 
 
 
-
-	wildcard_pred = [](nodeid r){
+/*
+	wildcard_pred = [p1](nodeid r){
 		EEE;
-		return [entry, r](Thing *s, Thing *o) mutable {
+		return [entry, r, p1](Thing *s, Thing *o) mutable {
 			//just iterate over wildcard
 			switch (entry) {
 				case 0:
+
 					p1 = wildcard;
 					while (p1(s, r, o)) {
 						entry = LAST;
 						return true;
 						case_LAST:;
 					}
+
 					END;
 			}
-		}
+		};
 
 	//{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
-	wildcard = [p1,p2,](Thing *s, nodeid r, Thing *o) mutable {
+	wildcard = [p1,p2](Thing *s, nodeid r, Thing *o) mutable {
+
 		switch(entry){
 		case 0:
 			p1 = ITEM(preds,rdfssubPropertyOf);
@@ -2177,8 +2187,9 @@ void build_in()
 			return false;
 			END;
 		}
-	});
 
+	});
+*/
 
 
 /*
@@ -2367,7 +2378,7 @@ void build_in()
 						}
 
 						const auto size = get_size(o2);
-						bool found = false;
+						//?bool found = false;
 
 						for (size_t i = 0; i < size; i++) {
 							Thing item = *(o + 1 + i);

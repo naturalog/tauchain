@@ -68,8 +68,122 @@ std::vector<string> _commands = {"kb", "query","run","quit"};
 
 yprover *tauProver = 0;
 
-
 std::vector<qdb> kbs;
+
+
+struct input_t
+{
+	bool interactive = true;
+	bool do_reparse = true;
+	std::string name;
+	string pop();
+	string pop_long();
+	void take_back();
+	void readline()	{};
+	bool end();
+};
+
+struct args_input_t:input_t
+{
+	int argc;
+	char **argv;
+	int counter = 1;
+	args_input_t(int argc_, char**argv_)
+	{
+		argc = argc_;
+		argv = argv_;
+		name = "args";
+	}
+	bool end()
+	{
+		return counter == argc;
+	}
+	string pop()
+	{
+		assert(!end());
+		return argv[counter++];
+	}
+	string pop_long()
+	{
+		return pop();
+	}
+	void take_back()
+	{
+		counter--;
+		assert(counter);
+	}
+};
+
+
+
+struct stream_input_t:input_t
+{
+	std::istream stream;
+	string line;
+	size_t pos;
+	std::stack<size_t> starts;
+
+	void figure_out_interactivity()
+	{
+		//if its a file
+		auto s = dynamic_cast<std::ifstream>(stream);
+		interactive = !s;
+		//else its stdin
+		if (!s) {
+			assert(stream == std::cin);
+			//but its not attached to a tty
+			if (!isatty(fileno(stdin)))
+				interactive = false;
+		}
+	}
+
+	stream_input_t(string fn_, std::ifstream is_)
+	{
+		name = fn_;
+		stream = is_;
+		figure_out_interactivity();
+	}
+	bool end()
+	{
+		return stream.eof();
+	}
+
+	void readline()
+	{
+		std::getline(stream, line);
+		starts.clear();
+		pos = 0;
+		do_reparse = interactive && stream.peek() == EOF;
+	}
+	string pop_x(wchar_t x)
+	{
+		size_t start = pos;
+		while(line[pos] == ' ') pos++;
+		while(line[pos] != x && line[pos] != '\n' && line[pos] != 0) pos++;
+		size_t end = pos;
+		string t = line.substr(start, end);
+		starts.push(start);
+		return t;
+	}
+	string pop()
+	{
+		return pop_x(' ');
+	}
+	string pop_long()
+	{
+		return pop_x(0);
+	}
+	void take_back()
+	{
+		assert(starts.size());
+		pos = starts.back();
+		starts.pop();
+	}
+};
+
+stack<struct { input_t*}> inputs;
+input_t* input;
+
 
 void fresh_prover()
 {
@@ -103,7 +217,7 @@ void set_mode(Mode m)
 	mode = m;
 }
 
-void help(string help_arg){
+void help(){
 	if(input.end()){
 		dout << "Help -- commands: kb, query, help, quit; use \"help <topic>\" for more detail." << endl;
 		dout << "command 'kb': load a knowledge-base." << endl;
@@ -154,7 +268,7 @@ void switch_color(){
 }
 
 ParsingResult get_qdb(qdb &kb, string fname){
-	std::wifstream is(ws(fname));
+	std::ifstream is(ws(fname));
 
 	if (!is.is_open()) {
 		dout << "failed to open file." << std::endl;
@@ -442,137 +556,12 @@ int count_fins()
 	do {
 		string l;
 		getline(ss, l);
-		if(ss.end())break;
-		trim(l);
+		if(!ss.good())break;
+		std::trim(l);
 		if (l == "fin.") fins++;
 	}
 	return fins;
 }
-
-struct input_t
-{
-	bool interactive = true;
-	bool do_reparse = true;
-	std::string name;
-	string pop();
-	string pop_long();
-	void take_back();
-	void readline()	{};
-	bool end();
-}
-
-struct args_input_t:input_t
-{
-	int argc;
-	char **argv;
-	unsigned int counter = 1;
-	args_input_t(int argc_, char**argv_)
-	{
-		argc = argc_;
-		argv = argv_;
-		name = "args";
-	}
-	bool end()
-	{
-		return counter == argc;
-	}
-	string pop()
-	{
-		assert(!end());
-		return argv[counter++];
-	}
-	string pop_long()
-	{
-		return pop();
-	}
-	void take_back()
-	{
-		counter--;
-		assert(counter);
-	}
-}
-
-
-
-struct stream_input_t:input_t
-{
-	std::istream stream;
-	string line;
-	size_t pos;
-	std::stack<size_t> starts;
-
-	void figure_out_interactivity()
-	{
-		//if its a file
-		auto s = dynamic_cast<std::wifstream>(stream);
-		interactive = !s;
-		//else its stdin
-		if (!s) {
-			assert(stream == std::wcin);
-			//but its not attached to a tty
-			if (!isatty(fileno(stdin)))
-				interactive = false;
-		}
-	}
-
-	stream_input_t(string fn_, std::wifstream is_)
-	{
-		name = fn_;
-		stream = is_;
-		figure_out_interactivity();
-	}
-	bool end()
-	{
-		return stream.eof();
-	}
-
-	void readline()
-	{
-		std::getline(stream, line);
-		starts.clear();
-		pos = 0;
-		do_reparse = interactive && stream.peek() == EOF;
-	}
-	string pop_x(wchar_t x)
-	{
-		size_t start = pos;
-		while(line[pos] == ' ') pos++;
-		while(line[pos] != x && line[pos] != '\n' && line[pos] != 0) pos++;
-		size_t end = pos;
-		string t = line.substr(start, end);
-		starts.push(start);
-		return t;
-	}
-	string pop()
-	{
-		return pop_x(' ');
-	}
-	string pop_long()
-	{
-		return pop_x(0);
-	}
-	void take_back()
-	{
-		assert(starts.size());
-		pos = starts.back();
-		starts.pop();
-	}
-}
-
-
-/*		{
-			string line;
-
-			input += line + "\n";
-		}
-					//is.rdbuf()+"\n";
-*/
-
-
-stack<struct { input_t*}> inputs;
-input_t* input;
-
-
 
 bool read_option(string s){
 	if(s.length() < 2 || s.at(0) != L'-' ||	s == "-" || s == "--")
@@ -817,8 +806,8 @@ int main ( int argc, char** argv)
 				string line = input.pop_long()
 
 				//maybe its a filename
-				string fn = ws(line)
-				auto &is = new std::wifstream(fn);
+				string fn = line;
+				auto &is = new std::ifstream(fn);
 				if (!is.is_open()) {
 					dout << "[cli]failed to open \"" << fn << "\"." << std::endl;
 				}
@@ -881,3 +870,11 @@ int main ( int argc, char** argv)
 		delete tauProver;
 }
 
+
+/*		{
+			string line;
+
+			input += line + "\n";
+		}
+					//is.rdbuf()+"\n";
+*/

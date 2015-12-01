@@ -36,14 +36,14 @@ extern bool irc;
 	public:
 		nodeid thing;
 		string name, regex_string;
-		boost::wregex regex;
+		boost::regex regex;
 
 		terminal(nodeid thing_, string name_, string regex_)
 		{
 			name = name_;
 			thing = thing_;
 			regex_string = regex_;
-			regex = boost::wregex(regex_);
+			regex = boost::regex(regex_);
 		}
 	};
 
@@ -52,7 +52,7 @@ extern bool irc;
 	struct MarpaIris {
 		nodeid iri(const std::string s)
 		{
-			return dict[mkiri(pstr(prefix + ws(s)))];
+			return dict[mkiri(pstr(prefix + s))];
 		}
 
 		string prefix = "http://idni.org/marpa#";
@@ -388,7 +388,7 @@ extern bool irc;
 			std::vector<sym> expected;
 			expected.resize(check_int(marpa_g_highest_symbol_id(g)));
 
-			boost::wregex whitespace_regex = boost::wregex(whitespace);
+			boost::regex whitespace_regex = boost::regex(whitespace);
 
 			while (pos < inp.end()) {
 				if (is_ws(*pos)) {
@@ -396,7 +396,7 @@ extern bool irc;
 					continue;
 				}
 
-				boost::wsmatch what;
+				boost::smatch what;
 
 				if (whitespace.size() &&
 					regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous)) {
@@ -612,7 +612,7 @@ extern bool irc;
 
 		nodeid uri(std::string s)
 		{
-			return dict[mkiri(pstr(ws("http://www.w3.org/2000/10/swap/grammar/n3#" + s)))];
+			return dict[mkiri(pstr("http://www.w3.org/2000/10/swap/grammar/n3#" + s))];
 		}
 
 		nodeid n3symbol = uri("symbol");
@@ -987,12 +987,16 @@ extern bool irc;
 		static Marpa *parser = 0;
 		if (!parser) {
 			std::string gfn = "n3-grammar.nq";
-			std::wifstream gf(gfn);
+			std::ifstream gf(gfn);
 			if (!gf.is_open())
 				throw std::runtime_error("couldnt open file \"" + gfn + "\"");
 
 			qdb gkb;
+			#ifndef NOPARSER
 			readqdb(gkb, gf);
+			#else
+			
+			#endif
 
 			static prover grmr(gkb);
 			TRACE(dout << "grammar loaded." << std::endl);

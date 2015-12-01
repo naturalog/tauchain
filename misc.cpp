@@ -11,13 +11,17 @@ extern int _indent;
 
 
 //misc
-nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfType, GND, rdfnil, False;
+nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri;
+nodeid logequalTo, lognotEqualTo;
+nodeid A, Dot, GND, False;
+//nodeid _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
 
 //RDFS
-nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
-//nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke, rdfnil, False;
-
-
+nodeid rdfType, rdfnil, rdffirst, rdfrest;
+nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf;
+nodeid rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
+nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdfXMLLiteral, rdfscomment;
+nodeid rdfList, rdfsisDefinedBy, owlFunctionalProperty;
 
 
 bidict& dict = *new bidict;
@@ -73,9 +77,23 @@ void bidict::init() {
 	rdfsDatatype = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Datatype")));
 	rdfsLiteral = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Literal")));
 	rdfProperty = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
+	rdfAlt = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt")));
+	rdfsContainer = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Container")));
+	rdfBag = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag")));
+	rdfSeq = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq")));
+	rdfXMLLiteral = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral")));
+	rdfscomment = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#comment")));
+	rdfList = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#List")));
+ 	rdfsisDefinedBy = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#isDefinedBy")));
+
+	owlFunctionalProperty = set(mkiri(pstr("owlFunctionalProperty")));
+
+
+
 //	initRDFS();
 
-//	rdfList = set(mkiri(pstr("rdf:List")));
+
+
 //	_dlopen = set(mkiri(pstr("dlfcn:dlopen")));
 //	_dlerror = set(mkiri(pstr("dlfcn:dlerror")));
 //	_dlsym = set(mkiri(pstr("dlfcn:dlsym")));
