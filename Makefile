@@ -2,9 +2,9 @@ CXX=clang++
 ###NEW= -DNEW
 ASAN= -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow #-fsanitize-undefined-trap-on-error
 DBG= $(ASAN) -DDEBUG -g -ggdb -O0 -fno-omit-frame-pointer -fno-optimize-sibling-calls 
-CXXFLAGS= -c -O3 $(DBG) $(NEW) -std=c++1y -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include
+CXXFLAGS= -c -O3 $(DBG) $(NEW) -std=c++1y -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include 
 LDFLAGS=  $(DBG) -L/usr/local/lib #-ldl -pthread -lrt
-OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
+OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o jsonld_tau.o nquads.o
 
 
 all: with_marpa
@@ -17,7 +17,7 @@ libmarpa/dist/.libs/libmarpa.so:
 	cd libmarpa;	make dist;	cd dist;	./configure;	make
 
 with_marpa: OBJECTS += marpa_tau.o
-with_marpa: CXXFLAGS += -Dwith_marpa  -I libmarpa/dist
+with_marpa: CXXFLAGS += -Dwith_marpa  -I libmarpa/dist -DNOPARSER -DJSON
 with_marpa: LDFLAGS += -Llibmarpa/dist/.libs -lmarpa  -lboost_regex
 
 

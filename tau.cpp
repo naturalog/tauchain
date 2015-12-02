@@ -54,11 +54,11 @@ std::map<string,bool*> _flags = {
 
 std::vector<string> extensions = {"jsonld", "natural3", "natq", "n3", "nq"};
 std::vector<string> _formats = {
-								#ifndef NOPARSER
-								"nq",
-								#endif
 								#ifdef with_marpa
 								"n3",
+								#endif
+								#ifndef NOPARSER
+								"nq",
 								#endif
 								#ifdef JSON
 								"jsonld"
@@ -698,7 +698,7 @@ void displayPrompt(){
 		string prompt;
 		if (mode == OLD)
 			prompt = "tau";
-		if (mode == COMMANDS)
+		else if (mode == COMMANDS)
 			prompt = "Tau";
 		else if (mode == KB)
 			prompt = "kb";
