@@ -567,16 +567,17 @@ void get_int(int &i, const string &tok)
 }
 
 bool read_option(string s){
-	if(s.length() < 2 || s.at(0) != L'-' ||	s == "-" || s == "--")
+	if(s.length() < 2 || s.at(0) != L'-' || s == "--")
 		return false;
 	
-	if(s.at(1) == L'-'){
+	while(s.at(0) == L'-'){
 		s = s.substr(1, s.length()-1);
 	}
 
 	string _option = s;
 
 	for( std::pair<string,bool*> x : _flags){
+		CLI_TRACE(dout << _option << _option.size() << x.first << x.first.size() << std::endl;)
 		if(x.first == _option){
 			*x.second = !(*x.second);
 			if(x.first == "nocolor") switch_color();
@@ -781,6 +782,9 @@ int main ( int argc, char** argv)
 
 	while (true) {
 
+
+		displayPrompt();
+
 		input->readline();
 		while (input->end()) {
 			if (!inputs.size())
@@ -791,7 +795,7 @@ int main ( int argc, char** argv)
 		}
 
 
-		displayPrompt();
+
 
 
 		if (mode == COMMANDS) {
@@ -836,6 +840,7 @@ int main ( int argc, char** argv)
 					continue;
 				}
 
+				input->take_back();
 				//maybe its old-style input
 				if (try_to_parse_the_line__if_it_works__add_it_to_qdb_text())
 					set_mode(OLD);
