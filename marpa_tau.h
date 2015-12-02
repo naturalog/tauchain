@@ -2,7 +2,7 @@
 #define __MARPA_TAU_H__
 
 #include "prover.h"
-#include "cli.h"
+#include "jsonld_tau.h"
 #include <istream>
 #include "misc.h"
 

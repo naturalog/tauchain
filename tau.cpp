@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 #include "univar.h"
-#include "cli.h"
+#include "jsonld_tau.h"
 
 #ifdef with_marpa
 #include "marpa_tau.h"
@@ -41,6 +41,8 @@ int result_limit = 123;
 bool irc = false;
 std::set<string> silence;
 bool in_silent_part = false;
+bool nocolor;
+bool fnamebase = true;
 
 std::map<string,bool*> _flags = {
 		{"nocolor",&nocolor}
@@ -765,11 +767,16 @@ int main ( int argc, char** argv)
 {
 	//Initialize the prover strings dictionary with hard-coded nodes.
 	dict.init();
-
+/*
 	if (argc == 1)
 		emplace_stdin();
 	else
 		inputs.emplace(new ArgsInput(argc, argv));
+*/
+	if (argc == 1)
+		input = new StreamInput("stdin", std::cin);
+	else
+		input = new ArgsInput(argc, argv);
 
 
 	while (true) {

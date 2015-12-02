@@ -24,7 +24,6 @@ env LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so ./tau --level 1 load_n3 n3.natura
 
 ~/sw/swap/cwm.py  n3-grammar.n3 --triples  > n3-grammar.nt
 ~/sw/rdfconvert-0.4/bin/rdfconvert.sh   n3-grammar.nt  n3-grammar.nq
-cat n3-grammar.nq load_n3 > load_n3.nq
 
 
 

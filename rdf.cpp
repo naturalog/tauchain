@@ -1,4 +1,4 @@
-#include "cli.h"
+#include "jsonld_tau.h"
 //#include <boost/filesystem.hpp>
 #include "prover.h"
 #include "jsonld.h"
@@ -370,34 +370,4 @@ int readqdb (qdb& r, std::istream& is) {
 }
 #endif
 */
-
-
-
-
-
-#ifdef JSON
-std::string convert_cmd::desc() const {
-	return "Convert JSON-LD to quads including all dependent algorithms.";
-}
-
-std::string convert_cmd::help() const {
-	std::stringstream ss ( "Usage: tau expand [JSON-LD input filename]" );
-	ss << std::endl << "If input filename is unspecified, reads from stdin." << std::endl;
-	return ss.str();
-}
-
-int convert_cmd::operator() ( const strings& args ) {
-	if ( ( args.size() == 3 && args[1] == "help" ) || args.size() > 3 ) {
-		dout << ws(help());
-		return 1;
-	}
-	try {
-		dout << std::setw(20) << convert ( args[2] ) << std::endl;
-		return 0;
-	} catch ( std::exception& ex ) {
-		derr << ex.what() << std::endl;
-		return 1;
-	}
-}
-#endif
 

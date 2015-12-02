@@ -8,7 +8,7 @@ http://www.w3.org/2000/10/swap/grammar/n3.n3
 
 #include "prover.h"
 #include "json_object.h"
-#include "cli.h"
+#include "jsonld_tau.h"
 #include "rdf.h"
 #include "misc.h"
 #include "jsonld.h"
@@ -22,6 +22,9 @@ extern "C" {
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+#ifdef NOPARSER
+#include "jsonld_tau.h"
+#endif
 
 extern bool irc;
 
@@ -981,21 +984,27 @@ extern bool irc;
 	}
 
 
+void open_file(std::ifstream &f, string gfn)
+{
+			f.open(gfn);
+			if (!f.is_open())
+				throw std::runtime_error("couldnt open file \"" + gfn + "\"");
+}
+
 	ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base)
 	{
 		setproc("N3");
 		static Marpa *parser = 0;
 		if (!parser) {
-			std::string gfn = "n3-grammar.nq";
-			std::ifstream gf(gfn);
-			if (!gf.is_open())
-				throw std::runtime_error("couldnt open file \"" + gfn + "\"");
 
+			std::ifstream gf;
 			qdb gkb;
 			#ifndef NOPARSER
-			readqdb(gkb, gf);
+			open_file(gf, "n3-grammar.nq");
+			assert(readqdb(gkb, gf) == COMPLETE);
 			#else
-
+			open_file(gf, "n3-grammar.jsonld");
+			assert(load_jsonld ( gkb, gf ) == COMPLETE);
 			#endif
 
 			static prover grmr(gkb);

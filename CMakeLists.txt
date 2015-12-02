@@ -25,8 +25,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fsanitize-undefined-trap-on-error -fsa
 
 
 set(SOURCE_FILES
-    cli.cpp
-    cli.h
+        jsonld_tau.cpp
+        jsonld_tau.h
     jsonld.cpp
     jsonld.h
     json_spirit.h
