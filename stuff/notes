@@ -24,7 +24,6 @@ env LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so ./tau --level 1 load_n3 n3.natura
 
 ~/sw/swap/cwm.py  n3-grammar.n3 --triples  > n3-grammar.nt
 ~/sw/rdfconvert-0.4/bin/rdfconvert.sh   n3-grammar.nt  n3-grammar.nq
-cat n3-grammar.nq load_n3 > load_n3.nq
 
 
 
@@ -44,7 +43,7 @@ tau --level 100 --nocolor  --silence addrules --silence readcurly --silence quad
 
 env CXX="/usr/local/bin/clang++" ~/llvm/tools/clang/tools/scan-build/scan-build --use-analyzer /usr/local/bin/clang -analyze-headers -o scan -v -V -stats -maxloop 10 -internal-stats -enable-checker security.FloatLoopCounter,alpha.core.CastSize,alpha.core.FixedAddr,alpha.core.IdenticalExpr,alpha.core.PointerArithm,alpha.core.PointerSub,alpha.core.SizeofPtr,alpha.core.TestAfterDivZero,alpha.cplusplus.VirtualCall,alpha.deadcode.UnreachableCode,alpha.security.ArrayBoundV2,alpha.security.MallocOverflow,alpha.security.ReturnPtrRange,alpha.security.taint.TaintPropagation,alpha.unix.SimpleStream,alpha.unix.Stream,alpha.unix.cstring.BufferOverlap,alpha.unix.cstring.NotNullTerminated,alpha.unix.cstring.OutOfBounds,core.CallAndMessage,core.DivideZero,core.DynamicTypePropagation,core.NonNullParamChecker,core.NullDereference,core.StackAddressEscape,core.UndefinedBinaryOperatorResult,core.uninitialized.ArraySubscript,core.uninitialized.Assign,core.uninitialized.Branch,core.builtin.NoReturnFunctions,core.builtin.BuiltinFunctions,core.uninitialized.UndefReturn,cplusplus.NewDelete,debug.ConfigDumper,security.insecureAPI.UncheckedReturn,unix.API,unix.Malloc,unix.MallocSizeof,unix.MismatchedDeallocator,unix.cstring.BadSizeArg,unix.cstring.NullArg  make
 
-valgrind --tool=callgrind    ./tau   --silence addrules --silence readcurly --silence quad::ctor   --level 1 --limit 10 < tests/speed/2
+valgrind --tool=callgrind    ./tau   --silence addrules --silence readcurly --silence quad::ctor --silence N3  --level 1 --limit 10 < tests/speed/2
 --dump-instr=yes
 --simulate-cache=yes 
 --collect-jumps=yes 

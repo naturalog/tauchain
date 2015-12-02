@@ -2,10 +2,10 @@
 #define __MARPA_TAU_H__
 
 #include "prover.h"
-#include "cli.h"
+#include "jsonld_tau.h"
 #include <istream>
+#include "misc.h"
 
-namespace old {
-	int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base = L"@default");
-}
+ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base = "@default");
+
 #endif

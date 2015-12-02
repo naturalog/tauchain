@@ -17,8 +17,51 @@
 #define MARPA(x)
 #endif
 
+enum ParsingResult {FAIL, /* INCOMPLETE, */ COMPLETE};
 
-namespace old{
+string indent();
+using std::endl;
+
+extern std::set<string> silence;
+#ifdef DEBUG
+extern bool in_silent_part;
+#define TRACE(x) \
+  if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) \
+  { \
+  	in_silent_part = false; \
+  	dout << KYEL << indent() << KNRM; \
+  	x; \
+  } \
+  else \
+  { \
+  	if(!in_silent_part) \
+  	{ \
+  		dout << "..." << endl; \
+	  	in_silent_part = true; \
+	} \
+  }
+#else
+#define TRACE(X)
+#endif
+
+extern std::ostream& dout;
+extern std::ostream& derr;
+extern bool deref, shorten;
+
+
+
+#ifdef DEBUG
+//logger _logger;
+extern bool autobt, _pause;
+void bt();
+void dopause();
+#define trace(x) std::wclog<<__FILE__<<':'<<__LINE__<<tab<<x; if (_pause) dopause()
+#else
+void bt();
+#define trace(x)
+#endif
+
+
 
 typedef i64 nodeid;
 
@@ -53,12 +96,16 @@ extern bidict& dict;
 
 
 //MISC?
-extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdfType, GND, rdfnil, False;
+extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdftype, GND, rdfnil, False;
 
 //RDFS
 extern nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
+extern nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdfXMLLiteral, rdfscomment;
+extern nodeid rdfList, rdfsisDefinedBy, owlFunctionalProperty;
+extern nodeid rdfsseeAlso, rdfslabel, rdfobject, rdfStatement, rdfpredicate, rdfsrange, rdfsubject, rdfvalue;
 
-//extern nodeid rdfList, _dlopen, _dlclose, _dlsym, _dlerror, _invoke;
+
+//, _dlopen, _dlclose, _dlsym, _dlerror, _invoke;
 
 
 
@@ -74,7 +121,7 @@ extern int _indent;
 
 struct _setproc {
 	string prev;
-	_setproc(const std::string& p);
+	//_setproc(const std::string& p);
 	_setproc(const string& p);
 	~_setproc();
 };
@@ -90,7 +137,5 @@ struct _setproc {
 
 string listid();
 string list_bnode_name(int item);
-
-}
 
 #endif

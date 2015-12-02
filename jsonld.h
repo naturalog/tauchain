@@ -19,7 +19,6 @@
 #include "strings.h"
 #include "rdf.h"
 
-namespace old{
 
 
 inline string resolve ( pstring base_, const string& ref ) {
@@ -50,7 +49,7 @@ bool keyword ( const string& key );
 bool keyword ( pstring key );
 
 #define KW_SHORTCUTS(x) \
-const string kw##x = string(L"@") + ws(#x);\
+const string kw##x = string("@") + ws(#x);\
 template<typename T> inline bool has##x(T t) { return 	has(t, kw##x); } \
 inline const pobj& get##x(pobj p) { return 		p->MAP()->at(kw##x); } \
 inline const pobj& get##x(obj& p) { return		p.MAP()->at(kw##x); } \
@@ -150,7 +149,7 @@ public:
 
 typedef std::shared_ptr<context_t> pcontext;
 
-class rdf_db;
+//class rdf_db;
 class jsonld_api {
 public:
 	jsonld_options opts;
@@ -158,7 +157,7 @@ public:
 	pcontext context = 0;
 
 	jsonld_api ( pobj input, jsonld_options opts );
-	jsonld_api ( jsonld_options opts_ = jsonld_options ( L"" ) ) :
+	jsonld_api ( jsonld_options opts_ = jsonld_options ( "" ) ) :
 		opts ( opts_ ) {
 	}
 private:
@@ -184,6 +183,6 @@ public:
 pobj expand ( pobj input, jsonld_options opts = jsonld_options() );
 
 
-}
+
 #endif
 #endif

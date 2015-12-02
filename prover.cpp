@@ -18,7 +18,7 @@
 #include <fstream>
 #endif
 
-namespace old{
+
 
 #define queuepush(x) { auto y = x; if (lastp) lastp->next = y; lastp = y; }
 
@@ -28,7 +28,7 @@ int _indent = 0;
 term::term() : p(0), s(0), o(0) {}
 
 bool prover::euler_path(shared_ptr<proof> _p) {
-	setproc(L"euler_path");
+	setproc("euler_path");
 	auto& ep = _p;
 	proof& p = *_p;
 	termid t = heads[p.rule];
@@ -46,12 +46,12 @@ bool prover::euler_path(shared_ptr<proof> _p) {
 
 termid prover::tmpvar() {
 	static int last = 1;
-	return make(mkiri(pstr(string(L"?__v")+_tostr(last++))),0,0);
+	return make(mkiri(pstr(string("?__v")+_tostr(last++))),0,0);
 }
 
 termid prover::list_next(termid cons, proof& p) {
 	if (!cons) return 0;
-	setproc(L"list_next");
+	setproc("list_next");
 	termset ts;
 	ts.push_back(make(rdfrest, cons, tmpvar()));
 	do_query( ts, &p.s);
@@ -68,7 +68,7 @@ termid prover::list_next(termid cons, proof& p) {
 
 termid prover::list_first(termid cons, proof& p) {
 	if (!cons || cons->p == rdfnil) return 0;
-	setproc(L"list_first");
+	setproc("list_first");
 	termset ts;
 	ts.push_back(make(rdffirst, cons, tmpvar()));
 	do_query( ts, &p.s);
@@ -89,7 +89,7 @@ uint64_t dlparam(const node& n) {
 		p = (uint64_t)n.value->c_str();
 	} else {
 		const string &dt = *n.datatype, &v = *n.value;
-		if (dt == *XSD_BOOLEAN) p = (lower(v) == L"true");
+		if (dt == *XSD_BOOLEAN) p = (lower(v) == "true");
 		else if (dt == *XSD_DOUBLE) {
 			double d;
 			d = std::stod(v);
@@ -101,7 +101,7 @@ uint64_t dlparam(const node& n) {
 }
 
 std::vector<termid> prover::get_list(termid head, proof* _p) {
-	setproc(L"get_list");
+	setproc("get_list");
 	assert(_p);
 	proof& p = *_p;
 	termid t = list_first(head, p);
@@ -125,6 +125,11 @@ void prover::get_dotstyle_list(termid id, std::list<nodeid> &list) {
 	return;
 }
 
+
+//Think of these two as part of the same thing. Get the subject from each
+//term and put them into a list. List terms are chained together by placing
+//the value in the subject, a dot in the predicate, and the next list term
+//in the object.
 void prover::get_dotstyle_list(termid id, std::vector<termid> &list) {
 	auto s = id->s;
 	if (!s) return;
@@ -140,6 +145,8 @@ std::vector<termid> prover::get_dotstyle_list(termid id) {
 	return r;
 }
 
+
+
 void* testfunc(void* p) {
 	derr <<std::endl<< "***** Test func calleued ****** " << p << std::endl;
 	return (void*)(pstr("testfunc_result")->c_str());
@@ -152,14 +159,14 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 	//TODO: correctly, so that subqery proof trace not opaque?
 	int r = -1;
 	//rdfs:Resource(?x)
-	if ((t.p == A || t.p == rdfType) && t0 && t1 && t1->p == rdfsResource)
+	if ((t.p == A || t.p == rdftype) && t0 && t1 && t1->p == rdfsResource)
 		r = 1;
 	else if (t.p == rdfssubClassOf && t1->p == rdfsResource) {
 		r = 0;
 		// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
 		{
 			prover copy(*this);
-			auto ps = copy.askt(t0, rdfType, make(rdfsClass, 0, 0));
+			auto ps = copy.askt(t0, rdftype, make(rdfsClass, 0, 0));
 			if (ps.size())
 				return 1;
 		}
@@ -181,13 +188,13 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		if (t1->p == rdfsLiteral) {
 			{
 				prover copy(*this);
-				auto ps = copy.askt(t0, rdfType, make(rdfsDatatype, 0, 0));
+				auto ps = copy.askt(t0, rdftype, make(rdfsDatatype, 0, 0));
 				if (ps.size())
 					return 1;
 			}
 		}
 	}
-	else if (t.p == A || t.p == rdfType) {
+	else if (t.p == A || t.p == rdftype) {
 		r = 0;
 		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		{
@@ -223,7 +230,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 			prover copy(*this);
 			auto as = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
 			for (termid a: as) {
-				auto xx = copy.askt(t0, rdfType, a);
+				auto xx = copy.askt(t0, rdftype, a);
 				if (xx.size() > 0) {
 					dout << "\n\nYay even more\n\n" << std::endl;
 					return 1;
@@ -238,7 +245,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 		//#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
 		if (t1 && t1->p == rdfsmember) {
 			prover copy(*this);
-			auto ps = copy.askt(copy.tmpvar(), rdfType, make(rdfsContainerMembershipProperty, 0, 0));
+			auto ps = copy.askt(copy.tmpvar(), rdftype, make(rdfsContainerMembershipProperty, 0, 0));
 			if (ps.size())
 				return 1;
 		}
@@ -269,7 +276,7 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 
 
 int prover::builtin(termid id, shared_ptr<proof> p) {
-	setproc(L"builtin");
+	setproc("builtin");
 	const term& t = *id;
 	int r = -1;
 	termid i0 = t.s ? EVALPS(t.s, p->s) : 0;
@@ -311,19 +318,19 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 			void* handle;
 			try {
 				string f = predstr(params[0]);
-				if (f == L"0") handle = dlopen(0, std::stol(predstr(params[1])));
+				if (f == "0") handle = dlopen(0, std::stol(predstr(params[1])));
 				else handle = dlopen(ws(f).c_str(), std::stol(predstr(params[1])));
 				pnode n = mkliteral(tostr((uint64_t)handle), XSD_INTEGER, 0);
 				subs[p->s][get(t.o).p] = make(dict.set(n), 0, 0);
 				r = 1;
 			} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
-			catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
+			catch (...) { derr << indent() << "Unknown exception during dlopen" << std::endl; }
 		}
 	}
 	else if (t.p == _dlerror) {
 		if (get(t.o).p > 0) throw std::runtime_error("dlerror must be called with variable object.");
 		auto err = dlerror();
-		pnode n = mkliteral(err ? pstr(err) : pstr(L"NULL"), 0, 0);
+		pnode n = mkliteral(err ? pstr(err) : pstr("NUL"), 0, 0);
 		subs[p->s][get(t.o).p] = make(dict.set(n), 0, 0);
 		r = 1;
 	}
@@ -339,7 +346,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 					p->s[t1->p] = make(dict.set(n), 0, 0);
 					r = 1;
 				} catch (std::exception ex) { derr << indent() << ex.what() <<std::endl; }
-				catch (...) { derr << indent() << L"Unknown exception during dlopen" << std::endl; }
+				catch (...) { derr << indent() << "Unknown exception during dlopen" << std::endl; }
 			}
 		}
 	}
@@ -367,7 +374,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 	////RDFS
 		//first some old stuff
 	/*
-	else if (t.p == rdfType || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	else if (t.p == rdftype || t.p == A) { // {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 		termset ts(2);
 		termid p = tmpvar();
 		termid o = tmpvar();
@@ -377,7 +384,7 @@ int prover::builtin(termid id, shared_ptr<proof> p) {
 	}
 	else if ((
 		 t.p == A // parser kludge
-		 || t.p == rdfType || t.p == rdfssubClassOf) && t.s && t.o) {
+		 || t.p == rdftype || t.p == rdfssubClassOf) && t.s && t.o) {
 		//termset ts(2,0,*alloc);
 		termset ts(2);
 		termid va = tmpvar();
@@ -451,7 +458,7 @@ void prover::pushev(shared_ptr<proof> p) {
 
 shared_ptr<prover::proof> prover::step(shared_ptr<proof> _p) {
 	if (!_p) return 0;
-	setproc(L"step");
+	setproc("step");
 	if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
 	++steps;
 	if (euler_path(_p)) return _p->next;
@@ -513,7 +520,7 @@ prover::ground prover::proof::g(prover* p) const {
 }
 
 termid prover::list2term_simple(std::list<termid>& l) {
-	setproc(L"list2term_simple");
+	setproc("list2term_simple");
 	termid t;
 	if (l.empty())
 		t = make(Dot, 0, 0);
@@ -527,12 +534,22 @@ termid prover::list2term_simple(std::list<termid>& l) {
 }
 
 termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
-	setproc(L"list2term");
+	setproc("list2term");
 	termid t;
 	if (l.empty()) t = make(Dot, 0, 0);
 	else {
 		pnode x = l.front();
 		l.pop_front();
+
+		//Try to find the item's value in quads.second. If it's
+		//not there, then the item is not a list, and we'll make
+		//a normal (0,node,0) term from the node. This will be the
+		//subject of a term with Dot as the predicate and the term
+		//for the next node as the object (or make(Dot,0,0) if there
+		//is no next node). If the item's value was in quads.second,
+		//then it's referencing a list, and we need to build up that
+		//list and the term for this list will be the subject and the
+		//same process for the object.
 		auto it = quads.second.find(*x->value);
 		//item is not a list
 		if (it == quads.second.end())
@@ -542,18 +559,39 @@ termid prover::list2term(std::list<pnode>& l, const qdb& quads) {
 			auto ll = it->second;
 			t = make(Dot, list2term(ll, quads), list2term(l, quads));
 		}
+		//Could do it like:
+		//termid first;
+		//termid rest = list2term(l,quads);
+		//auto it = quads.second.find(*x->value);
+		//if(it == quads.second.end()){
+		//	first = make(dict.set(x),0,0);
+		//}else{
+		//	auto ll = it->second;
+		//	first = list2term(ll,quads);
+		//}
+		//t = make(Dot,first,rest);
 	}
 	TRACE(dout << format(t) << endl);
 	return t;
 }
 
+//Make terms from the subject node S, and object node O, which will be either
+//lists or triples of the form: (0,S,0) and (0,O,0), respectively, and then make 
+//a term for the predicate node P of the form ((0,S,0),P,(0,O,0)). make() will run
+//checks on the (p,s,o) triples sent to it and then run prover::termdb::add()
+//on these triples to actually create term objects and add them to the termdb.
 termid prover::quad2term(const quad& p, const qdb& quads) {
-	setproc(L"quad2term");
-	TRACE(dout<<L"called with: "<<p.tostring()<<endl);
+	setproc("quad2term");
+	TRACE(dout<<"called with: "<<p.tostring()<<endl);
+
 	termid t, s, o;
+
+	//Make sure the predicate is not rdffirst or rdfrest. Why?
 	#ifndef with_marpa
 	if (dict[p.pred] == rdffirst || dict[p.pred] == rdfrest) return 0;
 	#endif
+
+	//Make the (0,S,0) or list for the subject.
 	auto it = quads.second.find(*p.subj->value);
 	if (it != quads.second.end()) {
 		auto l = it->second;
@@ -561,13 +599,18 @@ termid prover::quad2term(const quad& p, const qdb& quads) {
 	}
 	else
 		s = make(p.subj, 0, 0);
+
+	//Make the (0,O,0) or list for the object.
 	if ((it = quads.second.find(*p.object->value)) != quads.second.end()) {
 		auto l = it->second;
 		o = list2term(l, quads);
 	}
 	else
 		o = make(p.object, 0, 0);
+
+	//Make the ((0,S,0),P,(0,O,0)) term representing the full triple.
 	t = make(p.pred, s, o);
+
 	TRACE(dout<<"quad: " << p.tostring() << " term: " << format(t) << endl);
 	return t;
 }
@@ -581,42 +624,94 @@ qlist merge ( const qdb& q ) {
 prover::~prover() { }
 prover::prover(const prover& q) : kb(q.kb), _terms(q._terms) { kb.p = this; } 
 
+
+//This is just preprocessing to translate a qdb to a termset.
 void prover::addrules(pquad q, qdb& quads) {
-	setproc(L"addrules");
+	setproc("addrules");
 	TRACE(dout<<q->tostring()<<endl);
+
+	//Get the values of the subject, predicate and object for this quad.
 	const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
 	termid t;
 	TRACE(dout<<"called with " << q->tostring()<<endl);
+
+	//if this is a rule, i.e. the predicate is "=>":
 	if (p == implication) {
-		if (quads.first.find(o) == quads.first.end()) quads.first[o] = mk_qlist();
-		for ( pquad y : *quads.first.at ( o ) ) {
-			if ( quads.first.find ( s ) == quads.first.end() ) continue;
+
+		//why would it be missing?
+		//if the head graph is missing in the kb, add an empty one?
+		if (quads.first.find(o) == quads.first.end()) 
+			quads.first[o] = mk_qlist();
+
+		//If there's a body present, then make a rule with this body
+		//for each quad in the head.
+		if(quads.first.find ( s ) != quads.first.end()){ 
+	
+			//build up the body into a termset.
+			//termset ts represent the body, i.e. the subject of the
+			//implication.
 			termset ts = termset();
+
+			//For each quad in the subject, make sure it's not
+			//rdffirst or rdfrest, and if so then attempt to generate
+			//a term from it using quad2term(). If this succeeds then
+			//add this to our termset.
 			for ( pquad z : *quads.first.at( s ) )
 				if ((dict[z->pred] != rdffirst && 
 					dict[z->pred] != rdfrest) &&
 					(t = quad2term(*z, quads)))
 					ts.push_back( t );
-			if ((t = quad2term(*y, quads))) kb.add(t, ts);
+		
+			//Explode the head into separate quads and make a separate
+			//rule for each of them with the same body 'ts', using kb.add().
+			for ( pquad y : *quads.first.at ( o ) ) {
+				//Make a term from our current quad in the head, and add
+				//this this term to heads and our termset ts to bodies.
+				//ruleset::add()
+				if ((t = quad2term(*y, quads))) 
+					kb.add(t, ts);
+			}
 		}
-	} else
-	if ((t = quad2term(*q, quads))) kb.add(t, termset()); // remarking the 'else' is essential for consistency checker
+
+	} 
+	//adding a triple like <bnode> ..#implies <bnode> 
+	else //for every rule added, although correct, 
+	//creates a lot of noise, so we dont until we will have to
+	if ((t = quad2term(*q, quads)))  //whats this test about?
+		kb.add(t, termset()); // remarking the 'else' is essential for consistency checker
 }
 
+
+
+//Input: an already-filled-out qdb representing our KB, and a flag specifying
+//whether we should check the KB for consistency or not.
+
+//Check to see if we have "@default" and "false" contexts, and if not then
+//make them. For every quad in the default context, <<addrules(quad,qkb)>>
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
+	//If we can't find the default graph, then make an empty default graph.
 	auto it = qkb.first.find(str_default);
 	if (it == qkb.first.end()){
 		 //throw std::runtime_error("Error: @default graph is empty.");
-		qkb.first[L"@default"] = mk_qlist();
+		qkb.first["@default"] = mk_qlist();
 		it = qkb.first.find(str_default);
 	}
-	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = mk_qlist();
+	//Why do we make empty "false" context in every kb?
+	if (qkb.first.find("false") == qkb.first.end()) qkb.first["false"] = mk_qlist();
+
+	//This is just preprocessing to translate a qdb to a termset.	
 	for ( pquad quad : *it->second ) addrules(quad, qkb);
+
+	//If the consistency flag was set true, then check the KB for consistency,
+	//and if it's inconsistent, then throw an error.
 	if (check_consistency && !consistency(qkb)) throw std::runtime_error("Error: inconsistent kb");
 }
 
+
+
+
 bool prover::consistency(const qdb& quads) {
-	setproc(L"consistency");
+	setproc("consistency");
 	bool c = true;
 	prover p(*this);
 	termid t = p.make(mkiri(pimplication), p.tmpvar(), p.make(False, 0, 0));
@@ -628,13 +723,13 @@ bool prover::consistency(const qdb& quads) {
 		prover q(*this);
 		g.clear();
 		string s = *dict[y.first->s->p].value;
-		if (s == L"GND") continue;
-		TRACE(dout<<L"Trying to prove false context: " << s << endl);
+		if (s == "GND") continue;
+		TRACE(dout<<"Trying to prove false context: " << s << endl);
 		qdb qq;
-		qq.first[L""] = quads.first.at(s);
+		qq.first[""] = quads.first.at(s);
 		q.do_query(qq);
 		if (q.e.size()) {
-			derr << L"Inconsistency found: " << q.format(y.first) << L" is provable as true and false."<<endl;
+			derr << "Inconsistency found: " << q.format(y.first) << " is provable as true and false."<<endl;
 			c = false;
 		}
 	}
@@ -664,7 +759,7 @@ void prover::do_query(const qdb& q_, subs * s) {
 }
 
 void prover::query(const termset& goal, subs * s) {
-	TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	TRACE(dout << KRED << "Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	auto duration = do_query(goal, s);
 	TRACE(dout << KYEL << "Evidence:" << endl);
 	printe();/* << ejson()->toString()*/ dout << KNRM;
@@ -672,8 +767,8 @@ void prover::query(const termset& goal, subs * s) {
 }
 
 void prover::unittest() {
-	pnode x = mkiri(pstr(L"x"));
-	pnode a = mkiri(pstr(L"?a"));
+	pnode x = mkiri(pstr("x"));
+	pnode a = mkiri(pstr("?a"));
 	qdb &kb = *new qdb, &q = *new qdb;
 	kb.first[str_default] = mk_qlist();
 	q.first[str_default] = mk_qlist();
@@ -702,14 +797,14 @@ int prover::do_query(const termid goal, subs * s)
 }
 
 int prover::do_query(const termset& goal, subs * s) {
-	setproc(L"do_query");
+	setproc("do_query");
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = *s;
 
 	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	{
-		setproc(L"rules");
-		TRACE(dout << KRED << L"Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+		setproc("rules");
+		TRACE(dout << KRED << "Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	}
 
 #ifdef TIMER
@@ -733,23 +828,47 @@ int prover::do_query(const termset& goal, subs * s) {
 
 term::term(nodeid _p, termid _s, termid _o) : p(_p), s(_s), o(_o) {}
 
+
+
+
+
+
+//Think of these two make functions as part of the same thing, the
+//first is just the entry point if you send a pnode for the pred,
+//the second for if you send a nodeid for pred. The first one just
+//gets the nodeid for the node and calls the second one.
 termid prover::make(pnode p, termid s, termid o) { 
 	return make(dict.set(*p), s, o); 
 }
 
+
+//Make a term from the (p,s,o) and add it to prover's termdb _terms,
+//returning the termid for this term.
 termid prover::make(nodeid p, termid s, termid o) {
+//Make sure we have a node.
+//redundant?
 #ifdef DEBUG
 	if (!p) throw 0;
 #endif
 //	if ( (_terms.terms.capacity() - _terms.terms.size() ) < _terms.terms.size() )
 //		_terms.terms.reserve(2 * _terms.terms.size());
-	if (!p) throw 0;
+
+//They're either both 0 or both not zero. !s != !o rather than s != o
+//so that they will evaluate to booleans first and then do boolean
+//comparison rather than termid comparison.
 	if (!s != !o) throw 0;
+
+//Add the term to prover's termdb _terms.
 	return _terms.add(p, s, o);
 }
 
+
+
+
+
+
 prover::ruleid prover::ruleset::add(termid t, const termset& ts) {
-	setproc(L"ruleset::add");
+	setproc("ruleset::add");
 	ruleid r =  _head.size();
 	_head.push_back(t);
 	_body.push_back(ts);
@@ -776,7 +895,7 @@ bool prover::ask(nodeid s, nodeid p, nodeid o) {
 
 bool prover::ask(termid s, nodeid p, termid o) {
 	assert(s);assert(p);assert(o);
-	setproc(L"ask");
+	setproc("ask");
 
 	clear();
 
@@ -795,7 +914,7 @@ bool prover::ask(termid s, nodeid p, termid o) {
 prover::termids prover::askt(termid s, nodeid p, termid o, size_t stop_at) {
 	prover::termids r;
 	assert(s);assert(p);assert(o);
-	setproc(L"ask");
+	setproc("ask");
 
 	clear();
 
@@ -893,11 +1012,11 @@ nodeid prover::force_one_n(nodeids r) {
     /*#ifdef debug
      * if (r.size() > 1)
     {
-        std::wstringstream ss;
-        ss << L"well, this is weird, more than one match:";
+        std::stringstream ss;
+        ss << "well, this is weird, more than one match:";
         for (auto xx: r)
             ss << xx << " ";
-        throw wruntime_error(ss.str());
+        throw runtime_error(ss.str());
     }
      #endif*/
     if (r.size() == 0)
@@ -922,5 +1041,4 @@ prover::nodeids prover::get_list(nodeid head)
     for (auto rrr: r)
         rr.push_back(rrr->p);
     return rr;
-}
 }

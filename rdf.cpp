@@ -1,4 +1,4 @@
-#include "cli.h"
+#include "jsonld_tau.h"
 //#include <boost/filesystem.hpp>
 #include "prover.h"
 #include "jsonld.h"
@@ -6,14 +6,14 @@
 #include "misc.h"
 #include <boost/algorithm/string.hpp>
 
-namespace old{
+
 
 pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
 
 string node::tostring() const {
-	std::wstringstream ss;
+	std::stringstream ss;
 //	if ( _type == IRI && (*value)[0] != L'?' ) ss << L'<';
 	if ( _type == LITERAL ) ss << L'\"';
 	ss << *value;
@@ -47,7 +47,7 @@ pnode set_dict(node r){
 //Could just make all these constructors for the node class:
 //	mkliteral, mkiri, and mkbnode, that is.
 pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
-	setproc(L"mkliteral");
+	setproc("mkliteral");
 //	TRACE(dout << *value << endl);
 	if (!value) throw std::runtime_error("mkliteral: null value given");
 
@@ -63,14 +63,14 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 		//--in any case, maybe better to put these in an 
 		//associative array
 //sure
-		if (dt == L"XSD_STRING") r.datatype = XSD_STRING;
-		else if (dt == L"XSD_INTEGER") r.datatype = XSD_INTEGER;
-		else if (dt == L"XSD_DOUBLE") r.datatype = XSD_DOUBLE;
-		else if (dt == L"XSD_BOOLEAN") r.datatype = XSD_BOOLEAN;
-		else if (dt == L"XSD_FLOAT") r.datatype = XSD_FLOAT;
-		else if (dt == L"XSD_DECIMAL") r.datatype = XSD_DECIMAL;
-		else if (dt == L"XSD_ANYTYPE") r.datatype = XSD_ANYTYPE;
-		else if (dt == L"XSD_ANYURI") r.datatype = XSD_ANYURI;
+		if (dt == "XSD_STRING") r.datatype = XSD_STRING;
+		else if (dt == "XSD_INTEGER") r.datatype = XSD_INTEGER;
+		else if (dt == "XSD_DOUBLE") r.datatype = XSD_DOUBLE;
+		else if (dt == "XSD_BOOLEAN") r.datatype = XSD_BOOLEAN;
+		else if (dt == "XSD_FLOAT") r.datatype = XSD_FLOAT;
+		else if (dt == "XSD_DECIMA") r.datatype = XSD_DECIMAL;
+		else if (dt == "XSD_ANYTYPE") r.datatype = XSD_ANYTYPE;
+		else if (dt == "XSD_ANYURI") r.datatype = XSD_ANYURI;
 		else r.datatype = datatype;
 	}
 
@@ -79,8 +79,11 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 	return set_dict(r);
 }
 
+
+
 pnode mkiri ( pstring iri ) {
-	setproc(L"mkiri");
+	setproc("mkiri");
+
 	if (!iri) throw std::runtime_error("mkiri: null iri given");
 //	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
@@ -88,8 +91,32 @@ pnode mkiri ( pstring iri ) {
 	return set_dict(r);
 }
 
+/*
+//Should use this one instead:
+
+
+pnode mkiri ( pstring iri ) {
+	setproc("mkiri");
+
+	if(!iri) throw std::runtime_error("mkiri: null iri given");
+	auto it = dict.nodes.find(*iri);
+	if(it != dict.nodes.end()){
+		assert(it->second->_type == node::IRI);
+		return it->second;
+	}
+	node r ( node::IRI);
+	r.value = iri;
+	pnode pr = make_shared<node>(r);
+	dict.set(pr);
+	return dict.nodes[r.tostring()] = pr;
+}
+
+*/
+
+
+
 pnode mkbnode ( pstring attribute ) {
-	setproc(L"mkbnode");
+	setproc("mkbnode");
 	if (!attribute) throw std::runtime_error("mkbnode: null value given");
 //	TRACE(dout << *attribute << endl);
 	node r ( node::BNODE );
@@ -102,19 +129,19 @@ pnode mkbnode ( pstring attribute ) {
 
 
 
-std::wostream& operator<< ( std::wostream& o, const qlist& x ) {
+std::ostream& operator<< ( std::ostream& o, const qlist& x ) {
 	for ( pquad q : x )
 		o << q->tostring ( ) << std::endl;
 	return o;
 }
 
-std::wostream& operator<< ( std::wostream& o, const std::list<pnode>& x ) {
+std::ostream& operator<< ( std::ostream& o, const std::list<pnode>& x ) {
 	for ( pnode n : x )
 		o << n->tostring ( ) << std::endl;
 	return o;
 }
 
-std::wostream& operator<< ( std::wostream& o, const qdb& q ) {
+std::ostream& operator<< ( std::ostream& o, const qdb& q ) {
 	for ( auto x : q.first )
 		o << x.first << ": " << std::endl << *x.second << std::endl;
 	for ( auto x : q.second )
@@ -133,7 +160,7 @@ rdf_db::rdf_db ( jsonld_api& api_ ) :
 
 
 string rdf_db::tostring() {
-	std::wstringstream s;
+	std::stringstream s;
 	s << *this;
 	return s.str();
 }
@@ -158,9 +185,9 @@ somap rdf_db::getContext() {
 	somap rval;
 	for ( auto x : context )
 		rval[x.first] = mk_str_obj ( x.second );
-	if ( has ( rval, L"" ) ) {
-		rval[str_vocab] = rval[L""];
-		rval.erase ( L"" );
+	if ( has ( rval, "" ) ) {
+		rval[str_vocab] = rval[""];
+		rval.erase ( "" );
 	}
 	return rval;
 }
@@ -172,7 +199,7 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 
 	for ( auto x : prefixes ) {
 		const string &key = x.first, &val = x.second;
-		if ( key == str_vocab ) setNamespace ( L"", val );
+		if ( key == str_vocab ) setNamespace ( "", val );
 		else if ( !keyword ( key ) ) setNamespace ( key, val );
 	}
 }
@@ -197,12 +224,12 @@ void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
 				values = gettype ( node )->LIST(); // ??
 				property = RDF_TYPE; // ??
 			} else if ( keyword ( property ) ) continue;
-			else if ( startsWith ( property, L"_:" ) && !api.opts.produceGeneralizedRdf ) continue;
+			else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
 			else if ( is_rel_iri ( property ) ) continue;
 			else values = node->at ( *property )->LIST();
 
-			pnode subj = id->find ( L"_:" ) ? mkiri ( id ) : mkbnode ( id );
-			pnode pred = startsWith ( property, L"_:" ) ?  mkbnode ( property ) : mkiri ( property );
+			pnode subj = id->find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
+			pnode pred = startsWith ( property, "_:" ) ?  mkbnode ( property ) : mkiri ( property );
 
 			for ( auto item : *values ) {
 				if ( item->MAP() && haslist ( item->MAP() ) ) {
@@ -249,7 +276,7 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 			return 0;
 		if ( value->BOOL() || value->INT() || value->UINT() || value->DOUBLE() ) {
 			if ( value->BOOL() ) 
-				return mkliteral ( pstr(*value->BOOL() ? L"true" : L"false"), datatype ? pstr(*datatype->STR()) : XSD_BOOLEAN, 0 );
+				return mkliteral ( pstr(*value->BOOL() ? "true" : "false"), datatype ? pstr(*datatype->STR()) : XSD_BOOLEAN, 0 );
 			else if ( value->DOUBLE() || ( datatype && *XSD_DOUBLE == *datatype->STR() ) )
 				return mkliteral ( tostr ( *value->DOUBLE() ), datatype ? pstr( *datatype->STR() ) : XSD_DOUBLE, 0 );
 			else 
@@ -267,7 +294,7 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 			id = *getid ( item )->STR();
 			if ( is_rel_iri ( id ) ) return 0;
 		} else id = *item->STR();
-		return id.find ( L"_:" ) ? mkiri ( pstr(id) ) : mkbnode ( pstr(id) );
+		return id.find ( "_:" ) ? mkiri ( pstr(id) ) : mkbnode ( pstr(id) );
 	}
 }
 #endif
@@ -278,14 +305,14 @@ pnode rdf_db::obj_to_rdf ( pobj item ) {
 
 
 quad::quad ( string subj, string pred, pnode object, string graph ) :
-	quad ( startsWith ( subj, L"_:" ) ? mkbnode ( pstr(subj) ) : mkiri ( pstr(subj) ), mkiri ( pstr(pred) ), object, graph ) {
+	quad ( startsWith ( subj, "_:" ) ? mkbnode ( pstr(subj) ) : mkiri ( pstr(subj) ), mkiri ( pstr(pred) ), object, graph ) {
 }
 
 
 
 quad::quad ( string subj, string pred, string object, string graph ) :
 	quad ( subj, pred,
-	       startsWith ( object, L"_:" ) ? mkbnode ( pstr(object) ) : mkiri ( pstr(object) ),
+	       startsWith ( object, "_:" ) ? mkbnode ( pstr(object) ) : mkiri ( pstr(object) ),
 	       graph ) {}
 
 
@@ -297,8 +324,8 @@ quad::quad ( string subj, string pred, string value, pstring datatype, pstring l
 
 
 quad::quad ( pnode s, pnode p, pnode o, string c ) :
-	subj(s), pred(p), object(o), graph(startsWith ( c, L"_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ) {
-		setproc(L"quad::ctor");
+	subj(s), pred(p), object(o), graph(startsWith ( c, "_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ) {
+		setproc("quad::ctor");
 		TRACE(dout<<tostring()<<endl);
 	}
 
@@ -312,20 +339,20 @@ quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
 
 
 string quad::tostring ( ) const {
-	std::wstringstream ss;
+	std::stringstream ss;
 	bool _shorten = shorten;
 	auto f = [_shorten] ( pnode n ) {
 		if ( n ) {
 			string s = n->tostring();
 			if ( !shorten ) return s;
-			if ( s.find ( L"#" ) == string::npos ) return s;
-			return s.substr ( s.find ( L"#" ), s.size() - s.find ( L"#" ) );
+			if ( s.find ( "#" ) == string::npos ) return s;
+			return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
 		}
-		return string ( L"<>" );
+		return string ( "<>" );
 	};
 	ss << f ( subj ) << L' ' << f ( pred ) << L' ' << f ( object );
 	if ( *graph->value != str_default ) ss << L' ' << f ( graph );
-	ss << L" .";
+	ss << " .";
 	return ss.str();
 }
 
@@ -338,40 +365,9 @@ string quad::tostring ( ) const {
 using namespace boost::algorithm;
 /*
 #ifndef NOPARSER
-int readqdb (qdb& r, std::wistream& is) {
+int readqdb (qdb& r, std::istream& is) {
 	return parse_nq(r,is);
 }
 #endif
 */
 
-
-
-
-
-#ifdef JSON
-std::string convert_cmd::desc() const {
-	return "Convert JSON-LD to quads including all dependent algorithms.";
-}
-
-std::string convert_cmd::help() const {
-	std::stringstream ss ( "Usage: tau expand [JSON-LD input filename]" );
-	ss << std::endl << "If input filename is unspecified, reads from stdin." << std::endl;
-	return ss.str();
-}
-
-int convert_cmd::operator() ( const strings& args ) {
-	if ( ( args.size() == 3 && args[1] == L"help" ) || args.size() > 3 ) {
-		dout << ws(help());
-		return 1;
-	}
-	try {
-		dout << std::setw(20) << convert ( args[2] ) << std::endl;
-		return 0;
-	} catch ( std::exception& ex ) {
-		derr << ex.what() << std::endl;
-		return 1;
-	}
-}
-#endif
-
-}

@@ -7,13 +7,13 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(s, s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -41,13 +41,13 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(s, o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -75,13 +75,13 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(s, ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -109,13 +109,13 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(s, ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -143,13 +143,13 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(o, s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -177,13 +177,13 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(o, o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -211,13 +211,13 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(o, ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -245,13 +245,13 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(o, ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -279,13 +279,13 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&locals,wi), s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -313,13 +313,13 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&locals,wi), o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -347,13 +347,13 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&locals,wi), ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -381,13 +381,13 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&locals,wi), ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -415,13 +415,13 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&consts,wi), s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -449,13 +449,13 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&consts,wi), o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -483,13 +483,13 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&consts,wi), ITEM(&locals,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -517,13 +517,13 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	pred_t ac;
 	join_t bc;
 	return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts]()mutable {
-		setproc(L"join gen");
+		setproc("join gen");
 		return [a, b, wi, xi, entry TRCCAP(call), ac, bc, &consts](Thing *s, Thing *o, Thing *locals)mutable {
-			setproc(L"join");
+			setproc("join");
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
-					//TRACE( dout << sprintPred(L"a()",a) << endl;)
+					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					while (ac(ITEM(&consts,wi), ITEM(&consts,xi))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -545,10 +545,10 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 
 void make_perms()
 {
-permname[HEAD_S] = L"HEAD_S";
-permname[HEAD_O] = L"HEAD_O";
-permname[LOCAL] = L"LOCAL";
-permname[CONST] = L"CONST";
+permname[HEAD_S] = "HEAD_S";
+permname[HEAD_O] = "HEAD_O";
+permname[LOCAL] = "LOCA";
+permname[CONST] = "CONST";
 perms[HEAD_S][HEAD_S] = perm_HEAD_S_HEAD_S;
 perms[HEAD_S][HEAD_O] = perm_HEAD_S_HEAD_O;
 perms[HEAD_S][LOCAL] = perm_HEAD_S_LOCAL;

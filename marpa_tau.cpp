@@ -8,7 +8,7 @@ http://www.w3.org/2000/10/swap/grammar/n3.n3
 
 #include "prover.h"
 #include "json_object.h"
-#include "cli.h"
+#include "jsonld_tau.h"
 #include "rdf.h"
 #include "misc.h"
 #include "jsonld.h"
@@ -22,11 +22,11 @@ extern "C" {
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+#ifdef NOPARSER
+#include "jsonld_tau.h"
+#endif
 
 extern bool irc;
-
-namespace old {
-
 
 
 	typedef Marpa_Symbol_ID sym;
@@ -39,14 +39,14 @@ namespace old {
 	public:
 		nodeid thing;
 		string name, regex_string;
-		boost::wregex regex;
+		boost::regex regex;
 
 		terminal(nodeid thing_, string name_, string regex_)
 		{
 			name = name_;
 			thing = thing_;
 			regex_string = regex_;
-			regex = boost::wregex(regex_);
+			regex = boost::regex(regex_);
 		}
 	};
 
@@ -55,10 +55,10 @@ namespace old {
 	struct MarpaIris {
 		nodeid iri(const std::string s)
 		{
-			return dict[mkiri(pstr(prefix + ws(s)))];
+			return dict[mkiri(pstr(prefix + s))];
 		}
 
-		string prefix = L"http://idni.org/marpa#";
+		string prefix = "http://idni.org/marpa#";
 		const nodeid has_value = iri("has_value");
 		const nodeid is_parse_of = iri("is_parse_of");
 		const nodeid list_of = iri("list_of");
@@ -71,8 +71,8 @@ namespace old {
 
 	MarpaIris *marpa = 0;
 
-	const string RDFS = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#";
-	const string BNF = L"http://www.w3.org/2000/10/swap/grammar/bnf#";
+	const string RDFS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+	const string BNF = "http://www.w3.org/2000/10/swap/grammar/bnf#";
 
 	nodeid iri(const string prefix, const string s)
 	{
@@ -93,17 +93,17 @@ namespace old {
 		/*prvr is the one we are called from. we will use prvr2 for querying the grammar, so that prvr doesnt get messed up*/
 		prover *prvr, *prvr2;
 		// i use this for comment regex, comments are processed kinda specially so they dont have to pollute the grammar
-		string whitespace = L"";
-		const nodeid pcomma = dict[mkliteral(pstr(L","), 0, 0)];
-		const nodeid rdfs_nil = iri(RDFS, L"nil");
-		const nodeid rdfs_rest = iri(RDFS, L"rest");
-		const nodeid rdfs_first = iri(RDFS, L"first");
-		const nodeid bnf_matches = iri(BNF, L"matches");
-		const nodeid bnf_document = iri(BNF, L"document");
-		const nodeid bnf_whitespace = iri(BNF, L"whiteSpace");
-		const nodeid bnf_zeroormore = iri(BNF, L"zeroOrMore");
-		const nodeid bnf_mustBeOneSequence = iri(BNF, L"mustBeOneSequence");
-		const nodeid bnf_commaSeparatedListOf = iri(BNF, L"commaSeparatedListOf");
+		string whitespace = "";
+		const nodeid pcomma = dict[mkliteral(pstr(","), 0, 0)];
+		const nodeid rdfs_nil = iri(RDFS, "nil");
+		const nodeid rdfs_rest = iri(RDFS, "rest");
+		const nodeid rdfs_first = iri(RDFS, "first");
+		const nodeid bnf_matches = iri(BNF, "matches");
+		const nodeid bnf_document = iri(BNF, "document");
+		const nodeid bnf_whitespace = iri(BNF, "whiteSpace");
+		const nodeid bnf_zeroormore = iri(BNF, "zeroOrMore");
+		const nodeid bnf_mustBeOneSequence = iri(BNF, "mustBeOneSequence");
+		const nodeid bnf_commaSeparatedListOf = iri(BNF, "commaSeparatedListOf");
 
 		nodeid sym2resid(sym s)
 		{
@@ -127,17 +127,17 @@ namespace old {
 		string sym2str_(sym s)
 		{
 			if (literals.find(s) != literals.end())
-				return L"\"" + literals[s] + L"\"";
+				return "\"" + literals[s] + "\"";
 			if (terminals.find(s) != terminals.end())
-				return maybe_shorten_uri(terminals[s]->name) + L" - " + terminals[s]->regex_string;
+				return maybe_shorten_uri(terminals[s]->name) + " - " + terminals[s]->regex_string;
 			return maybe_shorten_uri(*dict[sym2resid(s)].value);
 		}
 
 		string sym2str(sym s)
 		{
-			std::wstringstream sss;
+			std::stringstream sss;
 			if (!irc)
-				sss << L"(" << s << L")";
+				sss << "(" << s << ")";
 			sss << sym2str_(s);
 			return sss.str();
 		}
@@ -178,7 +178,7 @@ namespace old {
 			nodeid whitespace_ = prvr2->askn1o(language, bnf_whitespace);
 			if (whitespace_) {
 				whitespace = value(whitespace_);
-				TRACE(dout << L"whitespace:" << whitespace << std::endl);
+				TRACE(dout << "whitespace:" << whitespace << std::endl);
 			}
 			/*so is bnf:document, the root rule*/
 			nodeid root = prvr2->askn1o(language, bnf_document);
@@ -202,7 +202,7 @@ namespace old {
 
 			//is it a literal?
 			if ((dict[thing]._type == node::LITERAL) ||
-				(dict[thing]._type == node::IRI && thingv == L".")) // crap: nquads parser bug workaround
+				(dict[thing]._type == node::IRI && thingv == ".")) // crap: nquads parser bug workaround
 			{
 				//dout << "itsa str"<<std::endl;
 				for (auto t: literals)
@@ -231,7 +231,7 @@ namespace old {
 				// mustBeOneSequence is a list of lists
 				std::vector<nodeid> lll = prvr2->get_list(bind);
 				if (!bind)
-					throw wruntime_error(L"mustBeOneSequence empty");
+					throw runtime_error("mustBeOneSequence empty");
 
 				for (auto l:lll) {
 					syms rhs;
@@ -252,9 +252,9 @@ namespace old {
 			else if ((bind = prvr2->askn1o(thing, bnf_zeroormore))) {
 				seq_new(symbol, add(bind), -1, 0, 0);
 			}
-			else if (thingv == L"http://www.w3.org/2000/10/swap/grammar/bnf#eof") { }//so what?
+			else if (thingv == "http://www.w3.org/2000/10/swap/grammar/bnf#eof") { }//so what?
 			else
-				throw wruntime_error(L"whats " + thingv + L"?");
+				throw runtime_error("whats " + thingv + "?");
 
 			TRACE(dout << "added sym " << symbol << std::endl);
 			return symbol;
@@ -293,7 +293,7 @@ namespace old {
 
 		void rule_new(sym lhs, syms rhs)
 		{
-			TRACE(dout << sym2str(lhs) << L" ::= ");
+			TRACE(dout << sym2str(lhs) << " ::= ");
 			for (sym s: rhs)
 				TRACE(dout << sym2str(s));
 			TRACE(dout << std::endl);
@@ -316,7 +316,7 @@ namespace old {
 			if (r == -2) {
 				int e = marpa_g_error(g, NULL);
 				if (e == MARPA_ERR_DUPLICATE_RULE)
-					dout << sym2str(lhs) << L" ::= sequence of " << sym2str(rhs) << std::endl;
+					dout << sym2str(lhs) << " ::= sequence of " << sym2str(rhs) << std::endl;
 			}
 			rules[check_int(r)] = lhs;
 		}
@@ -331,7 +331,7 @@ namespace old {
 				Marpa_Event e;
 				for (int i = 0; i < count; i++) {
 					int etype = check_int(marpa_g_event(g, &e, i));
-					dout << L" " << etype << ", " << e.t_value << std::endl;
+					dout << " " << etype << ", " << e.t_value << std::endl;
 				}
 			}
 
@@ -355,7 +355,7 @@ namespace old {
 
 		bool is_ws(wchar_t x)
 		{
-			string wss = L"\n\r \t";
+			string wss = "\n\r \t";
 
 			for (auto ws: wss)
 				if (x == ws)
@@ -364,7 +364,7 @@ namespace old {
 		}
 
 
-		int parse(const string inp, termid &raw)
+		ParsingResult parse(const string inp, termid &raw)
 		{
 			if (!precomputed) {
 				check_int(marpa_g_precompute(g));
@@ -391,7 +391,7 @@ namespace old {
 			std::vector<sym> expected;
 			expected.resize(check_int(marpa_g_highest_symbol_id(g)));
 
-			boost::wregex whitespace_regex = boost::wregex(whitespace);
+			boost::regex whitespace_regex = boost::regex(whitespace);
 
 			while (pos < inp.end()) {
 				if (is_ws(*pos)) {
@@ -399,13 +399,13 @@ namespace old {
 					continue;
 				}
 
-				boost::wsmatch what;
+				boost::smatch what;
 
 				if (whitespace.size() &&
 					regex_search(pos, inp.end(), what, whitespace_regex, boost::match_continuous)) {
 					if (what.size()) {
 						int llll = what[0].length();
-						TRACE(dout << L"skipping " << llll << L" comment chars" << std::endl);
+						TRACE(dout << "skipping " << llll << " comment chars" << std::endl);
 						pos += llll;
 						continue;
 					}
@@ -448,18 +448,18 @@ namespace old {
 
 				if (best_len) {
 					if (best_syms.size() > 1) {
-						dout << L"cant decide between:" << std::endl;
+						dout << "cant decide between:" << std::endl;
 						for (auto ccc: best_syms)
-							dout << L" " << sym2str(ccc) << std::endl;
+							dout << " " << sym2str(ccc) << std::endl;
 					}
 					assert(best_syms.size());
 					toks.push_back(tokt(pos, pos + best_len));
-					TRACE(dout << std::distance(inp.begin(), pos) << L"-" <<
+					TRACE(dout << std::distance(inp.begin(), pos) << "-" <<
 						  std::distance(inp.begin(), pos + best_len) <<
-						  L" \"" << string(pos, pos + best_len) << L"\" - " << sym2str(best_syms[0]) << std::endl);
+						  " \"" << string(pos, pos + best_len) << "\" - " << sym2str(best_syms[0]) << std::endl);
 					if (MARPA_ERR_UNEXPECTED_TOKEN_ID ==
 						check_int(marpa_r_alternative(r, best_syms[0], toks.size(), 1)))
-						return 0;
+						return FAIL;
 					check_int(marpa_r_earleme_complete(r));
 					pos += best_len;
 				}
@@ -475,12 +475,12 @@ namespace old {
 					while (post != inp.end() && *post != '\n')
 						post += 1;
 					//post += 10;
-					dout << L"[n3]at line " << 1 + std::count(inp.begin(), pos, '\n') << L", char " << charnum <<
-					L":" << std::endl;
+					dout << "[n3]at line " << 1 + std::count(inp.begin(), pos, '\n') << ", char " << charnum <<
+					":" << std::endl;
 					auto poss(pos);
 					//if (poss != inp.begin()) poss--;
-					dout << string(pre, poss) << L"<HERE>" << string(pos, post) << std::endl;
-					//                        dout << L"..\"" << string(pre, pos-1) << L"<HERE>" << string(pos, post) << L"\"..." << std::endl;
+					dout << string(pre, poss) << "<HERE>" << string(pos, post) << std::endl;
+					//                        dout << "..\"" << string(pre, pos-1) << "<HERE>" << string(pos, post) << "\"..." << std::endl;
 
 
 					dout << "[n3]expecting:";
@@ -490,7 +490,7 @@ namespace old {
 						dout << sym2str(e) << ", ";
 						if (!irc) dout << std::endl;
 					}
-					return 0;
+					return FAIL;
 				}
 			}
 
@@ -500,7 +500,7 @@ namespace old {
 			Marpa_Bocage b = marpa_b_new(r, -1);
 			if (!b) {
 				TRACE(dout << "[n3]parsing failed, failed to create bocage" << std::endl);
-				return 0;
+				return FAIL;
 			}
 			Marpa_Order o = marpa_o_new(b);
 			check_null(o);
@@ -525,7 +525,7 @@ namespace old {
 						sym symbol = marpa_v_symbol(v);
 						size_t token = marpa_v_token_value(v) - 1;
 						string token_value = string(toks[token].first, toks[token].second);
-						sexp[marpa_v_result(v)] = L"/*" + token_value + L"*/";
+						sexp[marpa_v_result(v)] = "/*" + token_value + "*/";
 						termid xx;
 						if (terminals.find(symbol) != terminals.end()) {
 							xx = prvr->make(mkbnode(gen_bnode_id()));
@@ -540,13 +540,13 @@ namespace old {
 					}
 					case MARPA_STEP_RULE: {
 						nodeid res = rule2resid(marpa_v_rule(v));
-						string sexp_str = L"\"" + value(res) + L"\":{ ";
+						string sexp_str = "\"" + value(res) + "\":{ ";
 
 						std::list<termid> args;
 						for (int i = marpa_v_arg_0(v); i <= marpa_v_arg_n(v); i++) {
 							if (stack[i]) {
 								args.push_back(stack[i]);
-								sexp_str += sexp[i] + L" ";
+								sexp_str += sexp[i] + " ";
 							}
 						}
 
@@ -557,7 +557,7 @@ namespace old {
 						}
 						else {
 							xx = prvr->make(mkbnode(gen_bnode_id()));
-							//dout << L".xx: " << prvr->format(xx) << std::endl;
+							//dout << ".xx: " << prvr->format(xx) << std::endl;
 							for (int i = 0; i <= marpa_v_arg_n(v) - marpa_v_arg_0(v); i++) {
 								termid arg = stack[marpa_v_arg_0(v) + i];
 
@@ -568,22 +568,22 @@ namespace old {
 								if (literals.find(arg_sym) == literals.end())
 									prvr->kb.add(prvr->make(sym2resid(arg_sym), xx, arg));
 
-								std::wstringstream arg_pred;
-								arg_pred << L"http://idni.org/marpa#arg" << i;
+								std::stringstream arg_pred;
+								arg_pred << "http://idni.org/marpa#arg" << i;
 
 								prvr->kb.add(prvr->make(mkiri(pstr(arg_pred.str())), xx, arg));
 							}
 						}
 
 						prvr->kb.add(prvr->make(marpa->is_parse_of, xx, prvr->make(res)));
-						//dout << L"xx: " << prvr->format(xx) << std::endl;
+						//dout << "xx: " << prvr->format(xx) << std::endl;
 						stack[marpa_v_result(v)] = xx;
-						sexp[marpa_v_result(v)] = sexp_str + L"} ";
+						sexp[marpa_v_result(v)] = sexp_str + "} ";
 
 						break;
 					}
 					case MARPA_STEP_NULLING_SYMBOL:
-						sexp[marpa_v_result(v)] = L"0";
+						sexp[marpa_v_result(v)] = "0";
 						stack[marpa_v_result(v)] = 0;
 						break;
 					default:
@@ -599,11 +599,11 @@ namespace old {
 			marpa_o_unref(o);
 			marpa_b_unref(b);
 
-			TRACE(dout << L"{" << sexp[0] << L"}" << std::endl << std::endl);
+			TRACE(dout << "{" << sexp[0] << "}" << std::endl << std::endl);
 
 			raw = stack[0];
-			TRACE(dout << L"result0: " << prvr->format(raw) << std::endl);
-			return 2;
+			TRACE(dout << "result0: " << prvr->format(raw) << std::endl);
+			return COMPLETE;
 		}
 
 
@@ -615,7 +615,7 @@ namespace old {
 
 		nodeid uri(std::string s)
 		{
-			return dict[mkiri(pstr(ws("http://www.w3.org/2000/10/swap/grammar/n3#" + s)))];
+			return dict[mkiri(pstr("http://www.w3.org/2000/10/swap/grammar/n3#" + s))];
 		}
 
 		nodeid n3symbol = uri("symbol");
@@ -706,12 +706,12 @@ namespace old {
 			nodeid v = q(sss, marpa->has_value);
 			assert(v);
 			string s = *dict[v].value;
-			string triple = string(L"\"\"\"");
+			string triple = string("\"\"\"");
 
 			if (startsWith(s, triple))
 				trim(s, triple);
 			else
-				trim(s, L"\"");
+				trim(s, "\"");
 
 			return mkliteral(pstr(s), 0, 0);
 		}
@@ -750,12 +750,12 @@ namespace old {
 			if (qname) {
 				string v = get_value(qname);
 
-				auto pos = v.find(L":");
+				auto pos = v.find(":");
 				if (pos != string::npos) {
 					string pref = string(v.begin(), v.begin() + pos);
-					TRACE(dout << L"comparing " << pref << L" with ";
+					TRACE(dout << "comparing " << pref << " with ";
 								  for (auto it: prefixes)
-									  dout << it.first << L" ";
+									  dout << it.first << " ";
 								  dout << std::endl;)
 					if (prefixes.find(pref) != prefixes.end()) {
 						string rest = string(v.begin() + pos + 1, v.end());
@@ -820,7 +820,7 @@ namespace old {
 			//( "[" propertylist "]"  )
 
 			nodeid l = q(pi, marpa->arg0);
-			if (l && *dict[l].value == L"(") {
+			if (l && *dict[l].value == "(") {
 				termid x = prvr->askt1o(pi, marpa->arg1);
 				return add_pathlist(x);
 			}
@@ -881,19 +881,19 @@ namespace old {
 						/*      ( expression )
 							( "@has" expression )
 						  ( "@is" expression "@of" )*/
-						if (i0v == L"@is")
+						if (i0v == "@is")
 							reverse = true;
 					}
 					else {
 						string ps;
-						if (i0v == L"@a")
-							ps = L"http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
-						else if (i0v == L"=")
-							ps = L"http://www.w3.org/2002/07/owl#sameAs";
-						else if (i0v == L"=>")
-							ps = L"http://www.w3.org/2000/10/swap/log#implies";
-						else if (i0v == L"<=") {
-							ps = L"http://www.w3.org/2000/10/swap/log#implies";
+						if (i0v == "@a")
+							ps = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+						else if (i0v == "=")
+							ps = "http://www.w3.org/2002/07/owl#sameAs";
+						else if (i0v == "=>")
+							ps = "http://www.w3.org/2000/10/swap/log#implies";
+						else if (i0v == "<=") {
+							ps = "http://www.w3.org/2000/10/swap/log#implies";
 							reverse = true;
 						}
 						else
@@ -928,7 +928,7 @@ namespace old {
 					}
 				}
 			}
-			else if (finfin_mode && *subject->value == L"fin" && graph == L"@default") {
+			else if (finfin_mode && *subject->value == "fin" && graph == "@default") {
 				finfin_mode = false;//ignore further fins
 				fins++;
 				if (fins == 1) {
@@ -942,23 +942,23 @@ namespace old {
 		{
 			nodeid a0 = q(decl, marpa->arg0);
 			assert(a0);
-			old::string dec = *dict[a0].value;
-			TRACE(dout << L"DECLARATION:" << dec << std::endl;)
-			if (dec == L"@prefix") {
+			string dec = *dict[a0].value;
+			TRACE(dout << "DECLARATION:" << dec << std::endl;)
+			if (dec == "@prefix") {
 				nodeid p = q(decl, n3prefix);
 				nodeid uri = q(decl, n3explicituri);
 				string uri_s = get_value(uri);
 				string p_s = get_value(p);
 				assert(p_s.size());
-				assert(string(p_s.end() - 1, p_s.end()) == L":");
+				assert(string(p_s.end() - 1, p_s.end()) == ":");
 				string prefix = string(p_s.begin(), p_s.end() - 1);
 				assert(uri_s.size() > 1);
 				string expluri = string(uri_s.begin() + 1, uri_s.end() - 1);
 				prefixes[prefix] = expluri;
 				TRACE(dout << "@prefix\"" << p_s << "\": \"" << uri_s << "\"" << std::endl;)
 			}
-			else throw std::wruntime_error("not supported: " + dec);
-			//else if(*dict[a0].value == L"@keywords")
+			else throw std::runtime_error("not supported");//todo:make an own error class and throw it here and catch it outside and return a parsing FAIL, dont die
+			//else if(*dict[a0].value == "@keywords")
 		}
 
 		void add_statements(termid list, string graph)
@@ -976,55 +976,63 @@ namespace old {
 	};
 
 
-	string load_file(std::wistream &f)
+	string load_file(std::istream &f)
 	{
-		std::wstringstream ss;
+		std::stringstream ss;
 		ss << f.rdbuf();
 		return ss.str();
 	}
 
 
-	int parse_natural3(qdb &kb, qdb &q, std::wistream &f, int &fins, string base)
+void open_file(std::ifstream &f, string gfn)
+{
+			f.open(gfn);
+			if (!f.is_open())
+				throw std::runtime_error("couldnt open file \"" + gfn + "\"");
+}
+
+	ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base)
 	{
-		setproc(L"N3");
+		setproc("N3");
 		static Marpa *parser = 0;
 		if (!parser) {
-			std::string gfn = "n3-grammar.nq";
-			std::wifstream gf(gfn);
-			if (!gf.is_open())
-				throw std::runtime_error("couldnt open file \"" + gfn + "\"");
 
+			std::ifstream gf;
 			qdb gkb;
-			readqdb(gkb, gf);
+			#ifndef NOPARSER
+			open_file(gf, "n3-grammar.nq");
+			assert(readqdb(gkb, gf) == COMPLETE);
+			#else
+			open_file(gf, "n3-grammar.jsonld");
+			assert(load_jsonld ( gkb, gf ) == COMPLETE);
+			#endif
 
 			static prover grmr(gkb);
 			TRACE(dout << "grammar loaded." << std::endl);
 			//TRACE(dout << std::endl << std::endl << "grmr:" << std::endl << grmr.formatkb());
-			parser = new Marpa(&grmr, dict[mkiri(pstr(L"http://www.w3.org/2000/10/swap/grammar/n3#language"))]);
+			parser = new Marpa(&grmr, dict[mkiri(pstr("http://www.w3.org/2000/10/swap/grammar/n3#language"))]);
 		}
 
 		string in = load_file(f);
 		termid raw;
-		int success = parser->parse(in, raw);
+		ParsingResult success = parser->parse(in, raw);
 
-		if (success == 2) {
+		if (success == COMPLETE) {
 			TRACE(dout << std::endl << std::endl << "prvr:" << std::endl << parser->prvr->formatkb());
 
 			if (!raw)
-				return 0;
+				return FAIL;
 
 			TRACE(dout << "retrieving results." << std::endl);
 
 			N3 n3(*parser->prvr, kb, q, true);
 			n3.base = base;
-			n3.add_statements(raw, L"@default");
-			fins = n3.fins;
+			n3.add_statements(raw, "@default");
 		}
 
 		return success;
 	}
 
-}
 
 /*builtins*/
 /*

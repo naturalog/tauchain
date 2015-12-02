@@ -1,11 +1,11 @@
 #include "prover.h"
 
-namespace old{
+
 
 bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 	PROFILE(++unifs);
 	if (!_s || !_d) return !_s == !_d;
-	setproc(L"unify_bind");
+	setproc("unify_bind");
 	termid v;
 	bool r, ns = false;
 	const term& d = *_d, &s = *_s;
@@ -40,7 +40,7 @@ bool prover::unify(termid _s, const subs& ssub, termid _d, subs& dsub) {
 bool prover::unify_ep(termid _s, const subs& ssub, const term& d, const subs& dsub) {
 	PROFILE(++unifs);
 	if (!_s) return false;
-	setproc(L"unify_ep");
+	setproc("unify_ep");
 	const term& s = *_s;
 	termid v;
 	bool r;
@@ -66,7 +66,7 @@ bool prover::unify_ep(termid _s, const subs& ssub, const term& d, const subs& ds
 bool prover::unify_ep(termid _s, const term& d) {
 	PROFILE(++unifs);
 	if (!_s) return false;
-	setproc(L"unify_ep");
+	setproc("unify_ep");
 	const term& s = *_s;
 	bool r;
 	if (ISVAR(s) || ISVAR(d)) return true;
@@ -89,7 +89,7 @@ bool prover::unify_snovar_ep(const term& s, const subs& ssub, const term& d) {
 bool prover::unify_ep(termid _s, const subs& ssub, const term& d) {
 	PROFILE(++unifs);
 	if (!_s) return false;
-	setproc(L"unify_ep");
+	setproc("unify_ep");
 	const term& s = *_s;
 	termid v;
 	bool r;
@@ -108,7 +108,7 @@ bool prover::unify_ep(termid _s, const subs& ssub, const term& d) {
 bool prover::unify_ep(termid _s, const term& d, const subs& dsub) {
 	PROFILE(++unifs);
 	if (!_s) return false;
-	setproc(L"unify_ep");
+	setproc("unify_ep");
 	const term& s = *_s;
 	termid v;
 	bool r;
@@ -172,7 +172,7 @@ bool prover::unify_snovar_dvar_ep(const term& s, const subs& ssub, const term& d
 
 bool prover::unify_dnovar_ep(termid _s, const subs& ssub, const term& d, const subs& dsub) {
 	PROFILE(++unifs);
-	setproc(L"unify");
+	setproc("unify");
 	const term& s = *_s;
 	if (ISVAR(s)) {
 		termid v = evalvar(s, ssub);
@@ -205,7 +205,7 @@ bool prover::unify(termid _s, termid _d, subs& dsub) {
 
 bool prover::unify_dnovar(termid _s, const term& d, subs& dsub) {
 	PROFILE(++unifs);
-	setproc(L"unify");
+	setproc("unify");
 	const term& s = *_s;
 	if (ISVAR(s)) return true;
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
@@ -216,7 +216,7 @@ bool prover::unify_dnovar(termid _s, const term& d, subs& dsub) {
 
 bool prover::unify_sdnovar(const term& s, const subs& ssub, const term& d, subs& dsub) {
 	PROFILE(++unifs);
-	setproc(L"unify");
+	setproc("unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
 	if (!s.s) return true;
 	if (!unify(s.s, ssub, d.s, dsub)) return false;
@@ -225,7 +225,7 @@ bool prover::unify_sdnovar(const term& s, const subs& ssub, const term& d, subs&
 
 bool prover::unify_sdnovar_ep(const term& s, const subs& ssub, const term& d) {
 	PROFILE(++unifs);
-	setproc(L"unify");
+	setproc("unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
 	if (!s.s) return true;
 	if (!unify_ep(s.s, ssub, *d.s)) return false;
@@ -234,7 +234,7 @@ bool prover::unify_sdnovar_ep(const term& s, const subs& ssub, const term& d) {
 
 bool prover::unify_sdnovar_ep(const term& s, const term& d, const subs& dsub) {
 	PROFILE(++unifs);
-	setproc(L"unify");
+	setproc("unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
 	if (!s.s) return true;
 	if (!unify_ep(s.s, *d.s, dsub)) return false;
@@ -243,7 +243,7 @@ bool prover::unify_sdnovar_ep(const term& s, const term& d, const subs& dsub) {
 
 bool prover::unify_sdnovar_ep(const term& s, const subs& ssub, const term& d, const subs& dsub) {
 	PROFILE(++unifs);
-	setproc(L"unify");
+	setproc("unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
 	if (!s.s) return true;
 	if (!unify_ep(s.s, ssub, *d.s, dsub)) return false;
@@ -252,11 +252,10 @@ bool prover::unify_sdnovar_ep(const term& s, const subs& ssub, const term& d, co
 
 bool prover::unify_sdnovar(const term& s, const term& d, subs& dsub) {
 	PROFILE(++unifs);
-	setproc(L"unify");
+	setproc("unify");
 	if (!(s.p == d.p && !s.s == !d.s && !s.o == !d.o)) return false;
 	if (!s.s) return true;
 	if (!unify(s.s, d.s, dsub)) return false;
 	return unify(s.o, d.o, dsub);
 }
 
-}

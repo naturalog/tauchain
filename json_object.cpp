@@ -1,7 +1,7 @@
 #include "json_object.h"
 
 
-namespace old{
+
 
 
 #ifdef JSON
@@ -123,7 +123,6 @@ bool has ( pobj o, pstring s ) {
 
 
 #endif
-pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }
+//pstring pstr ( const wchar_t* s ) { return s ? pstr ( string ( s ) ) : 0; }
 
 
-}

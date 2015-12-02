@@ -1,0 +1,564 @@
+{
+  "@context": {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@graph": [
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#numericliteral",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#integer"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#unsignedint",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "0",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[0-9]+"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#date",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "0",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[0-9][0-9]-[0-9][0-9]-[0-9][0-9]Z?"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#integer",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": [
+        "0",
+        "+",
+        "-"
+      ],
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[-+]?[0-9]+"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#rational",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#integer"
+              },
+              "/",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#unsignedint"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statement",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#declaration"
+              }
+            ]
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#simpleStatement"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#langcode",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "a",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[a-z]+(-[a-z0-9]+)*"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathtail",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": []
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#quickvariable",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "?",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "\\?[A-Z_a-z][\\-0-9A-Z_a-z]*"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#universal",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              "@forAll",
+              {
+                "@id": "_:N060255a695b74d1da283dd405519e9e8"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#formulacontent",
+      "http://idni.org/marpa#list_of": {
+        "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statement"
+      },
+      "http://idni.org/marpa#separator": "."
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#propertylist",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": []
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#predicate"
+              },
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#object"
+              },
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#objecttail"
+              },
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#propertylisttail"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathitem",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#symbol"
+              }
+            ]
+          },
+          {
+            "@list": [
+              "{",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#formulacontent"
+              },
+              "}"
+            ]
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#quickvariable"
+              }
+            ]
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#numericliteral"
+              }
+            ]
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#literal"
+              }
+            ]
+          },
+          {
+            "@list": [
+              "(",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathlist"
+              },
+              ")"
+            ]
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#boolean"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#decimal",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": [
+        "0",
+        "+",
+        "-"
+      ],
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[-+]?[0-9]+\\.[0-9]*"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#string",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "\"",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "(\"\"\"[^\"\\\\]*(?:(?:\\\\.)[^\"\\\\]*)*\"\"\")|(\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#object",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#language",
+      "@type": "http://www.w3.org/2000/10/swap/grammar/bnf#Language",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#document": {
+        "@id": "http://www.w3.org/2000/10/swap/grammar/n3#document"
+      },
+      "http://www.w3.org/2000/10/swap/grammar/bnf#whiteSpace": "(?m)#(.)*?$"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#double",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": [
+        "0",
+        "+",
+        "-"
+      ],
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[-+]?[0-9]+(\\.[0-9]+)?([eE][-+]?[0-9]+)"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#qname",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": [
+        ":",
+        "_",
+        "a"
+      ],
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "(([A-Z_a-z][\\-0-9A-Z_a-z]*)?:)?[A-Z_a-z][\\-0-9A-Z_a-z]*"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#prefix",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": [
+        "a",
+        "_",
+        ":"
+      ],
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "([A-Z_a-z][\\-0-9A-Z_a-z]*)?:"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#barename",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": [
+        "a",
+        "_"
+      ],
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[A-Z_a-z][\\-0-9A-Z_a-z]*"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#predicate",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression"
+              }
+            ]
+          },
+          {
+            "@list": [
+              "@has",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression"
+              }
+            ]
+          },
+          {
+            "@list": [
+              "@is",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression"
+              },
+              "@of"
+            ]
+          },
+          {
+            "@list": [
+              "@a"
+            ]
+          },
+          {
+            "@list": [
+              "="
+            ]
+          },
+          {
+            "@list": [
+              "=>"
+            ]
+          },
+          {
+            "@list": [
+              "<="
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#literal",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#string"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#objecttail",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": []
+          },
+          {
+            "@list": [
+              ",",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#object"
+              },
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#objecttail"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#subject",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#propertylisttail",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": []
+          },
+          {
+            "@list": [
+              ";",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#propertylist"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "_:N060255a695b74d1da283dd405519e9e8",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf": {
+        "@id": "http://www.w3.org/2000/10/swap/grammar/n3#symbol"
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathitem"
+              },
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathtail"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#document",
+      "http://idni.org/marpa#list_of": {
+        "@id": "http://www.w3.org/2000/10/swap/grammar/n3#statement"
+      },
+      "http://idni.org/marpa#separator": "."
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#symbol",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#explicituri"
+              }
+            ]
+          },
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#qname"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#pathlist",
+      "http://idni.org/marpa#list_of": {
+        "@id": "http://www.w3.org/2000/10/swap/grammar/n3#expression"
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#explicituri",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "<",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "<[^>]*>"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#boolean",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              "@true"
+            ]
+          },
+          {
+            "@list": [
+              "@false"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "_:Nff608caf839245f4a9370505babe17f2",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#commaSeparatedListOf": {
+        "@id": "http://www.w3.org/2000/10/swap/grammar/n3#symbol"
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#dtlang",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": []
+          },
+          {
+            "@list": [
+              "@",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#langcode"
+              }
+            ]
+          },
+          {
+            "@list": [
+              "^^",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#symbol"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#simpleStatement",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#subject"
+              },
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#propertylist"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#dateTime",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#canStartWith": "0",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#matches": "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9](T[0-9][0-9]:[0-9][0-9](:[0-9][0-9](\\.[0-9]*)?)?)?Z?"
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#declaration",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              "@prefix",
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#prefix"
+              },
+              {
+                "@id": "http://www.w3.org/2000/10/swap/grammar/n3#explicituri"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "@id": "http://www.w3.org/2000/10/swap/grammar/n3#existential",
+      "http://www.w3.org/2000/10/swap/grammar/bnf#mustBeOneSequence": {
+        "@list": [
+          {
+            "@list": [
+              "@forSome",
+              {
+                "@id": "_:Nff608caf839245f4a9370505babe17f2"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

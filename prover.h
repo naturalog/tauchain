@@ -33,7 +33,7 @@
 #define PROFILE(x)
 #endif
 
-namespace old{
+
 
 struct term;
 class prover;
@@ -121,6 +121,7 @@ public:
 	std::vector<termid> get_list(termid head, proof*);
 	termid list2term(std::list<pnode>& l, const qdb& quads);
 	termid list2term_simple(std::list<termid>& l);
+
 	void get_dotstyle_list(termid, std::list<nodeid>&);
 	void get_dotstyle_list(termid id, std::vector<termid> &list);
 	std::vector<termid> get_dotstyle_list(termid id);
@@ -154,6 +155,11 @@ public:
 			if (x->p == y->p) return equals(x->s, y->s) && equals(x->o, y->o);
 			return false;
 		}
+
+		//Check if the term defined by this (p,s,o) is already in the
+		//p2id_t. If so, just return the one that's already there. Otherwise
+		//make the term for this (p,s,o) and add that to p2id[p].
+		//**Can we just use t instead of making r?
 		inline termid add(nodeid p, termid s, termid o) {
 			auto& pp = p2id[p];
 			term t(p, s, o);
@@ -197,14 +203,14 @@ private:
 	#define EVALPS(id, s) ((s.empty()) ? (EVALS(id, s)) : ((EVAL(id))))
 	termid evalvar(const term& x, const subs& s) {
 		PROFILE(++evals);
-		setproc(L"evalvar");
+		setproc("evalvar");
 		termid r = ((evvit = s.find(x.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
 		TRACE(dout<<format(x) << ' ' << formats(s)<< " = " << format(r) << endl; if (r && r->p > 1e+8) throw 0);
 		return r;
 	}
 	inline termid evaluate(const term& p) {
 		PROFILE(++evals);
-		setproc(L"evaluate");
+		setproc("evaluate");
 		if (ISVAR(p)) return 0;
 		if (!p.s && !p.o) return &p;
 		termid a = evaluate(*p.s), b = evaluate(*p.o);
@@ -213,7 +219,7 @@ private:
 
 	inline termid evaluate(const term& p, const subs&  s) {
 		PROFILE(++evals);
-		setproc(L"evaluate");
+		setproc("evaluate");
 //		dout<<"eval:"<<format(p) << ' ' << formats(s) << endl;
 		termid r;
 		if (ISVAR(p)) r = ((evvit = s.find(p.p)) == s.end()) ? 0 : evaluate(*evvit->second, s);
@@ -310,6 +316,6 @@ public:
 	ruleset::r2id_t::const_iterator rit;
 	shared_ptr<proof> lastp = 0;
 };
-}
+
 
 #endif

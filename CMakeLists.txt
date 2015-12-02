@@ -25,8 +25,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fsanitize-undefined-trap-on-error -fsa
 
 
 set(SOURCE_FILES
-    cli.cpp
-    cli.h
+        jsonld_tau.cpp
+        jsonld_tau.h
     jsonld.cpp
     jsonld.h
     json_spirit.h
@@ -62,7 +62,7 @@ set(COMMON_FLAGS "-I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS} -g -ggdb -DDEBUG")
 SET_TARGET_PROPERTIES(tau   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}  -DDEBUG -O1" )
 SET_TARGET_PROPERTIES(tau-new   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}  -DDEBUG -O0 -DKBDBG" )
 SET_TARGET_PROPERTIES(tau-clitrace   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}  -DDEBUG -O1 -Ddebug_cli" )
-SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -I${MARPA_DIST} -Dwith_marpa  -DDEBUG -O0")
+SET_TARGET_PROPERTIES(m-tau PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -I${MARPA_DIST} -Dwith_marpa -DJSON -DNOPARSER -DDEBUG -O0")
 SET_TARGET_PROPERTIES(m-tau3 PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -I${MARPA_DIST} -Dwith_marpa -O3")
 
 target_link_libraries(m-tau3            PRIVATE "-L${MARPA_DIST}/.libs -lmarpa")
