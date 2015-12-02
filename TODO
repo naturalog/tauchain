@@ -35,7 +35,7 @@ it is quite heavyweight, so it should be an optional dependency
 *Find out what the multi-line formulas bug is
 *What's up with our quoted strings
 nq parser?
-*Change parse_nq to just generate a qdb instead of going round-about at it.
+*Change nq_to_qdb() to just generate a qdb instead of going round-about at it.
 *What's wrong with our list reasoning
 *Strip out old::prover stuff
 *Organize univar.cpp

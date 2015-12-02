@@ -37,6 +37,8 @@ rdf:nil a rdf:List.
 #{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
 #{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
 
+#rdfs:range of rdfs:comment is rdfs:Literal
+X comment 0
 
 #{?S ?P ?O} => {?S a rdfs:Resource}.
 #{?S ?P ?O} => {?O a rdfs:Resource}.
@@ -52,6 +54,10 @@ rdf:nil a rdf:List.
 
 
 #{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+for any pred invocation, this pulls up a list of superproperties of it and calls those
+
+
+
 #{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
 #{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
 
