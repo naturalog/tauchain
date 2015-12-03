@@ -1,3 +1,24 @@
+so, fuck qdb.second, and fuck terms
+we have just a list of contexts with quads
+we do our own addrules, trivially
+now, if i have this right, something is a rdf list if its part of some first/rest triple in the default context
+now...
+hmm
+it might work
+do you have any idea if rdf is needed for p63?
+wrt lists, there will be a change in make_locals, we will look if a bnode is a part of a list 
+we add our list as usual, possibly multiple times, we will optimize that later
+i will add the new list bnode type
+i guess thats all, that should make lists behave as expected
+or at least will be a good stab at it
+wrt the other rdf builtins, ive been struggling with the one fucker that has a predvar in head, but theres no conceptual problem i think
+we gotta tackle parsers/unicode, also i need to make some parser work to debug the cli
+
+
+
+
+
+
 Nov. 19th:
 *What specification of n3 are we supporting
 n3-grammar.n3
