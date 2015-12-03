@@ -58,7 +58,7 @@ for w in PP:
 }"""
 
 print """
-void make_perms()
+void make_perms_table()
 {"""
 for x in PP:
 	print "permname[" + x + "] = L\"" + x + "\";"

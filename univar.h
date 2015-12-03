@@ -1,3 +1,4 @@
+#include "rdf.h"
 
 class yprover {
 public:

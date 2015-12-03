@@ -1,9 +1,10 @@
 #include <functional>
 #include <unordered_map>
 #include <queue>
-#include "univar.h"
-#include <string.h>
 #include <limits>
+#include <string.h>
+
+#include "univar.h"
 
 using namespace std;
 
@@ -291,6 +292,8 @@ static inline ThingType get_type(Thing x)
 		return UNBOUND;
 	if(is_node(x))
 		return NODE;
+	if(is_list_bnode(x))
+		return LIST_BNODE;
 	if(is_list(x))
 		return LIST;
 	ASSERT(is_offset(x));
@@ -333,7 +336,6 @@ typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_
 enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
 typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
-
 map<nodeid, vector<pred_t>> builtins;
 map<string, string> log_outputString;
 
@@ -355,7 +357,6 @@ typedef map<termid, size_t> locals_map;
 std::unordered_map<nodeid, pred_t> preds;
 typedef unordered_map<termid, size_t> locals_map;
 #endif
-prover *op;
 
 
 
@@ -377,7 +378,7 @@ coro unify(Thing *, Thing *);
 void check_pred(nodeid pr);
 rule_t seq(rule_t a, rule_t b);
 rule_t compile_rule(prover::ruleid r);
-void build_in();
+void build_in_rules();
 void build_in_facts();
 
 //endregion
@@ -607,9 +608,14 @@ string str(const Thing *_x)
 		case UNBOUND:
 			return "var()";
 		case NODE: {
-			const termid term = get_term(x);
-			ASSERT(term);
-			return op->format(term);
+			const nodeid node = get_node(x);
+			ASSERT(node);
+			return *dict[node->p].value;
+		}
+		case LIST_BNODE: {
+			const nodeid node = get_node(x);
+			ASSERT(node);
+			return *dict[node->p].value;
 		}
 		case LIST: {
 			const size_t size = get_size(x);
@@ -1269,7 +1275,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 //locals: var (thats the ?a) | list header (size 2) | offset - 2 (pointing to the first var) | list bnode ("size" 1) | node b | nil 
 //consts: the node b
 
-void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, qlist &body)
 {
 	FUN;
 
@@ -1716,30 +1722,17 @@ void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
 
 
 
-yprover::yprover ( qdb qkb, bool check_consistency)  {
-	TRACE(dout << "constructing old prover" << endl;)
-
-	//
-	op = new prover(qkb, false);
-
-	//
-	make_perms();
+yprover::yprover ( qdb qkb)  {
+	make_perms_table();
 	build_in_facts();
-	build_in();
-
-	//
+	build_in_rules();
 	compile_kb();
-
-	//
-	if(check_consistency) dout << "consistency: mushy" << endl;
 }
 
 
 yprover::~yprover()
 {
 	free_garbage();
-	TRACE(dout << "deleting old prover" << endl;)
-	delete op;
 }
 
 
@@ -1819,11 +1812,11 @@ void print_kbdbg(prover::termset query)
 }
 #endif
 
+
 void yprover::query(const qdb& goal){
 	FUN;
 	results.clear();
-
-	const prover::termset q = op->qdb2termset(goal);
+	auto &q = *goal.first.at("@default");
 #ifdef KBDBG
 	print_kbdbg(q);
 #endif
@@ -1989,7 +1982,7 @@ void build_in_facts()
 }
 
 
-void build_in()
+void build_in_rules()
 {//under construction
 	EEE;
 	coro suc, suc2, ouc;

@@ -543,7 +543,7 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	};
 }
 
-void make_perms()
+void make_perms_table()
 {
 permname[HEAD_S] = "HEAD_S";
 permname[HEAD_O] = "HEAD_O";
