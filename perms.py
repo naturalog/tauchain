@@ -15,9 +15,9 @@ def param(a, s):
 	if a == "HEAD_O":
 		return "o"
 	if a == "LOCAL":
-		return "ITEM(&locals," + s + "i)"
+		return "(&locals[" + s + "i])"
 	if a == "CONST":
-		return "ITEM(&consts," + s + "i)" #wi, xi
+		return "(&consts[" + s + "i])" #wi, xi
 
 for w in PP:
 	for x in PP:
@@ -38,6 +38,7 @@ for w in PP:
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
+					//todo assert that access is within bounds?
 					while (ac(""" + param(w, "w") + ", " + param(x, "x") + """)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();

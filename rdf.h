@@ -149,7 +149,7 @@ private:
 typedef std::shared_ptr<rdf_db> prdf_db;
 #endif
 
-//Does this need it's own class?
+//why isnt this in its own header?
 #ifndef NOPARSER
 class nqparser {
 private:

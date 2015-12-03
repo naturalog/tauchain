@@ -1,6 +1,4 @@
 
-#include "prover.h"
-
 class yprover {
 public:
 
@@ -9,7 +7,7 @@ public:
 	long steps_;
 	long unifys_;
 
-	yprover(qdb qkb, bool check_consistency = false);
+	yprover(qdb qkb);
 	~yprover();
 	void thatsAllFolks(int nresults);
 	void query(const qdb &goal);

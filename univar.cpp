@@ -7,7 +7,7 @@
 
 using namespace std;
 
-typedef intptr_t offset_t;//ptrdiff_t
+typedef intptr_t offset_t;//ptrdiff_t?
 typedef unsigned char byte;
 
 intptr_t ofst(size_t target, size_t me)
@@ -22,32 +22,34 @@ unsigned long kbdbg_part_max;
 
 extern int result_limit ;
 
-#define FUN setproc(__FUNCTION__);
-
 #define EEE char entry = 0
 #define TRCEEE TRACE(dout << "entry = " << (int)entry << endl)
-const char LAST = 33; // last in the sense of a last case in release mode, not of a last entry into the coro
+const char LAST = 33; // last case statement (in release mode), not last entry, the coro might still be invoked with 33 several itmes before returning false
 
-//#define ITEM(x,y) x[y] in both execution paths
 #ifdef DEBUG
+
 #define DBG(x) x
 #define TRC(x) x
 #define TRCCAP(x) ,x
-//#define ITEM(x,y) x.at(y)
-#define ITEM(x,y) x[y]
+#define ITEM(x,y) x.at(y)
 #define ASSERT assert
+
 #define case_LAST case LAST
 #define DONE {entry = 66; return false; }
 #define END DONE; default: assert(false);
+
 #else
+
 #define DBG(x)
 #define TRC(x)
 #define TRCCAP(x)
 #define ITEM(x,y) x[y]
 #define ASSERT(x)
+
 #define case_LAST default
 #define DONE return false
 #define END DONE;
+
 #endif
 
 
@@ -74,7 +76,7 @@ typedef vector<unsigned long> Markup;
 typedef std::pair<termid, Markup> toadd;
 
 
-enum ThingType {BOUND, NODE, OFFSET, LIST, UNBOUND};
+enum ThingType {BOUND, NODE, OFFSET, LIST, LIST_BNODE, UNBOUND};
 
 #ifndef oneword
 
@@ -102,9 +104,9 @@ class Thing {
 public:
 	ThingType type;
 	union {
-		//maybe call this value?
+		//maybe call this value? how about binding?
 		Thing *thing;     // for bound var
-		termid term; // for node
+		nodeid node;      // for node
 		size_t size;      // for list
 		offset_t offset;
 	};
@@ -115,9 +117,9 @@ public:
 
 
 //we could add some assertions here maybe
-//this seems like overkill, but we can use either one i guess
+//this abstracts away oneword and struct implementations of Thing
 #define get_type(thing) ((thing).type)
-#define get_term(thing) ((thing).term)
+#define get_node(thing) (ASSERT(get_type(thing) == NODE), /*then return*/ (thing).term)
 #define get_size(thing) ((thing).size)
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
@@ -128,6 +130,7 @@ public:
 #define is_bound(thing)		(get_type(thing) == BOUND)
 #define is_var(thing)		(get_type(thing) == BOUND || get_type(thing) == UNBOUND)
 #define is_list(thing)		(get_type(thing) == LIST)
+#define is_list_bnode(thing)(get_type(thing) == LIST_BNODE)
 #define is_node(thing)		(get_type(thing) == NODE)
 #define types_differ(x, y) (x.type != y.type)
 #define sizes_differ(x, y) (x.size != y.size)

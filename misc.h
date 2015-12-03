@@ -44,6 +44,8 @@ extern bool in_silent_part;
 #define TRACE(X)
 #endif
 
+#define FUN setproc(__FUNCTION__);
+
 extern std::ostream& dout;
 extern std::ostream& derr;
 extern bool deref, shorten;
