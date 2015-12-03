@@ -205,61 +205,61 @@ void rdf_db::parse_ctx ( pobj contextLike ) {
 }
 
 
-
-
-
-void rdf_db::graph_to_rdf ( string graph_name, somap& graph ) {
+void rdf_db::graph_to_rdf(string graph_name, somap &graph)
+{
 	qlist triples;
-	{pnode first = mkiri ( RDF_FIRST );
-	pnode rest = mkiri ( RDF_REST );
-	pnode nil = mkiri ( RDF_NIL );
-	for ( auto y : graph ) { // 4.3
-		pstring id = pstr(y.first);
-		if ( is_rel_iri ( id ) ) continue;
-		psomap node = y.second->MAP();
-		for ( auto x : *node ) {
-			pstring property = pstr(x.first);
-			polist values;
-			if ( *property == str_type ) { // 4.3.2.1
-				values = gettype ( node )->LIST(); // ??
-				property = RDF_TYPE; // ??
-			} else if ( keyword ( property ) ) continue;
-			else if ( startsWith ( property, "_:" ) && !api.opts.produceGeneralizedRdf ) continue;
-			else if ( is_rel_iri ( property ) ) continue;
-			else values = node->at ( *property )->LIST();
+	{
+		pnode first = mkiri(RDF_FIRST);
+		pnode rest = mkiri(RDF_REST);
+		pnode nil = mkiri(RDF_NIL);
+		for (auto y : graph) { // 4.3
+			pstring id = pstr(y.first);
+			if (is_rel_iri(id)) continue;
+			psomap node = y.second->MAP();
+			for (auto x : *node) {
+				pstring property = pstr(x.first);
+				polist values;
+				if (*property == str_type) { // 4.3.2.1
+					values = gettype(node)->LIST(); // ??
+					property = RDF_TYPE; // ??
+				} else if (keyword(property)) continue;
+				else if (startsWith(property, "_:") && !api.opts.produceGeneralizedRdf) continue;
+				else if (is_rel_iri(property)) continue;
+				else values = node->at(*property)->LIST();
 
-			pnode subj = id->find ( "_:" ) ? mkiri ( id ) : mkbnode ( id );
-			pnode pred = startsWith ( property, "_:" ) ?  mkbnode ( property ) : mkiri ( property );
+				pnode subj = id->find("_:") ? mkiri(id) : mkbnode(id);
+				pnode pred = startsWith(property, "_:") ? mkbnode(property) : mkiri(property);
 
-			for ( auto item : *values ) {
-				if ( item->MAP() && haslist ( item->MAP() ) ) {
-					polist list = getlist ( item )->LIST();
-					pnode last = 0;
-					pnode firstBnode = nil, head;
-					if ( list && list->size() ) {
-						last = obj_to_rdf ( *list->rbegin() );
-						head = mkbnode ( gen_bnode_id() );
-					}
-					triples.push_back ( make_shared <quad> ( subj, pred, firstBnode, graph_name ) );
-					for ( int i = 0; i < ( ( int ) list->size() ) - 1; ++i ) {
-						pnode object = obj_to_rdf ( list->at ( i ) );
-						triples.push_back ( make_shared <quad> ( firstBnode, first, object, graph_name ) );
-						second[*head->value].push_back(object);
-						pnode restBnode = mkbnode ( gen_bnode_id() );
-						triples.push_back ( make_shared <quad> ( firstBnode, rest, restBnode, graph_name ) );
-						firstBnode = restBnode;
-					}
-					if ( last ) {
-						triples.push_back ( make_shared <quad> ( firstBnode, first, last, graph_name ) );
-						triples.push_back ( make_shared <quad> ( firstBnode, rest, nil, graph_name ) );
-					}
-				} else if ( pnode object = obj_to_rdf ( item ) ) 
-					triples.push_back ( make_shared <quad> ( subj, pred, object, graph_name ) );
+				for (auto item : *values) {
+					if (item->MAP() && haslist(item->MAP())) {
+						polist list = getlist(item)->LIST();
+						pnode last = 0;
+						pnode firstBnode = nil, head;
+						if (list && list->size()) {
+							last = obj_to_rdf(*list->rbegin());
+							head = mkbnode(gen_bnode_id());
+						}
+						triples.push_back(make_shared<quad>(subj, pred, firstBnode, graph_name));
+						for (int i = 0; i < ((int) list->size()) - 1; ++i) {
+							pnode object = obj_to_rdf(list->at(i));
+							triples.push_back(make_shared<quad>(firstBnode, first, object, graph_name));
+							second[*head->value].push_back(object);
+							pnode restBnode = mkbnode(gen_bnode_id());
+							triples.push_back(make_shared<quad>(firstBnode, rest, restBnode, graph_name));
+							firstBnode = restBnode;
+						}
+						if (last) {
+							triples.push_back(make_shared<quad>(firstBnode, first, last, graph_name));
+							triples.push_back(make_shared<quad>(firstBnode, rest, nil, graph_name));
+						}
+					} else if (pnode object = obj_to_rdf(item))
+						triples.push_back(make_shared<quad>(subj, pred, object, graph_name));
+				}
 			}
 		}
-	}}
-	if ( first.find ( graph_name ) == first.end() ) first[graph_name] = make_shared <qlist> ( triples );
-	else first[graph_name]->insert ( first[graph_name]->end() , triples.begin(), triples.end() );
+	}
+	if (first.find(graph_name) == first.end()) first[graph_name] = make_shared<qlist>(triples);
+	else first[graph_name]->insert(first[graph_name]->end(), triples.begin(), triples.end());
 }
 
 

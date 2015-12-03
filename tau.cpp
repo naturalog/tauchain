@@ -70,11 +70,12 @@ yprover *tauProver = 0;
 
 std::vector<qdb> kbs;
 
+bool done_anything = false;
 
 class Input
 {
 public:
-	bool interactive = true;
+	bool interactive = false;
 	bool do_reparse = true;
 	std::string name;
 	virtual string pop() = 0;
@@ -135,7 +136,7 @@ public:
 		if (!s) {
 			assert(stream == std::cin);
 			//but its not attached to a tty
-			if (!isatty(fileno(stdin)))
+			if (!isatty(fileno(stdin)) && !irc)
 				interactive = false;
 		}
 	}
@@ -598,10 +599,10 @@ bool read_option(string s){
 	
 		if(_option == "silence") {
 			silence.emplace(token);
-			/*dout << "silence:";
+			CLI_TRACE(dout << "silence:";
 			for(auto x: silence)
 				dout << x << " ";
-			dout << endl;*/
+			dout << endl;)
 			return true;
 		}
 	
@@ -661,10 +662,7 @@ void add_kb(string fn)
 {
 	dout << "todo" << endl;
 }
-void load_kb(string fn)
-{
-	dout << "todo" << endl;
-}
+
 
 void cmd_kb(){
 	if(input->end()){
@@ -686,14 +684,15 @@ void cmd_kb(){
 			else
 				add_kb(input->pop_long());
 		}else{
-			load_kb(token);
+			clear_kb();
+			add_kb(token);
 		}	
 	}
 }
 
 
 void displayPrompt(){
-	if (irc || isatty(fileno(stdin))) {
+	if (input->interactive) {
 		//Set the prompt string differently to
 		//specify current mode:
 		string prompt;
@@ -768,34 +767,27 @@ int main ( int argc, char** argv)
 {
 	//Initialize the prover strings dictionary with hard-coded nodes.
 	dict.init();
-/*
-	if (argc == 1)
-		emplace_stdin();
-	else
-		inputs.emplace(new ArgsInput(argc, argv));
-*/
-	if (argc == 1)
-		input = new StreamInput("stdin", std::cin);
-	else
-		input = new ArgsInput(argc, argv);
 
+	//start with processing program arguments
+	input = new ArgsInput(argc, argv);
 
 	while (true) {
-
 
 		displayPrompt();
 
 		input->readline();
+
+		//maybe its time to go to the next input
 		while (input->end()) {
+			if (dynamic_cast<ArgsInput*>(input))
+				if (!done_anything)
+					emplace_stdin();
 			if (!inputs.size())
 				goto end;
 			input = inputs.top();
 			inputs.pop();
 			input->readline();
 		}
-
-
-
 
 
 		if (mode == COMMANDS) {
@@ -866,6 +858,7 @@ int main ( int argc, char** argv)
 					}
 					else if (mode == QUERY) {
 						tauProver->query(kb);
+						done_anything = true;
 					}
 					else if (mode == SHOULDBE) {
 						shouldbe(kb);
@@ -889,6 +882,7 @@ int main ( int argc, char** argv)
 				kbs.push_back(kb);
 				fresh_prover();
 				tauProver->query(kb2);
+				done_anything = true;
 			}
 		}
 	}
@@ -898,10 +892,3 @@ int main ( int argc, char** argv)
 }
 
 
-/*		{
-			string line;
-
-			input += line + "\n";
-		}
-					//is.rdbuf()+"\n";
-*/
