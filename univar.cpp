@@ -346,10 +346,16 @@ typedef function<bool(Thing*,nodeid, Thing*)> wildcard_t;
 wildcard_t wildcard;
 
 
-
+//these are filled in from perms.cpp
 Perms perms;
 map<PredParam, string> permname;
-map<nodeid, vector<size_t>> pred_index;
+
+typedef struct {
+	pquad head;
+	pqlist body;
+} Rule;
+
+map<nodeid, vector<Rule>> rules;
 #ifdef DEBUG
 std::map<nodeid, pred_t> preds;
 typedef map<termid, size_t> locals_map;
@@ -955,20 +961,45 @@ void check_pred(nodeid pr)
  }
 
 
-void compile_kb()
+void compile_kb(qdb &kb)
 {
 	FUN;
-	//TRACE(dout << "# of rules: " << op->heads.size() << endl;)
+	preds.clear();//the lambdas
+	rules.clear();//intermediate data
+	free_garbage();//eps, locals_templates_garbage, consts_garbage
 
-	//pred_index :	std::map<nodeid, vector<size_t>>
-	pred_index.clear();
 
-	//pred_t :	function<bool(Thing*,Thing*)>	
-	//preds : 	std::map<old::nodeid, pred_t>
-	preds.clear();
+	auto &quads = kb.first;
 
-	//eps, locals_templates_garbage, consts_garbage
-	free_garbage();
+	auto it = quads.find(str_default);
+	if (it != quads.end()){
+		for ( pquad quad : *it->second )
+		{
+			const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
+			TRACE(dout<<"called with " << q->tostring()<<endl);
+
+			if (p == implication) //if this is a rule, i.e. the predicate is "=>":
+			{
+				if ( //if body and head are nonempty graphs
+				(quads.find(o) != quads.end()) &&
+				(quads.find ( s ) != quads.end()))
+				{
+
+					//Explode the head into separate quads and make a separate
+					//rule for each of them with the same body
+					for ( pquad y : *quads.at ( o ) ) {
+						add_rule(
+
+
+
+
+
+
+
+
+
+
+
 
 	//Loop over the heads starting from the end and going backwards.
 	//Pred_index maps the nodeid for each unique pred to a list of rules
