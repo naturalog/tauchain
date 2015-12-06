@@ -47,3 +47,10 @@ valgrind --tool=callgrind    ./tau   --silence addrules --silence readcurly --si
 --dump-instr=yes
 --simulate-cache=yes 
 --collect-jumps=yes 
+
+
+
+sudo apt-get install exuberant-ctags 
+ctags --fields=+S -R -e  *h  *cpp
+
+

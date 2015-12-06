@@ -3,15 +3,24 @@
 #include <queue>
 #include <limits>
 #include <string.h>
+#include <assert.h>
 
 #include "univar.h"
 
+/* http://www.chiark.greenend.org.uk/~sgtatham/coroutines.html
+ * http://www.codeproject.com/Articles/29524/Generators-in-C
+ * < HMC_Alf> JIT are just crazy "specialized jump table" constructing machines
+ *
+ */
+
 using namespace std;
 
-typedef intptr_t offset_t;//ptrdiff_t?
 typedef unsigned char byte;
+typedef size_t pos_t;
 
-intptr_t ofst(size_t target, size_t me)
+typedef intptr_t offset_t;//ptrdiff_t?
+
+intptr_t ofst(pos_t target, pos_t me)
 {
 	assert(target < numeric_limits<int>::max());
 	assert(me < numeric_limits<int>::max());
@@ -58,7 +67,6 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 #ifdef NEW
 #define KBDBG
 #endif
-
 #ifdef KBDBG
 #ifdef oneword
 nope
@@ -72,9 +80,11 @@ nope
 #endif
 
 
+
 //for kbdbg
 typedef vector<unsigned long> Markup;
-typedef std::pair<termid, Markup> toadd;
+typedef std::pair<nodeid, Markup> toadd;
+
 
 
 enum ThingType {BOUND, NODE, OFFSET, LIST, LIST_BNODE, UNBOUND};
@@ -120,7 +130,7 @@ public:
 //we could add some assertions here maybe
 //this abstracts away oneword and struct implementations of Thing
 #define get_type(thing) ((thing).type)
-#define get_node(thing) (ASSERT(get_type(thing) == NODE), /*then return*/ (thing).term)
+#define get_node(thing) (ASSERT(get_type(thing) == NODE), /*then return*/ (thing).node)
 #define get_size(thing) ((thing).size)
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
@@ -151,11 +161,11 @@ inline Thing create_unbound()
 	return x;
 }
 
-inline Thing create_node(termid v)
+inline Thing create_node(nodeid v)
 {
 	Thing x;
 	x.type = NODE;
-	x.term = v;
+	x.node = v;
 	return x;
 }
 
@@ -350,18 +360,25 @@ wildcard_t wildcard;
 Perms perms;
 map<PredParam, string> permname;
 
-typedef struct {
+
+//this is an intermediate structure before compilation
+//need to come up with better names, maybe rule_t would be rule_coro?
+struct Rule
+{
+	Rule(pquad h, pqlist b):head(h), body(b){};
 	pquad head;
 	pqlist body;
-} Rule;
-
+} ;
 map<nodeid, vector<Rule>> rules;
+
+
+
 #ifdef DEBUG
 std::map<nodeid, pred_t> preds;
-typedef map<termid, size_t> locals_map;
+typedef map<nodeid, pos_t> locals_map;
 #else
 std::unordered_map<nodeid, pred_t> preds;
-typedef unordered_map<termid, size_t> locals_map;
+typedef unordered_map<nodeid, pos_t> locals_map;
 #endif
 
 
@@ -383,7 +400,7 @@ coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb);
 coro unify(Thing *, Thing *);
 void check_pred(nodeid pr);
 rule_t seq(rule_t a, rule_t b);
-rule_t compile_rule(prover::ruleid r);
+rule_t compile_rule(Rule r);
 void build_in_rules();
 void build_in_facts();
 
@@ -518,7 +535,7 @@ string kbdbg_str(const Thing * x)
 {
 	stringstream o;
 	o << "[" << "\"" << x << "\""  << ", ";
-	size_t c=0;
+	pos_t c=0;
 	for (auto i: x->markup) {
 		o << i;
 		if (++c != x->markup.size())
@@ -613,15 +630,11 @@ string str(const Thing *_x)
 		}
 		case UNBOUND:
 			return "var()";
-		case NODE: {
-			const nodeid node = get_node(x);
-			ASSERT(node);
-			return *dict[node->p].value;
-		}
+		case NODE:
 		case LIST_BNODE: {
 			const nodeid node = get_node(x);
 			ASSERT(node);
-			return *dict[node->p].value;
+			return *dict[node].value;
 		}
 		case LIST: {
 			const size_t size = get_size(x);
@@ -775,14 +788,7 @@ bool would_unify(Thing *this_, Thing *x_)
 		else if (types_differ(me, x)) // in oneword mode doesnt differentiate between bound and unbound!
 			return false;
 		else if(is_node(me))
-		{
-			/*const auto this_term = get_term(this);
-			const auto x_term = get_term(x);
-			TRACE(dout << op->format(this_term) << " =?= " << op->format(x_term) << endl;)*/
-			bool r = are_equal(me, x);
-			ASSERT(op->_terms.equals(get_term(me), get_term(x)) == r);
-			return r;
-		}
+			return  are_equal(me, x);
 		else
 		{
 			ASSERT(is_list(me));
@@ -938,15 +944,10 @@ void compile_pred(nodeid pr)
 			return;
 	}
 
-	if (pred_index.find(pr) == pred_index.end())
-		return;
-
-	//All the rules with that pred in the head
-	vector<size_t> rs = pred_index.at(pr);
-	TRACE(dout << "# of rules: " << rs.size() << endl;)
-	//For each of those rules, compile it, and add the result to preds.
-	for (auto r: rs)
-		add_rule(pr, compile_rule(r));
+	if (rules.find(pr) != rules.end()) {
+		for (auto r: rules.at(pr))
+			add_rule(pr, compile_rule(r));
+	}
 }
 
 
@@ -954,9 +955,9 @@ void compile_pred(nodeid pr)
 void check_pred(nodeid pr)
 {
 	FUN;
-	if (pred_index.find(pr) == pred_index.end() && builtins.find(pr) == builtins.end()) {
+	if (rules.find(pr) == rules.end() && builtins.find(pr) == builtins.end()) {
 		dout << KRED << "Predicate '" << KNRM << dict[pr] << "' not found." << endl;
-		preds[pr] = GEN_FAIL_WITH_ARGS;
+		preds[pr] = wildcard_pred(pr);//GEN_FAIL_WITH_ARGS;
 	}
  }
 
@@ -968,57 +969,40 @@ void compile_kb(qdb &kb)
 	rules.clear();//intermediate data
 	free_garbage();//eps, locals_templates_garbage, consts_garbage
 
-
+	//preprocessing
 	auto &quads = kb.first;
-
 	auto it = quads.find(str_default);
-	if (it != quads.end()){
-		for ( pquad quad : *it->second )
-		{
-			const string &s = *q->subj->value, &p = *q->pred->value, &o = *q->object->value;
-			TRACE(dout<<"called with " << q->tostring()<<endl);
+	if (it != quads.end()) {
+		auto &pffft = *it->second;
+		reverse(pffft.begin(), pffft.end());
+		for (pquad quad : *it->second) {
+			const string &s = *quad->subj->value, &p = *quad->pred->value, &o = *quad->object->value;
+			TRACE(dout << quad->tostring() << endl);
+
+			rules[dict[quad->pred]].push_back(Rule(quad, 0));
 
 			if (p == implication) //if this is a rule, i.e. the predicate is "=>":
 			{
-				if ( //if body and head are nonempty graphs
-				(quads.find(o) != quads.end()) &&
-				(quads.find ( s ) != quads.end()))
-				{
-
+				if (quads.find(o) != quads.end()) {
 					//Explode the head into separate quads and make a separate
 					//rule for each of them with the same body
-					for ( pquad y : *quads.at ( o ) ) {
-						add_rule(
-
-
-
-
-
-
-
-
-
-
-
-
-	//Loop over the heads starting from the end and going backwards.
-	//Pred_index maps the nodeid for each unique pred to a list of rules
-	//that use that pred, so at pred_index[pr] we'll add the index of the
-	//rule (i.e. the index into heads/bodies).
-	//old::prover->heads/bodies --> pred_index, we group rules by their pred
-	for (int i = op->heads.size(); i > 0; i--)
-	{
-		nodeid pr = op->heads[i - 1]->p;
-		TRACE(dout << "adding rule for pred [" << pr << "] " << dict[pr] << "'" << endl;)
-		pred_index[pr].push_back(i - 1);
+					pqlist b = 0;
+					if (quads.find(s) != quads.end())
+						b = quads[s];
+					for (pquad h : *quads.at(o)) {
+						rules[dict[h->pred]].push_back(Rule(h, b));
+					}
+				}
+			}
+		}
 	}
 
-	//pred_index --> preds (compilation step)
+	//rules --> preds (compilation step)
 
 	for(auto x: builtins){
 		compile_pred(x.first);
 	}
-	for(auto x: pred_index){
+	for(auto x: rules){
 		compile_pred(x.first);
 	}
 }
@@ -1204,18 +1188,7 @@ a join captures two indexes into the locals/consts table, which it may or may no
 
 
 
-
-bool islist(termid t)
-{
-	ASSERT(t);/*
-	dout << t << endl;
-	dout << t->p << endl;
-	dout << &dict << endl;
-	dout << " " << dict[t->p].value  << endl;*/
-	return *dict[t->p].value == ".";
-}
-
-PredParam maybe_head(PredParam pp, termid head, termid x)
+PredParam maybe_head(PredParam pp, pquad head, pquad x)
 {
 #ifndef KBDBG
 	if (head) {
@@ -1230,7 +1203,7 @@ PredParam maybe_head(PredParam pp, termid head, termid x)
 }
 
 //return term's PredParam and possibly also its index into the corresponding vector
-PredParam find_thing (termid x, size_t &index, locals_map &lm, locals_map &cm)
+PredParam find_thing (nodeid x, size_t &index, locals_map &lm, locals_map &cm)
 {
 	auto it = lm.find(x);
 	if (it != lm.end()) {
@@ -1259,8 +1232,8 @@ PredParam kbdbg_find_thing (unsigned long part, size_t &index, Locals &locals)
 }
 #endif
 
-//find thing in locals or consts by termid
-Thing &fetch_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
+//find thing in locals or consts
+Thing &fetch_thing(nodeid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
 	size_t i;
 	auto pp = find_thing(x, i, lm, cm);
@@ -1273,10 +1246,10 @@ Thing &fetch_thing(termid x, Locals &locals, Locals &consts, locals_map &lm, loc
 }
 
 
-void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head)
+void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head)
 {
 	(void)head;
-	dout << endl << "locals map: (termid, pos, thing, kbdbg)" << endl;
+	dout << endl << "locals map: (nodeid, pos, thing, kbdbg)" << endl;
 	for (auto x: lm)
 		dout << " " << op->format(x.first) << "     " << x.second << "     " << str(&locals.at(x.second)) <<
 #ifdef KBDBG
@@ -1296,6 +1269,18 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 }
 
 
+bool islist(nodeid x)
+{
+	for (auto i: rules) {
+		for (auto j: i.second) {
+			auto h = j.head;
+			if (h->pred == rdfrest && h->subj == x)
+				return true;
+		}
+	}
+	return false;
+}
+
 
 
 //think {?a x ?a. (?a) x b} => b x b
@@ -1306,7 +1291,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 //locals: var (thats the ?a) | list header (size 2) | offset - 2 (pointing to the first var) | list bnode ("size" 1) | node b | nil 
 //consts: the node b
 
-void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, qlist &body)
+void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, qlist &body)
 {
 	FUN;
 
@@ -1452,7 +1437,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		terms.push_back(toadd(head->s, {kbdbg_part++}));
 		terms.push_back(toadd(head->o, {kbdbg_part++}));
 	}
-	for (termid bi: body) {
+	for (pquad bi: body) {
 		terms.push_back(toadd(bi->s, {kbdbg_part++}));
 		terms.push_back(toadd(bi->o, {kbdbg_part++}));
 	}
@@ -1463,7 +1448,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//If the term is a variable, then "add_node(true, xx, locals, lm)".
 	//If it's a list, then push it to lq to be processed later.
 	for (toadd xx: terms) {
-		termid x = xx.first;
+		nodeid x = xx.first;
 		if (x->p > 0 && !islist(x)) {
 #ifndef KBDBG
 			//force rule s and o into locals for now
@@ -1572,27 +1557,22 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 
 
 
-rule_t compile_rule(prover::ruleid r)
+rule_t compile_rule(Rule r)
 {
 	FUN;
 
-	//Get the head and body associated with the ruleid.
-	termid head = op->heads[r];
-	prover::termset body = op->bodies[r];
-
 	//What do each of these do?
-
 	//should draw a picture of the data structure(s)
-	//maps from termids to indexes into locals/consts
+	//maps from nodeids to indexes into locals/consts
 	locals_map lm, cm;
-	//they will be needed after this func is over so we allocate them on the heap
+	//these will be needed after this func is over so we allocate them on the heap
 	Locals &locals_template = *new Locals();
 	locals_templates_garbage.push_back(&locals_template);//and register them for garbage collection
 	Locals *consts_ = new Locals();
 	consts_garbage.push_back(consts_);
 	Locals &consts = *consts_;
 
-	make_locals(locals_template, consts, lm, cm, head, body);
+	make_locals(locals_template, consts, lm, cm, r.head, r.body);
 
 
 	join_gen jg = compile_body(locals_template, consts, lm, cm, head, body);
@@ -1819,14 +1799,14 @@ void print_kbdbg_termset(stringstream &o, prover::termset b, unsigned long &part
 void print_kbdbg(prover::termset query)
 {
 	unsigned long part = 0;
-	for (auto rules: pred_index) {
-		for (auto rule: rules.second) {
+	for (auto rs: rules) {
+		for (auto rule: rs.second) {
 			stringstream o;
-			auto h = op->heads[rule];
+			auto h = rule->head;
 			o << "\"{\",";
 			print_kbdbg_term(o, h, part);
 			o << ",\"}\"";
-			auto b = op->bodies[rule];
+			auto b = rule->body;
 			if (b.size()) {
 				o << ",\" <= {\",";
 				print_kbdbg_termset(o, b, part);
