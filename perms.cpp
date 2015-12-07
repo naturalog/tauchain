@@ -15,6 +15,7 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
+					//todo assert that access is within bounds?
 					while (ac(s, s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -49,6 +50,7 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
+					//todo assert that access is within bounds?
 					while (ac(s, o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -83,7 +85,8 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(s, ITEM(&locals,xi))) {
+					//todo assert that access is within bounds?
+					while (ac(s, (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -117,7 +120,8 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(s, ITEM(&consts,xi))) {
+					//todo assert that access is within bounds?
+					while (ac(s, (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -151,6 +155,7 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
+					//todo assert that access is within bounds?
 					while (ac(o, s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -185,6 +190,7 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
+					//todo assert that access is within bounds?
 					while (ac(o, o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
@@ -219,7 +225,8 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(o, ITEM(&locals,xi))) {
+					//todo assert that access is within bounds?
+					while (ac(o, (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -253,7 +260,8 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(o, ITEM(&consts,xi))) {
+					//todo assert that access is within bounds?
+					while (ac(o, (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -287,7 +295,8 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&locals,wi), s)) {
+					//todo assert that access is within bounds?
+					while (ac((&locals[wi]), s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -321,7 +330,8 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&locals,wi), o)) {
+					//todo assert that access is within bounds?
+					while (ac((&locals[wi]), o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -355,7 +365,8 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&locals,wi), ITEM(&locals,xi))) {
+					//todo assert that access is within bounds?
+					while (ac((&locals[wi]), (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -389,7 +400,8 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&locals,wi), ITEM(&consts,xi))) {
+					//todo assert that access is within bounds?
+					while (ac((&locals[wi]), (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -423,7 +435,8 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&consts,wi), s)) {
+					//todo assert that access is within bounds?
+					while (ac((&consts[wi]), s)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -457,7 +470,8 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&consts,wi), o)) {
+					//todo assert that access is within bounds?
+					while (ac((&consts[wi]), o)) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -491,7 +505,8 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&consts,wi), ITEM(&locals,xi))) {
+					//todo assert that access is within bounds?
+					while (ac((&consts[wi]), (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -525,7 +540,8 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 				case 0:
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
-					while (ac(ITEM(&consts,wi), ITEM(&consts,xi))) {
+					//todo assert that access is within bounds?
+					while (ac((&consts[wi]), (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
 						bc = b();
 						while (bc(s, o, locals)) {
@@ -547,7 +563,7 @@ void make_perms_table()
 {
 permname[HEAD_S] = "HEAD_S";
 permname[HEAD_O] = "HEAD_O";
-permname[LOCAL] = "LOCA";
+permname[LOCAL] = "LOCAL";
 permname[CONST] = "CONST";
 perms[HEAD_S][HEAD_S] = perm_HEAD_S_HEAD_S;
 perms[HEAD_S][HEAD_O] = perm_HEAD_S_HEAD_O;

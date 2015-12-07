@@ -156,7 +156,13 @@ public:
 		std::getline(stream, line);
 		while(!starts.empty()) starts.pop();
 		pos = 0;
-		do_reparse = interactive && stream.peek() == EOF;
+		auto m = stream.rdbuf()->in_avail();
+		TRACE(dout << m << endl);
+		do_reparse = interactive && m <= 0;
+		/* got_more_to_read();
+		 * i would just use select here, like http://stackoverflow.com/a/6171237
+		 * got any crossplatform idea?
+		 */
 	}
 	string pop_x(wchar_t x)
 	{
@@ -774,7 +780,6 @@ int main ( int argc, char** argv)
 	while (true) {
 
 		displayPrompt();
-
 		input->readline();
 
 		//maybe its time to go to the next input
@@ -786,6 +791,7 @@ int main ( int argc, char** argv)
 				goto end;
 			input = inputs.top();
 			inputs.pop();
+			displayPrompt();
 			input->readline();
 		}
 

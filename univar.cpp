@@ -169,6 +169,14 @@ inline Thing create_node(nodeid v)
 	return x;
 }
 
+inline Thing create_list_bnode(nodeid v)
+{
+	Thing x;
+	x.type = LIST_BNODE;
+	x.node = v;
+	return x;
+}
+
 inline void make_this_unbound(Thing * me)
 {
 	me->type = UNBOUND;
@@ -343,7 +351,9 @@ typedef function<join_t()> join_gen;
 //btw im using gen in the sense that its a lambda generating another lambda
 typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
 
+//this tells a join coro where to take the parameters to pass to a pred coro
 enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
+//and these are the specialized join coros
 typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
 map<nodeid, vector<pred_t>> builtins;
@@ -1130,7 +1140,6 @@ coro unify(Thing *a_, Thing *b_){
 
 	if(are_equal(a,b)) {
 		if (is_node(a)) {
-			ASSERT(op->_terms.equals(get_term(a), get_term(b)));
 			return UNIFY_SUCCEED(origa, origb);
 		}
 		if (is_list(a)) {
@@ -1188,14 +1197,14 @@ a join captures two indexes into the locals/consts table, which it may or may no
 
 
 
-PredParam maybe_head(PredParam pp, pquad head, pquad x)
+PredParam maybe_head(PredParam pp, pquad head, nodeid x)
 {
 #ifndef KBDBG
 	if (head) {
-		assert(head->s && head->o);
-		if (x == head->s)
+		assert(head->subj && head->object);
+		if (x == dict[head->subj])
 			return HEAD_S;
-		if (x == head->o)
+		if (x == dict[head->object])
 			return HEAD_O;
 	}
 #endif
@@ -1251,7 +1260,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 	(void)head;
 	dout << endl << "locals map: (nodeid, pos, thing, kbdbg)" << endl;
 	for (auto x: lm)
-		dout << " " << op->format(x.first) << "     " << x.second << "     " << str(&locals.at(x.second)) <<
+		dout << " " << *dict[x.first].value << "     " << x.second << "     " << str(&locals.at(x.second)) <<
 #ifdef KBDBG
 		"     " << kbdbg_str(&locals.at(x.second)) <<
 #endif
@@ -1264,7 +1273,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 	if (cm.size()) {
 		dout << "consts:" << endl;
 		for (auto x: cm)
-			dout << op->format(x.first) << " : : " << x.second << "  --> " << str(&consts.at(x.second)) << endl;
+			dout << *dict[x.first].value << " : : " << x.second << "  --> " << str(&consts.at(x.second)) << endl;
 	}
 }
 
@@ -1274,12 +1283,38 @@ bool islist(nodeid x)
 	for (auto i: rules) {
 		for (auto j: i.second) {
 			auto h = j.head;
-			if (h->pred == rdfrest && h->subj == x)
+			if (dict[h->pred] == rdfrest && dict[h->subj] == x)
 				return true;
 		}
 	}
 	return false;
 }
+
+vector<nodeid> get_list(nodeid n) {
+	FUN;
+	ASSERT(n);
+	vector<nodeid> r;
+	while(true) {
+		for (auto rule: rules[rdffirst]) {
+			if (dict[rule.head->subj] == n) {
+				if (dict[rule.head->object] == rdfnil)
+					return r;
+				r.push_back(dict[rule.head->object]);
+				break;
+			}
+		}
+		for (auto rule: rules[rdfrest]) {
+			if (dict[rule.head->subj] == n) {
+				if (dict[rule.head->object] == rdfnil)
+					return r;
+				n = dict[rule.head->object];
+				break;
+			}
+		}
+	}
+}
+
+
 
 
 
@@ -1296,7 +1331,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	FUN;
 
 	std::queue<toadd> lq;
-	TRACE(dout << "head:" << op->format(head) << endl);
+//	TRACE(dout << "head:" << op->format(head) << endl);
 
 	/* Function definition region */
 	//We make 3 function which we then apply later, so in reading this make_locals function,
@@ -1314,9 +1349,9 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			toadd ll = lq.front();
 			lq.pop();
 
-			termid l = ll.first;
+			nodeid l = ll.first;
 
-			auto lst = op->get_dotstyle_list(l);
+			auto lst = get_list(l);
 
 			Thing i0; // list size item, a sort of header / pascal string (array?) style thing
 #ifdef KBDBG
@@ -1337,7 +1372,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				m.push_back(list_part++);
 #endif
 				Thing t;
-				if (li->p < 0) { //its a var
+				if (li < 0) { //its a var
 					auto it = lm.find(li); //is it already in locals?
 					if (it == lm.end()) { //no? create a fresh var
 						t = create_unbound();
@@ -1362,14 +1397,13 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				locals.push_back(t);
 
 				//we add bnodes that simulate rdf list structure
-				Thing bnode;
-				make_this_list(bnode, --bnode_counter);
+				Thing bnode = create_list_bnode(--bnode_counter);
 				locals.push_back(bnode);
 				
 			}
 
 			//final nil
-			Thing nil = create_node(op->make(rdfnil,0,0));
+			Thing nil = create_node(rdfnil);
 			locals.push_back(nil);
 
 		}
@@ -1379,8 +1413,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	auto link_lists = [&locals, &lm]() {
 		for (size_t i = 0; i < locals.size(); i++) {
 			Thing &x = locals[i];
-			if (is_node(x) && islist(get_term(x))) {
-				make_this_offset(x, ofst(lm.at(get_term(x)), i));
+			if (is_node(x) && islist(get_node(x))) {
+				make_this_offset(x, ofst(lm.at(get_node(x)), i));
 			}
 		}
 	};
@@ -1392,8 +1426,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		setproc("add_node");
 		Thing t;
 		add_kbdbg_info(t, xx.second);
-		termid x = xx.first;
-		TRACE(dout << "termid:" << x << " p:" << dict[x->p] << "(" << x->p << ")" << endl;)
+		nodeid x = xx.first;
+//		TRACE(dout << "termid:" << x << " p:" << dict[x->p] << "(" << x->p << ")" << endl;)
 
 		//Check to see if the termid is already in m (locals/consts).
 		//If it's not then add it.
@@ -1434,12 +1468,12 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//Make toadds out of the head and all terms in the body and push these
 	//into terms.
 	if (head) {
-		terms.push_back(toadd(head->s, {kbdbg_part++}));
-		terms.push_back(toadd(head->o, {kbdbg_part++}));
+		terms.push_back(toadd(dict[head->subj], {kbdbg_part++}));
+		terms.push_back(toadd(dict[head->object], {kbdbg_part++}));
 	}
 	for (pquad bi: body) {
-		terms.push_back(toadd(bi->s, {kbdbg_part++}));
-		terms.push_back(toadd(bi->o, {kbdbg_part++}));
+		terms.push_back(toadd(dict[bi->subj], {kbdbg_part++}));
+		terms.push_back(toadd(dict[bi->object], {kbdbg_part++}));
 	}
 	//TRACE(dout << "terms.size:" << terms.size() << endl);
 
@@ -1449,10 +1483,10 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//If it's a list, then push it to lq to be processed later.
 	for (toadd xx: terms) {
 		nodeid x = xx.first;
-		if (x->p > 0 && !islist(x)) {
+		if (x > 0 && !islist(x)) {
 #ifndef KBDBG
 			//force rule s and o into locals for now
-			if (head && (x == head->s || x == head->o))
+			if (head && (x == dict[head->subj] || x == dict[head->object]))
 				add_node(false, xx, locals, lm);
 			else
 				add_node(false, xx, consts, cm);
@@ -1460,9 +1494,9 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			add_node(false, xx, locals, lm);
 #endif
 		}
-		else if (x->p < 0)
+		else if (x < 0)
 			add_node(true, xx, locals, lm);
-		else if (x->p > 0 && islist(x))
+		else if (x > 0 && islist(x))
 			lq.push(xx);
 		else
 			assert(false);
@@ -1481,7 +1515,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 
 
-join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, termid head, prover::termset body)
+join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, qlist &body)
 {
 	FUN;
 	join_gen jg = succeed_with_args_gen();
@@ -1496,11 +1530,11 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 	//For every term in the body, check the pred to see if there's a head
 	//with this pred. If not we'll set the pred-function for that pred to
 	//fail_with_args. 
-	for (termid bi: b2)
+	for (pquad bi: b2)
 	{
-		check_pred(bi->p);
-		termid s = bi->s;
-		termid o = bi->o;
+		check_pred(dict[bi->pred]);
+		nodeid s = dict[bi->subj];
+		nodeid o = dict[bi->object];
 		size_t i1, i2;
 		PredParam sk, ok;
 #ifdef KBDBG
@@ -1517,7 +1551,7 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 		ok = maybe_head(find_thing(o, i2, lm, cm), head, o);
 #endif
 		TRACE(dout <<"perm " << permname.at(sk) << " " << permname.at(ok) << endl );
-		jg = perms.at(sk).at(ok)(bi->p, jg, i1, i2, consts);
+		jg = perms.at(sk).at(ok)(dict[bi->pred], jg, i1, i2, consts);
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
 	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
@@ -1572,10 +1606,8 @@ rule_t compile_rule(Rule r)
 	consts_garbage.push_back(consts_);
 	Locals &consts = *consts_;
 
-	make_locals(locals_template, consts, lm, cm, r.head, r.body);
-
-
-	join_gen jg = compile_body(locals_template, consts, lm, cm, head, body);
+	make_locals(locals_template, consts, lm, cm, r.head, *r.body);
+	join_gen jg = compile_body(locals_template, consts, lm, cm, r.head, *r.body);
 
 	size_t hs, ho; // indexes of head subject and object in locals
 #ifdef KBDBG
@@ -1585,8 +1617,8 @@ rule_t compile_rule(Rule r)
 	kbdbg_part = kbdbg_part_max;
 #else
 	//ignoring key, because head s and o go into locals always
-	find_thing(head->s, hs, lm, cm);//sets hs
-	find_thing(head->o, ho, lm, cm);
+	find_thing(dict[r.head->subj], hs, lm, cm);//sets hs
+	find_thing(dict[r.head->object], ho, lm, cm);
 #endif
 
 	EEE;
@@ -1600,12 +1632,12 @@ rule_t compile_rule(Rule r)
 	auto locals_data = locals_template.data();
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
 	Thing * locals=0; //to be malloced inside the lambda
-	const bool has_body = body.size(); // does this rule have a body or is it a fact?
+	const bool has_body = r.body->size(); // does this rule have a body or is it a fact?
 
 	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc("rule");
 		TRC(++call;)
-		TRACE(dout << op->formatr(r) << endl;)
+//		TRACE(dout << op->formatr(r) << endl;)
 		TRACE(dout << "call=" << call << endl;)
 		switch (entry) {
 			case 0: 
@@ -1707,7 +1739,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 	}
 
 	if (is_node(t))
-		return std::make_shared<node>(dict[get_term(t)->p]);
+		return std::make_shared<node>(dict[get_node(t)]);
 
 	//dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
 	assert(is_unbound(t));
@@ -1733,11 +1765,11 @@ void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
 
 
 
-yprover::yprover ( qdb qkb)  {
+yprover::yprover ( qdb kb)  {
 	make_perms_table();
 	build_in_facts();
 	build_in_rules();
-	compile_kb();
+	compile_kb(kb);
 }
 
 
@@ -1852,25 +1884,25 @@ void yprover::query(const qdb& goal){
 		//go over the triples of the query to print them out
 		for(auto i: q)
 		{
-			Thing *s = &fetch_thing(i->s, locals, consts, lm, cm);
-			Thing *o = &fetch_thing(i->o, locals, consts, lm, cm);
+			Thing *s = &fetch_thing(dict[i->subj], locals, consts, lm, cm);
+			Thing *o = &fetch_thing(dict[i->object], locals, consts, lm, cm);
 
-			TRACE(dout << sprintThing("Subject", s) << " Pred: " << dict[i->p] << " "  << sprintThing("Object", o) << endl;)
+			TRACE(dout << sprintThing("Subject", s) << " Pred: " << i->pred->tostring() << " "  << sprintThing("Object", o) << endl;)
 
 			//lets try to get the original names of unbound vars
 			Thing n1, n2;
 			if (is_unbound(*s)) {
 				s = &n1;
-				n1 = create_node(i->s);
+				n1 = create_node(dict[i->subj]);
 			}
 			if (is_unbound(*o)) {
 				o = &n2;
-				n2 = create_node(i->o);
+				n2 = create_node(dict[i->object]);
 			}
 
-			dout << str(getValue(s)) << " " << dict[i->p] << " "  << str(getValue(o)) << endl;
+			dout << str(getValue(s)) << " " << i->pred->tostring() << " "  << str(getValue(o)) << endl;
 
-			add_result(r, s, o, i->p);
+			add_result(r, s, o, dict[i->pred]);
 		}
 
 		results.emplace_back(r);
@@ -1897,16 +1929,13 @@ void yprover::query(const qdb& goal){
 
 void add_facts(vector<vector<nodeid>> facts)
 {
-	///std::sort(myList.begin(), myList.end(), [](int x, int y){ return std::abs(x) < std::abs(y); });
-	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
-
 	ths_t &ths = *new ths_t;
 	ths_garbage = &ths;///.push_back(ths);
 
 	for (auto f: facts)
 		ths[f[1]].push_back({
-			create_node(op->make(f[0])),
-			create_node(op->make(f[2]))});
+			create_node(f[0]),
+			create_node(f[2])});
 	
 	coro suc, ouc;
 	for (auto ff:ths)
@@ -2265,7 +2294,7 @@ void build_in_rules()
 								dout << bu << ": " << str(&item) << " not a node" << endl;
 								DONE;
 							}
-							node p = dict[get_term(item)->p];
+							node p = dict[get_node(item)];
 							if (p.datatype != XSD_INTEGER) {
 								dout << bu << ": " << p.tostring() << " not an int" << endl;
 								DONE;
@@ -2277,7 +2306,7 @@ void build_in_rules()
 						ss << total;
 
 						r = new(Thing);
-						*r = create_node(op->make(dict[mkliteral(pstr(ss.str()), pstr("XSD_INTEGER"), 0)], 0, 0));
+						*r = create_node(dict[mkliteral(pstr(ss.str()), pstr("XSD_INTEGER"), 0)]);
 
 						ouc = unify(o_, r);
 					}
@@ -2317,8 +2346,8 @@ void build_in_rules()
 							dout << bu << ": " << str(o) << " not a node" << endl;
 							DONE;
 						}
-						auto sss = dict[get_term(s2)->p].tostring();
-						auto ooo = dict[get_term(o2)->p].tostring();
+						auto sss = dict[get_node(s2)].tostring();
+						auto ooo = dict[get_node(o2)].tostring();
 
 						log_outputString[sss] = ooo;
 						entry = LAST;
@@ -2360,7 +2389,7 @@ void build_in_rules()
 			}
 	);
 
-
+	/*
 	//nope
 	//item in list
 	bu = "http://www.w3.org/2000/10/swap/list#in";
@@ -2402,6 +2431,7 @@ void build_in_rules()
 				}
 			}
 	);
+	 */
 
 
 	//if the subject is bound, and bound to a list just take it's first item.
@@ -2660,6 +2690,8 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 	return r;
 }
 
+	///std::sort(myList.begin(), myList.end(), [](int x, int y){ return std::abs(x) < std::abs(y); });
+	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
 
 
 #endif
