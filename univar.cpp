@@ -1640,10 +1640,15 @@ rule_t compile_rule(Rule r)
 //		TRACE(dout << op->formatr(r) << endl;)
 		TRACE(dout << "call=" << call << endl;)
 		switch (entry) {
-			case 0: 
+			case 0:
+
+				/*optimization: this could happen in a different thread.
+				http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
+				cpu affinity should be set.*/
 				locals = (Thing*)malloc(locals_bytes);
 				memcpy(locals, locals_data, locals_bytes);
-			
+
+
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				ASSERT(hs < locals_bytes / sizeof(Thing));
 				ASSERT(ho < locals_bytes / sizeof(Thing));
@@ -2434,6 +2439,15 @@ void build_in_rules()
 	 */
 
 
+
+
+
+
+
+
+
+
+
 	//if the subject is bound, and bound to a list just take it's first item.
 	// If it is bound to something that is not a list, fail.
 	// If it is unbound, do a trivial yield (no new binding first).
@@ -2480,6 +2494,67 @@ void build_in_rules()
 				}
 			}
 	);
+
+	/*
+	 * 19:18 < HMC_a> stoopkid: in rdf there is a tricky caveat, all possible lists are assumed to exist
+19:19 < HMC_a> so there are lists that begin with ?x regardless of the value of ?x or state pf the kb....
+19:20 < adam789654123> HMC_a: is it possible that we could work on trivial projects in Idris together?
+19:20 < HMC_a> this may seem strange, but it is indeed how cwm, euler, et al (racer, pwlim, jena, the lot) do work
+19:24 < HMC_a> stoopkid: well technically it is to match McCarthy's theory of arrays, but that is just minutia really
+19:24 < stoopkid> mmm
+19:24 < adam789654123> stoopkid: can we make plans to do this tomorrow?
+19:25 < adam789654123> stoopkid: or some time this week maybe?
+19:25 < adam789654123> maybe this weekend?
+19:26 < adam789654123> its just that im under the gun today
+19:27 < adam789654123> there's a method to my madness
+19:27 < stoopkid> this week for sure, and possibly tomorrow, but i'm gonna be going to a lecture about US imperialism in the Philippines in the afternoon/evening
+19:27 < HMC_a> stoopkid: suffice to say that this is a very old soundness-of-closure detail that survived through and was inherited into rdf
+19:28 < HMC_a> it is a tricky caveat conceptually, but actually very easy to implement for us :-)
+
+	 19:46 < HMC_a> stoopkid: it returns with ?l and ?x left as unbound vars!  It returns "?l rdf:first ?x"... in the "result graph" this is a top level statement, so the vars are considered as existential!  So it returns exactly a statement interpreted as "there exists a list l and a node x such that x is the rdf:first of l" which is ofc tautologicaly true regardless of what the kb state is. ;-)
+19:46 < HMC_a> our universal vars like ?foo are also bnodes, remember
+19:47 < HMC_a> all vars are bnodes, all bnodes are vars! XD
+19:47 < stoopkid> ok so it just returns the existential vars, it doesn't return the infinite solution set, gotcha
+19:48 < HMC_a> the ones we write like ?foo are universals in subformulae and existential at top level (we use "quantifier alternation" instead of tricky @forall type crap and skolem rewrites and such... mostly just "because we can and it is easier"... ("we can" because we are ordinal and do not allow nesting of formulae at the term rewrite))
+19:48 < HMC_a> so nothing rszeno said was wrong wrt more general reasoner semantics, we are just playing on our constraints there wrt skolem et al
+19:49 < HMC_a> and "skipping around" some of the more complex semantic details that would occur if we cared for more general formula interpretation :-)
+19:49 < HMC_a> anyway
+19:51 < stoopkid> now, i'm still iffy on calling vars universals, it seems to me that they are always existential and that it's the {}=>{} that makes for universal quantification
+19:51 < HMC_a> the ones we write like _:foo are existentials, and similarly ones like ?foo at a top level in a syntactic unit are considered existential as a sort of special case, and there are some other "tricky" special cases that "sneak in" like variables that appear in a head but not a body end up as something like "doesn't matter which" quantifier in a sense, but again these are all details of our particular reasoner, not of more general rdf.... HEH
+19:51 < HMC_a> 19:56 < stoopkid> now, i'm still iffy on calling vars universals, it seems to me that they are always existential and that it's the {}=>{} that makes for universal quantification
+19:51 < HMC_a> right, you're not exactly wrong at all...
+19:52 < HMC_a> how you are looking at it is sound for our reasoner
+19:52 < HMC_a> but is not sound for rdf reasoning in general! hehe
+19:53 < HMC_a> in more general rdf reasoning you might run into statements that are structured arbitrarily, where the corresponding predicate fol expression would have arbitrary implication and quantifier placement
+19:53 < HMC_a> we do *not* allow arbitrary implication structures *or* arbitrary quantifier placement!! hehe
+19:54 < stoopkid> i see
+19:54 < HMC_a> well, more accurately, we allow them syntactically but do not reason over them directly in our semantics! :-)
+19:55 < HMC_a> we only take "outer" implications (not nested) in our inference chaining, and we determine quantifiers (universal or existential) by placement relative to these
+19:56 < HMC_a> someone could ofc write, in our logic, an interpretation that *does* consider things like nested implications, arbitrary quantifications, and a math:sum that will do factoring of objects to bind subject lists...
+19:57 < HMC_a> but we do none of these things in our "core" rewrite semantics. :-)
+
+
+	 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }
 

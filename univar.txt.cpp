@@ -1113,4 +1113,23 @@ b = ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 
 
 
+
+
+
+
+https://github.com/google/snappy
+
+http://woboq.com/blog/utf-8-processing-using-simd.html
+https://software.intel.com/en-us/articles/xml-parsing-accelerator-with-intel-streaming-simd-extensions-4-intel-sse4
+http://www.strchr.com/strcmp_and_strlen_using_sse_4.2
+http://blog.qt.io/blog/2011/03/23/improving-string-performance-with-simd-the-revenge/
+http://www.alfredklomp.com/programming/sse-strings/
+http://halobates.de/pcmpstr-js/pcmp.html
+https://www.klittlepage.com/2013/12/10/accelerated-fix-processing-via-avx2-vector-instructions/
+
+
+
+https://github.com/ocornut/imgui/blob/master/examples/sdl_opengl_example/main.cpp
+
+
 #endif

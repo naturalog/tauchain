@@ -991,6 +991,11 @@ void open_file(std::ifstream &f, string gfn)
 		throw std::runtime_error("couldnt open file \"" + gfn + "\"");
 }
 
+void hack_add( qdb &gkb, string s, string p, string o)
+{
+	gkb.first.at("@default")->push_front(make_shared<quad>(quad(s, p, o, "@default")));
+}
+
 ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base)
 {
 	setproc("N3");
@@ -1001,13 +1006,19 @@ ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base)
 		qdb gkb;
 #ifndef NOPARSER
 		open_file(gf, "n3-grammar.nq");
-			assert(readqdb(gkb, gf) == COMPLETE);
+		assert(readqdb(gkb, gf) == COMPLETE);
 #else
 		open_file(gf, "n3-grammar.jsonld");
 		assert(load_jsonld ( gkb, gf ) == COMPLETE);
 #endif
+		/*hack_add(gkb, "string", BNF+"matches", "("""[^"\\]*(?:(?:\\.|"(?!""))[^"\\]*)*""")|("[^"\\]*(?:\\.[^"\\]*)*")");
+		 * http://www.w3.org/TeamSubmission/n3/#grammar
+		 * http://userguide.icu-project.org/strings/regexp
+		 * also see branch icu
+		 * */
 
 		static prover grmr(gkb);
+
 		TRACE(dout << "grammar loaded." << std::endl);
 		//TRACE(dout << std::endl << std::endl << "grmr:" << std::endl << grmr.formatkb());
 		parser = new Marpa(&grmr, dict[mkiri(pstr("http://www.w3.org/2000/10/swap/grammar/n3#language"))]);
