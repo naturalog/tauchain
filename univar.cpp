@@ -2179,24 +2179,6 @@ void build_in_rules()
 
 
 /*
-	wildcard_pred = [p1](nodeid r){
-		EEE;
-		return [entry, r, p1](Thing *s, Thing *o) mutable {
-			//just iterate over wildcard
-			switch (entry) {
-				case 0:
-
-					p1 = wildcard;
-					while (p1(s, r, o)) {
-						entry = LAST;
-						return true;
-						case_LAST:;
-					}
-
-					END;
-			}
-		};
-
 	//{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
 	wildcard = [p1,p2](Thing *s, nodeid r, Thing *o) mutable {
 
@@ -2225,7 +2207,25 @@ void build_in_rules()
 		}
 
 	});
-*/
+	wildcard_pred = [p1](nodeid r){
+		EEE;
+		return [entry, r, p1](Thing *s, Thing *o) mutable {
+			//just iterate over wildcard
+			switch (entry) {
+				case 0:
+
+					p1 = wildcard;
+					while (p1(s, r, o)) {
+						entry = LAST;
+						return true;
+						case_LAST:;
+					}
+
+					END;
+			}
+		};
+
+ */
 
 
 /*
