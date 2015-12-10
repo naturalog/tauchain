@@ -353,7 +353,7 @@ struct Marpa {
 	}
 
 
-	bool is_ws(wchar_t x)
+	bool is_ws(char x)
 	{
 		string wss = "\n\r \t";
 
@@ -1006,7 +1006,8 @@ ParsingResult parse_natural3(qdb &kb, qdb &q, std::istream &f, string base)
 		qdb gkb;
 #ifndef NOPARSER
 		open_file(gf, "n3-grammar.nq");
-		assert(readqdb(gkb, gf) == COMPLETE);
+		nqparser p;
+		p.parse(gkb, gf);
 #else
 		open_file(gf, "n3-grammar.jsonld");
 		assert(load_jsonld ( gkb, gf ) == COMPLETE);

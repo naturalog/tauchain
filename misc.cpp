@@ -522,19 +522,6 @@ string prover::ruleset::format() const {
 
 int unique_list_id = 0;
 //generate a hopefully unique bnode name for a new list
-/*string _listid()
-{
-        std::stringstream ss;
-        ss << "_:list" << unique_list_id;
-        return ss.str();
-};
-string list_bnode_name(int item) 
-{ 
-        std::stringstream ss;
-        ss << _listid();
-        ss << "." << item;
-        return ss.str();
-};*/
 string _listid()
 {
 	std::stringstream ss;

@@ -967,7 +967,7 @@ void check_pred(nodeid pr)
 	FUN;
 	if (rules.find(pr) == rules.end() && builtins.find(pr) == builtins.end()) {
 		dout << KRED << "Predicate '" << KNRM << dict[pr] << "' not found." << endl;
-		preds[pr] = wildcard_pred(pr);//GEN_FAIL_WITH_ARGS;
+		preds[pr] = GEN_FAIL_WITH_ARGS;//wildcard_pred(pr);//
 	}
  }
 
@@ -1326,7 +1326,7 @@ map<nodeid,nodeid> get_list(nodeid n) {
 //locals: var (thats the ?a) | list header (size 2) | offset - 2 (pointing to the first var) | list bnode ("size" 1) | node b | nil 
 //consts: the node b
 
-void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, qlist &body)
+void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, pqlist body)
 {
 	FUN;
 
@@ -1472,7 +1472,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		terms.push_back(toadd(dict[head->subj], {kbdbg_part++}));
 		terms.push_back(toadd(dict[head->object], {kbdbg_part++}));
 	}
-	for (pquad bi: body) {
+	if(body)
+	for (pquad bi: *body) {
 		terms.push_back(toadd(dict[bi->subj], {kbdbg_part++}));
 		terms.push_back(toadd(dict[bi->object], {kbdbg_part++}));
 	}
@@ -1516,13 +1517,14 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 
 
-join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, qlist &body)
+join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, pqlist body)
 {
 	FUN;
 	join_gen jg = succeed_with_args_gen();
-	//for (int i = body.size() - 1; i >= 0; i--) {
-		//termid &bi = body[i];
-	auto b2 = body;
+	if(body)
+	{
+
+	auto b2 = *body;
 	reverse(b2.begin(), b2.end());
 #ifdef KBDBG
 	auto max = kbdbg_part_max;
@@ -1556,6 +1558,8 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
 	}
 	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
+	}
+	
 	return jg;
 }
 
@@ -1607,8 +1611,8 @@ rule_t compile_rule(Rule r)
 	consts_garbage.push_back(consts_);
 	Locals &consts = *consts_;
 
-	make_locals(locals_template, consts, lm, cm, r.head, *r.body);
-	join_gen jg = compile_body(locals_template, consts, lm, cm, r.head, *r.body);
+	make_locals(locals_template, consts, lm, cm, r.head, r.body);
+	join_gen jg = compile_body(locals_template, consts, lm, cm, r.head, r.body);
 
 	size_t hs, ho; // indexes of head subject and object in locals
 #ifdef KBDBG
@@ -1633,7 +1637,7 @@ rule_t compile_rule(Rule r)
 	auto locals_data = locals_template.data();
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
 	Thing * locals=0; //to be malloced inside the lambda
-	const bool has_body = r.body->size(); // does this rule have a body or is it a fact?
+	const bool has_body = r.body && r.body->size(); // or is it a fact (without any conditions)?
 
 	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc("rule");
@@ -1845,7 +1849,7 @@ void print_kbdbg(prover::termset query)
 			print_kbdbg_term(o, h, part);
 			o << ",\"}\"";
 			auto b = rule->body;
-			if (b.size()) {
+			if (b&&b.size()) {
 				o << ",\" <= {\",";
 				print_kbdbg_termset(o, b, part);
 				o << ",\"}\"";
@@ -1865,7 +1869,13 @@ void print_kbdbg(prover::termset query)
 void yprover::query(const qdb& goal){
 	FUN;
 	results.clear();
-	auto &q = *goal.first.at("@default");
+
+	//die if the query is empty
+	auto qit = goal.first.find("@default");
+	if (qit == goal.first.end())
+		return;
+	auto q = qit->second;
+
 #ifdef KBDBG
 	print_kbdbg(q);
 #endif
@@ -1888,7 +1898,7 @@ void yprover::query(const qdb& goal){
 		r.first["@default"] = mk_qlist();
 
 		//go over the triples of the query to print them out
-		for(auto i: q)
+		for(auto i: *q)
 		{
 			Thing *s = &fetch_thing(dict[i->subj], locals, consts, lm, cm);
 			Thing *o = &fetch_thing(dict[i->object], locals, consts, lm, cm);

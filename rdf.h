@@ -117,9 +117,6 @@ pqlist mk_qlist();
 
 std::ostream& operator<< ( std::ostream& o, const qdb& );
 std::ostream& operator<< ( std::ostream& o, const qlist& );
-#ifndef NOPARSER
-int readqdb (qdb& r, std::istream& is);
-#endif
 #ifdef JSON
 class jsonld_api;
 class rdf_db: public qdb {
@@ -155,8 +152,8 @@ class nqparser {
 private:
 	typedef std::list<pnode> plist;
 
-	wchar_t *t;
-	const wchar_t *s;
+	char *t;
+	const char *s;
 	std::list<quad> r;
 	int pos;
 	
@@ -164,11 +161,9 @@ private:
 	std::map<string, std::list<pnode>> qlists;
 	std::list<std::tuple<pnode, pnode, pnode>> lists;
 
-	qdb& _kb;
-
-	pnode readcurly();
-	pnode readlist();
-	pnode readany(bool lit = true);
+	pnode readcurly(qdb &kb);
+	pnode readlist(qdb &kb);
+	pnode readany(qdb &kb, bool lit = true);
 	pnode readiri();
 	pnode readlit();
 	pnode readvar();
@@ -178,14 +173,15 @@ private:
 public:
 	nqparser();
 	~nqparser();
-	void nq_to_qdb(qdb& kb, std::istream& is);
-	//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> operator()(const wchar_t* _s, string ctx = "@default");
+	
+	void parse(qdb& kb, std::istream& is);
+	void _parse(qdb& kb, string ctx);
 };
-qlist merge ( const qdb& q );
+
 
 #endif
 
-
+qlist merge ( const qdb& q );
 
 #endif
 

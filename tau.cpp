@@ -83,6 +83,7 @@ public:
 	virtual void take_back() = 0;
 	virtual void readline()	{};
 	virtual bool end() = 0;
+	virtual bool done() = 0;
 };
 
 class ArgsInput : public Input
@@ -100,6 +101,10 @@ public:
 	bool end()
 	{
 		return counter == argc;
+	}
+	bool done()
+	{
+		return end();
 	}
 	string pop()
 	{
@@ -146,9 +151,15 @@ public:
 		name = fn_;
 		figure_out_interactivity();
 	}
-	bool end()
+	bool done()
 	{
 		return stream.eof();
+	}
+	bool end()
+	{
+		bool r = pop_long() != "";
+		take_back();
+		return r;
 	}
 
 	void readline()
@@ -156,15 +167,16 @@ public:
 		std::getline(stream, line);
 		while(!starts.empty()) starts.pop();
 		pos = 0;
+
 		auto m = stream.rdbuf()->in_avail();
-		TRACE(dout << m << endl);
+		//TRACE(dout << m << endl);
 		do_reparse = interactive && m <= 0;
-		/* got_more_to_read();
+		/* got_more_to_read()? this isnt guaranteed to work.
 		 * i would just use select here, like http://stackoverflow.com/a/6171237
 		 * got any crossplatform idea?
 		 */
 	}
-	string pop_x(wchar_t x)
+	string pop_x(char x)
 	{
 		size_t start = pos;
 		while(line[pos] == ' ') pos++;
@@ -417,13 +429,13 @@ ParsingResult parse_nq(qdb &kb, qdb &query, std::istream &f)
 	//use functions? idk..
 	nqparser parser;
         try {
-                parser.nq_to_qdb(kb, f);
+                parser.parse(kb, f);
         } catch (std::exception& ex) {
                 derr << "[nq]Error reading quads: " << ex.what() << endl;
                 return FAIL;
         }
         try {
-                parser.nq_to_qdb(query, f);
+                parser.parse(query, f);
         } catch (std::exception& ex) {
                 derr << "[nq]Error reading quads: " << ex.what() << endl;
                 return FAIL;
@@ -783,7 +795,7 @@ int main ( int argc, char** argv)
 		input->readline();
 
 		//maybe its time to go to the next input
-		while (input->end()) {
+		while (input->done()) {
 			if (dynamic_cast<ArgsInput*>(input))
 				if (!done_anything)
 					emplace_stdin();
@@ -834,7 +846,8 @@ int main ( int argc, char** argv)
 				}
 				else {
 					dout << "[cli]loading \"" << fn << "\"." << std::endl;
-					inputs.push(new StreamInput(fn, is));
+					inputs.push(input);
+					input = new StreamInput(fn, is);
 					continue;
 				}
 

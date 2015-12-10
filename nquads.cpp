@@ -10,7 +10,7 @@
 using namespace boost::algorithm;
 
 
-nqparser::nqparser() : t(new wchar_t[4096*4096]) { }
+nqparser::nqparser() : t(new char[4096/*wat*/*/*da*/4096]) {/*fuck*/}
 nqparser::~nqparser() { delete[] t; }
 
 
@@ -28,7 +28,7 @@ iswspace:
 //ws*,{~'{'},return
 //ws*,'{',ws*,'}',return
 //ws*,'{',ws*,{~'}'}, << (*this)(s,*r) >>
-pnode nqparser::readcurly() {
+pnode nqparser::readcurly(qdb& kb) {
 	setproc("readcurly");
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
@@ -49,13 +49,12 @@ pnode nqparser::readcurly() {
 	//make a bnode for r, and return this.
 	if (*s == L'}') { ++s; return mkbnode(r); }
 
-	//**needs comments**
-	//Otherwise: nqparser::nqparser().
 	//This needs to be fixed
 	//This says that any string that the parser would accept as valid syntax
 	//can be placed inside a curly, and this new string will also be accepted
 	//as valid syntax.
-	auto t = (*this)(s,*r);//whats going on here?;
+	
+	_parse(kb, *r);
 
 	return mkbnode(r);
 }
@@ -72,7 +71,7 @@ pnode nqparser::readcurly() {
 // L'(',ws*,{~L')'},X,ws*,{~L')'},readany_success,ws*,{L'}'},error
 // L'(',ws*,{~L')'},X,ws*,{~L')'},readany_success,ws*,((L'.',ws*)|{~(L'.' | L'}'}),{L')'},ws*
 
-pnode nqparser::readlist() {
+pnode nqparser::readlist(qdb& kb) {
 	setproc("readlist");
 
 	//We don't skip over any white-space here?
@@ -84,7 +83,7 @@ pnode nqparser::readlist() {
 
 	//**needs comments**
 	int lpos = 0;
-	const string head = list_bnode_name();
+	const string head = list_bnode_name(lpos);
 
 	pnode pn;
 
@@ -110,18 +109,18 @@ pnode nqparser::readlist() {
 
 		//Maybe not readany().
 		//Attempt to readany(true) into pn. If we fail, throw an error.
-		if (!(pn = readany(true)))
+		if (!(pn = readany(kb, true)))
 			//or literal apparently?
 			throw runtime_error(string("expected iri or bnode or list in list: ") + string(s,0,48));
 		
 		//**needs comments**
-		pnode cons = mkbnode(pstr(list_bnode_name()));
+		pnode cons = mkbnode(pstr(list_bnode_name(lpos)));
 
 		//**needs comments**
 		lists.emplace_back(cons, mkiri(RDF_FIRST), pn);//then we create first triple?
 
 		//**needs comments**
-		_kb.second[head].push_back(pn);
+		kb.second[head].push_back(pn);
 		//qlists[head].push_back(pn);//and into qdb.second i presume we add the item too
 
 		++lpos;
@@ -132,7 +131,7 @@ pnode nqparser::readlist() {
 		//**needs comments**
 		if (*s == L')') lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));//end
 
-		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(list_bnode_name())));
+		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(list_bnode_name(lpos))));
 
 		//**needs comments**
 		//If the next character is L'.', then read that and skip over any white-space
@@ -421,14 +420,14 @@ pnode nqparser::readlit() {
 				++s;
 				while (*s != L'>') dt += *s++;
 				++s;
-				break;
+				//break;
 			}
 		//Otherwise, if the next character is L'@', then copy characters
 		//from s into lang until reaching a whitespace character. Then break
 		//from the loop.
 		} else if (*s == L'@') { 
 			while (!iswspace(*s)) lang += *s++;
-			break;
+			//break;
 		}
 
 		//Otherwise we didn't receive either a langtag or an iri, so throw an error:
@@ -447,14 +446,14 @@ pnode nqparser::readlit() {
 }
 
 
-pnode nqparser::readany(bool lit){
+pnode nqparser::readany(qdb& kb, bool lit){
 	pnode pn;
 	//Attempt to read a prefix tag.
 	readprefix();
 
 	//Try to read the next token using: readbnode(), readvar(), readlit(), readlist(), readcurly(),
 	//and readiri(). If it fails, return "(pnode)0". Otherwise, return the node received into pn.
-	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist()) && !(pn = readcurly()) && !(pn = readiri()) )
+	if (!(pn = readbnode()) && !(pn = readvar()) && (!lit || !(pn = readlit())) && !(pn = readlist(kb)) && !(pn = readcurly(kb)) && !(pn = readiri()) )
 		return (pnode)0;
 	return pn;
 }
@@ -491,25 +490,16 @@ void nqparser::preprocess(std::istream& is, std::stringstream& ss){
 }
 
 
-void nqparser::nq_to_qdb(qdb& kb, std::istream& is){
-	_kb = kb;
-
-//std::pair<std::list<quad>, std::map<string, std::list<pnode>>> nqparser::operator()(const wchar_t* _s, string ctx/* = "@default"*/) {
-
-	//Read an nq file in is into the stringstream ss.
+void nqparser::parse(qdb& kb, std::istream& is){
 	std::stringstream ss;
-
 	preprocess(is,ss);
+	string x = ss.str();//weird
+	s = x.c_str();
+	_parse(kb, "@default");
+}
 
-	const wchar_t* _s = (wchar_t*)ss.str().c_str();
-	string ctx;
+void nqparser::_parse(qdb& kb, string ctx){
 	std::list<std::pair<pnode, plist>> preds;
-	//std::pair<std::list<quad>,std::map<string, std::list<pnode>>> rr;
-	//std::pair<std::map<string, pqlist>, std::map<string, std::list<pnode>>> qdb
-	//qdb rr_qdb;	
-	s = _s;
-	if (!s || !*s) kb = {{},{}};
-	//if (!s || !*s) rr = {{},{}};
 
 	string graph;
 	pnode subject, pn;
@@ -523,7 +513,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::istream& is){
 		//This is expecting to read a subject node immediately by using readany(false).
 		//Try to read any node except a literal into subject. RDF subjects can only
 		//be IRIs or blank-nodes. If we fail to read a node, then throw an error.
-		if (!(subject = readany(false)))
+		if (!(subject = readany(kb, false)))
 			throw runtime_error(string("expected iri or bnode subject:") + string(s,0,48));
 
 		//This is expecting to be looping over the predicate-object pairs given for this subject,
@@ -540,7 +530,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::istream& is){
 	
 			//readcurly() here?
 			//Otherwise, try to readiri() and then try to readcurly().
-			if ((pn = readiri()) || (pn = readcurly())) {
+			if ((pn = readiri()) || (pn = readcurly(kb))) {
 				//If one of them succeeds, we'll have a node in 'pn', and we'll
 				//stick this node along with an empty list on the back of preds.
 				//This list will hold all the object nodes captured in the
@@ -567,7 +557,7 @@ void nqparser::nq_to_qdb(qdb& kb, std::istream& is){
 				//Otherwise, it's some other character, try to read a node
 				//into 'pn' using readany(true). (Can be either IRI, blank node,
 				//or literal).
-				if ((pn = readany(true))) {
+				if ((pn = readany(kb, true))) {
 					//If we successfully read a node, then we place it on
 					//the back of the plist() we made for our predicate.
 					pos1->second.push_back(pn);

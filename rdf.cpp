@@ -360,14 +360,3 @@ string quad::tostring ( ) const {
 
 
 
-
-
-using namespace boost::algorithm;
-/*
-#ifndef NOPARSER
-int readqdb (qdb& r, std::istream& is) {
-	return parse_nq(r,is);
-}
-#endif
-*/
-
