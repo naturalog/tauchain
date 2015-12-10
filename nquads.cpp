@@ -436,9 +436,11 @@ pnode nqparser::readlit() {
 	}
 	//Append a null character to t and set pos back to 0.
 	t[pos] = 0; pos = 0;
+
 	//Copy t into t1 and replace all occurrences of "\\\\" with "\\".
 	string t1 = t;
 	boost::replace_all(t1, "\\\\", "\\");
+	//eww, this isnt how you unescape stuff
 
 	//Make a literal node from the value, the IRI and the langtag, and return this node.
 	return mkliteral(wstrim(t1), pstrtrim(dt), pstrtrim(lang));

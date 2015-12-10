@@ -1290,16 +1290,16 @@ bool islist(nodeid x)
 	return false;
 }
 
-vector<nodeid> get_list(nodeid n) {
+map<nodeid,nodeid> get_list(nodeid n) {
 	FUN;
 	ASSERT(n);
-	vector<nodeid> r;
+	map<nodeid,nodeid>  r;
 	while(true) {
 		for (auto rule: rules[rdffirst]) {
 			if (dict[rule.head->subj] == n) {
 				if (dict[rule.head->object] == rdfnil)
 					return r;
-				r.push_back(dict[rule.head->object]);
+				r[n] = dict[rule.head->object];
 				break;
 			}
 		}
@@ -1362,11 +1362,12 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			locals.push_back(i0);
 			lm[l] = locals.size()-1; // register us in the locals map
 
-			size_t bnode_counter = lst.size();
-
-			//For each item in the list, 
-			for (auto li: lst) {
+			//For each item in the list,
+			for (auto list_item: lst) {
 				TRACE(dout << "item..." << endl;)
+				nodeid bnode_id = list_item.first;
+				nodeid li = list_item.second;
+
 #ifdef KBDBG
 				Markup m = ll.second;
 				m.push_back(list_part++);
@@ -1397,7 +1398,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				locals.push_back(t);
 
 				//we add bnodes that simulate rdf list structure
-				Thing bnode = create_list_bnode(--bnode_counter);
+				Thing bnode = create_list_bnode(bnode_id);
 				locals.push_back(bnode);
 				
 			}
@@ -2067,6 +2068,7 @@ void build_in_rules()
 	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
 	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
 	<HMC_a> yes, the bnode names as well*/
+
 	/*builtins[rdftype].push_back([a, b, c_rdfsResource, entry, suc, suc2, ouc, s, o, p1](Thing *s_, Thing *o_) mutable {
 		switch (entry) {
 			case 0:
@@ -2364,7 +2366,7 @@ void build_in_rules()
 			}
 	);
 
-
+	/*
 	//@prefix list: <http://www.w3.org/2000/10/swap/list#>.
 	//list last item
 	bu = "http://www.w3.org/2000/10/swap/list#last";
@@ -2393,6 +2395,7 @@ void build_in_rules()
 				}
 			}
 	);
+	 */
 
 	/*
 	//nope
@@ -2459,7 +2462,7 @@ void build_in_rules()
 						o = getValue(o_);
 						if (is_unbound(*s))
 							ouc = gen_succeed();
-						else if (is_list(*s))
+						else if (is_list(*s) || is_list_bnode(*s))
 							ouc = unify(o, s + 1);
 						else
 							ouc = GEN_FAIL;
@@ -2475,15 +2478,22 @@ void build_in_rules()
 	);
 
 	builtins[rdfrest].push_back(
-			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+			[entry, ouc, s, o, r](Thing *s_, Thing *o_) mutable {
 				switch (entry) {
 					case 0:
 						s = getValue(s_);
 						o = getValue(o_);
-						if (is_list(*s) && get_size(*s))
-							ouc = unify(o, s + 2);
-						else
-							ouc = GEN_FAIL;
+
+						if (is_list(*s))
+							r = s+3;
+						else if(is_list_bnode(*s))
+							r = s+2;
+						else {
+							entry = 66;
+							return false;
+						}
+
+						ouc = unify(o, r);
 						entry = LAST;
 						while (ouc())
 						{
