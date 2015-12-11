@@ -1,0 +1,3 @@
+kb tests/cli/superman.kb
+query tests/cli/superman.q
+

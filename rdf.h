@@ -183,5 +183,16 @@ public:
 
 qlist merge ( const qdb& q );
 
+
+
+
+
+bool nodes_same(pnode x, qdb &a, pnode y, qdb &b);
+bool qdbs_equal(qdb &a, qdb &b) ;
+qdb merge_qdbs(const std::vector<qdb> qdbs);
+
+
+
+
 #endif
 

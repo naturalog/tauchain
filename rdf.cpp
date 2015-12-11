@@ -360,3 +360,101 @@ string quad::tostring ( ) const {
 
 
 
+bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
+	setproc("nodes_same");
+	TRACE(dout << x->_type << ":" << x->tostring() << ", " <<
+					  y->_type << ":" << y->tostring()  << endl);
+	if(x->_type == node::BNODE && y->_type == node::BNODE)
+	{
+		//CLI_TRACE(dout << "BBB" << endl);
+		auto la = a.second.find(*x->value);
+		auto lb = b.second.find(*y->value);
+		if ((la == a.second.end()) != (lb == b.second.end()))
+			return false;
+		if (la == a.second.end())
+		{
+			return true;//its a bnode not in lists, bail out for now
+		}
+		else {
+			auto laa = la->second;
+			auto lbb = lb->second;
+			if (laa.size() != lbb.size())
+				return false;
+			auto ai = laa.begin();
+			auto bi = lbb.begin();
+			while(ai != laa.end()) {
+				if (!nodes_same(*ai, a, *bi, b))
+					return false;
+				ai++;
+				bi++;
+			}
+			return true;
+		}
+	}
+	else
+		return *x == *y;
+}
+
+bool qdbs_equal(qdb &a, qdb &b) {
+	dout << "a.first.size  a.second.size  b.first.size  b.second.size" << endl;
+	dout << a.first.size() << " " << a.second.size() << " " << b.first.size() << " " << b.second.size() << endl;
+	dout << "maybe..";
+	dout << "A:" << endl;
+	dout << a;
+	dout << "B:" << endl;
+	dout << b;
+	auto ad = *a.first["@default"];
+	auto bd = *b.first["@default"];
+	auto i = ad.begin();
+	for (pquad x: bd) {
+		if (dict[x->pred] == rdffirst || dict[x->pred] == rdfrest)
+			continue;
+		if (i == ad.end())
+			return false;
+		pquad n1 = *i;
+		pquad n2 = x;
+		if (!(*n1->pred == *n2->pred))
+			return false;
+		if (!nodes_same(n1->subj, a, n2->subj, b))
+			return false;
+		if (!nodes_same(n1->object, a, n2->object, b))
+			return false;
+		i++;
+	}
+	return true;
+}
+
+qdb merge_qdbs(const std::vector<qdb> qdbs)
+{
+        qdb r;
+		if (qdbs.size() == 0)
+			return r;
+		else if (qdbs.size() == 1)
+			return qdbs[0];
+		else
+			dout << "warning, kb merging is half-assed";
+
+        for (auto x:qdbs) {
+			for (auto graph: x.first) {
+				string name = graph.first;
+				qlist contents = *graph.second;
+
+				if (r.first.find(name) == r.first.end())
+					r.first[name] = make_shared<qlist>(*new qlist());
+
+				for (pquad c: contents) {
+					r.first[name]->push_back(c);
+				}
+			}
+			for (auto list: x.second) {
+				string name = list.first;
+				auto val = list.second;
+				r.second[name] = val;
+				dout << "warning, lists may get overwritten";
+			}
+		}
+
+        return r;
+}
+
+

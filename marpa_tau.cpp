@@ -127,17 +127,17 @@ struct Marpa {
 	string sym2str_(sym s)
 	{
 		if (literals.find(s) != literals.end())
-			return "\"" + literals[s] + "\"";
+			return /*"\"" +*/ literals[s] /*+ "\""*/;
 		if (terminals.find(s) != terminals.end())
-			return maybe_shorten_uri(terminals[s]->name) + " - " + terminals[s]->regex_string;
-		return maybe_shorten_uri(*dict[sym2resid(s)].value);
+			return shorten_uri(terminals[s]->name) + ":" + terminals[s]->regex_string;
+		return shorten_uri(*dict[sym2resid(s)].value);
 	}
 
 	string sym2str(sym s)
 	{
 		std::stringstream sss;
-		if (!irc)
-			sss << "(" << s << ")";
+		//if (!irc)
+		//	sss << "(" << s << ")";
 		sss << sym2str_(s);
 		return sss.str();
 	}
@@ -483,8 +483,8 @@ struct Marpa {
 				//                        dout << "..\"" << string(pre, pos-1) << "<HERE>" << string(pos, post) << "\"..." << std::endl;
 
 
-				dout << "[n3]expecting:";
-				if (!irc) dout << std::endl;
+				dout << "[n3]expecting: ";
+				//if (!irc) dout << std::endl;
 				for (int i = 0; i < num_expected; i++) {
 					sym e = expected[i];
 					dout << sym2str(e) << ", ";
@@ -932,7 +932,7 @@ public:
 			finfin_mode = false;//ignore further fins
 			fins++;
 			if (fins == 1) {
-				dout << kb.first.size() << " rules loaded." << std::endl;
+				//dout << kb.first.size() << " rules loaded." << std::endl;
 				dest = &query;
 			}
 		}

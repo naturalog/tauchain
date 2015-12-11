@@ -945,49 +945,6 @@ bool ep_check(Thing *a, Thing *b){
 	*/
 
 
-
-/*
-Arranging switch statement cases by probability of occurrence improves performance when the
-switch statement is translated as a comparison chain; this arrangement has no negative impact when
-the statement is translated as a jump table.
-
-In general, use prototypes for all functions.
-Prototypes can convey additional information to the compiler that might enable more aggressive
-optimizations.
-
-http://stackoverflow.com/questions/6434549/does-c11-add-the-c99-restrict-specifier-if-not-why-not
-
-artificial
-This attribute is useful for small inline wrappers that if possible should appear during debugging as a unit. Depending on the debug info format it either means marking the function as artificial or using the caller location for all instructions within the inlined body.
-
-The preferred type for array indices is ptrdiff_t.
-Application
-This optimization applies to:
-• 32-bit software
-• 64-bit software
-Rationale
-Array indices are often used with pointers while doing arithmetic. Using ptrdiff_t produces more
-portable code and will generally provide good performance.
-
-In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min)
-
-Assembly/Compiler Coding Rule 4. (MH impact, MH generality) Near calls must be matched with
-near returns, and far calls must be matched with far returns. Pushing the return address on the stack
-and jumping to the routine to be called is not recommended since it creates a mismatch in calls and
-returns.
-^cps?
-
-When using ld, include the following command line option:
--Bsymbolic
-If using gcc to build a library, add this option to the command-line:
--Wl,-Bsymbolic
-https://docs.oracle.com/cd/E19957-01/806-0641/chapter4-16/index.html
-https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-14824
-
-
-*/
-
-
 /*
 	wstring dbgstr() const
 	{
@@ -1034,6 +991,58 @@ https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-1482
 		return r.str();
 	}*/
 
+
+
+
+
+/*
+Arranging switch statement cases by probability of occurrence improves performance when the
+switch statement is translated as a comparison chain; this arrangement has no negative impact when
+the statement is translated as a jump table.
+
+In general, use prototypes for all functions.
+Prototypes can convey additional information to the compiler that might enable more aggressive
+optimizations.
+
+http://stackoverflow.com/questions/6434549/does-c11-add-the-c99-restrict-specifier-if-not-why-not
+
+artificial
+This attribute is useful for small inline wrappers that if possible should appear during debugging as a unit. Depending on the debug info format it either means marking the function as artificial or using the caller location for all instructions within the inlined body.
+
+The preferred type for array indices is ptrdiff_t.
+Application
+This optimization applies to:
+• 32-bit software
+• 64-bit software
+Rationale
+Array indices are often used with pointers while doing arithmetic. Using ptrdiff_t produces more
+portable code and will generally provide good performance.
+
+In if statements, avoid long logical expressions that can generate dense conditional branches that violate the guideline described in “Density of Branches” on page 126. Listing 1. Preferred for Data that Falls Mostly Within the Range if (a <= max && a >= min && b <= max && b >= min) If most of the data falls within the range, the branches will not be taken, so the above code is preferred. Otherwise, the following code is preferred. Listing 2. Preferred for Data that Does Not Fall Mostly Within the Range if (a > max || a < min || b > max || b < min)
+
+Assembly/Compiler Coding Rule 4. (MH impact, MH generality) Near calls must be matched with
+near returns, and far calls must be matched with far returns. Pushing the return address on the stack
+and jumping to the routine to be called is not recommended since it creates a mismatch in calls and
+returns.
+^cps?
+
+When using ld, include the following command line option:
+-Bsymbolic
+If using gcc to build a library, add this option to the command-line:
+-Wl,-Bsymbolic
+https://docs.oracle.com/cd/E19957-01/806-0641/chapter4-16/index.html
+https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-14824
+
+
+*/
+
+
+
+
+
+
+
+
 	/*lets task a second thread with copying the template?
 	 * LocalsQueue &locals_queue = *new LocalsQueue();
 	locals_queues.push_back(&locals_template);
@@ -1049,6 +1058,8 @@ https://docs.oracle.com/cd/E19957-01/806-0641/6j9vuquim/index.html#chapter2-1482
 
 
 
+
+
 gcc  -O3 -Q --help=optimizers
 
 
@@ -1061,10 +1072,7 @@ gcc  -O3 -Q --help=optimizers
 
 
 
-
-
 Counting bits set, Brian Kernighan's way
-
 unsigned int v; // count the number of bits set in v
 unsigned int c; // c accumulates the total bits set in v
 for (c = 0; v; c++)
@@ -1075,17 +1083,14 @@ for (c = 0; v; c++)
 
 
  Counting bits set in 14, 24, or 32-bit words using 64-bit instructions
-
 unsigned int v; // count the number of bits set in v
 unsigned int c; // c accumulates the total bits set in v
-
 // option 1, for at most 14-bit values in v:
 c = (v * 0x200040008001ULL & 0x111111111111111ULL) % 0xf;
 
 
 
  A generalization of the best bit counting method to integers of bit-widths upto 128 (parameterized by type T) is this:
-
 v = v - ((v >> 1) & (T)~(T)0/3);                           // temp
 v = (v & (T)~(T)0/15*3) + ((v >> 2) & (T)~(T)0/15*3);      // temp
 v = (v + (v >> 4)) & (T)~(T)0/255*15;                      // temp
@@ -1094,20 +1099,15 @@ c = (T)(v * ((T)~(T)0/255)) >> (sizeof(T) - 1) * CHAR_BIT; // count
 
 
  Swapping values with XOR
-
 #define SWAP(a, b) (((a) ^= (b)), ((b) ^= (a)), ((a) ^= (b)))
-
 This is an old trick to exchange the values of the variables a and b without using extra space for a temporary variable.
-
 On January 20, 2005, Iain A. Fleming pointed out that the macro above doesn't work when you swap with the same memory location, such as SWAP(a[i], a[j]) with i == j. So if that may occur, consider defining the macro as (((a) == (b)) || (((a) ^= (b)), ((b) ^= (a)), ((a) ^= (b)))). On July 14, 2009, Hallvard Furuseth suggested that on some machines, (((a) ^ (b)) && ((b) ^= (a) ^= (b), (a) ^= (b))) might be faster, since the (a) ^ (b) expression is reused.
 
 
 
 
  Reverse the bits in a byte with 4 operations (64-bit multiply, no division):
-
 unsigned char b; // reverse this byte
-
 b = ((b * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32;
 
 

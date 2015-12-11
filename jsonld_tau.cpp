@@ -45,16 +45,22 @@ qdb toquads ( pobj o ) {
 
 ParsingResult load_jsonld ( qdb &kb, std::istream &is )
 {
-	//try{
 		kb = toquads(load_json(is));
 		return COMPLETE;
-	//}
-	//catch (runtime_error ex) { derr << "[json]" << ex.what() << std::endl; }
-	//catch (json_spirit::Error_position ex) { derr << "[json]" << ex.reason_ << std::endl; }
-
-	//catch (...) { derr << "Unknown exception" << std::endl; }
-	//return FAIL;
 }
+
+ParsingResult parse_jsonld(qdb &kb, std::istream &f)
+{
+	try{
+		load_jsonld(kb, f);
+		return COMPLETE;
+	}
+	catch (runtime_error ex) { derr << "[json]" << ex.what() << std::endl; }
+	catch (json_spirit::Error_position ex) { derr << "[json]" << ex.reason_ << std::endl; }
+	catch (...) { derr << "[jsonld]Unknown exception" << std::endl; }
+	return FAIL;
+}
+
 
 #endif
 

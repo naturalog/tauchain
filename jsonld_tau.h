@@ -10,6 +10,7 @@
 //typedef std::vector<string> strings;
 
 ParsingResult load_jsonld ( qdb &kb, std::istream &is );
+ParsingResult parse_jsonld(qdb &kb, std::istream &f);
 
 #endif
 

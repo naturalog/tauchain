@@ -176,11 +176,19 @@ string dstr ( nodeid p, bool escape ) {
 	else
 		return s;
 }
-string maybe_shorten_uri(string s)
+
+string shorten_uri(string s)
 {
-	if ( !shorten ||  s.find ( "#" ) == string::npos ) return s;
+	if ( s.find ( "#" ) == string::npos ) return s;
 	return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
 }
+
+string maybe_shorten_uri(string s)
+{
+	if ( !shorten ) return s;
+	return shorten_uri(s);
+}
+
 
 bool endsWith ( const string& x, const string& y ) {
 	return x.size() >= y.size() && x.substr ( x.size() - y.size(), y.size() ) == y;

@@ -114,6 +114,7 @@ extern nodeid rdfsseeAlso, rdfslabel, rdfobject, rdfStatement, rdfpredicate, rdf
 
 string dstr ( nodeid p, bool json = false );
 string maybe_shorten_uri(string s);
+string shorten_uri(string s);
 string indent();
 extern int _indent;
 
