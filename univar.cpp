@@ -65,18 +65,19 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 
 
 #ifdef NEW
-#define KBDBG
+	#define KBDBG
 #endif
+
 #ifdef KBDBG
-#ifdef oneword
-nope
-#endif
-#ifndef DEBUG
-nope
-#endif
-#define IFKBDBG(x) x
+	#ifdef oneword
+		nope
+	#endif
+	#ifndef DEBUG
+		nope
+	#endif
+	#define IFKBDBG(x) x
 #else
-#define IFKBDBG(x)
+	#define IFKBDBG(x)
 #endif
 
 

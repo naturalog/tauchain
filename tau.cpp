@@ -318,11 +318,11 @@ bool _shouldbe(qdb &sb) {
 
 
 void test_result(bool x) {
-	dout << "test:";
+	dout << INPUT->name << ":test:";
 	if (x)
 		dout << KGRN << "PASS" << KNRM << endl;
 	else
-		dout << KRED << "FAI" << KNRM << endl;
+		dout << KRED << "FAIL" << KNRM << endl;
 }
 
 

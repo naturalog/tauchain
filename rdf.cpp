@@ -14,15 +14,16 @@ pqlist mk_qlist() {
 
 string node::tostring() const {
 	std::stringstream ss;
-//	if ( _type == IRI && (*value)[0] != L'?' ) ss << L'<';
-	if ( _type == LITERAL ) ss << L'\"';
+	bool isiri = _type == IRI && (!(*value).size() && ((*value)[0] == L'?')) ;
+	if ( isiri ) ss << L'<';
+	else if ( _type == LITERAL ) ss << L'\"';
 	ss << *value;
 	if ( _type == LITERAL ) {
 		ss << L'\"';
 		if ( datatype && datatype->size() ) ss << "^^" << *datatype;
 		if ( lang && lang->size() ) ss << L'@' << *lang;
 	}
-//	if ( _type == IRI && (*value)[0] != L'?' ) ss << L'>';
+	else if ( isiri ) ss << L'>';
 	return ss.str();
 }
 
@@ -31,8 +32,12 @@ pnode set_dict(node r){
 	//If the dictionary already contains a node with this name,
 	//return that one.
 	//#dict.nodes : std::map<string,pnode>;
-	auto it = dict.nodes.find(r.tostring());
+
+	string s = r.tostring();
+
+	auto it = dict.nodes.find(s);
 	if (it != dict.nodes.end()) {
+		TRACE(dout << "xxx" << s << "xxx" << endl);
 		assert(it->second->_type == r._type);
 		return it->second;
 	}	
@@ -41,7 +46,7 @@ pnode set_dict(node r){
 	//dict.nodes not part of dict.set?
 	pnode pr = make_shared<node>(r);
 	dict.set(pr);
-	return dict.nodes[r.tostring()] = pr;
+	return dict.nodes[s] = pr;
 }
 
 //Could just make all these constructors for the node class:

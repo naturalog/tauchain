@@ -786,17 +786,45 @@ public:
 		return graph;
 	}
 
+	pnode create_list_triples(std::vector<pnode> l)
+	{
+		string head = *RDF_NIL;
+
+		if (l.size())
+		{
+
+			if (dest->first.find("@default") == dest->first.end())
+				dest->first["@default"] = mk_qlist();
+
+			listid();
+			head = list_bnode_name(0);
+			string x = head;
+			auto &c = *dest->first["@default"];
+			auto size = l.size();
+			for (size_t idx = 0; idx < size;) {
+				pnode i = l[idx];
+				pnode y = mkbnode(pstr(x));
+				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_FIRST), i)));
+				x = list_bnode_name(idx++);
+				pnode z = (idx == size) ? mkiri(RDF_NIL) : mkbnode(pstr(x));
+				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_REST), z)));
+			}
+		}
+		return mkiri(pstr(head));
+	}
+
+
 	pnode add_pathlist(termid/*TERMID - internalized list*/x)
 	{
-		std::list<pnode> r;
+		std::vector<pnode> r;
 		if (x) {
+			//how does this work with nested lists?
+			//isnt the nodeid of the item a dot?
 			prover::nodeids items = get_dotstyle_list(x);
 			for (auto i:items)
 				r.push_back(add_expression(i));
 		}
-		auto id = listid();
-		dest->second[id] = r;
-		return mkbnode(pstr(id));
+		return create_list_triples(r);
 	}
 
 	pnode add_pathitem(nodeid pi)

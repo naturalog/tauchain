@@ -83,6 +83,7 @@ pnode nqparser::readlist(qdb& kb) {
 
 	//**needs comments**
 	int lpos = 0;
+	listid();
 	const string head = list_bnode_name(lpos);
 
 	pnode pn;
