@@ -489,10 +489,10 @@ void get_int(int &i, const string &tok)
 }
 
 bool read_option(string s){
-	if(s.length() < 2 || s.at(0) != L'-' || s == "--")
+	if(s.length() < 2 || s.at(0) != '-' || s == "--")
 		return false;
 	
-	while(s.at(0) == L'-'){
+	while(s.at(0) == '-'){
 		s = s.substr(1, s.length()-1);
 	}
 
@@ -559,11 +559,11 @@ void do_run(string fn)
 		dout << "[cli]failed to open \"" << fn << "\"." << std::endl;
 	}
 	else {
-		//	dout << "[cli]loading \"" << fn << "\"." << std::endl;
+		dout << "[cli]loading \"" << fn << "\"." << std::endl;
 		inputs.push(new StreamInput(fn, is));
 	}
 }
-
+//err
 void run()
 {
 	if(INPUT->end()) {

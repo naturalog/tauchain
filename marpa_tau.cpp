@@ -487,8 +487,8 @@ struct Marpa {
 				//if (!irc) dout << std::endl;
 				for (int i = 0; i < num_expected; i++) {
 					sym e = expected[i];
-					dout << sym2str(e) << ", ";
-					if (!irc) dout << std::endl;
+					dout << sym2str(e); << " ";
+					//if (!irc) dout << std::endl;
 				}
 				return FAIL;
 			}
@@ -797,6 +797,7 @@ public:
 				dest->first["@default"] = mk_qlist();
 
 			listid();
+
 			head = list_bnode_name(0);
 			string x = head;
 			auto &c = *dest->first["@default"];
@@ -805,7 +806,7 @@ public:
 				pnode i = l[idx];
 				pnode y = mkbnode(pstr(x));
 				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_FIRST), i)));
-				x = list_bnode_name(idx++);
+				x = list_bnode_name(++idx);
 				pnode z = (idx == size) ? mkiri(RDF_NIL) : mkbnode(pstr(x));
 				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_REST), z)));
 			}

@@ -950,7 +950,7 @@
 
 	bool is_abs_iri(const string &s)
 	{
-		return (s.find(":") != string::npos) || (s.size() && s[0] == L'?');
+		return (s.find(":") != string::npos) || (s.size() && s[0] == '?');
 	}
 
 	bool is_rel_iri(const string &s)

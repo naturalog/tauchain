@@ -100,7 +100,7 @@ void bidict::set ( const std::vector<node>& v ) {
 //return the nodeid of the one that's already there (make sure both
 //have the same type). If it's not there, generate a new nodeid by adding
 //1 to pi.size(), which is theoretically the number of nodes we have in
-//the dictionary. If the node is an IRI that begins with L'?', then it's
+//the dictionary. If the node is an IRI that begins with '?', then it's
 //a variable, so we negate the nodeid (because negative nodeids is our
 //representation of variables). Add the node/nodeid pair to pi and ip for
 //lookup, and return the new nodeid.
@@ -129,7 +129,7 @@ nodeid bidict::set ( node v ) {
 	//add the nodeid to dict.ip with the node as the value.
 	//Return the nodeid.
 	nodeid k = pi.size() + 1; 
-	if ( v._type == node::IRI && (*v.value)[0] == L'?' ) k = -k;
+	if ( v._type == node::IRI && (*v.value)[0] == '?' ) k = -k;
 	pi[v] = k;
 	ip[k] = v;
 	return k;
@@ -224,7 +224,7 @@ string prover::format(const term& p, bool json) {
 		std::stringstream ss;
 		if (level > 100) ss << " [" <</* id << ':' <<*/ p.p << ']';
 		ss << dstr(p.p, false);
-		if (p.s) ss << L'('<< prover::format(p.s) << L',' << prover::format(p.o) << L')';
+		if (p.s) ss << '('<< prover::format(p.s) << ',' << prover::format(p.o) << ')';
 		return ss.str();
 	}
 	std::stringstream ss;
@@ -274,30 +274,30 @@ void prover::prints(const subs & s) {
 string prover::format(const termset& l, bool json) {
 	std::stringstream ss;
 	auto x = l.begin();
-	if (json) ss << L'[';
+	if (json) ss << '[';
 	while (x != l.end()) {
 		ss << format (*x, json);
-		if (++x != l.end()) ss << L',';
+		if (++x != l.end()) ss << ',';
 	}
-	if (json) ss << L']';
+	if (json) ss << ']';
 	return ss.str();
 }
 /*
 void prover::printterm_subs(termid id, const subs & s) {
 	const term& p = *id;
-	dout << dstr(p.p) << L'(';
+	dout << dstr(p.p) << '(';
 	if (p.s) {
 		printterm_subs(p.s, s);
-		dout << L' ';
+		dout << ' ';
 	}
 	if(s.find(p.p) != s.end()) {
 		dout << " (" << format(s.get(p.p)) << " )";
 	}
 	if (p.o) {
-		dout << L',';
+		dout << ',';
 		printterm_subs(p.o, s);
 	}
-	dout << L')';
+	dout << ')';
 }
 
 void prover::printl_subs(const termset& l, const subs & s) {
@@ -305,7 +305,7 @@ void prover::printl_subs(const termset& l, const subs & s) {
 	while (x != l.end()) {
 		printterm_subs(*x, s);
 		if (++x != l.end())
-			dout << L',';
+			dout << ',';
 	}
 }
 
@@ -328,7 +328,7 @@ string prover::formatr(ruleid r, bool json) {
 	ss << "{head:" << format(kb.head()[r],true) << ",body:";
 //	for (size_t n = 0; n < kb.bodies().size(); ++n) {
 		ss << format(kb.body()[r], true);
-//		if (n != (kb.bodies().size()-1)) ss << L',';
+//		if (n != (kb.bodies().size()-1)) ss << ',';
 //	}
  	ss << "}";
 	return ss.str();
@@ -336,13 +336,13 @@ string prover::formatr(ruleid r, bool json) {
 
 string prover::formatkb(bool json) {
 	std::stringstream ss;
-	if (json) ss << L'[';
+	if (json) ss << '[';
 	for (uint n = 0; n < kb.size(); ++n) {
 		ss << formatr(n, json);
-		if (json && n != (kb.size()-1)) ss << L',';
+		if (json && n != (kb.size()-1)) ss << ',';
 		ss << endl;
 	}
-	if (json) ss << L']';
+	if (json) ss << ']';
 	return ss.str();
 }
 
@@ -512,18 +512,18 @@ pobj prover::ejson() const {
 string prover::ruleset::format() const {
 	setproc("ruleset::format");
 	std::stringstream ss;
-	ss << L'['<<endl;
+	ss << '['<<endl;
 	for (auto it = r2id.begin(); it != r2id.end();) {
-		ss <<tab<< L'{' << endl <<tab<<tab<<L'\"'<<(it->first ? *dict[it->first].value : "")<<"\":[";
+		ss <<tab<< '{' << endl <<tab<<tab<<'\"'<<(it->first ? *dict[it->first].value : "")<<"\":[";
 		for (auto iit = it->second.begin(); iit != it->second.end();) {
 			ss << p->formatr(*iit, true);
-			if (++iit != it->second.end()) ss << L',';
+			if (++iit != it->second.end()) ss << ',';
 			ss << endl;
 		}
 		ss << "]}";
-		if (++it != r2id.end()) ss << L',';
+		if (++it != r2id.end()) ss << ',';
 	}
-	ss << L']';
+	ss << ']';
 	return ss.str();
 }
 

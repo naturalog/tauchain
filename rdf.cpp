@@ -14,16 +14,16 @@ pqlist mk_qlist() {
 
 string node::tostring() const {
 	std::stringstream ss;
-	bool isiri = _type == IRI && (!(*value).size() && ((*value)[0] == L'?')) ;
-	if ( isiri ) ss << L'<';
-	else if ( _type == LITERAL ) ss << L'\"';
+	bool isiri = _type == IRI && !((*value).size() && ((*value)[0] == '?')) ;
+	if ( isiri ) ss << '<';
+	else if ( _type == LITERAL ) ss << '\"';
 	ss << *value;
 	if ( _type == LITERAL ) {
-		ss << L'\"';
+		ss << '\"';
 		if ( datatype && datatype->size() ) ss << "^^" << *datatype;
-		if ( lang && lang->size() ) ss << L'@' << *lang;
+		if ( lang && lang->size() ) ss << '@' << *lang;
 	}
-	else if ( isiri ) ss << L'>';
+	else if ( isiri ) ss << '>';
 	return ss.str();
 }
 
@@ -37,7 +37,7 @@ pnode set_dict(node r){
 
 	auto it = dict.nodes.find(s);
 	if (it != dict.nodes.end()) {
-		TRACE(dout << "xxx" << s << "xxx" << endl);
+		TRACE(dout << "xxx" << s << "xxx " << it->second->_type << " " << r._type << endl);
 		assert(it->second->_type == r._type);
 		return it->second;
 	}	
@@ -355,8 +355,8 @@ string quad::tostring ( ) const {
 		}
 		return string ( "<>" );
 	};
-	ss << f ( subj ) << L' ' << f ( pred ) << L' ' << f ( object );
-	if ( *graph->value != str_default ) ss << L' ' << f ( graph );
+	ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object );
+	if ( *graph->value != str_default ) ss << ' ' << f ( graph );
 	ss << " .";
 	return ss.str();
 }

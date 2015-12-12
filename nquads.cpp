@@ -33,7 +33,7 @@ pnode nqparser::readcurly(qdb& kb) {
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
 
-	//If the next char is not L'{' then this is not a syntactically
+	//If the next char is not '{' then this is not a syntactically
 	//correct context, return "(pnode)0".
 	if (*s != '{') return (pnode)0;
 	++s;
@@ -45,9 +45,9 @@ pnode nqparser::readcurly(qdb& kb) {
 	//Create a unique blank-node ID for this context
 	auto r = gen_bnode_id();
 
-	//If the next character is L'}' then move the string-pointer past L'}',
+	//If the next character is '}' then move the string-pointer past '}',
 	//make a bnode for r, and return this.
-	if (*s == L'}') { ++s; return mkbnode(r); }
+	if (*s == '}') { ++s; return mkbnode(r); }
 
 	//This needs to be fixed
 	//This says that any string that the parser would accept as valid syntax
@@ -60,25 +60,25 @@ pnode nqparser::readcurly(qdb& kb) {
 }
 
 
-// {~L'('}, return
-// L'(',ws*,L')',return
+// {~'('}, return
+// '(',ws*,')',return
 
-//(ws*,{~L')'},readany_success,ws*,((L'.',ws*)|{~(L'.' | L'}'}),{~L')'})* as X
+//(ws*,{~')'},readany_success,ws*,(('.',ws*)|{~('.' | '}'}),{~')'})* as X
 
-// L'(',ws*,{~L')'},X,ws*,L')',break,ws*
-// L'(',ws*,{~L')'},X,ws*,{~L')'},readany_error,error
+// '(',ws*,{~')'},X,ws*,')',break,ws*
+// '(',ws*,{~')'},X,ws*,{~')'},readany_error,error
 
-// L'(',ws*,{~L')'},X,ws*,{~L')'},readany_success,ws*,{L'}'},error
-// L'(',ws*,{~L')'},X,ws*,{~L')'},readany_success,ws*,((L'.',ws*)|{~(L'.' | L'}'}),{L')'},ws*
+// '(',ws*,{~')'},X,ws*,{~')'},readany_success,ws*,{'}'},error
+// '(',ws*,{~')'},X,ws*,{~')'},readany_success,ws*,(('.',ws*)|{~('.' | '}'}),{')'},ws*
 
 pnode nqparser::readlist(qdb& kb) {
 	setproc("readlist");
 
 	//We don't skip over any white-space here?
 
-	//If the first character is not L'(', then we assume it's not
+	//If the first character is not '(', then we assume it's not
 	//a list and return "(pnode)0".
-	if (*s != L'(') return (pnode)0;
+	if (*s != '(') return (pnode)0;
 	++s;
 
 	//**needs comments**
@@ -91,9 +91,9 @@ pnode nqparser::readlist(qdb& kb) {
 	//Skip over any white-space
 	while (iswspace(*s)) ++s;
 
-	//If the next character is L')' then I guess we have
+	//If the next character is ')' then I guess we have
 	//an empty list and we return RDF_NIL.
-	if (*s == L')') {
+	if (*s == ')') {
 		 ++s;
 		return mkiri(RDF_NIL); 
 	}
@@ -102,9 +102,9 @@ pnode nqparser::readlist(qdb& kb) {
 		//Skip over any white-space
 		while (iswspace(*s)) ++s;
 
-		//If the next character is L')' then we've reached the end
+		//If the next character is ')' then we've reached the end
 		//of the list, break.
-		if (*s == L')') {
+		if (*s == ')') {
 			break;
 		}
 
@@ -130,25 +130,25 @@ pnode nqparser::readlist(qdb& kb) {
 		while (iswspace(*s)) ++s;
 
 		//**needs comments**
-		if (*s == L')') lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));//end
+		if (*s == ')') lists.emplace_back(cons, mkiri(RDF_REST), mkiri(RDF_NIL));//end
 
 		else lists.emplace_back(cons, mkiri(RDF_REST), mkbnode(pstr(list_bnode_name(lpos))));
 
 		//**needs comments**
-		//If the next character is L'.', then read that and skip over any white-space
+		//If the next character is '.', then read that and skip over any white-space
 		//following it.
-		if (*s == L'.'){
+		if (*s == '.'){
 			s++;
 			while (iswspace(*s++));
 		}
 
-		//If the next character is L'}', then throw a run-time error.
+		//If the next character is '}', then throw a run-time error.
 		//**needs comments**
-		if (*s == L'}') throw runtime_error(string("expected { inside list: ") + string(s,0,48));
+		if (*s == '}') throw runtime_error(string("expected { inside list: ") + string(s,0,48));
 
 	}
 	//Can we encounter an infinite loop here? Let's find out.
-	while (*s != L')');//id be more worried about this endless loop :)
+	while (*s != ')');//id be more worried about this endless loop :)
 		
 
 	//Skip over any white-space.
@@ -159,12 +159,12 @@ pnode nqparser::readlist(qdb& kb) {
 
 
 
-//(iswspace | L',' | L';' | L'.' | L'}' | L'{' | L')') as special
+//(iswspace | ',' | ';' | '.' | '}' | '{' | ')') as special
 
 //iswspace*, 0, error
-//iswspace*, {!0}, L'<',!(L'>')*,L'>', return
-//iswspace*, {!0}, {!L'<'}, "=>", return
-//iswspace*, {!0}, {!L'<'}, !{"=>"}, (~special)*, {"true"}, return
+//iswspace*, {!0}, '<',!('>')*,'>', return
+//iswspace*, {!0}, {!'<'}, "=>", return
+//iswspace*, {!0}, {!'<'}, !{"=>"}, (~special)*, {"true"}, return
 //iswspace*, ..., (~special)*, {~("true")}, {"false"}, return
 //iswspace*, ..., (~special)*, {~("true" | "false")}, {atoi}, return
 //iswspace*, ..., (~special)*, {~("true" | "false" | atoi)}, {atof}, return
@@ -183,8 +183,8 @@ pnode nqparser::readiri() {
 
 
 	//If our next char is '<', then we're expecting an IRI
-	if (*s == L'<') {
-		while (*++s != L'>') 
+	if (*s == '<') {
+		while (*++s != '>')
 		//until bracket, copy s to t
 		//*note: increments 'pos' *after* storing '*s'.
 		//**therefore "t[pos] = 0;" is not overwriting anything
@@ -199,7 +199,7 @@ pnode nqparser::readiri() {
 
 
 	//If the next two chars are '=>', then this is an implication.
-	else if (*s == L'=' && *(s+1) == L'>') 
+	else if (*s == '=' && *(s+1) == '>')
 	{ 
 		++++s; return mkiri(pimplication); 
 	}
@@ -208,7 +208,7 @@ pnode nqparser::readiri() {
 	//Okay so we didn't hit a '<' bracket, and we didn't get an implication, so
 	//copy whatever else we've got from s into t until we hit either white-space or
 	//one of these special chars: ",;.}{)". What about "("?	
-	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
+	while (!iswspace(*s) && *s != ',' && *s != ';' && *s != '.' && *s != '}' && *s != '{' && *s != ')') t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	pstring iri = wstrim(t);
 
@@ -228,7 +228,7 @@ pnode nqparser::readiri() {
 
 	//So we didn't determine it to be a literal. Check if the string contains ':',
 	//implying that the substring coming before ':' is a prefix.
-	auto i = iri->find(L':');
+	auto i = iri->find(':');
 	
 	//If we didn't find ':' then we'll have that "i == string::npos", and so
 	//return mkiri() of the whole string.
@@ -238,7 +238,7 @@ pnode nqparser::readiri() {
 	//this represents a prefix, and we'll copy this into 'p'.
 	string p = iri->substr(0, ++i);
 
-//	TRACE(dout<<"extracted prefix \"" << p <<L'\"'<< endl);
+//	TRACE(dout<<"extracted prefix \"" << p <<'\"'<< endl);
 
 	//Now check if that prefix is contained in nqparser::prefixes.
 	auto it = prefixes.find(p);
@@ -257,7 +257,7 @@ pnode nqparser::readiri() {
 
 
 
-//(iswspace | L',' | L';' | L'.' | L'}' | L'{' | L')') as special.
+//(iswspace | ',' | ';' | '.' | '}' | '{' | ')') as special.
 
 //iswspace*, {~("_:")}, return
 //iswspace*, "_:",(~special)*, return.
@@ -269,14 +269,14 @@ pnode nqparser::readbnode() {
 
 	//If the next two characters are not exactly "_:" then apparently it is not
 	//a syntactically correct blank node, and we return "pnode(0)".
-	if (*s != L'_' || *(s+1) != L':') return pnode(0);
+	if (*s != '_' || *(s+1) != ':') return pnode(0);
 	//We don't need to advance s here because that will be taken care of in the while
 	//loop. We can see that neither '_' nor ':' are any of the characters triggering
 	//false in that conditional.
 
 	//Copy characters from s into t until reaching either a whitespace character
 	//or one of the special characters ",;.}{)".
-	while (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
+	while (!iswspace(*s) && *s != ',' && *s != ';' && *s != '.' && *s != '}' && *s != '{' && *s != ')') t[pos++] = *s++;
 
 	//Append a null character to t and set pos back to 0.
 	t[pos] = 0; pos = 0;
@@ -290,23 +290,23 @@ pnode nqparser::readbnode() {
 
 
 
-//iswspace*, <!(L'@')>, return
-//iswspace*, L'@', <!("@prefix ")>, error
-//iswspace*, "@prefix ", (~(L':'|0|'\n'))*,(0|\n),error
-//iswspace*, "@prefix ", (~(L':'|0|'\n'))*, L':',(0|\n),error
-//iswspace*, "@prefix ", (~(L':'|0|'\n'))*, L':',~(0|\n), readiri()_error, error
-//iswspace*, "@prefix ", (~(L':'|0|'\n'))*, L':',~(0|\n), readiri()_success,(~('.'|'\n'|0))*,('.'|'\n'|0).
+//iswspace*, <!('@')>, return
+//iswspace*, '@', <!("@prefix ")>, error
+//iswspace*, "@prefix ", (~(':'|0|'\n'))*,(0|\n),error
+//iswspace*, "@prefix ", (~(':'|0|'\n'))*, ':',(0|\n),error
+//iswspace*, "@prefix ", (~(':'|0|'\n'))*, ':',~(0|\n), readiri()_error, error
+//iswspace*, "@prefix ", (~(':'|0|'\n'))*, ':',~(0|\n), readiri()_success,(~('.'|'\n'|0))*,('.'|'\n'|0).
 void nqparser::readprefix() {
 	setproc("readprefix");
 
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
 
-	//If the next char is not L'@'. Then it's not a '@prefix' tag, so return.
-	if (*s != L'@') return;
+	//If the next char is not '@'. Then it's not a '@prefix' tag, so return.
+	if (*s != '@') return;
 
 	//Otherwise, check to see if the next 8 characters match "@prefix ". If
-	//not, then the appearance of L'@' is apparently syntactically incorrect
+	//not, then the appearance of '@' is apparently syntactically incorrect
 	//because we're throwing an error about it.
 	if (memcmp(s, "@prefix ", 8*sizeof(*s)))
 			throw runtime_error(string("\"@prefix \" expected: ") + string(s,0,48));
@@ -317,7 +317,7 @@ void nqparser::readprefix() {
 
 
 	//Copy the string from s into t until reaching ":".		
-	while (*s != L':' && *s!= 0 && *s!='\n') t[pos++] = *s++;
+	while (*s != ':' && *s!= 0 && *s!='\n') t[pos++] = *s++;
 	if (!(*s!= 0 && *s!='\n'))
 		throw runtime_error("hm");
 
@@ -329,7 +329,7 @@ void nqparser::readprefix() {
 
 	//Trim the resulting string
 	pstring tt = wstrim(t);
-	TRACE(dout<<"reading prefix: \"" << *tt<<L'\"' << endl);
+	TRACE(dout<<"reading prefix: \"" << *tt<<'\"' << endl);
 
 	//Expecting the next token to represent an IRI, so readiri and add it
 	//to prefixes at key *tt.
@@ -344,26 +344,26 @@ void nqparser::readprefix() {
 
 
 
-//(iswspace | L'?' | L',' | L';' | L'.' | L'}' | L'{' | L')') as special.
-//(iswspace | L',' | L';' | L'.' | L'}' | L'{' | L')') as special2.
+//(iswspace | '?' | ',' | ';' | '.' | '}' | '{' | ')') as special.
+//(iswspace | ',' | ';' | '.' | '}' | '{' | ')') as special2.
 
-//iswspace*, {~L'?'},return
-//iswspace*, L'?', (~special)*,{L'?'},error
-//iswspace*, L'?', (~special)*,{special2},return.
+//iswspace*, {~'?'},return
+//iswspace*, '?', (~special)*,{'?'},error
+//iswspace*, '?', (~special)*,{special2},return.
 pnode nqparser::readvar() {
 	setproc("readvar");
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
 
-	//If the next character is not L'?', then apparently it's not
+	//If the next character is not '?', then apparently it's not
 	//a syntactically correct variable, so we return "pnode(0)"
-	if (*s != L'?') return pnode(0);
+	if (*s != '?') return pnode(0);
 	s++; 
 
 	//Copy characters from s into t until reaching either a whitespace character
 	//or one of the special characters ",;.}{)".
-	while (!iswspace(*s) && *s != L'?' && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') t[pos++] = *s++;
-	if(*s == L'?') throw runtime_error(string("bad variable name") + string(s,0,48));
+	while (!iswspace(*s) && *s != '?' && *s != ',' && *s != ';' && *s != '.' && *s != '}' && *s != '{' && *s != ')') t[pos++] = *s++;
+	if(*s == '?') throw runtime_error(string("bad variable name") + string(s,0,48));
 
 	t[pos] = 0; pos = 0;
 
@@ -373,34 +373,34 @@ pnode nqparser::readvar() {
 
 
 
-//(!iswspace | L',' | L';' | L'.' | L'}' | L'{' | L')') as special
+//(!iswspace | ',' | ';' | '.' | '}' | '{' | ')') as special
 
-//iswspace*, {~L'\"'}, return
-//iswspace*, L'\"',((~(L'\\' | L'\"')) | (L'\\', $))*, L'\"',"^^",L'<',(~L'>')*,L'>'
-//iswspace*, L'\"',((~(L'\\' | L'\"')) | (L'\\', $))*, L'\"',L'@',(~iswspace)*
-//iswspace*, L'\"',((~(L'\\' | L'\"')) | (L'\\', $))*, L'\"',~(special | "^^" | L'@'), error
+//iswspace*, {~'\"'}, return
+//iswspace*, '\"',((~('\\' | '\"')) | ('\\', $))*, '\"',"^^",'<',(~'>')*,'>'
+//iswspace*, '\"',((~('\\' | '\"')) | ('\\', $))*, '\"','@',(~iswspace)*
+//iswspace*, '\"',((~('\\' | '\"')) | ('\\', $))*, '\"',~(special | "^^" | '@'), error
 pnode nqparser::readlit() {
 	setproc("readlit");
 
 	//Skip any white-space at the beginning of the line:
 	while (iswspace(*s)) ++s;
 
-	//If the next char found is not a L'\"', then it's apparently not a syntactically
+	//If the next char found is not a '\"', then it's apparently not a syntactically
 	//correct literal, because we're returning 'pnode(0)'
-	if (*s != L'\"') return pnode(0);
+	if (*s != '\"') return pnode(0);
 
-	//Move the string ponter past the L'\"'.
+	//Move the string ponter past the '\"'.
 	++s;
 
 	//Does this miss the string "\"\"" ?
-	//Copy characters from s into t until you reach a L'\"' that isn't preceded
-	//by a L'\\'. (Because \" is a literal quote character and not one of the
+	//Copy characters from s into t until you reach a '\"' that isn't preceded
+	//by a '\\'. (Because \" is a literal quote character and not one of the
 	//quotes delimiting the literal value).
 
-	//do { t[pos++] = *s++; } while (!(*(s-1) != L'\\' && *s == L'\"'));
+	//do { t[pos++] = *s++; } while (!(*(s-1) != '\\' && *s == '\"'));
 
-	while (!(*(s-1) != L'\\' && *s == L'\"')) t[pos++] = *s++;
-	//Move the string-pointer past the L'\"'. 
+	while (!(*(s-1) != '\\' && *s == '\"')) t[pos++] = *s++;
+	//Move the string-pointer past the '\"'.
 	++s;
 
 	string dt, lang;
@@ -410,23 +410,23 @@ pnode nqparser::readlit() {
 
 	//As long as the next character is not whitespace and not one of the special
 	//characters ",;.}{)" then:
-	if (!iswspace(*s) && *s != L',' && *s != L';' && *s != L'.' && *s != L'}' && *s != L'{' && *s != L')') {
+	if (!iswspace(*s) && *s != ',' && *s != ';' && *s != '.' && *s != '}' && *s != '{' && *s != ')') {
 		//If the next two characters are "^^", then:
-		if (*s == L'^' && *++s == L'^') {
-			//Check if the next character is L'<', and if so then
-			//copy characters from s into dt until reaching a L'>' character.
-			//Then move the string-pointer past the L'>' and break from
+		if (*s == '^' && *++s == '^') {
+			//Check if the next character is '<', and if so then
+			//copy characters from s into dt until reaching a '>' character.
+			//Then move the string-pointer past the '>' and break from
 			//the loop.
-			if (*++s == L'<')  {
+			if (*++s == '<')  {
 				++s;
-				while (*s != L'>') dt += *s++;
+				while (*s != '>') dt += *s++;
 				++s;
 				//break;
 			}
-		//Otherwise, if the next character is L'@', then copy characters
+		//Otherwise, if the next character is '@', then copy characters
 		//from s into lang until reaching a whitespace character. Then break
 		//from the loop.
-		} else if (*s == L'@') { 
+		} else if (*s == '@') {
 			while (!iswspace(*s)) lang += *s++;
 			//break;
 		}
@@ -518,16 +518,16 @@ void nqparser::_parse(qdb& kb, string ctx){
 			throw runtime_error(string("expected iri or bnode subject:") + string(s,0,48));
 
 		//This is expecting to be looping over the predicate-object pairs given for this subject,
-		//separated by L';' i.e. like "subject pred1 obj1; pred2 obj2;" or
+		//separated by ';' i.e. like "subject pred1 obj1; pred2 obj2;" or
 		// "subject pred1 obj1a, obj1b, obj1c; pred2 obj2a, obj2b, obj2c." etc.
 		//This loop is over the preds, i.e. "subject pred1 ...; pred2 ...; ...."
-		//and you'll see in the do-condition that reading L';' is what iterates the loop.	
+		//and you'll see in the do-condition that reading ';' is what iterates the loop.
 		do {
-			while (iswspace(*s) || *s == L';') ++s;
+			while (iswspace(*s) || *s == ';') ++s;
 
 			//On the first time around this might just be subject-nothing-nothing	
-			//If we reach either the end, a L'.', or a L'}', then break.
-			if (!*s || *s == L'.' || *s == L'}') break; 
+			//If we reach either the end, a '.', or a '}', then break.
+			if (!*s || *s == '.' || *s == '}') break;
 	
 			//readcurly() here?
 			//Otherwise, try to readiri() and then try to readcurly().
@@ -545,15 +545,15 @@ void nqparser::_parse(qdb& kb, string ctx){
 			else throw runtime_error(string("expected iri predicate:") + string(s,0,48));
 
 			//This loop is over the objects for each predicate, and you can see
-			//in the do-condition that it iterates on ending up at a L','.
+			//in the do-condition that it iterates on ending up at a ','.
 			do {
 				//Skip the following characters until reading something besides
-				//whitespace and L','.
-				while (iswspace(*s) || *s == L',') ++s;
+				//whitespace and ','.
+				while (iswspace(*s) || *s == ',') ++s;
 				
 				//*On the first time around this would be subject-predicate-nothing
-				//If that character is L'.' or L'}' then break.
-				if (*s == L'.' || *s == L'}') break;
+				//If that character is '.' or '}' then break.
+				if (*s == '.' || *s == '}') break;
 
 				//Otherwise, it's some other character, try to read a node
 				//into 'pn' using readany(true). (Can be either IRI, blank node,
@@ -569,24 +569,24 @@ void nqparser::_parse(qdb& kb, string ctx){
 				//Skip any more white-space following this.
 				while (iswspace(*s)) ++s;
 
-			//If the next character is L',', then repeat.
+			//If the next character is ',', then repeat.
 			//i.e. expecting to capture another object.
-			} while (*s == L',');
+			} while (*s == ',');
 
 			//Okay, we did that do-sequence and finally exited because when we
-			//checked the conditional, the character was something other than L','.
+			//checked the conditional, the character was something other than ','.
 			//Skip any more white-space following this.
 			while (iswspace(*s)) ++s;
 
-		//If the next character is L';', then repeat.
+		//If the next character is ';', then repeat.
 		//i.e. expecting to capture another predicate and object list.
-		} while (*s == L';');
+		} while (*s == ';');
 
 		//Okay, we did that do-sequence and finally exited because when we checked
-		//the conditional, the character was something other than L';'. Check to see
-		//if the next character is either L'.' or L'}' or if we hit the end of the file.
+		//the conditional, the character was something other than ';'. Check to see
+		//if the next character is either '.' or '}' or if we hit the end of the file.
 
-		if (*s != L'.' && *s != L'}' && *s) {
+		if (*s != '.' && *s != '}' && *s) {
 
 			//We did not get any of those, and so we'll try to read either a blank node
 			//or an IRI node into pn. We're attempting to read a context label. If that 
@@ -596,7 +596,7 @@ void nqparser::_parse(qdb& kb, string ctx){
 
 			graph = *pn->value;
 		} else
-			//The next character was either L'.' or L'}', and so we copy the
+			//The next character was either '.' or '}', and so we copy the
 			//value of 'ctx' into 'graph'.
 			graph = ctx;
 
@@ -629,8 +629,8 @@ void nqparser::_parse(qdb& kb, string ctx){
 
 		//Okay we're past the white-space and the '.', 
 		//return here?
-		if (*s == L'}') { ++s; /*rr = { r, qlists };*/ }
-		if (*s == L')') throw runtime_error(string("expected ) outside list: ") + string(s,0,48));
+		if (*s == '}') { ++s; /*rr = { r, qlists };*/ }
+		if (*s == ')') throw runtime_error(string("expected ) outside list: ") + string(s,0,48));
 	}
 	}
 }

@@ -967,7 +967,7 @@ void check_pred(nodeid pr)
 {
 	FUN;
 	if (rules.find(pr) == rules.end() && builtins.find(pr) == builtins.end()) {
-		dout << KRED << "Predicate '" << KNRM << dict[pr] << "' not found." << endl;
+		dout << "'" << dict[pr] << "' not found." << endl;
 		preds[pr] = GEN_FAIL_WITH_ARGS;//wildcard_pred(pr);//
 	}
  }
