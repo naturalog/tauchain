@@ -487,7 +487,7 @@ struct Marpa {
 				//if (!irc) dout << std::endl;
 				for (int i = 0; i < num_expected; i++) {
 					sym e = expected[i];
-					dout << sym2str(e); << " ";
+					dout << sym2str(e) << " ";
 					//if (!irc) dout << std::endl;
 				}
 				return FAIL;
@@ -811,7 +811,7 @@ public:
 				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_REST), z)));
 			}
 		}
-		return mkiri(pstr(head));
+		return mkbnode(pstr(head));
 	}
 
 

@@ -641,11 +641,15 @@ string str(const Thing *_x)
 		}
 		case UNBOUND:
 			return "var()";
-		case NODE:
-		case LIST_BNODE: {
+		case NODE: {
 			const nodeid node = get_node(x);
 			ASSERT(node);
 			return *dict[node].value;
+		}
+		case LIST_BNODE: {
+			const nodeid node = get_node(x);
+			ASSERT(node);
+			return "~" + *dict[node].value + "~";
 		}
 		case LIST: {
 			const size_t size = get_size(x);
@@ -1259,11 +1263,11 @@ Thing &fetch_thing(nodeid x, Locals &locals, Locals &consts, locals_map &lm, loc
 void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head)
 {
 	(void)head;
-	dout << endl << "locals map: (nodeid, pos, thing, kbdbg)" << endl;
+	dout << endl << "locals map: (nodeid, \t\tpos, \t\tthing, \t\tkbdbg)" << endl;
 	for (auto x: lm)
-		dout << " " << *dict[x.first].value << "     " << x.second << "     " << str(&locals.at(x.second)) <<
+		dout << " " << *dict[x.first].value << " \t\t" << x.second << " \t\t" << str(&locals.at(x.second)) <<
 #ifdef KBDBG
-		"     " << kbdbg_str(&locals.at(x.second)) <<
+		" \t\t" << kbdbg_str(&locals.at(x.second)) <<
 #endif
 		endl;
 #ifdef KBDBG
@@ -1281,11 +1285,15 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 
 bool islist(nodeid x)
 {
+	FUN;
 	for (auto i: rules) {
 		for (auto j: i.second) {
 			auto h = j.head;
-			if (dict[h->pred] == rdfrest && dict[h->subj] == x)
-				return true;
+			if (dict[h->pred] == rdfrest) {
+				TRACE(dout << h->subj->tostring() << " vs " << dict[x].tostring() << endl);
+				if (dict[h->subj] == x)
+					return true;
+			}
 		}
 	}
 	return false;

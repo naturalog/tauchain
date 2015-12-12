@@ -750,7 +750,7 @@ int main ( int argc, char** argv)
 				continue;
 			else if (read_option(token))
 				continue;
-			else if (token == "help")
+			else if (token == "help" || token == "halp" || token == "hilfe")
 				help();
 			else if (token == "kb")
 				cmd_kb();

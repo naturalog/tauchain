@@ -17,6 +17,7 @@ string node::tostring() const {
 	bool isiri = _type == IRI && !((*value).size() && ((*value)[0] == '?')) ;
 	if ( isiri ) ss << '<';
 	else if ( _type == LITERAL ) ss << '\"';
+	else if ( _type == BNODE ) ss << '*';
 	ss << *value;
 	if ( _type == LITERAL ) {
 		ss << '\"';
@@ -24,6 +25,7 @@ string node::tostring() const {
 		if ( lang && lang->size() ) ss << '@' << *lang;
 	}
 	else if ( isiri ) ss << '>';
+	else if ( _type == BNODE ) ss << '*';
 	return ss.str();
 }
 
@@ -37,7 +39,7 @@ pnode set_dict(node r){
 
 	auto it = dict.nodes.find(s);
 	if (it != dict.nodes.end()) {
-		TRACE(dout << "xxx" << s << "xxx " << it->second->_type << " " << r._type << endl);
+		//TRACE(dout << "xxx" << s << "xxx " << it->second->_type << " " << r._type << endl);
 		assert(it->second->_type == r._type);
 		return it->second;
 	}	
@@ -90,7 +92,12 @@ pnode mkiri ( pstring iri ) {
 	setproc("mkiri");
 
 	if (!iri) throw std::runtime_error("mkiri: null iri given");
-//	TRACE(dout << *iri << endl);
+
+	auto it = dict.nodes.find(*iri);
+	if(it != dict.nodes.end())
+		assert(it->second->_type == node::IRI);
+
+	/// /	TRACE(dout << *iri << endl);
 	node r ( node::IRI );
 	r.value = iri;
 	return set_dict(r);
@@ -124,6 +131,11 @@ pnode mkbnode ( pstring attribute ) {
 	setproc("mkbnode");
 	if (!attribute) throw std::runtime_error("mkbnode: null value given");
 //	TRACE(dout << *attribute << endl);
+
+	auto it = dict.nodes.find(*attribute);
+	if(it != dict.nodes.end())
+		assert(it->second->_type == node::BNODE);
+
 	node r ( node::BNODE );
 	r.value = attribute;
 	return set_dict(r);
@@ -378,7 +390,8 @@ bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
 			return false;
 		if (la == a.second.end())
 		{
-			return true;//its a bnode not in lists, bail out for now
+			TRACE(dout << "its a bnode not in lists, bail out for now" << endl);
+			return true;
 		}
 		else {
 			auto laa = la->second;
@@ -412,8 +425,8 @@ bool qdbs_equal(qdb &a, qdb &b) {
 	auto bd = *b.first["@default"];
 	auto i = ad.begin();
 	for (pquad x: bd) {
-		if (dict[x->pred] == rdffirst || dict[x->pred] == rdfrest)
-			continue;
+		//if (dict[x->pred] == rdffirst || dict[x->pred] == rdfrest)
+		//	continue;
 		if (i == ad.end())
 			return false;
 		pquad n1 = *i;
