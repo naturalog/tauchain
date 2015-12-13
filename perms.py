@@ -36,6 +36,12 @@ for w in PP:
 			TRACE(dout << "call: " << ++call << endl;)
 			switch (entry) {
 				case 0:
+				
+					if ((steps != 0) && (steps % 1000000 == 0))
+					dout << "step: " << steps << endl;
+					++steps;
+
+				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
 					ac = ITEM(preds,a);
 					//todo assert that access is within bounds?
