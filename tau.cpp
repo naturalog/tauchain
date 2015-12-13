@@ -688,7 +688,7 @@ bool try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
 		qdb kb, query;
 		std::stringstream ss(x);
 		int pr = parse(kb, query, ss, "");
-		CLI_TRACE(dout << "parsing result:" << pr << std::endl);
+		dout << "parsing result:" << pr << std::endl;
 		if (pr) {
 			qdb_text = x;
 		}

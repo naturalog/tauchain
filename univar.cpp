@@ -39,6 +39,7 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 #ifdef DEBUG
 
 #define DBG(x) x
+#define DBGC(x) x,
 #define TRC(x) x
 #define TRCCAP(x) ,x
 #define ITEM(x,y) x.at(y)
@@ -51,6 +52,7 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 #else
 
 #define DBG(x)
+#define DBGC(x)
 #define TRC(x)
 #define TRCCAP(x)
 #define ITEM(x,y) x[y]
@@ -131,7 +133,7 @@ public:
 //we could add some assertions here maybe
 //this abstracts away oneword and struct implementations of Thing
 #define get_type(thing) ((thing).type)
-#define get_node(thing) (ASSERT(get_type(thing) == NODE), /*then return*/ (thing).node)
+#define get_node(thing) (DBGC(ASSERT(get_type(thing) == NODE)) /*then return*/ (thing).node)
 #define get_size(thing) ((thing).size)
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
@@ -450,6 +452,7 @@ static join_t succeed_with_args()
 		{
 		case 0:
 			entry = LAST;
+				steps++;
 			return true;
 		case_LAST:
 			END
@@ -1286,15 +1289,11 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 bool islist(nodeid x)
 {
 	FUN;
-	for (auto i: rules) {
-		for (auto j: i.second) {
-			auto h = j.head;
-			if (dict[h->pred] == rdfrest) {
-				TRACE(dout << h->subj->tostring() << " vs " << dict[x].tostring() << endl);
-				if (dict[h->subj] == x)
-					return true;
-			}
-		}
+	for (auto i: rules[rdfrest]) {
+		auto h = i.head;
+		TRACE(dout << h->subj->tostring() << " vs " << dict[x].tostring() << endl);
+		if (dict[h->subj] == x)
+				return true;
 	}
 	return false;
 }
@@ -1679,14 +1678,12 @@ rule_t compile_rule(Rule r)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 						ASSERT(call == 1);
 
-						if ((steps != 0) && (steps % 1000000 == 0)) (dout << "step: " << steps << endl);
-							++steps;
-
 						o = getValue(o);
 						s = getValue(s);
 
-						if (has_body && find_ep(ep, s, o)) {
-							goto end;
+						if (find_ep(ep, s, o)) {
+							if (has_body)
+								goto end;
 						}
 						if (has_body ) ep->push_back(thingthingpair(s, o));
 
