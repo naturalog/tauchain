@@ -439,6 +439,8 @@ struct cmpstr {
 		if (!x && !y) return false;
 		if (!x && y) return true;
 		if (x && !y) return false;
+		TRACE(dout << x << "XXX" << y;)
+		TRACE(dout << *x << "XXX" << *y;)
 		return *x < *y;
 	}
 };
@@ -451,7 +453,7 @@ pstring pstr ( const string& s ) {
 	//Use the static std::set to prevent from making the
 	//same string multiple times.
 	static std::set<pstring, cmpstr> strings;
-	auto ps = std::make_shared<string> ( s );
+	auto ps = std::make_shared<string> ( string(s) );
 	auto it = strings.find(ps);
 	if (it != strings.end()) return *it;
 	strings.insert(ps);

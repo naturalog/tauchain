@@ -1308,15 +1308,14 @@ map<nodeid,nodeid> get_list(nodeid n) {
 				if (dict[rule.head->object] == rdfnil)
 					return r;
 				r[n] = dict[rule.head->object];
-				break;
-			}
-		}
-		for (auto rule: rules[rdfrest]) {
-			if (dict[rule.head->subj] == n) {
-				if (dict[rule.head->object] == rdfnil)
-					return r;
-				n = dict[rule.head->object];
-				break;
+				for (auto rule: rules[rdfrest]) {
+					if (dict[rule.head->subj] == n) {
+						if (dict[rule.head->object] == rdfnil)
+							return r;
+						n = dict[rule.head->object];
+						break;
+					}
+				}
 			}
 		}
 	}
@@ -1682,8 +1681,10 @@ rule_t compile_rule(Rule r)
 						s = getValue(s);
 
 						if (find_ep(ep, s, o)) {
-							if (has_body)
+							if (has_body) {
+								steps++;
 								goto end;
+							}
 						}
 						if (has_body ) ep->push_back(thingthingpair(s, o));
 

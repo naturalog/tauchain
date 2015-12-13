@@ -139,7 +139,7 @@ public:
 		interactive = !s;
 		//else its stdin
 		if (!s) {
-			assert(stream == std::cin);
+			//assert(stream == std::cin);//sometimes doesnt compile
 			//but its not attached to a tty
 			if (!isatty(fileno(stdin)) && !irc)
 				interactive = false;

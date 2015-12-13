@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <memory>
 #include <fstream>
+#include <vector>
 
 using std::map;
 using std::stringstream;
