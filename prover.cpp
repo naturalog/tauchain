@@ -759,10 +759,10 @@ void prover::do_query(const qdb& q_, subs * s) {
 }
 
 void prover::query(const termset& goal, subs * s) {
-	TRACE(dout << KRED << "Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	//TRACE(dout << KRED << "Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	auto duration = do_query(goal, s);
 	TRACE(dout << KYEL << "Evidence:" << endl);
-	printe();/* << ejson()->toString()*/ dout << KNRM;
+	//printe();/* << ejson()->toString()*/ dout << KNRM;
 	TRACE(dout << "elapsed: " << duration << "ms steps: " << steps << " unifs: " << unifs << " evals: " << evals << endl);
 }
 
@@ -801,11 +801,11 @@ int prover::do_query(const termset& goal, subs * s) {
 	shared_ptr<proof> p = make_shared<proof>(nullptr, kb.add(0, goal)), q;
 	if (s) p->s = *s;
 
-	TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
+	/*TRACE(dout << KGRN << "Query: " << format(goal) << KNRM << std::endl);
 	{
 		setproc("rules");
 		TRACE(dout << KRED << "Rules:\n" << formatkb() << endl << KGRN << "Query: " << format(goal) << KNRM << std::endl);
-	}
+	}*/
 
 #ifdef TIMER
 	using namespace std;

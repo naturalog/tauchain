@@ -453,10 +453,10 @@ pstring pstr ( const string& s ) {
 	//Use the static std::set to prevent from making the
 	//same string multiple times.
 	static std::set<pstring, cmpstr> strings;
-	auto ps = std::make_shared<string> ( string(s) );
-	auto it = strings.find(ps);
+	auto ps = std::make_shared<string> ( s );
+	/*auto it = strings.find(ps);
 	if (it != strings.end()) return *it;
-	strings.insert(ps);
+	strings.insert(ps);*/
 	return ps;
 }
 

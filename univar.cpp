@@ -133,7 +133,7 @@ public:
 //we could add some assertions here maybe
 //this abstracts away oneword and struct implementations of Thing
 #define get_type(thing) ((thing).type)
-#define get_node(thing) (DBGC(ASSERT(get_type(thing) == NODE)) /*then return*/ (thing).node)
+#define get_node(thing) (DBGC(ASSERT(get_type(thing) == NODE || get_type(thing) == LIST_BNODE)) /*then return*/ (thing).node)
 #define get_size(thing) ((thing).size)
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
@@ -948,6 +948,7 @@ void compile_pred(nodeid pr)
 //rule_t we pass it just gets sequenced with what's already there (using seq).
 {
 	FUN;
+	TRACE(dout << dict[pr] << endl;)
 
 	if (preds.find(pr) != preds.end())
 		return;
@@ -1399,15 +1400,15 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 						lq.push(toadd(li, {}));
 						#endif
 				}
+				//we add bnodes that simulate rdf list structure
+				Thing bnode = create_list_bnode(bnode_id);
+				locals.push_back(bnode);
+
 #ifdef KBDBG
 				add_kbdbg_info(t, m);
 #endif
 				locals.push_back(t);
 
-				//we add bnodes that simulate rdf list structure
-				Thing bnode = create_list_bnode(bnode_id);
-				locals.push_back(bnode);
-				
 			}
 
 			//final nil
@@ -1755,7 +1756,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 		return mkbnode(pstr(head));
 	}
 
-	if (is_node(t))
+	if (is_node(t) || is_list_bnode(t))
 		return std::make_shared<node>(dict[get_node(t)]);
 
 	//dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
@@ -1766,6 +1767,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 
 void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
 {
+	FUN;
 	r.first["@default"]->push_back(
 		make_shared<quad>(
 			quad(
@@ -1910,7 +1912,7 @@ void yprover::query(const qdb& goal){
 			Thing *s = &fetch_thing(dict[i->subj], locals, consts, lm, cm);
 			Thing *o = &fetch_thing(dict[i->object], locals, consts, lm, cm);
 
-			TRACE(dout << sprintThing("Subject", s) << " Pred: " << i->pred->tostring() << " "  << sprintThing("Object", o) << endl;)
+			//TRACE(dout << sprintThing("Subject", s) << " Pred: " << i->pred->tostring() << " "  << sprintThing("Object", o) << endl;)
 
 			//lets try to get the original names of unbound vars
 			Thing n1, n2;
@@ -2473,13 +2475,17 @@ void build_in_rules()
 	// If it is unbound, do a trivial yield (no new binding first).
 	builtins[rdffirst].push_back(
 			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+				setproc("rdffirst");
 				switch (entry) {
 					case 0:
 						s = getValue(s_);
 						o = getValue(o_);
+						TRACE(dout << str(s) << " #first " << str(o) << endl);
 						if (is_unbound(*s))
 							ouc = gen_succeed();
-						else if (is_list(*s) || is_list_bnode(*s))
+						else if (is_list(*s))
+							ouc = unify(o, s + 2);
+						else if (is_list_bnode(*s))
 							ouc = unify(o, s + 1);
 						else
 							ouc = GEN_FAIL;
