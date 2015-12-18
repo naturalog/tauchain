@@ -1279,11 +1279,15 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 	(void)head;
 	dout << endl << "locals map: \n nodeid\t\tpos\t\tthing\t\tkbdbg" << endl;
 	for (auto x: lm)
-		dout << " " << *dict[x.first].value << "\t\t" << x.second << "\t\t" << str(&locals.at(x.second)) <<
+	{
+		dout << " " << *dict[x.first].value << "\t\t" << endl;
+		dout << x.second << "\t\t" << endl;
+		dout << str(&locals.at(x.second)) << endl;
 #ifdef KBDBG
-		"\t\t" << kbdbg_str(&locals.at(x.second)) <<
+		"\t\t" << kbdbg_str(&locals.at(x.second))  srtsrt
 #endif
-		endl;
+		dout << endl;
+	}
 #ifdef KBDBG
 	dout << "locals: (pos, thing, kbdbg)" << endl;
 	for (size_t i = 0; i<locals.size(); i++)
@@ -1394,10 +1398,18 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				Markup m = ll.second;
 				m.push_back(list_part++);
 #endif
+
+				//we add bnodes that simulate rdf list structure
+				Thing bnode = create_list_bnode(bnode_id);
+				locals.push_back(bnode);
+
+
 				Thing t;
-				if (li < 0) { //its a var
+				if (li < 0) {
+					TRACE(dout << "its a var" << endl);
 					auto it = lm.find(li); //is it already in locals?
-					if (it == lm.end()) { //no? create a fresh var
+					if (it == lm.end()) { //no? 
+						MSG("create a fresh var")
 						t = create_unbound();
 						lm[li] = locals.size();
 					}
@@ -1414,9 +1426,6 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 						lq.push(toadd(li, {}));
 						#endif
 				}
-				//we add bnodes that simulate rdf list structure
-				Thing bnode = create_list_bnode(bnode_id);
-				locals.push_back(bnode);
 
 #ifdef KBDBG
 				add_kbdbg_info(t, m);
