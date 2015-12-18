@@ -1109,7 +1109,7 @@ coro listunifycoro(Thing *a_, Thing *b_)
 
 	for(int i = get_size(b)-1;i >= 0; i--)
 	{
-		r = unifjoin(a_+1+(i*2), b_+1+(i*2), r);
+		r = unifjoin(a_+2+(i*2), b_+2+(i*2), r);
 	}
 
 	return r;
@@ -2545,6 +2545,7 @@ void build_in_rules()
 
 	builtins[rdfrest].push_back(
 			[entry, ouc, s, o, r](Thing *s_, Thing *o_) mutable {
+				setproc("rdfrest");
 				switch (entry) {
 					case 0:
 						s = getValue(s_);
