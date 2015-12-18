@@ -659,13 +659,13 @@ string str(const Thing *_x)
 			ASSERT(node);
 			return "~" + *dict[node].value + "~";
 		}
-		case LIST: {
+		case LIST: {//btw with list bnodes, LIST Thing is just an optimization now
 			const size_t size = get_size(x);
 			stringstream r;
 			r << "{" << size << " items}(";
 			for (size_t i = 0; i < size; i++) {
 				if (i != 0) r << " ";
-				r << str(_x + 1 + (i*2));
+				r << str(_x + 2 + (i*2));
 			}
 			if (!size)
 				r << " ";
@@ -988,7 +988,7 @@ void check_pred(nodeid pr)
 
 
 Rules quads2rules(qdb &kb)
-{
+{//i refactored this from compile_kb
 	FUN;
 	Rules rules;
 	auto &quads = kb.first;
@@ -1028,7 +1028,7 @@ void compile_kb(qdb &kb)
 	free_garbage();
 
 	rules = quads2rules(kb);
-	lists = rules;
+	lists = rules;//we dont have any query at this point
 
 	for(auto x: builtins)
 		compile_pred(x.first);
@@ -1297,6 +1297,9 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 }
 
 
+/*the two funcs look into Rules lists
+those should contain the kb rules and possibly also the query triples*/
+
 bool islist(nodeid x)
 {
 	FUN;
@@ -1309,6 +1312,7 @@ bool islist(nodeid x)
 	return false;
 }
 
+/*the first nodeid in the map is the bnode*/
 map<nodeid,nodeid> get_list(nodeid n) {
 	FUN;
 	ASSERT(n);
@@ -1382,9 +1386,9 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 			//For each item in the list,
 			for (auto list_item: lst) {
-				TRACE(dout << "item..." << endl;)
 				nodeid bnode_id = list_item.first;
 				nodeid li = list_item.second;
+				TRACE(dout << "item..." << dict[bnode_id] << " : " << dict[li] << endl;)
 
 #ifdef KBDBG
 				Markup m = ll.second;
@@ -1922,6 +1926,8 @@ void yprover::query(qdb& goal){
 	Locals locals, consts;
 
 	dout << KGRN << "COMPILE QUERY" << KNRM << endl;
+	//here we combine the two Rules maps, and lists will 
+	//be used by get_list and islist deep inside make_locals
 	lists = add_ruleses(rules, quads2rules(goal));
 	make_locals(locals, consts, lm, cm, 0, q);
 	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);

@@ -161,8 +161,8 @@ std::ostream& operator<< ( std::ostream& o, const std::list<pnode>& x ) {
 std::ostream& operator<< ( std::ostream& o, const qdb& q ) {
 	for ( auto x : q.first )
 		o << x.first << ": " << std::endl << *x.second << std::endl;
-	for ( auto x : q.second )
-		o << x.first << ": " << std::endl << x.second << std::endl;
+	//for ( auto x : q.second )we dont care about this much anymore
+	//	o << x.first << ": " << std::endl << x.second << std::endl;
 	return o;
 }
 
@@ -414,9 +414,11 @@ bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
 }
 
 bool qdbs_equal(qdb &a, qdb &b) {
+	FUN;
+	TRACE(
 	dout << "a.first.size  a.second.size  b.first.size  b.second.size" << endl;
 	dout << a.first.size() << " " << a.second.size() << " " << b.first.size() << " " << b.second.size() << endl;
-	dout << "maybe..";
+	dout << "maybe..";)
 	dout << "A:" << endl;
 	dout << a;
 	dout << "B:" << endl;

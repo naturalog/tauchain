@@ -787,11 +787,17 @@ public:
 		return graph;
 	}
 
+	//this does what it says
+/*	out_of_tape> its probably not quite to the spec and buggy
+<out_of_tape> the idea is to turn lists that come like (x y z) into triples*/
+/*this is then picked up by get_list()*/
 	pnode create_list_triples(std::vector<pnode> l)
 	{
 		string head = *RDF_NIL;
 
-		if (l.size())
+		if (l.size())//is empty list simply a nil?
+		//are you asking me? i think yes//if you know the answer then yes:)
+		//hehe i'll check the rdf specs later but we'll roll with it for now i guess ok
 		{
 
 			if (dest->first.find("@default") == dest->first.end())
@@ -806,6 +812,7 @@ public:
 			for (size_t idx = 0; idx < size;) {
 				pnode i = l[idx];
 				pnode y = mkbnode(pstr(x));
+				//we just write into the dest kb
 				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_FIRST), i)));
 				x = list_bnode_name(++idx);
 				pnode z = (idx == size) ? mkiri(RDF_NIL) : mkbnode(pstr(x));
