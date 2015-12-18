@@ -4,7 +4,7 @@ Alice :loves Bob.
 {?x :likes ?y} => {?x :tolerates ?y}.
 fin.
 query
-?WHO :tolerates ?WHAT
+?WHO :tolerates ?WHAT.
 fin.
 shouldbe
 Alice :tolerates Bob.

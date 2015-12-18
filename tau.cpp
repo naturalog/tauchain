@@ -84,6 +84,7 @@ public:
 	virtual bool end() = 0;
 	virtual bool done() = 0;
 	Mode mode = COMMANDS;
+	int limit = 123;
 };
 
 class ArgsInput : public Input
@@ -535,7 +536,7 @@ bool read_option(string s){
 		}
 
 		if(_option == "limit"){
-			get_int(result_limit, token);
+			get_int(INPUT->limit, token);
 			dout << "result limit:" << result_limit << std::endl;
 			return true;
 		}
@@ -582,7 +583,9 @@ void run()
 void do_query(qdb &q_in)
 {
 	dout << "query size: " << q_in.first.size() << std::endl;
+	result_limit = INPUT->limit;
 	tauProver->query(q_in);
+	done_anything = true;
 }
 
 
@@ -798,8 +801,7 @@ int main ( int argc, char** argv)
 						fresh_prover();
 					}
 					else if (INPUT->mode == QUERY) {
-						tauProver->query(kb);
-						done_anything = true;
+						do_query(kb);
 					}
 					else if (INPUT->mode == SHOULDBE) {
 						shouldbe(kb);
@@ -826,8 +828,7 @@ int main ( int argc, char** argv)
 				dout << "querying" << std::endl;
 				kbs.push_back(kb);
 				fresh_prover();
-				tauProver->query(kb2);
-				done_anything = true;
+				do_query(kb2);
 			}
 		}
 	}

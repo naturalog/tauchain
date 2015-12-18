@@ -382,7 +382,11 @@ struct Rule
 	pquad head;
 	pqlist body;
 } ;
-map<nodeid, vector<Rule>> rules;
+
+typedef map<nodeid, vector<Rule>> Rules;
+
+Rules rules;
+Rules lists; // rules + query
 
 
 
@@ -471,6 +475,7 @@ static join_t succeed_with_args()
 
 static join_gen succeed_with_args_gen()
 {
+	FUN;
 	return []() {
 		return succeed_with_args();
 	};
@@ -981,14 +986,11 @@ void check_pred(nodeid pr)
  }
 
 
-void compile_kb(qdb &kb)
+
+Rules quads2rules(qdb &kb)
 {
 	FUN;
-	preds.clear();//the lambdas
-	rules.clear();//intermediate data
-	free_garbage();//eps, locals_templates_garbage, consts_garbage
-
-	//preprocessing
+	Rules rules;
 	auto &quads = kb.first;
 	auto it = quads.find(str_default);
 	if (it != quads.end()) {
@@ -1015,15 +1017,23 @@ void compile_kb(qdb &kb)
 			}
 		}
 	}
+	return rules;
+}
 
-	//rules --> preds (compilation step)
 
-	for(auto x: builtins){
+void compile_kb(qdb &kb)
+{
+	FUN;
+	preds.clear();//the lambdas
+	free_garbage();
+
+	rules = quads2rules(kb);
+	lists = rules;
+
+	for(auto x: builtins)
 		compile_pred(x.first);
-	}
-	for(auto x: rules){
+	for(auto x: rules)
 		compile_pred(x.first);
-	}
 }
 
 
@@ -1267,11 +1277,11 @@ Thing &fetch_thing(nodeid x, Locals &locals, Locals &consts, locals_map &lm, loc
 void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head)
 {
 	(void)head;
-	dout << endl << "locals map: (nodeid, \t\tpos, \t\tthing, \t\tkbdbg)" << endl;
+	dout << endl << "locals map: \n nodeid\t\tpos\t\tthing\t\tkbdbg" << endl;
 	for (auto x: lm)
-		dout << " " << *dict[x.first].value << " \t\t" << x.second << " \t\t" << str(&locals.at(x.second)) <<
+		dout << " " << *dict[x.first].value << "\t\t" << x.second << "\t\t" << str(&locals.at(x.second)) <<
 #ifdef KBDBG
-		" \t\t" << kbdbg_str(&locals.at(x.second)) <<
+		"\t\t" << kbdbg_str(&locals.at(x.second)) <<
 #endif
 		endl;
 #ifdef KBDBG
@@ -1290,7 +1300,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 bool islist(nodeid x)
 {
 	FUN;
-	for (auto i: rules[rdfrest]) {
+	for (auto i: lists[rdfrest]) {
 		auto h = i.head;
 		TRACE(dout << h->subj->tostring() << " vs " << dict[x].tostring() << endl);
 		if (dict[h->subj] == x)
@@ -1304,12 +1314,12 @@ map<nodeid,nodeid> get_list(nodeid n) {
 	ASSERT(n);
 	map<nodeid,nodeid>  r;
 	while(true) {
-		for (auto rule: rules[rdffirst]) {
+		for (auto rule: lists[rdffirst]) {
 			if (dict[rule.head->subj] == n) {
 				if (dict[rule.head->object] == rdfnil)
 					return r;
 				r[n] = dict[rule.head->object];
-				for (auto rule: rules[rdfrest]) {
+				for (auto rule: lists[rdfrest]) {
 					if (dict[rule.head->subj] == n) {
 						if (dict[rule.head->object] == rdfnil)
 							return r;
@@ -1875,7 +1885,23 @@ void print_kbdbg(prover::termset query)
 #endif
 
 
-void yprover::query(const qdb& goal){
+Rules add_ruleses (Rules &a, Rules b)
+{
+	FUN;
+	Rules r;
+	for (auto aa: a)
+		for (auto x: aa.second)
+			r[aa.first].push_back(x);
+
+	for (auto bb: b)
+		for (auto x: bb.second)
+			r[bb.first].push_back(x);
+
+	return r;
+}
+
+
+void yprover::query(qdb& goal){
 	FUN;
 	results.clear();
 
@@ -1888,6 +1914,7 @@ void yprover::query(const qdb& goal){
 #ifdef KBDBG
 	print_kbdbg(q);
 #endif
+
 	steps = 0;
 	unifys = 0;
 	int nresults = 0; 
@@ -1895,10 +1922,11 @@ void yprover::query(const qdb& goal){
 	Locals locals, consts;
 
 	dout << KGRN << "COMPILE QUERY" << KNRM << endl;
+	lists = add_ruleses(rules, quads2rules(goal));
 	make_locals(locals, consts, lm, cm, 0, q);
 	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);
-
 	join_t coro = jg();
+
 	dout << KGRN << "RUN" << KNRM << endl;
 	while (coro( (Thing*)666,(Thing*)666, locals.data() )) {
 		nresults++;

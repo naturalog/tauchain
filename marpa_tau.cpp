@@ -488,8 +488,9 @@ struct Marpa {
 				for (int i = 0; i < num_expected; i++) {
 					sym e = expected[i];
 					dout << sym2str(e) << " ";
-					//if (!irc) dout << std::endl;
+					//if (!irc)
 				}
+				dout << std::endl;
 				return FAIL;
 			}
 		}
@@ -753,7 +754,7 @@ public:
 			auto pos = v.find(":");
 			if (pos != string::npos) {
 				string pref = string(v.begin(), v.begin() + pos);
-				TRACE(dout << "comparing " << pref << " with ";
+				TRACE(dout << "comparing \"" << pref << "\" with ";
 							  for (auto it: prefixes)
 								  dout << it.first << " ";
 							  dout << std::endl;)

@@ -1,0 +1,8 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+(1 2 3) :foo :bar.
+fin.
+
+?z rdf:rest ?b.
+
+fin.
+

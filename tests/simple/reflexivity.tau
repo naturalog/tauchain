@@ -4,7 +4,7 @@ zero :a Nat.
 fin.
 
 query
-?WHAT :eq ?WHAT
+?WHAT :eq ?WHAT.
 fin.
 shouldbe
 zero :eq zero.

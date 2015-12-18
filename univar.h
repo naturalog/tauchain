@@ -12,5 +12,5 @@ public:
 	yprover(qdb qkb);
 	~yprover();
 	void thatsAllFolks(int nresults);
-	void query(const qdb &goal);
+	void query(qdb &goal);
 };
