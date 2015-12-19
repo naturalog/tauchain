@@ -1114,6 +1114,40 @@ coro listunifycoro(Thing *a_, Thing *b_)
 
 	return r;
 }
+
+
+coro listunifycoro2(Thing *a_, Thing *b_)
+{
+	FUN;
+
+	Thing a = *a_;
+	Thing b = *b_;
+
+	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
+
+	ASSERT(is_list_bnode(a));
+	ASSERT(is_list_bnode(b));
+
+	coro r = gen_succeed();
+
+
+	while(true){
+	auto i = a_ + 1;
+	auto j = b_ + 1;
+
+	r = unifjoin(i, j, r);
+	
+	a_ +=2;
+	b_ +=2;
+	a = *a_;
+	b = *b_;
+	
+	if(get_node(a) == rdfnil && get_node(b) == rdfnil)
+		return r;
+	else if(get_node(a) == rdfnil || get_node(b) == rdfnil)
+		return GEN_FAIL ;
+	}
+}
 /*
 	# If arg1 or arg2 is an object with a unify method (such as Variable or^M
 	# Functor) then just call its unify with the other argument.  The object's^M
@@ -1165,6 +1199,18 @@ coro unify(Thing *a_, Thing *b_){
 			//TRACE(dout << "Both args are lists." << endl;)
 			return listunifycoro(a_, b_);
 		}
+	}
+	
+	if (is_list(a) || is_list(b))
+	{
+		auto xx = a_;
+		auto yy = b_;
+		if (is_list(*xx))
+			xx += 1;
+		if (is_list(*yy))
+			yy += 1;
+		if (is_list_bnode(*xx) && is_list_bnode(*yy))
+			return listunifycoro2(xx,yy);
 	}
 
 	TRACE(dout << "Fail. origa:[" << origa << "] origb:[" << origb << "] a:["<< a_ << "]" << str(a_) << " b:[" << b_ << "]" << str(b_) << endl;)
@@ -1770,13 +1816,15 @@ pnode thing2node(Thing *t_, qdb &r) {
 	auto t = *t_;
 
 	if (is_list(t))
-	{
+	{/*this here needs to call create_list_triples
 		const string head = listid();
 		for (size_t i = 0; i < get_size(t); i++) {
 			auto x = (t_ + 1 + (i*2));
 			r.second[head].emplace_back(thing2node(x, r));
 		}
-		return mkbnode(pstr(head));
+		*/
+		return mkbnode(pstr("FU"));
+	
 	}
 
 	if (is_node(t) || is_list_bnode(t))
@@ -1935,8 +1983,12 @@ void yprover::query(qdb& goal){
 	Locals locals, consts;
 
 	dout << KGRN << "COMPILE QUERY" << KNRM << endl;
+
 	//here we combine the two Rules maps, and lists will 
 	//be used by get_list and islist deep inside make_locals
+	//get_list or something should then remove the triples of the internalized lists from the query
+	
+
 	lists = add_ruleses(rules, quads2rules(goal));
 	make_locals(locals, consts, lm, cm, 0, q);
 	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);
@@ -2550,7 +2602,7 @@ void build_in_rules()
 					case 0:
 						s = getValue(s_);
 						o = getValue(o_);
-
+						TRACE(dout << str(s) << " #rest " << str(o) << endl);
 						if (is_list(*s))
 							r = s+3;
 						else if(is_list_bnode(*s))
