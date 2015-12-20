@@ -829,6 +829,8 @@ int main ( int argc, char** argv)
 				kbs.push_back(kb);
 				fresh_prover();
 				do_query(kb2);
+				qdb_text = "";
+				set_mode(COMMANDS);
 			}
 		}
 	}

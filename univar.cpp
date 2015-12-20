@@ -988,15 +988,15 @@ void check_pred(nodeid pr)
 
 
 Rules quads2rules(qdb &kb)
-{//i refactored this from compile_kb
+{
 	FUN;
 	Rules rules;
 	auto &quads = kb.first;
 	auto it = quads.find(str_default);
 	if (it != quads.end()) {
-		auto &pffft = *it->second;
+		auto pffft = *it->second;;
 		reverse(pffft.begin(), pffft.end());
-		for (pquad quad : *it->second) {
+		for (pquad quad : pffft) {
 			const string &s = *quad->subj->value, &p = *quad->pred->value, &o = *quad->object->value;
 			TRACE(dout << quad->tostring() << endl);
 
@@ -1016,7 +1016,7 @@ Rules quads2rules(qdb &kb)
 				}
 			}
 		}
-	}
+	}	
 	return rules;
 }
 
@@ -1326,9 +1326,9 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 	dout << endl << "locals map: \n nodeid\t\tpos\t\tthing\t\tkbdbg" << endl;
 	for (auto x: lm)
 	{
-		dout << " " << *dict[x.first].value << "\t\t" << endl;
-		dout << x.second << "\t\t" << endl;
-		dout << str(&locals.at(x.second)) << endl;
+		dout << " " << *dict[x.first].value << "\t\t";
+		dout << x.second << "\t\t";
+		dout << str(&locals.at(x.second));
 #ifdef KBDBG
 		"\t\t" << kbdbg_str(&locals.at(x.second))  srtsrt
 #endif
