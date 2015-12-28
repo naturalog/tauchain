@@ -2740,6 +2740,7 @@ void build_in_rules()
 //http://www.w3.org/standards/techs/rif#w3c_all
 //http://www.w3.org/TR/rif-dtb/
 //http://www.w3.org/TR/2013/REC-rif-dtb-20130205/
+//http://sourceforge.net/p/eulersharp/discussion/263032/thread/d80e9aa6/
 
 //Cwm Builtins
 //http://www.w3.org/2000/10/swap/doc/CwmBuiltins   	--< HMC_a_> not all but most
