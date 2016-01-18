@@ -454,9 +454,11 @@ pstring pstr ( const string& s ) {
 	//same string multiple times.
 	static std::set<pstring, cmpstr> strings;
 	auto ps = std::make_shared<string> ( s );
-	/*auto it = strings.find(ps);
+#ifdef SEGFAULT
+	auto it = strings.find(ps);
 	if (it != strings.end()) return *it;
-	strings.insert(ps);*/
+	strings.insert(ps);
+#endif
 	return ps;
 }
 
