@@ -1,17 +1,29 @@
-1)fix up the nq parser
 
-2)debug the cli
+theres a segfault in pstr, the comparison function is getting garbage
+
+
+
+
+1)fix up the nq parser. still?
+
+
 
 marpa unicode:
-hardcode regexes. or implement escape sequences in string literals?
+hardcode regexes. or implement escape sequences in string literals in the nq parser?
+or load the marpa grammar with the json parser. has its own problems too.
 introduce ICU
 implement escape sequences in string literals?
+
 
 rdf lists:
 data structures should be almost done, just redo the first/rest/in/last builtins
 
+
 rdf semantics:
-fix the wildcard fucker, the rest should be straightforward
+fix the wildcard fucker, the rest should be straightforward, just messy and confusing
+
+
+
 
 random builtins?
 

@@ -24,7 +24,7 @@ set(MARPA_DIST ${CMAKE_SOURCE_DIR}/libmarpa/dist/)
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -ggdb -g")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fsanitize-undefined-trap-on-error -fsanitize=address -fsanitize=integer -fsanitize=unsigned-integer-overflow")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fsanitize-undefined-trap-on-error -fsanitize=address -fsanitize=integer -fsanitize=unsigned-integer-overflow ")
 set(COMMON_FLAGS "-I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS}  -I${MARPA_DIST} -Dwith_marpa -DJSON  ")
 
 

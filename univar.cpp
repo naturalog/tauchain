@@ -911,7 +911,7 @@ void free_garbage_nonassert()
 {
 	for (auto x: eps_garbage)
 		delete x;
-
+	eps_garbage.clear();
 }
 
 
@@ -2035,13 +2035,18 @@ void yprover::query(qdb& goal){
 
 	}
 	thatsAllFolks(nresults);
+
+
+	out:;
+
+
 	if (log_outputString.size()) {
 		dout << "log#outputString:" << endl;
 		for (const auto x:log_outputString)
 			dout << x.first << ": " << x.second << endl;
 		log_outputString.clear();
 	}
-	out:;
+
 }
 
 //endregion

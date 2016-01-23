@@ -54,3 +54,6 @@ sudo apt-get install exuberant-ctags
 ctags --fields=+S -R -e  *h  *cpp
 
 
+
+env ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.6  ASAN_OPTIONS="symbolize=1,detect_leaks=0"  LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so  ./tau --level 1  --silence addrules --silence readcurly --silence quad::ctor --silence N3 run tests/*/*
+
