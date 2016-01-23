@@ -567,17 +567,7 @@ void do_run(string fn)
 //err
 void run()
 {
-	if(INPUT->end()) {
-		set_mode(RUN);
-	}
-	else {
-		std::vector<string> fns;
-		while(!INPUT->end())
-			fns.push_back(INPUT->pop_long());
-		reverse(fns.begin(), fns.end());
-		for (auto fn:fns)
-			do_run(fn);
-	}
+	set_mode(RUN);
 }
 
 void do_query(qdb &q_in)
@@ -736,6 +726,7 @@ int main ( int argc, char** argv)
 		while (INPUT->done()) {
 			auto popped = inputs.top();
 			inputs.pop();
+			/*if there werent any args, drop into repl*/
 			if (dynamic_cast<ArgsInput*>(popped))
 				if (!done_anything)
 					emplace_stdin();
@@ -834,6 +825,8 @@ int main ( int argc, char** argv)
 			}
 		}
 	}
+
+
 	end:
 	if (tauProver)
 		delete tauProver;
