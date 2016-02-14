@@ -2118,7 +2118,6 @@ void build_in_facts()
 		{rdfsisDefinedBy,                 rdfsdomain,        rdfsResource},
 		{rdfsisDefinedBy,                 rdfsrange,         rdfsResource},
 		{rdfsisDefinedBy,                 rdfssubPropertyOf, rdfsseeAlso},
-//		{mkiri(pstr(":HMC")), rdftype, mkiri(pstr(":banana"))},
 		{rdfslabel,                       rdfsdomain,        rdfsResource},
 		{rdfslabel,                       rdfsrange,         rdfsLiteral},
 		{rdfsmember,                      rdfsdomain,        rdfsContainer},
@@ -2193,8 +2192,40 @@ rule_t make_wildcard_rule(nodeid pr)
 	
 
 
+/*
+<HMC_a> koo7: for the moment I'm less concerned about getting rdfs going and more interested in facilities like log:outputString and math:sum and etc
+<HMC_a> really even just those two would be enough to get some useful results out of the fuzzer, lol :-)
+<koo7> HMC_a, i cant get too far without you being specific/providing some specs
+<HMC_a> well
+<koo7> so far all your input was "like in master"
+<HMC_a> http://www.w3.org/2000/10/swap/doc/CwmBuiltins <-- "not quite specs" XD
+<koo7> Dump :s to stdout ordered by :k whereever { :k log:outputString :s }
+<HMC_a> so math:* and string:* should be pretty straightforward, list:* nearly so...
+<koo7> so this means it waits until the query is done?
+<HMC_a> yes, it caches up the output strings until the end
+<koo7> ok
+<koo7> as on list, list:append seems a misnomer
+<HMC_a> then sorts them by subject
+<HMC_a> then prints
+<HMC_a> koo7: you mean it is more aptly called "concat"? ;-)
+<koo7> yeah something like that
+<HMC_a> I don't think you're the first to mention it, hehe
+* HMC_a shrugs
+<koo7> alright
+<koo7> its fully namespaced, after all
+<nilli> I used the link koo7 gave me and changed the name but its going on #zennet. anyway never mind
+<nilli> ill just sit in the dark
+<HMC_a> sure, and I'm not against doubling up on some builtins later... maybe in the end we have list:append, tau:append, and tau:concat, with tau:append taking just a subject of a pair list of a list and a literal and doing an actual "append" and the other two both being "concat"...
+<HMC_a> but we want list:append to be there and to match cwm, in any case, so that any existing logic "out there" that calls upon cwm's list:append will do the right thing
+<HMC_a> ;-)
+<koo7> cool
+ */
+
+
+
+//under construction
 void build_in_rules()
-{//under construction
+{
 	EEE;
 	coro suc, suc2, ouc;
 	Thing *s = nullptr, *o = nullptr;
@@ -2210,16 +2241,20 @@ void build_in_rules()
 	/*ep_t *ep = new ep_t();
 	eps.push_back(ep)*/
 	pred_t p1, p2;
-
 	//Thing c_rdfsType = create_node(op->make(rdftype));
 	//Thing c_rdfsResource = create_node(op->make(rdfsResource));
 	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 
 
 
+
 	//hmc said this, alright i'll start a couple documents where we
 	//can start breaking down the details of these things
-	//http://www.w3.org/TR/lbase/#using
+
+/*
+ * RDF - http://www.w3.org/TR/lbase/#using - where the ?y(?x) thing comes from
+ */
+
 
 
 	//rdfs:Resource(?x)
@@ -2289,13 +2324,12 @@ void build_in_rules()
 
 
 	//todo rdfs:Class(?y) implies (?y(?x) iff rdf:type(?x ?y))
-
+	//...
 
 
 
 
 	//rdfs:domain(?x ?y) implies ( ?x(?u ?v)) implies ?y(?u) )
-	//rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
 	/*builtins[rdfsType].push_back([entry,p1,p2](Thing *s, Thing *c) mutable {
 		switch(entry){
 		case 0:
@@ -2321,6 +2355,8 @@ void build_in_rules()
 			END;
 		}
 	});
+
+	//rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
 	builtins[rdfsRange].push_back([entry](Thing *s_, Thing *o_) mutable {
 		switch(entry){
 		case 0:
@@ -2357,33 +2393,6 @@ void build_in_rules()
 
 
 
-/*
-<HMC_a> koo7: for the moment I'm less concerned about getting rdfs going and more interested in facilities like log:outputString and math:sum and etc
-<HMC_a> really even just those two would be enough to get some useful results out of the fuzzer, lol :-)
-<koo7> HMC_a, i cant get too far without you being specific/providing some specs
-<HMC_a> well
-<koo7> so far all your input was "like in master"
-<HMC_a> http://www.w3.org/2000/10/swap/doc/CwmBuiltins <-- "not quite specs" XD
-<koo7> Dump :s to stdout ordered by :k whereever { :k log:outputString :s }
-<HMC_a> so math:* and string:* should be pretty straightforward, list:* nearly so...
-<koo7> so this means it waits until the query is done?
-<HMC_a> yes, it caches up the output strings until the end
-<koo7> ok
-<koo7> as on list, list:append seems a misnomer
-<HMC_a> then sorts them by subject
-<HMC_a> then prints
-<HMC_a> koo7: you mean it is more aptly called "concat"? ;-)
-<koo7> yeah something like that
-<HMC_a> I don't think you're the first to mention it, hehe
-* HMC_a shrugs
-<koo7> alright
-<koo7> its fully namespaced, after all
-<nilli> I used the link koo7 gave me and changed the name but its going on #zennet. anyway never mind
-<nilli> ill just sit in the dark
-<HMC_a> sure, and I'm not against doubling up on some builtins later... maybe in the end we have list:append, tau:append, and tau:concat, with tau:append taking just a subject of a pair list of a list and a literal and doing an actual "append" and the other two both being "concat"...
-<HMC_a> but we want list:append to be there and to match cwm, in any case, so that any existing logic "out there" that calls upon cwm's list:append will do the right thing
-<HMC_a> ;-)
-<koo7> cool*/
 
 /*
 	old::string link = "http://www.w3.org/TR/rdf-schema/#ch_range";
@@ -2398,7 +2407,17 @@ void build_in_rules()
 	);
 */
 
-	//@prefix math: <http://www.w3.org/2000/10/swap/math#>.
+
+
+
+
+
+
+
+	/*
+	 * @prefix math: <http://www.w3.org/2000/10/swap/math#>.
+	 */
+
 
 	//sum: The subject is a list of numbers. The object is calculated as the arithmentic sum of those numbers.
 
@@ -2453,7 +2472,9 @@ void build_in_rules()
 	);
 
 
-	//@prefix log: <http://www.w3.org/2000/10/swap/log#>.
+	/*
+	 * @prefix log: <http://www.w3.org/2000/10/swap/log#>.
+	 * */
 
 	//outputString	The subject is a key and the object is a string, where the strings are to be output in the order of the keys. See cwm --strings in cwm --help.
 
@@ -2487,9 +2508,6 @@ void build_in_rules()
 				}
 			}
 	);
-
-
-
 
 
 
@@ -2556,23 +2574,19 @@ void build_in_rules()
 			}
 	);
 
-	/*
-	 * 19:18 < HMC_a> stoopkid: in rdf there is a tricky caveat, all possible lists are assumed to exist
+/*
+
+
+
+
+19:18 < HMC_a> stoopkid: in rdf there is a tricky caveat, all possible lists are assumed to exist
 19:19 < HMC_a> so there are lists that begin with ?x regardless of the value of ?x or state pf the kb....
-19:20 < adam789654123> HMC_a: is it possible that we could work on trivial projects in Idris together?
 19:20 < HMC_a> this may seem strange, but it is indeed how cwm, euler, et al (racer, pwlim, jena, the lot) do work
 19:24 < HMC_a> stoopkid: well technically it is to match McCarthy's theory of arrays, but that is just minutia really
-19:24 < stoopkid> mmm
-19:24 < adam789654123> stoopkid: can we make plans to do this tomorrow?
-19:25 < adam789654123> stoopkid: or some time this week maybe?
-19:25 < adam789654123> maybe this weekend?
-19:26 < adam789654123> its just that im under the gun today
-19:27 < adam789654123> there's a method to my madness
-19:27 < stoopkid> this week for sure, and possibly tomorrow, but i'm gonna be going to a lecture about US imperialism in the Philippines in the afternoon/evening
 19:27 < HMC_a> stoopkid: suffice to say that this is a very old soundness-of-closure detail that survived through and was inherited into rdf
 19:28 < HMC_a> it is a tricky caveat conceptually, but actually very easy to implement for us :-)
 
-	 19:46 < HMC_a> stoopkid: it returns with ?l and ?x left as unbound vars!  It returns "?l rdf:first ?x"... in the "result graph" this is a top level statement, so the vars are considered as existential!  So it returns exactly a statement interpreted as "there exists a list l and a node x such that x is the rdf:first of l" which is ofc tautologicaly true regardless of what the kb state is. ;-)
+19:46 < HMC_a> stoopkid: it returns with ?l and ?x left as unbound vars!  It returns "?l rdf:first ?x"... in the "result graph" this is a top level statement, so the vars are considered as existential!  So it returns exactly a statement interpreted as "there exists a list l and a node x such that x is the rdf:first of l" which is ofc tautologicaly true regardless of what the kb state is. ;-)
 19:46 < HMC_a> our universal vars like ?foo are also bnodes, remember
 19:47 < HMC_a> all vars are bnodes, all bnodes are vars! XD
 19:47 < stoopkid> ok so it just returns the existential vars, it doesn't return the infinite solution set, gotcha
@@ -2593,30 +2607,7 @@ void build_in_rules()
 19:55 < HMC_a> we only take "outer" implications (not nested) in our inference chaining, and we determine quantifiers (universal or existential) by placement relative to these
 19:56 < HMC_a> someone could ofc write, in our logic, an interpretation that *does* consider things like nested implications, arbitrary quantifications, and a math:sum that will do factoring of objects to bind subject lists...
 19:57 < HMC_a> but we do none of these things in our "core" rewrite semantics. :-)
-
-
-	 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+*/
 }
 
 
@@ -2706,126 +2697,6 @@ Do not confuse with owl:sameAs.
 A cwm built-in logical operator, RDF graph level.
 */
 
-
-
-
-int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
-	//TODO: correctly, so that subqery proof trace not opaque?
-	int r = -1;
-	//rdfs:Resource(?x)
-	if ((t.p == A || t.p == rdftype) && t0 && t1 && t1->p == rdfsResource)
-		r = 1;
-	else if (t.p == rdfssubClassOf && t1->p == rdfsResource) {
-		r = 0;
-		// #{?C a rdfs:Class} => {?C rdfs:subClassOf rdfs:Resource}.
-		{
-			prover copy(*this);
-			auto ps = copy.askt(t0, rdftype, make(rdfsClass, 0, 0));
-			if (ps.size())
-				return 1;
-		}
-	}
-	else if (t.p == rdfssubClassOf) {
-		r = 0;
-		//#{?B rdfs:subClassOf ?C. ?A rdfs:subClassOf ?B} => {?A rdfs:subClassOf ?C}.
-		{
-			prover copy(*this);
-			auto bs = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
-			for (auto b: bs) {
-				prover copy(*this);
-				auto xs = copy.askt(t0, rdfssubClassOf, b);
-				if (xs.size())
-					return 1;
-			}
-		}
-		//#{?X a rdfs:Datatype} => {?X rdfs:subClassOf rdfs:Literal}.
-		if (t1->p == rdfsLiteral) {
-			{
-				prover copy(*this);
-				auto ps = copy.askt(t0, rdftype, make(rdfsDatatype, 0, 0));
-				if (ps.size())
-					return 1;
-			}
-		}
-
-	else if (t.p == A || t.p == rdftype) {
-		r = 0;
-		// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
-		{
-			prover copy(*this);
-			//TRACE(dout << "{?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}." << std::endl;)
-			auto ps = copy.askt(copy.tmpvar(), rdfsdomain, t1);
-			for (termid p: ps) {
-				dout << "\n\nYAYdomain!!\n\n" << std::endl;
-				auto xx = copy.askt(t0, p->p, copy.tmpvar());
-				if (xx.size() > 0) {
-					dout << "\n\nYay even more\n\n" << std::endl;
-					return 1;
-				}
-			}
-		}
-		//{?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
-		{
-			prover copy(*this);
-			auto ps = copy.askt(copy.tmpvar(), rdfsrange, make(t1->p, 0, 0));
-			dout << "yays:" << ps.size() << std::endl;
-			for (termid p: ps) {
-				dout << "p:" << p << std::endl;
-				dout << "\n\nYAYrange!!\n\n" << std::endl;
-				auto xx = copy.askt(copy.tmpvar(), p->p, make(t0->p, 0, 0));
-				if (xx.size() > 0) {
-					dout << "\n\nYay even more\n\n" << std::endl;
-					return 1;
-				}
-			}
-		}
-		//#{?A rdfs:subClassOf ?B. ?S a ?A} => {?S a ?B}.
-		{
-			prover copy(*this);
-			auto as = copy.askt(copy.tmpvar(), rdfssubClassOf, t1);
-			for (termid a: as) {
-				auto xx = copy.askt(t0, rdftype, a);
-				if (xx.size() > 0) {
-					dout << "\n\nYay even more\n\n" << std::endl;
-					return 1;
-				}
-			}
-		}
-
-
-	}
-	else if (t.p == rdfssubPropertyOf) {
-		r = 0;
-		//#{?X a rdfs:ContainerMembershipProperty} => {?X rdfs:subPropertyOf rdfs:member}.
-		if (t1 && t1->p == rdfsmember) {
-			prover copy(*this);
-			auto ps = copy.askt(copy.tmpvar(), rdftype, make(rdfsContainerMembershipProperty, 0, 0));
-			if (ps.size())
-				return 1;
-		}
-		//#{?Q rdfs:subPropertyOf ?R. ?P rdfs:subPropertyOf ?Q} => {?P rdfs:subPropertyOf ?R}.
-		{
-			prover copy(*this);
-			auto qs = copy.askt(copy.tmpvar(), rdfssubPropertyOf, t1);
-			for (termid q: qs) {
-				auto ps = copy.askt(t0, rdfssubPropertyOf, q);
-				if (ps.size())
-					return 1;
-			}
-		}
-	}
-	//#{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
-	{
-		prover copy(*this);
-		auto ps = copy.askt(copy.tmpvar(), rdfssubPropertyOf, make(t.p, 0, 0));
-		for (termid p: ps) {
-			auto xs = copy.askt(t0, p->p, t1);
-			if (ps.size())
-				return 1;
-		}
-	}
-	return r;
-}
 
 	///std::sort(myList.begin(), myList.end(), [](int x, int y){ return std::abs(x) < std::abs(y); });
 	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
