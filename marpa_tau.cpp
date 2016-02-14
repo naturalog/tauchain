@@ -994,7 +994,8 @@ public:
 			prefixes[prefix] = expluri;
 			TRACE(dout << "@prefix\"" << p_s << "\": \"" << uri_s << "\"" << std::endl;)
 		}
-		else throw std::runtime_error("not supported");//todo:make an own error class and throw it here and catch it outside and return a parsing FAIL, dont die
+		else throw std::runtime_error("not supported: " + dec);
+		//todo:make an own error class and throw it here and catch it outside and return a parsing FAIL, dont die
 		//else if(*dict[a0].value == "@keywords")
 	}
 

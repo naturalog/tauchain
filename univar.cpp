@@ -938,8 +938,6 @@ void compile_pred(nodeid pr)
 //std::vector<pred_t> in the builtins table. Return unless the
 //builtin pred is 'rdftype'.
 
-// What's up with that return?
-
 //If it was rdftype or is not in the builtins table, then check to
 //see if it's in pred_index. If it's not, then return, otherwise,
 //get the list of rules in which this node is the predicate for the
@@ -958,8 +956,6 @@ void compile_pred(nodeid pr)
 	if (preds.find(pr) != preds.end())
 		return;
 
-	add_rule(pr, make_wildcard_rule(pr));
-
 	if (builtins.find(pr) != builtins.end()) {
 		for (auto b: builtins[pr]) {
 			TRACE(dout << "builtin: " << dict[pr] << endl;)
@@ -974,6 +970,10 @@ void compile_pred(nodeid pr)
 		for (auto r: rules.at(pr))
 			add_rule(pr, compile_rule(r));
 	}
+	
+	add_rule(pr, make_wildcard_rule(pr));
+
+
 }
 
 
@@ -2147,47 +2147,53 @@ void build_in_facts()
 	});
 }
 
-//{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
-//should recurse?
+//{?P1 @is rdfs:subPropertyOf ?P2. ?S ?P1 ?O} => {?S ?P2 ?O}.
 rule_t make_wildcard_rule(nodeid pr)
 {
 	EEE;
 
-	Thing *p = nullptr;
-	Thing *r = nullptr;
-	pred_t p1, p2;
-
-	return [entry,p,p1,p2,pr](Thing *s, Thing *o) mutable {
+	Thing p1 = create_unbound();
+	Thing p2 = create_node(pr);
+	pred_t sub, p1wildcard, p1lambda;
+	nodeid p1p = 0;
+	
+	return [entry,p1,p1p,p2,sub,p1wildcard,p1lambda](Thing *s, Thing *o) mutable {
 
 		switch(entry){
 		case 0:
-			r =
-			// ?R in the above formula
-			*r = create_node(pr);
-			// ?P
-			*p = create_unbound(); 
+
 			//quite sure its there since its a rdf builtin
 			sub = ITEM(preds,rdfssubPropertyOf); 
-		case 1:
-			while (sub(p, r)) // for each subPropertyOf triple
+			while (sub(&p1, &p2))
 			{
-				ASSERT(is_node(p));
-				nodeid pp = get_term(p)->p;
-				if (preds.find(pp) != preds.end())
+				ASSERT(is_node(p1));
+				p1p = get_node(p1);
+				if (preds.find(p1p) != preds.end())
 				{
-					p2 = ITEM(preds, pp);
-					while(p2(s, o)
+					p1lambda = ITEM(preds, p1p);
+					while(p1lambda(s, o))
 					{
-						entry = LAST;
+						entry = 2;
 						return true;
-		case_LAST:;
+		case 2:;
 					}
 				}
+				//recurse
+				ASSERT(p1p);
+				p1wildcard = make_wildcard_rule(p1p);
+				while(p1wildcard(s, o))
+				{
+					entry = LAST;
+					return true;
+		case_LAST:;
+				}
 			}
+			ASSERT(is_unbound(p1));
+			
 			return false;
 			END;
 		}
-	});
+	};
 }
 	
 
@@ -2233,7 +2239,6 @@ void build_in_rules()
 	//Thing oo;
 	Thing *r = nullptr;
 	
-	//so err these would be on stack so cant return them i think
 	Thing a,b;
 	a = create_unbound();
 	b = create_unbound();
@@ -2247,9 +2252,6 @@ void build_in_rules()
 
 
 
-
-	//hmc said this, alright i'll start a couple documents where we
-	//can start breaking down the details of these things
 
 /*
  * RDF - http://www.w3.org/TR/lbase/#using - where the ?y(?x) thing comes from
