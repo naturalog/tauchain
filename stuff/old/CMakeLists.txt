@@ -1,59 +1,6 @@
-MESSAGE( STATUS "note: you dont have to use cmake, our hand-written Makefile more-or-less works" )
-MESSAGE( STATUS "" )
-
-#cmake_minimum_required(VERSION 3.0)
-cmake_minimum_required(VERSION 2.8.7)
-
-
-project(tauchain)
-
-
+ffff
 execute_process(COMMAND "sh -c ./perms.py > perms.cpp")
 
-
-SET (CMAKE_C_COMPILER   "/usr/bin/clang")
-SET (CMAKE_CXX_COMPILER "/usr/bin/clang++")
-SET (CMAKE_AR      "/usr/bin/llvm-ar")
-SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
-SET (CMAKE_NM      "/usr/bin/llvm-nm")
-SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
-SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
-
-
-
-find_package(Boost REQUIRED regex)
-
-
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -ggdb -g")
-set(COMMON_FLAGS "-I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS} ")
-set(ASAN " -fsanitize=address -fsanitize=integer -fsanitize=undefined -fsanitize=unsigned-integer-overflow")
-
-
-set(SOURCE_FILES
-    cli.cpp
-    cli.h
-    jsonld.cpp
-    jsonld.h
-    json_spirit.h
-    misc.cpp
-    misc.h
-    nquads.cpp
-    unifiers.cpp
-    json_object.cpp
-    json_object.h
-    prover.cpp
-    prover.h
-    rdf.cpp
-    rdf.h
-    strings.h
-    tau.cpp
-    univar.cpp
-    univar.h
-)
-
-set(MARPA_FILES ${SOURCE_FILES} marpa_tau.cpp)
-set(MARPA_DIST ${CMAKE_SOURCE_DIR}/libmarpa/dist/)
 
 
 foreach(i [ "oneword-racer-asan" "-Doneword -O3 ${ASAN} " ] )

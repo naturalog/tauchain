@@ -1,4 +1,12 @@
 
+outputting results with lists...for testing...yes/how? err the prob is just 
+in doing the graph isomorphism, maybe we could use rdflib's once i integrate
+tau into it
+where does graph isomorphism problem come up? running tests
+i guess i need to look into that more ok
+
+
+
 theres a segfault in pstr, the comparison function is getting garbage
 
 
@@ -17,7 +25,7 @@ implement escape sequences in string literals?
 
 rdf lists:
 data structures should be almost done, just redo the first/rest/in/last builtins
-
+in and last should be definable in terms of rules
 
 rdf semantics:
 fix the wildcard fucker, the rest should be straightforward, just messy and confusing
@@ -25,7 +33,7 @@ fix the wildcard fucker, the rest should be straightforward, just messy and conf
 
 
 
-random builtins?
+random  stdlib builtins?
 
 
 

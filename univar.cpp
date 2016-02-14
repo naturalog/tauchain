@@ -359,15 +359,14 @@ enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
 //and these are the specialized join coros
 typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 
-map<nodeid, vector<pred_t>> builtins;
+map<nodeid, vector<rule_t>> builtins;
 map<string, string> log_outputString;
 
-typedef function<pred_t(nodeid)> wildcard_pred_t;
-wildcard_pred_t wildcard_pred;
-
-typedef function<bool(Thing*,nodeid, Thing*)> wildcard_t;
-wildcard_t wildcard;
-
+//typedef function<pred_t(nodeid)> wildcard_rule_t;
+//wildcard_pred_t wildcard_pred;
+//typedef function<bool(Thing*,nodeid, Thing*)> wildcard_t;
+//wildcard_t wildcard;
+rule_t make_wildcard_rule(nodeid p);
 
 //these are filled in from perms.cpp
 Perms perms;
@@ -955,8 +954,11 @@ void compile_pred(nodeid pr)
 	FUN;
 	TRACE(dout << dict[pr] << endl;)
 
+	//we already did it?
 	if (preds.find(pr) != preds.end())
 		return;
+
+	add_rule(pr, make_wildcard_rule(pr));
 
 	if (builtins.find(pr) != builtins.end()) {
 		for (auto b: builtins[pr]) {
@@ -981,7 +983,7 @@ void check_pred(nodeid pr)
 	FUN;
 	if (rules.find(pr) == rules.end() && builtins.find(pr) == builtins.end()) {
 		dout << "'" << dict[pr] << "' not found." << endl;
-		preds[pr] = GEN_FAIL_WITH_ARGS;//wildcard_pred(pr);//
+		preds[pr] = make_wildcard_rule(pr);// GEN_FAIL_WITH_ARGS;//wildcard_pred(pr);//
 	}
  }
 
@@ -2146,6 +2148,50 @@ void build_in_facts()
 	});
 }
 
+//{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
+//should recurse?
+rule_t make_wildcard_rule(nodeid pr)
+{
+	EEE;
+
+	Thing *p = nullptr;
+	Thing *r = nullptr;
+	pred_t p1, p2;
+
+	return [entry,p,p1,p2,pr](Thing *s, Thing *o) mutable {
+
+		switch(entry){
+		case 0:
+			r =
+			// ?R in the above formula
+			*r = create_node(pr);
+			// ?P
+			*p = create_unbound(); 
+			//quite sure its there since its a rdf builtin
+			sub = ITEM(preds,rdfssubPropertyOf); 
+		case 1:
+			while (sub(p, r)) // for each subPropertyOf triple
+			{
+				ASSERT(is_node(p));
+				nodeid pp = get_term(p)->p;
+				if (preds.find(pp) != preds.end())
+				{
+					p2 = ITEM(preds, pp);
+					while(p2(s, o)
+					{
+						entry = LAST;
+						return true;
+		case_LAST:;
+					}
+				}
+			}
+			return false;
+			END;
+		}
+	});
+}
+	
+
 
 void build_in_rules()
 {//under construction
@@ -2155,9 +2201,12 @@ void build_in_rules()
 	Thing ss;
 	//Thing oo;
 	Thing *r = nullptr;
+	
+	//so err these would be on stack so cant return them i think
 	Thing a,b;
 	a = create_unbound();
 	b = create_unbound();
+	
 	/*ep_t *ep = new ep_t();
 	eps.push_back(ep)*/
 	pred_t p1, p2;
@@ -2168,6 +2217,8 @@ void build_in_rules()
 
 
 
+	//hmc said this, alright i'll start a couple documents where we
+	//can start breaking down the details of these things
 	//http://www.w3.org/TR/lbase/#using
 
 
@@ -2304,54 +2355,6 @@ void build_in_rules()
 
 
 
-/*
-	//{?P @has rdfs:subPropertyOf ?R. ?S ?P ?O} => {?S ?R ?O}.
-	wildcard = [p1,p2](Thing *s, nodeid r, Thing *o) mutable {
-
-		switch(entry){
-		case 0:
-			p1 = ITEM(preds,rdfssubPropertyOf);
-			Thing r = create_unbound();
-			while (p1(p, r))
-			{
-				ASSERT(is_node(p));
-				pp = get_term(p)->p;
-				if (preds.find(pp) != preds.end())
-				{
-					p2 = ITEM(preds, pp);
-					Thing o = create_unbound();
-					while(p2(s, o)
-					{
-						entry = LAST;
-						return true;
-		case_LAST:;
-					}
-				}
-			}
-			return false;
-			END;
-		}
-
-	});
-	wildcard_pred = [p1](nodeid r){
-		EEE;
-		return [entry, r, p1](Thing *s, Thing *o) mutable {
-			//just iterate over wildcard
-			switch (entry) {
-				case 0:
-
-					p1 = wildcard;
-					while (p1(s, r, o)) {
-						entry = LAST;
-						return true;
-						case_LAST:;
-					}
-
-					END;
-			}
-		};
-
- */
 
 
 /*
@@ -2485,83 +2488,6 @@ void build_in_rules()
 			}
 	);
 
-	/*
-	//@prefix list: <http://www.w3.org/2000/10/swap/list#>.
-	//list last item
-	bu = "http://www.w3.org/2000/10/swap/list#last";
-	bui = dict.set(mkiri(pstr(bu)));
-	builtins[bui].push_back(
-			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
-				switch (entry) {
-					case 0: {
-						auto s = getValue(s_);
-						Thing s2 = *s;
-						if (!is_list(s2)) {
-							dout << bu << ": " << str(s) << " not a list" << endl;
-							DONE;
-						}
-
-						auto size = get_size(s2);
-						if (size == 0) DONE;
-						ouc = unify(s + size, o_);
-					}
-						while (ouc()) {
-							entry = LAST;
-							return true;
-							case_LAST:;
-						}
-						END;
-				}
-			}
-	);
-	 */
-
-	/*
-	//nope
-	//item in list
-	bu = "http://www.w3.org/2000/10/swap/list#in";
-	bui = dict.set(mkiri(pstr(bu)));
-	builtins[bui].push_back(
-			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
-				switch (entry) {
-					case 0: {
-						auto s = getValue(s_);
-						Thing s2 = *s;
-						if (!is_node(s2)) {
-							dout << bu << ": " << str(s) << " not a node" << endl;
-							DONE;
-						}
-						auto t = get_term(s2);
-
-						auto o = getValue(o_);
-						Thing o2 = *o;
-						if (!is_list(o2)) {
-							dout << bu << ": " << str(o) << " not a list" << endl;
-							DONE;
-						}
-
-						const auto size = get_size(o2);
-						//?bool found = false;
-
-						for (size_t i = 0; i < size; i++) {
-							Thing item = *(o + 1 + i);
-							if (is_node(item)) {
-								if (t == get_term(item)) {
-									entry = LAST;
-									return true;
-								}
-							}
-						}
-					}
-					case_LAST:;
-						END;
-				}
-			}
-	);
-	 */
-
-
-
 
 
 
@@ -2613,6 +2539,7 @@ void build_in_rules()
 						else if(is_list_bnode(*s))
 							r = s+2;
 						else {
+	
 							entry = 66;
 							return false;
 						}
@@ -2905,3 +2832,83 @@ int prover::rdfs_builtin(const term& t, const term *t0, const term *t1) {
 
 
 #endif
+
+
+
+	/*
+	//@prefix list: <http://www.w3.org/2000/10/swap/list#>.
+	//list last item
+	bu = "http://www.w3.org/2000/10/swap/list#last";
+	bui = dict.set(mkiri(pstr(bu)));
+	builtins[bui].push_back(
+			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0: {
+						auto s = getValue(s_);
+						Thing s2 = *s;
+						if (!is_list(s2)) {
+							dout << bu << ": " << str(s) << " not a list" << endl;
+							DONE;
+						}
+
+						auto size = get_size(s2);
+						if (size == 0) DONE;
+						ouc = unify(s + size, o_);
+					}
+						while (ouc()) {
+							entry = LAST;
+							return true;
+							case_LAST:;
+						}
+						END;
+				}
+			}
+	);
+	 */
+
+	/*
+	//nope
+	//item in list
+	bu = "http://www.w3.org/2000/10/swap/list#in";
+	bui = dict.set(mkiri(pstr(bu)));
+	builtins[bui].push_back(
+			[bu, entry, ouc](Thing *s_, Thing *o_) mutable {
+				switch (entry) {
+					case 0: {
+						auto s = getValue(s_);
+						Thing s2 = *s;
+						if (!is_node(s2)) {
+							dout << bu << ": " << str(s) << " not a node" << endl;
+							DONE;
+						}
+						auto t = get_term(s2);
+
+						auto o = getValue(o_);
+						Thing o2 = *o;
+						if (!is_list(o2)) {
+							dout << bu << ": " << str(o) << " not a list" << endl;
+							DONE;
+						}
+
+						const auto size = get_size(o2);
+						//?bool found = false;
+
+						for (size_t i = 0; i < size; i++) {
+							Thing item = *(o + 1 + i);
+							if (is_node(item)) {
+								if (t == get_term(item)) {
+									entry = LAST;
+									return true;
+								}
+							}
+						}
+					}
+					case_LAST:;
+						END;
+				}
+			}
+	);
+	 */
+
+
+

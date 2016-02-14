@@ -31,8 +31,8 @@ tau: $(OBJECTS)
 %.o: %.cpp `${CXX} -std=c++11 $(CXXFLAGS) -M %.cpp`
 
 
-univar.txt: univar.txt.cpp
-	clang++ $(ASAN) -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O3   univar.txt.cpp
+how: stuff/how-lambdas-work.cpp
+	clang++ $(ASAN) -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O3   stuff/how-lambdas-work.cpp
 
 
 
