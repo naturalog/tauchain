@@ -43,7 +43,13 @@ for w in PP:
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(""" + param(w, "w") + ", " + param(x, "x") + """)) {
 						TRACE(dout << "MATCH A." << endl;)

@@ -16,3 +16,13 @@ apt-get install libboost-regex-dev
 C++ Compiler has to support C++11, gcc-4.9 and clang++-3.6 are known to work.  
 
 Building: run make. You can also use cmake, but the hand-written Makefile is the primary method.  
+
+
+
+similar projects:
+https://github.com/odipar/spread/
+https://github.com/unisonweb/unison
+http://ceptr.org/
+and ofc http://ethereum.org/
+
+

@@ -148,7 +148,7 @@ public:
 #define is_node(thing)		(get_type(thing) == NODE)
 #define types_differ(x, y) (x.type != y.type)
 #define sizes_differ(x, y) (x.size != y.size)
-#define are_equal(x, y) (x.type == y.type && x.size == y.size)
+#define are_equal(x, y) ((x).type == (y).type && (x).size == (y).size)
 
 inline void make_this_bound(Thing *me, Thing *val)
 {
@@ -362,10 +362,6 @@ typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
 map<nodeid, vector<rule_t>> builtins;
 map<string, string> log_outputString;
 
-//typedef function<pred_t(nodeid)> wildcard_rule_t;
-//wildcard_pred_t wildcard_pred;
-//typedef function<bool(Thing*,nodeid, Thing*)> wildcard_t;
-//wildcard_t wildcard;
 rule_t make_wildcard_rule(nodeid p);
 
 //these are filled in from perms.cpp
@@ -962,7 +958,7 @@ void compile_pred(nodeid pr)
 			add_rule(pr, b);
 		}
 		//lets not shadow rdftype by builtins for now
-		if (pr != rdftype)
+		if (pr != rdftype && pr != rdfssubPropertyOf)
 			return;
 	}
 
@@ -1674,6 +1670,13 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 
 
 
+ep_t * new_ep()
+{
+	ep_t *ep = new ep_t();
+	eps_garbage.push_back(ep);
+	return ep;
+}
+
 
 rule_t compile_rule(Rule r)
 {
@@ -1709,14 +1712,14 @@ rule_t compile_rule(Rule r)
 	join_t j;
 	coro suc, ouc;
 	TRC(int call = 0;)
-	ep_t *ep = new ep_t();//ep is one per rule just as locals_template and consts
-	eps_garbage.push_back(ep);
-
+	ep_t *ep = new_ep();
+	//ep is one per rule just as locals_template and consts
+	
 	//where to memcpy locals from and what length
 	auto locals_data = locals_template.data();
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
 	Thing * locals=0; //to be malloced inside the lambda
-	const bool has_body = r.body && r.body->size(); // or is it a fact (without any conditions)?
+	const bool has_body = r.body && r.body->size(); // or is it a fact? (a rule without any conditions)
 
 	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc("rule");
@@ -2150,24 +2153,43 @@ void build_in_facts()
 //{?P1 @is rdfs:subPropertyOf ?P2. ?S ?P1 ?O} => {?S ?P2 ?O}.
 rule_t make_wildcard_rule(nodeid pr)
 {
+	FUN;
+
 	EEE;
+
+	MSG("..")
 
 	Thing p1 = create_unbound();
 	Thing p2 = create_node(pr);
 	pred_t sub, p1wildcard, p1lambda;
 	nodeid p1p = 0;
 	
-	return [entry,p1,p1p,p2,sub,p1wildcard,p1lambda](Thing *s, Thing *o) mutable {
+	ep_t *ep = new_ep();
+	DBG(Thing old[2]);
+	
+	return [entry,ep,DBGC(old) p1,p1p,p2,sub,p1wildcard,p1lambda](Thing *s, Thing *o) mutable {
+		setproc("wildcard");
+		MSG(entry);
 
 		switch(entry){
 		case 0:
+
+			DBG(old[0] = *s);
+			
+			if (find_ep(ep, s, o))
+				DONE;
+			ep->push_back(thingthingpair(s, o));
 
 			//quite sure its there since its a rdf builtin
 			sub = ITEM(preds,rdfssubPropertyOf); 
 			while (sub(&p1, &p2))
 			{
-				ASSERT(is_node(p1));
-				p1p = get_node(p1);
+				ASSERT(is_bound(p1));
+				{
+					Thing *p1v = get_thing(p1);
+					ASSERT(is_node(*p1v));
+					p1p = get_node(*p1v);
+				}
 				if (preds.find(p1p) != preds.end())
 				{
 					p1lambda = ITEM(preds, p1p);
@@ -2190,6 +2212,11 @@ rule_t make_wildcard_rule(nodeid pr)
 			}
 			ASSERT(is_unbound(p1));
 			
+			ASSERT(are_equal(old[0], *s));
+			
+			ASSERT(ep->size());
+			ep->pop_back();
+						
 			return false;
 			END;
 		}
