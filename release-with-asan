@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+./perms.py  > perms.cpp
+env CC="clang++ -Xclang -fcolor-diagnostics " DEBUG="" make -e "$@"  2>&1 
