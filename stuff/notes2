@@ -1,37 +1,4 @@
 
-how stuff works:
-outdated?
-
-	auto T = atom(op->make(mkiri(pstr("T")), 0,0));
-	auto F = atom(op->make(mkiri(pstr("F")), 0,0));
-
-	auto tnf = fact(T, F);
-	auto fnt = fact(F, T);
-	auto tnf2 = fact(T, F);
-	auto fnt2 = fact(F, T);
-
-	auto s1 = seq(tnf,fnt);
-
-	Var * x = new Var();
-	Var * xx = new Var();
-	Var * y = new Var();
-	Var * yy = new Var();
-
-	while(s1(x, xx)) {
-		auto s2 = seq(tnf2, fnt2);
-		while (s2(y, yy)) {
-			dout << x->str() << ", " << y->str() << endl;
-		}
-	}
-	dout << "======================================================================================" << endl;
-
-
-
-
-
-*/
-/*
-
 i'm thinking something like
 
 struct fact{
@@ -1028,4 +995,7 @@ http://www.crash-safe.org/docs/DMHC_TRETS2015.html
 
 
 
-#endif
+http://infoscience.epfl.ch/record/64410/files/techlists.pdf
+https://docs.racket-lang.org/reference/pairs.html
+
+
