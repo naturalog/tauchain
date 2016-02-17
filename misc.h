@@ -29,14 +29,14 @@ extern bool in_silent_part;
   if ((_indent + (int)proc.size() < level) && !(proc.size() > 0 && silence.find(proc.back()) != silence.end()) ) \
   { \
   	in_silent_part = false; \
-  	dout << KYEL << indent() << KNRM; \
+  	dout << indent() ; \
   	x; \
   } \
   else \
   { \
   	if(!in_silent_part) \
   	{ \
-  		dout << "..." << endl; \
+  		dout << "( > " << level << " )" << endl; \
 	  	in_silent_part = true; \
 	} \
   }

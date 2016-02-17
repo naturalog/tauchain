@@ -15,6 +15,8 @@
 
 using namespace std;
 
+#define has(x,y) ((x).find(y) == (x).end())
+
 typedef unsigned char byte;
 typedef size_t pos_t;
 
@@ -33,7 +35,7 @@ unsigned long kbdbg_part_max;
 extern int result_limit ;
 
 #define EEE char entry = 0
-#define TRCEEE TRACE(dout << "entry = " << (int)entry << endl)
+#define TRCEEE TRACE(dout << "entry:" << (int)entry << endl)
 const char LAST = 33; // last case statement (in release mode), not last entry, the coro might still be invoked with 33 several itmes before returning false
 
 #ifdef DEBUG
@@ -957,9 +959,9 @@ void compile_pred(nodeid pr)
 			TRACE(dout << "builtin: " << dict[pr] << endl;)
 			add_rule(pr, b);
 		}
-		//lets not shadow rdftype by builtins for now
+		/*//lets not shadow rdftype by builtins for now
 		if (pr != rdftype && pr != rdfssubPropertyOf)
-			return;
+			return;*/
 	}
 
 	if (rules.find(pr) != rules.end()) {
@@ -2169,7 +2171,8 @@ rule_t make_wildcard_rule(nodeid pr)
 	
 	return [entry,ep,DBGC(old) p1,p1p,p2,sub,p1wildcard,p1lambda](Thing *s, Thing *o) mutable {
 		setproc("wildcard");
-		MSG(entry);
+		MSG("entry:"<<(int)entry);
+
 
 		switch(entry){
 		case 0:
@@ -2353,39 +2356,52 @@ void build_in_rules()
 
 
 	//todo rdfs:Class(?y) implies (?y(?x) iff rdf:type(?x ?y))
-	//...
+	//...nothing to implement?
 
 
 
 
-	//rdfs:domain(?x ?y) implies ( ?x(?u ?v)) implies ?y(?u) )
-	/*builtins[rdfsType].push_back([entry,p1,p2](Thing *s, Thing *c) mutable {
+	// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	// rdfs:domain(?x ?y) implies ( ?x(?u ?v)) implies ?y(?u) )
+	{
+		Thing o = create_unbound();
+		Thing p = create_unbound();
+
+	builtins[rdftype].push_back([entry,p,p1,p2,o](Thing *s, Thing *c) mutable {
+		setproc("domainImpliesType");
+		TRCEEE;
 		switch(entry){
 		case 0:
 			p1 = ITEM(preds,rdfsdomain);
-			Thing p = create_unbound();
 			while (p1(&p, c))
 			{
-				ASSERT(is_node(p));
-				pp = get_term(p)->p;
-				if (preds.find(pp) != preds.end())
 				{
+					ASSERT(is_bound(p));
+					Thing *x = get_thing(p);
+					ASSERT(is_node(*x));
+					nodeid pp = get_node(*x);
+					if (!has(preds, pp))
+						preds[pp] = make_wildcard_rule(pp);
 					p2 = ITEM(preds, pp);
-					Thing o = create_unbound();
-					while(p2(s, o)
-					{
-						entry = LAST;
-						return true;
-		case_LAST:;
-					}
 				}
+				ASSERT(is_unbound(o));
+				while(p2(s, &o))
+				{
+					entry = LAST;
+					return true;
+		case_LAST:;
+				}
+				ASSERT(is_unbound(o));
 			}
 			return false;
 			END;
 		}
 	});
+	}
 
-	//rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
+/*
+	// {?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+	// rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
 	builtins[rdfsRange].push_back([entry](Thing *s_, Thing *o_) mutable {
 		switch(entry){
 		case 0:

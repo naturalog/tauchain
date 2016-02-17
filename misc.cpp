@@ -399,13 +399,13 @@ string indent() {
 	if (!_indent) return string();
 	std::stringstream ss;
 //	size_t sz = proc.size();
+	ss << KYEL << "(";
 	for (auto it = proc.rbegin(); it != proc.rend(); ++it) {
-		string str = "(";
-		str += *it;
-		str += ") ";
-		ss << std::setw(8) << str;
+		ss << *it;
+		ss << KYEL << ":" << KNRM;
 	}
-	ss << "    " << std::setw(_indent * 2);
+	ss << KRED << "::" << KNRM;
+	//ss << "    " << std::setw(_indent * 2);
 	return ss.str();
 }
 
