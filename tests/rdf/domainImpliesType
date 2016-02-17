@@ -11,7 +11,7 @@ fin.
 query
 
 :banana @a :food .
-:gravel @a :food .
+#:gravel @a :food .
 
 fin.
 

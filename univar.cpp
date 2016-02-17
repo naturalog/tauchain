@@ -15,7 +15,7 @@
 
 using namespace std;
 
-#define has(x,y) ((x).find(y) == (x).end())
+#define has(x,y) ((x).find(y) != (x).end())
 
 typedef unsigned char byte;
 typedef size_t pos_t;
