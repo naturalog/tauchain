@@ -2101,6 +2101,10 @@ void add_facts(vector<vector<nodeid>> facts)
 
 
 
+/*
+ * RDF - http://www.w3.org/TR/lbase/#using - where the ?y(?x) thing comes from
+ */
+
 
 void build_in_facts()
 {
@@ -2152,13 +2156,12 @@ void build_in_facts()
 	});
 }
 
+
 //{?P1 @is rdfs:subPropertyOf ?P2. ?S ?P1 ?O} => {?S ?P2 ?O}.
 rule_t make_wildcard_rule(nodeid pr)
 {
 	FUN;
-
 	EEE;
-
 	MSG("..")
 
 	Thing p1 = create_unbound();
@@ -2172,7 +2175,6 @@ rule_t make_wildcard_rule(nodeid pr)
 	return [entry,ep,DBGC(old) p1,p1p,p2,sub,p1wildcard,p1lambda](Thing *s, Thing *o) mutable {
 		setproc("wildcard");
 		MSG("entry:"<<(int)entry);
-
 
 		switch(entry){
 		case 0:
@@ -2214,12 +2216,9 @@ rule_t make_wildcard_rule(nodeid pr)
 				}
 			}
 			ASSERT(is_unbound(p1));
-			
 			ASSERT(are_equal(old[0], *s));
-			
 			ASSERT(ep->size());
 			ep->pop_back();
-						
 			return false;
 			END;
 		}
@@ -2228,41 +2227,14 @@ rule_t make_wildcard_rule(nodeid pr)
 	
 
 
-/*
-<HMC_a> koo7: for the moment I'm less concerned about getting rdfs going and more interested in facilities like log:outputString and math:sum and etc
-<HMC_a> really even just those two would be enough to get some useful results out of the fuzzer, lol :-)
-<koo7> HMC_a, i cant get too far without you being specific/providing some specs
-<HMC_a> well
-<koo7> so far all your input was "like in master"
-<HMC_a> http://www.w3.org/2000/10/swap/doc/CwmBuiltins <-- "not quite specs" XD
-<koo7> Dump :s to stdout ordered by :k whereever { :k log:outputString :s }
-<HMC_a> so math:* and string:* should be pretty straightforward, list:* nearly so...
-<koo7> so this means it waits until the query is done?
-<HMC_a> yes, it caches up the output strings until the end
-<koo7> ok
-<koo7> as on list, list:append seems a misnomer
-<HMC_a> then sorts them by subject
-<HMC_a> then prints
-<HMC_a> koo7: you mean it is more aptly called "concat"? ;-)
-<koo7> yeah something like that
-<HMC_a> I don't think you're the first to mention it, hehe
-* HMC_a shrugs
-<koo7> alright
-<koo7> its fully namespaced, after all
-<nilli> I used the link koo7 gave me and changed the name but its going on #zennet. anyway never mind
-<nilli> ill just sit in the dark
-<HMC_a> sure, and I'm not against doubling up on some builtins later... maybe in the end we have list:append, tau:append, and tau:concat, with tau:append taking just a subject of a pair list of a list and a literal and doing an actual "append" and the other two both being "concat"...
-<HMC_a> but we want list:append to be there and to match cwm, in any case, so that any existing logic "out there" that calls upon cwm's list:append will do the right thing
-<HMC_a> ;-)
-<koo7> cool
- */
-
 
 
 //under construction
 void build_in_rules()
 {
 	EEE;
+
+	/*some commonly used vars*/
 	coro suc, suc2, ouc;
 	Thing *s = nullptr, *o = nullptr;
 	Thing ss;
@@ -2281,11 +2253,6 @@ void build_in_rules()
 	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 
 
-
-
-/*
- * RDF - http://www.w3.org/TR/lbase/#using - where the ?y(?x) thing comes from
- */
 
 
 
@@ -2399,33 +2366,111 @@ void build_in_rules()
 	});
 	}
 
-/*
 	// {?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
 	// rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
-	builtins[rdfsRange].push_back([entry](Thing *s_, Thing *o_) mutable {
-		switch(entry){
-		case 0:
-			for(auto x : rangeItems){
-				ouc = unify(o,x.first);
-				while(ouc()){
-					for(auto y : x.second){
-						suc = unify(s,y);
-						while(suc()){
-							entry = 1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/*
+19:18 < HMC_a> stoopkid: in rdf there is a tricky caveat, all possible lists are assumed to exist
+19:19 < HMC_a> so there are lists that begin with ?x regardless of the value of ?x or state pf the kb....
+19:20 < HMC_a> this may seem strange, but it is indeed how cwm, euler, et al (racer, pwlim, jena, the lot) do work
+19:24 < HMC_a> stoopkid: well technically it is to match McCarthy's theory of arrays, but that is just minutia really
+19:27 < HMC_a> stoopkid: suffice to say that this is a very old soundness-of-closure detail that survived through and was inherited into rdf
+19:28 < HMC_a> it is a tricky caveat conceptually, but actually very easy to implement for us :-)
+19:46 < HMC_a> stoopkid: it returns with ?l and ?x left as unbound vars!  It returns "?l rdf:first ?x"... in the "result graph" this is a top level statement, so the vars are considered as existential!  So it returns exactly a statement interpreted as "there exists a list l and a node x such that x is the rdf:first of l" which is ofc tautologicaly true regardless of what the kb state is. ;-)
+19:46 < HMC_a> our universal vars like ?foo are also bnodes, remember
+19:47 < HMC_a> all vars are bnodes, all bnodes are vars! XD
+19:47 < stoopkid> ok so it just returns the existential vars, it doesn't return the infinite solution set, gotcha
+19:48 < HMC_a> the ones we write like ?foo are universals in subformulae and existential at top level (we use "quantifier alternation" instead of tricky @forall type crap and skolem rewrites and such... mostly just "because we can and it is easier"... ("we can" because we are ordinal and do not allow nesting of formulae at the term rewrite))
+19:48 < HMC_a> so nothing rszeno said was wrong wrt more general reasoner semantics, we are just playing on our constraints there wrt skolem et al
+19:49 < HMC_a> and "skipping around" some of the more complex semantic details that would occur if we cared for more general formula interpretation :-)
+19:49 < HMC_a> anyway
+19:51 < stoopkid> now, i'm still iffy on calling vars universals, it seems to me that they are always existential and that it's the {}=>{} that makes for universal quantification
+19:51 < HMC_a> the ones we write like _:foo are existentials, and similarly ones like ?foo at a top level in a syntactic unit are considered existential as a sort of special case, and there are some other "tricky" special cases that "sneak in" like variables that appear in a head but not a body end up as something like "doesn't matter which" quantifier in a sense, but again these are all details of our particular reasoner, not of more general rdf.... HEH
+19:51 < HMC_a> 19:56 < stoopkid> now, i'm still iffy on calling vars universals, it seems to me that they are always existential and that it's the {}=>{} that makes for universal quantification
+19:51 < HMC_a> right, you're not exactly wrong at all...
+19:52 < HMC_a> how you are looking at it is sound for our reasoner
+19:52 < HMC_a> but is not sound for rdf reasoning in general! hehe
+19:53 < HMC_a> in more general rdf reasoning you might run into statements that are structured arbitrarily, where the corresponding predicate fol expression would have arbitrary implication and quantifier placement
+19:53 < HMC_a> we do *not* allow arbitrary implication structures *or* arbitrary quantifier placement!! hehe
+19:54 < stoopkid> i see
+19:54 < HMC_a> well, more accurately, we allow them syntactically but do not reason over them directly in our semantics! :-)
+19:55 < HMC_a> we only take "outer" implications (not nested) in our inference chaining, and we determine quantifiers (universal or existential) by placement relative to these
+19:56 < HMC_a> someone could ofc write, in our logic, an interpretation that *does* consider things like nested implications, arbitrary quantifications, and a math:sum that will do factoring of objects to bind subject lists...
+19:57 < HMC_a> but we do none of these things in our "core" rewrite semantics. :-)
+*/
+
+	//if the subject is bound, and bound to a list just take it's first item.
+	// If it is bound to something that is not a list, fail.
+	// If it is unbound, do a trivial yield (no new binding first).
+	builtins[rdffirst].push_back(
+			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
+				setproc("rdffirst");
+				switch (entry) {
+					case 0:
+						s = getValue(s_);
+						o = getValue(o_);
+						TRACE(dout << str(s) << " #first " << str(o) << endl);
+						if (is_unbound(*s))
+							ouc = gen_succeed();
+						else if (is_list(*s))
+							ouc = unify(o, s + 2);
+						else if (is_list_bnode(*s))
+							ouc = unify(o, s + 1);
+						else
+							ouc = GEN_FAIL;
+						entry = LAST;
+						while (ouc())
+						{
 							return true;
-		case 1:;
+							case_LAST:;
 						}
-					}
+						END
 				}
 			}
-			entry = 2;
-			return false;
-		case 2:;
-			assert(false);
-		}
-	});*/
+	);
 
+	builtins[rdfrest].push_back(
+			[entry, ouc, s, o, r](Thing *s_, Thing *o_) mutable {
+				setproc("rdfrest");
+				switch (entry) {
+					case 0:
+						s = getValue(s_);
+						o = getValue(o_);
+						TRACE(dout << str(s) << " #rest " << str(o) << endl);
+						if (is_list(*s))
+							r = s+3;
+						else if(is_list_bnode(*s))
+							r = s+2;
+						else {
 
+							entry = 66;
+							return false;
+						}
+
+						ouc = unify(o, r);
+						entry = LAST;
+						while (ouc())
+						{
+							return true;
+							case_LAST:;
+						}
+						END
+				}
+			}
+	);
 
 
 
@@ -2440,22 +2485,20 @@ void build_in_rules()
 
 
 /*
-	old::string link = "http://www.w3.org/TR/rdf-schema/#ch_range";
-	auto link_node = dict.set(mkiri(pstr(link)));
-	builtins[link_node].push_back(
-		[entry, ... ](Thing *s_, Thing *o_) mutable {
-			switch(entry){
-			case 0:  
-				
-			}
-		}
-	);
-*/
-
-
-
-
-
+<HMC_a> koo7: for the moment I'm less concerned about getting rdfs going and more interested in facilities like log:outputString and math:sum and etc
+<HMC_a> really even just those two would be enough to get some useful results out of the fuzzer, lol :-)
+<HMC_a> http://www.w3.org/2000/10/swap/doc/CwmBuiltins <-- "not quite specs" XD
+<HMC_a> so math:* and string:* should be pretty straightforward, list:* nearly so...
+<koo7> as on list, list:append seems a misnomer
+<HMC_a> koo7: you mean it is more aptly called "concat"? ;-)
+<koo7> yeah something like that
+<HMC_a> I don't think you're the first to mention it, hehe
+* HMC_a shrugs
+<koo7> alright
+<koo7> its fully namespaced, after all
+<HMC_a> sure, and I'm not against doubling up on some builtins later... maybe in the end we have list:append, tau:append, and tau:concat, with tau:append taking just a subject of a pair list of a list and a literal and doing an actual "append" and the other two both being "concat"...
+<HMC_a> but we want list:append to be there and to match cwm, in any case, so that any existing logic "out there" that calls upon cwm's list:append will do the right thing
+ */
 
 
 
@@ -2521,8 +2564,14 @@ void build_in_rules()
 	 * @prefix log: <http://www.w3.org/2000/10/swap/log#>.
 	 * */
 
-	//outputString	The subject is a key and the object is a string, where the strings are to be output in the order of the keys. See cwm --strings in cwm --help.
-
+/*
+//outputString	The subject is a key and the object is a string, where the strings are to be output in the order of the keys. See cwm --strings in cwm --help.
+<koo7> Dump :s to stdout ordered by :k whereever { :k log:outputString :s }
+<koo7> so this means it waits until the query is done?
+<HMC_a> yes, it caches up the output strings until the end
+<HMC_a> then sorts them by subject
+<HMC_a> then prints
+ */
 	bu = "http://www.w3.org/2000/10/swap/log#outputString";
 	bui = dict.set(mkiri(pstr(bu)));
 	builtins[bui].push_back(
@@ -2559,101 +2608,12 @@ void build_in_rules()
 
 
 
-	//if the subject is bound, and bound to a list just take it's first item.
-	// If it is bound to something that is not a list, fail.
-	// If it is unbound, do a trivial yield (no new binding first).
-	builtins[rdffirst].push_back(
-			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
-				setproc("rdffirst");
-				switch (entry) {
-					case 0:
-						s = getValue(s_);
-						o = getValue(o_);
-						TRACE(dout << str(s) << " #first " << str(o) << endl);
-						if (is_unbound(*s))
-							ouc = gen_succeed();
-						else if (is_list(*s))
-							ouc = unify(o, s + 2);
-						else if (is_list_bnode(*s))
-							ouc = unify(o, s + 1);
-						else
-							ouc = GEN_FAIL;
-						entry = LAST;
-						while (ouc())
-						{
-							return true;
-							case_LAST:;
-						}
-						END
-				}
-			}
-	);
-
-	builtins[rdfrest].push_back(
-			[entry, ouc, s, o, r](Thing *s_, Thing *o_) mutable {
-				setproc("rdfrest");
-				switch (entry) {
-					case 0:
-						s = getValue(s_);
-						o = getValue(o_);
-						TRACE(dout << str(s) << " #rest " << str(o) << endl);
-						if (is_list(*s))
-							r = s+3;
-						else if(is_list_bnode(*s))
-							r = s+2;
-						else {
-	
-							entry = 66;
-							return false;
-						}
-
-						ouc = unify(o, r);
-						entry = LAST;
-						while (ouc())
-						{
-							return true;
-							case_LAST:;
-						}
-						END
-				}
-			}
-	);
-
-/*
-
-
-
-
-19:18 < HMC_a> stoopkid: in rdf there is a tricky caveat, all possible lists are assumed to exist
-19:19 < HMC_a> so there are lists that begin with ?x regardless of the value of ?x or state pf the kb....
-19:20 < HMC_a> this may seem strange, but it is indeed how cwm, euler, et al (racer, pwlim, jena, the lot) do work
-19:24 < HMC_a> stoopkid: well technically it is to match McCarthy's theory of arrays, but that is just minutia really
-19:27 < HMC_a> stoopkid: suffice to say that this is a very old soundness-of-closure detail that survived through and was inherited into rdf
-19:28 < HMC_a> it is a tricky caveat conceptually, but actually very easy to implement for us :-)
-
-19:46 < HMC_a> stoopkid: it returns with ?l and ?x left as unbound vars!  It returns "?l rdf:first ?x"... in the "result graph" this is a top level statement, so the vars are considered as existential!  So it returns exactly a statement interpreted as "there exists a list l and a node x such that x is the rdf:first of l" which is ofc tautologicaly true regardless of what the kb state is. ;-)
-19:46 < HMC_a> our universal vars like ?foo are also bnodes, remember
-19:47 < HMC_a> all vars are bnodes, all bnodes are vars! XD
-19:47 < stoopkid> ok so it just returns the existential vars, it doesn't return the infinite solution set, gotcha
-19:48 < HMC_a> the ones we write like ?foo are universals in subformulae and existential at top level (we use "quantifier alternation" instead of tricky @forall type crap and skolem rewrites and such... mostly just "because we can and it is easier"... ("we can" because we are ordinal and do not allow nesting of formulae at the term rewrite))
-19:48 < HMC_a> so nothing rszeno said was wrong wrt more general reasoner semantics, we are just playing on our constraints there wrt skolem et al
-19:49 < HMC_a> and "skipping around" some of the more complex semantic details that would occur if we cared for more general formula interpretation :-)
-19:49 < HMC_a> anyway
-19:51 < stoopkid> now, i'm still iffy on calling vars universals, it seems to me that they are always existential and that it's the {}=>{} that makes for universal quantification
-19:51 < HMC_a> the ones we write like _:foo are existentials, and similarly ones like ?foo at a top level in a syntactic unit are considered existential as a sort of special case, and there are some other "tricky" special cases that "sneak in" like variables that appear in a head but not a body end up as something like "doesn't matter which" quantifier in a sense, but again these are all details of our particular reasoner, not of more general rdf.... HEH
-19:51 < HMC_a> 19:56 < stoopkid> now, i'm still iffy on calling vars universals, it seems to me that they are always existential and that it's the {}=>{} that makes for universal quantification
-19:51 < HMC_a> right, you're not exactly wrong at all...
-19:52 < HMC_a> how you are looking at it is sound for our reasoner
-19:52 < HMC_a> but is not sound for rdf reasoning in general! hehe
-19:53 < HMC_a> in more general rdf reasoning you might run into statements that are structured arbitrarily, where the corresponding predicate fol expression would have arbitrary implication and quantifier placement
-19:53 < HMC_a> we do *not* allow arbitrary implication structures *or* arbitrary quantifier placement!! hehe
-19:54 < stoopkid> i see
-19:54 < HMC_a> well, more accurately, we allow them syntactically but do not reason over them directly in our semantics! :-)
-19:55 < HMC_a> we only take "outer" implications (not nested) in our inference chaining, and we determine quantifiers (universal or existential) by placement relative to these
-19:56 < HMC_a> someone could ofc write, in our logic, an interpretation that *does* consider things like nested implications, arbitrary quantifications, and a math:sum that will do factoring of objects to bind subject lists...
-19:57 < HMC_a> but we do none of these things in our "core" rewrite semantics. :-)
-*/
 }
+
+
+
+
+
 
 
 #ifdef notes65465687
