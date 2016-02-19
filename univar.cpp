@@ -34,19 +34,39 @@ unsigned long kbdbg_part_max;
 
 extern int result_limit ;
 
+
+
+//just leave it for now maybe change it later
+//we don't modify this for any compiler directives/macros, can we just
+//use the regular code instead? i guess, i just turned it into a macro the second or third time i was going thru all the code and changing the line when it was in flux
 #define EEE char entry = 0
-#define TRCEEE TRACE(dout << "entry:" << (int)entry << endl)
+
+//we don't modify this one either
+#define TRCEEE TRACE(dout << "entry = " << (int)entry << endl)
+//At the very least call them ENTRY & TRCENTRY //sounds good
+/*after all, these macros are an abstraction like any other....
+so lets give them good names and leave them there?*/
+
 const char LAST = 33; // last case statement (in release mode), not last entry, the coro might still be invoked with 33 several itmes before returning false
 
+
+
+
+
+//DEBUG directive:
 #ifdef DEBUG
 
 #define DBG(x) x
 #define DBGC(x) x,
+//same as DBG
 #define TRC(x) x
+
 #define TRCCAP(x) ,x
 #define ITEM(x,y) x.at(y)
+
 #define ASSERT assert
 
+//For the switch coros
 #define case_LAST case LAST
 #define DONE {entry = 66; return false; }
 #define END DONE; default: assert(false);
@@ -55,11 +75,15 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 
 #define DBG(x)
 #define DBGC(x)
+//same as DBG
 #define TRC(x)
+
 #define TRCCAP(x)
 #define ITEM(x,y) x[y]
+
 #define ASSERT(x)
 
+//For the switch coros
 #define case_LAST default
 #define DONE return false
 #define END DONE;
@@ -68,12 +92,16 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 
 
 
+
+
+//NEW & KBDBG directives:
 #ifdef NEW
 	#define KBDBG
 #endif
 
 #ifdef KBDBG
 	#ifdef oneword
+	//what specifically does nope do?
 		nope
 	#endif
 	#ifndef DEBUG
@@ -104,6 +132,7 @@ this is just an attempt at optimization, it isnt a change needed for the correct
 	BOUND,  	// bound var
 	NODE, 		// nodeid - atom
 	LIST, 		// has size, is followed by its items
+	LIST_BNODE	// ...
 	OFFSET		// pointer offset to another item in the vector
 
 so, a rule needs local variables shared among its body joins.
@@ -118,22 +147,28 @@ the lists themselves will be just consecutive things in the locals vector
 
 class Thing {
 public:
+	//Structure
 	ThingType type;
 	union {
 		//maybe call this value? how about binding?
+		//both sound appropriate; better than thing anyway
 		Thing *thing;     // for bound var
 		nodeid node;      // for node
-		size_t size;      // for list
+		size_t size;      // for list. not sure
 		offset_t offset;
 	};
 #ifdef KBDBG
 	Markup markup;
 #endif
+
+	//No internalized methods
 };
 
 
 //we could add some assertions here maybe
 //this abstracts away oneword and struct implementations of Thing
+//Thing::Access
+//All these macros must be applied to Things
 #define get_type(thing) ((thing).type)
 #define get_node(thing) (DBGC(ASSERT(get_type(thing) == NODE || get_type(thing) == LIST_BNODE)) /*then return*/ (thing).node)
 #define get_size(thing) ((thing).size)
@@ -141,23 +176,25 @@ public:
 #define get_offset(thing) ((thing).offset)
 
 //these make sense
+//Thing::Property -- specifically a unary boolean function Things
 #define is_offset(thing)	(get_type(thing) == OFFSET)
 #define is_unbound(thing)	(get_type(thing) == UNBOUND)
 #define is_bound(thing)		(get_type(thing) == BOUND)
-#define is_var(thing)		(get_type(thing) == BOUND || get_type(thing) == UNBOUND)
 #define is_list(thing)		(get_type(thing) == LIST)
 #define is_list_bnode(thing)(get_type(thing) == LIST_BNODE)
 #define is_node(thing)		(get_type(thing) == NODE)
+
+#define is_var(thing)		(get_type(thing) == BOUND || get_type(thing) == UNBOUND)
+
+//Thing::Comparison
 #define types_differ(x, y) (x.type != y.type)
 #define sizes_differ(x, y) (x.size != y.size)
 #define are_equal(x, y) ((x).type == (y).type && (x).size == (y).size)
 
-inline void make_this_bound(Thing *me, Thing *val)
-{
-	me->type = BOUND;
-	me->thing = val;
-}
 
+
+//Thing::Constructors:
+//Can be put into standard form maybe?
 inline Thing create_unbound()
 {
 	Thing x;
@@ -182,6 +219,15 @@ inline Thing create_list_bnode(nodeid v)
 	return x;
 }
 
+//Thing::Update
+//will perhaps want to assert that 'me' is an unbound variable
+inline void make_this_bound(Thing *me, Thing *val)
+{
+	me->type = BOUND;
+	me->thing = val;
+}
+
+//will perhaps want to assert that 'me' is a bound variable
 inline void make_this_unbound(Thing * me)
 {
 	me->type = UNBOUND;
@@ -216,12 +262,7 @@ typedef uintptr_t *Thing; // unsigned int that is capable of storing a pointer
 static_assert(sizeof(uintptr_t) == sizeof(size_t), "damn");
 
 
-static inline void make_this_bound(Thing * me, Thing * v)
-{
-	ASSERT(((uintptr_t)v & 0b11) == 0);
-	*me = (Thing)v;
-}
-
+//Thing::Constructors
 static inline Thing create_unbound()
 {
 	return 0;
@@ -231,6 +272,14 @@ static inline Thing create_node(termid v)
 {
 	ASSERT(((uintptr_t)v & 0b11) == 0);
 	return (Thing)((uintptr_t)v | 0b01);
+}
+
+
+//Thing::Update
+static inline void make_this_bound(Thing * me, Thing * v)
+{
+	ASSERT(((uintptr_t)v & 0b11) == 0);
+	*me = (Thing)v;
 }
 
 static inline void make_this_unbound(Thing * me)
@@ -258,6 +307,7 @@ void make_this_list(Thing &i0, size_t size)
 	i0 = (Thing)((size << 2) | 0b11);
 }
 
+//Thing::Access/Get
 static inline offset_t get_offset(Thing x)
 {
 	uintptr_t xx = (uintptr_t)x;
@@ -278,11 +328,16 @@ static inline termid get_term(Thing x)
 	return (termid)databits(x);
 }
 
+
+//Thing::Measurement
 static inline size_t get_size(Thing x)
 {
 	return (size_t)((uintptr_t)x >> 2);
 }
 
+
+//Thing::Comparison
+//Could use != operator
 static inline bool types_differ(Thing a, Thing b)
 {
 	return (((long)a ^ (long)b) & 0b11);
@@ -290,6 +345,15 @@ static inline bool types_differ(Thing a, Thing b)
 
 #define sizes_differ(x, y) (x != y)
 
+
+//Properties?	Too weak in that it can include non-booleans
+//Propositions?	Too weak in that it can include arity != 1
+//Decisions?	Too weak in that it can include arity != 1
+//Predicates?
+//Measurements? Too weak in that it can include non-booleans
+//Judgements?	Too weak in that it can include non-booleans & arity != 1
+	
+//Unary boolean functions on the class
 static inline bool is_bound(Thing x)
 {
 	return ((((uintptr_t)x & (uintptr_t)0b11) == 0) && x);
@@ -305,8 +369,10 @@ static inline bool is_unbound(Thing x)
 #define is_offset(thing) 	(typebits(thing) 	== 0b10)
 #define is_list(thing) 		(typebits(thing) 	== 0b11)
 
+//General application of '=='; ostensibly general comparison
 #define are_equal(x, y) (x == y)
 
+//Thing::Access
 static inline ThingType get_type(Thing x)
 {
 	if(is_bound(x))
@@ -327,6 +393,9 @@ static inline ThingType get_type(Thing x)
 #endif //ndef oneword
 
 
+
+
+
 inline void add_kbdbg_info(Thing &t, Markup markup)
 {
 	(void) t;
@@ -338,50 +407,88 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 
 
 
+
 //region types, globals, funcs
 
-
+//Structures of Things
 typedef vector<Thing> Locals;
-
 typedef std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
+
+//Functions-types on Things
 typedef function<bool()> coro;
+
+
 typedef function<bool(Thing*,Thing*)> pred_t;
 typedef function<pred_t()> pred_gen;
+
 typedef function<bool(Thing*,Thing*)> rule_t;
 typedef function<rule_t()> rule_gen;
+
+
 typedef function<bool(Thing*,Thing*, Thing*)> join_t;
 typedef function<join_t()> join_gen;
 //btw im using gen in the sense that its a lambda generating another lambda
 typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
 
+
+
+//Permutations:
+
 //this tells a join coro where to take the parameters to pass to a pred coro
+//The subjects/objects in the body of a rule can be of 4 different types:
+//HEAD_S: the subject of the head
+//HEAD_O: the object of the head
+//LOCAL:  a variable in the body but not in the head (local variable?)
+//CONST:  a constant
 enum PredParam {HEAD_S, HEAD_O, LOCAL, CONST};
 //and these are the specialized join coros
+//Maps subject predparam & object predparam pair to a specialized join_gen_gen
+//for that combination.
 typedef map<PredParam, map<PredParam, join_gen_gen>> Perms;
+//This is filled in from a list of functions of type join_gen_gen in perms.cpp a
+//s the first step of compilation of the kb, with the function: 
+//make_perms_table()
+Perms perms;
+//This is filled out by the same make_perms_table() function with the string 
+//versions of the PredParam enum literals.
+map<PredParam, string> permname;
+
+
+
 
 map<nodeid, vector<rule_t>> builtins;
+
+
+
 map<string, string> log_outputString;
 
 rule_t make_wildcard_rule(nodeid p);
 
-//these are filled in from perms.cpp
-Perms perms;
-map<PredParam, string> permname;
+
+
+
 
 
 //this is an intermediate structure before compilation
 //need to come up with better names, maybe rule_t would be rule_coro?
 struct Rule
 {
+	//Structure
+	pquad head;	//Single quad as head/consequent
+	pqlist body;	//List of quads as body/antecedents
+
+	//Constructor
+	//Standard constructor:
 	Rule(pquad h, pqlist b):head(h), body(b){};
-	pquad head;
-	pqlist body;
 } ;
 
+//Structure on rules
+//maps preds to the list of rules where they are used in the head.
 typedef map<nodeid, vector<Rule>> Rules;
 
+//Globals
 Rules rules;
 Rules lists; // rules + query
 
@@ -396,7 +503,7 @@ typedef unordered_map<nodeid, pos_t> locals_map;
 #endif
 
 
-
+//what does this represent
 typedef map<nodeid, vector<pair<Thing, Thing>>> ths_t;
 
 std::vector<ep_t*> eps_garbage;
@@ -405,7 +512,13 @@ vector<Locals*> locals_templates_garbage;
 ths_t * ths_garbage;
 
 //counters
+//what is this measuring?
 long steps = 0;
+
+//number of unify coros made
+//unifys are made on the fly when a unification needs to be done, thus
+//counting the number of unify coros made counts the number of unifications
+//done (attempted)
 long unifys = 0;
 
 
@@ -429,7 +542,7 @@ void build_in_facts();
 //yield once
 static coro gen_succeed()
 {
-	EEE;
+	EEE; //char entry = 0;
 	return [entry]() mutable{
 		switch(entry)
 		{
@@ -442,10 +555,12 @@ static coro gen_succeed()
 	};
 }
 
+//For consistency would this be gen_succeed_with_args?
 static join_t succeed_with_args()
 {
-	EEE;
+	EEE; //char entry = 0;
 	return [entry](Thing *Ds, Thing *Do, Thing* _) mutable{
+		//why (void) these?
 		(void)Ds;
 		(void)Do;
 		(void)_;
@@ -453,7 +568,7 @@ static join_t succeed_with_args()
 		{
 		case 0:
 			entry = LAST;
-				steps++;
+			steps++;
 			return true;
 		case_LAST:
 			END
@@ -469,6 +584,9 @@ static join_t succeed_with_args()
 		*/
 	};
 }
+
+//Returns a function that returns the succeed_with_args function
+//Wouldn't this really be gen_gen_succeed_with_args?
 
 static join_gen succeed_with_args_gen()
 {
@@ -547,6 +665,7 @@ pred_t dbg_fail_with_args()
 
 #ifdef KBDBG
 
+//Thing::Serializer::KBDBG
 string kbdbg_str(const Thing * x)
 {
 	stringstream o;
@@ -561,6 +680,7 @@ string kbdbg_str(const Thing * x)
 	//assert(c);
 	return o.str();
 }
+
 
 coro kbdbg_unify_fail(const Thing *a, const Thing *b)
 {
@@ -587,11 +707,13 @@ coro kbdbg_unify_fail(const Thing *a, const Thing *b)
 #endif // debug
 
 
+//Not sure what this function does
 inline void kbdbg_bind(const Thing *a, bool bind, const Thing *b)
 {
 	(void)a;
 	(void)b;
 	(void)bind;
+//why isn't this surrounding the whole function?
 #ifdef KBDBG
 	dout << "{\"type\":\"";
 	if(!bind) dout << "un";
@@ -606,9 +728,10 @@ inline void kbdbg_bind(const Thing *a, bool bind, const Thing *b)
 
 #else
 
+//Not sure what this function does
 static coro UNIFY_SUCCEED(const Thing *a, const Thing *b)
 {
-	EEE;
+	EEE; //case entry = 0;
 	return [entry, a ,b]() mutable{
 		switch(entry)
 		{
@@ -634,7 +757,8 @@ static coro UNIFY_SUCCEED(const Thing *a, const Thing *b)
 
 
 
-
+//Thing::Serializer
+//potentially suitable for tail-recursion optimization
 string str(const Thing *_x)
 {
 	Thing x = *_x;
@@ -682,7 +806,12 @@ string str(const Thing *_x)
 	ASSERT(false);
 }
 
+
+//Thing::Access
+//not sure what this does
 static Thing *getValue (Thing *_x) __attribute__ ((pure));
+
+//This seems to be suitable for tail-recursion optimization.
 static Thing *getValue (Thing *_x)
 	/*
 		# If this Variable is unbound, then just return this Variable.^M
@@ -705,22 +834,37 @@ static Thing *getValue (Thing *_x)
 			return result^M
 	*/
 {
+
 	ASSERT(_x);
+
 	Thing x = *_x;
 
+	//Is a bound variable, return the value of it's value.
 	if (is_bound(x)) {
+		//Retrieve the contents of a variable
 		Thing * thing = get_thing(x);
 		ASSERT(thing);
+		//Return the value of the contents
 		return getValue(thing);
 	}
+
 	//Need to understand this whole offset thing better
 	else if (is_offset(x))
 	{
+		//x is the 2nd or later occurrence of a local variable in a
+		//rule; it will store a value offset of type offset_t.
+
+		//This is the offset from the pointer to the Thing representing 
+		//this instance of a local variable to the pointer to it's 
+		//"representative", which will be labeled either bound or 
+		//unbound.
 		const offset_t offset = get_offset(x);
 		Thing * z = _x + offset;
+		//Why?
 		make_this_bound(_x, z);
 		return getValue(z);
 	}
+	//Is either an unbound variable or a value.
 	else
 		return _x;
 }
@@ -736,7 +880,16 @@ static Thing *getValue (Thing *_x)
 	# Otherwise, bind this Variable to YP.getValue(arg) and yield once.  After the
 	# yield, return this Variable to the unbound state.
 	# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html */
-function<bool()> unboundunifycoro(Thing * me, Thing *arg
+
+
+//Thing::Update
+//Thing::Unify
+//coro; will change
+//We know that 'me' will be an unbound var, and
+//arg could be anything.
+//should this have gen_ prefix?
+//gen_unbound_uc?
+coro unboundunifycoro(Thing * me, Thing *arg
 #ifdef DEBUG
 , Thing * origa, Thing * origb
 #endif
@@ -747,27 +900,44 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg
 		Thing *argv = getValue(arg);
 		TRACE(dout << "unify with [" << argv << "]" << str(argv) << endl;)
 
+		//When does this occur? Not sure what this is doing.
 		if (argv == me) {
 			TRACE(dout << "argv == me" << endl;)
 			//# We are unifying this unbound variable with itself, so leave it unbound.^M
 #ifdef DEBUG
+			//gen_unbound_succeed
 			return unbound_succeed(me, argv, origa, origb);
 #else
+			//why gen_succeed(); vs succeed;?
+			//because succeed needs to define entry externally
+			//to itself and then capture it in to use for the 
+			//coro switch. This allows entry to escape gen_succeed
+			//when it returns the succeed coro, and will, in a
+			//sense, exist outside of normal variable space, because
+			//it will no longer be local to any function, nor will
+			//it be global, but it will be accessible by the
+			//succeed coro, and will in this sense be bound to it. 
 			return gen_succeed();
 #endif
 		}
 		else {
 			TRACE(dout << "!= me" << endl;)
 
-			EEE;
+			EEE; //char entry = 0;
 			return [me, entry, argv
 			#ifdef DEBUG
 			, origa, origb
 			#endif
 			]() mutable {
 				setproc("var unify lambda");
-				TRCEEE;
+				//TRACE(dout << "entry = " << (int)entry << endl)
+				TRCEEE; //TRCENTRY
 				switch (entry) {
+				//A 2-step process:
+				//on the first time around it will bind me
+				//to argv:
+				// me() -> me(argv)
+				//why the brackets surrounding?
 					case 0: {
 						TRACE(dout << "binding [" << me << "]" << str(me) << " to [" << argv << "]" << str(argv) << endl;)
 						ASSERT(is_unbound(*me));
@@ -778,6 +948,9 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg
 						entry = LAST;
 						return true;
 					}
+				//on the second time around it will unbind it,
+				//and that's supposed to be it:
+				//me(argv) -> me()
 					case_LAST:
 						TRACE(dout << "unbinding [" << me << "]" << str(me) << " from [" << argv << "]" << str(argv) << endl;)
 						ASSERT(is_bound(*me));
@@ -785,6 +958,8 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg
 						#ifdef KBDBG
 						kbdbg_bind(origa, false, origb);
 						#endif
+				//there may be a 3rd step in case of debugging
+				//stuff (a 3rd step we're not supposed to reach).
 						END
 				}
 			};
@@ -792,6 +967,7 @@ function<bool()> unboundunifycoro(Thing * me, Thing *arg
 	}
 
 
+//Thing::Comparison
 bool would_unify(Thing *this_, Thing *x_)
 /*ep check is supposed to determine equality by seeing if the values would unify
 * (but not actually doing the unifying assignment)*/
@@ -825,6 +1001,14 @@ bool would_unify(Thing *this_, Thing *x_)
 
 #ifdef DEBUG
 
+//#ifdef DEBUG is enough to ensure that origa and origb will be there?
+//from (gen_)unboundunifycoro it's good.
+//that's the only place it's called from; alright.
+//is this just a more verbose, assertive, & argument-taking version of gen_succeed()?
+//The only place this is called from is the (me == argv) case in
+//(gen_)unboundunifycoro, so apparently we should have (x == y)
+
+//gen_unbound_succeed
 coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb)
 {
 	EEE;
@@ -847,29 +1031,38 @@ coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb)
 		}
 	};
 }
+//mm and if DEBUG is not defined?
+//unboundunifycoro only needs it when DEBUG is defined.
 #endif
+
+
 
 
 
 //region sprint
 
+//Thing::Serializer::Decorated
+//Var::Serializer::Decorated
 string sprintVar(string label, Thing *v){
 	stringstream wss;
 	wss << label << ": (" << v << ")" << str(v);
 	return wss.str();
 }
 
+//Pred::Serializer::Decorated
 string sprintPred(string label, nodeid pred){
 	stringstream wss;
 	wss << label << ": (" << pred << ")" << dict[pred];
 	return wss.str();
 }
 
+//Thing::Serializer::Decorated
 string sprintThing(string label, Thing *t){
 	stringstream wss;
 	wss << label << ": [" << t << "]" << str(t);
 	return wss.str();
 }
+
 
 string sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 	stringstream wss;
@@ -883,8 +1076,29 @@ string sprintSrcDst(Thing *Ds, Thing *s, Thing *Do, Thing *o){
 
 
 
+
+
+
+
 //region kb
 
+//Garbage zone
+/*
+What kind of garbage do we have?
+
+ * eps_garbage				vector<ep_t*>
+ * consts_garbage			vector<Locals*>
+ * locals_templates_garbage		vector<Locals*>
+
+
+ typedef vector<Thing> Locals;
+ typedef std::pair<Thing*,Thing*> thingthingpair;
+ typedef std::vector<thingthingpair> ep_t;
+*/
+
+/*
+Where does this garbage come from?
+*/
 void free_garbage()
 {
 	for (auto x: eps_garbage)
@@ -910,6 +1124,9 @@ void free_garbage_nonassert()
 		delete x;
 	eps_garbage.clear();
 }
+
+
+
 
 
 
@@ -987,15 +1204,27 @@ void check_pred(nodeid pr)
 
 
 
+//Let's get a graphical visualization of this transformation.
 Rules quads2rules(qdb &kb)
 {
 	FUN;
+	//isn't this already a global?
 	Rules rules;
+
+	//std::map<context,list of quads with that context>
+	//std::map<string,pqlist>
 	auto &quads = kb.first;
+
+	//why only default context?
 	auto it = quads.find(str_default);
 	if (it != quads.end()) {
-		auto pffft = *it->second;;
+		//pqlist
+		auto pffft = *it->second;
+
+		//reverse the list of quads for this pred.
+		//is it going now opposite to text-order?
 		reverse(pffft.begin(), pffft.end());
+		//pqlist
 		for (pquad quad : pffft) {
 			const string &s = *quad->subj->value, &p = *quad->pred->value, &o = *quad->object->value;
 			TRACE(dout << quad->tostring() << endl);
@@ -1024,10 +1253,14 @@ Rules quads2rules(qdb &kb)
 void compile_kb(qdb &kb)
 {
 	FUN;
+	//Cleanup
 	preds.clear();//the lambdas
 	free_garbage();
 
+	//These are globals of type Rules
+	//typedef map<nodeid, vector<Rule>> Rules;
 	rules = quads2rules(kb);
+	//why just copying rules into lists?
 	lists = rules;//we dont have any query at this point
 
 	for(auto x: builtins)
@@ -1157,22 +1390,41 @@ coro listunifycoro2(Thing *a_, Thing *b_)
 	# For more details, see http://yieldprolog.sourceforge.net/tutorial1.html^M
 	(returns an iterator)
 */
+
 coro unify(Thing *a_, Thing *b_){
 	FUN;
+	//This counts the number of unify coros for the kb?
 	unifys++;
+
+	//Not sure what these are for
 	DBG(auto origa = a_;)
 	DBG(auto origb = b_;)
+
+
 	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
+	//Where is '==' for Thing defined?
+	//Not sure what this is doing.
 	if (a_ == b_) {//?
 		TRACE(dout << "a == b" << endl;)
+
+		//ifndef KBDBG then this will be gen_succeed();
 		return UNIFY_SUCCEED(origa, origb);
 	}
 
+
 	a_ = getValue(a_);
 	Thing a = *a_;
+
+	//Should be the representative value, which will either be an
+	//unbound variable or a literal, i.e. not a bound variable and
+	//not an offset to a variable.
 	ASSERT(!is_bound(a));
 	ASSERT(!is_offset(a));
+
+
+
+	//If a is an unbound variable	
 	if (is_unbound(a))
 		return unboundunifycoro(a_, b_
 		#ifdef DEBUG
@@ -1180,10 +1432,19 @@ coro unify(Thing *a_, Thing *b_){
 		#endif
 		);
 
+
 	b_ = getValue(b_);
 	Thing b = *b_;
+
+	//Should be the representative value, so unbound or literal.
 	ASSERT(!is_bound(b));
 	ASSERT(!is_offset(b));
+
+	//a: literal; b: unbound variable
+	//(val)?x
+	//(list)?x	
+
+	//only on this one is there order switching.
 	if (is_unbound(b))
 		return unboundunifycoro(b_, a_
 		#ifdef DEBUG
@@ -1191,16 +1452,36 @@ coro unify(Thing *a_, Thing *b_){
 		#endif
 		);
 
+	//Neither a nor b can be any of:
+	//*bound variable	BOUND
+	//*offset variable	OFFSET
+	//*unbound variable	UNBOUND
+
+	//Both a and b can be any of:
+	//*node			NODE
+	//*list			LIST
+	//*list_bnode		LIST_BNODE
+
+	//Check if they are the same.
+	//If they don't have a size then this reduces to false==false right?
+	//(a.type == b.type && a.size == b.size)
 	if(are_equal(a,b)) {
+		//Since are_equal succeeded we know they both have the same
+		//type so we only need to do is_node/list for one of them.
+		//If they are nodes:
 		if (is_node(a)) {
+		//why origa and origb?
+		//ifndef KBDBG this will be gen_succeed();
 			return UNIFY_SUCCEED(origa, origb);
 		}
+		//If they are lists:
 		if (is_list(a)) {
 			//TRACE(dout << "Both args are lists." << endl;)
 			return listunifycoro(a_, b_);
 		}
 	}
 	
+	//Not sure i understand this one.
 	if (is_list(a) || is_list(b))
 	{
 		auto xx = a_;
@@ -1213,6 +1494,7 @@ coro unify(Thing *a_, Thing *b_){
 			return listunifycoro2(xx,yy);
 	}
 
+	//Otherwise fail. Why here?
 	TRACE(dout << "Fail. origa:[" << origa << "] origb:[" << origb << "] a:["<< a_ << "]" << str(a_) << " b:[" << b_ << "]" << str(b_) << endl;)
 	return UNIFY_FAIL(origa, origb);
 }
@@ -1982,12 +2264,21 @@ void yprover::query(qdb& goal){
 #ifdef KBDBG
 	print_kbdbg(q);
 #endif
+	//Initialize 
 
+	//Reset the global steps & unifys
+	//Why not turn these into member variables of yprover.
 	steps = 0;
 	unifys = 0;
+
+
 	int nresults = 0; 
+
 	locals_map lm, cm;
 	Locals locals, consts;
+
+
+
 
 	dout << KGRN << "COMPILE QUERY" << KNRM << endl;
 
@@ -2058,38 +2349,63 @@ void yprover::query(qdb& goal){
 
 //endregion
 
-
+//Outer vector: list
+//Inner vector: triples of nodeids
 void add_facts(vector<vector<nodeid>> facts)
 {
+	//std::map<nodeid,std::vector<std::pair<Thing*,Thing*>>>
 	ths_t &ths = *new ths_t;
 	ths_garbage = &ths;///.push_back(ths);
 
+	//Map each pred to a list of it's subject/object pairs
 	for (auto f: facts)
 		ths[f[1]].push_back({
 			create_node(f[0]),
 			create_node(f[2])});
 	
 	coro suc, ouc;
+	//For each pred in the ths:
+	//std::pair<nodeid,std::vector<std::pair<Thing*,Thing*>>>
 	for (auto ff:ths)
 	{
+		//std::vector<std::pair<Thing*, Thing*>>
 		auto &pairs = ff.second;
-		EEE;
+		EEE; //char entry = 0;
 		size_t pi = 0;
+
+		//Map each pred to a coro on it's subject/object
 		builtins[ff.first].push_back([suc,ouc,pi,pairs,entry](Thing *s_, Thing *o_)	mutable{
 			switch(entry)
 			{
 			case 0:
-				if (pi < pairs.size())
-				{
+				//hrmm.. where is pi being incremented? looks 
+				//like this just does pi=0 then exits.
+				/*yea looks like you found a bug
+this thing looks pretty suboptimal btw...buti guess it should get the job done*/
+				if (pi < pairs.size())//fixed?
+				{			
+				//Generate a unify coro for the subject; 
+				//on the fly.
+				//Then run it.
 					suc = unify(s_,&pairs[pi].first);
 					while(suc()){
+					//Again for the object
 						ouc = unify(o_,&pairs[pi].second);
 						while(ouc())
 						{
+						//If both succeed then yield
+						//true.
+						//not quite
 							entry = LAST;
+							
+
 							return true;
+				/*
+				entry = LAST;/
+/				retur/n/ //id just advise that we first try to compile all your changes as they are and run tests too and then get down to fixing, that works, i didn't change much though, pretty muchall just comments i saw some code shuffles... well lets run it then
+			*/
 			case_LAST:;
-						}
+						} 
 					}
 				}
 			END;
@@ -2232,7 +2548,8 @@ rule_t make_wildcard_rule(nodeid pr)
 //under construction
 void build_in_rules()
 {
-	EEE;
+	EEE; //char entry = 0;
+
 
 	/*some commonly used vars*/
 	coro suc, suc2, ouc;
@@ -2247,7 +2564,11 @@ void build_in_rules()
 	
 	/*ep_t *ep = new ep_t();
 	eps.push_back(ep)*/
+
+	//pred_t :: function<bool(Thing*,Thing*)>
 	pred_t p1, p2;
+
+
 	//Thing c_rdfsType = create_node(op->make(rdftype));
 	//Thing c_rdfsResource = create_node(op->make(rdfsResource));
 	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
@@ -2415,6 +2736,7 @@ void build_in_rules()
 	//if the subject is bound, and bound to a list just take it's first item.
 	// If it is bound to something that is not a list, fail.
 	// If it is unbound, do a trivial yield (no new binding first).
+	// Why the trivial yield on the unbound variable?
 	builtins[rdffirst].push_back(
 			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
 				setproc("rdffirst");
@@ -2455,7 +2777,7 @@ void build_in_rules()
 						else if(is_list_bnode(*s))
 							r = s+2;
 						else {
-
+	
 							entry = 66;
 							return false;
 						}
@@ -2471,11 +2793,6 @@ void build_in_rules()
 				}
 			}
 	);
-
-
-
-
-
 
 
 
@@ -2509,50 +2826,73 @@ void build_in_rules()
 
 	//sum: The subject is a list of numbers. The object is calculated as the arithmentic sum of those numbers.
 
+	//why not call it pred or pred_iri
 	string bu = "http://www.w3.org/2000/10/swap/math#sum";
 	auto bui = dict.set(mkiri(pstr(bu)));
+
 	builtins[bui].push_back(
 			[r, bu, entry, ouc, s, ss](Thing *s_, Thing *o_) mutable {
+				//TRCEEE?
 				switch (entry) {
 					case 0: {
 
 						s = getValue(s_);
+				//At this point s should not be either a bound
+				//var or an offset.
+
 						ss = *s;
+				//At this point neither s nor ss should be either 				//bound vars or offsets.
+
+
+				//Is this an error?
 						if (!is_list(ss)) {
 							dout << bu << ": " << str(s) << " not a list" << endl;
 							DONE;
 						}
+
+
 						long total = 0;
 						const size_t size = get_size(ss);
 						for (size_t i = 0; i < size; i++) {
 							Thing item = *(s + 1 + i);
+				//Make sure it's a node. Is this an error if it's not?
 							if (!is_node(item)) {
 								dout << bu << ": " << str(&item) << " not a node" << endl;
 								DONE;
 							}
+				
 							node p = dict[get_node(item)];
+				//Make sure it's an XSD_INTEGER. Is this an error if it's not?
 							if (p.datatype != XSD_INTEGER) {
 								dout << bu << ": " << p.tostring() << " not an int" << endl;
 								DONE;
 							}
+
+				//Convert the text value to a long, and add
+				//it to the total.
 							total += atol(ws(*p.value).c_str());
 						}
 
+				//Convert the total sum to a text value.
 						std::stringstream ss;
 						ss << total;
 
+				//Create an XSD_INTEGER node & corresponding Thing for the total
 						r = new(Thing);
 						*r = create_node(dict[mkliteral(pstr(ss.str()), pstr("XSD_INTEGER"), 0)]);
 
+				//Unify the input object with the Thing now representing the total.
 						ouc = unify(o_, r);
 					}
 						while (ouc()) {
 							TRACE(dout << "MATCH." << endl;)
 							entry = LAST;
 							return true;
-							case_LAST:;
+					case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 						}
+				//No longer need the Thing representing the total. hmm
+				//How about the node representing the total?
 						delete (r);
 						END;
 				}
@@ -2602,12 +2942,6 @@ void build_in_rules()
 				}
 			}
 	);
-
-
-
-
-
-
 }
 
 
@@ -2616,19 +2950,15 @@ void build_in_rules()
 
 
 
+
+
+
+
+
+
+
+
 #ifdef notes65465687
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 //http://wifo5-03.informatik.uni-mannheim.de/bizer/SWTSGuide/carroll-ISWC2004.pdf

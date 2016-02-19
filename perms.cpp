@@ -655,6 +655,7 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	};
 }
 
+//Can these two structures be baked in rather than created on the fly?
 void make_perms_table()
 {
 permname[HEAD_S] = "HEAD_S";

@@ -12,20 +12,50 @@ pqlist mk_qlist() {
 	return make_shared<qlist>();
 }
 
+/*
+IRI: 	 '<' << value << '>'
+
+BNODE:	 '*' << value << '*'
+
+
+LITERAL:
+	https://www.w3.org/TR/rdf11-concepts/
+	Section 3.3 Literals
+ 	//A literal in an RDF graph consists of two or three elements:
+	//A literal is a language-tagged string if the third element is present.
+
+	 '\"' << value << '\"^^' << datatype
+	 '\"' << value << '\"^^' << datatype << '@' << lang
+
+	//I think that means these two shouldn't be allowed.	
+	 '\"' << value << '\"'
+	 '\"' << value << '\"@' << lang
+		
+	
+*/
 string node::tostring() const {
 	std::stringstream ss;
 	bool isiri = _type == IRI && !((*value).size() && ((*value)[0] == '?')) ;
+
 	if ( isiri ) ss << '<';
-	else if ( _type == LITERAL ) ss << '\"';
 	else if ( _type == BNODE ) ss << '*';
+	else if ( _type == LITERAL ) ss << '\"';
+	//else?
+
+	//value is guaranteed to be filled?
 	ss << *value;
-	if ( _type == LITERAL ) {
+	
+	if ( isiri ) ss << '>';
+	else if ( _type == BNODE ) ss << '*';
+	else if ( _type == LITERAL ) {
 		ss << '\"';
 		if ( datatype && datatype->size() ) ss << "^^" << *datatype;
 		if ( lang && lang->size() ) ss << '@' << *lang;
 	}
-	else if ( isiri ) ss << '>';
-	else if ( _type == BNODE ) ss << '*';
+	//is _type guaranteed to be filled?
+	//else?
+
+
 	return ss.str();
 }
 
@@ -357,16 +387,20 @@ quad::quad ( pnode s, pnode p, pnode o, pnode c ) : quad(s, p, o, *c->value){}
 
 string quad::tostring ( ) const {
 	std::stringstream ss;
+	//not really sure why this has to be a lambda
 	bool _shorten = shorten;
 	auto f = [_shorten] ( pnode n ) {
 		if ( n ) {
 			string s = n->tostring();
 			if ( !shorten ) return s;
+		
 			if ( s.find ( "#" ) == string::npos ) return s;
 			return s.substr ( s.find ( "#" ), s.size() - s.find ( "#" ) );
 		}
 		return string ( "<>" );
 	};
+
+
 	ss << f ( subj ) << ' ' << f ( pred ) << ' ' << f ( object );
 	if ( *graph->value != str_default ) ss << ' ' << f ( graph );
 	ss << " .";
@@ -413,6 +447,7 @@ bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
 		return *x == *y;
 }
 
+//let's make this into an '==' operator
 bool qdbs_equal(qdb &a, qdb &b) {
 	FUN;
 	TRACE(

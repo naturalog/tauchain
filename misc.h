@@ -44,7 +44,6 @@ extern bool in_silent_part;
 #define TRACE(X)
 #endif
 
-#define FUN setproc(__FUNCTION__);
 
 #define MSG(x) TRACE(dout << x << std::endl);
 
@@ -68,8 +67,6 @@ void bt();
 
 
 typedef i64 nodeid;
-
-extern std::list<string>& proc;
 
 
 class bidict {
@@ -117,13 +114,13 @@ extern nodeid rdfsseeAlso, rdfslabel, rdfobject, rdfStatement, rdfpredicate, rdf
 string dstr ( nodeid p, bool json = false );
 string maybe_shorten_uri(string s);
 string shorten_uri(string s);
+
+
+
+//Output current function
+extern std::list<string>& proc;
 string indent();
 extern int _indent;
-
-
-
-
-
 struct _setproc {
 	string prev;
 	//_setproc(const std::string& p);
@@ -135,7 +132,7 @@ struct _setproc {
 #else
 #define setproc(x)
 #endif
-
+#define FUN setproc(__FUNCTION__);
 
 
 
