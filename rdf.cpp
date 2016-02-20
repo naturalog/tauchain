@@ -13,9 +13,9 @@ pqlist mk_qlist() {
 }
 
 /*
-IRI: 	 '<' << value << '>'
+IRI: 	 '<' value '>'
 
-BNODE:	 '*' << value << '*'
+BNODE:	 '*' value '*'
 
 
 LITERAL:
@@ -24,12 +24,12 @@ LITERAL:
  	//A literal in an RDF graph consists of two or three elements:
 	//A literal is a language-tagged string if the third element is present.
 
-	 '\"' << value << '\"^^' << datatype
-	 '\"' << value << '\"^^' << datatype << '@' << lang
+	 '\"' value '\"^^' datatype
+	 '\"' value '\"^^' datatype '@' lang
 
 	//I think that means these two shouldn't be allowed.	
-	 '\"' << value << '\"'
-	 '\"' << value << '\"@' << lang
+	 '\"' value '\"'
+	 '\"' value '\"@' lang
 		
 	
 */
@@ -81,6 +81,7 @@ pnode set_dict(node r){
 	return dict.nodes[s] = pr;
 }
 
+
 //Could just make all these constructors for the node class:
 //	mkliteral, mkiri, and mkbnode, that is.
 pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
@@ -118,6 +119,7 @@ pnode mkliteral ( pstring value, pstring datatype, pstring language ) {
 
 
 
+//
 pnode mkiri ( pstring iri ) {
 	setproc("mkiri");
 
@@ -195,6 +197,7 @@ std::ostream& operator<< ( std::ostream& o, const qdb& q ) {
 	//	o << x.first << ": " << std::endl << x.second << std::endl;
 	return o;
 }
+
 
 
 

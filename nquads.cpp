@@ -197,7 +197,8 @@ pnode nqparser::readiri() {
 		return mkiri(wstrim(t));
 	}
 
-
+	
+	//"@prefix: =>" ?
 	//If the next two chars are '=>', then this is an implication.
 	else if (*s == '=' && *(s+1) == '>')
 	{ 
@@ -316,11 +317,13 @@ void nqparser::readprefix() {
 	s += 8;
 
 
-	//Copy the string from s into t until reaching ":".		
+	//Copy the string from s into t until reaching ":".
+	//what about white-space		
 	while (*s != ':' && *s!= 0 && *s!='\n') t[pos++] = *s++;
 	if (!(*s!= 0 && *s!='\n'))
 		throw runtime_error("hm");
-
+	
+	//Advance past the ':'
 	t[pos++] = *s++;
 	t[pos] = 0; pos = 0;
 	

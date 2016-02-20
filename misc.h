@@ -11,11 +11,13 @@
 //#include <boost/interprocess/containers/map.hpp>
 //#include <boost/bimap.hpp>
 
+
 #ifdef with_marpa
 #define MARPA(x) x
 #else
 #define MARPA(x)
 #endif
+
 
 enum ParsingResult {FAIL, /* INCOMPLETE, */ COMPLETE};
 
@@ -70,36 +72,50 @@ typedef i64 nodeid;
 
 
 class bidict {
+	//Structure
 	std::map<nodeid, node> ip;
 	std::map<node, nodeid> pi;
 public:	
 	std::map<string, pnode> nodes;
 
+	//Null constructor
+
+	//Initializer
 	void init();
 
+	//Update
 	nodeid set ( node v );
 	nodeid set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
 	
+
+	//Propositions	
 	bool has ( nodeid k ) const;
 	bool has ( node v ) const;
 
+	//Access
 	node operator[] ( nodeid);
 	node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
 	nodeid operator[] ( node );
 	nodeid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }
-	
+
+
+	//Serializer	
 	string tostr();
 };
 
+//This is the structure we use to store all the nodes in the KB, and map from
+//node to id and vice-versa.
 extern bidict& dict;
 
 
 
 //MISC?
+//split these up into their logical groupings
 extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, lognotEqualTo, rdffirst, rdfrest, A, Dot, rdftype, GND, rdfnil, False;
 
 //RDFS
+//later make this look more like the layout on the RDFS specs.
 extern nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
 extern nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdfXMLLiteral, rdfscomment;
 extern nodeid rdfList, rdfsisDefinedBy, owlFunctionalProperty;
@@ -127,6 +143,8 @@ struct _setproc {
 	_setproc(const string& p);
 	~_setproc();
 };
+
+
 #ifdef DEBUG
 #define setproc(x) _setproc __setproc(x)
 #else

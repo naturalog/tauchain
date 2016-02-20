@@ -15,6 +15,7 @@
 
 using namespace std;
 
+//Must only be used when (x).find(y) and (x).end() will be defined.
 #define has(x,y) ((x).find(y) != (x).end())
 
 typedef unsigned char byte;
@@ -102,6 +103,7 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 #ifdef KBDBG
 	#ifdef oneword
 	//what specifically does nope do?
+	choke the parser
 		nope
 	#endif
 	#ifndef DEBUG
@@ -120,10 +122,19 @@ typedef std::pair<nodeid, Markup> toadd;
 
 
 
+
+
+
+
+
 enum ThingType {BOUND, NODE, OFFSET, LIST, LIST_BNODE, UNBOUND};
 
+
+//Two different versions of Thing:
 #ifndef oneword
 
+//Version A:
+/***************************************************************/
 /*so, the idea behind this new data structuring is that each little thing doesnt have to be allocated separately,
 we can put them in one big array per rule, and we can initialize such locals array from a template simply by memcpy
 this is just an attempt at optimization, it isnt a change needed for the correct functioning
@@ -175,6 +186,8 @@ public:
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
 
+
+
 //these make sense
 //Thing::Property -- specifically a unary boolean function Things
 #define is_offset(thing)	(get_type(thing) == OFFSET)
@@ -186,6 +199,8 @@ public:
 
 #define is_var(thing)		(get_type(thing) == BOUND || get_type(thing) == UNBOUND)
 
+
+
 //Thing::Comparison
 #define types_differ(x, y) (x.type != y.type)
 #define sizes_differ(x, y) (x.size != y.size)
@@ -194,7 +209,7 @@ public:
 
 
 //Thing::Constructors:
-//Can be put into standard form maybe?
+//3 different types of Things which can be created:
 inline Thing create_unbound()
 {
 	Thing x;
@@ -218,6 +233,10 @@ inline Thing create_list_bnode(nodeid v)
 	x.node = v;
 	return x;
 }
+
+
+
+
 
 //Thing::Update
 //will perhaps want to assert that 'me' is an unbound variable
@@ -244,8 +263,12 @@ void make_this_list(Thing &i0, size_t size)
 	i0.size = size;
 }
 
+
 #else
 
+
+//Version B:
+/***************************************************************/
 /* oneword:
 kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointees
 
@@ -351,6 +374,8 @@ static inline bool types_differ(Thing a, Thing b)
 //Decisions?	Too weak in that it can include arity != 1
 //Predicates?
 //Measurements? Too weak in that it can include non-booleans
+//		It would be suitable for numeric functions on the object
+//		though.
 //Judgements?	Too weak in that it can include non-booleans & arity != 1
 	
 //Unary boolean functions on the class
@@ -389,6 +414,7 @@ static inline ThingType get_type(Thing x)
 	return OFFSET;
 }
 
+/*******************************************************************/
 //</oneword>
 #endif //ndef oneword
 
@@ -411,6 +437,7 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 //region types, globals, funcs
 
 //Structures of Things
+//local variables in a rule?
 typedef vector<Thing> Locals;
 typedef std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
@@ -420,6 +447,7 @@ typedef std::vector<thingthingpair> ep_t;
 typedef function<bool()> coro;
 
 
+//these are the same 
 typedef function<bool(Thing*,Thing*)> pred_t;
 typedef function<pred_t()> pred_gen;
 
@@ -493,7 +521,7 @@ Rules rules;
 Rules lists; // rules + query
 
 
-
+//The structure holding the compiled KB:
 #ifdef DEBUG
 std::map<nodeid, pred_t> preds;
 typedef map<nodeid, pos_t> locals_map;
@@ -505,6 +533,8 @@ typedef unordered_map<nodeid, pos_t> locals_map;
 
 //what does this represent
 typedef map<nodeid, vector<pair<Thing, Thing>>> ths_t;
+
+
 
 std::vector<ep_t*> eps_garbage;
 vector<Locals*> consts_garbage;
@@ -841,27 +871,41 @@ static Thing *getValue (Thing *_x)
 
 	//Is a bound variable, return the value of it's value.
 	if (is_bound(x)) {
-		//Retrieve the contents of a variable
+		//get the pointer
 		Thing * thing = get_thing(x);
 		ASSERT(thing);
-		//Return the value of the contents
+		//and recurse
 		return getValue(thing);
 	}
 
 	//Need to understand this whole offset thing better
 	else if (is_offset(x))
 	{
-		//x is the 2nd or later occurrence of a local variable in a
-		//rule; it will store a value offset of type offset_t.
+		//Thing of type offset is used for the 2nd or later occurrence
+		// of a local variable in a
+		//rule; it will store a value offset of type offset_t. 
 
-		//This is the offset from the pointer to the Thing representing 
-		//this instance of a local variable to the pointer to it's 
-		//"representative", which will be labeled either bound or 
-		//unbound.
+		////This is the offset from the pointer to the Thing representing 
+		////this instance of a local variable to the pointer to it's 
+		////"representative", which will be labeled either bound or 
+		////unbound.
+		
+		//its an offset from the address of the offset to where the 
+		//value is
+		
+		//get the number
 		const offset_t offset = get_offset(x);
+		//add it to the current address
 		Thing * z = _x + offset;
-		//Why?
+		
+		
+		//Why do we bind here? We already have _x as offset to z
+		//this is an attempt at optimization so that the second time
+		//we look at this, it will be a variable, which should be 
+		//followed faster than the offset
 		make_this_bound(_x, z);
+		
+		//and recurse
 		return getValue(z);
 	}
 	//Is either an unbound variable or a value.
@@ -900,7 +944,17 @@ coro unboundunifycoro(Thing * me, Thing *arg
 		Thing *argv = getValue(arg);
 		TRACE(dout << "unify with [" << argv << "]" << str(argv) << endl;)
 
-		//When does this occur? Not sure what this is doing.
+		//How do we end up unifying an unbound variable with itself?
+		//Won't the variables that come in as the arguments necessarily
+		//be different from the variables in rules that they will
+		//potentially unify with? 
+		/*dunno, you can look for where it comes up in traces
+		{?x a man} => {?x a mortal}.
+		fin.
+		?x a mortal.
+		fin.
+		
+		*/
 		if (argv == me) {
 			TRACE(dout << "argv == me" << endl;)
 			//# We are unifying this unbound variable with itself, so leave it unbound.^M
@@ -1148,6 +1202,8 @@ void add_rule(nodeid pr, const rule_t &x)
 void compile_pred(nodeid pr)
 //Check preds to see if the pred has already been compiled.
 //Don't compile preds that have already been compiled. Return instead.
+//Note: we shouldn't even be getting the same pred twice anyway
+
 //Check builtins to see if the pred is a built-in. If we do find that
 //node-id, then do add_rule for each pred_t in the associated
 //std::vector<pred_t> in the builtins table. Return unless the
@@ -1171,6 +1227,7 @@ void compile_pred(nodeid pr)
 	if (preds.find(pr) != preds.end())
 		return;
 
+	//builtins are ready to go
 	if (builtins.find(pr) != builtins.end()) {
 		for (auto b: builtins[pr]) {
 			TRACE(dout << "builtin: " << dict[pr] << endl;)
@@ -1181,11 +1238,13 @@ void compile_pred(nodeid pr)
 			return;*/
 	}
 
+	//rules need to be compiled and then added:
 	if (rules.find(pr) != rules.end()) {
 		for (auto r: rules.at(pr))
 			add_rule(pr, compile_rule(r));
 	}
 	
+	//what's the wildcard rule
 	add_rule(pr, make_wildcard_rule(pr));
 
 
@@ -1208,14 +1267,14 @@ void check_pred(nodeid pr)
 Rules quads2rules(qdb &kb)
 {
 	FUN;
-	//isn't this already a global?
+	//isn't this already a global? yes but we work with this local and return it
 	Rules rules;
 
 	//std::map<context,list of quads with that context>
 	//std::map<string,pqlist>
 	auto &quads = kb.first;
 
-	//why only default context?
+	//why only default context? because thats what we reason about
 	auto it = quads.find(str_default);
 	if (it != quads.end()) {
 		//pqlist
@@ -1226,19 +1285,29 @@ Rules quads2rules(qdb &kb)
 		reverse(pffft.begin(), pffft.end());
 		//pqlist
 		for (pquad quad : pffft) {
+
 			const string &s = *quad->subj->value, &p = *quad->pred->value, &o = *quad->object->value;
 			TRACE(dout << quad->tostring() << endl);
 
+			//here we add a fact, one for each triple in @default
+			//typedef map<nodeid, vector<Rule>> Rules;
 			rules[dict[quad->pred]].push_back(Rule(quad, 0));
 
-			if (p == implication) //if this is a rule, i.e. the predicate is "=>":
+			if (p == implication) //then also, if this is a rule, i.e. the predicate is "=>":
 			{
+//hopefully the subject and object are graphs
 				if (quads.find(o) != quads.end()) {
+//the object of the implication is the head of the rule
 					//Explode the head into separate quads and make a separate
 					//rule for each of them with the same body
+//because from now on our rules must only have one triple for their head
+
+					//look for the body graph
 					pqlist b = 0;
 					if (quads.find(s) != quads.end())
 						b = quads[s];
+
+					//make a rule for each triple in the head
 					for (pquad h : *quads.at(o)) {
 						rules[dict[h->pred]].push_back(Rule(h, b));
 					}
@@ -1260,11 +1329,16 @@ void compile_kb(qdb &kb)
 	//These are globals of type Rules
 	//typedef map<nodeid, vector<Rule>> Rules;
 	rules = quads2rules(kb);
-	//why just copying rules into lists?
 	lists = rules;//we dont have any query at this point
+//well, no reason this shouldnt work i guess
+/*we only deal wihmmm
+maybe this includes also lists in heads, while it should only have
+lists in the default graph*/
 
+	//hrmm
 	for(auto x: builtins)
 		compile_pred(x.first);
+
 	for(auto x: rules)
 		compile_pred(x.first);
 }
@@ -1558,6 +1632,7 @@ PredParam maybe_head(PredParam pp, pquad head, nodeid x)
 	return pp;
 }
 
+//Locals::Access
 //return term's PredParam and possibly also its index into the corresponding vector
 PredParam find_thing (nodeid x, size_t &index, locals_map &lm, locals_map &cm)
 {
@@ -1602,6 +1677,7 @@ Thing &fetch_thing(nodeid x, Locals &locals, Locals &consts, locals_map &lm, loc
 }
 
 
+//Locals::Serializer
 void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head)
 {
 	(void)head;
@@ -1630,42 +1706,80 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 
 
 /*the two funcs look into Rules lists
-those should contain the kb rules and possibly also the query triples*/
-
+those should contain the kb triples and possibly also the query triples*/
 bool islist(nodeid x)
 {
 	FUN;
+	//hrmm
+	//For each Rule in lists[rdfrest]:
+	//for all rdfrest triples
+
+	//for all rules with rdfrest as the pred in the head
 	for (auto i: lists[rdfrest]) {
+		//pquad
 		auto h = i.head;
 		TRACE(dout << h->subj->tostring() << " vs " << dict[x].tostring() << endl);
+
+		//if our nodeid is a subject of rdfrest, its a list bnode
 		if (dict[h->subj] == x)
 				return true;
 	}
 	return false;
 }
 
+//Locals::Constructor (Partial)
 /*the first nodeid in the map is the bnode*/
+/*the second nodeid in the map is the object related to this bnode by
+  rdffirst*/
+//This map keeps the content of the list but loses the ordering; essentially
+//turns it into a set.
 map<nodeid,nodeid> get_list(nodeid n) {
 	FUN;
 	ASSERT(n);
+
 	map<nodeid,nodeid>  r;
+
 	while(true) {
+		//Find the rule where this bnode is the subj of rdffirst:
 		for (auto rule: lists[rdffirst]) {
+			//node -> nodeid
 			if (dict[rule.head->subj] == n) {
+				//hrmm, b0 rdffirst rdfnil ?
+				//returns an empty r
 				if (dict[rule.head->object] == rdfnil)
 					return r;
+
+				//Map the bnode to the object of the rdffirst
+				//triple that it appears in.
 				r[n] = dict[rule.head->object];
+
+		//Find the rule where this bnode is the subj of rdfrest:
 				for (auto rule: lists[rdfrest]) {
 					if (dict[rule.head->subj] == n) {
+		//If the object of the triple is rdfnil, we return a one-pair
+		//map.
 						if (dict[rule.head->object] == rdfnil)
 							return r;
+		//Otherwise set n to the node of the object, which should
+		//be a continuation of this list.
+		//Pseudo-recursion induced by the outer while loop and
+		//switching out n. Taken as a recursive function it
+		//implements its own tail-recursion optimization.
 						n = dict[rule.head->object];
 						break;
 					}
 				}
+			//Should probably have another break here?
+			//I guess the idea of leaving it is that it if the
+			//new node came after this node in the list, then
+			//by not breaking here we continue to traverse the
+			//list and don't have to start from the beginning,
+			//and if it's not there then we start over and it'll
+			//be in the beginning.
 			}
 		}
 	}
+	//It should have no capacity to reach this point
 }
 
 
@@ -1680,6 +1794,8 @@ map<nodeid,nodeid> get_list(nodeid n) {
 //locals: var (thats the ?a) | list header (size 2) | offset - 2 (pointing to the first var) | list bnode ("size" 1) | node b | nil 
 //consts: the node b
 
+
+//Locals::Constructor
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, pqlist body)
 {
 	FUN;
@@ -1693,25 +1809,38 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 
 
-	//in add_node we ignored lists, we just added them as nodes and queued them up
-	//more like we don't pass lists to add_node in the first place
 
 	//As long as there's still terms in lq, pop the 1st one off the list and 
 	auto expand_lists = [&lq, &locals, &lm]() {
 		setproc("expand_lists");
 		while (!lq.empty()) {
+			//Pop the first node off of lq into ll.
 			toadd ll = lq.front();
 			lq.pop();
 
+			//Grab the nodeid from the toadd.
 			nodeid l = ll.first;
 
+			//First item: bnode
+			//2nd item: object related to that bnode by
+			//rdffirst.
+			//map<nodeid,nodeid> get_list(nodeid n)
 			auto lst = get_list(l);
 
+			//Make a thing
 			Thing i0; // list size item, a sort of header / pascal string (array?) style thing
 #ifdef KBDBG
+			//Add the markup from the toadd to the thing.
 			add_kbdbg_info(i0, ll.second);
+
+			//What's this do
 			unsigned long list_part = 0;
 #endif
+			//Why the size?
+
+			//This will make the value of the Thing i0 the
+			//number of items in the list, and put it in locals.
+			//lm[l] = locals.size();
 			make_this_list(i0, lst.size());
 			locals.push_back(i0);
 			lm[l] = locals.size()-1; // register us in the locals map
@@ -1723,15 +1852,20 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 				TRACE(dout << "item..." << dict[bnode_id] << " : " << dict[li] << endl;)
 
 #ifdef KBDBG
+
 				Markup m = ll.second;
 				m.push_back(list_part++);
 #endif
+				//Create a Thing for the bnode of the item
+				//and put it in locals.
 
 				//we add bnodes that simulate rdf list structure
 				Thing bnode = create_list_bnode(bnode_id);
 				locals.push_back(bnode);
 
 
+				//Create a Thing for the list item and put
+				//it in locals.
 				Thing t;
 				if (li < 0) {
 					TRACE(dout << "its a var" << endl);
@@ -1742,6 +1876,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 						lm[li] = locals.size();
 					}
 					else { //yes? just point to it
+					//hrmm
 						make_this_offset(t, ofst(it->second, locals.size()));
 					}
 				}
@@ -1771,6 +1906,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 	//replace NODEs whose terms are lists with OFFSETs. expand_lists left them there.
 	auto link_lists = [&locals, &lm]() {
+		//For each Thing in locals:
 		for (size_t i = 0; i < locals.size(); i++) {
 			Thing &x = locals[i];
 			if (is_node(x) && islist(get_node(x))) {
@@ -1780,16 +1916,26 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	};
 
 
-	//vec is a vector of Things, and m is a map from termid's to indexes into
-	//that vector.
+	//typedef map<nodeid, pos_t> locals_map;
+	//typedef vector<Thing> Locals;
+
+	//Why do we pass var to this when we pass xx to it and we could
+	//just check x < 0
+	//make a Thing out of our node (toadd) xx
 	auto add_node = [](bool var, toadd xx, Locals &vec, locals_map &m) {
 		setproc("add_node");
+
+		//Make a blank Thing 
 		Thing t;
+
+		//add the Markup from xx to t.
 		add_kbdbg_info(t, xx.second);
+
+		//Get the nodeid of our toadd		
 		nodeid x = xx.first;
 //		TRACE(dout << "termid:" << x << " p:" << dict[x->p] << "(" << x->p << ")" << endl;)
 
-		//Check to see if the termid is already in m (locals/consts).
+		//Check to see if the termid is already in the map (locals/consts).
 		//If it's not then add it.
 		auto it = m.find(x);
 		if (it == m.end()) {
@@ -1798,19 +1944,38 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			//vec.
 			m[x] = vec.size();
 
-			//Create a Thing for this termid and push it to the back
+			//Create a Thing for this nodeid and push it to the back
 			//of vec.
+			//If it's a var it'll be unbound ofc. Bound variables
+			//only happen during query.
 			if(var)
 				t = create_unbound();
+			//If it's not a var it'll be a node, remember we're
+			//not handling lists here.
 			else
 				t = create_node(x);
+			
+			//add the Markup from xx to t.
+			//mm I think we did that already.
+			//yea I think this is redundant.
 			add_kbdbg_info(t, xx.second);
+
+			//Push the thing into our Locals vec.
+			//We should have the equation:
+			// t = vec[m[x]]
 			vec.push_back(t);
 		}
+		//Are we normally not expecting the else condition?
+//We only make offsets if KBDBG is defined?
+//What are we doing if it's not KBDBG and the var's already in there?
+//with kbdbg, every single occurence of a var in the rule has to have its
+//own representation in locals, we cant just re-use the same position
 #ifdef KBDBG
 		else
 		{
+			//hrmm
 			make_this_offset(t, ofst(it->second, vec.size()));
+			//I think this would also be redundant.
 			add_kbdbg_info(t, xx.second);
 			vec.push_back(t);
 		}
@@ -1820,13 +1985,23 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 	/* Execution region */ 
 
+	//typedef vector<unsigned long> Markup;
+	//typedef std::pair<nodeid, Markup> toadd;
+	//Should call this nodes maybe?
+	//We're going to put every node (subj/obj) used by the rule into this
+	//vector.
 	vector<toadd> terms;
 
-//Need to understand this kbdbg stuff
+
+	//Need to understand this kbdbg stuff
+
+	//Store the value of the global before we modify it
 	unsigned long old_kbdbg_part = kbdbg_part;
 
-	//Make toadds out of the head and all terms in the body and push these
-	//into terms.
+	//Make a toadd for both the subject and object for each term in the 
+	//rule (both head & body), and push these into terms vector.
+	//Increment kbdbg_part for each node added to terms, place this
+	//value into a vector, and set that as the Markup for the toadd.
 	if (head) {
 		terms.push_back(toadd(dict[head->subj], {kbdbg_part++}));
 		terms.push_back(toadd(dict[head->object], {kbdbg_part++}));
@@ -1844,19 +2019,41 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//If it's a list, then push it to lq to be processed later.
 	for (toadd xx: terms) {
 		nodeid x = xx.first;
+		//If not a variable & not a list:
+		//only says it's a list if it's in the head
+		//no it definitely says its a list if its in @default
+		//hmm
 		if (x > 0 && !islist(x)) {
+//im still just going through everything tryna make sure i know
+//what's going on cool cool wanna check out anything in particular right now? no you? i've just been basically going through the logical progression
+//i'm right about here in compilation process :P :) ive been sleeping
+//always good ok i really want a tea kettle full of fruit tea so brb
+//heh ok yea ima make coffee
+
+//islist() only tells us its a list if it's in the head?
+
+//what's with consts & cm?
 #ifndef KBDBG
 			//force rule s and o into locals for now
+		//If it's not a var, not a list, and is in the head, then
+		//put it in locals.
+		//Why would we have !head?
 			if (head && (x == dict[head->subj] || x == dict[head->object]))
 				add_node(false, xx, locals, lm);
+		//If it's not a var, not a list, and is not in the head, then
+		//put it in consts.
 			else
 				add_node(false, xx, consts, cm);
 #else
 			add_node(false, xx, locals, lm);
 #endif
 		}
+		//Is a variable
 		else if (x < 0)
 			add_node(true, xx, locals, lm);
+
+		//Is a list
+		//only says it's a list if it's in the head
 		else if (x > 0 && islist(x))
 			lq.push(xx);
 		else
@@ -1866,12 +2063,18 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	expand_lists();
 	link_lists();
 
+
+
+
 	kbdbg_part_max = kbdbg_part;
 	kbdbg_part = old_kbdbg_part;
 
 	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
 	TRACE(print_locals(locals, consts, lm, cm, head);)
 }
+
+
+
 
 
 
@@ -1909,6 +2112,7 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 
 #else
 		(void)locals;
+		//find_thing will just find the first occurence , toadd didnt add another one, all is well
 		sk = maybe_head(find_thing(s, i1, lm, cm), head, s);
 		ok = maybe_head(find_thing(o, i2, lm, cm), head, o);
 #endif
@@ -1969,15 +2173,38 @@ rule_t compile_rule(Rule r)
 	//What do each of these do?
 	//should draw a picture of the data structure(s)
 	//maps from nodeids to indexes into locals/consts
+
+
+	//typedef map<nodeid, pos_t> locals_map;
+	//typedef unordered_map<nodeid, pos_t> locals_map;
 	locals_map lm, cm;
+	//i'm not familiar with how this works
 	//these will be needed after this func is over so we allocate them on the heap
+
+
+	//typedef vector<Thing> Locals;
 	Locals &locals_template = *new Locals();
 	locals_templates_garbage.push_back(&locals_template);//and register them for garbage collection
+
 	Locals *consts_ = new Locals();
 	consts_garbage.push_back(consts_);
 	Locals &consts = *consts_;
 
+	/*
+	Structures to fill out:
+	-------------------------
+	locals_template:	vector<Thing>
+	consts:			vector<Thing>
+	lm:			map<nodeid, pos_t>
+	cm:			map<nodeid, pos_t>
+
+	Input:	//why not just send it the Rule?
+	r.head:			pquad
+	r.body:			pqlist
+	*/
 	make_locals(locals_template, consts, lm, cm, r.head, r.body);
+
+
 	join_gen jg = compile_body(locals_template, consts, lm, cm, r.head, r.body);
 
 	size_t hs, ho; // indexes of head subject and object in locals
