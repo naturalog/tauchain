@@ -43,15 +43,15 @@ extern int result_limit ;
 #define EEE char entry = 0
 
 //we don't modify this one either
-#define TRCEEE TRACE(dout << "entry = " << (int)entry << endl)
+#define TRACE_ENTRY TRACE(dout << "entry = " << (int)entry << endl)
 //At the very least call them ENTRY & TRCENTRY //sounds good
 /*after all, these macros are an abstraction like any other....
 so lets give them good names and leave them there?*/
 
-const char LAST = 33; // last case statement (in release mode), not last entry, the coro might still be invoked with 33 several itmes before returning false
+const char LAST = 33; // last case statement (in release mode), not last entry, the coro might still be invoked with 33 repeatedly before returning false
 
 
-
+//my keybindings are all default and fuckedup
 
 
 //DEBUG directive:
@@ -654,7 +654,7 @@ coro dbg_fail()
 	byte entry = 0;
 	return [entry]() mutable{
 		setproc("dbg_fail lambda");
-		TRCEEE;
+		TRACE_ENTRY;
 
 		switch(entry)
 		{
@@ -672,7 +672,7 @@ pred_t dbg_fail_with_args()
 	int entry = 0;
 	return [entry](Thing *_s, Thing *_o) mutable{
 		setproc("dbg_fail_with_args lambda");
-		TRCEEE;
+		TRACE_ENTRY;
 
 		(void)_s;
 		(void)_o;
@@ -985,7 +985,7 @@ coro unboundunifycoro(Thing * me, Thing *arg
 			]() mutable {
 				setproc("var unify lambda");
 				//TRACE(dout << "entry = " << (int)entry << endl)
-				TRCEEE; //TRCENTRY
+				TRACE_ENTRY; //TRCENTRY
 				switch (entry) {
 				//A 2-step process:
 				//on the first time around it will bind me
@@ -1070,7 +1070,7 @@ coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb)
 		ASSERT(is_unbound(*x));
 		setproc("unbound_succeed lambda");
 		TRACE(dout << str(x) << " " << str(y) << endl);
-		TRCEEE;
+		TRACE_ENTRY;
 		switch (entry) {
 			case 0:
 				entry = LAST;
@@ -1267,8 +1267,8 @@ void check_pred(nodeid pr)
 Rules quads2rules(qdb &kb)
 {
 	FUN;
-	//isn't this already a global? yes but we work with this local and return it
-	Rules rules;
+
+	Rules result;
 
 	//std::map<context,list of quads with that context>
 	//std::map<string,pqlist>
@@ -1291,7 +1291,7 @@ Rules quads2rules(qdb &kb)
 
 			//here we add a fact, one for each triple in @default
 			//typedef map<nodeid, vector<Rule>> Rules;
-			rules[dict[quad->pred]].push_back(Rule(quad, 0));
+			result[dict[quad->pred]].push_back(Rule(quad, 0));
 
 			if (p == implication) //then also, if this is a rule, i.e. the predicate is "=>":
 			{
@@ -1309,13 +1309,13 @@ Rules quads2rules(qdb &kb)
 
 					//make a rule for each triple in the head
 					for (pquad h : *quads.at(o)) {
-						rules[dict[h->pred]].push_back(Rule(h, b));
+						result[dict[h->pred]].push_back(Rule(h, b));
 					}
 				}
 			}
 		}
 	}	
-	return rules;
+	return result;
 }
 
 
@@ -1372,7 +1372,7 @@ coro unifjoin(Thing *a, Thing *b, coro c)
 	TRC(int call = 0;)
 	return [a,b,c, uc, entry TRCCAP(call)]() mutable{
 		setproc("unifjoin1");
-		TRCEEE;
+		TRACE_ENTRY;
 		TRC(call++;)
 
 		switch(entry)
@@ -2874,56 +2874,129 @@ void build_in_rules()
 	//...nothing to implement?
 
 
+//whats your sleep schedule now?random:)and today?not goin to sleep til tonight mm isee  im ripe for a break you? sure
 
-
-	// {?P @has rdfs:domain ?C. ?S ?P ?O} => {?S a ?C}.
+	// https://www.w3.org/TR/rdf-schema/#ch_domain
+	// {?Pred @has rdfs:domain ?Class. ?Instance ?Pred ?Whatever} => {?Instance a ?Class}.
 	// rdfs:domain(?x ?y) implies ( ?x(?u ?v)) implies ?y(?u) )
+	//why the code block?
+	//var declarations
 	{
-		Thing o = create_unbound();
-		Thing p = create_unbound();
+		Thing whatever = create_unbound();
+		Thing pred = create_unbound();
+		Thing pred_val;
+		nodeid pred_nodeid = 0;
 
-	builtins[rdftype].push_back([entry,p,p1,p2,o](Thing *s, Thing *c) mutable {
+		/*this one might still need adding ep check*///really
+
+
+		/* Why are we doing domain for rdftype?
+		builtins are just grouped by their pred
+		just as kb rules are grouped into pred_t's
+		rdftype is the predicate of the head of the rule
+		rule has head s rdftype o */
+
+	builtins[rdftype].push_back([entry,pred,pred_val,pred_nodeid,whatever](Thing *instance, Thing *cls) mutable {
 		setproc("domainImpliesType");
-		TRCEEE;
+		TRACE_ENTRY;
 		switch(entry){
 		case 0:
-			p1 = ITEM(preds,rdfsdomain);
-			while (p1(&p, c))
+			domain_pred = ITEM(preds,rdfsdomain);
+			while (domain_pred(&pred, cls))
 			{
 				{
-					ASSERT(is_bound(p));
-					Thing *x = get_thing(p);
-					ASSERT(is_node(*x));
-					nodeid pp = get_node(*x);
-					if (!has(preds, pp))
-						preds[pp] = make_wildcard_rule(pp);
-					p2 = ITEM(preds, pp);
+					ASSERT(is_bound(pred));
+					Thing *pred_val = get_thing(pred);
+					//how do we know it's not another bound var good q.......... i guess it wouldnt if a rule returned it
+					//at least i put the assert there:) we can test it
+					//yeah hm in the long run we should get the floobits session and tmux on one machine i guess
+					//so isnt that a bug
+					/*i dunno if we're supposed to allow rules to imply this*/
+					//if it's  a semantic restriction it should probably be handled more fully
+					//but in the typesystem, not here..at least thats my guess 
+					/*anyway good catch
+					 * tests/rdf/domainImpliesType-tricky
+					*/
+					ASSERT(is_node(*pred_val));
+					nodeid pred_nodeid = get_node(*pred_val);
+
+					if (!has(preds, pred_nodeid))
+						preds[pred_nodeid] = make_wildcard_rule(pred_nodeid);
+					pred_coro = ITEM(preds, pred_nodeid);
 				}
-				ASSERT(is_unbound(o));
-				while(p2(s, &o))
+				ASSERT(is_unbound(whatever));
+				while(pred_coro(instance, &whatever))
 				{
 					entry = LAST;
 					return true;
 		case_LAST:;
 				}
-				ASSERT(is_unbound(o));
+				ASSERT(is_unbound(whatever));
 			}
 			return false;
 			END;
 		}
 	});
 	}
+/*
+	//so,...
+//so does it work
+	tests/rdf/domainImpliesType passess
 
-	// {?P @has rdfs:range ?C. ?S ?P ?O} => {?O a ?C}.
+ /*
+//K so should we package these up into one builtin?
+	//hell no!
+	// {?Pred @has rdfs:range ?Class. ?Whatever ?Pred ?Instance} => {?Instance a ?Class}.
 	// rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
+*/
+//Alright how does that look
+	//like a lot of duplicated code hehe yep lol
+  {
+	Thing whatever = create_unbound();
+	Thing pred = create_unbound();
 
+  builtins[rdftype].push_back([entry,pred,p1,p2,whatever](Thing *instance, Thing *cls) mutable {
+    setproc("rangeImpliesType");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			range_pred = ITEM(preds,rdfsrange);
+			while (range_pred(&pred, cls))
+			{
+				{
+					ASSERT(is_bound(pred));
+					Thing *pred_val = get_thing(pred);
+					//how do we know it's not another bound var good q.......... i guess it wouldnt if a rule returned it
+					//at least i put the assert there:) we can test it
+					//yeah hm in the long run we should get the floobits session and tmux on one machine i guess
+					//so isnt that a bug
+					/*i dunno if we're supposed to allow rules to imply this*/
+					//if it's  a semantic restriction it should probably be handled more fully
+					//but in the typesystem, not here..at least thats my guess
+					/*anyway good catch*/
 
+					ASSERT(is_node(*pred_val));
+					nodeid pred_nodeid = get_node(*pred_val);
 
+					if (!has(preds, pred_nodeid))
+						preds[pred_nodeid] = make_wildcard_rule(pred_nodeid);
+					pred_coro = ITEM(preds, pred_nodeid);
+				}
+				ASSERT(is_unbound(whatever));
+				while(pred_coro(&whatever,instance))
+				{
+					entry = LAST;
+					return true;
+		case_LAST:;
+				}
+				ASSERT(is_unbound(whatever));
+			}
+			return false;
+			END;
+		}
 
-
-
-
-
+  });
+  }
 
 
 
@@ -3059,7 +3132,7 @@ void build_in_rules()
 
 	builtins[bui].push_back(
 			[r, bu, entry, ouc, s, ss](Thing *s_, Thing *o_) mutable {
-				//TRCEEE?
+				//TRACE_ENTRY?
 				switch (entry) {
 					case 0: {
 
@@ -3186,8 +3259,8 @@ void build_in_rules()
 
 
 #ifdef notes65465687
-
-
+i got ti nope
+https://www.w3.org/TR/rdf-schema/#ch_type
 //http://wifo5-03.informatik.uni-mannheim.de/bizer/SWTSGuide/carroll-ISWC2004.pdf
 
 //Unicode
