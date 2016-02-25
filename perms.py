@@ -21,7 +21,7 @@ def param(a, s):
 
 for w in PP:
 	for x in PP:
-		print "join_gen " + permname(w,x) + "(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)"
+		print "join_gen " + permname(w,x) + "(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)"
 		print """{
 	FUN;
 	TRACE(dout << "making a join" << endl;)

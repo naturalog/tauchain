@@ -84,6 +84,7 @@ public:
 	void init();
 
 	//Update
+	nodeid set ( string s );
 	nodeid set ( node v );
 	nodeid set ( pnode v ) { return set (*v); }
 	void set ( const std::vector<node>& v );
@@ -95,6 +96,13 @@ public:
 
 	//Access
 	node operator[] ( nodeid);
+	//Theoretically we could call it with any wrong type, why is u64 singled out;
+	//not really, we are only worried with implicit conversion
+	//is there a more general way to handle this filtering
+	// yes, switching to haskell lol
+	//that was because i kept confusing termids and nodeids
+	//we could shuffle things so that we could explicitly say termid here instead of u64 but
+	//that seems like overdoing it yea ill save it for later
 	node operator[] ( u64 ) { throw std::runtime_error("called dict[] with wrong type"); }
 	nodeid operator[] ( node );
 	nodeid operator[] ( pnode v ) { return v ? (*this)[*v] : 0; }

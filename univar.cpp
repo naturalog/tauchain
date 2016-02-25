@@ -169,7 +169,7 @@ public:
 		offset_t offset;
 	};
 #ifdef KBDBG
-	Markup markup;
+	Markup markup; //a list of ints saying where in the reconstructed kb text (by print_kbdbg) this Thing comes from
 #endif
 
 	//No internalized methods
@@ -183,9 +183,9 @@ public:
 #define get_type(thing) ((thing).type)
 #define get_node(thing) (DBGC(ASSERT(get_type(thing) == NODE || get_type(thing) == LIST_BNODE)) /*then return*/ (thing).node)
 #define get_size(thing) ((thing).size)
+//get_binding(var) or get_value(var) would be better
 #define get_thing(ttttt) ((ttttt).thing)
 #define get_offset(thing) ((thing).offset)
-
 
 
 //these make sense
@@ -196,9 +196,7 @@ public:
 #define is_list(thing)		(get_type(thing) == LIST)
 #define is_list_bnode(thing)(get_type(thing) == LIST_BNODE)
 #define is_node(thing)		(get_type(thing) == NODE)
-
 #define is_var(thing)		(get_type(thing) == BOUND || get_type(thing) == UNBOUND)
-
 
 
 //Thing::Comparison
@@ -270,13 +268,14 @@ void make_this_list(Thing &i0, size_t size)
 //Version B:
 /***************************************************************/
 /* oneword:
-kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointees
+kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointees #todo more relevant link
 
  00 = var        // address left intact or zero
  01 = node       // we mostly just compare these anyway
 010 = positive offset
 110 = negative offset
  11 = list(size)
+ gotta add list bnode
 */
 
 typedef uintptr_t *Thing; // unsigned int that is capable of storing a pointer
@@ -437,8 +436,11 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 //region types, globals, funcs
 
 //Structures of Things
-//local variables in a rule?
+
+//Stores all the different Things in a rule
 typedef vector<Thing> Locals;
+
+//Stores subject/object pairs for the Euler path check.
 typedef std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
@@ -447,7 +449,9 @@ typedef std::vector<thingthingpair> ep_t;
 typedef function<bool()> coro;
 
 
-//these are the same 
+//these are the same, why do we differentiate them? because they are logically different
+//i guess we just don't get to say anything more specific in the type
+//ah..yes
 typedef function<bool(Thing*,Thing*)> pred_t;
 typedef function<pred_t()> pred_gen;
 
@@ -458,7 +462,7 @@ typedef function<rule_t()> rule_gen;
 typedef function<bool(Thing*,Thing*, Thing*)> join_t;
 typedef function<join_t()> join_gen;
 //btw im using gen in the sense that its a lambda generating another lambda
-typedef function<join_gen(nodeid, join_gen, size_t, size_t, Locals&)>  join_gen_gen;
+typedef function<join_gen(nodeid, join_gen, pos_t , pos_t , Locals&)>  join_gen_gen;
 
 
 
@@ -798,30 +802,46 @@ string str(const Thing *_x)
 			ASSERT(thing);
 			return "var(" + str(thing) + ")";
 		}
+
+
 		case UNBOUND:
 			return "var()";
+
+
 		case NODE: {
 			const nodeid node = get_node(x);
 			ASSERT(node);
 			return *dict[node].value;
 		}
+
+
 		case LIST_BNODE: {
 			const nodeid node = get_node(x);
 			ASSERT(node);
 			return "~" + *dict[node].value + "~";
 		}
+
+
 		case LIST: {//btw with list bnodes, LIST Thing is just an optimization now
 			const size_t size = get_size(x);
 			stringstream r;
 			r << "{" << size << " items}(";
-			for (size_t i = 0; i < size; i++) {
+			for (pos_t  i = 0; i < size; i++) {
 				if (i != 0) r << " ";
+				//not sure what this is doing; iterating over the list i guess, i just dont quite get the mechanism
+				/*we are skipping the bnodes when printing the list, so this is
+				 * the address of the LIST, its followed by first LIST_BNODE,
+				 * then first actual value in the list, so +2 to get to the value,
+				 * then jumping to i-th value(*2)*/
 				r << str(_x + 2 + (i*2));
 			}
 			if (!size)
 				r << " ";
 			return r.str() + ")";
 		}
+
+
+
 		case OFFSET: {
 			const offset_t offset = get_offset(x);
 			stringstream r;
@@ -1012,8 +1032,7 @@ coro unboundunifycoro(Thing * me, Thing *arg
 						#ifdef KBDBG
 						kbdbg_bind(origa, false, origb);
 						#endif
-				//there may be a 3rd step in case of debugging
-				//stuff (a 3rd step we're not supposed to reach).
+				//with DEBUG, we check for reentry which would be a bug
 						END
 				}
 			};
@@ -1029,10 +1048,11 @@ bool would_unify(Thing *this_, Thing *x_)
 		FUN;
 		const Thing me = *this_;
 		const Thing x = *x_;
+		//We're sure it won't be these? in the context of ep-checking, yes
 		ASSERT(!is_offset(me));
 		ASSERT(!is_offset(x));
 		ASSERT(!is_bound(x));
-	//return type_bits(me) &&
+
 		if (is_var(me))
 			return true;// we must have been an unbound var
 		else if (types_differ(me, x)) // in oneword mode doesnt differentiate between bound and unbound!
@@ -1044,11 +1064,14 @@ bool would_unify(Thing *this_, Thing *x_)
 			ASSERT(is_list(me));
 			const auto size = get_size(me);
 			if(size != get_size(x)) return false;
-			for (size_t i = 0; i < size; i++)
+			for (pos_t  i = 0; i < size; i++)
 				if (!would_unify(getValue(this_+1+(i*2)) , getValue(x_+1+(i*2))))
 					return false;
 			return true;
 		}
+		//dont list bnodes ever come up here?
+
+	/*maybe we could do this function more functionally like return type_bits(me) &&...*/
 }
 
 
@@ -1151,7 +1174,7 @@ What kind of garbage do we have?
 */
 
 /*
-Where does this garbage come from?
+Where does this garbage come from? Allocation of objects
 */
 void free_garbage()
 {
@@ -1199,7 +1222,9 @@ void add_rule(nodeid pr, const rule_t &x)
 	}
 }
 
-void compile_pred(nodeid pr)
+
+
+
 //Check preds to see if the pred has already been compiled.
 //Don't compile preds that have already been compiled. Return instead.
 //Note: we shouldn't even be getting the same pred twice anyway
@@ -1213,12 +1238,13 @@ void compile_pred(nodeid pr)
 //see if it's in pred_index. If it's not, then return, otherwise,
 //get the list of rules in which this node is the predicate for the
 //head. For each rule in the list, compile the rule and add it to the
-//rule for that predicate using add_rule. 
+//rule for that predicate using add_rule.
 
-//add_rule is simple, it just checks to see if the pred has already been 
+//add_rule is simple, it just checks to see if the pred has already been
 //compiled, if not, then the rule_t we pass it becomes the rule_t for
 //that pred. If the pred is already partially compiled, then the
 //rule_t we pass it just gets sequenced with what's already there (using seq).
+void compile_pred(nodeid pr)
 {
 	FUN;
 	TRACE(dout << dict[pr] << endl;)
@@ -1244,9 +1270,8 @@ void compile_pred(nodeid pr)
 			add_rule(pr, compile_rule(r));
 	}
 	
-	//what's the wildcard rule
+	//rdfs:SubPropertyOf
 	add_rule(pr, make_wildcard_rule(pr));
-
 
 }
 
@@ -1267,7 +1292,7 @@ void check_pred(nodeid pr)
 Rules quads2rules(qdb &kb)
 {
 	FUN;
-
+  //typedef map<nodeid, vector<Rule>> Rules;
 	Rules result;
 
 	//std::map<context,list of quads with that context>
@@ -1275,6 +1300,7 @@ Rules quads2rules(qdb &kb)
 	auto &quads = kb.first;
 
 	//why only default context? because thats what we reason about
+
 	auto it = quads.find(str_default);
 	if (it != quads.end()) {
 		//pqlist
@@ -1323,6 +1349,8 @@ void compile_kb(qdb &kb)
 {
 	FUN;
 	//Cleanup
+	//DEBUG:      std::map<nodeid, pred_t> preds;
+	//otherwise:  std::unordered_map<nodeid, pred_t> preds;
 	preds.clear();//the lambdas
 	free_garbage();
 
@@ -1330,12 +1358,9 @@ void compile_kb(qdb &kb)
 	//typedef map<nodeid, vector<Rule>> Rules;
 	rules = quads2rules(kb);
 	lists = rules;//we dont have any query at this point
-//well, no reason this shouldnt work i guess
-/*we only deal wihmmm
-maybe this includes also lists in heads, while it should only have
-lists in the default graph*/
+/*maybe this includes also lists in heads, while it should only have
+lists in the default graph?*/
 
-	//hrmm
 	for(auto x: builtins)
 		compile_pred(x.first);
 
@@ -1467,26 +1492,25 @@ coro listunifycoro2(Thing *a_, Thing *b_)
 
 coro unify(Thing *a_, Thing *b_){
 	FUN;
-	//This counts the number of unify coros for the kb?
 	unifys++;
 
-	//Not sure what these are for
-	DBG(auto origa = a_;)
-	DBG(auto origb = b_;)
+	//for logging
+	DBG(Thing *origa = a_;)
+	DBG(Thing *origb = b_;)
 
 
 	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
-	//Where is '==' for Thing defined?
-	//Not sure what this is doing.
+
 	if (a_ == b_) {//?
 		TRACE(dout << "a == b" << endl;)
 
+    	//orig, origb only exist #ifdef DEBUG
 		//ifndef KBDBG then this will be gen_succeed();
 		return UNIFY_SUCCEED(origa, origb);
 	}
 
-
+	//Get the "representative value" of a_
 	a_ = getValue(a_);
 	Thing a = *a_;
 
@@ -1495,7 +1519,6 @@ coro unify(Thing *a_, Thing *b_){
 	//not an offset to a variable.
 	ASSERT(!is_bound(a));
 	ASSERT(!is_offset(a));
-
 
 
 	//If a is an unbound variable	
@@ -1576,12 +1599,13 @@ coro unify(Thing *a_, Thing *b_){
 rule_t seq(rule_t a, rule_t b){
 	FUN;
 	TRACE(dout << ".." << endl;)
-	EEE;
+	EEE; //char entry = 0;
 	TRC(int call = 0;)
 	return [a, b, entry TRCCAP(call)](Thing *Ds, Thing *Do) mutable{
 		setproc("seq1");
 		TRC(call++;)
 		TRACE(dout << "call: " << call << endl;)
+
 		switch(entry){
 		case 0:
 			entry = 1;
@@ -1634,7 +1658,7 @@ PredParam maybe_head(PredParam pp, pquad head, nodeid x)
 
 //Locals::Access
 //return term's PredParam and possibly also its index into the corresponding vector
-PredParam find_thing (nodeid x, size_t &index, locals_map &lm, locals_map &cm)
+PredParam find_thing (nodeid x, pos_t  &index, locals_map &lm, locals_map &cm)
 {
 	auto it = lm.find(x);
 	if (it != lm.end()) {
@@ -1648,9 +1672,9 @@ PredParam find_thing (nodeid x, size_t &index, locals_map &lm, locals_map &cm)
 }
 
 #ifdef KBDBG
-PredParam kbdbg_find_thing (unsigned long part, size_t &index, Locals &locals)
+PredParam kbdbg_find_thing (unsigned long part, pos_t  &index, Locals &locals)
 {
-	size_t r = 0;
+	pos_t  r = 0;
 	for(auto i: locals)
 	{
 		if (i.markup.size() == 1 && i.markup.at(0) == part) {
@@ -1663,10 +1687,11 @@ PredParam kbdbg_find_thing (unsigned long part, size_t &index, Locals &locals)
 }
 #endif
 
+
 //find thing in locals or consts
 Thing &fetch_thing(nodeid x, Locals &locals, Locals &consts, locals_map &lm, locals_map &cm)
 {
-	size_t i;
+	pos_t  i;
 	auto pp = find_thing(x, i, lm, cm);
 	if (pp == LOCAL)
 		return locals[i];
@@ -1675,6 +1700,8 @@ Thing &fetch_thing(nodeid x, Locals &locals, Locals &consts, locals_map &lm, loc
 	else
 		assert(false);
 }
+
+
 
 
 //Locals::Serializer
@@ -1694,7 +1721,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 	}
 #ifdef KBDBG
 	dout << "locals: (pos, thing, kbdbg)" << endl;
-	for (size_t i = 0; i<locals.size(); i++)
+	for (pos_t  i = 0; i<locals.size(); i++)
 		dout << " " << i << "     " << str(&locals.at(i)) << "     " << kbdbg_str(&locals.at(i)) << endl;
 #endif
 	if (cm.size()) {
@@ -1796,12 +1823,15 @@ map<nodeid,nodeid> get_list(nodeid n) {
 
 
 //Locals::Constructor
+//Input: head, body
+//To fill out: locals, consts, lm, cm
 void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, pqlist body)
 {
 	FUN;
 
+  //queue to load up our lists into.
 	std::queue<toadd> lq;
-//	TRACE(dout << "head:" << op->format(head) << endl);
+  //	TRACE(dout << "head:" << op->format(head) << endl);
 
 	/* Function definition region */
 	//We make 3 function which we then apply later, so in reading this make_locals function,
@@ -1907,7 +1937,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//replace NODEs whose terms are lists with OFFSETs. expand_lists left them there.
 	auto link_lists = [&locals, &lm]() {
 		//For each Thing in locals:
-		for (size_t i = 0; i < locals.size(); i++) {
+		for (pos_t  i = 0; i < locals.size(); i++) {
 			Thing &x = locals[i];
 			if (is_node(x) && islist(get_node(x))) {
 				make_this_offset(x, ofst(lm.at(get_node(x)), i));
@@ -1958,6 +1988,8 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			//add the Markup from xx to t.
 			//mm I think we did that already.
 			//yea I think this is redundant.
+			//we did it but for a different t
+			//anyway, just dont worry about kbdbg
 			add_kbdbg_info(t, xx.second);
 
 			//Push the thing into our Locals vec.
@@ -2002,6 +2034,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//rule (both head & body), and push these into terms vector.
 	//Increment kbdbg_part for each node added to terms, place this
 	//value into a vector, and set that as the Markup for the toadd.
+	//What's the Markup doing?
 	if (head) {
 		terms.push_back(toadd(dict[head->subj], {kbdbg_part++}));
 		terms.push_back(toadd(dict[head->object], {kbdbg_part++}));
@@ -2017,42 +2050,40 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//a variable or a list, then "add_node(false, xx, locals, lm)".
 	//If the term is a variable, then "add_node(true, xx, locals, lm)".
 	//If it's a list, then push it to lq to be processed later.
+	//std::pair<nodeid,Markup>
 	for (toadd xx: terms) {
 		nodeid x = xx.first;
-		//If not a variable & not a list:
+		//If not a variable & not a list, then we'll make a 'constant' thing, i.e. add_node(false,...)
 		//only says it's a list if it's in the head
 		//no it definitely says its a list if its in @default
 		//hmm
 		if (x > 0 && !islist(x)) {
-//im still just going through everything tryna make sure i know
-//what's going on cool cool wanna check out anything in particular right now? no you? i've just been basically going through the logical progression
-//i'm right about here in compilation process :P :) ive been sleeping
-//always good ok i really want a tea kettle full of fruit tea so brb
-//heh ok yea ima make coffee
 
 //islist() only tells us its a list if it's in the head?
 
 //what's with consts & cm?
+//not sure this whole KBDBG switch going on here
 #ifndef KBDBG
 			//force rule s and o into locals for now
 		//If it's not a var, not a list, and is in the head, then
-		//put it in locals.
-		//Why would we have !head?
+		//put it in locals. Why? //i guess just so i didnt have to complicate or make permutations of the rule lambda where it unifies the rule arguments against this
+		//Why would we have !head? //for query top level
 			if (head && (x == dict[head->subj] || x == dict[head->object]))
 				add_node(false, xx, locals, lm);
 		//If it's not a var, not a list, and is not in the head, then
-		//put it in consts.
+		//put it in consts. Why?
 			else
 				add_node(false, xx, consts, cm);
 #else
+    //And why #ifdef KBDBG they both go into locals?
 			add_node(false, xx, locals, lm);
 #endif
 		}
-		//Is a variable
+		//Is a variable, so we'll make a variable thing, i.e. add_node(true,...)
 		else if (x < 0)
 			add_node(true, xx, locals, lm);
 
-		//Is a list
+		//Is a list, we'll push it to lq and save it for expand_lists() and link_lists()
 		//only says it's a list if it's in the head
 		else if (x > 0 && islist(x))
 			lq.push(xx);
@@ -2065,7 +2096,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 
 
-
+  //What are these?
 	kbdbg_part_max = kbdbg_part;
 	kbdbg_part = old_kbdbg_part;
 
@@ -2086,6 +2117,7 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 	if(body)
 	{
 
+  //qlist
 	auto b2 = *body;
 	reverse(b2.begin(), b2.end());
 #ifdef KBDBG
@@ -2097,28 +2129,52 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 	//fail_with_args. 
 	for (pquad bi: b2)
 	{
+	  //Make sure the pred is there, if not, make a wild-card rule for it. Hrmm
+    //Need to think about what order we're compiling our rules/preds in and how
+    //this will impact the order of execution.
+    //This will have some preds calling the wildcard rule twice, once at the beginning of
+    //their execution and once at the end. This adds a wild-card rule if the pred isn't
+    //there, but it might only not be there because we just haven't gotten to it yet.
+    //When we do get around to it, it will now have a wildcard rule there already. We'll
+    //sequence it up with the rest of the rules in compile_pred, and then at the end of
+    //compile_pred, we add a wildcard rule onto the beginning.
+    //Really there probably shouldn't be a wildcard rule added to the beginning in compile_pred
+    //unless there's nothing in the pred at the end of compilation. We should probably do
+    //wildcard rule at the end, i.e. check if the property matches and *then* check if the
+    //subproperty matches.
+		/*check_pred doesnt look if we already compiled it but if we have it in kb or builtins*/
 		check_pred(dict[bi->pred]);
-		nodeid s = dict[bi->subj];
-		nodeid o = dict[bi->object];
-		size_t i1, i2;
-		PredParam sk, ok;
-#ifdef KBDBG
-		(void)lm;
-		(void)cm;
-		ok = maybe_head(kbdbg_find_thing(--max, i2, locals), head, o);
-		TRACE(dout<<"max:"<<max<<endl);
-		sk = maybe_head(kbdbg_find_thing(--max, i1, locals), head, s);
-		TRACE(dout<<"max:"<<max<<endl);
 
+
+
+		//set up the subject and object
+		pos_t  i1, i2;//s and o positions
+		//k? "key"
+		PredParam sk, ok;
+
+		{
+			nodeid s = dict[bi->subj];
+			nodeid o = dict[bi->object];
+#ifdef KBDBG
+			(void)lm;
+			(void)cm;
+			ok = maybe_head(kbdbg_find_thing(--max, i2, locals), head, o);
+			TRACE(dout<<"max:"<<max<<endl);
+			sk = maybe_head(kbdbg_find_thing(--max, i1, locals), head, s);
+			TRACE(dout<<"max:"<<max<<endl);
 #else
-		(void)locals;
-		//find_thing will just find the first occurence , toadd didnt add another one, all is well
-		sk = maybe_head(find_thing(s, i1, lm, cm), head, s);
-		ok = maybe_head(find_thing(o, i2, lm, cm), head, o);
+			(void) locals;
+
+
+			sk = maybe_head(find_thing(s, i1, lm, cm), head, s);
+			ok = maybe_head(find_thing(o, i2, lm, cm), head, o);
 #endif
+		}
+
 		TRACE(dout <<"perm " << permname.at(sk) << " " << permname.at(ok) << endl );
+
 		jg = perms.at(sk).at(ok)(dict[bi->pred], jg, i1, i2, consts);
-		//typedef function<join_gen(pred_gen, join_gen, size_t, size_t, Locals&)>
+		//typedef function<join_gen(pred_gen, join_gen, pos_t , pos_t , Locals&)>
 	}
 	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
 	}
@@ -2130,18 +2186,21 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 
 
 
-
+//Take a list of subject/object pairs, and see if any pair would unify with the arguments s and o.
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
 	FUN;
 	s = getValue(s);
 	o = getValue(o);
 	TRACE(dout << ep->size() << " ep items:" << endl);
-	for (auto i: *ep) 
+	//thingthingpair
+	for (auto i: *ep)
 	{
+	  //Thing*
 		auto os = i.first;
 		auto oo = i.second;
 		TRACE(dout << endl << " " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
+
 		if (would_unify(os,s))
 		{
 			//TRACE(dout << ".." << endl);
@@ -2156,8 +2215,10 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	return false;
 }
 
-
-
+//typedef std::pair<Thing*, Thing*>
+//typedef std::vector<thingthingpair> ep_t
+//Why the garbage collection stuff?
+//well..we allocate it, we have to free it
 ep_t * new_ep()
 {
 	ep_t *ep = new ep_t();
@@ -2179,9 +2240,8 @@ rule_t compile_rule(Rule r)
 	//typedef unordered_map<nodeid, pos_t> locals_map;
 	locals_map lm, cm;
 	//i'm not familiar with how this works
+
 	//these will be needed after this func is over so we allocate them on the heap
-
-
 	//typedef vector<Thing> Locals;
 	Locals &locals_template = *new Locals();
 	locals_templates_garbage.push_back(&locals_template);//and register them for garbage collection
@@ -2193,12 +2253,13 @@ rule_t compile_rule(Rule r)
 	/*
 	Structures to fill out:
 	-------------------------
-	locals_template:	vector<Thing>
-	consts:			vector<Thing>
-	lm:			map<nodeid, pos_t>
-	cm:			map<nodeid, pos_t>
+	locals_template:	    vector<Thing>         Locals
+	consts:			          vector<Thing>         Locals
+	lm:			              map<nodeid, pos_t>    locals_map
+	cm:			              map<nodeid, pos_t>    locals_map
 
-	Input:	//why not just send it the Rule?
+	Input:	//why not just send it the Rule? see how its used in query()
+	-------------------------
 	r.head:			pquad
 	r.body:			pqlist
 	*/
@@ -2207,7 +2268,7 @@ rule_t compile_rule(Rule r)
 
 	join_gen jg = compile_body(locals_template, consts, lm, cm, r.head, r.body);
 
-	size_t hs, ho; // indexes of head subject and object in locals
+	pos_t  hs, ho; // indexes of head subject and object in locals
 #ifdef KBDBG
 	kbdbg_find_thing(kbdbg_part++, hs, locals_template);
 	kbdbg_find_thing(kbdbg_part++, ho, locals_template);
@@ -2242,9 +2303,19 @@ rule_t compile_rule(Rule r)
 
 				/*optimization: this could happen in a different thread.
 				http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
+				 //lets first try to find some offtheshelf solution, boost? sure
 				cpu affinity should be set.*/
 				locals = (Thing*)malloc(locals_bytes);
 				memcpy(locals, locals_data, locals_bytes);
+				/*also, since when a pred is invoked, all rules are gone thru,
+				 * we should try (as long as this isnt too memory-intensive) allocating per-pred,
+				 * or allocating as late as possible,
+				 * either by adding one more var between the s/o parameters and their locals counterparts,
+				 * or
+				 * leveraging would_unify
+				 * -would_unify and unify could be made to work together with minimal overhead
+				 */
+
 
 
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
@@ -2486,6 +2557,7 @@ void yprover::query(qdb& goal){
 	auto qit = goal.first.find("@default");
 	if (qit == goal.first.end())
 		return;
+	//pqlist
 	auto q = qit->second;
 
 #ifdef KBDBG
@@ -2495,6 +2567,7 @@ void yprover::query(qdb& goal){
 
 	//Reset the global steps & unifys
 	//Why not turn these into member variables of yprover.
+	//because then all the functions where they are touched and subsequently everything would have to be in yprover
 	steps = 0;
 	unifys = 0;
 
@@ -2513,20 +2586,25 @@ void yprover::query(qdb& goal){
 	//be used by get_list and islist deep inside make_locals
 	//get_list or something should then remove the triples of the internalized lists from the query
 	
-
+  //Adds the rules from the query to the rules from the kb? just for the lists
 	lists = add_ruleses(rules, quads2rules(goal));
 	make_locals(locals, consts, lm, cm, 0, q);
 	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);
 	join_t coro = jg();
 
 	dout << KGRN << "RUN" << KNRM << endl;
+	//here we invoke satan
 	while (coro( (Thing*)666,(Thing*)666, locals.data() )) {
+
+    //Returned true, so found a result: the rest of this loop is handling the result.
 		nresults++;
 		dout << KCYN << "RESULT " << KNRM << nresults << ":";
 		qdb r;
 		r.first["@default"] = mk_qlist();
 
 		//go over the triples of the query to print them out
+		//*q  :: qlist
+		//i   :: pquad
 		for(auto i: *q)
 		{
 			Thing *s = &fetch_thing(dict[i->subj], locals, consts, lm, cm);
@@ -2535,6 +2613,7 @@ void yprover::query(qdb& goal){
 			//TRACE(dout << sprintThing("Subject", s) << " Pred: " << i->pred->tostring() << " "  << sprintThing("Object", o) << endl;)
 
 			//lets try to get the original names of unbound vars
+			//did we succeed at this yet? i think so
 			Thing n1, n2;
 			if (is_unbound(*s)) {
 				s = &n1;
@@ -2561,7 +2640,7 @@ void yprover::query(qdb& goal){
 	}
 	thatsAllFolks(nresults);
 
-
+  //what does this do//this is a goto label
 	out:;
 
 
@@ -2575,6 +2654,12 @@ void yprover::query(qdb& goal){
 }
 
 //endregion
+
+
+
+
+//maybe we should put this compilation stuff with the rest of the compilation stuff
+
 
 //Outer vector: list
 //Inner vector: triples of nodeids
@@ -2598,7 +2683,7 @@ void add_facts(vector<vector<nodeid>> facts)
 		//std::vector<std::pair<Thing*, Thing*>>
 		auto &pairs = ff.second;
 		EEE; //char entry = 0;
-		size_t pi = 0;
+		pos_t  pi = 0;
 
 		//Map each pred to a coro on it's subject/object
 		builtins[ff.first].push_back([suc,ouc,pi,pairs,entry](Thing *s_, Thing *o_)	mutable{
@@ -2628,8 +2713,8 @@ this thing looks pretty suboptimal btw...buti guess it should get the job done*/
 
 							return true;
 				/*
-				entry = LAST;/
-/				retur/n/ //id just advise that we first try to compile all your changes as they are and run tests too and then get down to fixing, that works, i didn't change much though, pretty muchall just comments i saw some code shuffles... well lets run it then
+				entry = LAST;
+				 so...wanna fix this?
 			*/
 			case_LAST:;
 						} 
@@ -2653,23 +2738,37 @@ void build_in_facts()
 {
 	add_facts({
 
+//rdfsLiteral rdfssubClassOf rdfsResource
+//rdflangString rdfssubClassOf rdfsLiteral
+//rdfHTML rdfssubClassOf rdfsLiteral
 		{rdfAlt,                          rdfssubClassOf,    rdfsContainer},
 		{rdfBag,                          rdfssubClassOf,    rdfsContainer},
 		{rdfsContainerMembershipProperty, rdfssubClassOf,    rdfProperty},
 		{rdfsDatatype,                    rdfssubClassOf,    rdfsClass},
 		{rdfSeq,                          rdfssubClassOf,    rdfsContainer},
 		{rdfXMLLiteral,                   rdfssubClassOf,    rdfsLiteral},
+		{rdfsisDefinedBy,                 rdfssubPropertyOf, rdfsseeAlso},
+
+//rdfsResource rdftype rdfsClass ?
+//rdfsClass rdftype rdfsClass ?
+//rdfsLiteral rdftype rdfsClass
+//rdfsDatatype rdftype rdfsClass
+//rdflangString rdftype rdfsDatatype
+//rdfHTML rdftype rdfsDatatype
+//rdfProperty rdftype rdfsClass
 		{rdfXMLLiteral,                   rdftype,           rdfsDatatype},
+		{rdffirst,                        rdftype,           owlFunctionalProperty},
+		{rdfrest,                         rdftype,           owlFunctionalProperty},
+		{rdfnil,                          rdftype,           rdfList},
+
 		{rdfscomment,                     rdfsdomain,        rdfsResource},
 		{rdfscomment,                     rdfsrange,         rdfsLiteral},
 		{rdfsdomain,                      rdfsdomain,        rdfProperty},
 		{rdfsdomain,                      rdfsrange,         rdfsClass},
 		{rdffirst,                        rdfsdomain,        rdfList},
 		{rdffirst,                        rdfsrange,         rdfsResource},
-		{rdffirst,                        rdftype,           owlFunctionalProperty},
 		{rdfsisDefinedBy,                 rdfsdomain,        rdfsResource},
 		{rdfsisDefinedBy,                 rdfsrange,         rdfsResource},
-		{rdfsisDefinedBy,                 rdfssubPropertyOf, rdfsseeAlso},
 		{rdfslabel,                       rdfsdomain,        rdfsResource},
 		{rdfslabel,                       rdfsrange,         rdfsLiteral},
 		{rdfsmember,                      rdfsdomain,        rdfsContainer},
@@ -2682,7 +2781,6 @@ void build_in_facts()
 		{rdfsrange,                       rdfsrange,         rdfsClass},
 		{rdfrest,                         rdfsdomain,        rdfList},
 		{rdfrest,                         rdfsrange,         rdfList},
-		{rdfrest,                         rdftype,           owlFunctionalProperty},
 		{rdfsseeAlso,                     rdfsdomain,        rdfsResource},
 		{rdfsseeAlso,                     rdfsrange,         rdfsResource},
 		{rdfssubClassOf,                  rdfsdomain,        rdfsClass},
@@ -2694,13 +2792,26 @@ void build_in_facts()
 		{rdftype,                         rdfsdomain,        rdfsResource},
 		{rdftype,                         rdfsrange,         rdfsClass},
 		{rdfvalue,                        rdfsdomain,        rdfsResource},
-		{rdfvalue,                        rdfsrange,         rdfsResource},
-		{rdfnil,                          rdftype,           rdfList}
+		{rdfvalue,                        rdfsrange,         rdfsResource}
+
 	});
 }
+/*
+rdfs:subPropertyOf is a partial order:
+{} => {?P rdfs:subPropertyOf ?P}                                                              reflexive
+{?p1 rdfs:subPropertyOf ?p2. ?p2 rdfs:subPropertyOf ?p3} => {?p1 rdfs:subPropertyOf ?p3}      transitive
+{?p1 rdfs:subPropertyOf ?p2. ?p2 rdfs:subPropertyOf ?p1} => {?p1 == ?p2}                      anti-symmetric
 
+*/
 
+//https://www.w3.org/TR/rdf-schema/#ch_subpropertyof
 //{?P1 @is rdfs:subPropertyOf ?P2. ?S ?P1 ?O} => {?S ?P2 ?O}.
+//
+//{?P3 @is rdfs:subPropertyOf rdfs:subPropertyOf. ?P1 ?P3 ?P2} => {?P1 @is rdfs:subPropertyOf ?P2}
+//{?P4 @is rdfs:subPropertyOf rdfs:subPropertyOf. ?P3 ?P4 rdfs:subPropertyOf} => {?P3 @is rdfs:subPropertyOf rdfs:subPropertyOf}
+//fixed point
+
+//{?P3 @is rdfs:subPropertyOf ?P1. ?S ?P3 ?O}=> {?S ?P1 ?O}
 rule_t make_wildcard_rule(nodeid pr)
 {
 	FUN;
@@ -2712,23 +2823,39 @@ rule_t make_wildcard_rule(nodeid pr)
 	pred_t sub, p1wildcard, p1lambda;
 	nodeid p1p = 0;
 	
+	//old? //thats just for assert
+	//hrm
+	//I'm a bit confused about ep-check here. 
+	//We ep-out if we repeat a (subject, object, rule) tuple.//subject, pred, object..err..well
+	//you could say it both ways
+	//Ok so the wildcard rule will be made for each pred
+	//We can do that in compile_pred
+
+  //If a pred gets called during its own execution with the same s/o as originally, then we ep out
+  //same defined as if we can unify s with orig_s and o with orig_o; if we can then execution of
+  //this pred with s and o will be equivalent to execution with orig_s and orig_o, which we're already doing.
+  //So, each pred should have its own ep-table, and if execution of a pred ends up calling the same pred,
+  //then the 2nd instance should use the same ep-table as the original.
+
+  //That should handle all our ep and wildcard problems.
+
 	ep_t *ep = new_ep();
 	DBG(Thing old[2]);
 	
 	return [entry,ep,DBGC(old) p1,p1p,p2,sub,p1wildcard,p1lambda](Thing *s, Thing *o) mutable {
 		setproc("wildcard");
-		MSG("entry:"<<(int)entry);
+		TRACE_ENTRY;
 
 		switch(entry){
 		case 0:
 
 			DBG(old[0] = *s);
-			
+			// i need to figure out floobits text navigation
 			if (find_ep(ep, s, o))
 				DONE;
 			ep->push_back(thingthingpair(s, o));
 
-			//quite sure its there since its a rdf builtin
+			//quite sure its there since its a rdf builtin; should be, at least. it was there last friday.
 			sub = ITEM(preds,rdfssubPropertyOf); 
 			while (sub(&p1, &p2))
 			{
@@ -2738,20 +2865,12 @@ rule_t make_wildcard_rule(nodeid pr)
 					ASSERT(is_node(*p1v));
 					p1p = get_node(*p1v);
 				}
-				if (preds.find(p1p) != preds.end())
-				{
-					p1lambda = ITEM(preds, p1p);
-					while(p1lambda(s, o))
-					{
-						entry = 2;
-						return true;
-		case 2:;
-					}
-				}
-				//recurse
-				ASSERT(p1p);
-				p1wildcard = make_wildcard_rule(p1p);
-				while(p1wildcard(s, o))
+
+				if (!has(preds, p1p))
+					preds[p1p] = make_wildcard_rule(p1p);
+
+				p1lambda = ITEM(preds, p1p);
+				while(p1lambda(s, o))//the recursion will happen here
 				{
 					entry = LAST;
 					return true;
@@ -2762,7 +2881,6 @@ rule_t make_wildcard_rule(nodeid pr)
 			ASSERT(are_equal(old[0], *s));
 			ASSERT(ep->size());
 			ep->pop_back();
-			return false;
 			END;
 		}
 	};
@@ -2775,10 +2893,11 @@ rule_t make_wildcard_rule(nodeid pr)
 //under construction
 void build_in_rules()
 {
-	EEE; //char entry = 0;
+
 
 
 	/*some commonly used vars*/
+	EEE; //char entry = 0;
 	coro suc, suc2, ouc;
 	Thing *s = nullptr, *o = nullptr;
 	Thing ss;
@@ -2874,20 +2993,28 @@ void build_in_rules()
 	//...nothing to implement?
 
 
-//whats your sleep schedule now?random:)and today?not goin to sleep til tonight mm isee  im ripe for a break you? sure
 
 	// https://www.w3.org/TR/rdf-schema/#ch_domain
 	// {?Pred @has rdfs:domain ?Class. ?Instance ?Pred ?Whatever} => {?Instance a ?Class}.
 	// rdfs:domain(?x ?y) implies ( ?x(?u ?v)) implies ?y(?u) )
-	//why the code block?
-	//var declarations
 	{
 		Thing whatever = create_unbound();
 		Thing pred = create_unbound();
+		pred_t domain_pred, pred_coro;
 		Thing pred_val;
 		nodeid pred_nodeid = 0;
 
 		/*this one might still need adding ep check*///really
+		//Each pred should have its own ep-table. If execution of this pred ends up calling the same pred again,
+		//the new instance should use the same ep-table.
+		//We could have a single ep-table for the whole kb. 
+		// * Start with an empty graph.
+		// * Each triple in a query would make a graph-node, carrying the structure of the triple.
+		// * When a triple in the query gets called, it executes rules sequentially. For each rule,
+		//   make the children of the graph-node for the triple be the triples in the body, substituted
+		//   with the HEAD_S and HEAD_O that result from unifying the query triple with the head triple.
+		// * When you want to ep-check anywhere in the query, you just follow the ancestors of a node.
+		
 
 
 		/* Why are we doing domain for rdftype?
@@ -2896,7 +3023,7 @@ void build_in_rules()
 		rdftype is the predicate of the head of the rule
 		rule has head s rdftype o */
 
-	builtins[rdftype].push_back([entry,pred,pred_val,pred_nodeid,whatever](Thing *instance, Thing *cls) mutable {
+	builtins[rdftype].push_back([entry,domain_pred,pred,pred_val,pred_nodeid,pred_coro,whatever](Thing *instance, Thing *cls) mutable {
 		setproc("domainImpliesType");
 		TRACE_ENTRY;
 		switch(entry){
@@ -2920,10 +3047,14 @@ void build_in_rules()
 					ASSERT(is_node(*pred_val));
 					nodeid pred_nodeid = get_node(*pred_val);
 
+					//(So if the pred is not there, )a subproperty of it might still satisfy,
+					//but we don't have a pred to run, so make a wildcard rule
 					if (!has(preds, pred_nodeid))
 						preds[pred_nodeid] = make_wildcard_rule(pred_nodeid);
+					//If the pred is there, use that. This will need the wildcard rule to be added to the pred during compile_kb
 					pred_coro = ITEM(preds, pred_nodeid);
 				}
+				
 				ASSERT(is_unbound(whatever));
 				while(pred_coro(instance, &whatever))
 				{
@@ -2938,20 +3069,17 @@ void build_in_rules()
 		}
 	});
 	}
-/*
-	//so,...
-//so does it work
-	tests/rdf/domainImpliesType passess
 
- /*
+//	tests/rdf/domainImpliesType passess
+
+
 //K so should we package these up into one builtin?
 	//hell no!
 	// {?Pred @has rdfs:range ?Class. ?Whatever ?Pred ?Instance} => {?Instance a ?Class}.
 	// rdfs:range(?x ?y) implies ( ?x(?u ?v)) implies ?y(?v) )
-*/
 //Alright how does that look
 	//like a lot of duplicated code hehe yep lol
-  {
+/*  {
 	Thing whatever = create_unbound();
 	Thing pred = create_unbound();
 
@@ -2970,10 +3098,8 @@ void build_in_rules()
 					//at least i put the assert there:) we can test it
 					//yeah hm in the long run we should get the floobits session and tmux on one machine i guess
 					//so isnt that a bug
-					/*i dunno if we're supposed to allow rules to imply this*/
 					//if it's  a semantic restriction it should probably be handled more fully
 					//but in the typesystem, not here..at least thats my guess
-					/*anyway good catch*/
 
 					ASSERT(is_node(*pred_val));
 					nodeid pred_nodeid = get_node(*pred_val);
@@ -2998,8 +3124,43 @@ void build_in_rules()
   });
   }
 
+*/
 
 
+
+	//rdfs:subClassOf(?x ?y) implies (forall (?u)(?x(?u) implies ?y(?u))
+	//{?sub rdfs:subClassOf ?sup. ?something a ?sub} => {?something a ?sup}.
+	{
+		Thing sub = create_unbound();
+		pred_t subclassof_pred, type_coro;
+
+	builtins[rdftype].push_back([entry,sub,subclassof_pred,type_coro](Thing *something, Thing *sup) mutable {
+		setproc("XasupIfXasub");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			subclassof_pred = ITEM(preds,rdfssubClassOf);
+			while (subclassof_pred (&sub, sup))
+			{
+				ASSERT(is_bound(sub));
+				type_coro = ITEM(preds, rdftype);
+				while(type_coro(something, &sub))
+				{
+					entry = LAST;
+					return true;
+		case_LAST:;
+				}
+			}
+			ASSERT(is_unbound(sub));
+			END;
+		}
+	});
+	}
+
+
+	//rdfs:Class(?x) implies ( rdfs:subClassOf(?x ?x) and rdfs:subClassOf(?x rdfs:Resource) )
+
+	//(rdfs:subClassOf(?x ?y) and rdfs:subClassOf(?y ?x)) implies  "?x == ?y" <-- how to handle?
 
 
 
@@ -3144,7 +3305,7 @@ void build_in_rules()
 				//At this point neither s nor ss should be either 				//bound vars or offsets.
 
 
-				//Is this an error?
+				//Is this an error? //we just dont unify
 						if (!is_list(ss)) {
 							dout << bu << ": " << str(s) << " not a list" << endl;
 							DONE;
@@ -3153,7 +3314,7 @@ void build_in_rules()
 
 						long total = 0;
 						const size_t size = get_size(ss);
-						for (size_t i = 0; i < size; i++) {
+						for (pos_t  i = 0; i < size; i++) {
 							Thing item = *(s + 1 + i);
 				//Make sure it's a node. Is this an error if it's not?
 							if (!is_node(item)) {
@@ -3259,8 +3420,7 @@ void build_in_rules()
 
 
 #ifdef notes65465687
-i got ti nope
-https://www.w3.org/TR/rdf-schema/#ch_type
+//https://www.w3.org/TR/rdf-schema/#ch_type
 //http://wifo5-03.informatik.uni-mannheim.de/bizer/SWTSGuide/carroll-ISWC2004.pdf
 
 //Unicode
@@ -3337,7 +3497,6 @@ A cwm built-in logical operator, RDF graph level.
 	///sort(facts.begin(), facts.end(), [](auto a, auto b) { return a[1] < b[1]; });
 
 
-#endif
 
 
 
@@ -3417,4 +3576,50 @@ A cwm built-in logical operator, RDF graph level.
 	 */
 
 
+//you sure you don't wanna make another file for this yea
+cppout()
+{
+        out << "#include \"univar.h\"\n";
+        out << "#include \"univar.cpp\"\n";
 
+
+
+
+
+
+cppout_pred(nodeid p)
+{
+persistent vars needed:
+entry
+
+per rule:
+headsub headsuc
+
+body items:
+ nested whiles calling predxxx
+
++more locals
+
+
+
+
+        out << "bool pred" << p
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#endif

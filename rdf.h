@@ -34,6 +34,7 @@ public:
 
 	pnode next = 0;
 	
+	//The three types of RDF nodes:
 	enum node_type { LITERAL, IRI, BNODE } _type;
 	
 	

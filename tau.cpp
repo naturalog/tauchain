@@ -71,34 +71,49 @@ std::vector<qdb> kbs;
 
 bool done_anything = false;
 
+
 class Input
 {
 public:
+//Structure
 	bool interactive = false;
 	bool do_reparse = true;
 	std::string name;
+	Mode mode = COMMANDS;
+	int limit = 123;
+	
+
 	virtual string pop() = 0;
 	virtual string pop_long() = 0;
 	virtual void take_back() = 0;
 	virtual void readline()	{};
 	virtual bool end() = 0;
 	virtual bool done() = 0;
-	Mode mode = COMMANDS;
-	int limit = 123;
 };
 
 class ArgsInput : public Input
 {
 public:
+/*
+	bool interactive = false;
+	bool do_reparse = true;
+	std::string name;
+	Mode mode = COMMANDS;
+	int limit = 123;
+*/
 	int argc;
 	char **argv;
 	int counter = 1;
+
+
 	ArgsInput(int argc_, char**argv_)
 	{
 		argc = argc_;
 		argv = argv_;
 		name = "args";
 	}
+
+
 	bool end()
 	{
 		return counter == argc;
@@ -708,8 +723,14 @@ void emplace_stdin()
 }
 
 
+
+
+
+
+
 int main ( int argc, char** argv)
 {
+  //This should probably go logically with other initialization stuff.
 	//Initialize the prover strings dictionary with hard-coded nodes.
 	dict.init();
 

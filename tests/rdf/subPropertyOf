@@ -9,14 +9,8 @@ kb
 
 
 
-fos:hasBrandName
-#	a rdf:Property;
-#	rdfs:isDefinedBy <http://eulersharp.sourceforge.net/2003/03swap/foster#>;
-#	rdfs:label """brand name""";#@en;
-	rdfs:subPropertyOf foaf:name.
-#	rdfs:domain rdfs:Resource;
-#	rdfs:range rdfs:Literal.
-	
+fos:hasBrandName	rdfs:subPropertyOf foaf:name.
+
 
 :mybanana fos:hasBrandName :chicquita.
 

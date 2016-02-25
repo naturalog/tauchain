@@ -30,55 +30,60 @@ bidict& dict = *new bidict;
 //considering that mkiri, mkliteral and mkbnode already run set() on themselves, then
 //to convernt pnode to nodeid we should just be able to do a lookup in pi
 
+
+//Let's clean this up a bit shall we
+//Can package these vars up into a structure that reflects their logical grouping and allows us to map the function over the list
+//
 void bidict::init() {
-	file_contents_iri = set(mkiri(pstr("http://idni.org/marpa#file_contents")));
-	marpa_parser_iri = set(mkiri(pstr("http://idni.org/marpa#parser")));
-	marpa_parse_iri = set(mkiri(pstr("http://idni.org/marpa#parse")));
+	file_contents_iri = set("http://idni.org/marpa#file_contents");
+	marpa_parser_iri = set("http://idni.org/marpa#parser");
+	marpa_parse_iri = set("http://idni.org/marpa#parse");
 
-	GND = set (mkiri(pstr( "GND" )));
-	A = set(mkiri(pstr("a")));
+	GND = set ( "GND" );
+	Dot = set(".");
+	A = set("a");
 
-	logequalTo = set (mkiri(pstr( "http://www.w3.org/2000/10/swap/log#equalTo")));
-	lognotEqualTo = set (mkiri(pstr("http://www.w3.org/2000/10/swap/log#notEqualTo")));
+	logequalTo = set ( "http://www.w3.org/2000/10/swap/log#equalTo");
+	lognotEqualTo = set ("http://www.w3.org/2000/10/swap/log#notEqualTo");
 	False = set(mkliteral(pstr("false"), XSD_BOOLEAN, 0));
 
-	rdffirst = set(mkiri(RDF_FIRST/*Tpstr("rdf:first")*/));
-	rdfrest = set(mkiri(RDF_REST/*pstr("rdf:rest")*/));
-	rdfnil = set(mkiri(RDF_NIL/*Tpstr("rdf:nil")*/));
-	Dot = set(mkiri(pstr(".")));
+	rdffirst = set(mkiri(RDF_FIRST));
+	rdfrest = set(mkiri(RDF_REST));
+	rdfnil = set(mkiri(RDF_NIL));
 
-	rdftype = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")));
-	rdfsResource = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Resource")));
-	rdfsdomain = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#domain")));
-	rdfsrange =  set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#range")));
-	rdfsClass = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Class")));
-	rdfssubClassOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subClassOf")));
-	rdfssubPropertyOf = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#subPropertyOf")));
-	rdfsContainerMembershipProperty = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty")));
-	rdfsmember = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#member")));
-	rdfsDatatype = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Datatype")));
-	rdfsLiteral = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Literal")));
-	rdfProperty = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property")));
-	rdfAlt = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt")));
-	rdfsContainer = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#Container")));
-	rdfBag = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag")));
-	rdfSeq = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq")));
-	rdfXMLLiteral = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral")));
-	rdfscomment = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#comment")));
-	rdfList = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#List")));
- 	rdfsisDefinedBy = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#isDefinedBy")));
+//the best you can do in c++ is like
+#define rdfxxx(x) rdf##x = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#" #x);
 
-	owlFunctionalProperty = set(mkiri(pstr("owlFunctionalProperty")));
+	//rdftype = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
+	rdfxxx(type)
+	rdfsResource = set("http://www.w3.org/2000/01/rdf-schema#Resource");
+	rdfsdomain = set("http://www.w3.org/2000/01/rdf-schema#domain");
+	rdfsrange =  set("http://www.w3.org/2000/01/rdf-schema#range");
+	rdfsClass = set("http://www.w3.org/2000/01/rdf-schema#Class");
+	rdfssubClassOf = set("http://www.w3.org/2000/01/rdf-schema#subClassOf");
+	rdfssubPropertyOf = set("http://www.w3.org/2000/01/rdf-schema#subPropertyOf");
+	rdfsContainerMembershipProperty = set("http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty");
+	rdfsmember = set("http://www.w3.org/2000/01/rdf-schema#member");
+	rdfsDatatype = set("http://www.w3.org/2000/01/rdf-schema#Datatype");
+	rdfsLiteral = set("http://www.w3.org/2000/01/rdf-schema#Literal");
+	rdfProperty = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property");
+	rdfAlt = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt");
+	rdfsContainer = set("http://www.w3.org/2000/01/rdf-schema#Container");
+	rdfBag = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag");
+	rdfSeq = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq");
+	rdfXMLLiteral = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral");
+	rdfscomment = set("http://www.w3.org/2000/01/rdf-schema#comment");
+	rdfList = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#List");
+ 	rdfsisDefinedBy = set("http://www.w3.org/2000/01/rdf-schema#isDefinedBy");
+	rdfsseeAlso = set("http://www.w3.org/2000/01/rdf-schema#seeAlso");
+	rdfslabel = set("http://www.w3.org/2000/01/rdf-schema#label");
+	rdfobject = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#object");
+	rdfStatement = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement");
+	rdfpredicate = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate");
+	rdfsubject = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#subject");
+	rdfvalue = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#value");
 
-	rdfsseeAlso = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#seeAlso")));
-	rdfslabel = set(mkiri(pstr("http://www.w3.org/2000/01/rdf-schema#label")));
-	rdfobject = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#object")));
-	rdfStatement = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement")));
-	rdfpredicate = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate")));
-	rdfsubject = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#subject")));
-	rdfvalue = set(mkiri(pstr("http://www.w3.org/1999/02/22-rdf-syntax-ns#value")));
-
-
+//anyway..lets do something more critical
 
 //	initRDFS();
 
@@ -91,10 +96,21 @@ void bidict::init() {
 //	_invoke = set(mkiri(pstr("dlfcn:invoke")));
 }
 
+//bidict::Update
+
 void bidict::set ( const std::vector<node>& v ) {
+  //node x : v
 	for ( auto x : v ) set ( x );
 }
 
+//considering that mkiri, mkliteral and mkbnode already run set() on themselves, then
+//to convert pnode to nodeid we should just be able to do a lookup in pi, i.e.
+
+//return pi[mkiri(pstr(s))]
+nodeid bidict::set ( string s )
+{
+	return set(mkiri(pstr(s)));
+}
 
 //Search the bidict to see if node v is already present. If so, just
 //return the nodeid of the one that's already there (make sure both
@@ -135,7 +151,7 @@ nodeid bidict::set ( node v ) {
 	return k;
 }
 
-
+//bidict::Access
 node bidict::operator[] ( nodeid k ) {
 //	if (!has(k)) set(::tostr(k));
 #ifdef DEBUG
@@ -149,6 +165,10 @@ nodeid bidict::operator[] ( node v ) {
 	return pi[v];
 }
 
+
+
+
+//bidict::Propositions
 bool bidict::has ( nodeid k ) const {
 	return ip.find ( k ) != ip.end();
 }
@@ -157,8 +177,12 @@ bool bidict::has ( node v ) const {
 	return pi.find ( v ) != pi.end();
 }
 
+
+
+//bidict::Serializer
 string bidict::tostr() {
 	std::stringstream s;
+	//std::pair<node,nodeid>
 	for ( auto x : pi ) s << x.first.tostring() << " := " << x.second << endl;
 	return s.str();
 }
@@ -446,6 +470,8 @@ struct cmpstr {
 };
 
 
+//I think we can maybe abstract this functionality. abstract?
+
 //Take a string and return a pointer to it. Store a static set of
 //strings already converted so that if we get a string that's already
 //been converted, we can just return the pointer to the original one.
@@ -453,8 +479,9 @@ pstring pstr ( const string& s ) {
 	//Use the static std::set to prevent from making the
 	//same string multiple times.
 	static std::set<pstring, cmpstr> strings;
+	//std::shared_ptr<string>
 	auto ps = std::make_shared<string> ( s );
-#ifdef SEGFAULT
+#ifdef SEGFAULT // this is the only place in this file that needs fixing
 	auto it = strings.find(ps);
 	if (it != strings.end()) return *it;
 	strings.insert(ps);

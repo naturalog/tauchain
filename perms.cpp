@@ -1,4 +1,4 @@
-join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
