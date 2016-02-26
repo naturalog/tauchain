@@ -172,7 +172,8 @@ public:
 	Markup markup; //a list of ints saying where in the reconstructed kb text (by print_kbdbg) this Thing comes from
 #endif
 
-	//No internalized methods
+	Thing(ThingType type_, offset_t thing_) : type(type_), offset(thing_) {};
+	Thing() {};
 };
 
 
@@ -1026,7 +1027,8 @@ coro unboundunifycoro(Thing * me, Thing *arg
 				//and that's supposed to be it:
 				//me(argv) -> me()
 					case_LAST:
-						TRACE(dout << "unbinding [" << me << "]" << str(me) << " from [" << argv << "]" << str(argv) << endl;)
+						TRACE(dout << "unbinding [" << me << "]" << str(me)/* << " from [" << argv << "]" << str(argv)*/ << endl;)
+						//argv shouldnt be touched here anymore, it could be a gone constant on stack
 						ASSERT(is_bound(*me));
 						make_this_unbound(me);
 						#ifdef KBDBG
@@ -1490,6 +1492,13 @@ coro listunifycoro2(Thing *a_, Thing *b_)
 	(returns an iterator)
 */
 
+/*
+in cppout it would be like:
+
+
+int will_unify(
+
+*/
 coro unify(Thing *a_, Thing *b_){
 	FUN;
 	unifys++;
@@ -2186,7 +2195,39 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 
 
 
-//Take a list of subject/object pairs, and see if any pair would unify with the arguments s and o.
+/*Take a list of subject/object pairs, and see if any pair would unify with the arguments s and o.
+ * 					///shouldn't we check ep prior to running suc & ouc?
+					i dunno, this is how we do it now but im not sure on the reasons
+					i don't think it makes a functional difference but i think would be faster to ep-check prior to running the coros
+					we'll work that out later
+          the ep-check really just needs to see if the pred has been called with the same args twice
+          i dont really think so, it does would_unify, err right, lets say same == would_unify
+          it needs to see if the pred has been called with any s/o that would_unify with the current s/o
+          im still sketchy on how this actually works, if the current s/o would_unify with any s/o that you previously
+          called with, then the results of executing the pred with the current s/o would be equivalent to the results
+          of that previous application, so you ep-out,
+			at least thats the high level description
+
+          think each time you call a pred, it makes a node in a tree, labeled with the actual spo it gets called with
+          that pred will call other preds, and they'll be child-nodes
+          every time you call a pred with a particular s/o, you check all of this node's ancestors to see if one of its
+          ancestors is the same pred with some s/o that would_unify with the current s/o.
+          so if you ask A B C,
+          and inside that Z B C,
+          A and Z dont unify,
+          if you ask ?Anything B C,
+          and later Z B C,
+          Z would already be being returned by the first call,
+
+          correspondingly for Z B C followed by ?Anything B C
+          ^i dont think would_unify corresponds with this
+          err no this wouldnt make sense, the second call is more general
+          think of it like, there is a more general query up the tree
+					  so now we dont go into a more specific query
+
+					  but if its the other way around we do
+
+*/
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
 	FUN;
@@ -2336,7 +2377,7 @@ rule_t compile_rule(Rule r)
 
 						o = getValue(o);
 						s = getValue(s);
-
+						/*i dunno*/
 						if (find_ep(ep, s, o)) {
 							if (has_body) {
 								steps++;
@@ -2656,8 +2697,8 @@ void yprover::query(qdb& goal){
 //endregion
 
 
-
-
+//region builtins
+//hows this?
 //maybe we should put this compilation stuff with the rest of the compilation stuff
 
 
@@ -3409,6 +3450,7 @@ void build_in_rules()
 
 
 
+//endregion
 
 
 
@@ -3418,8 +3460,6 @@ void build_in_rules()
 
 
 
-
-#ifdef notes65465687
 //https://www.w3.org/TR/rdf-schema/#ch_type
 //http://wifo5-03.informatik.uni-mannheim.de/bizer/SWTSGuide/carroll-ISWC2004.pdf
 
@@ -3576,19 +3616,9 @@ A cwm built-in logical operator, RDF graph level.
 	 */
 
 
-//you sure you don't wanna make another file for this yea
-cppout()
-{
-        out << "#include \"univar.h\"\n";
-        out << "#include \"univar.cpp\"\n";
-
-
-
-
-
-
-cppout_pred(nodeid p)
-{
+//#ifdef cppout
+/*
+lets forget builtins for now
 persistent vars needed:
 entry
 
@@ -3596,14 +3626,211 @@ per rule:
 headsub headsuc
 
 body items:
- nested whiles calling predxxx
+body becomes nested whiles calling predxxx instead of the join-consing thing
 
 +more locals
 
 
+*/
+/* i made some things slightly different than how we do them in our lambdas
+	 * instead of returning bools, we indicate being done by setting entry to -1
+	 * callee state obviously has to be kept explicitly, not hidden with a lambda*/
+auto &out = cout;
+
+string predname(nodeid x)
+{
+	stringstream ss;
+	ss << "cpppred" << x;
+	return ss.str();
+}
 
 
-        out << "bool pred" << p
+string param(PredParam key, pos_t thing_index, pos_t rule_index)
+{
+	stringstream ss;
+	if (key == HEAD_S)
+	ss << "s";
+	if (key == HEAD_O)
+	ss << "o";
+	if (key == LOCAL)
+	ss << "(&state.locals[" << thing_index << "])";
+	if (key == CONST)
+	ss << "(&consts" << rule_index << "[" << thing_index << "])";
+	return ss.str();
+}
+
+string things_literals(const Locals &things)
+{
+	stringstream ss;
+	pos_t i = 0;
+	for (Thing t: things) {
+		if (i++ != 0) ss << ", ";
+		ss << "Thing(" << t.type << ", " << t.node << ")";
+	}
+	ss << "}";
+	return ss.str();
+}
+
+void cppout_pred(string name, vector<Rule> rules)
+{
+	out << "void " << name << "(cpppred_state *state, Thing *s, Thing *o){\n";
+	for (pos_t i = 0; i < rules.size(); i++) {
+		if (rules[i].head && rules[i].body->size())
+			out << "static ep_t ep" << i << ";\n";
+
+
+
+		auto &r = rules[i];
+		locals_map lm, cm;
+		Locals locals_template;
+		Locals consts;
+		make_locals(locals_template, consts, lm, cm, r.head, r.body);
+
+
+
+
+		out << "static Locals consts" << i << " = " << things_literals(consts) << ";\n";
+	}
+
+	int label = 0;
+
+	out << "switch(state.entry){\n";
+
+	out << "case "<<label++ << ":\n";
+
+	size_t max_body_len = 0;
+	for (auto rule:rules) {
+		if (max_body_len < rule.body->size())
+			max_body_len = rule.body->size();
+	}
+
+	out << "state.states.resize(" << max_body_len << ");\n";
+
+	int i = 0;
+	//Rule rule
+	for (auto rule:rules)
+	{
+		out << "//rule " << i << ":\n";
+		//out << "// "<<<<":\n";
+		out << "case " << label << ":\n";
+
+		label++;
+		out << "state.entry = " << label << ";\n";
+
+		locals_map lm, cm;
+		Locals locals_template;
+		Locals consts;
+		make_locals(locals_template, consts, lm, cm, rule.head, rule.body);
+
+		out << "state.locals = " << things_literals(locals_template) << ";\n";
+
+		if (rule.head) {
+			pos_t hs, ho; // indexes of head subject and object in locals
+			find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
+			find_thing(dict[rule.head->object], ho, lm, cm);
+
+			out << "state.suc = unify(s, &locals[" << hs << "]);\n";
+			out << "if(state.suc()){\n";
+			out << "state.ouc = unify(o, &locals[" << ho << "]);\n";
+			out << "if(state.ouc()){\n";
+		}
+		if (rule.head && rule.body) {
+			out << "if (!find_ep(ep" << i << ", s, o)){\n";
+			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
+		}
+
+		if(rule.body)
+		{
+							//	reverse(b2.begin(), b2.end());
+
+			size_t j = 0;
+			for (pquad bi: *rule.body)
+			{
+				out << "//body item" << j;
+
+				stringstream ss;
+				ss << "state.states[" << j << "]";
+				string substate = ss.str();
+
+				out << "state.states[" << j << "] = cpppred_state();\n";
+				out << "do{\n";
+
+				//	check_pred(dict[bi->pred]);
+
+				//set up the subject and object
+				pos_t i1, i2;//s and o positions
+
+				nodeid s = dict[bi->subj];
+				nodeid o = dict[bi->object];
+
+				PredParam sk, ok;
+
+				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
+				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
+
+				out << predname(dict[bi->pred]) << "(" <<
+				"&" << substate << ", " <<
+				param(sk, i1, i) << ", " << param(ok, i2, i) << ");\n";
+
+				out << "if(" << substate << ".entry == -1) break;\n";
+				if (j == rule.body->size() - 1) // last body item?
+				{
+					out << "return;\n";
+					out << "case " << label++ << ":;\n";
+					for(pos_t closing = 0; closing <= j; closing++)
+						out << "}\n";
+				}
+				j++;
+			}
+
+			if (rule.head && rule.body) {
+				out << "}\nASSERT(ep" << i << "->size());\nep->pop_back();";
+			}
+			if (rule.head) {
+				out << "}\n"
+						"state.ouc()//unbind\n"
+						"}\n"
+						"state.suc()//unbind\n"
+						"}\n";
+			}
+		}
+		i++;
+	}
+}
+
+//void cpploop(size_t &label, size_t j, pquad bi, Rule r, Locals &lm, Locals &cm)
+
+struct cpppred_state {
+	int entry=0;
+
+};
+
+
+void cppout(qdb &kb, qdb &query)
+{
+	FUN;
+
+	out << "#include \"univar.h\"\n";
+	out << "#include \"univar.cpp\"\n";
+	out << "struct cpppred_state cpppred_state_s;\n";
+	out << "struct cpppred_state {\n"
+		"int entry=0;\n"
+		"Thing *locals;\n"
+		"vector<cpppred_state_s> states;\n}\n";
+
+	rules = quads2rules(kb);
+	lists = rules;
+
+	for(auto x: rules) {
+		nodeid n = x.first;
+		stringstream ss;
+		ss << n;
+		cppout_pred(ss.str(), x.second);
+	}
+
+
+
+}
 
 
 
@@ -3611,15 +3838,4 @@ body items:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-#endif
+//#endif

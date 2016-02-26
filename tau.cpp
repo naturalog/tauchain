@@ -852,5 +852,3 @@ int main ( int argc, char** argv)
 	if (tauProver)
 		delete tauProver;
 }
-
-
