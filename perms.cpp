@@ -20,7 +20,13 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &co
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(s, s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -39,7 +45,7 @@ join_gen perm_HEAD_S_HEAD_S(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &co
 		};
 	};
 }
-join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -61,7 +67,13 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(s, o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -80,7 +92,7 @@ join_gen perm_HEAD_S_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 		};
 	};
 }
-join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -102,7 +114,13 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(s, (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -121,7 +139,7 @@ join_gen perm_HEAD_S_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -143,7 +161,13 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(s, (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -162,7 +186,7 @@ join_gen perm_HEAD_S_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -184,7 +208,13 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(o, s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -203,7 +233,7 @@ join_gen perm_HEAD_O_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 		};
 	};
 }
-join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -225,7 +255,13 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(o, o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -244,7 +280,7 @@ join_gen perm_HEAD_O_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &
 		};
 	};
 }
-join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -266,7 +302,13 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(o, (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -285,7 +327,7 @@ join_gen perm_HEAD_O_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -307,7 +349,13 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac(o, (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -326,7 +374,7 @@ join_gen perm_HEAD_O_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -348,7 +396,13 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&locals[wi]), s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -367,7 +421,7 @@ join_gen perm_LOCAL_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -389,7 +443,13 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&locals[wi]), o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -408,7 +468,7 @@ join_gen perm_LOCAL_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -430,7 +490,13 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&locals[wi]), (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -449,7 +515,7 @@ join_gen perm_LOCAL_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 		};
 	};
 }
-join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_LOCAL_CONST(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -471,7 +537,13 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&locals[wi]), (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -490,7 +562,7 @@ join_gen perm_LOCAL_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 		};
 	};
 }
-join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -512,7 +584,13 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&consts[wi]), s)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -531,7 +609,7 @@ join_gen perm_CONST_HEAD_S(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -553,7 +631,13 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&consts[wi]), o)) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -572,7 +656,7 @@ join_gen perm_CONST_HEAD_O(nodeid a, join_gen b, size_t wi, size_t xi, Locals &c
 		};
 	};
 }
-join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_CONST_LOCAL(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -594,7 +678,13 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&consts[wi]), (&locals[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -613,7 +703,7 @@ join_gen perm_CONST_LOCAL(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 		};
 	};
 }
-join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &consts)
+join_gen perm_CONST_CONST(nodeid a, join_gen b, pos_t wi, pos_t xi, Locals &consts)
 {
 	FUN;
 	TRACE(dout << "making a join" << endl;)
@@ -635,7 +725,13 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 
 				
 					//TRACE( dout << sprintPred("a()",a) << endl;)
+					
+					/*optimization: if we can create a graph of dependencies,
+					then not all preds have to be looked up at runtime,
+					some can be compiled first and some can have those looked up
+					at compilation time*/
 					ac = ITEM(preds,a);
+					
 					//todo assert that access is within bounds?
 					while (ac((&consts[wi]), (&consts[xi]))) {
 						TRACE(dout << "MATCH A." << endl;)
@@ -655,7 +751,6 @@ join_gen perm_CONST_CONST(nodeid a, join_gen b, size_t wi, size_t xi, Locals &co
 	};
 }
 
-//Can these two structures be baked in rather than created on the fly?
 void make_perms_table()
 {
 permname[HEAD_S] = "HEAD_S";

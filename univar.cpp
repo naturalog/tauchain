@@ -36,6 +36,7 @@ unsigned long kbdbg_part_max;
 extern int result_limit ;
 
 
+map<nodeid, string> cppdict;
 
 //just leave it for now maybe change it later
 //we don't modify this for any compiler directives/macros, can we just
@@ -791,6 +792,13 @@ static coro UNIFY_SUCCEED(const Thing *a, const Thing *b)
 //endregion
 
 
+string nodestr(nodeid n)
+{
+	if (has(cppdict, n))
+		return cppdict[n];
+	else
+		return *dict[n].value;
+}
 
 //Thing::Serializer
 //potentially suitable for tail-recursion optimization
@@ -812,14 +820,14 @@ string str(const Thing *_x)
 		case NODE: {
 			const nodeid node = get_node(x);
 			ASSERT(node);
-			return *dict[node].value;
+			return nodestr(node);
 		}
 
 
 		case LIST_BNODE: {
 			const nodeid node = get_node(x);
 			ASSERT(node);
-			return "~" + *dict[node].value + "~";
+			return "~" + nodestr(node) + "~";
 		}
 
 
@@ -1268,8 +1276,9 @@ void compile_pred(nodeid pr)
 
 	//rules need to be compiled and then added:
 	if (rules.find(pr) != rules.end()) {
-		for (auto r: rules.at(pr))
-			add_rule(pr, compile_rule(r));
+
+		for (pos_t i = rules.at(pr).size(); i > 0; i--)
+			add_rule(pr, compile_rule(rules.at(pr)[i-1]));
 	}
 	
 	//rdfs:SubPropertyOf
@@ -1308,9 +1317,9 @@ Rules quads2rules(qdb &kb)
 		//pqlist
 		auto pffft = *it->second;
 
-		//reverse the list of quads for this pred.
+		//reverse the list of quads in this graph
 		//is it going now opposite to text-order?
-		reverse(pffft.begin(), pffft.end());
+		//reverse(pffft.begin(), pffft.end());
 		//pqlist
 		for (pquad quad : pffft) {
 
@@ -3659,7 +3668,7 @@ string param(PredParam key, pos_t thing_index, pos_t rule_index)
 	return ss.str();
 }
 
-map<nodeid, string> cppdict;
+
 
 string things_literals(const Locals &things)
 {
@@ -3747,7 +3756,6 @@ void cppout_pred(string name, vector<Rule> rules)
 		}
 
 		if(rule.body) {
-			//	reverse(b2.begin(), b2.end());
 			size_t j = 0;
 			for (pquad bi: *rule.body) {
 				out << "//body item" << j << "\n";

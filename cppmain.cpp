@@ -14,8 +14,7 @@ int main ( int argc, char** argv){
 		        {
 		        	dout << "?";
 		        	Thing *v = getValue(&t);
-		        	if (is_node(*v))
-                			dout << " = " << cppdict[v->node];
+		        	dout << " = " << str(v);
                 		dout << endl;
                 	}
 		}               
