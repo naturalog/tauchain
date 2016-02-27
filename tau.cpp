@@ -24,9 +24,6 @@
 #define CLI_TRACE(x)
 #endif
 
-std::ostream& dout = std::cout;
-std::ostream& derr = std::cerr;
-std::istream& din = std::cin;
 
 // to hold a kb/query string
 string qdb_text;
@@ -36,10 +33,17 @@ enum Mode {COMMANDS, KB, QUERY, SHOULDBE, CPPOUT, OLD, RUN};
 string format = "";
 string base = "";
 
-int result_limit = 123;
 bool irc = false;
+
+
+int result_limit = 123;
 std::set<string> silence;
 bool in_silent_part = false;
+std::ostream& dout = std::cout;
+std::ostream& derr = std::cerr;
+std::istream& din = std::cin;
+
+
 bool nocolor = false;
 bool fnamebase = true;//?
 

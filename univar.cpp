@@ -3674,7 +3674,9 @@ string things_literals(const Locals &things)
 
 void cppout_pred(string name, vector<Rule> rules)
 {
-	out << "void " << name << "(cpppred_state &state, Thing *s, Thing *o){\n";
+	out << "void " << name << "(cpppred_state &state";
+	if (name != "query") out << ", Thing *s, Thing *o";
+	out << "){\n";
 	for (pos_t i = 0; i < rules.size(); i++) {
 		if (rules[i].head && rules[i].body && rules[i].body->size())
 			out << "static ep_t ep" << i << ";\n";
@@ -3744,7 +3746,7 @@ void cppout_pred(string name, vector<Rule> rules)
 			//	reverse(b2.begin(), b2.end());
 			size_t j = 0;
 			for (pquad bi: *rule.body) {
-				out << "//body item" << j;
+				out << "//body item" << j << "\n";
 
 				stringstream ss;
 				ss << "state.states[" << j << "]";
@@ -3766,9 +3768,8 @@ void cppout_pred(string name, vector<Rule> rules)
 				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
 				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
 
-				out << predname(dict[bi->pred]) << "(" <<
-				"&" << substate << ", " <<
-				param(sk, i1, i) << ", " << param(ok, i2, i) << ");\n";
+				out << predname(dict[bi->pred]) << "(" << substate << ", " <<
+					param(sk, i1, i) << ", " << param(ok, i2, i) << ");\n";
 
 				out << "if(" << substate << ".entry == -1) break;\n";
 				j++;
@@ -3781,7 +3782,7 @@ void cppout_pred(string name, vector<Rule> rules)
 
 		if(rule.body)
 			for (pos_t closing = 0; closing < rule.body->size(); closing++)
-				out << "}\n";
+				out << "}while(true);\n";
 
 		if (rule.head && rule.body && rule.body->size())
 				out << "}\nASSERT(ep" << i << "->size());\nep->pop_back();";
@@ -3790,24 +3791,23 @@ void cppout_pred(string name, vector<Rule> rules)
 			out << "}\n"
 					"state.ouc();//unbind\n"
 					"}\n"
-					"state.suc();//unbind\n"
-					"}\n";
+					"state.suc();//unbind\n";
 		}
 		i++;
 	}
-	out << "}\n\n";
+	out << "}}\n\n";
 
 }
 
 //void cpploop(size_t &label, size_t j, pquad bi, Rule r, Locals &lm, Locals &cm)
 
 
-void yprover::cppout(qdb &query)
+void yprover::cppout(qdb &goal)
 {
 	FUN;
 
 	out.open("out.cpp", fstream::out);
-
+	out << "#include \"globals.cpp\"\n";
 	out << "#include \"univar.cpp\"\n";
 	out << "struct cpppred_state;\n";
 	out << "struct cpppred_state {\n"
@@ -3816,13 +3816,24 @@ void yprover::cppout(qdb &query)
 		"coro suc,ouc;\n"
 		"vector<cpppred_state> states;\n};\n";
 
-	lists = add_ruleses(rules, quads2rules(query));
+
 
 	for(auto x: rules) {
 		cppout_pred(predname(x.first), x.second);
 	}
 
 
+
+	auto qit = goal.first.find("@default");
+	if (qit == goal.first.end())
+		return;
+	lists = add_ruleses(rules, quads2rules(goal));
+
+
+
+	cppout_pred("query", {Rule(0, qit->second)});
+
+	out << "#include \"cppmain.cpp\"\n";
 
 }
 

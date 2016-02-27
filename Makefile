@@ -24,9 +24,11 @@ with_marpa: LDFLAGS += -Llibmarpa/dist/.libs -lmarpa  -lboost_regex
 
 tau: $(OBJECTS)
 	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
-cppout: out.o prover.o unifiers.o jsonld.o rdf.o misc.o json_object.o jsonld_tau.o nquads.o
+cppout:  out.o prover.o unifiers.o jsonld.o rdf.o misc.o json_object.o jsonld_tau.o nquads.o
+	$(CXX) out.o prover.o unifiers.o jsonld.o rdf.o misc.o json_object.o jsonld_tau.o nquads.o -o $@ $(LDFLAGS)
 
-	$(CXX) out.o -o $@ $(LDFLAGS)
+out.cpp: cppmain.cpp globals.cpp
+
 #tau-new: CXXFLAGS += -DNEW
 #tau-new: $(OBJECTS) 
 #	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
