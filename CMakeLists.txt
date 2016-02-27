@@ -55,19 +55,25 @@ set(SOURCE_FILES
 find_package(Boost REQUIRED regex)
 
 add_executable(tau ${SOURCE_FILES})
+add_executable(tau-asan ${SOURCE_FILES})
 add_executable(tau-clitrace ${SOURCE_FILES})
 add_executable(tau3 ${SOURCE_FILES})
+add_executable(tau3-asan ${SOURCE_FILES})
 add_executable(taud3 ${SOURCE_FILES})
 
 
 SET_TARGET_PROPERTIES(tau-clitrace   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}  -DDEBUG -O0 -Ddebug_cli " )
 SET_TARGET_PROPERTIES(tau   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O0")
+SET_TARGET_PROPERTIES(tau-asan   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O0  ${ASAN}")
 SET_TARGET_PROPERTIES(tau3  PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -O3")
+SET_TARGET_PROPERTIES(tau3-asan  PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -O3 ${ASAN}")
 SET_TARGET_PROPERTIES(taud3 PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O3")
 
 target_link_libraries(tau-clitrace   PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau3           PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
+target_link_libraries(tau-asan            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
+target_link_libraries(tau3-asan           PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(taud3          PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 #target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS} ${MARPA_DIST})
 #target_include_directories(  tau PRIVATE ${Boost_INCLUDE_DIRS})

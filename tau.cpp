@@ -246,6 +246,7 @@ void fresh_prover()
 {
 	if (tauProver)
 		delete tauProver;
+	dout << "constructing prover" << endl;
 	tauProver = new yprover(merge_qdbs(kbs));
 }
 

@@ -1786,9 +1786,9 @@ bool islist(nodeid x)
 map<nodeid,nodeid> get_list(nodeid n) {
 	FUN;
 	ASSERT(n);
-
+	MSG(n);
 	map<nodeid,nodeid>  r;
-
+	//guess this should infiloop if it finds no rest
 	while(true) {
 		//Find the rule where this bnode is the subj of rdffirst:
 		for (auto rule: lists[rdffirst]) {
@@ -2498,6 +2498,8 @@ void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
 
 
 yprover::yprover ( qdb kb)  {
+	FUN;
+	MSG("...");
 	make_perms_table();
 	build_in_facts();
 	build_in_rules();
