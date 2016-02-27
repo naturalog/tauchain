@@ -3659,6 +3659,8 @@ string param(PredParam key, pos_t thing_index, pos_t rule_index)
 	return ss.str();
 }
 
+map<nodeid, string> cppdict;
+
 string things_literals(const Locals &things)
 {
 	stringstream ss;
@@ -3667,6 +3669,8 @@ string things_literals(const Locals &things)
 	for (Thing t: things) {
 		if (i++ != 0) ss << ", ";
 		ss << "Thing((ThingType)" << t.type << ", " << t.node << ")";
+		if (is_node(t))
+			cppdict[t.node] = *dict[t.node].value;
 	}
 	ss << "}";
 	return ss.str();
@@ -3738,7 +3742,7 @@ void cppout_pred(string name, vector<Rule> rules)
 			out << "if(state.ouc()){\n";
 		}
 		if (rule.head && rule.body && rule.body->size()) {
-			out << "if (!find_ep(ep" << i << ", s, o)){\n";
+			out << "if (!find_ep(&ep" << i << ", s, o)){\n";
 			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
 		}
 
@@ -3778,24 +3782,23 @@ void cppout_pred(string name, vector<Rule> rules)
 
 		out << "return;\n";
 		out << "case " << label++ << ":;\n";
-		out << "state.entry = -1;\n";
 
 		if(rule.body)
 			for (pos_t closing = 0; closing < rule.body->size(); closing++)
 				out << "}while(true);\n";
 
 		if (rule.head && rule.body && rule.body->size())
-				out << "}\nASSERT(ep" << i << "->size());\nep->pop_back();";
+				out << "}\nASSERT(ep" << i << ".size());\nep" << i << ".pop_back();";
 
 		if (rule.head) {
-			out << "}\n"
-					"state.ouc();//unbind\n"
+			out << "state.ouc();//unbind\n"
 					"}\n"
-					"state.suc();//unbind\n";
+					"state.suc();//unbind\n"
+					"}\n";
 		}
 		i++;
 	}
-	out << "}}\n\n";
+	out << "}state.entry = -1;}\n\n";
 
 }
 
@@ -3814,14 +3817,18 @@ void yprover::cppout(qdb &goal)
 		"int entry=0;\n"
 		"vector<Thing> locals;\n"
 		"coro suc,ouc;\n"
-		"vector<cpppred_state> states;\n};\n";
+		"vector<cpppred_state> states;\n};\n"
+				   ""
+				   ""
+				   ;
 
-
+	for(auto x: rules) {
+		out << "void " << predname(x.first) << "(cpppred_state &state, Thing *s, Thing *o);";
+	}
 
 	for(auto x: rules) {
 		cppout_pred(predname(x.first), x.second);
 	}
-
 
 
 	auto qit = goal.first.find("@default");
@@ -3832,6 +3839,12 @@ void yprover::cppout(qdb &goal)
 
 
 	cppout_pred("query", {Rule(0, qit->second)});
+
+	out << "void cppdict_init(){\n";
+	for (auto x:cppdict)
+		out << "cppdict[" << x.first << "] = \"" << x.second << "\";\n";
+	out << "}\n";
+
 
 	out << "#include \"cppmain.cpp\"\n";
 
