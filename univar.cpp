@@ -3635,7 +3635,7 @@ body becomes nested whiles calling predxxx instead of the join-consing thing
 /* i made some things slightly different than how we do them in our lambdas
 	 * instead of returning bools, we indicate being done by setting entry to -1
 	 * callee state obviously has to be kept explicitly, not hidden with a lambda*/
-auto &out = cout;
+fstream out;
 
 string predname(nodeid x)
 {
@@ -3662,10 +3662,11 @@ string param(PredParam key, pos_t thing_index, pos_t rule_index)
 string things_literals(const Locals &things)
 {
 	stringstream ss;
+	ss << "{";
 	pos_t i = 0;
 	for (Thing t: things) {
 		if (i++ != 0) ss << ", ";
-		ss << "Thing(" << t.type << ", " << t.node << ")";
+		ss << "Thing((ThingType)" << t.type << ", " << t.node << ")";
 	}
 	ss << "}";
 	return ss.str();
@@ -3673,9 +3674,9 @@ string things_literals(const Locals &things)
 
 void cppout_pred(string name, vector<Rule> rules)
 {
-	out << "void " << name << "(cpppred_state *state, Thing *s, Thing *o){\n";
+	out << "void " << name << "(cpppred_state &state, Thing *s, Thing *o){\n";
 	for (pos_t i = 0; i < rules.size(); i++) {
-		if (rules[i].head && rules[i].body->size())
+		if (rules[i].head && rules[i].body && rules[i].body->size())
 			out << "static ep_t ep" << i << ";\n";
 
 
@@ -3700,7 +3701,7 @@ void cppout_pred(string name, vector<Rule> rules)
 
 	size_t max_body_len = 0;
 	for (auto rule:rules) {
-		if (max_body_len < rule.body->size())
+		if (rule.body && max_body_len < rule.body->size())
 			max_body_len = rule.body->size();
 	}
 
@@ -3729,23 +3730,20 @@ void cppout_pred(string name, vector<Rule> rules)
 			find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
 			find_thing(dict[rule.head->object], ho, lm, cm);
 
-			out << "state.suc = unify(s, &locals[" << hs << "]);\n";
+			out << "state.suc = unify(s, &state.locals[" << hs << "]);\n";
 			out << "if(state.suc()){\n";
-			out << "state.ouc = unify(o, &locals[" << ho << "]);\n";
+			out << "state.ouc = unify(o, &state.locals[" << ho << "]);\n";
 			out << "if(state.ouc()){\n";
 		}
-		if (rule.head && rule.body) {
+		if (rule.head && rule.body && rule.body->size()) {
 			out << "if (!find_ep(ep" << i << ", s, o)){\n";
 			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
 		}
 
-		if(rule.body)
-		{
-							//	reverse(b2.begin(), b2.end());
-
+		if(rule.body) {
+			//	reverse(b2.begin(), b2.end());
 			size_t j = 0;
-			for (pquad bi: *rule.body)
-			{
+			for (pquad bi: *rule.body) {
 				out << "//body item" << j;
 
 				stringstream ss;
@@ -3773,59 +3771,55 @@ void cppout_pred(string name, vector<Rule> rules)
 				param(sk, i1, i) << ", " << param(ok, i2, i) << ");\n";
 
 				out << "if(" << substate << ".entry == -1) break;\n";
-				if (j == rule.body->size() - 1) // last body item?
-				{
-					out << "return;\n";
-					out << "case " << label++ << ":;\n";
-					for(pos_t closing = 0; closing <= j; closing++)
-						out << "}\n";
-				}
 				j++;
 			}
+		}
 
-			if (rule.head && rule.body) {
+		out << "return;\n";
+		out << "case " << label++ << ":;\n";
+		out << "state.entry = -1;\n";
+
+		if(rule.body)
+			for (pos_t closing = 0; closing < rule.body->size(); closing++)
+				out << "}\n";
+
+		if (rule.head && rule.body && rule.body->size())
 				out << "}\nASSERT(ep" << i << "->size());\nep->pop_back();";
-			}
-			if (rule.head) {
-				out << "}\n"
-						"state.ouc()//unbind\n"
-						"}\n"
-						"state.suc()//unbind\n"
-						"}\n";
-			}
+
+		if (rule.head) {
+			out << "}\n"
+					"state.ouc();//unbind\n"
+					"}\n"
+					"state.suc();//unbind\n"
+					"}\n";
 		}
 		i++;
 	}
+	out << "}\n\n";
+
 }
 
 //void cpploop(size_t &label, size_t j, pquad bi, Rule r, Locals &lm, Locals &cm)
 
-struct cpppred_state {
-	int entry=0;
 
-};
-
-
-void cppout(qdb &kb, qdb &query)
+void yprover::cppout(qdb &query)
 {
 	FUN;
 
-	out << "#include \"univar.h\"\n";
+	out.open("out.cpp", fstream::out);
+
 	out << "#include \"univar.cpp\"\n";
-	out << "struct cpppred_state cpppred_state_s;\n";
+	out << "struct cpppred_state;\n";
 	out << "struct cpppred_state {\n"
 		"int entry=0;\n"
-		"Thing *locals;\n"
-		"vector<cpppred_state_s> states;\n}\n";
+		"vector<Thing> locals;\n"
+		"coro suc,ouc;\n"
+		"vector<cpppred_state> states;\n};\n";
 
-	rules = quads2rules(kb);
-	lists = rules;
+	lists = add_ruleses(rules, quads2rules(query));
 
 	for(auto x: rules) {
-		nodeid n = x.first;
-		stringstream ss;
-		ss << n;
-		cppout_pred(ss.str(), x.second);
+		cppout_pred(predname(x.first), x.second);
 	}
 
 

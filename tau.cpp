@@ -31,7 +31,7 @@ std::istream& din = std::cin;
 // to hold a kb/query string
 string qdb_text;
 
-enum Mode {COMMANDS, KB, QUERY, SHOULDBE, OLD, RUN};
+enum Mode {COMMANDS, KB, QUERY, SHOULDBE, CPPOUT, OLD, RUN};
 
 string format = "";
 string base = "";
@@ -258,6 +258,9 @@ void set_mode(Mode m)
 			break;
 		case SHOULDBE:
 			dout << "shouldbe";
+			break;
+		case CPPOUT:
+			dout << "cppout";
 			break;
 		case OLD:
 			dout << "old";
@@ -564,10 +567,6 @@ bool read_option(string s){
 
 
 
-void cmd_shouldbe() {
-	set_mode(SHOULDBE);
-}
-
 void do_run(string fn)
 {
 	std::ifstream &is = *new std::ifstream(fn);
@@ -673,6 +672,9 @@ void displayPrompt(){
 			case SHOULDBE:
 				prompt = "shouldbe";
 				break;
+			case CPPOUT:
+				prompt = "cppout";
+				break;
 		}
 		std::cout << prompt;
 		if (format != "")
@@ -772,7 +774,9 @@ int main ( int argc, char** argv)
 			else if (token == "query")
 				cmd_query();
 			else if (token == "shouldbe")
-				cmd_shouldbe();
+				set_mode(SHOULDBE);
+			else if (token == "cppout")
+				set_mode(CPPOUT);
 			else if (token == "thatsall")
 				thatsall();
 			else if (token == "run")
@@ -797,7 +801,7 @@ int main ( int argc, char** argv)
 				continue;
 			}
 		}
-		else if (INPUT->mode == KB || INPUT->mode == QUERY || INPUT->mode == SHOULDBE) {
+		else if (INPUT->mode == KB || INPUT->mode == QUERY || INPUT->mode == SHOULDBE || INPUT->mode ==  CPPOUT) {
 			try_to_parse_the_line__if_it_works__add_it_to_qdb_text();
 			int fins = count_fins();
 			if (fins > 0) {
@@ -817,6 +821,10 @@ int main ( int argc, char** argv)
 					}
 					else if (INPUT->mode == SHOULDBE) {
 						shouldbe(kb);
+					}
+					else if (INPUT->mode == CPPOUT) {
+						tauProver->cppout(kb);
+						done_anything = true;
 					}
 				}
 				else

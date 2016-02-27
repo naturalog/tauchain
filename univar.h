@@ -19,6 +19,7 @@ public:
 
 	//Access	
 	void query(qdb &goal);
+	void cppout(qdb &goal);
 
 	//
 	void thatsAllFolks(int nresults);
