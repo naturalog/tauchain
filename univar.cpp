@@ -525,8 +525,13 @@ typedef map<nodeid, vector<Rule>> Rules;
 
 //Globals
 Rules rules;
-Rules lists; // rules + query
+Rules lists_rules; // rules + query but what graphs does this include?
+/*maybe this includes also lists in heads, while it should only have
+lists in the default graph?*///lists in heads sounds like something we need in it too
 
+typedef vector<pair</*bnode*/nodeid,/*first*/nodeid>> List;
+typedef map</*bnode*/nodeid, pair</*first*/nodeid,/*rest*/nodeid>> Lists;
+Lists lists;
 
 //The structure holding the compiled KB:
 #ifdef DEBUG
@@ -1360,6 +1365,20 @@ Rules quads2rules(qdb &kb)
 }
 
 
+void collect_lists() {
+	FUN;
+	MSG("...");
+	lists.clear();
+
+	for (auto rule: lists_rules[rdffirst])
+		lists[dict[rule.head->subj]].first = dict[rule.head->object];
+	for (auto rule: lists_rules[rdfrest])
+		lists[dict[rule.head->subj]].second = dict[rule.head->object];
+}
+
+
+
+
 void compile_kb(qdb &kb)
 {
 	FUN;
@@ -1372,9 +1391,8 @@ void compile_kb(qdb &kb)
 	//These are globals of type Rules
 	//typedef map<nodeid, vector<Rule>> Rules;
 	rules = quads2rules(kb);
-	lists = rules;//we dont have any query at this point
-/*maybe this includes also lists in heads, while it should only have
-lists in the default graph?*/
+	lists_rules = rules;//we dont have any query at this point
+	collect_lists();
 
 	if (have_builtins)
 		for(auto x: builtins)
@@ -1755,83 +1773,28 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 }
 
 
+
 /*the two funcs look into Rules lists
 those should contain the kb triples and possibly also the query triples*/
 bool islist(nodeid x)
 {
 	FUN;
-	//hrmm
-	//For each Rule in lists[rdfrest]:
-	//for all rdfrest triples
-
-	//for all rules with rdfrest as the pred in the head
-	for (auto i: lists[rdfrest]) {
-		//pquad
-		auto h = i.head;
-		TRACE(dout << h->subj->tostring() << " vs " << dict[x].tostring() << endl);
-
-		//if our nodeid is a subject of rdfrest, its a list bnode
-		if (dict[h->subj] == x)
-				return true;
-	}
-	return false;
+	return has(lists, x);
 }
 
-//Locals::Constructor (Partial)
-/*the first nodeid in the map is the bnode*/
-/*the second nodeid in the map is the object related to this bnode by
-  rdffirst*/
-//This map keeps the content of the list but loses the ordering; essentially
-//turns it into a set.
-map<nodeid,nodeid> get_list(nodeid n) {
+List get_list(nodeid n)
+{
 	FUN;
 	ASSERT(n);
 	MSG(n);
-	map<nodeid,nodeid>  r;
-	//guess this should infiloop if it finds no rest
-	while(true) {
-		//Find the rule where this bnode is the subj of rdffirst:
-		for (auto rule: lists[rdffirst]) {
-			//node -> nodeid
-			if (dict[rule.head->subj] == n) {
-				//hrmm, b0 rdffirst rdfnil ?
-				//returns an empty r
-				if (dict[rule.head->object] == rdfnil)
-					return r;
-
-				//Map the bnode to the object of the rdffirst
-				//triple that it appears in.
-				r[n] = dict[rule.head->object];
-
-		//Find the rule where this bnode is the subj of rdfrest:
-				for (auto rule: lists[rdfrest]) {
-					if (dict[rule.head->subj] == n) {
-		//If the object of the triple is rdfnil, we return a one-pair
-		//map.
-						if (dict[rule.head->object] == rdfnil)
-							return r;
-		//Otherwise set n to the node of the object, which should
-		//be a continuation of this list.
-		//Pseudo-recursion induced by the outer while loop and
-		//switching out n. Taken as a recursive function it
-		//implements its own tail-recursion optimization.
-						n = dict[rule.head->object];
-						break;
-					}
-				}
-			//Should probably have another break here?
-			//I guess the idea of leaving it is that it if the
-			//new node came after this node in the list, then
-			//by not breaking here we continue to traverse the
-			//list and don't have to start from the beginning,
-			//and if it's not there then we start over and it'll
-			//be in the beginning.
-			}
-		}
+	List r;
+	while (n != rdfnil) {
+		nodeid first = lists.at(n).first;
+		r.push_back(pair</*bnode*/nodeid,/*first*/nodeid>(n, first));
+		n = lists.at(n).second;
 	}
-	//It should have no capacity to reach this point
+	return r;
 }
-
 
 
 
@@ -2463,7 +2426,7 @@ pnode thing2node(Thing *t_, qdb &r) {
 		for (size_t i = 0; i < get_size(t); i++) {
 			auto x = (t_ + 1 + (i*2));
 			r.second[head].emplace_back(thing2node(x, r));
-		}
+		}https://github.com/RDFLib/rdflib/blob/master/rdflib/tools/graphisomorphism.py
 		*/
 		return mkbnode(pstr("FU"));
 	
@@ -2644,7 +2607,7 @@ void yprover::query(qdb& goal){
 	//get_list or something should then remove the triples of the internalized lists from the query
 	
   //Adds the rules from the query to the rules from the kb? just for the lists
-	lists = add_ruleses(rules, quads2rules(goal));
+	lists_rules = add_ruleses(rules, quads2rules(goal));
 	make_locals(locals, consts, lm, cm, 0, q);
 	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);
 	join_t coro = jg();
@@ -3850,8 +3813,8 @@ void yprover::cppout(qdb &goal)
 	auto qit = goal.first.find("@default");
 	if (qit == goal.first.end())
 		return;
-	lists = add_ruleses(rules, quads2rules(goal));
-
+	lists_rules = add_ruleses(rules, quads2rules(goal));
+	collect_lists();
 
 
 	cppout_pred("query", {Rule(0, qit->second)});
