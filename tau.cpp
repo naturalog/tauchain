@@ -47,6 +47,8 @@ std::istream& din = std::cin;
 bool nocolor = false;
 bool fnamebase = true;//?
 
+
+
 std::map<string,bool*> _flags = {
 		 {"nocolor",&nocolor}
 		,{"deref",&deref}

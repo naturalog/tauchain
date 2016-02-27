@@ -35,6 +35,7 @@ unsigned long kbdbg_part_max;
 
 extern int result_limit ;
 
+bool have_builtins = true;
 
 map<nodeid, string> cppdict;
 
@@ -1282,7 +1283,8 @@ void compile_pred(nodeid pr)
 	}
 	
 	//rdfs:SubPropertyOf
-	add_rule(pr, make_wildcard_rule(pr));
+	if (have_builtins)
+		add_rule(pr, make_wildcard_rule(pr));
 
 }
 
@@ -1293,7 +1295,9 @@ void check_pred(nodeid pr)
 	FUN;
 	if (rules.find(pr) == rules.end() && builtins.find(pr) == builtins.end()) {
 		dout << "'" << dict[pr] << "' not found." << endl;
-		preds[pr] = make_wildcard_rule(pr);// GEN_FAIL_WITH_ARGS;//wildcard_pred(pr);//
+		if (have_builtins)
+			preds[pr] = make_wildcard_rule(pr);
+		else preds[pr] = GEN_FAIL_WITH_ARGS;
 	}
  }
 
@@ -1372,8 +1376,9 @@ void compile_kb(qdb &kb)
 /*maybe this includes also lists in heads, while it should only have
 lists in the default graph?*/
 
-	for(auto x: builtins)
-		compile_pred(x.first);
+	if (have_builtins)
+		for(auto x: builtins)
+			compile_pred(x.first);
 
 	for(auto x: rules)
 		compile_pred(x.first);
