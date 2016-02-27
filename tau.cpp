@@ -47,7 +47,7 @@ std::istream& din = std::cin;
 bool nocolor = false;
 bool fnamebase = true;//?
 
-
+extern bool have_builtins;
 
 std::map<string,bool*> _flags = {
 		 {"nocolor",&nocolor}
@@ -55,6 +55,7 @@ std::map<string,bool*> _flags = {
 		,{"irc",&irc}
 		,{"shorten",&shorten}
 		,{"base",&fnamebase}
+		,{"builtins",&have_builtins}
 };
 
 std::vector<string> extensions = {"jsonld", "natural3", "natq", "n3", "nq"};

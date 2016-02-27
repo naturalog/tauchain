@@ -597,7 +597,7 @@ static join_t succeed_with_args()
 {
 	EEE; //char entry = 0;
 	return [entry](Thing *Ds, Thing *Do, Thing* _) mutable{
-		//why (void) these?
+		//why (void) these?//they are explicitly unused parameters
 		(void)Ds;
 		(void)Do;
 		(void)_;
@@ -3648,7 +3648,8 @@ body becomes nested whiles calling predxxx instead of the join-consing thing
 */
 /* i made some things slightly different than how we do them in our lambdas
 	 * instead of returning bools, we indicate being done by setting entry to -1
-	 * callee state obviously has to be kept explicitly, not hidden with a lambda*/
+	 * callee state obviously has to be kept explicitly, not hidden with a lambda
+	 * instead of while-looping around an unify coro, theres just an if*/
 fstream out;
 
 string predname(nodeid x)
