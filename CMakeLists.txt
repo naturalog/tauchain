@@ -24,7 +24,7 @@ set(MARPA_DIST ${CMAKE_SOURCE_DIR}/libmarpa/dist/)
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -ggdb -g")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fsanitize-undefined-trap-on-error -fsanitize=address -fsanitize=integer -fsanitize=unsigned-integer-overflow ")
+set(ASAN "${CMAKE_CXX_FLAGS}  -fsanitize-undefined-trap-on-error -fsanitize=address -fsanitize=integer -fsanitize=unsigned-integer-overflow ")
 set(COMMON_FLAGS "-I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS}  -I${MARPA_DIST} -Dwith_marpa -DJSON  ")
 
 
@@ -55,22 +55,25 @@ set(SOURCE_FILES
 find_package(Boost REQUIRED regex)
 
 add_executable(tau ${SOURCE_FILES})
+add_executable(tau-moderate ${SOURCE_FILES})
+add_executable(tau-moderate0 ${SOURCE_FILES})
 add_executable(tau-asan ${SOURCE_FILES})
-add_executable(tau-clitrace ${SOURCE_FILES})
 add_executable(tau3 ${SOURCE_FILES})
 add_executable(tau3-asan ${SOURCE_FILES})
 add_executable(taud3 ${SOURCE_FILES})
 
 
-SET_TARGET_PROPERTIES(tau-clitrace   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS}  -DDEBUG -O0 -Ddebug_cli " )
 SET_TARGET_PROPERTIES(tau   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O0")
+SET_TARGET_PROPERTIES(tau-moderate   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -O1")
+SET_TARGET_PROPERTIES(tau-moderate0   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -O0")
 SET_TARGET_PROPERTIES(tau-asan   PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O0  ${ASAN}")
 SET_TARGET_PROPERTIES(tau3  PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -O3")
 SET_TARGET_PROPERTIES(tau3-asan  PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -O3 ${ASAN}")
 SET_TARGET_PROPERTIES(taud3 PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O3")
 
-target_link_libraries(tau-clitrace   PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
+target_link_libraries(tau-moderate            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
+target_link_libraries(tau-moderate0            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau3           PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau-asan            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau3-asan           PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")

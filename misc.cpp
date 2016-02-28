@@ -481,11 +481,11 @@ pstring pstr ( const string& s ) {
 	static std::set<pstring, cmpstr> strings;
 	//std::shared_ptr<string>
 	auto ps = std::make_shared<string> ( s );
-#ifdef SEGFAULT // this is the only place in this file that needs fixing
+//#ifdef SEGFAULT // this is the only place in this file that needs fixing
 	auto it = strings.find(ps);
 	if (it != strings.end()) return *it;
 	strings.insert(ps);
-#endif
+//#endif
 	return ps;
 }
 

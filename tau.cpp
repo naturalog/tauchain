@@ -511,7 +511,7 @@ void get_int(int &i, const string &tok)
 	}
 	catch (std::exception& ex)
 	{
-		dout << "bad int, ";
+		dout << "bad int, " << endl;
 	}
 }
 
@@ -556,13 +556,13 @@ bool read_option(string s){
 	
 
 		if(_option == "level"){
-			get_int(level, token);
+			level = std::stoi(token);
 			dout << "debug level:" << level << std::endl;
 			return true;
 		}
 
 		if(_option == "limit"){
-			get_int(INPUT->limit, token);
+			INPUT->limit = std::stoi(token);
 			dout << "result limit:" << result_limit << std::endl;
 			return true;
 		}

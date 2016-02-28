@@ -610,7 +610,7 @@ static join_t succeed_with_args()
 		{
 		case 0:
 			entry = LAST;
-			steps++;
+			//steps++;
 			return true;
 		case_LAST:
 			END
@@ -2351,13 +2351,13 @@ rule_t compile_rule(Rule r)
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 						ASSERT(call == 1);
-
+steps++;
 						o = getValue(o);
 						s = getValue(s);
 						/*i dunno*/
 						if (find_ep(ep, s, o)) {
 							if (has_body) {
-								steps++;
+								//steps++;
 								goto end;
 							}
 						}

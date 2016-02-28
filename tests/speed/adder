@@ -1,3 +1,8 @@
+#06:01 < HMC_A> it is the 1 bit full adder circuit example from the guido paper
+#06:01 < HMC_A> http://www.agfa.com/w3c/2002/02/thesis/thesis.pdf
+
+
+
 kb
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "false".} => {?C :nand3 "true"}.
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "true".} => {?C :nand3 "true"}.
@@ -10,6 +15,8 @@ kb
 :a :nand1 "true" .
 :b :nand2 "true" .
 :cin :nand2 "true" .
+
+
 :g1 :gnand1 :a .
 :g1 :gnand2 :b .
 :g1 :gnand3 :a11 .
@@ -20,6 +27,7 @@ kb
 :g2 :gnand2 :a11 .
 :g2 :gnand3 :a12 .
 :g2 :nandnand1 :g4 .
+
 :g3 :gnand1 :a11 .
 :g3 :gnand2 :b .
 :g3 :gnand3 :a13 .
@@ -58,219 +66,9 @@ query
 fin.
 
 
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
+shouldbe
+:cout :nand3 "true" .
+:sum :nand3 "true" .
 fin.
 
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-
-query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
 
