@@ -463,8 +463,9 @@ struct cmpstr {
 		if (!x && !y) return false;
 		if (!x && y) return true;
 		if (x && !y) return false;
-		TRACE(dout << x << "XXX" << y;)
-		TRACE(dout << *x << "XXX" << *y;)
+		//initialization-order-fiasco
+		//		TRACE(dout << x << "XXX" << y;)
+		//		TRACE(dout << *x << "XXX" << *y;)
 		return *x < *y;
 	}
 };

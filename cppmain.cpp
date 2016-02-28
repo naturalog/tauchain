@@ -10,13 +10,13 @@ int main ( int argc, char** argv){
 		dout << "result " << n << endl;
 		for(Thing t:state.locals)
 		{
-		        if (is_bound(t))
-		        {
-		        	dout << "?";
-		        	Thing *v = getValue(&t);
-		        	dout << " = " << str(v);
-                		dout << endl;
-                	}
+			if (is_bound(t))
+			{
+				dout << "?";
+				Thing *v = getValue(&t);
+				dout << " = " << str(v);
+					dout << endl;
+			}
 		}               
 	}
 	while(true);

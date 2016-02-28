@@ -1,7 +1,7 @@
 #06:01 < HMC_A> it is the 1 bit full adder circuit example from the guido paper
 #06:01 < HMC_A> http://www.agfa.com/w3c/2002/02/thesis/thesis.pdf
 
-
+--limit 30
 
 kb
 
@@ -68,14 +68,38 @@ fin.
 
 
 query
-:cout :nand3 ?V1 .
-:sum :nand3 ?V2 .
-fin.
-
-
-shouldbe
-:cout :nand3 "true" .
-:sum :nand3 "true" .
+:cout :nand3 ?V1q .
+:sum :nand3  ?V2q .
+:cout :nand3 ?V1w .
+:sum :nand3  ?V2w .
+:cout :nand3 ?V1f .
+:sum :nand3  ?V2f .
+:cout :nand3 ?V1p .
+:sum :nand3  ?V2p .
+:cout :nand3 ?V1g .
+:sum :nand3  ?V2g .
+:cout :nand3 ?V1j .
+:sum :nand3  ?V2j .
+:cout :nand3 ?V1l .
+:sum :nand3  ?V2l .
+:cout :nand3 ?V1u .
+:sum :nand3  ?V2u .
+:cout :nand3 ?V1y .
+:sum :nand3  ?V2y .
+:cout :nand3 ?V1a .
+:sum :nand3  ?V2a .
+:cout :nand3 ?V1r .
+:sum :nand3  ?V2r .
+:cout :nand3 ?V1s .
+:sum :nand3  ?V2s .
+:cout :nand3 ?V1t .
+:sum :nand3  ?V2t .
+:cout :nand3 ?V1d .
+:sum :nand3  ?V2d .
+:cout :nand3 ?V1h .
+:sum :nand3  ?V2h .
+:cout :nand3 ?V1n .
+:sum :nand3  ?V2n .
 fin.
 
 

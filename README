@@ -1,5 +1,13 @@
 # tauchain
 
+similar projects:
+https://github.com/odipar/spread/
+https://github.com/unisonweb/unison
+http://ceptr.org/
+and ofc http://ethereum.org/
+
+
+
 Under development. For more information about tauchain visit http://idni.org  
 
 To run example: "./tau < examples/socrates"  
@@ -19,10 +27,6 @@ Building: run make. You can also use cmake, but the hand-written Makefile is the
 
 
 
-similar projects:
-https://github.com/odipar/spread/
-https://github.com/unisonweb/unison
-http://ceptr.org/
-and ofc http://ethereum.org/
 
-
+apt-get install -y build-essential autoconf automake libtool libboost-regex-dev clang-3.6 libc++-dev
+CXX="clang++-3.6  -stdlib=libc++ " DEBUG="" make -e

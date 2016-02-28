@@ -157,6 +157,7 @@ the reason for this is that vars may occur multiple times, for example:
 we have two distinct lists in this rule, each contains ?y
 the lists themselves will be just consecutive things in the locals vector
 */
+class Thing;
 
 class Thing {
 public:
@@ -174,7 +175,7 @@ public:
 	Markup markup; //a list of ints saying where in the reconstructed kb text (by print_kbdbg) this Thing comes from
 #endif
 
-	Thing(ThingType type_, offset_t thing_) : type(type_), offset(thing_) {};
+	Thing(ThingType type_, offset_t thing_) : type(type_), offset(thing_) {/*dout<<str(this) << endl;*/};
 	Thing() {};
 };
 
@@ -1302,7 +1303,8 @@ void check_pred(nodeid pr)
 		dout << "'" << dict[pr] << "' not found." << endl;
 		if (have_builtins)
 			preds[pr] = make_wildcard_rule(pr);
-		else preds[pr] = GEN_FAIL_WITH_ARGS;
+		else
+			preds[pr] = GEN_FAIL_WITH_ARGS;
 	}
  }
 
@@ -2227,7 +2229,7 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 				return true;
 			}
 		}
-			TRACE(dout << endl << "---------------------" << endl);
+		TRACE(dout << endl << "---------------------" << endl);
 
 	}
 	return false;
@@ -2476,13 +2478,6 @@ yprover::~yprover()
 }
 
 
-void yprover::thatsAllFolks(int nresults){
-	dout << "That's all, folks, " << nresults << " results." << endl;
-	dout << unifys << " unifys, " << steps << " steps." << endl;
-	steps_ = steps;
-	unifys_ = unifys;
-}
-
 #ifdef KBDBG
 
 /*kbdbg fell to the wayside, it needs to be adapted to bnodes in lists and to builtins*/
@@ -2658,10 +2653,15 @@ void yprover::query(qdb& goal){
 		}
 
 	}
-	thatsAllFolks(nresults);
+
+	dout << "That's all, folks, " << nresults << " results." << endl;
 
   //what does this do//this is a goto label
 	out:;
+
+	dout << unifys << " unifys, " << steps << " steps." << endl;
+	steps_ = steps;
+	unifys_ = unifys;
 
 
 	if (log_outputString.size()) {
@@ -3767,7 +3767,7 @@ void cppout_pred(string name, vector<Rule> rules)
 				out << "}while(true);\n";
 
 		if (rule.head && rule.body && rule.body->size())
-				out << "}\nASSERT(ep" << i << ".size());\nep" << i << ".pop_back();";
+				out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
 
 		if (rule.head) {
 			out << "state.ouc();//unbind\n"

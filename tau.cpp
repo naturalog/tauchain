@@ -87,7 +87,7 @@ public:
 	bool do_reparse = true;
 	std::string name;
 	Mode mode = COMMANDS;
-	int limit = 123;
+	int limit = 123;//this should be hierarchical tho
 	
 
 	virtual string pop() = 0;
