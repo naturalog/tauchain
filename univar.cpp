@@ -1366,12 +1366,13 @@ Rules quads2rules(qdb &kb)
 	return result;
 }
 
-
+//massiively reworked for much simplicity, speed and correctness
 void collect_lists() {
 	FUN;
 	MSG("...");
 	lists.clear();
 
+	//Rule rule: vector<Rule>
 	for (auto rule: lists_rules[rdffirst])
 		lists[dict[rule.head->subj]].first = dict[rule.head->object];
 	for (auto rule: lists_rules[rdfrest])
@@ -2548,6 +2549,7 @@ void print_kbdbg(prover::termset query)
 #endif
 
 
+//arg1: kb, arg2: query
 Rules add_ruleses (Rules &a, Rules b)
 {
 	FUN;
@@ -3647,6 +3649,8 @@ string things_literals(const Locals &things)
 	ss << "{";
 	pos_t i = 0;
 	for (Thing t: things) {
+		if (is_unbound(t))
+			t.node = 0;
 		if (i++ != 0) ss << ", ";
 		ss << "Thing((ThingType)" << t.type << ", " << t.node << ")";
 		if (is_node(t))
@@ -3656,25 +3660,34 @@ string things_literals(const Locals &things)
 	return ss.str();
 }
 
+
 void cppout_pred(string name, vector<Rule> rules)
 {
+	DBG(out << "/* void cppout_pred */";)//ok this one is DBG() worthy
 	out << "void " << name << "(cpppred_state &state";
+	//query? query is baked in for now
 	if (name != "query") out << ", Thing *s, Thing *o";
 	out << "){\n";
+	//for every rule in the kb (not the query) with non-empty body, make an ep-table, static ep_t ep*rule-index*, and for every rule make a const table, Locals const*rule-index*
 	for (pos_t i = 0; i < rules.size(); i++) {
 		if (rules[i].head && rules[i].body && rules[i].body->size())
 			out << "static ep_t ep" << i << ";\n";
 
+/*
+should we voice call or something? sure, gotta go set up my other comp tho
+like, i dunno if youd rather go thru the code by yourself or have me answer your questions as you go.. the latter, though so far i don't have too many questions, mostly just limited by the pace i can read C++*/
 
 
+		//here we inefficiently do a special round of make_locals just to get consts
 		auto &r = rules[i];
 		locals_map lm, cm;
 		Locals locals_template;
 		Locals consts;
 		make_locals(locals_template, consts, lm, cm, r.head, r.body);
 
-
-
+//ok
+//also, dont you wanna start by reading the generated code?
+//:)
 
 		out << "static Locals consts" << i << " = " << things_literals(consts) << ";\n";
 	}
@@ -3683,6 +3696,7 @@ void cppout_pred(string name, vector<Rule> rules)
 
 	out << "switch(state.entry){\n";
 
+	//case 0:
 	out << "case "<<label++ << ":\n";
 
 	size_t max_body_len = 0;
@@ -3695,6 +3709,7 @@ void cppout_pred(string name, vector<Rule> rules)
 
 	int i = 0;
 	//Rule rule
+	//loop over all kb rules for the pred
 	for (auto rule:rules)
 	{
 		out << "//rule " << i << ":\n";
@@ -3711,6 +3726,8 @@ void cppout_pred(string name, vector<Rule> rules)
 
 		out << "state.locals = " << things_literals(locals_template) << ";\n";
 
+		//if it's a kb rule and not the query then we'll
+		//make join'd unify-coros for the subject & object of the head
 		if (rule.head) {
 			pos_t hs, ho; // indexes of head subject and object in locals
 			find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
@@ -3721,11 +3738,13 @@ void cppout_pred(string name, vector<Rule> rules)
 			out << "state.ouc = unify(o, &state.locals[" << ho << "]);\n";
 			out << "if(state.ouc()){\n";
 		}
+		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
 		if (rule.head && rule.body && rule.body->size()) {
 			out << "if (!find_ep(&ep" << i << ", s, o)){\n";
 			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
 		}
 
+		//if it's the query or a kb rule with non-empty body: (existing?)		
 		if(rule.body) {
 			size_t j = 0;
 			for (pquad bi: *rule.body) {
@@ -3766,6 +3785,7 @@ void cppout_pred(string name, vector<Rule> rules)
 			for (pos_t closing = 0; closing < rule.body->size(); closing++)
 				out << "}while(true);\n";
 
+
 		if (rule.head && rule.body && rule.body->size())
 				out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
 
@@ -3789,10 +3809,12 @@ void yprover::cppout(qdb &goal)
 	FUN;
 
 	out.open("out.cpp", fstream::out);
+	
+	DBG(out << "/* void yprover::cppout */\n";)//ah you want trace for that//well not even trace i guess since that would put the proc (things) in front, DBG()?
 	out << "#include \"globals.cpp\"\n";
 	out << "#include \"univar.cpp\"\n";
 	out << "struct cpppred_state;\n";
-	out << "struct cpppred_state {\n"
+	out << "struct cpppred_state {\n" //out << "...""...""...." ? this is treated as one long string
 		"int entry=0;\n"
 		"vector<Thing> locals;\n"
 		"coro suc,ouc;\n"
@@ -3800,11 +3822,14 @@ void yprover::cppout(qdb &goal)
 				   ""
 				   ""
 				   ;
-
+	//well, yea i guess this isn't the final version yea that it really isnt
+	out << "/* forward declarations */\n"//no need to limit this to debug mode tho;
 	for(auto x: rules) {
 		out << "void " << predname(x.first) << "(cpppred_state &state, Thing *s, Thing *o);";
 	}
 
+
+	out << "/* pred function definitions */
 	for(auto x: rules) {
 		cppout_pred(predname(x.first), x.second);
 	}
@@ -3813,11 +3838,14 @@ void yprover::cppout(qdb &goal)
 	auto qit = goal.first.find("@default");
 	if (qit == goal.first.end())
 		return;
+
 	lists_rules = add_ruleses(rules, quads2rules(goal));
 	collect_lists();
 
-
+	//query is baked in for now
 	cppout_pred("query", {Rule(0, qit->second)});
+
+
 
 	out << "void cppdict_init(){\n";
 	for (auto x:cppdict)
