@@ -80,7 +80,7 @@ target_link_libraries(tau3           PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS}
 target_link_libraries(tau-asan            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau3-asan           PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(taud3          PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
-target_link_libraries(taud3-asan          PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa"  ${ASAN})
+target_link_libraries(taud3-asan          PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa"  )
 #target_include_directories(m-tau PRIVATE ${Boost_INCLUDE_DIRS} ${MARPA_DIST})
 #target_include_directories(  tau PRIVATE ${Boost_INCLUDE_DIRS})
 

@@ -28,13 +28,12 @@
 // to hold a kb/query string
 string qdb_text;
 
-enum Mode {COMMANDS, KB, QUERY, SHOULDBE, CPPOUT, OLD, RUN};
+enum Mode {COMMANDS, KB, QUERY, SHOULDBE, OLD, RUN};
 
 string format = "";
 string base = "";
 
 bool irc = false;
-
 
 int result_limit = 123;
 std::set<string> silence;
@@ -80,11 +79,20 @@ bool done_anything = false;
 
 
 class Input
+;
+std::stack<Input *> inputs;
+#define INPUT (inputs.top())
+
+
+
+class Input
 {
 public:
 //Structure
 	bool interactive = false;
 	bool do_reparse = true;
+	bool do_cppout = false;
+	bool do_query = true;
 	std::string name;
 	Mode mode = COMMANDS;
 	int limit = 123;//this should be hierarchical tho
@@ -96,6 +104,14 @@ public:
 	virtual void readline()	{};
 	virtual bool end() = 0;
 	virtual bool done() = 0;
+
+	Input()
+	{
+		if(inputs.size()) {
+			limit = INPUT->limit;
+			do_cppout = INPUT->do_cppout;
+		}
+	}
 };
 
 class ArgsInput : public Input
@@ -227,8 +243,6 @@ public:
 };
 
 
-std::stack<Input *> inputs;
-#define INPUT (inputs.top())
 
 
 
@@ -253,7 +267,7 @@ void fresh_prover()
 
 void set_mode(Mode m)
 {
-	dout << "mode = ";
+	dout << "#mode = ";
 	switch(m) {
 		case COMMANDS:
 			dout << "commands";
@@ -266,9 +280,6 @@ void set_mode(Mode m)
 			break;
 		case SHOULDBE:
 			dout << "shouldbe";
-			break;
-		case CPPOUT:
-			dout << "cppout";
 			break;
 		case OLD:
 			dout << "old";
@@ -502,7 +513,7 @@ bool dash_arg(string token, string pattern){
 	return (token == pattern) || (token == "-" + pattern) || (token == "--" + pattern);
 }
 
-
+/*
 void get_int(int &i, const string &tok)
 {
 	try
@@ -514,6 +525,7 @@ void get_int(int &i, const string &tok)
 		dout << "bad int, " << endl;
 	}
 }
+*/
 
 bool read_option(string s){
 	if(s.length() < 2 || s.at(0) != '-' || s == "--")
@@ -567,6 +579,11 @@ bool read_option(string s){
 			return true;
 		}
 		
+		if(_option == "cppout"){
+			INPUT->do_cppout = std::stoi(token);
+			return true;
+		}
+
 		INPUT->take_back();
 	}
 
@@ -680,9 +697,6 @@ void displayPrompt(){
 			case SHOULDBE:
 				prompt = "shouldbe";
 				break;
-			case CPPOUT:
-				prompt = "cppout";
-				break;
 		}
 		std::cout << prompt;
 		if (format != "")
@@ -783,8 +797,6 @@ int main ( int argc, char** argv)
 				cmd_query();
 			else if (token == "shouldbe")
 				set_mode(SHOULDBE);
-			else if (token == "cppout")
-				set_mode(CPPOUT);
 			else if (token == "thatsall")
 				thatsall();
 			else if (token == "run")
@@ -809,7 +821,7 @@ int main ( int argc, char** argv)
 				continue;
 			}
 		}
-		else if (INPUT->mode == KB || INPUT->mode == QUERY || INPUT->mode == SHOULDBE || INPUT->mode ==  CPPOUT) {
+		else if (INPUT->mode == KB || INPUT->mode == QUERY || INPUT->mode == SHOULDBE) {
 			try_to_parse_the_line__if_it_works__add_it_to_qdb_text();
 			int fins = count_fins();
 			if (fins > 0) {
@@ -825,14 +837,15 @@ int main ( int argc, char** argv)
 						fresh_prover();
 					}
 					else if (INPUT->mode == QUERY) {
-						do_query(kb);
+						if (INPUT->do_query)
+							do_query(kb);
+						if (INPUT->do_cppout)
+							tauProver->cppout(kb);
+
+						done_anything = true;
 					}
 					else if (INPUT->mode == SHOULDBE) {
 						shouldbe(kb);
-					}
-					else if (INPUT->mode == CPPOUT) {
-						tauProver->cppout(kb);
-						done_anything = true;
 					}
 				}
 				else
