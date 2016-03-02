@@ -130,7 +130,8 @@ typedef std::pair<nodeid, Markup> toadd;
 
 
 enum ThingType {BOUND, NODE, OFFSET, LIST, LIST_BNODE, UNBOUND};
-
+const vector<string> ThingTypeNames =
+		{"BOUND", "NODE", "OFFSET", "LIST", "LIST_BNODE", "UNBOUND"};
 
 //Two different versions of Thing:
 #ifndef oneword
@@ -819,7 +820,6 @@ string str(const Thing *_x)
 			return "var(" + str(thing) + ")";
 		}
 
-
 		case UNBOUND:
 			return "var()";
 
@@ -1485,6 +1485,11 @@ coro listunifycoro(Thing *a_, Thing *b_)
 }
 
 
+inline bool is_nil(Thing* x)
+{
+	return is_node(*x) && (get_node(*x) == rdfnil);
+}
+
 coro listunifycoro2(Thing *a_, Thing *b_)
 {
 	FUN;
@@ -1500,21 +1505,22 @@ coro listunifycoro2(Thing *a_, Thing *b_)
 	coro r = gen_succeed();
 
 
-	while(true){
-	auto i = a_ + 1;
-	auto j = b_ + 1;
+	while(true) {
+		auto v1 = a_ + 1;
+		auto v2 = b_ + 1;
 
-	r = unifjoin(i, j, r);
-	
-	a_ +=2;
-	b_ +=2;
-	a = *a_;
-	b = *b_;
-	
-	if(get_node(a) == rdfnil && get_node(b) == rdfnil)
-		return r;
-	else if(get_node(a) == rdfnil || get_node(b) == rdfnil)
-		return GEN_FAIL ;
+		r = unifjoin(v1, v2, r);
+
+		a_ += 2;
+		b_ += 2;
+		a = *a_;
+		b = *b_;
+
+		if (is_nil(a_) || is_nil(b_)) {
+			if (is_nil(a_) && is_nil(b_))
+				return r;
+			return GEN_FAIL;//one is shorter
+		}
 	}
 }
 /*
@@ -1623,8 +1629,7 @@ coro unify(Thing *a_, Thing *b_){
 	}
 	
 	//Not sure i understand this one.
-	if (is_list(a) || is_list(b))
-	{
+	if (is_list(a) || is_list(b)) {
 		auto xx = a_;
 		auto yy = b_;
 		if (is_list(*xx))
@@ -1632,7 +1637,22 @@ coro unify(Thing *a_, Thing *b_){
 		if (is_list(*yy))
 			yy += 1;
 		if (is_list_bnode(*xx) && is_list_bnode(*yy))
-			return listunifycoro2(xx,yy);
+			return listunifycoro2(xx, yy);
+		if (
+				(is_node(*xx) && (get_node(*xx) == rdfnil))
+				||
+				(is_node(*yy) && (get_node(*yy) == rdfnil))
+				)
+		{
+			if (
+					(is_node(*xx) && (get_node(*xx) == rdfnil))
+					&&
+					(is_node(*yy) && (get_node(*yy) == rdfnil))
+					)
+				return UNIFY_SUCCEED(origa, origb);
+			else
+				return UNIFY_FAIL(origa, origb);
+		}
 	}
 
 	//Otherwise fail. Why here?
@@ -2414,71 +2434,7 @@ steps++;
 
 
 
-//region interface
-
-
-
-pnode thing2node(Thing *t_, qdb &r) {
-	t_ = getValue(t_);
-
-	auto t = *t_;
-
-	if (is_list(t))
-	{/*this here needs to call create_list_triples
-		const string head = listid();
-		for (size_t i = 0; i < get_size(t); i++) {
-			auto x = (t_ + 1 + (i*2));
-			r.second[head].emplace_back(thing2node(x, r));
-		}https://github.com/RDFLib/rdflib/blob/master/rdflib/tools/graphisomorphism.py
-		*/
-		return mkbnode(pstr("FU"));
-	
-	}
-
-	if (is_node(t) || is_list_bnode(t))
-		return std::make_shared<node>(dict[get_node(t)]);
-
-	//dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
-	assert(is_unbound(t));
-	return mkiri(pstr("?V?A?R?"));
-}
-
-
-void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
-{
-	FUN;
-	r.first["@default"]->push_back(
-		make_shared<quad>(
-			quad(
-				thing2node(s, r),
-				std::make_shared<node>(dict[p]),
-				thing2node(o, r)
-			)
-		)
-	);
-}
-
-
-
-
-
-
-yprover::yprover ( qdb kb)  {
-	FUN;
-	MSG("...");
-	make_perms_table();
-	build_in_facts();
-	build_in_rules();
-	compile_kb(kb);
-}
-
-
-yprover::~yprover()
-{
-	free_garbage();
-}
-
-
+//region kbdbg
 #ifdef KBDBG
 
 /*kbdbg fell to the wayside, it needs to be adapted to bnodes in lists and to builtins*/
@@ -2490,7 +2446,7 @@ void print_kbdbg_part(stringstream &o, termid t, unsigned long part)
 		o << "\"( \",";
 		unsigned long p = 0;
 		auto lst = op->get_dotstyle_list(t);
-		
+
 		for (auto i: lst)
 		{
 			print_kbdbg_part(o, i, p++);
@@ -2547,6 +2503,105 @@ void print_kbdbg(prover::termset query)
 	dout << "[" << o.str() << "]" << endl;
 }
 #endif
+//endregion
+
+
+
+
+//region interface
+
+
+
+pnode thing2node(Thing *t, qdb &r) {
+	FUN;
+	if (is_list(*t))
+	{
+		t += 1;//jump to the first bnode
+		pnode first = 0;
+		pnode previous = 0;
+		while(true) {
+			assert(is_list_bnode(*t) || is_node(*t));
+			nodeid n = get_node(*t);
+			assert((n == rdfnil || is_list_bnode(*t)));
+			pnode bn = thing2node(t, r);
+
+			if (!first)first = bn;
+			if (previous) {
+				r.first["@default"]->push_back(
+						make_shared<quad>(
+								quad(
+										previous,
+				std::make_shared<node>(dict[rdfrest]),
+						bn
+				)
+				)
+				);
+			}
+
+			if (n == rdfnil)
+				break;
+
+			previous = bn;
+
+			Thing *v = getValue(t + 1);
+
+			r.first["@default"]->push_back(
+					make_shared<quad>(
+							quad(
+									bn,
+			std::make_shared<node>(dict[rdffirst]),
+					thing2node(v, r)
+			)
+			)
+			);
+			t += 2;
+		}
+		assert(first);
+		return first;
+	
+	}
+
+	if (is_node(*t) || is_list_bnode(*t))
+		return std::make_shared<node>(dict[get_node(*t)]);
+
+
+	MSG(str(t));
+	//dout << "thing2node: Wtf did you send me?, " << str(t_) << endl;
+	assert(is_unbound(*t));
+	return mkiri(pstr("?V?A?R?"));
+	assert(false);
+}
+
+
+void add_result(qdb &r, Thing *s, Thing *o, nodeid p)
+{
+	FUN;
+	r.first["@default"]->push_back(
+		make_shared<quad>(
+			quad(
+				thing2node(s, r),
+				std::make_shared<node>(dict[p]),
+				thing2node(o, r)
+			)
+		)
+	);
+}
+
+
+yprover::yprover ( qdb kb)  {
+	FUN;
+	MSG("...");
+	make_perms_table();
+	build_in_facts();
+	build_in_rules();
+	compile_kb(kb);
+}
+
+
+yprover::~yprover()
+{
+	free_garbage();
+}
 
 
 //arg1: kb, arg2: query
@@ -2584,7 +2639,7 @@ void yprover::query(qdb& goal){
 
 	//Reset the global steps & unifys
 	//Why not turn these into member variables of yprover.
-	//because then all the functions where they are touched and subsequently everything would have to be in yprover
+	//because then all the functions where they are touched and subsequently everything would have to be in yprover.
 	steps = 0;
 	unifys = 0;
 
@@ -2602,15 +2657,17 @@ void yprover::query(qdb& goal){
 	//here we combine the two Rules maps, and lists will 
 	//be used by get_list and islist deep inside make_locals
 	//get_list or something should then remove the triples of the internalized lists from the query
-	
+
+	auto gr = quads2rules(goal);
   //Adds the rules from the query to the rules from the kb? just for the lists
-	lists_rules = add_ruleses(rules, quads2rules(goal));
+	lists_rules = add_ruleses(rules, gr);
+	collect_lists();
 	make_locals(locals, consts, lm, cm, 0, q);
 	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);
 	join_t coro = jg();
 
 	dout << KGRN << "RUN" << KNRM << endl;
-	//here we invoke satan
+	//invoke satan
 	while (coro( (Thing*)666,(Thing*)666, locals.data() )) {
 
     //Returned true, so found a result: the rest of this loop is handling the result.
@@ -2622,8 +2679,10 @@ void yprover::query(qdb& goal){
 		//go over the triples of the query to print them out
 		//*q  :: qlist
 		//i   :: pquad
+		MSG(q->size());
 		for(auto i: *q)
 		{
+
 			Thing *s = &fetch_thing(dict[i->subj], locals, consts, lm, cm);
 			Thing *o = &fetch_thing(dict[i->object], locals, consts, lm, cm);
 
@@ -2640,6 +2699,9 @@ void yprover::query(qdb& goal){
 				o = &n2;
 				n2 = create_node(dict[i->object]);
 			}
+
+			s = getValue(s);
+			o = getValue(o);
 
 			dout << str(getValue(s)) << " " << i->pred->tostring() << " "  << str(getValue(o)) << endl;
 
@@ -3652,7 +3714,7 @@ string things_literals(const Locals &things)
 		if (is_unbound(t))
 			t.node = 0;
 		if (i++ != 0) ss << ", ";
-		ss << "Thing((ThingType)" << t.type << ", " << t.node << ")";
+		ss << "Thing(" << ThingTypeNames.at(t.type) << ", " << t.node << ")";
 		if (is_node(t))
 			cppdict[t.node] = *dict[t.node].value;
 	}
@@ -3822,14 +3884,14 @@ void yprover::cppout(qdb &goal)
 				   ""
 				   ""
 				   ;
-	//well, yea i guess this isn't the final version yea that it really isnt
-	out << "/* forward declarations */\n"//no need to limit this to debug mode tho;
+
+	out << "/* forward declarations */\n";
 	for(auto x: rules) {
 		out << "void " << predname(x.first) << "(cpppred_state &state, Thing *s, Thing *o);";
 	}
 
 
-	out << "/* pred function definitions */
+	out << "/* pred function definitions */\n";
 	for(auto x: rules) {
 		cppout_pred(predname(x.first), x.second);
 	}

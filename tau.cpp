@@ -709,7 +709,7 @@ void displayPrompt(){
 
 
 
-bool try_to_parse_the_line__if_it_works__add_it_to_qdb_text()
+bool try_to_parse_the_line__if_it_works__add_it_to_qdb_text() //:)
 {
 	string x = qdb_text + INPUT->pop_long() + "\n";
 

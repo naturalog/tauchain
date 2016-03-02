@@ -11,7 +11,7 @@ project(tauchain)
 
 
 SET (CMAKE_C_COMPILER             "/usr/bin/clang")
-SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++")
+SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++-libc++")
 SET (CMAKE_AR      "/usr/bin/llvm-ar")
 SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
 SET (CMAKE_NM      "/usr/bin/llvm-nm")
@@ -73,7 +73,9 @@ SET_TARGET_PROPERTIES(tau3-asan  PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -O3 $
 SET_TARGET_PROPERTIES(taud3 PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O3")
 SET_TARGET_PROPERTIES(taud3-asan PROPERTIES COMPILE_FLAGS "${COMMON_FLAGS} -DDEBUG -O3 ${ASAN}")
 
-target_link_libraries(tau            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
+#set(LIBSS "")
+
+target_link_libraries(tau            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} -L${MARPA_DIST}/.libs -lmarpa)
 target_link_libraries(tau-moderate            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau-moderate0            PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")
 target_link_libraries(tau3           PRIVATE ${Boost_LIBRARIES} ${CMAKE_DL_LIBS} "-L${MARPA_DIST}/.libs -lmarpa")

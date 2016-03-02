@@ -412,74 +412,87 @@ string quad::tostring ( ) const {
 
 
 
+typedef map<nodeid, nodeid> BnodesDict;
 
-
-bool nodes_same(pnode x, qdb &a, pnode y, qdb &b) {
+bool nodes_same(BnodesDict &bnodes, pnode x, qdb &a, pnode y, qdb &b) {
 	setproc("nodes_same");
 	TRACE(dout << x->_type << ":" << x->tostring() << ", " <<
 					  y->_type << ":" << y->tostring()  << endl);
-	if(x->_type == node::BNODE && y->_type == node::BNODE)
+	if (x->_type != y->_type)
+		return false;
+	if(x->_type == node::BNODE)
 	{
-		//CLI_TRACE(dout << "BBB" << endl);
-		auto la = a.second.find(*x->value);
-		auto lb = b.second.find(*y->value);
-		if ((la == a.second.end()) != (lb == b.second.end()))
-			return false;
-		if (la == a.second.end())
+		nodeid n1 = dict[x];
+		nodeid n2 = dict[y];
+
+		if (bnodes.find(n1) != bnodes.end())
 		{
-			TRACE(dout << "its a bnode not in lists, bail out for now" << endl);
-			return true;
+			return (bnodes[n1] == n2);
 		}
-		else {
-			auto laa = la->second;
-			auto lbb = lb->second;
-			if (laa.size() != lbb.size())
-				return false;
-			auto ai = laa.begin();
-			auto bi = lbb.begin();
-			while(ai != laa.end()) {
-				if (!nodes_same(*ai, a, *bi, b))
-					return false;
-				ai++;
-				bi++;
-			}
+		else
+		{
+			bnodes[n1] = n2;
 			return true;
 		}
 	}
-	else
-		return *x == *y;
+	//we'd end up here
+	return *x == *y;
 }
 
-//let's make this into an '==' operator
+//let's make this into an '==' operator, or make an '==' operator that calls it
 bool qdbs_equal(qdb &a, qdb &b) {
 	FUN;
 	TRACE(
 	dout << "a.first.size  a.second.size  b.first.size  b.second.size" << endl;
 	dout << a.first.size() << " " << a.second.size() << " " << b.first.size() << " " << b.second.size() << endl;
-	dout << "maybe..";)
+	)
 	dout << "A:" << endl;
 	dout << a;
 	dout << "B:" << endl;
 	dout << b;
-	auto ad = *a.first["@default"];
-	auto bd = *b.first["@default"];
-	auto i = ad.begin();
-	for (pquad x: bd) {
-		//if (dict[x->pred] == rdffirst || dict[x->pred] == rdfrest)
-		//	continue;
-		if (i == ad.end())
+
+	BnodesDict bnodes;
+
+  //qlist
+	auto a_default = *a.first["@default"];
+	auto b_default = *b.first["@default"];
+	auto i = a_default.begin();
+	if (i == a_default.end())
 			return false;
-		pquad n1 = *i;
-		pquad n2 = x;
-		if (!(*n1->pred == *n2->pred))
+
+	pquad qa;
+	for (pquad qb: b_default) {
+		qa = *i;
+		if (!(*qa->pred == *qb->pred))
 			return false;
-		if (!nodes_same(n1->subj, a, n2->subj, b))
+		if (!nodes_same(bnodes, qa->subj, a, qb->subj, b))
 			return false;
-		if (!nodes_same(n1->object, a, n2->object, b))
+		if (!nodes_same(bnodes, qa->object, a, qb->object, b))
 			return false;
 		i++;
 	}
 	return true;
+/*
+	for (pquad x: b_default) {
+		//if (dict[x->pred] == rdffirst || dict[x->pred] == rdfrest)
+		//	continue;
+
+		//could move this in front of the loop
+		if (i == a_default.end())
+			return false;
+		//would be better to call this na and nb or qa and
+		pquad n1 = *i;
+		pquad n2 = x;
+		if (!(*n1->pred == *n2->pred))
+			return false;
+		if (!nodes_same(bnodes, n1->subj, a, n2->subj, b))
+			return false;
+		if (!nodes_same(bnodes, n1->object, a, n2->object, b))
+			return false;
+		i++;
+	}
+	return true;
+	*/
 }
 
 qdb merge_qdbs(const std::vector<qdb> qdbs)
