@@ -813,10 +813,10 @@ public:
 				pnode i = l[idx];
 				pnode y = mkbnode(pstr(x));
 				//we just write into the dest kb
-				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_FIRST), i)));
+				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_FIRST), i, "@default",  true)));
 				x = list_bnode_name(++idx);
 				pnode z = (idx == size) ? mkiri(RDF_NIL) : mkbnode(pstr(x));
-				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_REST), z)));
+				c.push_back(make_shared<quad>(quad(y, mkiri(RDF_REST), z, "@default", true)));
 			}
 		}
 		return mkbnode(pstr(head));

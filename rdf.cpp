@@ -373,11 +373,12 @@ quad::quad ( string subj, string pred, string value, pstring datatype, pstring l
 
 
 
-quad::quad ( pnode s, pnode p, pnode o, string c ) :
-	subj(s), pred(p), object(o), graph(startsWith ( c, "_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ) {
+quad::quad ( pnode s, pnode p, pnode o, string c, bool auto_added_ ) :
+	subj(s), pred(p), object(o), graph(startsWith ( c, "_:" ) ? mkbnode ( pstr(c) ) : mkiri ( pstr(c) ) ), auto_added (auto_added_)
+{
 		setproc("quad::ctor");
-		TRACE(dout<<tostring()<<endl);
-	}
+		TRACE(dout<<auto_added_<<auto_added<<":" << tostring()<<endl);
+}
 
 
 

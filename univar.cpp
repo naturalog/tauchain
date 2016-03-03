@@ -423,6 +423,11 @@ static inline ThingType get_type(Thing x)
 #endif //ndef oneword
 
 
+inline bool is_nil(Thing* x)
+{
+	return is_node(*x) && (get_node(*x) == rdfnil);
+}
+
 
 
 
@@ -1062,32 +1067,53 @@ bool would_unify(Thing *this_, Thing *x_)
 /*ep check is supposed to determine equality by seeing if the values would unify
 * (but not actually doing the unifying assignment)*/
 {
-		FUN;
-		const Thing me = *this_;
-		const Thing x = *x_;
-		//We're sure it won't be these? in the context of ep-checking, yes
-		ASSERT(!is_offset(me));
-		ASSERT(!is_offset(x));
-		ASSERT(!is_bound(x));
+	FUN;
+	const Thing me = *this_;
+	const Thing x = *x_;
+	//We're sure it won't be these? in the context of ep-checking, yes
+			ASSERT(!is_offset(me));
+			ASSERT(!is_offset(x));
+			ASSERT(!is_bound(x));
 
-		if (is_var(me))
-			return true;// we must have been an unbound var
-		else if (types_differ(me, x)) // in oneword mode doesnt differentiate between bound and unbound!
-			return false;
-		else if(is_node(me))
-			return  are_equal(me, x);
-		else
-		{
-			ASSERT(is_list(me));
+	if (is_var(me))
+		return true;// we must have been an unbound var
+	else if (is_node(me))
+		return are_equal(me, x);
+	else if (is_list(me)) {
+		if (is_list(x)) {
+			if (get_size(*this_) != get_size(x))
+				return false;
+			/*
 			const auto size = get_size(me);
-			if(size != get_size(x)) return false;
 			for (pos_t  i = 0; i < size; i++)
 				if (!would_unify(getValue(this_+1+(i*2)) , getValue(x_+1+(i*2))))
 					return false;
 			return true;
-		}
-		//dont list bnodes ever come up here?
+			*/
 
+			x_++;
+		}
+		this_++;
+	}
+	if ((is_list_bnode(*this_) || is_nil(this_)) && (is_list_bnode(*x_) || is_nil(x_))) {
+		do {
+			if (is_nil(this_)) {
+				if (is_nil(x_))
+					return true;
+				return false;
+			}
+			if (is_nil(x_))
+				return false;
+
+			if (!would_unify(getValue(this_+1), getValue(x_+1)))
+				return false;
+			this_+=2;
+			x_+=2;
+		} while (true);
+	}
+	else if (types_differ(me, x)) // in oneword mode doesnt differentiate between bound and unbound!
+		return false;
+	assert(false);
 	/*maybe we could do this function more functionally like return type_bits(me) &&...*/
 }
 
@@ -1485,10 +1511,6 @@ coro listunifycoro(Thing *a_, Thing *b_)
 }
 
 
-inline bool is_nil(Thing* x)
-{
-	return is_node(*x) && (get_node(*x) == rdfnil);
-}
 
 coro listunifycoro2(Thing *a_, Thing *b_)
 {
@@ -2629,48 +2651,50 @@ void yprover::query(qdb& goal){
 	auto qit = goal.first.find("@default");
 	if (qit == goal.first.end())
 		return;
-	//pqlist
-	auto q = qit->second;
 
 #ifdef KBDBG
 	print_kbdbg(q);
 #endif
-	//Initialize 
 
 	//Reset the global steps & unifys
 	//Why not turn these into member variables of yprover.
 	//because then all the functions where they are touched and subsequently everything would have to be in yprover.
 	steps = 0;
 	unifys = 0;
+	int nresults = 0;
 
-
-	int nresults = 0; 
 
 	locals_map lm, cm;
 	Locals locals, consts;
 
-
-
-
 	dout << KGRN << "COMPILE QUERY" << KNRM << endl;
-
-	//here we combine the two Rules maps, and lists will 
+	//here we combine the two Rules maps, and lists will
 	//be used by get_list and islist deep inside make_locals
 	//get_list or something should then remove the triples of the internalized lists from the query
 
 	auto gr = quads2rules(goal);
-  //Adds the rules from the query to the rules from the kb? just for the lists
+	//Adds the rules from the query to the rules from the kb? just for the lists
 	lists_rules = add_ruleses(rules, gr);
 	collect_lists();
-	make_locals(locals, consts, lm, cm, 0, q);
-	join_gen jg = compile_body(locals, consts, lm, cm, 0, q);
+
+	qlist q;
+	for (auto qu: *qit->second) {
+		MSG(qu->auto_added << ":" << qu);
+		if (!qu->auto_added)
+			q.push_back(qu);
+	}
+	shared_ptr<qlist> pq = make_shared<qlist>(q);
+
+	make_locals(locals, consts, lm, cm, 0, pq);
+	join_gen jg = compile_body(locals, consts, lm, cm, 0, pq);
 	join_t coro = jg();
 
 	dout << KGRN << "RUN" << KNRM << endl;
-	//invoke satan
+
+	//invoke Satan our Lord
 	while (coro( (Thing*)666,(Thing*)666, locals.data() )) {
 
-    //Returned true, so found a result: the rest of this loop is handling the result.
+		//Returned true, so found a result: the rest of this loop is handling the result.
 		nresults++;
 		dout << KCYN << "RESULT " << KNRM << nresults << ":";
 		qdb r;
@@ -2679,8 +2703,8 @@ void yprover::query(qdb& goal){
 		//go over the triples of the query to print them out
 		//*q  :: qlist
 		//i   :: pquad
-		MSG(q->size());
-		for(auto i: *q)
+		MSG(q.size());
+		for(auto i: q)
 		{
 
 			Thing *s = &fetch_thing(dict[i->subj], locals, consts, lm, cm);

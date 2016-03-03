@@ -107,7 +107,7 @@ class quad {
 public:
 	//Definition
 	pnode subj, pred, object, graph;
-
+	bool auto_added = false;
 
 
 	//Constructors
@@ -118,12 +118,12 @@ public:
 	//@default graph?
 	quad ( string subj, string pred, string object, string graph );
 	quad ( string subj, string pred, string value, pstring datatype, pstring language, string graph );
-	quad ( pnode subj, pnode pred, pnode object, string graph = "@default" );
+	quad ( pnode subj, pnode pred, pnode object, string graph = "@default", bool auto_added_ = false );
 	//default graph?
 	quad ( pnode subj, pnode pred, pnode object, pnode graph);
 
 	//makes a quad from another quad?
-	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph) {}
+	quad(const quad& q) : subj(q.subj), pred(q.pred), object(q.object), graph(q.graph), auto_added(q.auto_added) {}
 
 
 	//Serializer

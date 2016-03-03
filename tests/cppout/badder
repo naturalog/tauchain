@@ -67,7 +67,7 @@ kb
 fin.
 
 
-cppout
+shouldbe
 :cout :nand3 ?V1q .
 :sum :nand3  ?V2q .
 :cout :nand3 ?V1w .
