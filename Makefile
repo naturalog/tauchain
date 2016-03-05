@@ -1,9 +1,10 @@
-CXX=clang++
+#CXX=clang++
+CXX=clang++-libc++ -stdlib=libc++ 		
 ###NEW= -DNEW
 ASAN=   -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=unsigned-integer-overflow -fsanitize=undefined -ggdb -gline-tables-only # -fsanitize-undefined-trap-on-error 
 DEBUG=  -DDEBUG -O0  -fno-omit-frame-pointer -fno-optimize-sibling-calls 
 DBG= $(ASAN) -g -ggdb $(DEBUG)
-CXXFLAGS= -c -O3 $(DBG) $(NEW) -std=c++1y -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include 
+CXXFLAGS= -c -O3 $(DBG) $(NEW) -std=c++1y -W -Wall -Wextra -Wpedantic -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include  
 LDFLAGS=  $(DBG) -L/usr/local/lib #-ldl -pthread -lrt
 OBJECTS= prover.o unifiers.o univar.o tau.o jsonld.o rdf.o misc.o json_object.o jsonld_tau.o nquads.o
 

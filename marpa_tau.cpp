@@ -413,7 +413,7 @@ struct Marpa {
 
 			std::vector<sym> best_syms;
 			size_t best_len = 0;
-			expected.clear();
+			//expected.clear();
 			int num_expected = check_int(marpa_r_terminals_expected(r, &expected[0]));
 			for (int i = 0; i < num_expected; i++) {
 				sym e = expected[i];

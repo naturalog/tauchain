@@ -371,8 +371,11 @@ void test_result(bool x) {
 
 void shouldbe(qdb &sb) {
 	test_result(_shouldbe(tauProver->results, sb));
-	if (INPUT->do_cppout)
-		test_result(_shouldbe(cppout_results, sb));
+	if (INPUT->do_cppout) {
+		bool r = _shouldbe(cppout_results, sb);
+		test_result(r);
+		dout << ":cppout";
+	}
 }
 
 void thatsall()
@@ -756,6 +759,14 @@ void emplace_stdin()
 
 
 
+void passthru(string s)
+{
+	std::string line;
+	redi::ipstream m(s);
+	while (getline(m.out(), line))
+		dout << line << endl;
+	m.close();
+}
 
 
 
@@ -851,12 +862,20 @@ int main ( int argc, char** argv)
 
 							std::string line;
 
-							redi::ipstream m("make");
-							while (getline(m.out(), line))
-								dout << line << endl;
-							m.close();
-							
-							redi::ipstream p("./cppout");
+							passthru("sleep 1; astyle out.cpp; rm cppout out.o");
+
+
+							string fff = "  || echo \"test:cppout:make:FAIL:";
+
+							stringstream errss;
+							errss << "make cppout" << fff << INPUT->name << "\"";
+							passthru(errss.str());
+
+							stringstream cmdss;
+							cmdss << "./cppout" << fff << INPUT->name << "\"";
+							redi::ipstream p(cmdss.str());
+
+
 							while (getline(p.out(), line)) {
 								dout << line << endl;
 								if (startsWith(line, "RESULT ")) {

@@ -3912,7 +3912,7 @@ string things_literals(const Locals &things)
 
 void cppout_pred(string name, vector<Rule> rules)
 {
-	DBG(out << "/* void cppout_pred */";)//ok this one is DBG() worthy
+	DBG(out << "/* void cppout_pred */\n";)
 	out << "void " << name << "(cpppred_state &state";
 	//query? query is baked in for now
 	if (name != "query") out << ", Thing *s, Thing *o";
@@ -3936,6 +3936,16 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 
 		out << "static Locals consts" << i << " = " << things_literals(consts) << ";\n";
 	}
+
+
+
+
+	if (name == "query")
+			out << "static int counter = 0;\n";
+
+
+
+
 
 	int label = 0;
 
@@ -4023,6 +4033,35 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 			}
 		}
 
+		if (name == "query") {
+			out << "dout << \"RESULT \" << counter << \": \";\n";
+
+			for (pquad bi: *rule.body) {
+				pos_t i1, i2;//s and o positions
+				nodeid s = dict[bi->subj];
+				nodeid o = dict[bi->object];
+				PredParam sk, ok;
+				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
+				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
+
+
+				out << "{Thing * bis, * bio;\n";
+				out << "bis = getValue(" << param(sk, i1, i) << ");\n";
+				out << "bio = getValue(" << param(ok, i2, i) << ");\n";
+
+				out << "Thing n1; if (is_unbound(*bis)) {bis = &n1; n1 = create_node(" << dict[bi->subj] << ");};\n";
+				out << "Thing n2; if (is_unbound(*bio)) {bio = &n2; n2 = create_node(" << dict[bi->object] << ");};\n";
+
+				out << "dout << str(bis) << \" " << bi->pred->tostring() << " \" << str(bio) << \".\";};\n";
+			}
+			out << "dout << \"\\n\";\n";
+		}
+
+
+		if (name == "query")
+			out << "counter++;\n";
+
+
 		out << "return;\n";
 		out << "case " << label++ << ":;\n";
 
@@ -4098,7 +4137,8 @@ void yprover::cppout(qdb &goal)
 	out << "}\n";
 
 
-	out << "#include \"cppmain.cpp\"\n";
+	out << "#include \"cppmain.cpp\"\n" << endl;
+	out.close();
 
 }
 
