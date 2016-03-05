@@ -18,6 +18,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "pstreams-0.8.1/pstream.h"
+
+
 #ifdef debug_cli
 #define CLI_TRACE(x) TRACE(x)
 #else
@@ -76,6 +79,8 @@ yprover *tauProver = 0;
 std::vector<qdb> kbs;
 
 bool done_anything = false;
+
+results_t cppout_results;
 
 
 class Input
@@ -342,14 +347,14 @@ void switch_color(){
 	}
 }
 
-bool _shouldbe(qdb &sb) {
+bool _shouldbe(results_t &results, qdb &sb) {
 	if (sb.first.empty() && sb.second.empty()) {
-		return tauProver->results.empty();
+		return results.empty();
 	}
-	if(!tauProver->results.size())
+	if(!results.size())
 		return false;
-	auto r = tauProver->results.front();
-	tauProver->results.pop_front();
+	auto r = results.front();
+	results.pop_front();
 	return qdbs_equal(r, sb);
 }
 
@@ -365,7 +370,9 @@ void test_result(bool x) {
 
 
 void shouldbe(qdb &sb) {
-	test_result(_shouldbe(sb));
+	test_result(_shouldbe(tauProver->results, sb));
+	if (INPUT->do_cppout)
+		test_result(_shouldbe(cppout_results, sb));
 }
 
 void thatsall()
@@ -839,9 +846,29 @@ int main ( int argc, char** argv)
 					else if (INPUT->mode == QUERY) {
 						if (INPUT->do_query)
 							do_query(kb);
-						if (INPUT->do_cppout)
+						if (INPUT->do_cppout) {
 							tauProver->cppout(kb);
 
+							std::string line;
+
+							redi::ipstream m("make");
+							while (getline(m.out(), line))
+								dout << line << endl;
+							m.close();
+							
+							redi::ipstream p("./cppout");
+							while (getline(p.out(), line)) {
+								dout << line << endl;
+								if (startsWith(line, "RESULT ")) {
+									string result = line.substr(line.find(":") + 1);
+									qdb kb, kb2, cppout;
+									std::stringstream ss(result);
+									auto pr = parse(cppout, kb2, ss, "cppout output");
+									cppout_results.push_back(cppout);
+								}
+							}
+							p.close();
+						}
 						done_anything = true;
 					}
 					else if (INPUT->mode == SHOULDBE) {

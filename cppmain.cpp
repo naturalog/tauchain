@@ -7,7 +7,7 @@ int main ( int argc, char** argv){
 	{
 		query(state);
 		if(state.entry == -1){ dout << "done" << endl; break;}
-		dout << "result " << n << endl;
+		dout << "RESULT " << n << ":" << endl;
 		for(Thing t:state.locals)
 		{
 			if (is_bound(t))

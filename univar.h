@@ -1,11 +1,12 @@
 #include "rdf.h"
 #include "misc.h"
 
+typedef std::list<qdb> results_t;
+
 class yprover {
 public:
 	//Structure
-	typedef std::list<qdb> results_t;
-	
+
 	results_t results;
 
 	//Correspond to the global steps & unifys defined in univar.cpp

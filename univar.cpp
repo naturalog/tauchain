@@ -7,6 +7,7 @@
 
 #include "univar.h"
 
+
 /* http://www.chiark.greenend.org.uk/~sgtatham/coroutines.html
  * http://www.codeproject.com/Articles/29524/Generators-in-C
  * < HMC_Alf> JIT are just crazy "specialized jump table" constructing machines
@@ -2703,7 +2704,7 @@ void yprover::query(qdb& goal){
 		//go over the triples of the query to print them out
 		//*q  :: qlist
 		//i   :: pquad
-		MSG(q.size());
+
 		for(auto i: q)
 		{
 
