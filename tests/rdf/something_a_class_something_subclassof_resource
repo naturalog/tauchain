@@ -1,0 +1,38 @@
+
+
+
+kb
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+
+Fruit @a rdfs:Class.
+
+fin.
+
+query
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+Fruit rdfs:subClassOf rdfs:Resource .
+fin.
+shouldbe
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+Fruit rdfs:subClassOf rdfs:Resource .
+fin.
+thatsall
+
+
+query
+Fruit :eats rdfs:Resource .
+fin.
+shouldbe
+fin.
+thatsall
+
+
+query
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+Fruit rdfs:subClassOf :Banana .
+fin.
+shouldbe
+fin.
+thatsall
+

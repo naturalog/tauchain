@@ -1,0 +1,33 @@
+
+kb
+@prefix rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+
+
+
+
+#note that hmc originally said that builtins shouldnt be shadowed, 
+#but it isnt making sense at least at this point, where we need to
+#speak about all these builtin preds in our tests
+
+
+:yummyness :is :yummyness .
+{?X :is :yummyness} => {?X rdfs:domain :food }.
+:banana :yummyness 10 .
+
+fin.
+
+query
+
+:banana @a :food .
+#:gravel @a :food .
+
+fin.
+
+shouldbe
+
+:banana @a :food .
+
+fin.
+
+thatsall

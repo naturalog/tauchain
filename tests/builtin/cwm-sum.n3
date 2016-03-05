@@ -1,4 +1,6 @@
 kb
+a b c.
+1 2 3.
 fin.
 query
 (1 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
@@ -11,7 +13,30 @@ fin.
 thatsall
 
 query
+?x 2 3. (?x 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
+fin.
+shouldbe
+1 2 3. (1 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
+fin.
+thatsall
+
+
+query
 (?x 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
+fin.
+shouldbe
+fin.
+thatsall
+
+query
+?x b c. (?x 1) <http://www.w3.org/2000/10/swap/math#sum> 2 .
+fin.
+shouldbe
+fin.
+thatsall
+
+query
+"ramen" <http://www.w3.org/2000/10/swap/math#sum> 2 .
 fin.
 shouldbe
 fin.

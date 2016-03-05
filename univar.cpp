@@ -430,6 +430,25 @@ inline bool is_nil(Thing* x)
 }
 
 
+bool is_listey(Thing *x)
+{
+	return is_list(*x) || is_list_bnode(*x) || is_nil(x);
+}
+
+Thing * next_item(Thing *&x)
+{
+	if (is_list(*x))
+		x++;
+	if (is_list_bnode(*x))
+	{
+		x += 2;
+		return x - 1;
+	}
+	if (is_nil(x))
+		return 0;
+	assert(false);
+}			
+                                    
 
 
 inline void add_kbdbg_info(Thing &t, Markup markup)
@@ -2845,30 +2864,112 @@ this thing looks pretty suboptimal btw...buti guess it should get the job done*/
 
 void build_in_facts()
 {
+
+//Is it beneficial to add the redundant facts or not?
 	add_facts({
 
+//These are redundant given the rule {?x rdf:type rdfs:Class} => {?x rdfs:subClassOf rdfs:Resource}
+//rdfsResource rdfssubClassOf rdfsResource
+//rdfsClass rdfssubClassOf rdfsResource
 //rdfsLiteral rdfssubClassOf rdfsResource
-//rdflangString rdfssubClassOf rdfsLiteral
-//rdfHTML rdfssubClassOf rdfsLiteral
+
+		{rdfsDatatype,                    rdfssubClassOf,    rdfsClass},
+//These are redundant given the rule {?x rdf:type rdfs:Datatype} => {?x rdfs:subClassOf rdfs:Literal}
+//rdflangString rdfssubClassOf rdfsLiteral	//(redundant)
+//rdfHTML rdfssubClassOf rdfsLiteral		//(redundant)
+		{rdfXMLLiteral,                   rdfssubClassOf,    rdfsLiteral}, //(redundant)
+//rdfProperty rdfssubClassOf rdfsResource	//(redundant)
+//rdfsContainer rdfssubClassOf rdfsResource	//(redundant)
 		{rdfAlt,                          rdfssubClassOf,    rdfsContainer},
 		{rdfBag,                          rdfssubClassOf,    rdfsContainer},
 		{rdfsContainerMembershipProperty, rdfssubClassOf,    rdfProperty},
 		{rdfsDatatype,                    rdfssubClassOf,    rdfsClass},
 		{rdfSeq,                          rdfssubClassOf,    rdfsContainer},
-		{rdfXMLLiteral,                   rdfssubClassOf,    rdfsLiteral},
+
+
 		{rdfsisDefinedBy,                 rdfssubPropertyOf, rdfsseeAlso},
 
-//rdfsResource rdftype rdfsClass ?
-//rdfsClass rdftype rdfsClass ?
-//rdfsLiteral rdftype rdfsClass
-//rdfsDatatype rdftype rdfsClass
-//rdflangString rdftype rdfsDatatype
-//rdfHTML rdftype rdfsDatatype
-//rdfProperty rdftype rdfsClass
-		{rdfXMLLiteral,                   rdftype,           rdfsDatatype},
-		{rdffirst,                        rdftype,           owlFunctionalProperty},
+
+
+
+		//I think we need these:
+		/*
+		{rdfsResource, rdftype, rdfsClass},
+		{rdfsClass, rdftype, rdfsClass},
+		{rdfsLiteral, rdftype, rdfsClass},
+		{rdfsDatatype, rdftype, rdfsClass},
+		*/
+	
+		/*
+		{rdflangString, 		rdftype, 		rdfsDatatype},
+		{rdfHTML, 			rdftype, 		rdfsDatatype}
+		*/
+		{rdfXMLLiteral,                 rdftype,        	rdfsDatatype},
+
+		//I think we need this one:
+		//{rdfProperty, rdftype, rdfsClass},
+
+
+
+//possibly redundant via their usage in rdfsdomain & rdfsrange (not sure):
+//rdfsrange rdftype rdfProperty
+//rdfsdomain rdftype rdfProperty
+//rdftype rdftype rdfProperty
+//rdfssubClassOf rdftype rdfProperty
+//rdfssubPropertyOf rdftype rdfProperty
+//rdfslabel rdftype rdfProperty
+//rdfscomment rdftype rdfProperty
+
+		//{rdfsContainer, 	rdftype, 	rdfsClass},
+
+//redundant due to:
+/*
+	[rdfBag, rdfSeq, rdfAlt] rdfssubClassOf rdfsContainer
+	rdfssubClassOf rdfsdomain rdfsClass
+	{?p rdfsdomain ?c. ?s ?p ?o} => {?s rdf:type ?c}
+*/
+//rdfBag rdftype rdfsClass
+//rdfSeq rdftype rdfsClass
+//rdfAlt rdftype rdfsClass
+
+
+//redundant due to: 
+/*
+	rdfsContainerMembershipProperty rdfssubClassOf rdfProperty
+	rdfssubClassOf rdfsdomain rdfsClass
+	{?p rdfsdomain ?c. ?s ?p ?o} => {?s rdf:type ?c}
+*/
+//rdfsContainerMembershipProperty rdftype rdfsClass
+
+//rdf:_1 rdftype rdfsContainerMembershipProperty
+//rdf:_2 rdftype rdfsContainerMembershipProperty
+//rdf:_3 rdftype rdfsContainerMembershipProperty
+//...
+
+//rdfsmember rdftype rdfProperty (possibly redundant due to domain & range)
+
+		//{rdfList, 			rdftype,	rdfsClass},
+		{rdffirst,                        rdftype,           owlFunctionalProperty},//?
 		{rdfrest,                         rdftype,           owlFunctionalProperty},
 		{rdfnil,                          rdftype,           rdfList},
+
+
+		//{rdfStatement, 		rdftype, 	rdfsClass},
+
+//possibly redundant due to domain & range:
+//rdfsubject rdftype rdfProperty
+//rdfpredicate rdftype rdfProperty
+//rdfobject rdftype rdfProperty
+
+//possibly redundant due to domain & range:
+//rdfsseeAlso rdftype rdfProperty
+//rdfsisDefinedBy rdftype rdfProperty
+//rdfvalue rdftype rdfProperty
+
+
+
+
+
 
 		{rdfscomment,                     rdfsdomain,        rdfsResource},
 		{rdfscomment,                     rdfsrange,         rdfsLiteral},
@@ -3025,7 +3126,8 @@ void build_in_rules()
 
 
 	//Thing c_rdfsType = create_node(op->make(rdftype));
-	//Thing c_rdfsResource = create_node(op->make(rdfsResource));
+	Thing c_rdfsResource = create_node(rdfsResource);
+	Thing c_rdfsClass = create_node(rdfsClass);
 	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
 
 
@@ -3096,11 +3198,35 @@ void build_in_rules()
 
 
 
-
-
+	
 	//todo rdfs:Class(?y) implies (?y(?x) iff rdf:type(?x ?y))
 	//...nothing to implement?
-
+	//for this ^, no, but for this v :
+	// {?x rdf:type rdfs:Class} => {?x rdfs:subClassOf rdfs:Resource}
+	
+	{
+		pred_t type_pred;
+	builtins[rdfssubClassOf].push_back([entry,c_rdfsResource,c_rdfsClass,type_pred,ouc](Thing *s, Thing *res) mutable{
+		setproc("type is Class implies superClass is Resource");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			ouc = unify(res, &c_rdfsResource);
+			type_pred = ITEM(preds,rdftype);
+			entry = LAST;
+			while(ouc())
+			{
+				while(type_pred(s, &c_rdfsClass))
+				{
+					return true;		
+		case_LAST:;
+				}
+			}
+			END;
+		}	
+	});
+	}
+	
 
 
 	// https://www.w3.org/TR/rdf-schema/#ch_domain
@@ -3269,7 +3395,27 @@ void build_in_rules()
 
 	//rdfs:Class(?x) implies ( rdfs:subClassOf(?x ?x) and rdfs:subClassOf(?x rdfs:Resource) )
 
+
+	//{?x rdf:type rdfs:Class} => {?x rdfs:subClassOf ?x}
+	//{?x rdf:type rdfs:Class} => {?x rdfs:subClassOf rdfs:Resource}
+	//{?x rdfs:subClassOf ?y. ?y rdfs:subClassOf ?z} => {?x rdfs:subClassOf ?z}.
+	
+
 	//(rdfs:subClassOf(?x ?y) and rdfs:subClassOf(?y ?x)) implies  "?x == ?y" <-- how to handle?
+
+
+	//{?x rdf:type rdfs:Datatype} => {?x rdfs:subClassOf rdfs:Literal}
+
+
+
+
+	//{?x rdf:type rdfs:Property} => {?x rdfs:subPropertyOf ?x}
+	//{?x rdfs:subPropertyOf ?y. ?y rdfs:subPropertyOf ?z} => {?x rdfs:subPropertyOf ?z}
+	
+	//{?x rdfs:subPropertyOf ?y. ?y rdfs:subPropertyOf ?x} => {?x == ?y} 
+
+
+	//{?x rdf:type rdfs:ContainerMembershipProperty} => {?x rdfs:subPropertyOf rdfs:member}
 
 
 
@@ -3307,6 +3453,9 @@ void build_in_rules()
 	// If it is bound to something that is not a list, fail.
 	// If it is unbound, do a trivial yield (no new binding first).
 	// Why the trivial yield on the unbound variable?
+	// Returns an existential var; just says, there does exist something which is
+	// rdffirst of this bnode. I guess. The only way you can really query with
+	// rdffirst is with a var or bnode. 
 	builtins[rdffirst].push_back(
 			[entry, ouc, s, o](Thing *s_, Thing *o_) mutable {
 				setproc("rdffirst");
@@ -3317,6 +3466,14 @@ void build_in_rules()
 						TRACE(dout << str(s) << " #first " << str(o) << endl);
 						if (is_unbound(*s))
 							ouc = gen_succeed();
+						//Couldn't we just:
+						/*
+							entry = LAST;
+							return true;
+
+						*/
+
+						//Not sure i understand the +1 +2 here
 						else if (is_list(*s))
 							ouc = unify(o, s + 2);
 						else if (is_list_bnode(*s))
@@ -3342,6 +3499,7 @@ void build_in_rules()
 						s = getValue(s_);
 						o = getValue(o_);
 						TRACE(dout << str(s) << " #rest " << str(o) << endl);
+						//not sure i understand the +3 +2 here
 						if (is_list(*s))
 							r = s+3;
 						else if(is_list_bnode(*s))
@@ -3394,6 +3552,7 @@ void build_in_rules()
 	 */
 
 
+
 	//sum: The subject is a list of numbers. The object is calculated as the arithmentic sum of those numbers.
 
 	//why not call it pred or pred_iri
@@ -3401,37 +3560,40 @@ void build_in_rules()
 	auto bui = dict.set(mkiri(pstr(bu)));
 
 	builtins[bui].push_back(
-			[r, bu, entry, ouc, s, ss](Thing *s_, Thing *o_) mutable {
+			[r, bu, entry, ouc](Thing *s_, Thing *o_) mutable {
 				//TRACE_ENTRY?
 				switch (entry) {
 					case 0: {
 
-						s = getValue(s_);
-				//At this point s should not be either a bound
-				//var or an offset.
+						Thing *sv = getValue(s_);
+						//At this point s should not be either a bound
+						//var or an offset.
 
-						ss = *s;
-				//At this point neither s nor ss should be either 				//bound vars or offsets.
+						
+				//At this point neither s nor ss should be either bound vars or offsets.
 
 
 				//Is this an error? //we just dont unify
-						if (!is_list(ss)) {
-							dout << bu << ": " << str(s) << " not a list" << endl;
+						if (!is_listey(sv)) {
+							dout << bu << ": " << str(s_) << " not a list" << endl;
 							DONE;
 						}
-
+						
 
 						long total = 0;
-						const size_t size = get_size(ss);
-						for (pos_t  i = 0; i < size; i++) {
-							Thing item = *(s + 1 + i);
+						Thing *item;
+						while((item = next_item(sv)))
+						{
+							//i think we should be getValuing here
+							item = getValue(item);
+							
 				//Make sure it's a node. Is this an error if it's not?
-							if (!is_node(item)) {
-								dout << bu << ": " << str(&item) << " not a node" << endl;
+							if (!is_node(*item)) {
+								dout << bu << ": " << str(item) << " not a node" << endl;
 								DONE;
 							}
 				
-							node p = dict[get_node(item)];
+							node p = dict[get_node(*item)];
 				//Make sure it's an XSD_INTEGER. Is this an error if it's not?
 							if (p.datatype != XSD_INTEGER) {
 								dout << bu << ": " << p.tostring() << " not an int" << endl;
@@ -3771,10 +3933,6 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 		Locals locals_template;
 		Locals consts;
 		make_locals(locals_template, consts, lm, cm, r.head, r.body);
-
-//ok
-//also, dont you wanna start by reading the generated code?
-//:)
 
 		out << "static Locals consts" << i << " = " << things_literals(consts) << ";\n";
 	}
