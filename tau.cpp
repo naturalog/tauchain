@@ -113,8 +113,10 @@ public:
 	Input()
 	{
 		if(inputs.size()) {
+			//these should be inherited from parent input
 			limit = INPUT->limit;
 			do_cppout = INPUT->do_cppout;
+			do_query = INPUT->do_query;
 		}
 	}
 };
@@ -370,11 +372,12 @@ void test_result(bool x) {
 
 
 void shouldbe(qdb &sb) {
-	test_result(_shouldbe(tauProver->results, sb));
+	if (INPUT->do_query) 
+		test_result(_shouldbe(tauProver->results, sb));
 	if (INPUT->do_cppout) {
 		bool r = _shouldbe(cppout_results, sb);
+		dout << "cppout:";
 		test_result(r);
-		dout << ":cppout";
 	}
 }
 
@@ -591,6 +594,11 @@ bool read_option(string s){
 		
 		if(_option == "cppout"){
 			INPUT->do_cppout = std::stoi(token);
+			return true;
+		}
+
+		if(_option == "lambdas"){
+			INPUT->do_query = std::stoi(token);
 			return true;
 		}
 
@@ -858,17 +866,20 @@ int main ( int argc, char** argv)
 						if (INPUT->do_query)
 							do_query(kb);
 						if (INPUT->do_cppout) {
+							cppout_results.clear();	
+						
 							tauProver->cppout(kb);
 
 							std::string line;
 
 							passthru("sleep 1; astyle out.cpp; rm cppout out.o");
 
-
-							string fff = "  || echo \"test:cppout:make:FAIL:";
+							stringstream omg;
+							omg << "  || echo  \"test:cppout:make:" << KRED << "FAIL:" << KNRM;
+							string fff=omg.str();
 
 							stringstream errss;
-							errss << "make cppout" << fff << INPUT->name << "\"";
+							errss << "make -e cppout" << fff << INPUT->name << "\"";
 							passthru(errss.str());
 
 							stringstream cmdss;

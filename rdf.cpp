@@ -415,7 +415,7 @@ string quad::tostring ( ) const {
 
 typedef map<nodeid, nodeid> BnodesDict;
 
-bool nodes_same(BnodesDict &bnodes, pnode x, qdb &a, pnode y, qdb &b) {
+bool nodes_same(BnodesDict &bnodes, pnode x, pnode y) {
 	setproc("nodes_same");
 	TRACE(dout << x->_type << ":" << x->tostring() << ", " <<
 					  y->_type << ":" << y->tostring()  << endl);
@@ -466,9 +466,9 @@ bool qdbs_equal(qdb &a, qdb &b) {
 		qa = *i;
 		if (!(*qa->pred == *qb->pred))
 			return false;
-		if (!nodes_same(bnodes, qa->subj, a, qb->subj, b))
+		if (!nodes_same(bnodes, qa->subj, qb->subj))
 			return false;
-		if (!nodes_same(bnodes, qa->object, a, qb->object, b))
+		if (!nodes_same(bnodes, qa->object, qb->object))
 			return false;
 		i++;
 	}

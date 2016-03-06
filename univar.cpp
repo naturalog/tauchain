@@ -3890,6 +3890,11 @@ string param(PredParam key, pos_t thing_index, pos_t rule_index)
 	return ss.str();
 }
 
+nodeid ensure_cppdict(nodeid node)
+{
+	cppdict[node] = *dict[node].value;
+	return node;
+}
 
 
 string things_literals(const Locals &things)
@@ -3903,14 +3908,14 @@ string things_literals(const Locals &things)
 		if (i++ != 0) ss << ", ";
 		ss << "Thing(" << ThingTypeNames.at(t.type) << ", " << t.node << ")";
 		if (is_node(t))
-			cppdict[t.node] = *dict[t.node].value;
+			ensure_cppdict(t.node);
 	}
 	ss << "}";
 	return ss.str();
 }
 
 
-void cppout_pred(string name, vector<Rule> rules)
+void cppout_pred(string name, vector<Rule> rs)
 {
 	DBG(out << "/* void cppout_pred */\n";)
 	out << "void " << name << "(cpppred_state &state";
@@ -3918,17 +3923,12 @@ void cppout_pred(string name, vector<Rule> rules)
 	if (name != "query") out << ", Thing *s, Thing *o";
 	out << "){\n";
 	//for every rule in the kb (not the query) with non-empty body, make an ep-table, static ep_t ep*rule-index*, and for every rule make a const table, Locals const*rule-index*
-	for (pos_t i = 0; i < rules.size(); i++) {
-		if (rules[i].head && rules[i].body && rules[i].body->size())
+	for (pos_t i = 0; i < rs.size(); i++) {
+		if (rs[i].head && rs[i].body && rs[i].body->size())
 			out << "static ep_t ep" << i << ";\n";
 
-/*
-should we voice call or something? sure, gotta go set up my other comp tho
-like, i dunno if youd rather go thru the code by yourself or have me answer your questions as you go.. the latter, though so far i don't have too many questions, mostly just limited by the pace i can read C++*/
-
-
 		//here we inefficiently do a special round of make_locals just to get consts
-		auto &r = rules[i];
+		auto &r = rs[i];
 		locals_map lm, cm;
 		Locals locals_template;
 		Locals consts;
@@ -3938,13 +3938,8 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 	}
 
 
-
-
 	if (name == "query")
 			out << "static int counter = 0;\n";
-
-
-
 
 
 	int label = 0;
@@ -3952,10 +3947,10 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 	out << "switch(state.entry){\n";
 
 	//case 0:
-	out << "case "<<label++ << ":\n";
+	out << "case "<< label++ << ":\n";
 
 	size_t max_body_len = 0;
-	for (auto rule:rules) {
+	for (auto rule:rs) {
 		if (rule.body && max_body_len < rule.body->size())
 			max_body_len = rule.body->size();
 	}
@@ -3963,9 +3958,8 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 	out << "state.states.resize(" << max_body_len << ");\n";
 
 	int i = 0;
-	//Rule rule
 	//loop over all kb rules for the pred
-	for (auto rule:rules)
+	for (Rule rule:rs)
 	{
 		out << "//rule " << i << ":\n";
 		//out << "// "<<<<":\n";
@@ -4025,8 +4019,11 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
 				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
 
-				out << predname(dict[bi->pred]) << "(" << substate << ", " <<
-					param(sk, i1, i) << ", " << param(ok, i2, i) << ");\n";
+				if (has(rules, dict[bi->pred]))
+					out << predname(dict[bi->pred]) << "(" << substate << ", " <<
+						param(sk, i1, i) << ", " << param(ok, i2, i) << ");\n";
+				else
+					out << substate << ".entry = -1;\n";
 
 				out << "if(" << substate << ".entry == -1) break;\n";
 				j++;
@@ -4034,6 +4031,7 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 		}
 
 		if (name == "query") {
+		//would be nice to also write out the head of the rule, and do this for all rules, not just query
 			out << "dout << \"RESULT \" << counter << \": \";\n";
 
 			for (pquad bi: *rule.body) {
@@ -4049,8 +4047,8 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 				out << "bis = getValue(" << param(sk, i1, i) << ");\n";
 				out << "bio = getValue(" << param(ok, i2, i) << ");\n";
 
-				out << "Thing n1; if (is_unbound(*bis)) {bis = &n1; n1 = create_node(" << dict[bi->subj] << ");};\n";
-				out << "Thing n2; if (is_unbound(*bio)) {bio = &n2; n2 = create_node(" << dict[bi->object] << ");};\n";
+				out << "Thing n1; if (is_unbound(*bis)) {bis = &n1; n1 = create_node(" << ensure_cppdict(dict[bi->subj]) << ");};\n";
+				out << "Thing n2; if (is_unbound(*bio)) {bio = &n2; n2 = create_node(" << ensure_cppdict(dict[bi->object]) << ");};\n";
 
 				out << "dout << str(bis) << \" " << bi->pred->tostring() << " \" << str(bio) << \".\";};\n";
 			}
@@ -4062,8 +4060,20 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 			out << "counter++;\n";
 
 
+		if (rule.head && rule.body && rule.body->size()) {
+			out << "ASSERT(ep" << i << ".size());\n ep" << i << ".pop_back();\n\n";
+		}
+
+
 		out << "return;\n";
 		out << "case " << label++ << ":;\n";
+		
+		
+		if (rule.head && rule.body && rule.body->size()) {
+			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
+		}
+		
+		
 
 		if(rule.body)
 			for (pos_t closing = 0; closing < rule.body->size(); closing++)
@@ -4071,8 +4081,8 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 
 
 		if (rule.head && rule.body && rule.body->size())
-				out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
-
+			out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
+			
 		if (rule.head) {
 			out << "state.ouc();//unbind\n"
 					"}\n"
@@ -4085,13 +4095,12 @@ like, i dunno if youd rather go thru the code by yourself or have me answer your
 
 }
 
-//void cpploop(size_t &label, size_t j, pquad bi, Rule r, Locals &lm, Locals &cm)
-
 
 void yprover::cppout(qdb &goal)
 {
 	FUN;
 
+	cppdict.clear();
 	out.open("out.cpp", fstream::out);
 	
 	DBG(out << "/* void yprover::cppout */\n";)//ah you want trace for that//well not even trace i guess since that would put the proc (things) in front, DBG()?

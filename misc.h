@@ -38,7 +38,7 @@ extern bool in_silent_part;
   { \
   	if(!in_silent_part) \
   	{ \
-  		dout << "( > " << level << " )" << endl; \
+  		dout << "( sssssh )" << endl; \
 	  	in_silent_part = true; \
 	} \
   }
