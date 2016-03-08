@@ -119,6 +119,9 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 
 
 
+
+//region Thing
+
 //for kbdbg
 typedef vector<unsigned long> Markup;
 typedef std::pair<nodeid, Markup> toadd;
@@ -159,7 +162,7 @@ the reason for this is that vars may occur multiple times, for example:
 we have two distinct lists in this rule, each contains ?y
 the lists themselves will be just consecutive things in the locals vector
 */
-class Thing;
+
 
 class Thing {
 public:
@@ -460,10 +463,10 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 #endif
 }
 
+//endregion
 
 
-
-//region types, globals, funcs
+//region typedefs, globals, forward declarations
 
 //Structures of Things
 
@@ -825,6 +828,9 @@ static coro UNIFY_SUCCEED(const Thing *a, const Thing *b)
 //endregion
 
 
+
+//region Thing stuff
+
 string nodestr(nodeid n)
 {
 	if (has(cppdict, n))
@@ -1175,7 +1181,7 @@ coro unbound_succeed(Thing *x, Thing *y, Thing * origa, Thing * origb)
 //unboundunifycoro only needs it when DEBUG is defined.
 #endif
 
-
+//endregion
 
 
 
@@ -2391,12 +2397,14 @@ rule_t compile_rule(Rule r)
 				locals = (Thing*)malloc(locals_bytes);
 				memcpy(locals, locals_data, locals_bytes);
 				/*also, since when a pred is invoked, all rules are gone thru,
-				 * we should try (as long as this isnt too memory-intensive) allocating per-pred,
-				 * or allocating as late as possible,
+				 * we should try (as long as this isnt too memory-intensive) allocating per-pred/on some granularity.
+
+				 * allocating as late as possible:
 				 * either by adding one more var between the s/o parameters and their locals counterparts,
 				 * or
 				 * leveraging would_unify
 				 * -would_unify and unify could be made to work together with minimal overhead
+				 * would_unify, maybe_unify, surely_unify?
 				 */
 
 
@@ -3680,12 +3688,6 @@ void build_in_rules()
 
 
 
-//endregion
-
-
-
-
-
 
 
 
@@ -3846,26 +3848,22 @@ A cwm built-in logical operator, RDF graph level.
 	 */
 
 
+//endregion
+
+
+//region cppout
+
 //#ifdef cppout
 /*
+body becomes nested whiles calling predxxx instead of the join-consing thing
 lets forget builtins for now
 persistent vars needed:
-entry
-
-per rule:
-headsub headsuc
-
-body items:
-body becomes nested whiles calling predxxx instead of the join-consing thing
-
-+more locals
-
-
-*/
-/* i made some things slightly different than how we do them in our lambdas
+entry headsub headsuc locals
+i made some things slightly different than how we do them in our lambdas
 	 * instead of returning bools, we indicate being done by setting entry to -1
 	 * callee state obviously has to be kept explicitly, not hidden with a lambda
 	 * instead of while-looping around an unify coro, theres just an if*/
+
 fstream out;
 
 string predname(nodeid x)
@@ -3961,6 +3959,8 @@ void cppout_pred(string name, vector<Rule> rs)
 	//loop over all kb rules for the pred
 	for (Rule rule:rs)
 	{
+		bool has_body = rule.body && rule.body->size();
+
 		out << "//rule " << i << ":\n";
 		//out << "// "<<<<":\n";
 		out << "case " << label << ":\n";
@@ -3988,7 +3988,7 @@ void cppout_pred(string name, vector<Rule> rs)
 			out << "if(state.ouc()){\n";
 		}
 		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
-		if (rule.head && rule.body && rule.body->size()) {
+		if (rule.head && has_body) {
 			out << "if (!find_ep(&ep" << i << ", s, o)){\n";
 			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
 		}
@@ -4033,7 +4033,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		if (name == "query") {
 		//would be nice to also write out the head of the rule, and do this for all rules, not just query
 			out << "dout << \"RESULT \" << counter << \": \";\n";
-
+			ASSERT(rule.body);
 			for (pquad bi: *rule.body) {
 				pos_t i1, i2;//s and o positions
 				nodeid s = dict[bi->subj];
@@ -4060,7 +4060,7 @@ void cppout_pred(string name, vector<Rule> rs)
 			out << "counter++;\n";
 
 
-		if (rule.head && rule.body && rule.body->size()) {
+		if (rule.head && has_body) {
 			out << "ASSERT(ep" << i << ".size());\n ep" << i << ".pop_back();\n\n";
 		}
 
@@ -4069,7 +4069,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		out << "case " << label++ << ":;\n";
 		
 		
-		if (rule.head && rule.body && rule.body->size()) {
+		if (rule.head && has_body) {
 			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
 		}
 		
@@ -4080,7 +4080,7 @@ void cppout_pred(string name, vector<Rule> rs)
 				out << "}while(true);\n";
 
 
-		if (rule.head && rule.body && rule.body->size())
+		if (rule.head && has_body)
 			out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
 			
 		if (rule.head) {
@@ -4103,7 +4103,7 @@ void yprover::cppout(qdb &goal)
 	cppdict.clear();
 	out.open("out.cpp", fstream::out);
 	
-	DBG(out << "/* void yprover::cppout */\n";)//ah you want trace for that//well not even trace i guess since that would put the proc (things) in front, DBG()?
+	DBG(out << "/* void yprover::cppout */\n";)
 	out << "#include \"globals.cpp\"\n";
 	out << "#include \"univar.cpp\"\n";
 	out << "struct cpppred_state;\n";
@@ -4158,3 +4158,4 @@ void yprover::cppout(qdb &goal)
 
 
 //#endif
+//endregion
