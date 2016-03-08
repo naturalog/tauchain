@@ -6,3 +6,9 @@ fin.
 query
 ?WHAT :foo ?WHATELSE.
 fin.
+
+shouldbe
+a :foo b.
+b :foo a.
+fin.
+thatsall

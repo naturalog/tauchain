@@ -1,6 +1,0 @@
-kb
-(a b c) :foo :bar.
-fin.
-query
-(a y z) :foo :bar.
-fin.

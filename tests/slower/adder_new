@@ -1,25 +1,43 @@
 #06:01 < HMC_A> it is the 1 bit full adder circuit example from the guido paper
 #06:01 < HMC_A> http://www.agfa.com/w3c/2002/02/thesis/thesis.pdf
+#http://www.electronicshub.org/half-adder-and-full-adder-circuits/#Full_Adder_using_NAND_Gates
+#the numbering in the diagram is the same as the numbering here
+
+#9 nand-gates chained together:
+#here   diagram
+#g[i] = U[i]
+
+
 
 #--limit 5
 
 kb
 
-#nand1
-#nand2
-#nand3
-#gnand1
-#gnand2
-#gnand3
-#nandnand1
-#nandnand2
+
+#<koo7> so, ones and twos are inputs and threes are outputs?
+#<stoopkid> yep, the object of :nand1 or :nand2 is the truth value of input1 or input2, respectively, which will be referenced by the subject, and the object of :nand3 is the truth-value of the output which is represented by the subject
+#<stoopkid> from a normal programmer's perspective, it's a really really crude way of handling it
+#<stoopkid> :nand1, :nand2, :nand3 all mean the same thing, they only differ in where their subject is being used in the gates
+
+
+
+#nand1			truth value o for node s acting as input1 for a gate
+#nand2			truth value o for node s acting as input2 for a gate
+#nand3			truth value o for node s acting as output for a gate
+#gnand1			s is a gate, o is input1
+#gnand2			s is a gate, o is input2
+#gnand3			s is a gate, o is output
+#nandnand1		s/o are gates, and the output of s is input1 for o 
+#nandnand2		s/o are gates, and the output of s is input2 for o
 
 
 #definition of a nand gate
-#?A
-#?B
-#?C
-#?G
+#?A: input1
+#?B: input2
+#?C: output
+#?G: gate
+#?C :nand3 "true" basically means that there is *some* gate which returns true with ?C as the output
+#wrt this rule, that is
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "false".} => {?C :nand3 "true"}.
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "true".} => {?C :nand3 "true"}.
 {?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "true".  ?B :nand2 "false".} => {?C :nand3 "true"}.
@@ -34,23 +52,26 @@ kb
 
 #then give ?x a :nand2 value of ?v, because it needs to act as input2 for gate2 and the
 #truth value for things being used as input2 is stored as the object of :nand2.
+
+#remember how i said it was really crude from a programmer's perspective?
+#this translates the output value of a previous gate into something usable for input to another gate
+#:nand3 -> :nand1/2
 {?G1 :nandnand2 ?G2.  ?G1 :gnand3 ?X.  ?G2 :gnand2 ?X.  ?X :nand3 ?V.} => {?X :nand2 ?V}.
 {?G1 :nandnand1 ?G2.  ?G1 :gnand3 ?X.  ?G2 :gnand1 ?X.  ?X :nand3 ?V.} => {?X :nand1 ?V}.
 
 #The facts of the example:
 
-wikipedia has this XOR version idk the nand version
-yea i couldnt find a matching version, my ignorance of logic gates schematics didnt help
+#
 #it's a full adder cause it has the carry from the previous bits
 #A + B, Cin = (S,Cout)
-#0 + 0, 0   = (0,0)
-#0 + 0, 1   = (1,0)
-#1 + 0, 0   = (1,0)
-#1 + 0, 1   = (0,1)
-#0 + 1, 0   = (1,0)
-#0 + 1, 1   = (0,1)
-#1 + 1, 0   = (0,1)
-#1 + 1, 1   = (1,1)
+#0 + 0, n   = (0,n)
+#0 + 0, y   = (1,n)
+#1 + 0, n   = (1,n)
+#1 + 0, y   = (0,y)
+#0 + 1, n   = (1,n)
+#0 + 1, y   = (0,y)
+#1 + 1, n   = (0,y)
+#1 + 1, y   = (1,y)
 
 
 #if it's used as input1, it'll have :nand1 and it'll be it's truth value
@@ -79,14 +100,7 @@ yea i couldnt find a matching version, my ignorance of logic gates schematics di
 
 
 
-
-#http://www.electronicshub.org/half-adder-and-full-adder-circuits/#Full_Adder_using_NAND_Gates
-#thie  numbering in the diagram is the same as the numbering here
-
-#9 nand-gates chained together:
-#here   diagram
-#g[i] = U[i]
-
+#gates 7 and 8 were switched in name but the logic was the same; i switched it to match the diagram tho, for clarity.
 
 #inputs feed into the first one on the far left; a11 is the output
 :g1 :gnand1 :a .
@@ -126,7 +140,8 @@ yea i couldnt find a matching version, my ignorance of logic gates schematics di
 :g5 :gnand2 :cin .
 :g5 :gnand3 :a15 .
 
-:g5 :nandnand1 :g8 .
+#:g5 :nandnand1 :g8 .
+:g5 :nandnand1 :g7 .
 :g5 :nandnand1 :g9 .
 :g5 :nandnand2 :g6 .
 
@@ -134,17 +149,27 @@ yea i couldnt find a matching version, my ignorance of logic gates schematics di
 :g6 :gnand2 :a15 .
 :g6 :gnand3 :a16 .
 
-:g6 :nandnand1 :g7 .
+#:g6 :nandnand1 :g7 .
+:g6 :nandnand1 :g8 .
 
-:g7 :gnand1 :a16 .
-:g7 :gnand2 :a17 .
-:g7 :gnand3 :sum .
 
-:g8 :gnand1 :a15 .
-:g8 :gnand2 :cin .
-:g8 :gnand3 :a17 .
+#:g7 :gnand1 :a16 .
+#:g7 :gnand2 :a17 .
+#:g7 :gnand3 :sum .
+:g7 :gnand1 :a15 .
+:g7 :gnand2 :cin .
+:g7 :gnand3 :a17 .
 
-:g8 :nandnand2 :g7 .
+:g7 :nandnand2 :g8.
+
+#:g8 :gnand1 :a15 .
+#:g8 :gnand2 :cin .
+#:g8 :gnand3 :a17 .
+:g8 :gnand1 :a16 .
+:g8 :gnand2 :a17 .
+:g8 :gnand3 :sum .
+
+#:g8 :nandnand2 :g7 .
 
 :g9 :gnand1 :a15 .
 :g9 :gnand2 :a11 .

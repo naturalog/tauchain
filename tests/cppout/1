@@ -1,7 +1,0 @@
-kb
-:baz :foo :bar.
-fin.
-
-cppout
-?x :foo ?y.
-fin.

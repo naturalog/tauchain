@@ -1,8 +1,0 @@
-kb
-Person :is Bob.
-{Person :is ?x} => {?x :self ?x}.
-fin.
-
-cppout
-?WHO :self ?WHO.
-fin.
