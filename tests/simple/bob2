@@ -1,0 +1,17 @@
+kb
+Bob :a Person .
+Bob :self Bob .
+{ ?x :a Person. ?x :self ?x } => { ?x :is ?x } .
+fin.
+
+query
+?WHO :is ?WHO .
+?FOO :is ?WHOELSE .
+fin.
+
+shouldbe
+Bob :is Bob .
+Bob :is Bob .
+fin.
+
+thatsall

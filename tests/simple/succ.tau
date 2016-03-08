@@ -1,0 +1,7 @@
+kb
+0 a Nat.
+{?x a Nat} => {?x succ ?y. ?y a Nat}.
+fin.
+query
+?what a Nat.
+fin.
