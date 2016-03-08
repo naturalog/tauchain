@@ -125,7 +125,7 @@ extern nodeid file_contents_iri, marpa_parser_iri, marpa_parse_iri, logequalTo, 
 //RDFS
 //later make this look more like the layout on the RDFS specs.
 extern nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf, rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
-extern nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdfXMLLiteral, rdfscomment;
+extern nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdflangString, rdfHTML, rdfXMLLiteral, rdfscomment;
 extern nodeid rdfList, rdfsisDefinedBy, owlFunctionalProperty;
 extern nodeid rdfsseeAlso, rdfslabel, rdfobject, rdfStatement, rdfpredicate, rdfsrange, rdfsubject, rdfvalue;
 

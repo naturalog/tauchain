@@ -471,7 +471,7 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 typedef vector<Thing> Locals;
 
 //Stores subject/object pairs for the Euler path check.
-typedef std::pair<Thing*,Thing*> thingthingpair;
+typedef std::pair<Thing,Thing> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
 
@@ -1094,11 +1094,32 @@ bool would_unify(Thing *this_, Thing *x_)
 			ASSERT(!is_offset(me));
 			ASSERT(!is_offset(x));
 			ASSERT(!is_bound(x));
+//are_equivalent differs from this in that it would be
+if(is_var(me) && is_var(x))
+/*was:var,is:node => not ep*/
 
-	if (is_var(me))
+/*so, if i was called with a var and now im being called with a node, its not an ep, its more specific
+i dunno
+
+so, if we consider two cases where in the first one we call a pred with a node (in the subject or object, it doesn't matter), and the second one we call it with a var
+both cases the pred will try to run over all the rules
+the case of var will unify with everything that the case with the node will unify with
+ah, but it might not be able to reach ground unless you let it call it with more specific cases
+right, so your idea is right i guess, at the very at least it still doesn't allow infloops and shouldn't add any incorrect semantics, just perhaps redundancy at worst
+
+*/
+
+
+//	if (is_var(me))
 		return true;// we must have been an unbound var
+/*was:var,is:node => ep*/
+
+
+
+//node would be the same
 	else if (is_node(me))
 		return are_equal(me, x);
+//list would change the way var changed, i.e. vars in the list could only "unify" with vars
 	else if (is_list(me)) {
 		if (is_list(x)) {
 			if (get_size(*this_) != get_size(x))
@@ -1131,6 +1152,10 @@ bool would_unify(Thing *this_, Thing *x_)
 			x_+=2;
 		} while (true);
 	}
+//and this would stay the same
+//what else can me be anyway?
+//value of anything can be either an unbound var, a node, or list stuff.
+//so this is for example trying to unify a list with a node
 	else if (types_differ(me, x)) // in oneword mode doesnt differentiate between bound and unbound!
 		return false;
 	assert(false);
@@ -2250,10 +2275,20 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
           of that previous application, so you ep-out,
 			at least thats the high level description
 
+
+
           think each time you call a pred, it makes a node in a tree, labeled with the actual spo it gets called with
           that pred will call other preds, and they'll be child-nodes
           every time you call a pred with a particular s/o, you check all of this node's ancestors to see if one of its
-          ancestors is the same pred with some s/o that would_unify with the current s/o.
+          ancestors is the same pred with some s/o that are_equivalent with the current s/o.
+
+are_equivalent(unbound u, unbound v) = true
+are_equivalent(node a, node b) = node a == node b
+are_equivalent(list a, list b) = list_equal(a,b)
+
+
+
+
           so if you ask A B C,
           and inside that Z B C,
           A and Z dont unify,
@@ -2282,8 +2317,22 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	  //Thing*
 		auto os = i.first;
 		auto oo = i.second;
-		TRACE(dout << endl << " " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
+		ASSERT(!is_offset(os));
+		ASSERT(!is_offset(oo));
+		
+		TRACE(dout << endl << " " << str(&os) << "    VS     " << str(s) << endl << str(&oo) << "    VS    " << str(o) << endl;)
 
+		bool r = false;
+		auto suc = unify(s, &os);
+		while(suc())
+		{
+			auto ouc = unify(o,&oo);
+			while(ouc())
+				r = true;
+		}
+		if (r) return true;
+
+		/*
 		if (would_unify(os,s))
 		{
 			//TRACE(dout << ".." << endl);
@@ -2292,6 +2341,7 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 				return true;
 			}
 		}
+		*/
 		TRACE(dout << endl << "---------------------" << endl);
 
 	}
@@ -2375,8 +2425,9 @@ rule_t compile_rule(Rule r)
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
 	Thing * locals=0; //to be malloced inside the lambda
 	const bool has_body = r.body && r.body->size(); // or is it a fact? (a rule without any conditions)
+	Thing * sv,*ov;
 
-	return [has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
+	return [ov, sv, has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc("rule");
 		TRC(++call;)
 //		TRACE(dout << op->formatr(r) << endl;)
@@ -2404,39 +2455,51 @@ rule_t compile_rule(Rule r)
 				//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 				ASSERT(hs < locals_bytes / sizeof(Thing));
 				ASSERT(ho < locals_bytes / sizeof(Thing));
+				
+				// i mean up here
+				
+				//i *think* we can safely move these
+				ov = getValue(o);
+				sv = getValue(s);
+						
+				//and here i feel like the ep-check should be before
+				//the unifys
+				if (find_ep(ep, sv, ov)) {
+					goto end;
+				}else{
+					ep->push_back(thingthingpair(*sv,*ov));	
+				}
 
-				suc = unify(s, &locals[hs]); // try to match head subject
+				
+
+				suc = unify(sv, &locals[hs]); // try to match head subject
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 					ASSERT(call == 1);
 
-					ouc = unify(o, &locals[ho]);
+					ouc = unify(ov, &locals[ho]);
 					while (ouc()) {
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 						ASSERT(call == 1);
-steps++;
-						o = getValue(o);
-						s = getValue(s);
-						/*i dunno*/
-						if (find_ep(ep, s, o)) {
-							if (has_body) {
-								//steps++;
-								goto end;
-							}
-						}
-						if (has_body ) ep->push_back(thingthingpair(s, o));
+
+
+						steps++;
+						if (!(steps&0b1111111111))
+							dout << steps << " steps." << endl;
+
+
+					
 
 						j = jg();
-						while (j(s, o, locals)) {
+						while (j(sv, ov, locals)) {
 							TRACE(dout << "After c0() -- " << endl;)
 							//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 
-							if(has_body) {
-								ASSERT(ep->size());
-								ep->pop_back();
-							}
+							ASSERT(ep->size());
+							ep->pop_back();
+					
 
 							TRACE(dout << "MATCH." << endl;)
 							entry = LAST;
@@ -2444,16 +2507,18 @@ steps++;
 
 				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
-							if (has_body ) ep->push_back(thingthingpair(s, o));
+							ep->push_back(thingthingpair(*sv, *ov));
 						}
 
-						if(has_body) {
-							ASSERT(ep->size());
-							ep->pop_back();
-						}
-				end:;
+				
 					}
 				}
+
+
+				ASSERT(ep->size());
+				ep->pop_back();
+				
+				end:;
 
 				TRACE(dout << "DONE." << endl;)
 				free(locals);
@@ -2893,21 +2958,20 @@ void build_in_facts()
 
 
 		//I think we need these:
-		/*
+		
 		{rdfsResource, rdftype, rdfsClass},
 		{rdfsClass, rdftype, rdfsClass},
 		{rdfsLiteral, rdftype, rdfsClass},
 		{rdfsDatatype, rdftype, rdfsClass},
-		*/
+		
 	
-		/*
+		
 		{rdflangString, 		rdftype, 		rdfsDatatype},
-		{rdfHTML, 			rdftype, 		rdfsDatatype}
-		*/
+		{rdfHTML, 			rdftype, 		rdfsDatatype},
 		{rdfXMLLiteral,                 rdftype,        	rdfsDatatype},
 
 		//I think we need this one:
-		//{rdfProperty, rdftype, rdfsClass},
+		{rdfProperty, rdftype, rdfsClass},
 
 
 
@@ -2920,26 +2984,35 @@ void build_in_facts()
 //rdfslabel rdftype rdfProperty
 //rdfscomment rdftype rdfProperty
 
-		//{rdfsContainer, 	rdftype, 	rdfsClass},
+		{rdfsContainer, 	rdftype, 	rdfsClass},
 
+
+
+
+//rdfBag rdftype rdfsClass
+//rdfSeq rdftype rdfsClass
+//rdfAlt rdftype rdfsClass
 //redundant due to:
 /*
 	[rdfBag, rdfSeq, rdfAlt] rdfssubClassOf rdfsContainer
 	rdfssubClassOf rdfsdomain rdfsClass
 	{?p rdfsdomain ?c. ?s ?p ?o} => {?s rdf:type ?c}
 */
-//rdfBag rdftype rdfsClass
-//rdfSeq rdftype rdfsClass
-//rdfAlt rdftype rdfsClass
 
 
+
+
+
+//{rdfsContainerMembershipProperty, rdftype, rdfsClass},
 //redundant due to: 
 /*
 	rdfsContainerMembershipProperty rdfssubClassOf rdfProperty
 	rdfssubClassOf rdfsdomain rdfsClass
 	{?p rdfsdomain ?c. ?s ?p ?o} => {?s rdf:type ?c}
 */
-//rdfsContainerMembershipProperty rdftype rdfsClass
+
+
+
 
 //rdf:_1 rdftype rdfsContainerMembershipProperty
 //rdf:_2 rdftype rdfsContainerMembershipProperty
@@ -2948,13 +3021,13 @@ void build_in_facts()
 
 //rdfsmember rdftype rdfProperty (possibly redundant due to domain & range)
 
-		//{rdfList, 			rdftype,	rdfsClass},
+		{rdfList, 			rdftype,	rdfsClass},
 		{rdffirst,                        rdftype,           owlFunctionalProperty},//?
 		{rdfrest,                         rdftype,           owlFunctionalProperty},
 		{rdfnil,                          rdftype,           rdfList},
 
 
-		//{rdfStatement, 		rdftype, 	rdfsClass},
+		{rdfStatement, 		rdftype, 	rdfsClass},
 
 //possibly redundant due to domain & range:
 //rdfsubject rdftype rdfProperty
@@ -3049,13 +3122,18 @@ rule_t make_wildcard_rule(nodeid pr)
 
   //That should handle all our ep and wildcard problems.
 
-	ep_t *ep = new_ep();
+	ep_t *ep = new_ep();//reminds me, a bug in cppout was that i forgot to pop the ep-pair before the successful unify return and push it back after. Its like..you have a query with two triples calling the same rule...when youre yielding out of the first instance of the rule you want to retract the ep-pair before
+//so..this func might need checking wrt that
 	DBG(Thing old[2]);
 	
 	return [entry,ep,DBGC(old) p1,p1p,p2,sub,p1wildcard,p1lambda](Thing *s, Thing *o) mutable {
 		setproc("wildcard");
 		TRACE_ENTRY;
-
+		
+		
+		
+		return false;
+/*
 		switch(entry){
 		case 0:
 
@@ -3083,6 +3161,7 @@ rule_t make_wildcard_rule(nodeid pr)
 				while(p1lambda(s, o))//the recursion will happen here
 				{
 					entry = LAST;
+					//todo:retract ep
 					return true;
 		case_LAST:;
 				}
@@ -3093,6 +3172,7 @@ rule_t make_wildcard_rule(nodeid pr)
 			ep->pop_back();
 			END;
 		}
+		*/
 	};
 }
 	
@@ -3125,11 +3205,12 @@ void build_in_rules()
 	pred_t p1, p2;
 
 
+	/*c is for constant*/
 	//Thing c_rdfsType = create_node(op->make(rdftype));
 	Thing c_rdfsResource = create_node(rdfsResource);
 	Thing c_rdfsClass = create_node(rdfsClass);
 	//Thing c_rdfssubClassOf = create_node(op->make(rdfssubClassOf));
-
+	Thing c_rdfProperty = create_node(rdfProperty);
 
 
 
@@ -3150,8 +3231,24 @@ void build_in_rules()
 	<koo7> err well wouldnt that mean the bnodes that rdf lists are made up of?
 	<HMC_a> so any node name that appears within a list is in the object position of some rdf:first triple
 	<HMC_a> yes, the bnode names as well*/
+	/*i forgot if we are supposed to/have list triples in compiled preds...if yes this 
+	might even produce correct results i guess*/
 
-	/*builtins[rdftype].push_back([a, b, c_rdfsResource, entry, suc, suc2, ouc, s, o, p1](Thing *s_, Thing *o_) mutable {
+
+//so this is saying: if you pass me a constant like a node or a list, then return true, it's a resource, and if you pass me a var, then run through every pred in the kb and give me any node/list that binds to subject or object of any of these preds?yea
+//maybe this should instead just iterate thru kb triples tho?
+//yea probably; this works but it's basically requiring the evaluation of the entire kb when everything's already defined prior to compile
+/*nvm
+id rather worry about the semantic difference
+anyway we should either consult euler or run with it for now
+im fine with running with it; probably the fastest way to get critique from HMC :)
+we need tests, hard to make a test when you don't know the should-be
+:)
+if we roll with it HMC will make tests for us
+we should hook up eulersharp at some point though, apparently that's what we're comparing against.. apparently
+*/
+/*	builtins[rdftype].push_back([a, b, c_rdfsResource, entry, suc, suc2, ouc, s, o, p1](Thing *s_, Thing *o_) mutable {
+		map<nodeid, pred_t>::iterator x;
 		switch (entry) {
 			case 0:
 				o = getValue(o_);
@@ -3160,6 +3257,8 @@ void build_in_rules()
 				while (ouc())
 				{
 					s = getValue(s_);
+					
+					
 					if(!is_unbound(*s))
 					{
 						entry = 1;
@@ -3168,34 +3267,32 @@ void build_in_rules()
 			case 1:
 					if(is_unbound(*s))
 					{
-						for (auto &x: preds)
+						for ( x=preds.begin(); x!=preds.end();x++)
 						{
-							p1 = x.second;//a coro-permanent copy
+							p1 = x->second;//a coro-permanent copy
 							while(p1(&a, &b))
 							suc = unify(s, &a);
 							while(suc())
 							{
 								entry = 2;
 								return true;
-								case 2:;
+			case 2:;
 							}
-							suc2 = unify(s, b);
+							suc2 = unify(s, &b);
 							while(suc2())
 							{
 								entry = 3;
 								return true;
-								case 3:;
+			case 3:;
 							}
 						}
 
 					}
 				}
-				entry = 66;
-				return false;
 				END
 		}
-	});*/
-
+	});
+*/
 
 
 	
@@ -3397,26 +3494,177 @@ void build_in_rules()
 
 
 	//{?x rdf:type rdfs:Class} => {?x rdfs:subClassOf ?x}
+	/*
+	{
+	coro suc;
+	pred_t type_pred;
+	builtins[rdfssubClassOf].push_back([entry,suc,type_pred](Thing *x1, Thing *x2){
+		setproc("subClass is reflexive");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			suc = unify(x1,x2);
+			entry = LAST;
+			while(suc()){
+				type_pred = ITEM(preds,rdftype);
+				while(type_pred(x1,c_rdfsClass)){
+					return true;
+		case LAST:
+				}
+			}
+			return false;
+		}
+	});
+	
+	}
+	
+	*/
+
 	//{?x rdf:type rdfs:Class} => {?x rdfs:subClassOf rdfs:Resource}
 	//{?x rdfs:subClassOf ?y. ?y rdfs:subClassOf ?z} => {?x rdfs:subClassOf ?z}.
+	/*
+	{
+	Thing y = create_unbound();
+	pred_t sub1, sub2;
+	builtins[rdfssubClassOf].push_back([entry,y,sub1,sub2](Thing *x, Thing *z){
+		setproc("rdfssubClass transitive");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			sub1 = ITEM(preds,rdfssubClassOf);
+			entry = LAST;
+			while(sub(x,y)){
+				sub2 = ITEM(preds,rdfssubClassOf);
+				while(sub(y,z)){
+					return true;
+		case LAST:
+				}
+			}
+			return false;
+		
+		}
 	
+	});
+	
+	}
+	
+	*/
 
 	//(rdfs:subClassOf(?x ?y) and rdfs:subClassOf(?y ?x)) implies  "?x == ?y" <-- how to handle?
 
 
 	//{?x rdf:type rdfs:Datatype} => {?x rdfs:subClassOf rdfs:Literal}
+	/*
+	{
+	coro luc;
+	Thing l = create_unbound();
+	pred_t type_pred;
+	builtins[rdfssubClassOf].push_back([entry,l,type_pred](Thing *x, Thing *lit){
+		setproc("XaDatatypeThenXsubLiteral");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			luc = unify(l,c_rdfsLiteral);
+			entry = LAST;	
+			while(luc()){
+				type_pred = ITEM(
+				while(type_pred(x,c_rdfsDatatype)){
+					return true;
+		case LAST:
+				}
+			}
+			return false;
+		}
+	});
+	
+	}
+	
+	*/
 
 
 
-
-	//{?x rdf:type rdfs:Property} => {?x rdfs:subPropertyOf ?x}
+	//{?x rdf:type rdf:Property} => {?x rdfs:subPropertyOf ?x}
+	/*
+	{
+	coro suc;
+	pred_t type_pred;
+	builtins[rdfssubPropertyOf].push_back([entry,suc,type_pred,c_rdfProperty](Thing *x1, Thing *x2){
+		setproc("rdfssubPropertyOf is reflexive");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			suc = unify(x1,x2);
+			entry = LAST;
+			while(suc()){
+				type_pred = ITEM(preds,rdftype);
+				while(type_pred(x1 ,c_rdfProperty)
+					return true;
+		case LAST:
+				}
+			}
+			return false;
+		};
+	});
+	
+	
+	}
+	*/
 	//{?x rdfs:subPropertyOf ?y. ?y rdfs:subPropertyOf ?z} => {?x rdfs:subPropertyOf ?z}
+	/*
+	{
+	Thing y = create_unbound();
+	pred_t sub1, sub2;
+	builtins[rdfssubPropertyOf].push_back([entry,y](Thing *x, Thing *z){
+		setproc("rdfssubPropertyOf is transitive");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			sub1 = ITEM(preds,rdfssubPropertyOf);
+			entry = LAST;
+			while(sub1(x,y)){
+				sub2 = ITEM(preds,rdfssubPropertyOf);
+				while(sub2(y,z)){
+					return true;
+		case LAST:
+				}
+			}
+			return false;
+		}
+	});
+	
+	}
+	*/
 	
 	//{?x rdfs:subPropertyOf ?y. ?y rdfs:subPropertyOf ?x} => {?x == ?y} 
 
 
 	//{?x rdf:type rdfs:ContainerMembershipProperty} => {?x rdfs:subPropertyOf rdfs:member}
-
+	/*
+	{
+	coro muc;
+	pred_t type_pred;
+	builtins[rdfssubPropertyOf].push_back([entry,muc,type_pred](Thing *x, Thing *m){
+		setproc("XsubpropMember then Xa....");
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			muc = unify(m,rdfsmember);
+			entry = LAST;
+			while(muc()){
+				type_pred = ITEM(preds,rdftype);
+				while(type_pred(x,rdfsContainerMembershipProperty)){
+					return true;
+		case LAST:
+				}
+			}
+			return false;
+		}
+	});
+	
+	}
+	
+	
+	*/
 
 
 	/*
