@@ -11,7 +11,7 @@ project(tauchain)
 
 
 SET (CMAKE_C_COMPILER             "/usr/bin/clang")
-SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++-libc++")
+SET (CMAKE_CXX_COMPILER           "/usr/bin/clang++")#-libc++")
 SET (CMAKE_AR      "/usr/bin/llvm-ar")
 SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
 SET (CMAKE_NM      "/usr/bin/llvm-nm")
@@ -23,7 +23,7 @@ set(MARPA_DIST ${CMAKE_SOURCE_DIR}/libmarpa/dist/)
 
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++ -Wall -Wextra -ggdb -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -ggdb -g")# -stdlib=libc++ 
 set(ASAN "-fsanitize-undefined-trap-on-error -fsanitize=address -fsanitize=integer -fsanitize=unsigned-integer-overflow ")
 set(COMMON_FLAGS "-I${Boost_INCLUDE_DIRS} ${CMAKE_CXX_FLAGS}  -I${MARPA_DIST} -Dwith_marpa -DJSON  ")
 

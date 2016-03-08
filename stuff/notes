@@ -70,4 +70,7 @@ make ; env ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.6  \
                         --silence addrules --silence readcurly --silence quad::ctor --silence N3 \
                         --cppout 1  \
                         run tests/simple/* | grep test:
-                        
+                    
+                                     
+
+env CXX=/usr/bin/clang++ make -e 

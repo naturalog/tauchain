@@ -20,7 +20,7 @@ nodeid A, Dot, GND, False;
 nodeid rdftype, rdfnil, rdffirst, rdfrest;
 nodeid rdfsResource, rdfsdomain, rdfsrange, rdfsClass, rdfssubClassOf, rdfssubPropertyOf;
 nodeid rdfsContainerMembershipProperty, rdfsmember, rdfsDatatype, rdfsLiteral, rdfProperty;
-nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdfXMLLiteral, rdfscomment;
+nodeid rdfAlt, rdfsContainer, rdfBag, rdfSeq, rdflangString, rdfHTML, rdfXMLLiteral, rdfscomment;
 nodeid rdfList, rdfsisDefinedBy, owlFunctionalProperty;
 nodeid rdfsseeAlso, rdfslabel, rdfobject, rdfStatement, rdfpredicate, rdfsubject, rdfvalue;
 
@@ -52,26 +52,31 @@ void bidict::init() {
 	rdfnil = set(mkiri(RDF_NIL));
 
 //the best you can do in c++ is like
-#define rdfxxx(x) rdf##x = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#" #x);
+//this combines the strings when it resolves #x?
+#define rdfxxx(x) rdf##x = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#" #x)
 
 	//rdftype = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
-	rdfxxx(type)
+	rdfxxx(type);
 	rdfsResource = set("http://www.w3.org/2000/01/rdf-schema#Resource");
+	rdfsClass = set("http://www.w3.org/2000/01/rdf-schema#Class");
+	rdfsLiteral = set("http://www.w3.org/2000/01/rdf-schema#Literal");
+	rdfsDatatype = set("http://www.w3.org/2000/01/rdf-schema#Datatype");
+	rdfxxx(langString);
+	rdfxxx(HTML);
+	rdfxxx(XMLLiteral);
+	rdfxxx(Property);
+
 	rdfsdomain = set("http://www.w3.org/2000/01/rdf-schema#domain");
 	rdfsrange =  set("http://www.w3.org/2000/01/rdf-schema#range");
-	rdfsClass = set("http://www.w3.org/2000/01/rdf-schema#Class");
 	rdfssubClassOf = set("http://www.w3.org/2000/01/rdf-schema#subClassOf");
 	rdfssubPropertyOf = set("http://www.w3.org/2000/01/rdf-schema#subPropertyOf");
+
 	rdfsContainerMembershipProperty = set("http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty");
 	rdfsmember = set("http://www.w3.org/2000/01/rdf-schema#member");
-	rdfsDatatype = set("http://www.w3.org/2000/01/rdf-schema#Datatype");
-	rdfsLiteral = set("http://www.w3.org/2000/01/rdf-schema#Literal");
-	rdfProperty = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Property");
 	rdfAlt = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Alt");
 	rdfsContainer = set("http://www.w3.org/2000/01/rdf-schema#Container");
 	rdfBag = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Bag");
 	rdfSeq = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq");
-	rdfXMLLiteral = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral");
 	rdfscomment = set("http://www.w3.org/2000/01/rdf-schema#comment");
 	rdfList = set("http://www.w3.org/1999/02/22-rdf-syntax-ns#List");
  	rdfsisDefinedBy = set("http://www.w3.org/2000/01/rdf-schema#isDefinedBy");
