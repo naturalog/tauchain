@@ -2316,6 +2316,10 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	FUN;
 	s = getValue(s);
 	o = getValue(o);
+	
+	ASSERT(!is_offset(s));
+	ASSERT(!is_offset(o));
+
 	TRACE(dout << ep->size() << " ep items:" << endl);
 	//thingthingpair
 	for (auto i: *ep)
@@ -2431,7 +2435,12 @@ rule_t compile_rule(Rule r)
 	auto locals_bytes = locals_template.size() * sizeof(Thing);
 	Thing * locals=0; //to be malloced inside the lambda
 	const bool has_body = r.body && r.body->size(); // or is it a fact? (a rule without any conditions)
+
 	Thing * sv,*ov;
+/*added that yesterday^im mulling over this myself, where do we getValue and why, ...also do we want to be passing
+s and o in params..but thats for cppout... but the getValues and interplay with unify (and ep ofc)
+i have no idea */
+
 
 	return [ov, sv, has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc("rule");
@@ -2472,11 +2481,6 @@ rule_t compile_rule(Rule r)
 						
 				//and here i feel like the ep-check should be before
 				//the unifys
-				if (find_ep(ep, sv, ov)) {
-					goto end;
-				}else{
-					ep->push_back(thingthingpair(*sv,*ov));	
-				}
 
 				
 
@@ -2491,6 +2495,18 @@ rule_t compile_rule(Rule r)
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 						ASSERT(call == 1);
+
+
+				
+				
+
+
+				if (find_ep(ep, sv, ov)) {
+					goto end;
+				}else{
+					ep->push_back(thingthingpair(*sv,*ov));	
+				}
+
 
 
 						steps++;
@@ -2518,15 +2534,18 @@ rule_t compile_rule(Rule r)
 							ep->push_back(thingthingpair(*sv, *ov));
 						}
 
-				
-					}
-				}
-
 
 				ASSERT(ep->size());
 				ep->pop_back();
 				
 				end:;
+
+
+				
+					}
+				}
+
+
 
 				TRACE(dout << "DONE." << endl;)
 				free(locals);
