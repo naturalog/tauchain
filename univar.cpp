@@ -1907,7 +1907,7 @@ List get_list(nodeid n)
 //Locals::Constructor
 //Input: head, body
 //To fill out: locals, consts, lm, cm
-void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, pqlist body)
+void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head, pqlist body, bool head_goes_into_locals=true)
 {
 	FUN;
 
@@ -2150,7 +2150,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		//If it's not a var, not a list, and is in the head, then
 		//put it in locals. Why? //i guess just so i didnt have to complicate or make permutations of the rule lambda where it unifies the rule arguments against this
 		//Why would we have !head? //for query top level
-			if (head && (x == dict[head->subj] || x == dict[head->object]))
+			if (head_goes_into_locals && head && (x == dict[head->subj] || x == dict[head->object]))
 				add_node(false, xx, locals, lm);
 		//If it's not a var, not a list, and is not in the head, then
 		//put it in consts. Why?
@@ -2494,7 +2494,7 @@ rule_t compile_rule(Rule r)
 
 
 						steps++;
-						if (!(steps&0b1111111111))
+						if (!(steps&0b11111111111111111))
 							dout << steps << " steps." << endl;
 
 
@@ -4178,7 +4178,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		locals_map lm, cm;
 		Locals locals_template;
 		Locals consts;
-		make_locals(locals_template, consts, lm, cm, r.head, r.body);
+		make_locals(locals_template, consts, lm, cm, r.head, r.body, false);
 
 		out << "static Locals consts" << i << " = " << things_literals(consts) << ";\n";
 	}
@@ -4219,30 +4219,31 @@ void cppout_pred(string name, vector<Rule> rs)
 		locals_map lm, cm;
 		Locals locals_template;
 		Locals consts;
-		make_locals(locals_template, consts, lm, cm, rule.head, rule.body);
+		make_locals(locals_template, consts, lm, cm, rule.head, rule.body, false);
 
-		out << "state.locals = " << things_literals(locals_template) << ";\n";
+		if(locals_template.size())
+			out << "state.locals = " << things_literals(locals_template) << ";\n";
 
 		//if it's a kb rule and not the query then we'll
 		//make join'd unify-coros for the subject & object of the head
 		if (rule.head) {
 			pos_t hs, ho; // indexes of head subject and object in locals
-			find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
-			find_thing(dict[rule.head->object], ho, lm, cm);
+			PredParam hsk = find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
+			PredParam hok = find_thing(dict[rule.head->object], ho, lm, cm);
 
-			out << "state.suc = unify(s, &state.locals[" << hs << "]);\n";
+			out << "state.suc = unify(s, " << param(hsk, hs, i) << ");\n";
 			out << "if(state.suc()){\n";
-			out << "state.ouc = unify(o, &state.locals[" << ho << "]);\n";
+			out << "state.ouc = unify(o, " << param(hok, ho, i) << ");\n";
 			out << "if(state.ouc()){\n";
 		}
 		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
 		if (rule.head && has_body) {
 			out << "if (!find_ep(&ep" << i << ", s, o)){\n";
-			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
+			out << "ep" << i << ".push_back(thingthingpair(*s, *o));\n";
 		}
 
 		//if it's the query or a kb rule with non-empty body: (existing?)		
-		if(rule.body) {
+		if(has_body) {
 			size_t j = 0;
 			for (pquad bi: *rule.body) {
 				out << "//body item" << j << "\n";
@@ -4251,7 +4252,7 @@ void cppout_pred(string name, vector<Rule> rs)
 				ss << "state.states[" << j << "]";
 				string substate = ss.str();
 
-				out << "state.states[" << j << "] = cpppred_state();\n";
+				out << substate << " = cpppred_state();\n";
 				out << "do{\n";
 
 				//	check_pred(dict[bi->pred]);
@@ -4318,7 +4319,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		
 		
 		if (rule.head && has_body) {
-			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
+			out << "ep" << i << ".push_back(thingthingpair(*s, *o));\n";
 		}
 		
 		
