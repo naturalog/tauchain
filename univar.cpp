@@ -474,7 +474,7 @@ inline void add_kbdbg_info(Thing &t, Markup markup)
 typedef vector<Thing> Locals;
 
 //Stores subject/object pairs for the Euler path check.
-typedef std::pair<Thing,Thing> thingthingpair;
+typedef std::pair<Thing*,Thing*> thingthingpair;
 typedef std::vector<thingthingpair> ep_t;
 
 
@@ -2317,8 +2317,8 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	s = getValue(s);
 	o = getValue(o);
 	
-	ASSERT(!is_offset(s));
-	ASSERT(!is_offset(o));
+	ASSERT(!is_offset(*s));
+	ASSERT(!is_offset(*o));
 
 	TRACE(dout << ep->size() << " ep items:" << endl);
 	//thingthingpair
@@ -2327,17 +2327,18 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	  //Thing*
 		auto os = i.first;
 		auto oo = i.second;
-		ASSERT(!is_offset(os));
-		ASSERT(!is_offset(oo));
+		ASSERT(!is_offset(*os));
+		ASSERT(!is_offset(*oo));
 		
-		TRACE(dout << endl << " " << str(&os) << "    VS     " << str(s) << endl << str(&oo) << "    VS    " << str(o) << endl;)
+		TRACE(dout << endl << " " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
 
 		bool r = false;
-		auto suc = unify(s, &os);
+		auto suc = unify(s, os);
 		while(suc())
 		{
-			auto ouc = unify(o,&oo);
+			auto ouc = unify(o,oo);
 			while(ouc())
+				//why not just return true here?
 				r = true;
 		}
 		if (r) return true;
@@ -2483,6 +2484,11 @@ i have no idea */
 				//the unifys
 
 				
+				if (find_ep(ep, sv, ov)) {
+					goto end;
+				}else{
+					ep->push_back(thingthingpair(sv,ov));	
+				}
 
 				suc = unify(sv, &locals[hs]); // try to match head subject
 				while (suc()) {
@@ -2496,25 +2502,9 @@ i have no idea */
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 						ASSERT(call == 1);
 
-
-				
-				
-
-
-				if (find_ep(ep, sv, ov)) {
-					goto end;
-				}else{
-					ep->push_back(thingthingpair(*sv,*ov));	
-				}
-
-
-
 						steps++;
 						if (!(steps&0b11111111111111111))
 							dout << steps << " steps." << endl;
-
-
-					
 
 						j = jg();
 						while (j(sv, ov, locals)) {
@@ -2531,19 +2521,20 @@ i have no idea */
 
 				case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
-							ep->push_back(thingthingpair(*sv, *ov));
+							ep->push_back(thingthingpair(sv, ov));
 						}
+
+				
+			
+				
+					}
+				}
 
 
 				ASSERT(ep->size());
 				ep->pop_back();
 				
 				end:;
-
-
-				
-					}
-				}
 
 
 

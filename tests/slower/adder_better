@@ -1,0 +1,55 @@
+kb
+
+{?G :out ?C. ?G :in1 ?A. ?G :in2 ?B. ?A :value "false"} => {?C :value "true"}.
+{?G :out ?C. ?G :in1 ?A. ?G :in2 ?B. ?B :value "false"} => {?C :value "true"}.
+{?G :out ?C. ?G :in1 ?A. ?G :in2 ?B. ?A :value "true". ?B :value "true"} => {?C :value "false"}.
+
+
+:a :value "true".
+:b :value "true".
+:cin :value "true".
+
+:g1 :in1 :a.
+:g1 :in2 :b.
+:g1 :out :o1.
+
+:g2 :in1 :a.
+:g2 :in2 :o1.
+:g2 :out :o2.
+
+:g3 :in1 :o1.
+:g3 :in2 :b.
+:g3 :out :o3.
+
+:g4 :in1 :o2.
+:g4 :in2 :o3.
+:g4 :out :o4.
+
+:g5 :in1 :o4.
+:g5 :in2 :cin.
+:g5 :out :o5.
+
+:g6 :in1 :o4.
+:g6 :in2 :o5.
+:g6 :out :o6.
+
+:g7 :in1 :o5.
+:g7 :in2 :cin.
+:g7 :out :o7.
+
+:g8 :in1 :o6.
+:g8 :in2 :o7.
+:g8 :out :sum.
+
+:g9 :in1 :o5.
+:g9 :in2 :o1.
+:g9 :out :cout.
+
+fin.
+
+query
+
+:sum :value ?vsum.
+:cout :value ?vcout.
+
+fin.
