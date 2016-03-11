@@ -1094,14 +1094,22 @@ bool would_unify(Thing *this_, Thing *x_)
 * (but not actually doing the unifying assignment)*/
 {
 	FUN;
+
+	//this_ = getValue(this_);
+
 	const Thing me = *this_;
 	const Thing x = *x_;
 	//We're sure it won't be these? in the context of ep-checking, yes
-			ASSERT(!is_offset(me));
-			ASSERT(!is_offset(x));
-			ASSERT(!is_bound(x));
-//are_equivalent differs from this in that it would be
-if(is_var(me) && is_var(x))
+	//We're asserting these because we assume we've done a getValue() prior to calling
+	//we could just do the getValue() here and then we don't have to worry about doing it
+	//prior to calling, but i guess we have to getValue() for that anyway
+	
+	 
+	ASSERT(!is_offset(me));
+	ASSERT(!is_offset(x));
+	ASSERT(!is_bound(x));
+	
+	if(is_var(me) && is_var(x))
 /*was:var,is:node => not ep*/
 
 /*so, if i was called with a var and now im being called with a node, its not an ep, its more specific
@@ -1115,6 +1123,7 @@ right, so your idea is right i guess, at the very at least it still doesn't allo
 
 */
 
+	//if (is_unboud(me) && is_unbound(x))
 
 //	if (is_var(me))
 		return true;// we must have been an unbound var
@@ -1625,15 +1634,15 @@ coro unify(Thing *a_, Thing *b_){
 	TRACE(dout << str(a_) << " X " << str(b_) << endl;)
 
 
-	if (a_ == b_) {//?
+	if (a_ == b_) {//i added this one of my own invention btw
+	//i'll need to think of which cases this covers but it looks good
 		TRACE(dout << "a == b" << endl;)
-
-    	//orig, origb only exist #ifdef DEBUG
+	    	//orig, origb only exist #ifdef DEBUG
 		//ifndef KBDBG then this will be gen_succeed();
 		return UNIFY_SUCCEED(origa, origb);
 	}
 
-	//Get the "representative value" of a_
+	//Get the "representative value" of a_//also here we getValue too
 	a_ = getValue(a_);
 	Thing a = *a_;
 
@@ -2311,16 +2320,37 @@ are_equivalent(list a, list b) = list_equal(a,b)
 					  but if its the other way around we do
 
 */
+
+
+//or say s & o are vars bound to other things
+
+//The rule will get pointers to s/o as args
+
+//find_ep(ep,s,o);
+
+//This will be passing these pointers to find_ep which will accept them as pointers
+#define EPDBG(x)
+
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
 	FUN;
+	//hrm
+	//wouldn't this overwrite the pointer to the Things with a pointer to their values? sure
+	//wouldn't this carry on beyond this ep-check though? no
+	//they won't be the same pointers? i.e. s/o here will be different s/o pointer-objects than
+	//those in the rule that called it, just pointing to the same place? yes
+	
+	//if we move getValue() inside of would_unify we don't need to do this though
+	//we should be moving stuff out of inner loops, not into them, fair enough
+	
 	s = getValue(s);
 	o = getValue(o);
 	
 	ASSERT(!is_offset(*s));
 	ASSERT(!is_offset(*o));
+	//what about !is_bound
 
-	TRACE(dout << ep->size() << " ep items:" << endl);
+	EPDBG(dout << endl << endl << ep->size() << " ep items:" << endl);
 	//thingthingpair
 	for (auto i: *ep)
 	{
@@ -2329,9 +2359,13 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 		auto oo = i.second;
 		ASSERT(!is_offset(*os));
 		ASSERT(!is_offset(*oo));
+		//what about !is_bound
 		
-		TRACE(dout << endl << " " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
+		//TRACE(dout << endl << " epitem " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
+		EPDBG(dout << endl << " epcheck " << str(os) << "    VS     " << str(s) << endl << " epcheck " << str(oo) << "    VS    " << str(o) << endl;)
 
+		
+		/*
 		bool r = false;
 		auto suc = unify(s, os);
 		while(suc())
@@ -2341,19 +2375,24 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 				//why not just return true here?
 				r = true;
 		}
-		if (r) return true;
-
-		/*
+		if (r) 
+		{
+			EPDBG(dout << endl << " epcheck " <<  "EP." << endl;)
+			return true;
+		}
+		*/
+		
 		if (would_unify(os,s))
 		{
 			//TRACE(dout << ".." << endl);
 			if(would_unify(oo,o)) {
-				TRACE(dout << endl << "EP." << endl;)
+				EPDBG(dout << endl << " epcheck " <<  "EP." << endl;)
+				dout << endl << "EP!" << endl;
 				return true;
 			}
 		}
-		*/
-		TRACE(dout << endl << "---------------------" << endl);
+		
+		EPDBG(dout << endl <<  " epcheck " << "---------------------" << endl);
 
 	}
 	return false;
@@ -2437,13 +2476,18 @@ rule_t compile_rule(Rule r)
 	Thing * locals=0; //to be malloced inside the lambda
 	const bool has_body = r.body && r.body->size(); // or is it a fact? (a rule without any conditions)
 
-	Thing * sv,*ov;
+	Thing *sv, *ov;
+	/*
+	Thing st, ot;
+	Thing * const stp = &st;
+	Thing * const otp = &ot;
+	*/
 /*added that yesterday^im mulling over this myself, where do we getValue and why, ...also do we want to be passing
 s and o in params..but thats for cppout... but the getValues and interplay with unify (and ep ofc)
 i have no idea */
 
 
-	return [ov, sv, has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
+	return [ov, sv,/* st, ot, stp, otp,*/ has_body, locals_bytes, locals_data, ep, hs, ho, locals ,&consts, jg, suc, ouc, j, entry TRCCAP(call) TRCCAP(r)](Thing *s, Thing *o) mutable {
 		setproc("rule");
 		TRC(++call;)
 //		TRACE(dout << op->formatr(r) << endl;)
@@ -2477,19 +2521,32 @@ i have no idea */
 				// i mean up here
 				
 				//i *think* we can safely move these
+				
+				//however its currently a no-op there
 				ov = getValue(o);
 				sv = getValue(s);
 						
 				//and here i feel like the ep-check should be before
 				//the unifys
 
-				
 				if (find_ep(ep, sv, ov)) {
 					goto end;
 				}else{
+					/*
+					if(is_var(*ov)){
+						ot = create_unbound();
+					}else if(is_node(*ov)){
+						ot = create_node(ov->node);
+					}else{ASSERT(false);}
+
+					if(is_var(*sv)){
+						st = create_unbound();
+					}else if(is_node(*sv)){
+						st = create_node(sv->node);
+					}else{ASSERT(false);}
+					*/
 					ep->push_back(thingthingpair(sv,ov));	
 				}
-
 				suc = unify(sv, &locals[hs]); // try to match head subject
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
@@ -2519,7 +2576,7 @@ i have no idea */
 							entry = LAST;
 							return true;
 
-				case_LAST:;
+			case_LAST:;
 							TRACE(dout << "RE-ENTRY" << endl;)
 							ep->push_back(thingthingpair(sv, ov));
 						}
@@ -2534,13 +2591,13 @@ i have no idea */
 				ASSERT(ep->size());
 				ep->pop_back();
 				
-				end:;
+			end:;
 
 
 
 				TRACE(dout << "DONE." << endl;)
 				free(locals);
-				END
+			END
 		}
 	};
 }
@@ -4249,7 +4306,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
 		if (rule.head && has_body) {
 			out << "if (!find_ep(&ep" << i << ", s, o)){\n";
-			out << "ep" << i << ".push_back(thingthingpair(*s, *o));\n";
+			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
 		}
 
 		//if it's the query or a kb rule with non-empty body: (existing?)		
@@ -4291,7 +4348,8 @@ void cppout_pred(string name, vector<Rule> rs)
 
 		if (name == "query") {
 		//would be nice to also write out the head of the rule, and do this for all rules, not just query
-			out << "dout << \"RESULT \" << counter << \": \";\n";
+			//out << "if (!(counter & 0b11111111))";
+			out << "{dout << \"RESULT \" << counter << \": \";\n";
 			ASSERT(rule.body);
 			for (pquad bi: *rule.body) {
 				pos_t i1, i2;//s and o positions
@@ -4311,7 +4369,7 @@ void cppout_pred(string name, vector<Rule> rs)
 
 				out << "dout << str(bis) << \" " << bi->pred->tostring() << " \" << str(bio) << \".\";};\n";
 			}
-			out << "dout << \"\\n\";\n";
+			out << "dout << \"\\n\";}\n";
 		}
 
 
@@ -4329,7 +4387,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		
 		
 		if (rule.head && has_body) {
-			out << "ep" << i << ".push_back(thingthingpair(*s, *o));\n";
+			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
 		}
 		
 		

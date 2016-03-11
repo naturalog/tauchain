@@ -9,6 +9,8 @@ fin.
 
 shouldbe
 a :foo b.
+fin.
+shouldbe
 b :foo a.
 fin.
 thatsall

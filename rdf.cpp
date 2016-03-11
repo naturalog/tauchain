@@ -457,12 +457,19 @@ bool qdbs_equal(qdb &a, qdb &b) {
   //qlist
 	auto a_default = *a.first["@default"];
 	auto b_default = *b.first["@default"];
+	
+	if (a_default.size() != b_default.size())
+		return false;
+	
 	auto i = a_default.begin();
-	if (i == a_default.end())
-			return false;
 
 	pquad qa;
 	for (pquad qb: b_default) {
+		if (i == a_default.end())
+			return false;
+
+	
+	
 		qa = *i;
 		if (!(*qa->pred == *qb->pred))
 			return false;
@@ -471,6 +478,7 @@ bool qdbs_equal(qdb &a, qdb &b) {
 		if (!nodes_same(bnodes, qa->object, qb->object))
 			return false;
 		i++;
+		
 	}
 	return true;
 /*
