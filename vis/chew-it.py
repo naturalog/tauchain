@@ -27,34 +27,36 @@ print ("[")
 
 
 for line in sys.stdin:
-#	if len(line) == 0:
-#		print()
-	if line[0] == '[':
-		json.loads(line)
-		print (line)
-	elif line[0] == '{':
+	#print("#" + line)
+	if len(line) and line[0] == '{':
 		try:
 			x = json.loads(line)
 		except:
 			print ("error:" + str(line))
 			raise
+
 		t = x["type"]
-		x["style"] = "normal"
-		if t == 'bind':
-			step()
-			pr(x, "add")
-		elif t == 'unbind':
-			step()
-			pr(x, "remove")
-		elif t == 'fail':
-			step()
-			x["style"] = "fail"
-			pr(x, "add")
-			toremove = x
+
+		if t in ["kb", "query"]:
+		    print(json.dumps(x["value"]))
 		else:
-			print (json.dumps(x))
+
+			x["style"] = "normal"
+			if t == 'bind':
+				step()
+				pr(x, "add")
+			elif t == 'unbind':
+				step()
+				pr(x, "remove")
+			elif t == 'fail':
+				step()
+				x["style"] = "fail"
+				pr(x, "add")
+				toremove = x
+			else:
+				rasars#print (json.dumps(x))
 	else:
-		print (json.dumps(line))
+		print (json.dumps(line[:-1]))
 	print (",")
 		
 

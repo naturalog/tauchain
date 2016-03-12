@@ -1,3 +1,6 @@
+./src/sdl_client.py --arrows --lame
+
+
 http://ccodearchive.net/info/json.html
 https://github.com/tobami/codespeed/
 http://www.boost.org/doc/libs/1_55_0/doc/html/property_tree.html
@@ -74,3 +77,14 @@ make ; env ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.6  \
                                      
 
 env CXX=/usr/bin/clang++ make -e 
+
+
+
+env ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.6  \
+                                                            ASAN_OPTIONS="symbolize=1,detect_leaks=0,strict_init_order=1,check_initialization_order=1"   \
+                                                            LD_PRELOAD=libmarpa/dist/.libs/libmarpa.so  \
+                                                            ./tau --level 1 \
+                                                            --silence addrules --silence readcurly --silence quad::ctor --silence N3 \
+                                                            --nocolor --level 111  \
+                                                            --builtins --limit 10 run tests/tbd/equivalence.tau    | vis/chew-it.py > ~/new_shit/kbdbg.json 
+                                                            

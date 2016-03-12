@@ -31,8 +31,6 @@ intptr_t ofst(pos_t target, pos_t me)
 	return (int)target - (int)me;
 }
 
-unsigned long kbdbg_part;
-unsigned long kbdbg_part_max;
 
 extern int result_limit ;
 
@@ -52,9 +50,6 @@ map<nodeid, string> cppdict;
 so lets give them good names and leave them there?*/
 
 const char LAST = 33; // last case statement (in release mode), not last entry, the coro might still be invoked with 33 repeatedly before returning false
-
-
-//my keybindings are all default and fuckedup
 
 
 //DEBUG directive:
@@ -98,11 +93,6 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 
 
 
-//NEW & KBDBG directives:
-#ifdef NEW
-	#define KBDBG
-#endif
-
 #ifdef KBDBG
 	#ifdef oneword
 	//what specifically does nope do?
@@ -123,11 +113,26 @@ const char LAST = 33; // last case statement (in release mode), not last entry, 
 //region Thing
 
 //for kbdbg
-typedef vector<unsigned long> Markup;
+typedef vector<string> Markup;
 typedef std::pair<nodeid, Markup> toadd;
+Markup kbdbg_stack;
 
 
-
+void kbdbgp(string s, unsigned long x)
+{
+	stringstream ss;
+	ss << s;
+	ss << x;
+	kbdbg_stack.push_back(ss.str());
+}
+void kbdbgp(string s)
+{
+	kbdbg_stack.push_back(s);
+}
+void kbdbgpop()
+{
+	kbdbg_stack.pop_back();
+}
 
 
 
@@ -177,7 +182,7 @@ public:
 		offset_t offset;
 	};
 #ifdef KBDBG
-	Markup markup; //a list of ints saying where in the reconstructed kb text (by print_kbdbg) this Thing comes from
+	Markup markup; //a stack of string identifying where in the reconstructed kb text (by print_kbdbg) this Thing is
 #endif
 
 	Thing(ThingType type_, offset_t thing_) : type(type_), offset(thing_) {/*dout<<str(this) << endl;*/};
@@ -737,19 +742,26 @@ pred_t dbg_fail_with_args()
 
 #ifdef KBDBG
 
+
+void kbdbg_markup_str(ostream &o, Markup m)
+{
+	pos_t c=0;
+	o << "[";
+	for (auto i: m) {
+		o << "\""<<i<<"\"";
+		if (++c != m.size())
+			o << ", ";
+	}
+	o << "]";
+}
+
 //Thing::Serializer::KBDBG
 string kbdbg_str(const Thing * x)
 {
 	stringstream o;
-	o << "[" << "\"" << x << "\""  << ", ";
-	pos_t c=0;
-	for (auto i: x->markup) {
-		o << i;
-		if (++c != x->markup.size())
-			o << ", ";
-	}
-	o << "]";
-	//assert(c);
+	o << "{\"pointer\":" << "\"" << x << "\""  << ", \"markup\":";
+	kbdbg_markup_str(o, x->markup);
+	o << "}";
 	return o.str();
 }
 
@@ -826,6 +838,8 @@ static coro UNIFY_SUCCEED(const Thing *a, const Thing *b)
 
 
 //endregion
+
+
 
 
 
@@ -1060,12 +1074,14 @@ coro unboundunifycoro(Thing * me, Thing *arg
 				// me() -> me(argv)
 				//why the brackets surrounding?
 					case 0: {
-						TRACE(dout << "binding [" << me << "]" << str(me) << " to [" << argv << "]" << str(argv) << endl;)
-						ASSERT(is_unbound(*me));
-						make_this_bound(me, argv);
 						#ifdef KBDBG
 						kbdbg_bind(origa, true, origb);
 						#endif
+
+						TRACE(dout << "binding [" << me << "]" << str(me) << 
+							" to [" << argv << "]" << str(argv) << endl;)
+						ASSERT(is_unbound(*me));
+						make_this_bound(me, argv);
 						entry = LAST;
 						return true;
 					}
@@ -1073,13 +1089,14 @@ coro unboundunifycoro(Thing * me, Thing *arg
 				//and that's supposed to be it:
 				//me(argv) -> me()
 					case_LAST:
+						#ifdef KBDBG
+						kbdbg_bind(origa, false, origb);
+						#endif
+
 						TRACE(dout << "unbinding [" << me << "]" << str(me)/* << " from [" << argv << "]" << str(argv)*/ << endl;)
 						//argv shouldnt be touched here anymore, it could be a gone constant on stack
 						ASSERT(is_bound(*me));
 						make_this_unbound(me);
-						#ifdef KBDBG
-						kbdbg_bind(origa, false, origb);
-						#endif
 				//with DEBUG, we check for reentry which would be a bug
 						END
 				}
@@ -1356,7 +1373,10 @@ void compile_pred(nodeid pr)
 	if (preds.find(pr) != preds.end())
 		return;
 
+	kbdbgp("pred",pr);
+
 	//builtins are ready to go
+	if (have_builtins)
 	if (builtins.find(pr) != builtins.end()) {
 		for (auto b: builtins[pr]) {
 			TRACE(dout << "builtin: " << dict[pr] << endl;)
@@ -1369,14 +1389,19 @@ void compile_pred(nodeid pr)
 
 	//rules need to be compiled and then added:
 	if (rules.find(pr) != rules.end()) {
-
 		for (pos_t i = rules.at(pr).size(); i > 0; i--)
+		{
+			kbdbgp("rule",i);
 			add_rule(pr, compile_rule(rules.at(pr)[i-1]));
+			kbdbgpop();
+		}
 	}
 	
 	//rdfs:SubPropertyOf
 	if (have_builtins)
 		add_rule(pr, make_wildcard_rule(pr));
+
+	kbdbgpop();
 
 }
 
@@ -1483,12 +1508,16 @@ void compile_kb(qdb &kb)
 	lists_rules = rules;//we dont have any query at this point
 	collect_lists();
 
+	kbdbgp("kb");
+
 	if (have_builtins)
 		for(auto x: builtins)
 			compile_pred(x.first);
 
 	for(auto x: rules)
 		compile_pred(x.first);
+		
+	kbdbgpop();
 }
 
 
@@ -1818,17 +1847,27 @@ PredParam find_thing (nodeid x, pos_t  &index, locals_map &lm, locals_map &cm)
 }
 
 #ifdef KBDBG
-PredParam kbdbg_find_thing (unsigned long part, pos_t  &index, Locals &locals)
+PredParam kbdbg_find_thing (pos_t  &index, Locals &locals)
 {
 	pos_t  r = 0;
 	for(auto i: locals)
 	{
-		if (i.markup.size() == 1 && i.markup.at(0) == part) {
+		if (i.markup == kbdbg_stack) {
 			index = r;
 			return LOCAL;
 		}
 		r++;
+	}	
+	dout << "want: ";
+	kbdbg_markup_str(dout, kbdbg_stack);
+	dout << endl << "got:" << endl;
+	for(auto i: locals)
+	{
+		kbdbg_markup_str(dout, i.markup);
+		dout << endl;
 	}
+	dout << "." << endl;
+	
 	assert(false);
 }
 #endif
@@ -1854,6 +1893,7 @@ Thing &fetch_thing(nodeid x, Locals &locals, Locals &consts, locals_map &lm, loc
 void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm, pquad head)
 {
 	(void)head;
+	dout << locals.size() << ", " << consts.size() << endl;
 	dout << endl << "locals map: \n nodeid\t\tpos\t\tthing\t\tkbdbg" << endl;
 	for (auto x: lm)
 	{
@@ -1861,7 +1901,7 @@ void print_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm
 		dout << x.second << "\t\t";
 		dout << str(&locals.at(x.second));
 #ifdef KBDBG
-		"\t\t" << kbdbg_str(&locals.at(x.second))  srtsrt
+		dout << "\t\t" << kbdbg_str(&locals.at(x.second));
 #endif
 		dout << endl;
 	}
@@ -1922,7 +1962,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
   //queue to load up our lists into.
 	std::queue<toadd> lq;
-  //	TRACE(dout << "head:" << op->format(head) << endl);
+  	//TRACE(dout << "head:" << format(head) << endl);
 
 	/* Function definition region */
 	//We make 3 function which we then apply later, so in reading this make_locals function,
@@ -1975,7 +2015,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 #ifdef KBDBG
 
 				Markup m = ll.second;
-				m.push_back(list_part++);
+				//m.push_back(list_part++);
 #endif
 				//Create a Thing for the bnode of the item
 				//and put it in locals.
@@ -2119,30 +2159,58 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 	//Need to understand this kbdbg stuff
 
 	//Store the value of the global before we modify it
-	unsigned long old_kbdbg_part = kbdbg_part;
+	//unsigned long old_kbdbg_part = kbdbg_part;
 
 	//Make a toadd for both the subject and object for each term in the 
 	//rule (both head & body), and push these into terms vector.
 	//Increment kbdbg_part for each node added to terms, place this
 	//value into a vector, and set that as the Markup for the toadd.
 	//What's the Markup doing?
-	if (head) {
-		terms.push_back(toadd(dict[head->subj], {kbdbg_part++}));
-		terms.push_back(toadd(dict[head->object], {kbdbg_part++}));
+	if (head) 
+	{
+		kbdbgp("head");
+		kbdbgp("subject");
+		terms.push_back(toadd(dict[head->subj], kbdbg_stack));
+		kbdbgpop();
+		kbdbgp("object");
+		terms.push_back(toadd(dict[head->object], kbdbg_stack));
+		kbdbgpop();
+		kbdbgpop();
 	}
+	
 	if(body)
-	for (pquad bi: *body) {
-		terms.push_back(toadd(dict[bi->subj], {kbdbg_part++}));
-		terms.push_back(toadd(dict[bi->object], {kbdbg_part++}));
+	{
+
+	kbdbgp("body");
+	
+	unsigned long i=0;	
+	for (pquad bi: *body) 
+	{
+		kbdbgp("item",i++);
+		kbdbgp("subject");
+		terms.push_back(toadd(dict[bi->subj], kbdbg_stack));
+		kbdbgpop();
+		kbdbgp("object");
+		terms.push_back(toadd(dict[bi->object], kbdbg_stack));
+		kbdbgpop();
+		kbdbgpop();
 	}
-	//TRACE(dout << "terms.size:" << terms.size() << endl);
+	kbdbgpop();
+	
+	}
+	
+	TRACE(dout << "terms.size:" << terms.size() << endl);
 
 	//For all our terms (toadds) in terms, if the term is not
 	//a variable or a list, then "add_node(false, xx, locals, lm)".
 	//If the term is a variable, then "add_node(true, xx, locals, lm)".
 	//If it's a list, then push it to lq to be processed later.
 	//std::pair<nodeid,Markup>
-	for (toadd xx: terms) {
+
+
+
+	for (toadd xx: terms) 
+	{
 		nodeid x = xx.first;
 		//If not a variable & not a list, then we'll make a 'constant' thing, i.e. add_node(false,...)
 		//only says it's a list if it's in the head
@@ -2154,6 +2222,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 
 //what's with consts & cm?
 //not sure this whole KBDBG switch going on here
+
 #ifndef KBDBG
 			//force rule s and o into locals for now
 		//If it's not a var, not a list, and is in the head, then
@@ -2166,7 +2235,7 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 			else
 				add_node(false, xx, consts, cm);
 #else
-    //And why #ifdef KBDBG they both go into locals?
+			//And why #ifdef KBDBG they both go into locals? simplicity
 			add_node(false, xx, locals, lm);
 #endif
 		}
@@ -2181,17 +2250,14 @@ void make_locals(Locals &locals, Locals &consts, locals_map &lm, locals_map &cm,
 		else
 			assert(false);
 	}
+	
+
 
 	expand_lists();
 	link_lists();
 
 
-
-  //What are these?
-	kbdbg_part_max = kbdbg_part;
-	kbdbg_part = old_kbdbg_part;
-
-	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
+	
 	TRACE(print_locals(locals, consts, lm, cm, head);)
 }
 
@@ -2211,15 +2277,19 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
   //qlist
 	auto b2 = *body;
 	reverse(b2.begin(), b2.end());
-#ifdef KBDBG
-	auto max = kbdbg_part_max;
-#endif
+
+	auto max = b2.size();
+	kbdbgp("body");
+
 
 	//For every term in the body, check the pred to see if there's a head
 	//with this pred. If not we'll set the pred-function for that pred to
 	//fail_with_args. 
 	for (pquad bi: b2)
 	{
+	
+		kbdbgp("item",--max);
+	
 	  //Make sure the pred is there, if not, make a wild-card rule for it. Hrmm
     //Need to think about what order we're compiling our rules/preds in and how
     //this will impact the order of execution.
@@ -2249,10 +2319,14 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 #ifdef KBDBG
 			(void)lm;
 			(void)cm;
-			ok = maybe_head(kbdbg_find_thing(--max, i2, locals), head, o);
-			TRACE(dout<<"max:"<<max<<endl);
-			sk = maybe_head(kbdbg_find_thing(--max, i1, locals), head, s);
-			TRACE(dout<<"max:"<<max<<endl);
+			
+			kbdbgp("subject");
+			sk = maybe_head(kbdbg_find_thing(i1, locals), head, s);
+			kbdbgpop();
+			kbdbgp("object");
+			ok = maybe_head(kbdbg_find_thing(i2, locals), head, o);
+			kbdbgpop();
+			
 #else
 			(void) locals;
 
@@ -2266,8 +2340,13 @@ join_gen compile_body(Locals &locals, Locals &consts, locals_map &lm, locals_map
 
 		jg = perms.at(sk).at(ok)(dict[bi->pred], jg, i1, i2, consts);
 		//typedef function<join_gen(pred_gen, join_gen, pos_t , pos_t , Locals&)>
+		
+		kbdbgpop();
+		
 	}
-	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
+
+	kbdbgpop();
+
 	}
 	
 	return jg;
@@ -2329,7 +2408,7 @@ are_equivalent(list a, list b) = list_equal(a,b)
 //find_ep(ep,s,o);
 
 //This will be passing these pointers to find_ep which will accept them as pointers
-#define EPDBG(x)
+#define EPDBG(x) x
 
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
@@ -2350,7 +2429,7 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 	ASSERT(!is_offset(*o));
 	//what about !is_bound
 
-	EPDBG(dout << endl << endl << ep->size() << " ep items:" << endl);
+	EPDBG(dout << endl << endl << ep->size() << " ep items." << endl);
 	//thingthingpair
 	for (auto i: *ep)
 	{
@@ -2446,6 +2525,7 @@ rule_t compile_rule(Rule r)
 	r.head:			pquad
 	r.body:			pqlist
 	*/
+
 	make_locals(locals_template, consts, lm, cm, r.head, r.body);
 
 
@@ -2453,10 +2533,14 @@ rule_t compile_rule(Rule r)
 
 	pos_t  hs, ho; // indexes of head subject and object in locals
 #ifdef KBDBG
-	kbdbg_find_thing(kbdbg_part++, hs, locals_template);
-	kbdbg_find_thing(kbdbg_part++, ho, locals_template);
-	TRACE(dout << "kbdbg_part:" << kbdbg_part << ", kbdbg_part_max:" << kbdbg_part_max << endl);
-	kbdbg_part = kbdbg_part_max;
+	kbdbgp("head");
+	kbdbgp("subject");
+	kbdbg_find_thing(hs, locals_template);
+	kbdbgpop();
+	kbdbgp("object");
+	kbdbg_find_thing(ho, locals_template);
+	kbdbgpop();
+	kbdbgpop();
 #else
 	//ignoring key, because head s and o go into locals always
 	find_thing(dict[r.head->subj], hs, lm, cm);//sets hs
@@ -2619,12 +2703,14 @@ i have no idea */
 //region kbdbg
 #ifdef KBDBG
 
-/*kbdbg fell to the wayside, it needs to be adapted to bnodes in lists and to builtins*/
 
-void print_kbdbg_part(stringstream &o, termid t, unsigned long part)
+void print_kbdbg_part(stringstream &o, pnode n)
 {
-	o << "[";
-	if (islist(t)) {
+	o << "{\"text\":";
+
+
+/*	
+if (islist(n)) {
 		o << "\"( \",";
 		unsigned long p = 0;
 		auto lst = op->get_dotstyle_list(t);
@@ -2636,53 +2722,79 @@ void print_kbdbg_part(stringstream &o, termid t, unsigned long part)
 		}
 		o << "\")\"";
 	}
-	else
-		o << "\"" << dstr(t->p, true) << "\"";
-	o << "]";
+else*/
+	
+	o << "\"" << dstr(dict[n], true) << "\"" << ", \"markup\":";
+	kbdbg_markup_str(o, kbdbg_stack);
+	o << "}";
 }
 
-void print_kbdbg_term(stringstream &o, termid t, unsigned long &part)
+void print_kbdbg_term(stringstream &o, pquad t)
 {
-	print_kbdbg_part(o, t->s, part++);
-	o << ",\" " << dstr(t->p, true) << " \",";
-	print_kbdbg_part(o, t->o, part++);
+	kbdbgp("subject");
+	print_kbdbg_part(o, t->subj);
+	kbdbgpop();
+
+	o << ",\" " << dstr(dict[t->pred], true) << " \",";
+	
+	kbdbgp("object");	
+	print_kbdbg_part(o, t->object);
+	kbdbgpop();
+
 }
 
-void print_kbdbg_termset(stringstream &o, prover::termset b, unsigned long &part)
+void print_kbdbg_termset(stringstream &o, pqlist b)
 {
 	size_t i = 0;
-	for (auto bi: b) {
-		print_kbdbg_term(o, bi, part);
-		if (i++ != b.size() - 1)
+	for (auto bi: *b) {
+		kbdbgp("item",i);
+		print_kbdbg_term(o, bi);
+		if (i++ != b->size() - 1)
 			o << ", \". \", ";
+		kbdbgpop();
 	}
 }
 
 
-void print_kbdbg(prover::termset query)
+void print_kbdbg(pqlist query)
 {
-	unsigned long part = 0;
+	kbdbgp("kb");
 	for (auto rs: rules) {
+		kbdbgp("pred", rs.first);
+		unsigned long ruleid = 0;
 		for (auto rule: rs.second) {
+			kbdbgp("rule", ruleid);
+			kbdbgp("head");
 			stringstream o;
-			auto h = rule->head;
+			pquad h = rule.head;
 			o << "\"{\",";
-			print_kbdbg_term(o, h, part);
+			print_kbdbg_term(o, h);
 			o << ",\"}\"";
-			auto b = rule->body;
-			if (b&&b.size()) {
+			kbdbgpop();
+			kbdbgp("body");			
+			auto b = rule.body;
+			if (b&&b->size()) {
 				o << ",\" <= {\",";
-				print_kbdbg_termset(o, b, part);
+				print_kbdbg_termset(o, b);
 				o << ",\"}\"";
 			}
+			kbdbgpop();
 			o << ",\"\\n\"";
-			dout << "[" << o.str() << "]" << endl;
-
+			dout << "{\"type\":\"kb\", \"value\":[" << o.str() << "]}" << endl;
+	
+			ruleid++;
+			kbdbgpop();		
 		}
+		kbdbgpop();
 	}
+	kbdbgpop();
+	kbdbgp("query");
+	kbdbgp("body");			
 	stringstream o;
-	print_kbdbg_termset(o, query, part);
-	dout << "[" << o.str() << "]" << endl;
+	print_kbdbg_termset(o, query);
+	dout << "{\"type\":\"query\", \"value\":[" << o.str() << "]}" << endl;
+	kbdbgpop();
+	kbdbgpop();
 }
 #endif
 //endregion
@@ -2813,7 +2925,7 @@ void yprover::query(qdb& goal){
 		return;
 
 #ifdef KBDBG
-	print_kbdbg(q);
+	print_kbdbg(qit->second);
 #endif
 
 	//Reset the global steps & unifys
@@ -2845,8 +2957,14 @@ void yprover::query(qdb& goal){
 	}
 	shared_ptr<qlist> pq = make_shared<qlist>(q);
 
+	kbdbgp("query");
+
 	make_locals(locals, consts, lm, cm, 0, pq);
 	join_gen jg = compile_body(locals, consts, lm, cm, 0, pq);
+
+	kbdbgpop();
+
+
 	join_t coro = jg();
 
 	dout << KGRN << "RUN" << KNRM << endl;
