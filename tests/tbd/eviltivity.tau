@@ -1,0 +1,13 @@
+kb
+a a b.
+{?x a ?y.} => {(?x ?y) a ?z}.
+fin.
+
+query
+((a b) c) a ?what.
+fin.
+
+query
+?W a ?WE.
+fin.
+

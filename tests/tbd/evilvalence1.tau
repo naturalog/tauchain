@@ -1,0 +1,24 @@
+kb
+
+a a nat.
+a :eq b.
+{?x :eq ?y} => {?y :eq ?x. ?y a nat}.
+
+
+fin.
+
+query
+a :eq b.
+fin.
+
+query
+?W :eq ?WE.
+fin.
+
+
+
+#RESULT 1:a <:eq> b
+#RESULT 2:a <:eq> b
+#That's all, folks, 2 results.
+RESULT 1:a <:eq> b
+RESULT 2:b <:eq> a

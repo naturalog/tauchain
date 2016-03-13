@@ -1,0 +1,17 @@
+kb
+
+a a nat.
+
+{?x :o ?y} => {?y :o ?x. ?y a nat}.
+
+
+fin.
+
+query
+a :o b.
+fin.
+
+query
+?W :o ?WE.
+fin.
+

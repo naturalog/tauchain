@@ -1159,6 +1159,10 @@ right, so your idea is right i guess, at the very at least it still doesn't allo
 	else if (is_node(me))
 		return are_equal(me, x);
 //list would change the way var changed, i.e. vars in the list could only "unify" with vars
+
+
+
+//shouldnt getValue the items here!
 	else if (is_list(me)) {
 		if (is_list(x)) {
 			if (get_size(*this_) != get_size(x))
@@ -2450,24 +2454,25 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 		//TRACE(dout << endl << " epitem " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
 		EPDBG(dout << endl << " epcheck " << str(os) << "    VS     " << str(s) << endl << " epcheck " << str(oo) << "    VS    " << str(o) << endl;)
 
-		
-		/*
-		bool r = false;
+		bool rs = false;
+		bool ro = false;
+
 		auto suc = unify(s, os);
 		while(suc())
-		{
-			auto ouc = unify(o,oo);
-			while(ouc())
-				//why not just return true here?
-				r = true;
-		}
-		if (r) 
+		    rs = true;
+
+		auto ouc = unify(o, oo);
+		while(ouc())
+		    ro = true;
+
+		if (rs && ro)
 		{
 			EPDBG(dout << endl << " epcheck " <<  "EP." << endl;)
 			return true;
 		}
-		*/
 		
+		
+		/*
 		if (would_unify(os,s))
 		{
 			//TRACE(dout << ".." << endl);
@@ -2477,7 +2482,7 @@ bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 				return true;
 			}
 		}
-		
+		*/
 		EPDBG(dout << endl <<  " epcheck " << "---------------------" << endl);
 
 	}
@@ -4473,7 +4478,7 @@ void cppout_pred(string name, vector<Rule> rs)
 
 		if (name == "query") {
 		//would be nice to also write out the head of the rule, and do this for all rules, not just query
-			//out << "if (!(counter & 0b11111111))";
+			//out << "if (!(counter & 0b11111111111))";
 			out << "{dout << \"RESULT \" << counter << \": \";\n";
 			ASSERT(rule.body);
 			for (pquad bi: *rule.body) {

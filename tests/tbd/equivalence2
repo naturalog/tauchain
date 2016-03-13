@@ -1,27 +1,21 @@
 #--limit 300
 kb
-zero :a Nat.
-null :a Nat.
-nada :a Nat.
 
 null :eq zero.
 nada :eq null.
 
-#The three defining properties of an equivalence relation:
-#Reflexivity
-{?x :a Nat} => {?x :eq ?x}.
+null :eq null.
+nada :eq nada.
+zero :eq zero.
 
-#Symmetry
 {?x :eq ?y} => {?y :eq ?x}.
-
-#Transitivity
 {?x :eq ?y. ?y :eq ?z} => {?x :eq ?z}.
 
 fin.
 
 query
-#?WHAT :eq ?WHATELSE.
-nada :eq null.
+#nada :eq null.
+?W :eq ?WE.
 fin.
 
 #expected matches:
