@@ -1022,8 +1022,13 @@ coro unboundunifycoro(Thing * me, Thing *arg
 {
 		FUN;
 		TRACE(dout << "!Bound" << endl;)
+		
+		
+		
 		Thing *argv = getValue(arg);
-		TRACE(dout << "unify with [" << argv << "]" << str(argv) << endl;)
+		//TRACE(dout << "unify with [" << argv << "]" << str(argv) << endl;)
+
+
 
 		//How do we end up unifying an unbound variable with itself?
 		//Won't the variables that come in as the arguments necessarily
@@ -1034,8 +1039,10 @@ coro unboundunifycoro(Thing * me, Thing *arg
 		fin.
 		?x a mortal.
 		fin.
-		
 		*/
+
+
+
 		if (argv == me) {
 			TRACE(dout << "argv == me" << endl;)
 			//# We are unifying this unbound variable with itself, so leave it unbound.^M
@@ -1391,7 +1398,7 @@ void compile_pred(nodeid pr)
 	if (rules.find(pr) != rules.end()) {
 		for (pos_t i = rules.at(pr).size(); i > 0; i--)
 		{
-			kbdbgp("rule",i);
+			kbdbgp("rule",i-1);
 			add_rule(pr, compile_rule(rules.at(pr)[i-1]));
 			kbdbgpop();
 		}
@@ -1704,7 +1711,7 @@ coro unify(Thing *a_, Thing *b_){
 
 	//only on this one is there order switching.
 	if (is_unbound(b))
-		return unboundunifycoro(b_, a_
+		return unboundunifycoro(b_, a_//origa?
 		#ifdef DEBUG
 		,origb, origa
 		#endif
@@ -2408,7 +2415,7 @@ are_equivalent(list a, list b) = list_equal(a,b)
 //find_ep(ep,s,o);
 
 //This will be passing these pointers to find_ep which will accept them as pointers
-#define EPDBG(x) x
+#define EPDBG(x) 
 
 bool find_ep(ep_t *ep, /*const*/ Thing *s, /*const*/ Thing *o)
 {
@@ -2606,7 +2613,7 @@ i have no idea */
 				
 				//i *think* we can safely move these
 				
-				//however its currently a no-op there
+			
 				ov = getValue(o);
 				sv = getValue(s);
 						
@@ -2631,13 +2638,13 @@ i have no idea */
 					*/
 					ep->push_back(thingthingpair(sv,ov));	
 				}
-				suc = unify(sv, &locals[hs]); // try to match head subject
+				suc = unify(s, &locals[hs]); // try to match head subject
 				while (suc()) {
 					TRACE(dout << "After suc() -- " << endl;)
 					//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
 					ASSERT(call == 1);
 
-					ouc = unify(ov, &locals[ho]);
+					ouc = unify(o, &locals[ho]);
 					while (ouc()) {
 						TRACE(dout << "After ouc() -- " << endl;)
 						//TRACE(dout << sprintSrcDst(Ds,s,Do,o) << endl;)
