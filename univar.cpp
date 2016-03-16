@@ -4301,7 +4301,7 @@ A cwm built-in logical operator, RDF graph level.
 
 
 //region cppout
-#define CPPOUT
+#define CPPOUT2
 #ifdef CPPOUT
 /*
 body becomes nested whiles calling predxxx instead of the join-consing thing
@@ -4649,7 +4649,7 @@ string predname(nodeid x)
 }
 
 
-string param(PredParam key, pos_t thing_index, pos_t rule_index)
+string param(PredParam key, pos_t thing_index, string predname, pos_t rule_index)
 {
 	stringstream ss;
 	if (key == HEAD_S)
@@ -4659,7 +4659,7 @@ string param(PredParam key, pos_t thing_index, pos_t rule_index)
 	if (key == LOCAL)
 	ss << "(&state.locals[" << thing_index << "])";
 	if (key == CONST)
-	ss << "(&consts" << rule_index << "[" << thing_index << "])";
+	ss << "(&consts_" << predname << "_" << rule_index << "[" << thing_index << "])";
 	return ss.str();
 }
 
@@ -4708,9 +4708,31 @@ void cppout_consts(string name, vector<Rule> rs)
 
 
 
+bool unify_with_const(Thing * a, Thing * b)
+{
+    if (are_equal(*a, *b))
+	return true;
+    if (is_unbound(*a))
+    {
+	make_this_bound(a, b);
+	return true;
+    }
+    return false;
+}
+
+	
+void unbind_from_const(Thing *x)
+{
+	if (is_bound(*x))
+		make_this_unbound(x);
+}
+
+
 
 void cppout_pred(string name, vector<Rule> rs)
 {
+	cppout_consts(name, rs);
+
 	out << "void " << name << "(cpppred_state &state){\n";
 	for (pos_t i = 0; i < rs.size(); i++) {
 		if (rs[i].head && rs[i].body && rs[i].body->size())
@@ -4743,7 +4765,7 @@ void cppout_pred(string name, vector<Rule> rs)
 
 
 
-
+	const string PUSH = ".push_back(thingthingpair(state.s, state.o));\n";
 
 
 	int i = 0;
@@ -4768,31 +4790,34 @@ void cppout_pred(string name, vector<Rule> rs)
 
 		//if it's a kb rule and not the query then we'll
 		//make join'd unify-coros for the subject & object of the head
+		
+		PredParam hsk, hok;
+		pos_t hs, ho; // indexes of head subject and object in locals
+		
 		if (rule.head) {
-			pos_t hs, ho; // indexes of head subject and object in locals
-			PredParam hsk = find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
-			PredParam hok = find_thing(dict[rule.head->object], ho, lm, cm);
+			hsk = find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
+			hok = find_thing(dict[rule.head->object], ho, lm, cm);
 
 
 			if (hsk == CONST)
-				out << "if (unify_with_const(state.s, " << param(hsk, hs, i) << "){\n";
+				out << "if (unify_with_const(state.s, " << param(hsk, hs, name, i) << ")){\n";
 			else
 			{
-				out << "state.suc = unify(state.s, " << param(hsk, hs, i) << ");\n";
+				out << "state.suc = unify(state.s, " << param(hsk, hs, name, i) << ");\n";
 				out << "if(state.suc()){\n";
 			}
 			if (hok == CONST)
-				out << "if (unify_with_const(state.s, " << param(hok, ho, i) << "){\n";
+				out << "if (unify_with_const(state.o, " << param(hok, ho, name, i) << ")){\n";
 			else
 			{
-				out << "state.ouc = unify(o, " << param(hok, ho, i) << ");\n";
+				out << "state.ouc = unify(state.o, " << param(hok, ho, name, i) << ");\n";
 				out << "if(state.ouc()){\n";
 			}
 		}
 		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
 		if (rule.head && has_body) {
 			out << "if (!find_ep(&ep" << i << ", state.s, state.o)){\n";
-			out << "ep" << i << ".push_back(thingthingpair(state.s, state.o));\n";
+			out << "ep" << i << PUSH;
 		}
 		//if it's the query or a kb rule with non-empty body: (existing?)
 		if(has_body) {
@@ -4811,13 +4836,13 @@ void cppout_pred(string name, vector<Rule> rs)
 				nodeid s = dict[bi->subj];
 				nodeid o = dict[bi->object];
 				PredParam sk, ok;
-				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
-				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
+				sk = find_thing(s, i1, lm, cm);
+				ok = find_thing(o, i2, lm, cm);
 
 				out << substate << ".s = getValue(" <<
-						param(sk, i1, i) << ");\n";
+						param(sk, i1, name, i) << ");\n";
 				out << substate << ".o = getValue(" <<
-						param(ok, i2, i) << ");\n";
+						param(ok, i2, name, i) << ");\n";
 
 				out << "do{\n";
 
@@ -4841,13 +4866,13 @@ void cppout_pred(string name, vector<Rule> rs)
 				nodeid s = dict[bi->subj];
 				nodeid o = dict[bi->object];
 				PredParam sk, ok;
-				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
-				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
+				sk = find_thing(s, i1, lm, cm);
+				ok = find_thing(o, i2, lm, cm);
 
 
 				out << "{Thing * bis, * bio;\n";
-				out << "bis = getValue(" << param(sk, i1, i) << ");\n";
-				out << "bio = getValue(" << param(ok, i2, i) << ");\n";
+				out << "bis = getValue(" << param(sk, i1, name, i) << ");\n";
+				out << "bio = getValue(" << param(ok, i2, name, i) << ");\n";
 
 				out << "Thing n1; if (is_unbound(*bis)) {bis = &n1; n1 = create_node(" << ensure_cppdict(dict[bi->subj]) << ");};\n";
 				out << "Thing n2; if (is_unbound(*bio)) {bio = &n2; n2 = create_node(" << ensure_cppdict(dict[bi->object]) << ");};\n";
@@ -4872,7 +4897,7 @@ void cppout_pred(string name, vector<Rule> rs)
 
 
 		if (rule.head && has_body) {
-			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
+			out << "ep" << i << PUSH;
 		}
 
 		if(rule.body)
@@ -4884,12 +4909,12 @@ void cppout_pred(string name, vector<Rule> rs)
 
 		if (rule.head) {
 			if (hok == CONST)
-				out << "unbind_from_const(state.o, " << param(hok, ho, i) << ");\n";
+				out << "unbind_from_const(state.o);\n";
 			else
 				out << "state.ouc();//unbind\n";
 			out << "}\n";
 			if (hsk == CONST)
-				out << "unbind_from_const(state.s, " << param(hsk, hs, i) << ");\n";
+				out << "unbind_from_const(state.s);\n";
 			else
 				out << "state.suc();//unbind\n";
 			out << "}\n";
@@ -4915,7 +4940,7 @@ void yprover::cppout(qdb &goal)
 		"int entry=0;\n"
 		"vector<Thing> locals;\n"
 		"coro suc,ouc;\n"
-		"Thing *call_s, *call_o;\n"
+		"Thing *s, *o;\n"
 		"vector<cpppred_state> states;\n};\n"
 				   ""
 				   ""
@@ -4923,12 +4948,9 @@ void yprover::cppout(qdb &goal)
 
 	out << "/* forward declarations */\n";
 	for(auto x: rules) {
-		out << "void " << predname(x.first) << "(cpppred_state &state, Thing *s, Thing *o);";
+		out << "void " << predname(x.first) << "(cpppred_state &state);";
 	}
 
-	for(auto x: rules) {
-		cppout_consts(predname(x.first), x.second);
-	}
 
 	out << "/* pred function definitions */\n";
 	for(auto x: rules) {
@@ -4944,7 +4966,7 @@ void yprover::cppout(qdb &goal)
 	collect_lists();
 
 	//query is baked in for now
-	cppout_pred("query", {Rule(0, qit->second)});
+	cppout_pred  ("query", {Rule(0, qit->second)});
 
 
 
