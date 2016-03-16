@@ -2592,7 +2592,11 @@ i have no idea */
 			case 0:
 
 				/*optimization: this could happen in a different thread.
+				  http://liblfds.org/
+				 https://github.com/facebook/folly
+				 * http://moodycamel.com/blog/2013/a-fast-lock-free-queue-for-c++
 				http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
+				 http://www.boost.org/doc/libs/1_54_0/doc/html/boost/lockfree/spsc_queue.html
 				 //lets first try to find some offtheshelf solution, boost? sure
 				cpu affinity should be set.*/
 				locals = (Thing*)malloc(locals_bytes);
@@ -4297,8 +4301,8 @@ A cwm built-in logical operator, RDF graph level.
 
 
 //region cppout
-
-//#ifdef cppout
+#define CPPOUT
+#ifdef CPPOUT
 /*
 body becomes nested whiles calling predxxx instead of the join-consing thing
 lets forget builtins for now
@@ -4599,10 +4603,364 @@ void yprover::cppout(qdb &goal)
 }
 
 
+#endif
+
+
+/*
 
 
 
 
 
-//#endif
+
+-------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+*/
+
+
+
+
+#ifdef CPPOUT2
+/*
+body becomes nested whiles calling predxxx instead of the join-consing thing
+lets forget builtins for now
+persistent vars needed:
+entry headsub headsuc locals
+i made some things slightly different than how we do them in our lambdas
+	 * instead of returning bools, we indicate being done by setting entry to -1
+	 * callee state obviously has to be kept explicitly, not hidden with a lambda
+	 * instead of while-looping around an unify coro, theres just an if*/
+
+fstream out;
+
+string predname(nodeid x)
+{
+	stringstream ss;
+	ss << "cpppred" << x;
+	return ss.str();
+}
+
+
+string param(PredParam key, pos_t thing_index, pos_t rule_index)
+{
+	stringstream ss;
+	if (key == HEAD_S)
+	ss << "s";
+	if (key == HEAD_O)
+	ss << "o";
+	if (key == LOCAL)
+	ss << "(&state.locals[" << thing_index << "])";
+	if (key == CONST)
+	ss << "(&consts" << rule_index << "[" << thing_index << "])";
+	return ss.str();
+}
+
+nodeid ensure_cppdict(nodeid node)
+{
+	cppdict[node] = *dict[node].value;
+	return node;
+}
+
+
+string things_literals(const Locals &things)
+{
+	stringstream ss;
+	ss << "{";
+	pos_t i = 0;
+	for (Thing t: things) {
+		if (is_unbound(t))
+			t.node = 0;
+		if (i++ != 0) ss << ", ";
+		ss << "Thing(" << ThingTypeNames.at(t.type) << ", " << t.node << ")";
+		if (is_node(t))
+			ensure_cppdict(t.node);
+	}
+	ss << "}";
+	return ss.str();
+}
+
+
+
+
+
+
+
+void cppout_consts(string name, vector<Rule> rs)
+{
+	for (pos_t i = 0; i < rs.size(); i++) {
+		auto &r = rs[i];
+		locals_map lm, cm;
+		Locals locals_template;
+		Locals consts;
+		make_locals(locals_template, consts, lm, cm, r.head, r.body, false);
+		out << "static Locals consts_" << name << "_" << i << " = " << things_literals(consts) << ";\n";
+	}
+}
+
+
+
+
+
+void cppout_pred(string name, vector<Rule> rs)
+{
+	out << "void " << name << "(cpppred_state &state){\n";
+	for (pos_t i = 0; i < rs.size(); i++) {
+		if (rs[i].head && rs[i].body && rs[i].body->size())
+			out << "static ep_t ep" << i << ";\n";
+	}
+
+	size_t max_body_len = 0;
+	for (auto rule:rs) {
+		if (rule.body && max_body_len < rule.body->size())
+			max_body_len = rule.body->size();
+	}
+
+	if (name == "query")
+			out << "static int counter = 0;\n";
+
+
+	int label = 0;
+
+	out << "switch(state.entry){\n";
+
+	//case 0:
+	out << "case "<< label++ << ":\n";
+
+	out << "state.states.resize(" << max_body_len << ");\n";
+
+
+/*gonna do 3 loops here, */
+	//"if(is_unbound(state.s) && is_unbound(state.o)) goto case_uu;";
+//unify_list_
+
+
+
+
+
+
+	int i = 0;
+	//loop over all kb rules for the pred
+	for (Rule rule:rs)
+	{
+		bool has_body = rule.body && rule.body->size();
+
+		out << "//rule " << i << ":\n";
+		//out << "// "<<<<":\n";
+		out << "case " << label << ":\n";
+
+		out << "state.entry = " << ++label << ";\n";
+
+		locals_map lm, cm;
+		Locals locals_template;
+		Locals consts;
+		make_locals(locals_template, consts, lm, cm, rule.head, rule.body, false);
+
+		if(locals_template.size())
+			out << "state.locals = " << things_literals(locals_template) << ";\n";
+
+		//if it's a kb rule and not the query then we'll
+		//make join'd unify-coros for the subject & object of the head
+		if (rule.head) {
+			pos_t hs, ho; // indexes of head subject and object in locals
+			PredParam hsk = find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
+			PredParam hok = find_thing(dict[rule.head->object], ho, lm, cm);
+
+
+			if (hsk == CONST)
+				out << "if (unify_with_const(state.s, " << param(hsk, hs, i) << "){\n";
+			else
+			{
+				out << "state.suc = unify(state.s, " << param(hsk, hs, i) << ");\n";
+				out << "if(state.suc()){\n";
+			}
+			if (hok == CONST)
+				out << "if (unify_with_const(state.s, " << param(hok, ho, i) << "){\n";
+			else
+			{
+				out << "state.ouc = unify(o, " << param(hok, ho, i) << ");\n";
+				out << "if(state.ouc()){\n";
+			}
+		}
+		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
+		if (rule.head && has_body) {
+			out << "if (!find_ep(&ep" << i << ", state.s, state.o)){\n";
+			out << "ep" << i << ".push_back(thingthingpair(state.s, state.o));\n";
+		}
+		//if it's the query or a kb rule with non-empty body: (existing?)
+		if(has_body) {
+			size_t j = 0;
+			for (pquad bi: *rule.body) {
+				out << "//body item" << j << "\n";
+
+				stringstream ss;
+				ss << "state.states[" << j << "]";
+				string substate = ss.str();
+
+				out << substate << ".entry = 0;\n";
+
+				//set up the subject and object
+				pos_t i1, i2;//s and o positions
+				nodeid s = dict[bi->subj];
+				nodeid o = dict[bi->object];
+				PredParam sk, ok;
+				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
+				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
+
+				out << substate << ".s = getValue(" <<
+						param(sk, i1, i) << ");\n";
+				out << substate << ".o = getValue(" <<
+						param(ok, i2, i) << ");\n";
+
+				out << "do{\n";
+
+				if (has(rules, dict[bi->pred]))
+					out << predname(dict[bi->pred]) << "(" << substate << ");\n";
+				else
+					out << substate << ".entry = -1;\n";
+
+				out << "if(" << substate << ".entry == -1) break;\n";
+				j++;
+			}
+		}
+
+		if (name == "query") {
+		//would be nice to also write out the head of the rule, and do this for all rules, not just query
+			//out << "if (!(counter & 0b11111111111))";
+			out << "{dout << \"RESULT \" << counter << \": \";\n";
+			ASSERT(rule.body);
+			for (pquad bi: *rule.body) {
+				pos_t i1, i2;//s and o positions
+				nodeid s = dict[bi->subj];
+				nodeid o = dict[bi->object];
+				PredParam sk, ok;
+				sk = maybe_head(find_thing(s, i1, lm, cm), rule.head, s);
+				ok = maybe_head(find_thing(o, i2, lm, cm), rule.head, o);
+
+
+				out << "{Thing * bis, * bio;\n";
+				out << "bis = getValue(" << param(sk, i1, i) << ");\n";
+				out << "bio = getValue(" << param(ok, i2, i) << ");\n";
+
+				out << "Thing n1; if (is_unbound(*bis)) {bis = &n1; n1 = create_node(" << ensure_cppdict(dict[bi->subj]) << ");};\n";
+				out << "Thing n2; if (is_unbound(*bio)) {bio = &n2; n2 = create_node(" << ensure_cppdict(dict[bi->object]) << ");};\n";
+
+				out << "dout << str(bis) << \" " << bi->pred->tostring() << " \" << str(bio) << \".\";};\n";
+			}
+			out << "dout << \"\\n\";}\n";
+		}
+
+
+		if (name == "query")
+			out << "counter++;\n";
+
+
+		if (rule.head && has_body) {
+			out << "ASSERT(ep" << i << ".size());\n ep" << i << ".pop_back();\n\n";
+		}
+
+
+		out << "return;\n";
+		out << "case " << label++ << ":;\n";
+
+
+		if (rule.head && has_body) {
+			out << "ep" << i << ".push_back(thingthingpair(s, o));\n";
+		}
+
+		if(rule.body)
+			for (pos_t closing = 0; closing < rule.body->size(); closing++)
+				out << "}while(true);\n";
+
+		if (rule.head && has_body)
+			out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
+
+		if (rule.head) {
+			if (hok == CONST)
+				out << "unbind_from_const(state.o, " << param(hok, ho, i) << ");\n";
+			else
+				out << "state.ouc();//unbind\n";
+			out << "}\n";
+			if (hsk == CONST)
+				out << "unbind_from_const(state.s, " << param(hsk, hs, i) << ");\n";
+			else
+				out << "state.suc();//unbind\n";
+			out << "}\n";
+		}
+		i++;
+	}
+	out << "}state.entry = -1;}\n\n";
+
+}
+
+
+void yprover::cppout(qdb &goal)
+{
+	FUN;
+
+	cppdict.clear();
+	out.open("out.cpp", fstream::out);
+
+	out << "#include \"globals.cpp\"\n";
+	out << "#include \"univar.cpp\"\n";
+	out << "struct cpppred_state;\n";
+	out << "struct cpppred_state {\n"
+		"int entry=0;\n"
+		"vector<Thing> locals;\n"
+		"coro suc,ouc;\n"
+		"Thing *call_s, *call_o;\n"
+		"vector<cpppred_state> states;\n};\n"
+				   ""
+				   ""
+				   ;
+
+	out << "/* forward declarations */\n";
+	for(auto x: rules) {
+		out << "void " << predname(x.first) << "(cpppred_state &state, Thing *s, Thing *o);";
+	}
+
+	for(auto x: rules) {
+		cppout_consts(predname(x.first), x.second);
+	}
+
+	out << "/* pred function definitions */\n";
+	for(auto x: rules) {
+		cppout_pred(predname(x.first), x.second);
+	}
+
+
+	auto qit = goal.first.find("@default");
+	if (qit == goal.first.end())
+		return;
+
+	lists_rules = add_ruleses(rules, quads2rules(goal));
+	collect_lists();
+
+	//query is baked in for now
+	cppout_pred("query", {Rule(0, qit->second)});
+
+
+
+	out << "void cppdict_init(){\n";
+	for (auto x:cppdict)
+		out << "cppdict[" << x.first << "] = \"" << x.second << "\";\n";
+	out << "}\n";
+
+
+	out << "#include \"cppmain.cpp\"\n" << endl;
+	out.close();
+
+}
+
+
+
+#endif
+
 //endregion
