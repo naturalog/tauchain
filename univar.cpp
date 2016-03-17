@@ -205,7 +205,7 @@ public:
 //these make sense
 //Thing::Property -- specifically a unary boolean function Things
 #define is_offset(thing)	(get_type(thing) == OFFSET)
-#define is_unbound(thing)	(get_type(thing) == UNBOUND)
+bool is_unbound(Thing &thing)	{return (get_type(thing) == UNBOUND);}
 #define is_bound(thing)		(get_type(thing) == BOUND)
 #define is_list(thing)		(get_type(thing) == LIST)
 #define is_list_bnode(thing)(get_type(thing) == LIST_BNODE)
@@ -216,7 +216,7 @@ public:
 //Thing::Comparison
 #define types_differ(x, y) (x.type != y.type)
 #define sizes_differ(x, y) (x.size != y.size)
-#define are_equal(x, y) ((x).type == (y).type && (x).size == (y).size)
+bool are_equal(const Thing &x, const Thing &y) {return ((x).type == (y).type && (x).size == (y).size);}
 
 
 
@@ -304,9 +304,16 @@ static inline Thing create_unbound()
 	return 0;
 }
 
-static inline Thing create_node(termid v)
+static inline Thing create_node(nodeid v)
 {
 	ASSERT(((uintptr_t)v & 0b11) == 0);
+	return (Thing)(((uintptr_t)v<<2) | 0b01);
+}
+
+static inline Thing create_list_bnode(nodeid v)
+{
+	ASSERT(((uintptr_t)v & 0b11) == 0);
+	ASSERT(false);
 	return (Thing)((uintptr_t)v | 0b01);
 }
 
@@ -359,9 +366,9 @@ static inline Thing* get_thing(Thing x)
 	return (Thing*)x;
 }
 
-static inline termid get_term(Thing x)
+static inline nodeid get_node(Thing x)
 {
-	return (termid)databits(x);
+	return (nodeid)(((uintptr_t)x)>>2);
 }
 
 
@@ -406,6 +413,7 @@ static inline bool is_unbound(Thing x)
 #define is_node(thing) 		(typebits(thing) 	== 0b01)
 #define is_offset(thing) 	(typebits(thing) 	== 0b10)
 #define is_list(thing) 		(typebits(thing) 	== 0b11)
+bool is_list_bnode(const Thing &thing) {FUN;MSG("TODO");return false;}
 
 //General application of '=='; ostensibly general comparison
 #define are_equal(x, y) (x == y)
@@ -432,7 +440,7 @@ static inline ThingType get_type(Thing x)
 #endif //ndef oneword
 
 
-inline bool is_nil(Thing* x)
+inline bool is_nil(const Thing* x)
 {
 	return is_node(*x) && (get_node(*x) == rdfnil);
 }
@@ -4339,7 +4347,7 @@ string param(PredParam key, pos_t thing_index, pos_t rule_index)
 
 nodeid ensure_cppdict(nodeid node)
 {
-	cppdict[node] = *dict[node].value;
+	cppdict[node] = *dict.at(node).value;
 	return node;
 }
 
@@ -4629,15 +4637,68 @@ void yprover::cppout(qdb &goal)
 
 
 #ifdef CPPOUT2
-/*
-body becomes nested whiles calling predxxx instead of the join-consing thing
-lets forget builtins for now
-persistent vars needed:
-entry headsub headsuc locals
-i made some things slightly different than how we do them in our lambdas
-	 * instead of returning bools, we indicate being done by setting entry to -1
-	 * callee state obviously has to be kept explicitly, not hidden with a lambda
-	 * instead of while-looping around an unify coro, theres just an if*/
+
+
+bool cppout_would_unify(const Thing *old_, const Thing *now_)
+{
+	FUN;
+
+	const Thing old = *old_;
+	const Thing now = *now_;
+	 
+	ASSERT(!is_offset(old));
+	ASSERT(!is_offset(now));
+	ASSERT(!is_bound(now));
+	
+	if(is_var(old) && is_var(now))
+		return true;
+	else if (is_node(old))
+		return are_equal(old, now);
+	else if (is_list(old)) {
+		assert(false);
+	}
+	if ((is_list_bnode(*old_) || is_nil(old_)) && (is_list_bnode(*now_) || is_nil(now_))) {
+		assert(false);
+	}
+	else if (types_differ(old, now)) // in oneword mode doesnt differentiate between bound and unbound!
+		return false;
+	assert(false);
+}
+
+
+
+
+bool cppout_find_ep(const ep_t *ep, const Thing *s, const Thing *o)
+{
+	FUN;
+
+	ASSERT(!is_offset(*s));
+	ASSERT(!is_offset(*o));
+	ASSERT(!is_bound(*s));
+	ASSERT(!is_bound(*o));
+
+	EPDBG(dout << endl << endl << ep->size() << " ep items." << endl);
+
+	for (auto i: *ep)
+	{
+		auto os = i.first;
+		auto oo = i.second;
+		ASSERT(!is_offset(*os));
+		ASSERT(!is_offset(*oo));
+		//what about !is_bound
+		
+		//TRACE(dout << endl << " epitem " << str(os) << "    VS     " << str(s) << endl << str(oo) << "    VS    " << str(o) << endl;)
+		EPDBG(dout << endl << " epcheck " << str(os) << "    VS     " << str(s) << endl << " epcheck " << str(oo) << "    VS    " << str(o) << endl;)
+
+		if (!cppout_would_unify(os,s) || !cppout_would_unify(oo,o))
+		    continue;
+		return true;
+	}
+	return false;
+}
+
+
+
 
 fstream out;
 
@@ -4665,6 +4726,7 @@ string param(PredParam key, pos_t thing_index, string predname, pos_t rule_index
 
 nodeid ensure_cppdict(nodeid node)
 {
+//	dout << node << endl;
 	cppdict[node] = *dict[node].value;
 	return node;
 }
@@ -4675,13 +4737,21 @@ string things_literals(const Locals &things)
 	stringstream ss;
 	ss << "{";
 	pos_t i = 0;
-	for (Thing t: things) {
+	for (Thing t: things) 
+	{
+		if (i++ != 0) ss << ", ";
+
+		if (is_node(t))
+			ensure_cppdict(get_node(t));
+
+		#ifndef oneword
 		if (is_unbound(t))
 			t.node = 0;
-		if (i++ != 0) ss << ", ";
 		ss << "Thing(" << ThingTypeNames.at(t.type) << ", " << t.node << ")";
-		if (is_node(t))
-			ensure_cppdict(t.node);
+		#else
+		ss << "(Thing)" << t;
+		#endif
+
 	}
 	ss << "}";
 	return ss.str();
@@ -4733,7 +4803,7 @@ void cppout_pred(string name, vector<Rule> rs)
 {
 	cppout_consts(name, rs);
 
-	out << "void " << name << "(cpppred_state &state){\n";
+	out << "void " << name << "(cpppred_state & __restrict__ state){\n";
 	for (pos_t i = 0; i < rs.size(); i++) {
 		if (rs[i].head && rs[i].body && rs[i].body->size())
 			out << "static ep_t ep" << i << ";\n";
@@ -4756,7 +4826,8 @@ void cppout_pred(string name, vector<Rule> rs)
 	//case 0:
 	out << "case "<< label++ << ":\n";
 
-	out << "state.states.resize(" << max_body_len << ");\n";
+	if(max_body_len)
+		out << "state.states.resize(" << max_body_len << ");\n";
 
 
 /*gonna do 3 loops here, */
@@ -4776,7 +4847,7 @@ void cppout_pred(string name, vector<Rule> rs)
 
 		out << "//rule " << i << ":\n";
 		//out << "// "<<<<":\n";
-		out << "case " << label << ":\n";
+		//out << "case " << label << ":\n";
 
 		out << "state.entry = " << ++label << ";\n";
 
@@ -4816,7 +4887,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		}
 		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
 		if (rule.head && has_body) {
-			out << "if (!find_ep(&ep" << i << ", state.s, state.o)){\n";
+			out << "if (!cppout_find_ep(&ep" << i << ", state.s, state.o)){\n";
 			out << "ep" << i << PUSH;
 		}
 		//if it's the query or a kb rule with non-empty body: (existing?)
