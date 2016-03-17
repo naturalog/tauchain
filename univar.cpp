@@ -409,7 +409,7 @@ static inline bool is_unbound(Thing x)
 	return x == 0;
 }
 
-#define is_var(thing) 		(typebits(thing) 	== 0b00)
+static bool is_var(Thing thing) {return typebits(thing) == 0b00;}
 #define is_node(thing) 		(typebits(thing) 	== 0b01)
 #define is_offset(thing) 	(typebits(thing) 	== 0b10)
 #define is_list(thing) 		(typebits(thing) 	== 0b11)
@@ -4776,10 +4776,36 @@ void cppout_consts(string name, vector<Rule> rs)
 }
 
 
+char unify_with_var(Thing * a, Thing * b)
+{
+    ASSERT(is_unbound(b));
+    
+    if (!are_equal(*a, *b))
+    {
+        if (is_unbound(*a))
+        {
+	    make_this_bound(a, b);
+	    return (0b101);
+        }
+        make_this_bound(b, a);
+        return (0b011);
+    }
+    return (0b001);
+}
+
+void unbind_from_var(char magic, Thing * __restrict__ a, Thing * __restrict__ b)
+{
+    if (magic & 0b100)
+	make_this_unbound(a);
+    if (magic & 0b010)
+	make_this_unbound(b);
+}
 
 
 bool unify_with_const(Thing * a, Thing * b)
 {
+    ASSERT(!is_bound(a));
+
     if (are_equal(*a, *b))
 	return true;
     if (is_unbound(*a))
@@ -4793,7 +4819,8 @@ bool unify_with_const(Thing * a, Thing * b)
 	
 void unbind_from_const(Thing *x)
 {
-	if (is_bound(*x))
+        ASSERT(!is_unbound(x));
+	if (is_var(*x))
 		make_this_unbound(x);
 }
 
@@ -4815,9 +4842,12 @@ void cppout_pred(string name, vector<Rule> rs)
 			max_body_len = rule.body->size();
 	}
 
-	if (name == "query")
+	if (name == "cppout_query")
 			out << "static int counter = 0;\n";
 
+
+	out << "char uuus;(void)uuus;\n";
+	out << "char uuuo;(void)uuuo;\n";
 
 	int label = 0;
 
@@ -4849,7 +4879,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		//out << "// "<<<<":\n";
 		//out << "case " << label << ":\n";
 
-		out << "state.entry = " << ++label << ";\n";
+		out << "state.entry = " << label << ";\n";
 
 		locals_map lm, cm;
 		Locals locals_template;
@@ -4862,27 +4892,41 @@ void cppout_pred(string name, vector<Rule> rs)
 		//if it's a kb rule and not the query then we'll
 		//make join'd unify-coros for the subject & object of the head
 		
-		PredParam hsk, hok;
-		pos_t hs, ho; // indexes of head subject and object in locals
+		PredParam hsk, hok; //key
+		ThingType hst, hot; //type
+		pos_t hsi, hoi;     //index
 		
 		if (rule.head) {
-			hsk = find_thing(dict[rule.head->subj], hs, lm, cm);//sets hs
-			hok = find_thing(dict[rule.head->object], ho, lm, cm);
 
-
-			if (hsk == CONST)
-				out << "if (unify_with_const(state.s, " << param(hsk, hs, name, i) << ")){\n";
-			else
+			hsk = find_thing(dict[rule.head->subj], hsi, lm, cm);//sets hs
+			hok = find_thing(dict[rule.head->object], hoi, lm, cm);
+			hst = get_type(fetch_thing(dict[rule.head->subj  ], locals_template, consts, lm, cm));
+			hot = get_type(fetch_thing(dict[rule.head->object], locals_template, consts, lm, cm));
+			
+			if (hst == NODE)
+				out << "if (unify_with_const(state.s, " << param(hsk, hsi, name, i) << ")){\n";
+			else if (hst == UNBOUND)
 			{
-				out << "state.suc = unify(state.s, " << param(hsk, hs, name, i) << ");\n";
-				out << "if(state.suc()){\n";
+				out << "uuus = unify_with_var(state.s, " << param(hsk, hsi, name, i) << ");\n";
+				out << "if (uuus & 1){ state.su.magic = uuus;\n";
 			}
-			if (hok == CONST)
-				out << "if (unify_with_const(state.o, " << param(hok, ho, name, i) << ")){\n";
 			else
 			{
-				out << "state.ouc = unify(state.o, " << param(hok, ho, name, i) << ");\n";
-				out << "if(state.ouc()){\n";
+				out << "state.su.c = unify(state.s, " << param(hsk, hsi, name, i) << ");\n";
+				out << "if(state.su.c()){\n";
+			}
+
+			if (hot == NODE)
+				out << "if (unify_with_const(state.o, " << param(hok, hoi, name, i) << ")){\n";
+			else if (hot == UNBOUND)
+			{
+				out << "uuuo = unify_with_var(state.o, " << param(hok, hoi, name, i) << ");\n";
+				out << "if (uuuo & 1){ state.ou.magic = uuuo;\n";
+			}
+			else
+			{
+				out << "state.ou.c = unify(state.o, " << param(hok, hoi, name, i) << ");\n";
+				out << "if(state.ou.c()){\n";
 			}
 		}
 		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
@@ -4927,7 +4971,7 @@ void cppout_pred(string name, vector<Rule> rs)
 			}
 		}
 
-		if (name == "query") {
+		if (name == "cppout_query") {
 		//would be nice to also write out the head of the rule, and do this for all rules, not just query
 			//out << "if (!(counter & 0b11111111111))";
 			out << "{dout << \"RESULT \" << counter << \": \";\n";
@@ -4954,7 +4998,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		}
 
 
-		if (name == "query")
+		if (name == "cppout_query")
 			out << "counter++;\n";
 
 
@@ -4979,15 +5023,19 @@ void cppout_pred(string name, vector<Rule> rs)
 			out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
 
 		if (rule.head) {
-			if (hok == CONST)
+			if (hot == NODE)
 				out << "unbind_from_const(state.o);\n";
+			else if (hot == UNBOUND)
+				out << "unbind_from_var(state.ou.magic, state.o, " << param(hok, hoi, name, i) << ");\n";
 			else
-				out << "state.ouc();//unbind\n";
+				out << "state.ou.c();//unbind\n";
 			out << "}\n";
-			if (hsk == CONST)
+			if (hst == NODE)
 				out << "unbind_from_const(state.s);\n";
+			else if (hst == UNBOUND)
+				out << "unbind_from_var(state.su.magic, state.s, " << param(hsk, hsi, name, i) << ");\n";
 			else
-				out << "state.suc();//unbind\n";
+				out << "state.su.c();//unbind\n";
 			out << "}\n";
 		}
 		i++;
@@ -5006,11 +5054,12 @@ void yprover::cppout(qdb &goal)
 
 	out << "#include \"globals.cpp\"\n";
 	out << "#include \"univar.cpp\"\n";
+	out << "union unbinder{coro c; char magic; unbinder(){} unbinder(const unbinder&u){} ~unbinder(){}};\n";
 	out << "struct cpppred_state;\n";
 	out << "struct cpppred_state {\n"
 		"int entry=0;\n"
 		"vector<Thing> locals;\n"
-		"coro suc,ouc;\n"
+		"unbinder su,ou;\n"
 		"Thing *s, *o;\n"
 		"vector<cpppred_state> states;\n};\n"
 				   ""
@@ -5037,7 +5086,7 @@ void yprover::cppout(qdb &goal)
 	collect_lists();
 
 	//query is baked in for now
-	cppout_pred  ("query", {Rule(0, qit->second)});
+	cppout_pred  ("cppout_query", {Rule(0, qit->second)});
 
 
 

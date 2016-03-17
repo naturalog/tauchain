@@ -60,7 +60,10 @@ valgrind --tool=callgrind  \
                                     --collect-systime=yes \
                                     --collect-bus=yes \
                                     --branch-sim=yes \
+                                    --zero-before=cppout_query \
                                     --cache-sim=yes ./cppout
+
+
 
   ./tau   --silence addrules --silence readcurly --silence quad::ctor --silence N3  --level 1 --limit 10 < tests/speed/2
 
@@ -99,4 +102,9 @@ env ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.6  \
                                                             --silence addrules --silence readcurly --silence quad::ctor --silence N3 \
                                                             --nocolor --level 111  \
                                                             --builtins --limit 10 run tests/tbd/equivalence.tau    | vis/chew-it.py > ~/new_shit/kbdbg.json 
+                                                            
+                                                            
+
+objdump -dSC ttt.o
+
                                                             

@@ -6,7 +6,7 @@ int main ( int argc, char** argv){
 	cpppred_state state;
 	do
 	{
-		query(state);
+		cppout_query(state);
 		if(state.entry == -1){ dout << "done" << endl; break;}
 	}
 	while(true);
