@@ -107,4 +107,19 @@ env ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-3.6  \
 
 objdump -dSC ttt.o
 
+
+
+
+valgrind --tool=callgrind  \
+                                 --dump-instr=yes \
+                                 --dump-line=yes \
+                                 --simulate-cache=yes \
+                                 --collect-jumps=yes \
+                                 --collect-systime=yes \
+                                 --collect-bus=yes \
+                                 --branch-sim=yes  \
+                                 --cache-sim=yes \
+               --zero-before="cppout_query(cpppred_state&)" \
+               --dump-after="main*" \
+                                 ./cppout
                                                             
