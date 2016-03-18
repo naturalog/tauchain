@@ -5087,6 +5087,29 @@ void unbind_NODE_from_NODE(Thing *a , const Thing *b)
 
 
 
+/*if its a constant its known. if its a var its only known if its its first occurence*/
+bool known(ThingType bist, nodeid s, Rule &rule, int j)
+{
+	bool sknown = true;
+						if (bist == UNBOUND)
+						{
+							if (s == dict[rule.head->subj])
+								sknown = false;
+							if (s == dict[rule.head->object])
+								sknown = false;
+							int ccc=0;
+							for (pquad mybi: *rule.body) {
+								if (j == ccc++) break;
+								if (s == dict[mybi->subj])
+									sknown = false;
+								if (s == dict[mybi->object])
+									sknown = false;
+							}
+						}
+						else assert(bist == NODE);
+	return sknown;
+}
+
 
 
 
@@ -5121,20 +5144,23 @@ void unrolled_cppout_pred(string name, vector<Rule> rs)
 	out << "switch(state.entry){\n";
 
 	//case 0:
-	out << "case "<< label++ << ":\n";
+	out << "case 0:\n";
 
 	if(max_body_len)
 		out << "state.states.resize(" << max_body_len << ");\n";
+	
+	
+out << "if(is_unbound(*state.s)) goto UNBOUNDX;"
+        "else goto NODEX;"
+       "case 1:UNBOUNDX:"
+        "if(is_unbound(*state.o)) goto UNBOUNDUNBOUND;"
+        "else goto UNBOUNDNODE;"
+       "case 2:NODEX:"
+        "if(is_unbound(*state.o)) goto NODEUNBOUND;"
+        "else goto NODENODE;";
 
+	label = 3;
 
-
-	out <<  "if(is_unbound(*state.s)){"
-			"if(is_unbound(*state.o)) goto UNBOUNDUNBOUND;"
-			"else {ASSERT(is_node(*state.o)); goto UNBOUNDNODE;}"
-		"} else { "
-			"ASSERT(is_node(*state.s));"
-			"if(is_unbound(*state.o)) goto NODEUNBOUND;"
-			"else {ASSERT(is_node(*state.o)); goto NODENODE;}}";
 
 	
 	
@@ -5145,7 +5171,8 @@ void unrolled_cppout_pred(string name, vector<Rule> rs)
 	for (auto ooo: ttt)
 	{
 		out << ThingTypeNames.at(sss) << ThingTypeNames.at(ooo) << ":";
-		
+		out << "case " << label++ << ":";
+	
 		
 		
 		
@@ -5225,7 +5252,6 @@ void unrolled_cppout_pred(string name, vector<Rule> rs)
 				ss << "state.states[" << j << "]";
 				string substate = ss.str();
 
-				out << substate << ".entry = 0;\n";
 
 				//set up the subject and object
 				pos_t i1, i2;//s and o positions
@@ -5235,15 +5261,72 @@ void unrolled_cppout_pred(string name, vector<Rule> rs)
 				sk = find_thing(s, i1, lm, cm);
 				ok = find_thing(o, i2, lm, cm);
 
+
 				out << substate << ".s = getValue(" <<
 						param(sk, i1, name, i) << ");\n";
 				out << substate << ".o = getValue(" <<
 						param(ok, i2, name, i) << ");\n";
 
-				out << "do{\n";
+
+
+
+
 
 				if (has(rules, dict[bi->pred]))
+				{
+
+					
+					int label = 0;
+					
+					
+					
+				
+					bool noinit = true;
+					for (auto r: rules[dict[bi->pred]])
+						if (r.body && r.body->size())
+							noinit = false;
+					
+					if (noinit)
+					{
+					
+
+						ThingType bist = get_type(fetch_thing(s, locals_template, consts, lm, cm));
+						ThingType biot = get_type(fetch_thing(o, locals_template, consts, lm, cm));
+						
+						
+						bool sknown = known(bist, s, rule, j);
+						bool oknown = known(biot, o, rule, j);
+						
+						int section;
+						if (bist == UNBOUND && biot == UNBOUND)
+							section = 0;
+						if (bist == UNBOUND && biot == NODE)
+							section = 1;
+						if (bist == NODE && biot == UNBOUND)
+							section = 2;
+						if (bist == NODE && biot == NODE)
+							section = 3;
+							
+						label = 3+section*(rules[dict[bi->pred]].size()+1);
+				
+						if(!oknown)
+						{
+							if (bist == UNBOUND)
+								label = 1;
+							else label = 2;
+						}
+						if(!sknown)
+							label = 0;
+					}
+
+
+					out << substate << ".entry = " << label << ";\n";
+	
+					out << "do{\n";
+				
+				
 					out << predname(dict[bi->pred]) << "_unrolled(" << substate << ");\n";
+				}
 				else
 					out << substate << ".entry = -1;\n";
 
