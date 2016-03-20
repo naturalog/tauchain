@@ -921,6 +921,8 @@ string str(const Thing *_x)
 			r << str(_x + offset);
 			return r.str();
 		}
+		default:
+			return "banana";
 	}
 	ASSERT(false);
 }
@@ -1031,8 +1033,6 @@ coro unboundunifycoro(Thing * me, Thing *arg
 		FUN;
 		TRACE(dout << "!Bound" << endl;)
 		
-		
-		
 		Thing *argv = getValue(arg);
 		//TRACE(dout << "unify with [" << argv << "]" << str(argv) << endl;)
 
@@ -1079,6 +1079,9 @@ coro unboundunifycoro(Thing * me, Thing *arg
 			, origa, origb
 			#endif
 			]() mutable {
+
+		dout << "wat" << endl;
+		
 				setproc("var unify lambda");
 				//TRACE(dout << "entry = " << (int)entry << endl)
 				TRACE_ENTRY; //TRCENTRY
@@ -4824,13 +4827,19 @@ void unbind_from_const(Thing *x)
 		make_this_unbound(x);
 }
 
-
+string preddect(string name)
+{
+	stringstream ss;
+	ss << "static int " << name << "(cpppred_state & __restrict__ state, int entry)";
+	return ss.str();
+}
 
 void cppout_pred(string name, vector<Rule> rs)
 {
 	cppout_consts(name, rs);
 
-	out << "static void " << name << "(cpppred_state & __restrict__ state){\n";
+	out << "\n" << preddect(name);
+	out << "{\n";
 	for (pos_t i = 0; i < rs.size(); i++) {
 		if (rs[i].head && rs[i].body && rs[i].body->size())
 			out << "static ep_t ep" << i << ";\n";
@@ -4841,6 +4850,10 @@ void cppout_pred(string name, vector<Rule> rs)
 		if (rule.body && max_body_len < rule.body->size())
 			max_body_len = rule.body->size();
 	}
+	
+	for (size_t j = 0; j < max_body_len; j++)
+		out << "int entry" << j << ";\n";
+
 
 	if (name == "cppout_query")
 			out << "static int counter = 0;\n";
@@ -4852,7 +4865,7 @@ void cppout_pred(string name, vector<Rule> rs)
 
 	int label = 0;
 
-	out << "switch(state.entry){\n";
+	out << "switch(entry){\n";
 
 	//case 0:
 	out << "case "<< label++ << ":\n";
@@ -4930,7 +4943,7 @@ void cppout_pred(string name, vector<Rule> rs)
 			out << "ep" << i << PUSH;
 		}
 
-		out << "state.entry = " << label << ";\n";
+		out << "entry = " << label << ";\n";
 
 
 		//if it's the query or a kb rule with non-empty body: (existing?)
@@ -4938,12 +4951,13 @@ void cppout_pred(string name, vector<Rule> rs)
 			size_t j = 0;
 			for (pquad bi: *rule.body) {
 				out << "//body item" << j << "\n";
+				out << "entry" << j << " = 0;\n";
 
 				stringstream ss;
 				ss << "state.states[" << j << "]";
 				string substate = ss.str();
 
-				out << substate << ".entry = 0;\n";
+				
 
 				//set up the subject and object
 				pos_t i1, i2;//s and o positions
@@ -4961,11 +4975,11 @@ void cppout_pred(string name, vector<Rule> rs)
 				out << "do{\n";
 
 				if (has(rules, dict[bi->pred]))
-					out << predname(dict[bi->pred]) << "(" << substate << ");\n";
+					out << "entry" << j << "=" << predname(dict[bi->pred]) << "(" << substate << ", entry" << j << ");\n";
 				else
-					out << substate << ".entry = -1;\n";
+					out << "entry" << j << " = -1;\n";
 
-				out << "if(" << substate << ".entry == -1) break;\n";
+				out << "if(" << "entry" << j << " == -1) break;\n";
 				j++;
 			}
 		}
@@ -5006,8 +5020,30 @@ void cppout_pred(string name, vector<Rule> rs)
 		}
 
 
-		out << "return;\n";
+		if(has_body) {
+			size_t j = 0;
+			for (pquad bi: *rule.body) {
+				stringstream ss;
+				ss << "state.states[" << j << "]";
+				string substate = ss.str();
+				out << substate << ".entry = " << "entry" << j++ << ";\n";
+			}
+		}
+
+
+		out << "return entry;\n";
 		out << "case " << label++ << ":;\n";
+		
+		
+		if(has_body) {
+			size_t j = 0;
+			for (pquad bi: *rule.body) {
+				stringstream ss;
+				ss << "state.states[" << j << "]";
+				string substate = ss.str();
+				out << "entry" << j++ << " = " << substate << ".entry;\n";
+			}
+		}
 
 
 		if (rule.head && has_body) {
@@ -5039,7 +5075,7 @@ void cppout_pred(string name, vector<Rule> rs)
 		}
 		i++;
 	}
-	out << "}state.entry = -1;}\n\n";
+	out << "}return -1;}\n\n";
 }
 
 
@@ -5426,7 +5462,7 @@ void yprover::cppout(qdb &goal)
 
 	out << "#include \"globals.cpp\"\n";
 	out << "#include \"univar.cpp\"\n";
-	out << "union unbinder{coro c; char magic; unbinder(){} unbinder(const unbinder&u){} ~unbinder(){}};\n";
+	out << "union unbinder{coro c; char magic; unbinder(){} unbinder(const unbinder&u){(void)u;} ~unbinder(){}};\n";
 	out << "struct cpppred_state;\n";
 	out << "struct cpppred_state {\n"
 		"int entry=0;\n"
@@ -5438,23 +5474,31 @@ void yprover::cppout(qdb &goal)
 				   ""
 				   ;
 
+	auto unroll = 0;
+
+
 	out << "/* forward declarations */\n";
 	for(auto x: rules) {
-		out << "static void " << predname(x.first) << "(cpppred_state &state);";
+		out << preddect(predname(x.first)) << ";\n";
+		if(unroll)
+		{
 		stringstream ss;
 		ss << predname(x.first) << "_unrolled";
 		out << "static void " << predname(x.first) << "_unrolled(cpppred_state &state);";
+		}
 
 	}
 
 
-	auto unroll = 0;
 	out << "/* pred function definitions */\n";
 	for(auto x: rules) {
 		cppout_pred(predname(x.first), x.second);
+		if(unroll)
+		{
 		stringstream ss;
 		ss << predname(x.first) << "_unrolled";
 		unrolled_cppout_pred(ss.str(), x.second);
+		}
 	}
 
 
