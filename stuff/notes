@@ -122,4 +122,12 @@ valgrind --tool=callgrind  \
                --zero-before="cppout_query(cpppred_state&)" \
                --dump-after="main*" \
                                  ./cppout
+
+
+
+
+cp cppout cppout_(date +"%y%m%d_%H%M%S_%a")
+
+
+ls -trlhs
                                                             

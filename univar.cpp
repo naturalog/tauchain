@@ -932,6 +932,17 @@ string str(const Thing *_x)
 //not sure what this does
 static Thing *getValue (Thing *_x) __attribute__ ((pure));
 
+
+
+#define getValue_profile
+#ifdef getValue_profile
+int getValue_BOUNDS = 0;
+int getValue_OFFSETS = 0;
+int getValue_OTHERS = 0;
+#endif
+
+
+
 //This seems to be suitable for tail-recursion optimization.
 static Thing *getValue (Thing *_x)
 	/*
@@ -960,18 +971,104 @@ static Thing *getValue (Thing *_x)
 
 	Thing x = *_x;
 
+
+/*
+	if (is_unbound(x) || is_node(x))
+	{
+		#ifdef getValue_profile
+			getValue_OTHERS++;
+		#endif
+		return _x;
+	}
+	else
+	if (is_bound(x))
+		{
+		
+			#ifdef getValue_profile
+				getValue_BOUNDS++;
+			#endif
+
+			Thing * thing = get_thing(x);
+			ASSERT(thing);
+			return getValue(thing);
+	
+		}
+	}
+	else
+	{
+		ASSERT(is_offset(x));
+		#ifdef getValue_profile
+			getValue_OFFSETS++;
+		#endif
+		const offset_t offset = get_offset(x);
+		Thing * z = _x + offset;
+		return getValue(z);
+	}
+
+*/
+
+/*
+	if (!is_offset(x))
+	{
+		if (!is_bound(x))
+		{
+			#ifdef getValue_profile
+				getValue_OTHERS++;
+			#endif
+			return _x;
+		}
+		else
+		{
+		
+			#ifdef getValue_profile
+				getValue_BOUNDS++;
+			#endif
+
+			Thing * thing = get_thing(x);
+			ASSERT(thing);
+			return getValue(thing);
+	
+		}
+	}
+	else
+	{
+		ASSERT(is_offset(x));
+		#ifdef getValue_profile
+			getValue_OFFSETS++;
+		#endif
+		const offset_t offset = get_offset(x);
+		Thing * z = _x + offset;
+		return getValue(z);
+	}
+	assert(false);
+
+*/
+	
+
 	//Is a bound variable, return the value of it's value.
 	if (is_bound(x)) {
+		#ifdef getValue_profile
+		getValue_BOUNDS++;
+		#endif
 		//get the pointer
 		Thing * thing = get_thing(x);
 		ASSERT(thing);
 		//and recurse
 		return getValue(thing);
 	}
-
-	//Need to understand this whole offset thing better
-	else if (is_offset(x))
-	{
+	else if (!is_offset(x))
+	{	//Is either an unbound variable or a value.
+		#ifdef getValue_profile
+		getValue_OTHERS++;
+		#endif
+		return _x;
+	}
+	else
+	{	
+		ASSERT(is_offset(x));
+		#ifdef getValue_profile
+		getValue_OFFSETS++;
+		#endif
 		//Thing of type offset is used for the 2nd or later occurrence
 		// of a local variable in a
 		//rule; it will store a value offset of type offset_t. 
@@ -999,9 +1096,6 @@ static Thing *getValue (Thing *_x)
 		//and recurse
 		return getValue(z);
 	}
-	//Is either an unbound variable or a value.
-	else
-		return _x;
 }
 
 

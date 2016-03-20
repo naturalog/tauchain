@@ -14,7 +14,7 @@ def z(x):
 
 def run(c):
         a=dt.utcnow()
-        if os.system(c + " > /dev/null") != 0: exit()
+        if os.system("" + c + " > /dev/null") != 0: exit()
         d=dt.utcnow() - a
         return d
         
