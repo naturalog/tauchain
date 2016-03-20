@@ -4642,6 +4642,66 @@ void yprover::cppout(qdb &goal)
 #ifdef CPPOUT2
 
 
+
+
+
+/*
+
+const static Thing *const_getValue (const Thing *_x)
+
+	ASSERT(_x);
+
+	const Thing x = *_x;
+
+	//Is a bound variable, return the value of it's value.
+	if (is_bound(x)) {
+		//get the pointer
+		Thing * thing = get_thing(x);
+		ASSERT(thing);
+		//and recurse
+		return const_getValue(thing);
+	}
+
+	//Need to understand this whole offset thing better
+	else if (is_offset(x))
+	{
+		//Thing of type offset is used for the 2nd or later occurrence
+		// of a local variable in a
+		//rule; it will store a value offset of type offset_t. 
+
+		////This is the offset from the pointer to the Thing representing 
+		////this instance of a local variable to the pointer to it's 
+		////"representative", which will be labeled either bound or 
+		////unbound.
+		
+		//its an offset from the address of the offset to where the 
+		//value is
+		
+		//get the number
+		const offset_t offset = get_offset(x);
+		//add it to the current address
+		const Thing * z = _x + offset;
+		
+		
+		//Why do we bind here? We already have _x as offset to z
+		//this is an attempt at optimization so that the second time
+		//we look at this, it will be a variable, which should be 
+		//followed faster than the offset
+		//make_this_bound(_x, z);
+		
+		//and recurse
+		return const_getValue(z);
+	}
+	//Is either an unbound variable or a value.
+	else
+		return _x;
+}
+
+
+
+*/
+
+
 bool cppout_would_unify(const Thing *old_, const Thing *now_)
 {
 	FUN;
@@ -4834,6 +4894,20 @@ string preddect(string name)
 	return ss.str();
 }
 
+
+string maybe_getval(ThingType t, string what)
+{
+	stringstream ss;
+	bool yes = (t != NODE);
+	if (yes)
+		ss << "getValue(";
+	ss << what;
+	if (yes)
+		ss << ")";
+	return ss.str();
+}
+	
+
 void cppout_pred(string name, vector<Rule> rs)
 {
 	cppout_consts(name, rs);
@@ -4960,17 +5034,20 @@ void cppout_pred(string name, vector<Rule> rs)
 				
 
 				//set up the subject and object
-				pos_t i1, i2;//s and o positions
+				pos_t i1, i2; //positions
 				nodeid s = dict[bi->subj];
 				nodeid o = dict[bi->object];
 				PredParam sk, ok;
 				sk = find_thing(s, i1, lm, cm);
 				ok = find_thing(o, i2, lm, cm);
+				ThingType bist = get_type(fetch_thing(s, locals_template, consts, lm, cm));
+				ThingType biot = get_type(fetch_thing(o, locals_template, consts, lm, cm));
 
-				out << substate << ".s = getValue(" <<
-						param(sk, i1, name, i) << ");\n";
-				out << substate << ".o = getValue(" <<
-						param(ok, i2, name, i) << ");\n";
+
+				out << substate << ".s = " << 
+					maybe_getval(bist, param(sk, i1, name, i)) << ";\n";
+				out << substate << ".o = " << 
+					maybe_getval(biot, param(ok, i2, name, i)) << ";\n";
 
 				out << "do{\n";
 
@@ -5085,373 +5162,6 @@ void cppout_pred(string name, vector<Rule> rs)
 
 
 
-bool unify_UNBOUND_with_UNBOUND(Thing *a , const Thing *b)
-{
-	ASSERT(is_unbound(*a));
-	make_this_bound(a, b);
-	return true;
-}
-bool unify_UNBOUND_with_NODE(Thing *a , const Thing *b)
-{
-	ASSERT(is_unbound(*a));
-	make_this_bound(a, b);
-	return true;
-}
-bool unify_NODE_with_NODE(Thing *a , const Thing *b)
-{
-	return are_equal(*a , *b);
-}
-bool unify_NODE_with_UNBOUND(const Thing *a , Thing *b)
-{
-	make_this_bound(b, a);
-	return true;
-}
-void unbind_UNBOUND_from_UNBOUND(Thing *a , const Thing *b)
-{
-	make_this_unbound(a);(void)b;
-}
-void unbind_UNBOUND_from_NODE(Thing *a , const Thing *b)
-{
-	make_this_unbound(a);(void)b;
-}
-void unbind_NODE_from_UNBOUND(const Thing *a , Thing *b)
-{
-	make_this_unbound(b);(void)a;
-}
-void unbind_NODE_from_NODE(Thing *a , const Thing *b)
-{
-	(void)a;(void)b;
-}
-
-
-
-/*if its a constant its known. if its a var its only known if its its first occurence*/
-bool known(ThingType bist, nodeid s, Rule &rule, int j)
-{
-	bool sknown = true;
-						if (bist == UNBOUND)
-						{
-							if (s == dict[rule.head->subj])
-								sknown = false;
-							if (s == dict[rule.head->object])
-								sknown = false;
-							int ccc=0;
-							for (pquad mybi: *rule.body) {
-								if (j == ccc++) break;
-								if (s == dict[mybi->subj])
-									sknown = false;
-								if (s == dict[mybi->object])
-									sknown = false;
-							}
-						}
-						else assert(bist == NODE);
-	return sknown;
-}
-
-
-
-
-void unrolled_cppout_pred(string name, vector<Rule> rs)
-{
-	cppout_consts(name, rs);
-
-	out << "static void " << name << "(cpppred_state & __restrict__ state){\n";
-	for (pos_t i = 0; i < rs.size(); i++) {
-		if (rs[i].head && rs[i].body && rs[i].body->size())
-			out << "static ep_t ep" << i << ";\n";
-	}
-
-	const string PUSH = ".push_back(thingthingpair(state.s, state.o));\n";
-
-
-	size_t max_body_len = 0;
-	for (auto rule:rs) {
-		if (rule.body && max_body_len < rule.body->size())
-			max_body_len = rule.body->size();
-	}
-
-	if (name == "cppout_query")
-			out << "static int counter = 0;\n";
-
-
-	out << "char uuus;(void)uuus;\n";
-	out << "char uuuo;(void)uuuo;\n";
-
-	int label = 0;
-
-	out << "switch(state.entry){\n";
-
-	//case 0:
-	out << "case 0:\n";
-
-	if(max_body_len)
-		out << "state.states.resize(" << max_body_len << ");\n";
-	
-	
-out << "if(is_unbound(*state.s)) goto UNBOUNDX;"
-        "else goto NODEX;"
-       "case 1:UNBOUNDX:"
-        "if(is_unbound(*state.o)) goto UNBOUNDUNBOUND;"
-        "else goto UNBOUNDNODE;"
-       "case 2:NODEX:"
-        "if(is_unbound(*state.o)) goto NODEUNBOUND;"
-        "else goto NODENODE;";
-
-	label = 3;
-
-
-	
-	
-	const vector<ThingType> ttt = {UNBOUND, NODE};
-	
-	for (auto sss: ttt)
-	{
-	for (auto ooo: ttt)
-	{
-		out << ThingTypeNames.at(sss) << ThingTypeNames.at(ooo) << ":";
-		out << "case " << label++ << ":";
-	
-		
-		
-		
-
-
-	int i = 0;
-	//loop over all kb rules for the pred
-	for (Rule rule:rs)
-	{
-		bool has_body = rule.body && rule.body->size();
-
-		out << "//rule " << i << ":\n";
-		//out << "// "<<<<":\n";
-		
-
-
-		locals_map lm, cm;
-		Locals locals_template;
-		Locals consts;
-		make_locals(locals_template, consts, lm, cm, rule.head, rule.body, false);
-
-		if(locals_template.size())
-			out << "state.locals = " << things_literals(locals_template) << ";\n";
-
-		//if it's a kb rule and not the query then we'll
-		//make join'd unify-coros for the subject & object of the head
-		
-		PredParam hsk, hok; //key
-		ThingType hst, hot; //type
-		pos_t hsi, hoi;     //index
-		
-		if (rule.head) {
-
-			hsk = find_thing(dict[rule.head->subj], hsi, lm, cm);//sets hs
-			hok = find_thing(dict[rule.head->object], hoi, lm, cm);
-			hst = get_type(fetch_thing(dict[rule.head->subj  ], locals_template, consts, lm, cm));
-			hot = get_type(fetch_thing(dict[rule.head->object], locals_template, consts, lm, cm));
-			
-			
-			if (sss != UNBOUND && hst != UNBOUND)
-				out << "if (";
-			out << "unify_" << ThingTypeNames[sss] << "_with_" << ThingTypeNames[hst];
-			out << "(state.s, " << param(hsk, hsi, name, i) << ")";
-			if (sss != UNBOUND && hst != UNBOUND)
-				out << ")";
-			else
-				out << ";";
-			out << "{\n";
-			
-			if (ooo != UNBOUND && hot != UNBOUND)
-				out << "if (";
-			out << "unify_" << ThingTypeNames[ooo] << "_with_" << ThingTypeNames[hot];
-			out << "(state.o, " << param(hok, hoi, name, i) << ")";
-			if (ooo != UNBOUND && hot != UNBOUND)
-				out << ")";
-			else
-				out << ";";
-			out << "{\n";	
-
-
-		}
-		//if it's a kb rule (not the query) with non-empty body, then after the suc/ouc coros succeed, we'll check to see if there's an ep-hit
-		if (rule.head && has_body) {
-			out << "if (!cppout_find_ep(&ep" << i << ", state.s, state.o)){\n";
-			out << "ep" << i << PUSH;
-		}
-
-		out << "state.entry = " << label << ";\n";
-
-		//if it's the query or a kb rule with non-empty body: (existing?)
-		if(has_body) {
-			size_t j = 0;
-			for (pquad bi: *rule.body) {
-				out << "//body item" << j << "\n";
-
-				stringstream ss;
-				ss << "state.states[" << j << "]";
-				string substate = ss.str();
-
-
-				//set up the subject and object
-				pos_t i1, i2;//s and o positions
-				nodeid s = dict[bi->subj];
-				nodeid o = dict[bi->object];
-				PredParam sk, ok;
-				sk = find_thing(s, i1, lm, cm);
-				ok = find_thing(o, i2, lm, cm);
-
-
-				out << substate << ".s = getValue(" <<
-						param(sk, i1, name, i) << ");\n";
-				out << substate << ".o = getValue(" <<
-						param(ok, i2, name, i) << ");\n";
-
-
-
-
-
-
-				if (has(rules, dict[bi->pred]))
-				{
-
-					
-					int label = 0;
-					
-					
-					
-				
-					bool noinit = true;
-					for (auto r: rules[dict[bi->pred]])
-						if (r.body && r.body->size())
-							noinit = false;
-					
-					if (noinit)
-					{
-					
-
-						ThingType bist = get_type(fetch_thing(s, locals_template, consts, lm, cm));
-						ThingType biot = get_type(fetch_thing(o, locals_template, consts, lm, cm));
-						
-						
-						bool sknown = known(bist, s, rule, j);
-						bool oknown = known(biot, o, rule, j);
-						
-						int section;
-						if (bist == UNBOUND && biot == UNBOUND)
-							section = 0;
-						if (bist == UNBOUND && biot == NODE)
-							section = 1;
-						if (bist == NODE && biot == UNBOUND)
-							section = 2;
-						if (bist == NODE && biot == NODE)
-							section = 3;
-							
-						label = 3+section*(rules[dict[bi->pred]].size()+1);
-				
-						if(!oknown)
-						{
-							if (bist == UNBOUND)
-								label = 1;
-							else label = 2;
-						}
-						if(!sknown)
-							label = 0;
-					}
-
-
-					out << substate << ".entry = " << label << ";\n";
-	
-					out << "do{\n";
-				
-				
-					out << predname(dict[bi->pred]) << "_unrolled(" << substate << ");\n";
-				}
-				else
-					out << substate << ".entry = -1;\n";
-
-				out << "if(" << substate << ".entry == -1) break;\n";
-				j++;
-			}
-		}
-
-		if (name == "cppout_query") {
-		//would be nice to also write out the head of the rule, and do this for all rules, not just query
-			//out << "if (!(counter & 0b11111111111))";
-			out << "{dout << \"RESULT \" << counter << \": \";\n";
-			ASSERT(rule.body);
-			for (pquad bi: *rule.body) {
-				pos_t i1, i2;//s and o positions
-				nodeid s = dict[bi->subj];
-				nodeid o = dict[bi->object];
-				PredParam sk, ok;
-				sk = find_thing(s, i1, lm, cm);
-				ok = find_thing(o, i2, lm, cm);
-
-
-				out << "{Thing * bis, * bio;\n";
-				out << "bis = getValue(" << param(sk, i1, name, i) << ");\n";
-				out << "bio = getValue(" << param(ok, i2, name, i) << ");\n";
-
-				out << "Thing n1; if (is_unbound(*bis)) {bis = &n1; n1 = create_node(" << ensure_cppdict(dict[bi->subj]) << ");};\n";
-				out << "Thing n2; if (is_unbound(*bio)) {bio = &n2; n2 = create_node(" << ensure_cppdict(dict[bi->object]) << ");};\n";
-
-				out << "dout << str(bis) << \" " << bi->pred->tostring() << " \" << str(bio) << \".\";};\n";
-			}
-			out << "dout << \"\\n\";}\n";
-		}
-
-
-		if (name == "cppout_query")
-			out << "counter++;\n";
-
-
-		if (rule.head && has_body) {
-			out << "ASSERT(ep" << i << ".size());\n ep" << i << ".pop_back();\n\n";
-		}
-
-
-		out << "return;\n";
-		out << "case " << label++ << ":;\n";
-
-
-		if (rule.head && has_body) {
-			out << "ep" << i << PUSH;
-		}
-
-		if(rule.body)
-			for (pos_t closing = 0; closing < rule.body->size(); closing++)
-				out << "}while(true);\n";
-
-		if (rule.head && has_body)
-			out << "ASSERT(ep" << i << ".size());\nep" << i << ".pop_back();\n}\n";
-
-		if (rule.head) {
-			out << "unbind_" << ThingTypeNames[ooo] << "_from_" << ThingTypeNames[hot];
-			out << "(state.o, " << param(hok, hoi, name, i) << " );}\n";
-			out << "unbind_" << ThingTypeNames[sss] << "_from_" << ThingTypeNames[hst];
-			out << "(state.s, " << param(hsk, hsi, name, i) << " );}\n";
-		}
-		i++;
-	}
-	out << "\nstate.entry = -1;return;\n\n";
-	
-	}}
-	
-	out << "}}";
-	
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -5482,25 +5192,12 @@ void yprover::cppout(qdb &goal)
 	out << "/* forward declarations */\n";
 	for(auto x: rules) {
 		out << preddect(predname(x.first)) << ";\n";
-		if(unroll)
-		{
-		stringstream ss;
-		ss << predname(x.first) << "_unrolled";
-		out << "static void " << predname(x.first) << "_unrolled(cpppred_state &state);";
-		}
-
 	}
 
 
 	out << "/* pred function definitions */\n";
 	for(auto x: rules) {
 		cppout_pred(predname(x.first), x.second);
-		if(unroll)
-		{
-		stringstream ss;
-		ss << predname(x.first) << "_unrolled";
-		unrolled_cppout_pred(ss.str(), x.second);
-		}
 	}
 
 
