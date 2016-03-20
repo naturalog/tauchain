@@ -1,6 +1,8 @@
 int main ( int argc, char** argv){
+	for (int x = 0; x < argc - 1; x++)
+		if (0==strcmp(argv[x+1], "silent"))
+			silent = true;
 	(void)argv;
-	assert(argc == 1);
 	dict.init();
 	cppdict_init();
 	cpppred_state state;

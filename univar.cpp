@@ -4987,7 +4987,8 @@ void cppout_pred(string name, vector<Rule> rs)
 		if (name == "cppout_query") {
 		//would be nice to also write out the head of the rule, and do this for all rules, not just query
 			//out << "if (!(counter & 0b11111111111))";
-			out << "{dout << \"RESULT \" << counter << \": \";\n";
+			out << "{";
+			out << "if (!silent) dout << \"RESULT \" << counter << \": \";\n";
 			ASSERT(rule.body);
 			for (pquad bi: *rule.body) {
 				pos_t i1, i2;//s and o positions
@@ -5005,10 +5006,11 @@ void cppout_pred(string name, vector<Rule> rs)
 				out << "Thing n1; if (is_unbound(*bis)) {bis = &n1; n1 = create_node(" << ensure_cppdict(dict[bi->subj]) << ");};\n";
 				out << "Thing n2; if (is_unbound(*bio)) {bio = &n2; n2 = create_node(" << ensure_cppdict(dict[bi->object]) << ");};\n";
 
-				out << "dout << str(bis) << \" " << bi->pred->tostring() << " \" << str(bio) << \".\";};\n";
+				out << "if (!silent) dout << str(bis) << \" " << bi->pred->tostring() << " \" << str(bio) << \".\";};\n";
 			}
-			out << "dout << \"\\n\";}\n";
+			out << "if (!silent) dout << \"\\n\";}\n";
 		}
+		
 
 
 		if (name == "cppout_query")
@@ -5471,7 +5473,7 @@ void yprover::cppout(qdb &goal)
 		"Thing *s, *o;\n"
 		"vector<cpppred_state> states;\n};\n"
 				   ""
-				   ""
+				   "bool silent = false;"
 				   ;
 
 	auto unroll = 0;
