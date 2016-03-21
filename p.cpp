@@ -359,7 +359,8 @@ public:
 		return mkterm(dict[iri]);
 	}
 
-	term* readbnode() { SKIPWS; if (*s != L'_' || *(s+1) != L':') return 0; PROCEED; return mkterm(dict[wstrim(t)]); } 
+	term* readbnode() { SKIPWS; if (*s != L'_' || *(s+1) != L':') return 0; PROCEED; return mkterm(dict[wstrim(t)]); }
+
 	term* readvar() { SKIPWS; RETIFN(L'?'); PROCEED; return mkterm(dict[wstrim(t)]); }
 
 	term* readlit() {
@@ -380,6 +381,7 @@ public:
 		t[pos] = 0; pos = 0;
 		string t1 = t;
 //boost::replace_all(t1, L"\\\\", L"\\");
+
 		return mkterm(dict[wstrim(t1)]);//, pstrtrim(dt), pstrtrim(lang);
 	}
 
@@ -408,7 +410,7 @@ public:
 		termset dummy;
 		preds_t::iterator pos1 = 0;
 
-		while(*s) {
+		while(*s) {//read facts & rules
 			if (readcurly(subjs)) subject = 0;
 			else if (!(subject = readany(false))) EPARSE(L"expected iri or bnode subject:"); // read subject
 			do { // read predicates
@@ -425,9 +427,9 @@ public:
 					else if ((pn = readany(true))) pos1->second.push_back(pn); // read object
 					else EPARSE(L"expected iri or bnode or literal object:");
 					SKIPWS;
-				} while (*s == L','); // end predicates
+				} while (*s == L','); // end objects
 				SKIPWS;
-			} while (*s == L';'); // end objects
+			} while (*s == L';'); // end predicates
 			if (*s != L'.' && *s != L'}' && *s) { // read graph
 				if (!(pn = readbnode()) && !(pn = readiri()))
 					EPARSE(L"expected iri or bnode graph:");
@@ -449,6 +451,7 @@ public:
 			subjs.clear();
 			objs.clear();
 		}
+		EPARSE(L"Parser accept!\n");
 		return heads;
 	}
 };
@@ -608,9 +611,14 @@ sp_frame prove(sp_frame _p, sp_frame& lastp) {
 
 void term::_unify(subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
 	subs dsub;
+	//for every applicable rule head
+	//or is this like a pred?
 	for (term* _d : ts)  {
 		term& d = *_d;
+		//oops how did a term with different arity get here?
+		//i dont think we'd be getting different arity here
 		if (args.size() != d.args.size()) continue;
+
 		termset::iterator it = args.begin(), end = args.end(), dit = d.args.begin();
 		while (it != end) {
 			term& x = **it++;

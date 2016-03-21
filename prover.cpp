@@ -574,7 +574,13 @@ void prover::addrules(pquad q, qdb& quads) {
 	if ((t = quad2term(*q, quads))) kb.add(t, termset()); // remarking the 'else' is essential for consistency checker
 }
 
+void printDNA(qdb qkb){
+		
+}
+
 prover::prover ( qdb qkb, bool check_consistency ) : kb(this) {
+	printDNA(qkb);
+
 	auto it = qkb.first.find(str_default);
 	if (it == qkb.first.end()) throw std::runtime_error("Error: @default graph is empty.");
 	if (qkb.first.find(L"false") == qkb.first.end()) qkb.first[L"false"] = make_shared<qlist>();
