@@ -4406,9 +4406,36 @@ A cwm built-in logical operator, RDF graph level.
 
 
 //region cppout
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #define CPPOUT2
 #ifdef CPPOUT
 /*
+first, simple and naive cppout.
+
+
 body becomes nested whiles calling predxxx instead of the join-consing thing
 lets forget builtins for now
 persistent vars needed:
@@ -4739,7 +4766,15 @@ void yprover::cppout(qdb &goal)
 
 
 
-/*
+/* not used but would be nice, but if something returns a const pointer, 
+structures and functions that accept it have to declare the constness too
+havent thought too far about it, if theres any speed improvement to be gained,
+this would i think require generating quite a bit of permutations of other functions
+
+the motivating case is: rule consts array cant be declared const now
+gcc doesnt even know to avoid a call to getValue on a const.
+*/
+
 
 const static Thing *const_getValue (const Thing *_x)
 
@@ -4795,7 +4830,7 @@ const static Thing *const_getValue (const Thing *_x)
 
 
 
-/*this makes quite a bit of difference, its a big part of what a rule does
+/*getValue makes quite a bit of difference, its a big part of what a rule does
 
 also, is_bound translates to two cmps, i should try reworking this oneword scheme,
 alternatively, scheme A can be faster*/
@@ -4859,7 +4894,7 @@ static Thing *getValue_nooffset (Thing *_x)
 		return getValue_nooffset(z);
 	}*/
 }
-
+//^^ several percent speed improvement on adder
 
 
 
@@ -5261,6 +5296,13 @@ void cppout_pred(string name, vector<Rule> rs)
 		}
 
 
+		/*mm keeping entry on stack for as long as the func is running
+		is a good thing, (unless we start jumping into funcs and need to avoid
+		any stack state), but we shouldnt save and restore entry's en masse
+		around yield, but right after a pred func call returns.
+		i think theres anyway not much to be gained from this except the 
+		top query function doesnt have to do the stores and loads at all
+		..except maybe some memory traffic saving?*/
 		if(has_body) {
 			size_t j = 0;
 			for (pquad bi: *rule.body) {
