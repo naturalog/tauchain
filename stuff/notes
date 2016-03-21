@@ -130,4 +130,14 @@ cp cppout cppout_(date +"%y%m%d_%H%M%S_%a")
 
 
 ls -trlhs
-                                                            
+         
+         
+while true
+                                           echo "old"
+                                           time ./cppout | grep done
+                                           echo "new"
+                                           time ../univar4-2/cppout | grep done
+                                       end
+
+
+                                                   
