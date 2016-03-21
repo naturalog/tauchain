@@ -4789,11 +4789,79 @@ const static Thing *const_getValue (const Thing *_x)
 	//Is either an unbound variable or a value.
 	else
 		return _x;
+}*/
+
+
+
+
+
+/*this makes quite a bit of difference, its a big part of what a rule does
+
+also, is_bound translates to two cmps, i should try reworking this oneword scheme,
+alternatively, scheme A can be faster*/
+
+
+static Thing *getValue_nooffset (Thing *_x)
+{
+
+	ASSERT(_x);
+
+	Thing x = *_x;
+
+	if (is_bound(x)) {
+		#ifdef getValue_profile
+		getValue_BOUNDS++;
+		#endif
+		//get the pointer
+		Thing * thing = get_thing(x);
+		ASSERT(thing);
+		//and recurse
+		return getValue_nooffset(thing);
+	}
+	else //if (!is_offset(x))
+	{	//Is either an unbound variable or a value.
+		#ifdef getValue_profile
+		getValue_OTHERS++;
+		#endif
+		return _x;
+	}/*
+	else
+	{	
+		ASSERT(is_offset(x));
+		#ifdef getValue_profile
+		getValue_OFFSETS++;
+		#endif
+		//Thing of type offset is used for the 2nd or later occurrence
+		// of a local variable in a
+		//rule; it will store a value offset of type offset_t. 
+
+		////This is the offset from the pointer to the Thing representing 
+		////this instance of a local variable to the pointer to it's 
+		////"representative", which will be labeled either bound or 
+		////unbound.
+		
+		//its an offset from the address of the offset to where the 
+		//value is
+		
+		//get the number
+		const offset_t offset = get_offset(x);
+		//add it to the current address
+		Thing * z = _x + offset;
+		
+		
+		//Why do we bind here? We already have _x as offset to z
+		//this is an attempt at optimization so that the second time
+		//we look at this, it will be a variable, which should be 
+		//followed faster than the offset
+		make_this_bound(_x, z);
+		
+		//and recurse
+		return getValue_nooffset(z);
+	}*/
 }
 
 
 
-*/
 
 
 bool cppout_would_unify(const Thing *old_, const Thing *now_)
@@ -4994,7 +5062,7 @@ string maybe_getval(ThingType t, string what)
 	stringstream ss;
 	bool yes = (t != NODE);
 	if (yes)
-		ss << "getValue(";
+		ss << "getValue_nooffset(";
 	ss << what;
 	if (yes)
 		ss << ")";
