@@ -205,7 +205,7 @@ public:
 //these make sense
 //Thing::Property -- specifically a unary boolean function Things
 #define is_offset(thing)	(get_type(thing) == OFFSET)
-bool is_unbound(Thing &thing)	{return (get_type(thing) == UNBOUND);}
+bool is_unbound(Thing thing)	{return (get_type(thing) == UNBOUND);}
 #define is_bound(thing)		(get_type(thing) == BOUND)
 #define is_list(thing)		(get_type(thing) == LIST)
 #define is_list_bnode(thing)(get_type(thing) == LIST_BNODE)
@@ -255,7 +255,7 @@ inline Thing create_list_bnode(nodeid v)
 inline void make_this_bound(Thing *me, const Thing *val)
 {
 	me->type = BOUND;
-	me->thing = val;
+	me->thing = (Thing*)val;
 }
 
 //will perhaps want to assert that 'me' is a bound variable
@@ -1174,7 +1174,6 @@ coro unboundunifycoro(Thing * me, Thing *arg
 			#endif
 			]() mutable {
 
-		dout << "wat" << endl;
 		
 				setproc("var unify lambda");
 				//TRACE(dout << "entry = " << (int)entry << endl)
@@ -2703,6 +2702,8 @@ i have no idea */
 				http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448
 				 http://www.boost.org/doc/libs/1_54_0/doc/html/boost/lockfree/spsc_queue.html
 				 //lets first try to find some offtheshelf solution, boost? sure
+				 https://isocpp.org/wiki/faq/cpp11-language-concurrency
+				 
 				cpu affinity should be set.*/
 				locals = (Thing*)malloc(locals_bytes);
 				memcpy(locals, locals_data, locals_bytes);
@@ -4775,7 +4776,7 @@ the motivating case is: rule consts array cant be declared const now
 gcc doesnt even know to avoid a call to getValue on a const.
 */
 
-
+/*
 const static Thing *const_getValue (const Thing *_x)
 
 	ASSERT(_x);
@@ -5038,7 +5039,7 @@ void cppout_consts(string name, vector<Rule> rs)
 
 char unify_with_var(Thing * a, Thing * b)
 {
-    ASSERT(is_unbound(b));
+    ASSERT(is_unbound(*b));
     
     if (!are_equal(*a, *b))
     {
@@ -5064,7 +5065,7 @@ void unbind_from_var(char magic, Thing * __restrict__ a, Thing * __restrict__ b)
 
 bool unify_with_const(Thing * a, Thing * b)
 {
-    ASSERT(!is_bound(a));
+    ASSERT(!is_bound(*a));
 
     if (are_equal(*a, *b))
 	return true;
@@ -5079,7 +5080,7 @@ bool unify_with_const(Thing * a, Thing * b)
 	
 void unbind_from_const(Thing *x)
 {
-        ASSERT(!is_unbound(x));
+        ASSERT(!is_unbound(*x));
 	if (is_var(*x))
 		make_this_unbound(x);
 }
@@ -6505,9 +6506,9 @@ void yprover::cppout(qdb &goal)
 	out << "struct cpppred_state;\n";
 	out << "struct cpppred_state {\n"
 		"int entry=0;\n"
-		"vector<Thing> locals;\n"
 		"unbinder su,ou;\n"
 		"Thing *s, *o;\n"
+		"vector<Thing> locals;\n"
 		"vector<cpppred_state> states;\n};\n"
 				   ""
 				   "bool silent = false;"
@@ -6569,7 +6570,8 @@ void yprover::cppout(qdb &goal)
 #endif
 
 
-
-
-
+/*or rather should be doing hrrm, we should reuse one consts array throughout the pred
+unify bm?
+s and o re-fetching
+*/
 //endregion
