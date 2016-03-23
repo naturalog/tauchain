@@ -222,7 +222,7 @@ bool are_equal(const Thing &x, const Thing &y) {return ((x).type == (y).type && 
 
 //Thing::Constructors:
 //3 different types of Things which can be created:
-inline Thing create_unbound()
+Thing create_unbound()
 {
 	Thing x;
 	x.type = UNBOUND;
@@ -230,7 +230,7 @@ inline Thing create_unbound()
 	return x;
 }
 
-inline Thing create_node(nodeid v)
+Thing create_node(nodeid v)
 {
 	Thing x;
 	x.type = NODE;
@@ -238,7 +238,7 @@ inline Thing create_node(nodeid v)
 	return x;
 }
 
-inline Thing create_list_bnode(nodeid v)
+Thing create_list_bnode(nodeid v)
 {
 	Thing x;
 	x.type = LIST_BNODE;
@@ -252,14 +252,14 @@ inline Thing create_list_bnode(nodeid v)
 
 //Thing::Update
 //will perhaps want to assert that 'me' is an unbound variable
-inline void make_this_bound(Thing *me, const Thing *val)
+void make_this_bound(Thing *me, const Thing *val)
 {
 	me->type = BOUND;
 	me->thing = val;
 }
 
 //will perhaps want to assert that 'me' is a bound variable
-inline void make_this_unbound(Thing * me)
+void make_this_unbound(Thing * me)
 {
 	me->type = UNBOUND;
 }
@@ -299,18 +299,18 @@ static_assert(sizeof(uintptr_t) == sizeof(size_t), "damn");
 
 
 //Thing::Constructors
-static inline Thing create_unbound()
+static Thing create_unbound()
 {
 	return 0;
 }
 
-static inline Thing create_node(nodeid v)
+static Thing create_node(nodeid v)
 {
 	ASSERT(((uintptr_t)v & 0b11) == 0);
 	return (Thing)(((uintptr_t)v<<2) | 0b01);
 }
 
-static inline Thing create_list_bnode(nodeid v)
+static Thing create_list_bnode(nodeid v)
 {
 	ASSERT(((uintptr_t)v & 0b11) == 0);
 	ASSERT(false);
@@ -319,13 +319,13 @@ static inline Thing create_list_bnode(nodeid v)
 
 
 //Thing::Update
-static inline void make_this_bound(Thing * me, const Thing * v)
+static void make_this_bound(Thing * me, const Thing * v)
 {
 	ASSERT(((uintptr_t)v & 0b11) == 0);
 	*me = (Thing)v;
 }
 
-static inline void make_this_unbound(Thing * me)
+static void make_this_unbound(Thing * me)
 {
 	*me = 0;
 }
@@ -351,7 +351,7 @@ void make_this_list(Thing &i0, size_t size)
 }
 
 //Thing::Access/Get
-static inline offset_t get_offset(Thing x)
+static offset_t get_offset(Thing x)
 {
 	uintptr_t xx = (uintptr_t)x;
 	byte sign = (xx >> 1) & 0b10;
@@ -361,19 +361,19 @@ static inline offset_t get_offset(Thing x)
 	return val;
 }
 
-static inline Thing* get_thing(Thing x)
+static  Thing* get_thing(Thing x)
 {
 	return (Thing*)x;
 }
 
-static inline nodeid get_node(Thing x)
+static  nodeid get_node(Thing x)
 {
 	return (nodeid)(((uintptr_t)x)>>2);
 }
 
 
 //Thing::Measurement
-static inline size_t get_size(Thing x)
+static  size_t get_size(Thing x)
 {
 	return (size_t)((uintptr_t)x >> 2);
 }
@@ -381,7 +381,7 @@ static inline size_t get_size(Thing x)
 
 //Thing::Comparison
 //Could use != operator
-static inline bool types_differ(Thing a, Thing b)
+static  bool types_differ(Thing a, Thing b)
 {
 	return (((long)a ^ (long)b) & 0b11);
 }
@@ -399,12 +399,12 @@ static inline bool types_differ(Thing a, Thing b)
 //Judgements?	Too weak in that it can include non-booleans & arity != 1
 	
 //Unary boolean functions on the class
-static inline bool is_bound(Thing x)
+static  bool is_bound(Thing x)
 {
 	return ((((uintptr_t)x & (uintptr_t)0b11) == 0) && x);
 }
 
-static inline bool is_unbound(Thing x)
+static  bool is_unbound(Thing x)
 {
 	return x == 0;
 }
@@ -419,7 +419,7 @@ bool is_list_bnode(const Thing &thing) {FUN;MSG("TODO");return false;}
 #define are_equal(x, y) (x == y)
 
 //Thing::Access
-static inline ThingType get_type(Thing x)
+static  ThingType get_type(Thing x)
 {
 	if(is_bound(x))
 		return BOUND;
@@ -440,7 +440,7 @@ static inline ThingType get_type(Thing x)
 #endif //ndef oneword
 
 
-inline bool is_nil(const Thing* x)
+ bool is_nil(const Thing* x)
 {
 	return is_node(*x) && (get_node(*x) == rdfnil);
 }
@@ -467,7 +467,7 @@ Thing * next_item(Thing *&x)
                                     
 
 
-inline void add_kbdbg_info(Thing &t, Markup markup)
+ void add_kbdbg_info(Thing &t, Markup markup)
 {
 	(void) t;
 	(void) markup;
@@ -800,7 +800,7 @@ coro kbdbg_unify_fail(const Thing *a, const Thing *b)
 
 
 //Not sure what this function does
-inline void kbdbg_bind(const Thing *a, bool bind, const Thing *b)
+ void kbdbg_bind(const Thing *a, bool bind, const Thing *b)
 {
 	(void)a;
 	(void)b;
@@ -4775,7 +4775,7 @@ the motivating case is: rule consts array cant be declared const now
 gcc doesnt even know to avoid a call to getValue on a const.
 */
 
-
+/*
 const static Thing *const_getValue (const Thing *_x)
 
 	ASSERT(_x);
@@ -6505,9 +6505,9 @@ void yprover::cppout(qdb &goal)
 	out << "struct cpppred_state;\n";
 	out << "struct cpppred_state {\n"
 		"int entry=0;\n"
-		"vector<Thing> locals;\n"
 		"unbinder su,ou;\n"
 		"Thing *s, *o;\n"
+		"vector<Thing> locals;\n"
 		"vector<cpppred_state> states;\n};\n"
 				   ""
 				   "bool silent = false;"
