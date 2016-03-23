@@ -6573,5 +6573,16 @@ void yprover::cppout(qdb &goal)
 /*or rather should be doing hrrm, we should reuse one consts array throughout the pred
 unify bm?
 s and o re-fetching
+http://stackoverflow.com/questions/8019849/labels-as-values-vs-switch-statement
+http://www.deadalnix.me/2013/03/23/a-story-about-optimization-llvm-and-the-sentinelinputrange/
+http://llvm.org/docs/LangRef.html
+
+
+
+
 */
+
+
+
+
 //endregion
