@@ -292,6 +292,26 @@ kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointee
  gotta add list bnode
 */
 
+/*oneword2:
+<maybekoo2> so, preallocator thread can pre-resolve all offsets into variables
+<maybekoo2> unbound shouldnt be identified by all zeroes but something like xxx01
+<maybekoo2> so, not the same typebits pattern as bound
+<maybekoo2> so, getValue only has to do one cmp instead of 3
+ 00 = bound
+ 01 = unbound
+?10 = node
+ hrm gotta run a couple of tests, might as well see if we can cut down the generated object code size with the right patterns?
+010 = positive offset
+110 = negative offset
+ 11 = list(size)
+ gotta add list bnode
+ 
+ unify is still a bitch, could we use a switch?
+ (on some aggregate value computed/masked from the two things
+*/
+
+*/
+
 typedef uintptr_t *Thing; // unsigned int that is capable of storing a pointer
 #define databits(x) (((uintptr_t)x) & ~0b11)
 #define typebits(t) ((uintptr_t)t & (uintptr_t)0b11)
@@ -6576,6 +6596,36 @@ s and o re-fetching
 http://stackoverflow.com/questions/8019849/labels-as-values-vs-switch-statement
 http://www.deadalnix.me/2013/03/23/a-story-about-optimization-llvm-and-the-sentinelinputrange/
 http://llvm.org/docs/LangRef.html
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
