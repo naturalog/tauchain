@@ -1,0 +1,14 @@
+kb
+({a b c} z z) a salami.
+{?x a salami} => {?x a ?x}.
+
+{(?a ?b ?c) a salami} => {?a a banani}.
+
+#{({a b c}) a ?x} => {?x a ?x}.
+fin.
+query
+{a b d} a ?x.
+fin.
+query
+{a b c} a ?x.
+fin.

@@ -782,8 +782,25 @@ public:
 
 	pnode add_formulacontent(termid x)
 	{
-		auto graph = mkbnode(gen_bnode_id());
+	
+		auto evil_dummy = pstr("dont use this name");
+
+		auto dummy = mkbnode(evil_dummy);
+		add_statements(x, *dummy->value);
+		stringstream ss;
+		ss << *dest->first[*dummy->value];
+		MSG("formula:" << ss.str());
+		
+		std::hash<std::string> fn;
+		size_t h = fn(ss.str());
+		stringstream sss;
+		sss << std::showbase << std::uppercase << std::hex << h;
+		
+		auto graph = mkbnode(pstr(sss.str()));
 		add_statements(x, *graph->value);
+		
+		dest->first[*evil_dummy]->clear();
+		
 		return graph;
 	}
 
