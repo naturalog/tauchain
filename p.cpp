@@ -201,6 +201,7 @@ struct term {
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
 		termset matches;
+		map<term*,map<term*,term*>> DNA;		
 	};
 	typedef vector<body_t*> bvec;
 	bvec body;
@@ -252,6 +253,9 @@ struct term {
 				return false;
 		return true;
 	}
+	
+	
+
 	bool unify_ep(subs& ssub, term& d, subs& dsub) {
 		static term* v;
 		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(v, ssub))) ? v->unify_ep(ssub, d, dsub) : true;
@@ -264,12 +268,32 @@ struct term {
 		return true;
 	}
 	void _unify(subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
+
+	//Need a UF data-struct
+	//map<term*,size_t>
+	term* find_root(term* t, map<term*,term*>& dna){
+		if(!dna[t]){
+			if(!t->args.size()){
+				dna[t] = t;
+			}
+			return t;
+		}
+		term* root = t;
+		while(root != dna[root]) root = dna[root];
+		while(t != root){
+			term* newt = dna[t];
+			dna[t] = root;
+			t = newt;
+		}
+		return root;
+	}
+
 private:
 	// indexer: match a term (head) to a body's term by trying to unify them.
 	// if they cannot unify without subs, then they will not be able to
 	// unify also during inference.
 	void trymatch(body_t& b, term* t) {
-		if (t == this) return;
+		//if (t == this) return;
 		//b.addmatch(t, subs()); return; // unremark to disable indexing
 		TRACE(dout << "trying to match " << format(b.t) << " with " << format(t) << std::endl);
 		static subs d, empty;
@@ -280,6 +304,64 @@ private:
 		d.clear();
 	}
 };
+
+term* find_root(term* t, map<term*,term*>& dna){
+	if(t->p > 0) return t;
+	if(!dna[t]){
+		if(!t->args.size()){
+			dout << "New var: (" << t << ":" << t->p << ")" << format(t,false) << "\n";
+			dna[t] = t;
+		}
+		return t;
+	}
+	term* root = t;
+	while(root->p < 0 && root != dna[root]) root = dna[root];
+	while(t != root){
+		term* newt = dna[t];
+		dna[t] = root;
+		t = newt;
+	}
+	return root;
+}
+
+bool makeDNA(term* b, term* h, map<term*,term*>& dna){
+	for(size_t n = 0; n < b->args.size(); n++){
+		term* br = find_root(b->args[n], dna);
+		term* hr = find_root(h->args[n], dna);
+
+		if(hr->p < 0){
+			dna[hr] = br;
+		}else if(br->p < 0){
+			dna[br] = hr;
+		}else{
+			size_t sz = br->args.size();
+			if(sz != hr->args.size()) return false;
+			if(!sz){
+				if(!(br->p == hr->p)) return false;
+			}
+			else if(!makeDNA(br,hr,dna)) return false;
+		}
+	}
+
+	return true;
+}
+
+void makeDNA(termset* rules){
+	term** it = rules->begin();
+	term** end = rules->end();
+	for(; it != end; it++){
+		term::body_t** bit = (*it)->body.begin();
+		term::body_t** bend = (*it)->body.end();
+		for(; bit != bend; bit++){
+			term** hit = (*bit)->matches.begin();
+			term** hend = (*bit)->matches.end();
+			for(; hit != hend; hit++){
+				map<term*,term*> dna;
+				if(makeDNA((*bit)->t,(*hit),dna)) (*bit)->DNA[(*hit)] = dna;
+			}
+		}
+	}
+}
 
 const size_t tchunk = 8192, nch = tchunk / sizeof(term);
 size_t bufpos = 0;
@@ -451,7 +533,6 @@ public:
 			subjs.clear();
 			objs.clear();
 		}
-		EPARSE(L"Parser accept!\n");
 		return heads;
 	}
 };
@@ -633,16 +714,55 @@ void term::_unify(subs& ssub, termset& ts, sp_frame f, sp_frame& lastp) {
 	}
 }
 
+void printDNA(termset kb){
+	int i = 1;
+	for (auto it = kb.begin(); it != kb.end(); ++it){
+		//Print Rule
+		dout << i++ << ". " << format(*it,true) << "\n";
+		int j = 1;
+		for(auto bit = (*it)->body.begin(); bit != (*it)->body.end(); ++bit){
+			//Print Body Item
+			dout << "  " << j++ << ". " << format((*bit)->t,false) << "\n";
+			int k = 1;
+			auto dit = (*bit)->DNA.begin();
+			auto e = (*bit)->DNA.end();
+			for (;dit != e; ++dit) {
+				//Print Matching Rule
+				dout << "    " << k++ << ". " << format(dit->first,false) << "\n";
+				int l = 1;
+				auto eit = dit->second.begin();
+				for (;eit != dit->second.end(); ++eit)
+					//Print DNA
+					dout	<< "      " << l++ << ". " <<
+						format(eit->first,false) << "/" << 
+						format(eit->second,false) << "\n";
+			}
+		}
+	}
+}
+
 int main() {
 	dict.init();
 	termset kb = readterms(din);
+	
+
+
+	/*
 	termset query = readterms(din);
 
 	// create the query term and index it wrt the kb
 	term* q = mkterm(kb, query);
 	// now index the kb itself wrt itself
+	*/
 	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 		(*it)->trymatch(kb);
+
+
+	makeDNA(&kb);
+
+	printDNA(kb);
+	
+	/*
 	kb.push_back(q);
 	TRACE(dout << "kb:" << std::endl << format(kb) << std::endl);
 
@@ -652,6 +772,6 @@ int main() {
 	prove(p, lastp); // the main loop
 	end = clock();
 	dout << "steps: " << steps << " elapsed: " << (1000. * double(end - begin) / CLOCKS_PER_SEC) << "ms" << std::endl;
-
+	*/
 	return 0;
 }
