@@ -188,54 +188,6 @@ struct rule {
 	map<int, sub> right;
 };
 vector<rule> rules;
-/*
-bool build(int s, int d, auto sub) {
-  if (s < 0)
-    return d < 0 ? s == d : (sub[s] = d, true);
-  return sub[d] = s, true;
-}
-bool build(const triple *s, const triple *d, auto sub) {
-  return s && d && build(s->r[0], d->r[0], sub) &&
-         build(s->r[1], d->r[1], sub) && build(s->r[2], d->r[2], sub);
-}
-void build() {
-  for (int n = 0, sz = rules.size(); n < sz; ++n) {
-    rule &r = rules[n];
-    // build(r.head, r.head, r.ep);
-    emit_up(r.head);
-    for (int k = 0, e = r.body.size(); k < e; ++k) {
-      auto p = rules[n].body[k];
-      //			build(p.t, r.head, p.up);
-      emit_right(p.t, r.head, p.right);
-      FOR(m, sz) {
-        auto &r1 = rules[m];
-        auto h = r1.head;
-        sub s;
-        if (build(p.t, h, s))
-          p.down[m] = s;
-        emit_down()
-      }
-    }
-  }
-}
-
-void emit_frame(rule r, int b) {
-  if (b < r.size()) {
-    emit_up(r);
-    for (int k = 0, e = r.body.size(); k < e; ++k) {
-      auto p = rules[n].body[k];
-    }
-  }
-}
-*/
-struct ir {
-	typedef function<bool(sub, sub)> up_unifier;
-	typedef function<sub *(sub)> dn_unifier;
-	typedef function<void(sub, sub &)> rt_unifier;
-	map<int, map<int, dn_unifier>> dn;
-	map<int, map<int, rt_unifier>> rt;
-	vector<up_unifier> up;
-};
 
 wostream &operator<<(wostream &, const atom &);
 wostream &operator<<(wostream &, const triple &t);
