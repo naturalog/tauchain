@@ -310,7 +310,7 @@ kinda like http://software-lab.de/doc/ref.html#cell but with bits in the pointee
  (on some aggregate value computed/masked from the two things
 */
 
-*/
+
 
 typedef uintptr_t *Thing; // unsigned int that is capable of storing a pointer
 #define databits(x) (((uintptr_t)x) & ~0b11)
@@ -4794,9 +4794,7 @@ this would i think require generating quite a bit of permutations of other funct
 
 the motivating case is: rule consts array cant be declared const now
 gcc doesnt even know to avoid a call to getValue on a const.
-*/
 
-/*
 const static Thing *const_getValue (const Thing *_x)
 
 	ASSERT(_x);
@@ -4845,15 +4843,11 @@ const static Thing *const_getValue (const Thing *_x)
 	//Is either an unbound variable or a value.
 	else
 		return _x;
-}*/
+}
 
-
-
-
-
-/*getValue makes quite a bit of difference, its a big part of what a rule does
-
-also, is_bound translates to two cmps, i should try reworking this oneword scheme,
+getValue makes quite a bit of difference, its a big part of what a rule does
+also, is_bound translates to two cmps, 
+see work on oneword2
 alternatively, scheme A can be faster*/
 
 
@@ -4916,6 +4910,7 @@ static Thing *getValue_nooffset (Thing *_x)
 	}*/
 }
 //^^ several percent speed improvement on adder
+//we can resolve offsets in alloc thread
 
 
 
@@ -6612,6 +6607,7 @@ http://llvm.org/docs/LangRef.html
 
 
 
+we gotta be making things smaller instead of unrolled
 
 
 
