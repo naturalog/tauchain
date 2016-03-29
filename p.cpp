@@ -205,6 +205,7 @@ struct term {
 	};
 	typedef vector<body_t*> bvec;
 	bvec body;
+	term* val;
 
 	// add term(s) to body
 	term* addbody(const termset& t) { for (termset::iterator it = t.begin(); it != t.end(); ++it) addbody(*it); return this; }
@@ -237,6 +238,20 @@ struct term {
 		TRACE(dout<<"evaluate " << format(&t) << " under " << format(ss) << " returned " << format(r) << std::endl);
 		return r;
 	};
+/*
+ugh..this would be so much more straightforward in univar lol
+lets copy it into a different version if we wanna rework to univars,
+a) that'll give us more leeway to rework shit, b) we should probably finish the
+current version in case ohad's picky about it
+
+this is just defficient, or seems so
+anyway i wouldnt rework it to univars as much as just write the code into univar.cpp
+ah, well, then even moreso on b) lol, not that working this into univar would be a bad idea
+doesnt need to be worked into anything, just needs to print the output
+
+well, let's switch to univar then
+*/
+
 	bool unify(subs& ssub, term& d, subs& dsub) {
 		term* v;
 		if (p < 0) return ((v=ssub[p]) && (v = v->evaluate(v, ssub))) ? v->unify(ssub, d, dsub) : true;
@@ -269,25 +284,6 @@ struct term {
 	}
 	void _unify(subs& ssub, termset& ts, sp_frame f, sp_frame& lastp);
 
-	//Need a UF data-struct
-	//map<term*,size_t>
-	term* find_root(term* t, map<term*,term*>& dna){
-		if(!dna[t]){
-			if(!t->args.size()){
-				dna[t] = t;
-			}
-			return t;
-		}
-		term* root = t;
-		while(root != dna[root]) root = dna[root];
-		while(t != root){
-			term* newt = dna[t];
-			dna[t] = root;
-			t = newt;
-		}
-		return root;
-	}
-
 private:
 	// indexer: match a term (head) to a body's term by trying to unify them.
 	// if they cannot unify without subs, then they will not be able to
@@ -306,41 +302,129 @@ private:
 };
 
 term* find_root(term* t, map<term*,term*>& dna){
+	//so, this won't work out, "." is const, so > 0
+		//do we ever deal with terms other than lists that have args and vars in them?
+		//nope, just vars, consts & lists, no triples/rules at this level
+	/*ok so question is what is the root if there are lists
+	(a b ?c) and (?a b c)
+	would be a new list (a b c), i.e. the result of unifying all the lists
+	in the set together
+	*/
+	
 	if(t->p > 0) return t;
+	//assert(!t->args.size());
+	
 	if(!dna[t]){
-		if(!t->args.size()){
-			dout << "New var: (" << t << ":" << t->p << ")" << format(t,false) << "\n";
-			dna[t] = t;
-		}
+		//dout << "New var: (" << t << ":" << t->p << ")" << format(t,false) << "\n";
+		dna[t] = t;
 		return t;
 	}
+	
 	term* root = t;
+
 	while(root->p < 0 && root != dna[root]) root = dna[root];
+
 	while(t != root){
 		term* newt = dna[t];
 		dna[t] = root;
 		t = newt;
 	}
+
 	return root;
 }
 
+term* new_all_vars_list(int count,map<term*,term*>& dna)
+{
+	termset ts;
+	static int name = 0;
+	int i;
+	for (i = 0; i < count; i++)
+	{
+		std::wstringstream ss;
+		ss << "?new_var" << name++;
+		term *tmp = mkterm(dict[ss.str()]);
+		dna[tmp] = tmp;
+		ts.push_back(tmp);
+	}
+	return mkterm(Dot, ts);
+}
+
+
 bool makeDNA(term* b, term* h, map<term*,term*>& dna){
+	//h.unify(b, hsubs, bsubs);
+	
+
+
+
 	for(size_t n = 0; n < b->args.size(); n++){
 		term* br = find_root(b->args[n], dna);
 		term* hr = find_root(h->args[n], dna);
+		
+		//assert(!hr->val && !br->val);
 
-		if(hr->p < 0){
+		//var var		succeed
+		//			make the body-item var the root
+		if(br->p < 0 && hr->p < 0){
 			dna[hr] = br;
-		}else if(br->p < 0){
-			dna[br] = hr;
-		}else{
-			size_t sz = br->args.size();
-			if(sz != hr->args.size()) return false;
-			if(!sz){
-				if(!(br->p == hr->p)) return false;
-			}
-			else if(!makeDNA(br,hr,dna)) return false;
+			continue;
 		}
+
+		
+		//var const		succeed
+		//			make the const the root
+					
+		//var list		succeed
+		//			make the list the root
+		if(br->p < 0 && hr->p > 0){
+			if(!hr->args.size()){
+				dna[br] = hr;
+				continue;
+			}else{
+				if(!dna[br]->args.size()){
+					term* tmp = new_all_vars_list(hr->args.size(),dna);
+					dna[br] = tmp;
+				}
+				br = find_root(br,dna);
+			}
+		}
+		
+		//const var		succeed
+		//			make the const the root
+		//list var		succeed
+		//			make the list the root
+		if(br->p > 0 && hr->p < 0){
+			//dna[hr] = br;
+			if(!br->args.size()){
+				dna[hr] = br;
+				continue;
+			}else{
+			//make an all-vars list of the same size and then
+			//call makeDNA with br & the new list
+			//reuse hr for the new list since we don't need the
+			//var at this point
+				if(!dna[hr]->args.size()){
+					term* tmp = new_all_vars_list(br->args.size(),dna);
+					dna[hr] = tmp;
+				}
+				hr = find_root(hr,dna);
+			}
+		}
+		
+		//const const		succeed if const==const
+		//			root is still the const, just
+		//			merge the sets, otherwise fail
+		
+		//const list		fail
+		
+		//list const		fail
+		
+		//list list		succeed if list unifies with list
+		//			the result of their unification
+		//			becomes the root of the merged set
+
+		if(!(br->p == br->p)) return false;
+		if(!(br->args.size() == hr->args.size())) return false;
+		if(!makeDNA(br,hr,dna)) return false;
 	}
 
 	return true;
@@ -362,6 +446,21 @@ void makeDNA(termset* rules){
 		}
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const size_t tchunk = 8192, nch = tchunk / sizeof(term);
 size_t bufpos = 0;
@@ -749,11 +848,12 @@ int main() {
 
 	/*
 	termset query = readterms(din);
-
 	// create the query term and index it wrt the kb
 	term* q = mkterm(kb, query);
 	// now index the kb itself wrt itself
 	*/
+
+
 	for (termset::iterator it = kb.begin(); it != kb.end(); ++it)
 		(*it)->trymatch(kb);
 
