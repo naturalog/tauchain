@@ -1,10 +1,17 @@
-#CC=clang++-3.6
-CC=g++
-CXXFLAGS=-c -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O0 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include -DJSON #-DPREDVARS -DNOPARSER
+CC=clang++-3.6
+#CC=g++
+
+ASAN=   -Xclang -fcolor-diagnostics -ferror-limit=10 -fsanitize=address -fsanitize=integer -fsanitize=unsigned-integer-overflow -fsanitize=undefined -ggdb -gline-tables-only # -fsanitize-undefined-trap-on-error 
+DEBUG=  -DDEBUG -O0  -fno-omit-frame-pointer -fno-optimize-sibling-calls 
+DBG= $(ASAN) -g -ggdb $(DEBUG)
+
+
+CXXFLAGS=  $(DBG) -std=c++11 -W -Wall -Wextra -Wpedantic -g -ggdb -O0 -I/usr/local/include -I/usr/include -I/usr/local/linuxbrew/include -DJSON #-DPREDVARS -DNOPARSER -c
 #CXXFLAGS= -c -std=c++11 -Wall -Wextra -I/usr/local/include -DNDEBUG -O3 -I/usr/include -I/usr/local/linuxbrew/include -I/usr/include -I/usr/local/linuxbrew/include #-DJSON -DNOPARSER
 LDFLAGS= -L/usr/local/lib #-ldl -pthread -lrt
 #OBJECTS := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 OBJECTS= prover.o unifiers.o tau.o jsonld.o rdf.o misc.o json_object.o cli.o nquads.o
+
 
 all: tau
 tau: $(OBJECTS) $(EXECUTABLE)
@@ -52,7 +59,7 @@ ppjson: ppjson.cpp
 dimacs2tau: dimacs2tau.cpp
 	$(CC) -std=c++11 dimacs2tau.cpp -odimacs2tau -Wall -ggdb
 pcpp: p.cpp containers.h
-	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG p.cpp -opcpp -g -std=c++11 
+	$(CC) $(CXXFLAGS) -W -Wall -Wpedantic -Wextra -DDEBUG p.cpp -opcpp -g -std=c++11 
 mltt: mltt.cpp
 	$(CC) -W -Wall -Wpedantic -Wextra -DDEBUG mltt.cpp -omltt -g -std=c++11 -O3
 jit: jit.c dict.cpp ir.h ir.c n3.h n3.c eq.c eq.h defs.h
