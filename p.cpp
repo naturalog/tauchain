@@ -4,6 +4,14 @@
 #include <sstream>
 #include <stdexcept>
 #include <ctime>
+#include <map>
+#include <assert.h>
+
+#define has(x,y) ((x).find(y) != (x).end())             
+
+
+//well, the problem is whether or not the map knows if the ruleterms are the same,
+//because they're composed of terms that are still different
 
 template<typename T>
 struct sp { // smart pointer
@@ -182,6 +190,12 @@ term* mkterm(termset& kb, termset& query);
 term* mkterm(resid p);
 term* mkterm(resid p, const termset& args);
 
+
+enum Provenance {pbody, phead};
+
+typedef std::pair<resid, Provenance> ruleres;
+typedef std::pair<term*,Provenance> ruleterm;
+typedef std::map<ruleres,ruleterm> DNA;
 /*
 typedef term* (*fevaluate)(term&, const subs&);
 typedef bool (*funify)(term& s, const subs& ssub, term& d, subs& dsub);
@@ -193,6 +207,8 @@ struct term {
 	term(resid _p, const termset& _args = termset()) : p(_p), args(_args) {
 		TRACE(if (!p) throw 0);
 	}
+
+//i think i got it
 	const resid p;
 	const termset args;
 	struct body_t {
@@ -201,7 +217,7 @@ struct term {
 		bool state;
 		body_t(term* _t) : t(_t), state(false) {}
 		termset matches;
-		map<term*,map<term*,term*>> DNA;		
+		std::map<term*,map<ruleterm,vector<ruleres>>> dna;		
 	};
 	typedef vector<body_t*> bvec;
 	bvec body;
@@ -301,39 +317,15 @@ private:
 	}
 };
 
-term* find_root(term* t, map<term*,term*>& dna){
-	//so, this won't work out, "." is const, so > 0
-		//do we ever deal with terms other than lists that have args and vars in them?
-		//nope, just vars, consts & lists, no triples/rules at this level
-	/*ok so question is what is the root if there are lists
-	(a b ?c) and (?a b c)
-	would be a new list (a b c), i.e. the result of unifying all the lists
-	in the set together
-	*/
-	
-	if(t->p > 0) return t;
-	//assert(!t->args.size());
-	
-	if(!dna[t]){
-		//dout << "New var: (" << t << ":" << t->p << ")" << format(t,false) << "\n";
-		dna[t] = t;
-		return t;
-	}
-	
-	term* root = t;
 
-	while(root->p < 0 && root != dna[root]) root = dna[root];
+//ruleid won't work due to recursive rules ic 
+//didnt we say the key should be a resid?
+//key should be resid + Provenance
+	//that doesn't really play well with find_root as we have it now though
 
-	while(t != root){
-		term* newt = dna[t];
-		dna[t] = root;
-		t = newt;
-	}
 
-	return root;
-}
 
-term* new_all_vars_list(int count,map<term*,term*>& dna)
+term* new_all_vars_list(int count, Provenance p, DNA& dna)
 {
 	termset ts;
 	static int name = 0;
@@ -343,29 +335,103 @@ term* new_all_vars_list(int count,map<term*,term*>& dna)
 		std::wstringstream ss;
 		ss << "?new_var" << name++;
 		term *tmp = mkterm(dict[ss.str()]);
-		dna[tmp] = tmp;
+		dna[ruleres(tmp->p,p)] = ruleterm(tmp,p);
 		ts.push_back(tmp);
 	}
 	return mkterm(Dot, ts);
 }
 
 
-bool makeDNA(term* b, term* h, map<term*,term*>& dna){
-	//h.unify(b, hsubs, bsubs);
+
+//mmm
+
+ruleterm find_root(ruleterm t, DNA& dna){
+	//do we ever deal with terms other than lists that have args and vars in them?
+//ofc we do ?
+//not sure if here but a body item or head is such a term
+//ah yea, but not here, the only terms with args that we'll encounter here are lists
+	assert(!t.first->args.size() || t.first->p == Dot);
+	//nope, just vars, consts & lists, no triples/rules at this level
+	/*ok so question is what is the root if there are lists
+	(a b ?c) and (?a b c)
+	would be a new list (a b c), i.e. the result of unifying all the lists
+	in the set together
+	*/
 	
+	//see we're returning a term here but the resid+Provenance loses all that info
+	//so, maybe we should be sending find_root a termid+Provenance but still keying
+	//the map with resid+Provenance
+	//it's a little schizo but its pretty much the last thing left to do
+	
+	if(t.first->p > 0) return t;
+	
+	//we shouldn't even be getting lists beyond this point
+	assert(!t.first->args.size());
+	
+	ruleres root(t.first->p, t.second);
+
+
+	assert(!has(dna,root) || has(dna,root));
+
+	if(!has(dna,root)){
+		//dout << "New var: (" << t << ":" << t->p << ")" << format(t,false) << "\n";
+		dna[root] = t;
+		return t;
+	}
+
+	assert(has(dna, root));
+	//this is just preparing the "next one"
+	ruleterm rt = dna[root];
+
+	//we don't want these asserts here, we want it to be able to be different
+	//assert(root.first == dna[root].first->p);
+	//assert(root.second == dna[root].second);
+
+	ruleres rtmp = ruleres(rt.first->p,rt.second);
+	//won't necessarily be there if it's a const or list
+	//assert(has(dna, rtmp));
+
+	while(rtmp.first < 0 && root != rtmp){
+		root = rtmp;
+		
+		assert(has(dna, root));
+		rt = dna[root];
+		assert(rt.first);
+		rtmp = ruleres(rt.first->p,rt.second);
+	}
+
+	//you sure we dont need it in the value?
+	//hrm, well we don't need it in the ultimate return value
+	//i guess we can repackage into a ruleterm
+	//yea
+
+	while(t != rt){
+		ruleres tmp(t.first->p,t.second);
+		ruleterm newt = dna[tmp];
+		dna[tmp] = rt;
+		t = newt;
+	}
+
+	//we can return either the ruleterm or the term*, the head/body distinction
+	//is only necessary while we're inside find_root, this is fine though
+	return rt;
+}
 
 
 
+bool makeDNA(term* b, term* h, DNA& dna){
 	for(size_t n = 0; n < b->args.size(); n++){
-		term* br = find_root(b->args[n], dna);
-		term* hr = find_root(h->args[n], dna);
+		ruleterm br = find_root(ruleterm(b->args[n],pbody), dna);
+		ruleterm hr = find_root(ruleterm(h->args[n],phead), dna);
+		ruleres brr(br.first->p,br.second);
+		ruleres hrr(hr.first->p,hr.second);
 		
 		//assert(!hr->val && !br->val);
 
 		//var var		succeed
 		//			make the body-item var the root
-		if(br->p < 0 && hr->p < 0){
-			dna[hr] = br;
+		if(br.first->p < 0 && hr.first->p < 0){
+			dna[hrr] = br;
 			continue;
 		}
 
@@ -375,14 +441,14 @@ bool makeDNA(term* b, term* h, map<term*,term*>& dna){
 					
 		//var list		succeed
 		//			make the list the root
-		if(br->p < 0 && hr->p > 0){
-			if(!hr->args.size()){
-				dna[br] = hr;
+		if(br.first->p < 0 && hr.first->p > 0){
+			if(!hr.first->args.size()){
+				dna[brr] = hr;
 				continue;
 			}else{
-				if(!dna[br]->args.size()){
-					term* tmp = new_all_vars_list(hr->args.size(),dna);
-					dna[br] = tmp;
+				if(!dna[brr].first->args.size()){
+					term* tmp = new_all_vars_list(hr.first->args.size(),pbody,dna);
+					dna[brr] = ruleterm(tmp,pbody);
 				}
 				br = find_root(br,dna);
 			}
@@ -392,19 +458,20 @@ bool makeDNA(term* b, term* h, map<term*,term*>& dna){
 		//			make the const the root
 		//list var		succeed
 		//			make the list the root
-		if(br->p > 0 && hr->p < 0){
+		assert(br.first && hr.first);
+		if(br.first->p > 0 && hr.first->p < 0){
 			//dna[hr] = br;
-			if(!br->args.size()){
-				dna[hr] = br;
+			if(!br.first->args.size()){
+				dna[hrr] = br;
 				continue;
 			}else{
 			//make an all-vars list of the same size and then
 			//call makeDNA with br & the new list
 			//reuse hr for the new list since we don't need the
 			//var at this point
-				if(!dna[hr]->args.size()){
-					term* tmp = new_all_vars_list(br->args.size(),dna);
-					dna[hr] = tmp;
+				if(!dna[hrr].first->args.size()){
+					term* tmp = new_all_vars_list(br.first->args.size(),phead,dna);
+					dna[hrr] = ruleterm(tmp,phead);
 				}
 				hr = find_root(hr,dna);
 			}
@@ -422,9 +489,9 @@ bool makeDNA(term* b, term* h, map<term*,term*>& dna){
 		//			the result of their unification
 		//			becomes the root of the merged set
 
-		if(!(br->p == br->p)) return false;
-		if(!(br->args.size() == hr->args.size())) return false;
-		if(!makeDNA(br,hr,dna)) return false;
+		if(!(br.first->p == br.first->p)) return false;
+		if(!(br.first->args.size() == hr.first->args.size())) return false;
+		if(!makeDNA(br.first,hr.first,dna)) return false;
 	}
 
 	return true;
@@ -440,8 +507,57 @@ void makeDNA(termset* rules){
 			term** hit = (*bit)->matches.begin();
 			term** hend = (*bit)->matches.end();
 			for(; hit != hend; hit++){
-				map<term*,term*> dna;
-				if(makeDNA((*bit)->t,(*hit),dna)) (*bit)->DNA[(*hit)] = dna;
+				DNA dna;
+				//so, we'll want to makeDNA just like we're doing now,
+				//but then go through the DNA structure and invert the
+				//mapping so that it's <ruleterm,vector<ruleterm>>
+				
+				//<root, list-of-things-that-have-it-as-root>
+				
+				if(makeDNA((*bit)->t,(*hit),dna)){
+					//when we invert the mapping, our values now
+					//have to serve as keys, but they don't,
+					//cause terms
+					//but resid won't work because we need lists
+					map<ruleterm,vector<ruleres>> newdna;
+					for(auto x : dna){
+						ruleterm tmp(mkterm(x.first.first),x.first.second);
+						ruleterm root = find_root(tmp,dna);
+						
+						//if its a list we don't need to do
+						//anything, cause all lists are different
+						
+						if(root.first->args.size())
+						{
+							assert(root.first->p == Dot);
+					
+							
+							newdna[root].push_back(x.first);
+						}
+							
+						else
+						{
+							bool found = false;
+							for (auto kv: newdna)
+							{
+								if (kv.first.first->p == root.first->p && kv.first.second == root.second)
+								{
+									found = true;
+									newdna[kv.first].push_back(x.first);
+									break;
+								}
+							}
+							if (!found){newdna[root].push_back(x.first);}
+							
+						}	
+							
+						//alright
+						//hold tight
+						//newdna[root].push_back(x.first);
+					}
+					(*bit)->dna[(*hit)] = newdna;
+					//(*bit)->dna[(*hit)] = dna;
+				}
 			}
 		}
 	}
@@ -486,7 +602,7 @@ term* mkterm(resid p) { MKTERM1(p); }
 #define PROCEED PROCEED1 t[pos++] = *s++; t[pos] = 0; pos = 0
 #define TILL(x) do { t[pos++] = *s++; } while (x)
 class nqparser {
-private:
+private: 
 	wchar_t *t;
 	const wchar_t *s;
 	int pos;
@@ -690,6 +806,18 @@ string format(const subs& s) {
 	return ss.str();
 }
 
+string format(const ruleres rr){
+	std::wstringstream ss;
+	ss << dict[rr.first] << ":" << (rr.second == pbody?"b":"h");
+	return ss.str();
+}
+
+string format(const ruleterm rt){
+	std::wstringstream ss;
+	ss << format(rt.first, false) << ":" << (rt.second == pbody?"b":"h");
+	return ss.str();
+}
+
 #define IDENT for (int n = 0; n < dep; ++n) ss << L'\t'
 
 string format(const termset& t, int dep) {
@@ -823,18 +951,34 @@ void printDNA(termset kb){
 			//Print Body Item
 			dout << "  " << j++ << ". " << format((*bit)->t,false) << "\n";
 			int k = 1;
-			auto dit = (*bit)->DNA.begin();
-			auto e = (*bit)->DNA.end();
+			//<term*,map<ruleterm,vector<ruleres>>>
+			auto dit = (*bit)->dna.begin();
+			auto e = (*bit)->dna.end();
 			for (;dit != e; ++dit) {
 				//Print Matching Rule
 				dout << "    " << k++ << ". " << format(dit->first,false) << "\n";
 				int l = 1;
+				//<ruleterm,vector<ruleres>>
 				auto eit = dit->second.begin();
-				for (;eit != dit->second.end(); ++eit)
+				for (;eit != dit->second.end(); ++eit){
 					//Print DNA
+					/*
 					dout	<< "      " << l++ << ". " <<
-						format(eit->first,false) << "/" << 
-						format(eit->second,false) << "\n";
+						format(eit->first) << "/" << 
+						format(eit->second) << "\n";
+					*/
+					dout << "	" << l++ << ". " << format(eit->first);
+					
+					//ruleres		
+					for(auto fit = eit->second.begin(); fit != eit->second.end(); ++fit){
+						ruleres tmp(eit->first.first->p, eit->first.second);
+						if(*fit != tmp){
+							dout << " = " << format(*fit);
+						}	
+					}
+					
+					dout << "\n";
+				}
 			}
 		}
 	}
