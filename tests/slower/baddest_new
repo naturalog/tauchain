@@ -1,0 +1,209 @@
+#06:01 < HMC_A> it is the 1 bit full adder circuit example from the guido paper
+#06:01 < HMC_A> http://www.agfa.com/w3c/2002/02/thesis/thesis.pdf
+#http://www.electronicshub.org/half-adder-and-full-adder-circuits/#Full_Adder_using_NAND_Gates
+#the numbering in the diagram is the same as the numbering here
+
+#9 nand-gates chained together:
+#here   diagram
+#g[i] = U[i]
+
+
+
+--limit 5000
+
+kb
+
+
+#<koo7> so, ones and twos are inputs and threes are outputs?
+#<stoopkid> yep, the object of :nand1 or :nand2 is the truth value of input1 or input2, respectively, which will be referenced by the subject, and the object of :nand3 is the truth-value of the output which is represented by the subject
+#<stoopkid> from a normal programmer's perspective, it's a really really crude way of handling it
+#<stoopkid> :nand1, :nand2, :nand3 all mean the same thing, they only differ in where their subject is being used in the gates
+
+
+
+#nand1			truth value o for node s acting as input1 for a gate
+#nand2			truth value o for node s acting as input2 for a gate
+#nand3			truth value o for node s acting as output for a gate
+#gnand1			s is a gate, o is input1
+#gnand2			s is a gate, o is input2
+#gnand3			s is a gate, o is output
+#nandnand1		s/o are gates, and the output of s is input1 for o 
+#nandnand2		s/o are gates, and the output of s is input2 for o
+
+
+#definition of a nand gate
+#?A: input1
+#?B: input2
+#?C: output
+#?G: gate
+#?C :nand3 "true" basically means that there is *some* gate which returns true with ?C as the output
+#wrt this rule, that is
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "false".} => {?C :nand3 "true"}.
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "false".  ?B :nand2 "true".} => {?C :nand3 "true"}.
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "true".  ?B :nand2 "false".} => {?C :nand3 "true"}.
+{?G :gnand1 ?A.  ?G :gnand2 ?B.  ?G :gnand3 ?C.  ?A :nand1 "true".  ?B :nand2 "true".} => {?C :nand3 "false"}.
+
+#definition of the connection between gates
+
+#if gate1 is input2 for gate2, 
+#and ?x is the output of gate1 
+#and ?x is input2 for gate2, 
+#and ?v is the truth value of the output of whatever gate ?x is the output of
+
+#then give ?x a :nand2 value of ?v, because it needs to act as input2 for gate2 and the
+#truth value for things being used as input2 is stored as the object of :nand2.
+
+#remember how i said it was really crude from a programmer's perspective?
+#this translates the output value of a previous gate into something usable for input to another gate
+#:nand3 -> :nand1/2
+{?G1 :nandnand2 ?G2.  ?G1 :gnand3 ?X.  ?G2 :gnand2 ?X.  ?X :nand3 ?V.} => {?X :nand2 ?V}.
+{?G1 :nandnand1 ?G2.  ?G1 :gnand3 ?X.  ?G2 :gnand1 ?X.  ?X :nand3 ?V.} => {?X :nand1 ?V}.
+
+#The facts of the example:
+
+#
+#it's a full adder cause it has the carry from the previous bits
+#A + B, Cin = (S,Cout)
+#0 + 0, n   = (0,n)
+#0 + 0, y   = (1,n)
+#1 + 0, n   = (1,n)
+#1 + 0, y   = (0,y)
+#0 + 1, n   = (1,n)
+#0 + 1, y   = (0,y)
+#1 + 1, n   = (0,y)
+#1 + 1, y   = (1,y)
+
+
+#if it's used as input1, it'll have :nand1 and it'll be it's truth value
+#likewise with input2 and :nand2
+
+#this seems rather contrived, like it would be better to just have boolean values and check their value
+#but if you look at the diagram from the link you'll see that 
+#:a is only used as input1 in any of the gates, so it gets :nand1
+#:b is only used as input2 in any of the gates, :nand2
+#:Cin is only used as input2 in any of the gates, :nand2
+
+
+#current bit from first number
+:a :nand1 "true" .
+#so this should be read as input a on nand1 is true? im guessing so but i haven't determined for sure
+#maybe we should just rewrite an adder circuit our own way
+#well we could, but..ok if you wish..but im not sure it will help anything
+#just press esc twice, btw ah thanks; yea got so focused in the adder logic i forgot about the bug-tracking for a second :)heh
+#can you exit, my f keys dont work
+
+#current bit from second number
+:b :nand2 "true" .
+
+#carry bit from addition addition of the previous bits 
+:cin :nand2 "true" .
+
+
+
+#gates 7 and 8 were switched in name but the logic was the same; i switched it to match the diagram tho, for clarity.
+
+#inputs feed into the first one on the far left; a11 is the output
+:g1 :gnand1 :a .
+:g1 :gnand2 :b .
+:g1 :gnand3 :a11 .
+
+#this says that g1 is to be input 2 for g2, input 1 for g3, and input 2 for g9
+:g1 :nandnand1 :g3 .
+:g1 :nandnand2 :g2 .
+:g1 :nandnand2 :g9 .
+
+#this already says that the output of g1 is input 2 for g2.... where?
+#gnand1 is input1
+#gnand2 is input2
+#gnand3 is output
+#g is for gate what gate? check this link here
+:g2 :gnand1 :a .
+:g2 :gnand2 :a11 .
+:g2 :gnand3 :a12 .
+
+:g2 :nandnand1 :g4 .
+
+:g3 :gnand1 :a11 .
+:g3 :gnand2 :b .
+:g3 :gnand3 :a13 .
+
+:g3 :nandnand2 :g4 .
+
+:g4 :gnand1 :a12 .
+:g4 :gnand2 :a13 .
+:g4 :gnand3 :a14 .
+
+:g4 :nandnand1 :g6 .
+:g4 :nandnand1 :g5 .
+
+:g5 :gnand1 :a14 .
+:g5 :gnand2 :cin .
+:g5 :gnand3 :a15 .
+
+#:g5 :nandnand1 :g8 .
+:g5 :nandnand1 :g7 .
+:g5 :nandnand1 :g9 .
+:g5 :nandnand2 :g6 .
+
+:g6 :gnand1 :a14 .
+:g6 :gnand2 :a15 .
+:g6 :gnand3 :a16 .
+
+#:g6 :nandnand1 :g7 .
+:g6 :nandnand1 :g8 .
+
+
+#:g7 :gnand1 :a16 .
+#:g7 :gnand2 :a17 .
+#:g7 :gnand3 :sum .
+:g7 :gnand1 :a15 .
+:g7 :gnand2 :cin .
+:g7 :gnand3 :a17 .
+
+:g7 :nandnand2 :g8.
+
+#:g8 :gnand1 :a15 .
+#:g8 :gnand2 :cin .
+#:g8 :gnand3 :a17 .
+:g8 :gnand1 :a16 .
+:g8 :gnand2 :a17 .
+:g8 :gnand3 :sum .
+
+#:g8 :nandnand2 :g7 .
+
+:g9 :gnand1 :a15 .
+:g9 :gnand2 :a11 .
+:g9 :gnand3 :cout .
+fin.
+
+
+query
+
+?rrr :gnand3 ?rr .
+
+
+#carry
+:cout :nand3 ?V1q .
+
+#sum
+:sum :nand3  ?V2q .
+
+
+#carry
+:cout :nand3 ?V1q .
+
+#carry
+:cout :nand3 ?V1qaa .
+
+
+
+
+fin.
+
+
+shouldbe
+:cout :nand3 "true" .
+:sum :nand3  "true" .
+fin.
+
+

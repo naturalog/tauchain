@@ -98,6 +98,7 @@ public:
 	bool do_reparse = true;
 	bool do_cppout = false;
 	bool do_query = true;
+	bool do_test = true;
 	std::string name;
 	Mode mode = COMMANDS;
 	int limit = 123;//this should be hierarchical tho
@@ -117,6 +118,7 @@ public:
 			limit = INPUT->limit;
 			do_cppout = INPUT->do_cppout;
 			do_query = INPUT->do_query;
+			do_test = INPUT->do_test;
 		}
 	}
 };
@@ -602,6 +604,11 @@ bool read_option(string s){
 			return true;
 		}
 
+		if(_option == "test"){
+			INPUT->do_test = std::stoi(token);
+			return true;
+		}
+
 		INPUT->take_back();
 	}
 
@@ -882,10 +889,12 @@ int main ( int argc, char** argv)
 							errss << "make -e cppout" << fff << INPUT->name << "\"";
 							passthru(errss.str());
 
+							if (INPUT->do_test)
+							{
+
 							stringstream cmdss;
 							cmdss << "./cppout" << fff << INPUT->name << "\"";
 							redi::ipstream p(cmdss.str());
-
 
 							while (getline(p.out(), line)) {
 								dout << line << endl;
@@ -898,6 +907,7 @@ int main ( int argc, char** argv)
 								}
 							}
 							p.close();
+							}
 						}
 						done_anything = true;
 					}

@@ -108,7 +108,9 @@ pnode nqparser::readlist(qdb& kb) {
 			break;
 		}
 
-		//Maybe not readany().
+		//Here's why we can't have contexts in lists right now:
+		//readany() does not read contexts. If we had a context there
+		//then i think it would try to read it as an IRI and fail.
 		//Attempt to readany(true) into pn. If we fail, throw an error.
 		if (!(pn = readany(kb, true)))
 			//or literal apparently?
