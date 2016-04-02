@@ -15,11 +15,11 @@ struct rule : public vector<dna> {
 		for (dna d : *this) { // go over all body items
 			dna _d;
 			for (auto p : d) { // go over all body's head matches
-				uf *u;
+				uf *u = c;
 				// go over all vars
 				for (int n = 0; n < nvars; ++n) 
 					// merge uf
-					u = unio(p.second, n, find(c, n)); 
+					u = unio(p.second, n, find(u, n)); 
 				// push dna to new rule
 				_d.push_back(make_pair(p.first, u)); 
 			}
