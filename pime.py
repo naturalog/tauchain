@@ -18,13 +18,17 @@ def run(c):
         d=dt.utcnow() - a
         return d
         
+        
+progs = sys.argv[1:]
 
 while True:
 	runs += 1
 
-	for i,c in enumerate(sys.argv[1:]):
+	for i,c in enumerate(progs):
 		r = run(c)
 		if r < best[i]: best[i] = r
 
         print [z(x) for x in best]
+        
+        if runs%10==0: print progs
         
