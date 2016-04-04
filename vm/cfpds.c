@@ -2,6 +2,8 @@
 // Data Structure" published on "Proceeding ML '07 Proceedings of the 2007
 // workshop on Workshop on ML" pp. 37-46 
 // https://www.lri.fr/~filliatr/ftp/publis/puf-wml07.pdf
+//extern "C" 
+//{
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -75,3 +77,4 @@ void uftest() {
 	t = unio(t, 4, 4);
 	assert(find(t, 4) != find(t, 3));
 }
+//}

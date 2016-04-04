@@ -4,28 +4,34 @@
 #include "cfpds.h"
 #include <vector>
 #include <utility>
+#include <map>
 using namespace std;
-struct dna : public vector<pair<int, uf*>> { };
-struct rule : public vector<dna> {
+
+typedef pair<int, int>		constraint;
+typedef vector<pair<int, uf*>> 	dna;
+typedef vector<class rule*>	kb_t;
+
+class rule : public vector<dna> {
+	rule(const rule& r, const constraint& c);
+public:	
 	rule(int nvars) : nvars(nvars) {}
 	const int nvars;
-	// mutation without validation
-	rule* mutate( uf *c ) {
-		rule *r = new rule(nvars);
-		for (dna d : *this) { // go over all body items
-			dna _d;
-			for (auto p : d) { // go over all body's head matches
-				uf *u = c;
-				// go over all vars
-				for (int n = 0; n < nvars; ++n) 
-					// merge uf
-					u = unio(p.second, n, find(u, n)); 
-				// push dna to new rule
-				_d.push_back(make_pair(p.first, u)); 
-			}
-			r->push_back(_d);
-		}
-		return r;
-	}
+	map<constraint, rule*> m;
+
+	static rule* mutate(rule &r, const constraint &c);
 };
-struct kb : public vector<rule> {};
+
+rule::rule(const rule& r, const constraint& c) : nvars(r.nvars) {
+	for (dna d : r) { // go over all body items
+		dna _d;
+		for (auto p : d) // go over all body's head matches
+			_d.push_back(make_pair(p.first, unio(p.second, c.second, c.second))); 
+		push_back(_d);
+	}
+}
+
+rule* rule::mutate(rule &r, const constraint &c) {
+	auto i = r.m.find(c);
+	if (i != r.m.end()) return i->second;
+	r.m[c] = new rule(r, c);
+}
