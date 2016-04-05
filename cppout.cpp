@@ -20,7 +20,7 @@
 
 
 
-#define ultimate
+#define CPPOUT2
 #ifdef CPPOUT
 /*
 first, simple and naive cppout.

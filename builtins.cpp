@@ -1,3 +1,99 @@
+/*
+#include <thread>         // std::thread
+#include <mutex>          // std::mutex, std::lock
+
+
+
+
+void build_in_dht()
+{
+	static bool running = false;
+	static mutex mut;
+	static dht::DhtRunner node;
+	
+	
+	if (!running)
+	{
+		running = true;
+		
+		// Launch a dht node on a new thread, using a
+		// generated RSA key pair, and listen on port 4222.
+		node.run(4222, dht::crypto::generateIdentity(), true);
+
+		// Join the network through any running node,
+		// here using a known bootstrap node.
+		node.bootstrap("23.102.163.145", "4223");
+
+		// put some data on the dht
+		std::vector<uint8_t> some_data(5, 10);
+		node.put("unique_key", some_data);
+
+		// put some data on the dht, signed with our generated private key
+		node.putSigned("unique_key_42", some_data);
+	}
+
+
+
+	EEE;	
+	
+	string bu = "http://idni.org/dht#put";
+	auto bui = dict.set(mkiri(pstr(bu)));
+
+
+	builtins[bui].push_back(
+		[entry](Thing *dummy, Thing *graph) mutable {
+		setproc(bu);
+		TRACE_ENTRY;
+		switch(entry){
+		case 0:
+			graph = getValue(graph);
+			if(is_node(graph))
+			stringstream ss << kb.first[grap
+			
+			
+			while (domain_pred(&pred, cls))
+			{
+				{
+					ASSERT(is_bound(pred));
+					Thing *pred_val = get_thing(pred);
+					//how do we know it's not another bound var good q.......... i guess it wouldnt if a rule returned it
+					//at least i put the assert there:) we can test it
+					//yeah hm in the long run we should get the floobits session and tmux on one machine i guess
+					//so isnt that a bug
+					/*i dunno if we're supposed to allow rules to imply this*/
+					//if it's  a semantic restriction it should probably be handled more fully
+					//but in the typesystem, not here..at least thats my guess 
+					/*anyway good catch
+					 * tests/rdf/domainImpliesType-tricky
+					*/
+					ASSERT(is_node(*pred_val));
+					nodeid pred_nodeid = get_node(*pred_val);
+
+					//(So if the pred is not there, )a subproperty of it might still satisfy,
+					//but we don't have a pred to run, so make a wildcard rule
+					if (!has(preds, pred_nodeid))
+						preds[pred_nodeid] = make_wildcard_rule(pred_nodeid);
+					//If the pred is there, use that. This will need the wildcard rule to be added to the pred during compile_kb
+					pred_coro = ITEM(preds, pred_nodeid);
+				}
+				
+				ASSERT(is_unbound(whatever));
+				while(pred_coro(instance, &whatever))
+				{
+					entry = LAST;
+					return true;
+		case_LAST:;
+				}
+				ASSERT(is_unbound(whatever));
+			}
+			return false;
+			END;
+		}
+	});
+	}
+
+*/
+
 
 
 //Outer vector: list
