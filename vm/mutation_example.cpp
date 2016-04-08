@@ -18,15 +18,15 @@ bool merge(puf &dst, const puf& src);
 
 struct premise {
 	unsigned rl; // rule number of the matching head
-	premise *next; // since we may have many matching heads
+	// doubly linked list:
+	premise *next, *prev; // since we may have many matching heads
 	puf *conds; // conditions for matching this head
 	rule* operator()() { // the reasoning core
 		rule &r = kb.get(rl); // the rule to match to this premise
-		for (premise* p : r) { // mutate its premises
-			puf *tmp = p->conds; // in case we fail
+		for (premise* p : r)
 			if (!merge(*p->conds, *conds))
-				p->conds = tmp; // TODO: GC
+				p->prev = p->next; // TODO: GC
+				// TODO: handle edge cases
 			// we're done! target rule's premise is mutated
-		}
 	}
 };
