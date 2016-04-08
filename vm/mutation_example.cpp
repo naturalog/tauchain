@@ -1,37 +1,32 @@
-// Positive integers are vars. Negatives are list length up
-// to max list length in kb, integers smaller than -max represent consts.
-// NOTE: Assuming de-bruijn. this is crucial!
-#include "cfpds.h"
-#include <vector>
-#include <utility>
-#include <map>
-using namespace std;
-
-typedef pair<int, int>		constraint;
-typedef vector<pair<int, uf*>> 	dna;
-typedef vector<class rule*>	kb_t;
-
-class rule : public vector<dna> {
-	rule(const rule& r, const constraint& c);
-public:	
-	rule(int nvars) : nvars(nvars) {}
-	const int nvars;
-	map<constraint, rule*> m;
-
-	static rule* mutate(rule &r, const constraint &c);
+template<typename T>
+struct parr<T> { // persistent array
+	const T& get(unsigned);
+	parr<T>* set(unsigned, const T&);
+	void reroot();
 };
 
-rule::rule(const rule& r, const constraint& c) : nvars(r.nvars) {
-	for (dna d : r) { // go over all body items
-		dna _d;
-		for (auto p : d) // go over all body's head matches
-			_d.push_back(make_pair(p.first, unio(p.second, c.second, c.second))); 
-		push_back(_d);
-	}
-}
+struct puf : private parr<int> { // persistent dsds of ints
+	int find(int);
+	puf* unio(int, int);
+};
+struct premise;
+struct rule : public parr<premise*> { };
+struct kb_t : public parr<rule*> { };
+kb_t kb;
 
-rule* rule::mutate(rule &r, const constraint &c) {
-	auto i = r.m.find(c);
-	if (i != r.m.end()) return i->second;
-	r.m[c] = new rule(r, c);
-}
+bool merge(puf &dst, const puf& src);
+
+struct premise {
+	unsigned rl; // rule number of the matching head
+	premise *next; // since we may have many matching heads
+	puf *conds; // conditions for matching this head
+	rule* operator()() { // the reasoning core
+		rule &r = kb.get(rl); // the rule to match to this premise
+		for (premise* p : r) { // mutate its premises
+			puf *tmp = p->conds; // in case we fail
+			if (!merge(*p->conds, *conds))
+				p->conds = tmp; // TODO: GC
+			// we're done! target rule's premise is mutated
+		}
+	}
+};
