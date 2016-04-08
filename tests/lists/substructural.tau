@@ -1,0 +1,19 @@
+kb
+this isa dummyfact.
+{this isa dummyfact.} => {(?x ?y) first ?x}.
+{this isa dummyfact.} => {(?x ?y) rest ?y}.
+{this isa dummyfact.} => {(?x) first ?x}.
+{this isa dummyfact.} => {(?x) rest ()}.
+
+{?x first ?f.} => {?x substructure ?f}.
+
+#base case
+() recurse ().
+
+{?x substructure ?y. ?y recurse ?z.} => {?x recurse ?z}.
+
+fin.
+
+query
+(((((()))))) recurse ?what.
+fin.

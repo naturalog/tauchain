@@ -15,13 +15,9 @@
 
 
 
-
-
-
-
-
-#define CPPOUT2
 #ifdef CPPOUT
+#define CPPOUT2
+#ifdef simple_cppout
 /*
 first, simple and naive cppout.
 
@@ -2114,11 +2110,7 @@ void yprover::cppout(qdb &goal)
 	out.close();
 
 }
-
-
-
-#endif
-
+#endif 
 
 /*
 
@@ -2138,4 +2130,18 @@ Out[5]: 115.625
 
 */
 
+
+
+#else
+
+void yprover::cppout(qdb &goal)
+{
+	FUN;
+	(void)goal;
+	dout << "not compiled with -DCPPOUT." << endl;
+	
+
+}
+
+#endif
 

@@ -1,0 +1,72 @@
+#Superstructural recursion: An odometer for your cpu mileage :)
+
+kb
+#digits
+0 a Nat.
+1 a Nat.
+2 a Nat.
+3 a Nat.
+4 a Nat.
+5 a Nat.
+6 a Nat.
+7 a Nat.
+8 a Nat.
+9 a Nat.
+
+#order
+1 prev 0.
+2 prev 1.
+3 prev 2.
+4 prev 3.
+5 prev 4.
+6 prev 5.
+7 prev 6.
+8 prev 7.
+9 prev 8.
+
+{0 a Nat.} => {(?x) first ?x}.
+{0 a Nat.} => {(?x) rest ()}.
+{0 a Nat.} => {(?x ?y) first ?x}.
+{0 a Nat.} => {(?x ?y) rest ?y}.
+
+#check if digit ?x is less than digit ?y
+{ ?y prev ?x. } => { ?x digit_lt ?y . } .
+{ ?x digit_lt ?y . ?y digit_lt ?z . } => { ?x digit_lt ?z . } .
+
+#take a list and check if it's all 9's
+() isallnines t.
+{?r first 9. ?r rest ?q. ?q isallnines t.} => {?r isallnines t}.
+
+{?r first ?x. ?x digit_lt 9.} => {?r isallnines f}.
+{?r first 9. ?r rest ?q. ?q isallnines f.} => {?r isallnines f}.
+
+
+#take a list and return a list of the same length but with all 0's
+() makeallzeroes ().
+{?x first ?f. ?x rest (). } => {?x makeallzeroes (0)}.
+{?x first ?f. ?x rest ?r. ?r first ?q. ?r makeallzeroes ?z.} => {?x makeallzeroes (0 ?z)}.
+
+#normalize input: trim leading 0's and fail if it contains any items that aren't nats.
+() normalize2 ().
+() normalize ().
+{?x first ?f. ?f a Nat. ?x rest ?r. ?r normalize2 ?r.} => {?x normalize2 ?x}.
+{?x first ?f. ?f digit_gt 0. ?x rest ?r. ?r normalize2 ?r} => {?x normalize ?x}.
+{?x first 0. ?x rest ?r. ?r normalize ?y} => {?x normalize ?y}.
+
+#get next number
+{?x rest ?r. ?r first ?dummy. ?r isallnines t. ?x first ?f. ?next prev ?f. ?r makeallzeroes ?zeroes} => {?x mksucc2 (?next ?zeroes)}.
+{?x rest ?r. ?r first ?dummy. ?r isallnines f. ?x first ?f. ?r mksucc2 ?y.} => {?x mksucc2 (?f ?y)}.
+{?x rest (). ?x first ?f. ?f digit_lt 9. ?n prev ?f.} => {?x mksucc2(?n)}.
+{?x isallnines t. ?x makeallzeroes ?z} => {?x mksucc (1 ?z)}.
+{?x isallnines f. ?x mksucc2 ?y} => {?x mksucc ?y}.
+
+#countup
+{?x mksucc ?y. ?y countup2 ?z} => {?x countup2 ?z}.
+#lemme normalize your input for you so that you don't crash before you infloop:
+{?x normalize ?z. ?z countup2 ?y.} => {?x countup ?y}.
+
+fin.
+
+query
+(0) countup forever.
+fin.

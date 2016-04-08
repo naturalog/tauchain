@@ -1,0 +1,14 @@
+kb
+
+this isa dummyfact.
+#superstructural constructions are fine
+{?x <http://idni.org/builtins#printNow> (?x)} => {?x superstructure (?x)}.
+
+#superstructural recursions are not, unless they're capped off by some condition.
+{?x superstructure ?y. ?y recurse ?z. } => {?x recurse ?z. }.
+
+fin.
+
+query
+() recurse forever.
+fin.

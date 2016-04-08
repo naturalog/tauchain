@@ -1,0 +1,209 @@
+#The Countdown
+ 
+kb
+#digits
+0 a Nat.
+1 a Nat.
+2 a Nat.
+3 a Nat.
+4 a Nat.
+5 a Nat.
+6 a Nat.
+7 a Nat.
+8 a Nat.
+9 a Nat.
+ 
+#order
+1 prev 0.
+2 prev 1.
+3 prev 2.
+4 prev 3.
+5 prev 4.
+6 prev 5.
+7 prev 6.
+8 prev 7.
+9 prev 8.
+
+{0 a Nat.} => {(?x) first ?x}.
+{0 a Nat.} => {(?x) rest ()}.
+{0 a Nat.} => {(?x ?y) first ?x}. 
+{0 a Nat.} => {(?x ?y) rest ?y}.
+ 
+#check if digit ?x is greater than digit ?y
+{ ?x prev ?y . } => { ?x digit_gt ?y . } .
+{ ?x digit_gt ?y . ?y digit_gt ?z . } => { ?x digit_gt ?z . } .
+ 
+ 
+#check if digit ?x is less than digit ?y
+{ ?y prev ?x. } => { ?x digit_lt ?y . } .
+{ ?x digit_lt ?y . ?y digit_lt ?z . } => { ?x digit_lt ?z . } .
+
+#take a list and check if it's all 0's
+() isallzeroes t.
+{?r first 0. ?r rest ?q. ?q isallzeroes t.} => {?r isallzeroes t}.
+ 
+{?r first ?x. ?x digit_gt 0.} => {?r isallzeroes f}.
+{?r first 0. ?r rest ?q. ?q isallzeroes f.} => {?r isallzeroes f}.
+
+
+#take a list and check if it's all 9's
+() isallnines t.
+{?r first 9. ?r rest ?q. ?q isallnines t.} => {?r isallnines t}.
+
+{?r first ?x. ?x digit_lt 9.} => {?r isallnines f}.
+{?r first 9. ?r rest ?q. ?q isallnines f.} => {?r isallnines f}. 
+
+{?c a Nat.} => {(?x ?c) const ?c}.
+{?x a Nat.} => {?x makenine 9}.
+{?x a Nat.} => {?x makezero 0}.
+
+
+#{?i exec ?o} => {(exec_map ?i) exec ?o}. 
+#{?i const ?o} => {(const_map ?i) exec ?o}.
+{?i makenine ?o} => {(makenine_map ?i) exec ?o}.
+{?i makezero ?o} => {(makezero_map ?i) exec ?o}.
+
+(() ?f) map ().
+{?list_in first ?f. (?func_map ?f) exec ?first_out. ?list_in rest ?r. (?r ?func_map) map ?rest_out.} => {(?list_in ?func_map) map (?first_out ?rest_out)}.
+
+(() ?f) fold ().
+{?x a Nat} => {((?x) ?f) fold (?x)}.
+{?list_in first ?x. ?list_in rest ?r. ?r first ?y. (?bin_op (?x ?y)) exec ?o. ?r rest ?q. ((?o ?q) ?bin_op) fold ?out.} => {(?list_in ?bin_op) fold ?out}.
+
+
+#{} => {(?a ?m) mod ?o}.
+
+
+#{} => {(?a ?b ?m) addmod ?o}.
+
+
+#take a list and return a list of the same length but with all 9's
+() makeallnines ().
+{?x first ?f. ?x rest ().} => {?x makeallnines (9)}.
+{?x first ?f. ?x rest ?r. ?r first ?q. ?r makeallnines ?z.} => {?x makeallnines (9 ?z)}.
+
+
+{(?x makenine_map) map ?y.} => {?x makeallnines4 ?y}.
+
+#take a list and return a list of the same length but with all 0's
+() makeallzeroes ().
+{?x first ?f. ?x rest (). } => {?x makeallzeroes (0)}.
+{?x first ?f. ?x rest ?r. ?r first ?q. ?r makeallzeroes ?z.} => {?x makeallzeroes (0 ?z)}.
+
+#{(?x makezero_map) map ?y.} => {?x makeallzeroes ?y}.
+
+
+
+
+#normalize input: trim leading 0's and fail if it contains any items that aren't nats.
+() normalize2 ().
+() normalize ().
+{?x first ?f. ?f a Nat. ?x rest ?r. ?r normalize2 ?r.} => {?x normalize2 ?x}.
+{?x first ?f. ?f digit_gt 0. ?x rest ?r. ?r normalize2 ?r} => {?x normalize ?x}.
+{?x first 0. ?x rest ?r. ?r normalize ?y} => {?x normalize ?y}.
+ 
+ 
+#get previous number
+{?x rest ?r. ?r isallzeroes t. ?x first ?f. ?f prev ?prev. ?r makeallnines ?nines.} => {?x succ2 (?prev ?nines)}.
+{?x rest ?r. ?r isallzeroes f. ?x first ?f. ?r succ2 ?p.} => {?x succ2 (?f ?p)}.
+ 
+ 
+{?x rest ?r. ?r isallzeroes t. ?r first ?dummy. ?x first ?f. ?f digit_gt 1. ?f prev ?prev. ?r makeallnines ?nines.} => {?x succ (?prev ?nines)}.
+
+{?x rest ?r. ?r isallzeroes t. ?r first ?dummy. ?x first 1. ?r makeallnines ?y} => {?x succ ?y}.
+
+{?x rest (). ?x first ?f. ?f prev ?p} => {?x succ (?p)}.
+{?x rest ?r. ?r isallzeroes f. ?x first ?f. ?r succ2 ?p.} => {?x succ (?f ?p)}.
+ 
+#get next number
+{?x rest ?r. ?r first ?dummy. ?r isallnines t. ?x first ?f. ?next prev ?f. ?r makeallzeroes ?zeroes} => {?x mksucc2 (?next ?zeroes)}.
+
+{?x rest ?r. ?r first ?dummy. ?r isallnines f. ?x first ?f. ?r mksucc2 ?y.} => {?x mksucc2 (?f ?y)}.
+
+{?x rest (). ?x first ?f. ?f digit_lt 9. ?n prev ?f.} => {?x mksucc2(?n)}.
+
+#{?x rest (). ?x first ?f. ?f digit_lt 9. ?n prev ?f.} => {?x mksucc (?n)}.
+
+{?x isallnines t. ?x makeallzeroes ?z} => {?x mksucc (1 ?z)}.
+{?x isallnines f. ?x mksucc2 ?y} => {?x mksucc ?y}.
+
+
+
+
+ 
+#countdown
+() countdown2 done.
+(0) countdown2 done.
+{?x succ ?y. ?y countdown2 ?z} => {?x countdown2 ?z}.
+ 
+#don't start the countdown if we can't normalize the input, otherwise proceed
+{?x normalize ?z. ?z countdown2 ?y.} => {?x countdown ?y}.
+
+
+#countup
+{?x mksucc ?y. ?y countup2 ?z} => {?x countup2 ?z}.
+
+#lemme normalize your input for you so that you don't crash before you infloop:
+{?x normalize ?z. ?z countup2 ?y.} => {?x countup ?y}.
+
+() length (0).
+{?x first ?f. ?x rest ?r. ?r length ?z. ?z mksucc ?y.} => {?x length ?y}.
+
+fin.
+ 
+query
+
+#?what digit_gt 0.
+#(0 (0 (0 (1 (0 (0 (0))))))) normalize ?what.
+#(0 (0 (0 (1 (0 (0 (0))))))) countdown done.
+#(1 (0 (0))) countdown done.
+#(1 (0)) countdown ?what.
+#() countdown ?what.
+#(0) countdown ?what.
+#(1) countdown ?what.
+#(2) countdown ?what.
+#(9) countdown ?what.
+(1 (0 (0))) countdown ?what.
+#(1 (1 (1 (0)))) countdown ?what.
+#fin.
+#shouldbe
+# ... countdown done.
+#fin.
+
+#() first ?what.
+#() succ ?what.
+#(0) succ ?what.
+#(1) succ ?what.
+#(2) succ ?what.
+#(9) succ ?what.
+#(8 (7)) succ (8 (6))
+#(1 (0 (0))) succ ?what.
+#fin.
+#shouldbe
+#(1) succ (0)
+#(2) succ (1)
+#(9) succ (8)
+#(8 (7)) succ (8 (6))
+#(1 (0 (0))) succ (9 (9))
+#fin.
+
+#(1 (0 (0))) makeallnines4 ?what.
+#fin.
+#shouldbe
+#(1 (0 (0))) makeallnines4 (9 (9 (9))).
+#fin.
+#thatsall
+
+#(0) rest ?what.
+#(0) first ?what.
+#0 digit_lt 9.
+#?what prev 0.
+#(0) mksucc ?what.
+#(1) mksucc ?what.
+#(2) mksucc ?what.
+#(9) mksucc ?what.
+#(8 (6)) mksucc ?what.
+#(9 (9)) mksucc ?what.
+#(1 (0 (0))) mksucc ?what.
+#(0) countup ?what.
+fin.

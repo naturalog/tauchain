@@ -1,4 +1,5 @@
-/*
+#ifdef DHT
+
 #include <thread>         // std::thread
 #include <mutex>          // std::mutex, std::lock
 
@@ -92,7 +93,7 @@ void build_in_dht()
 	});
 	}
 
-*/
+#endif
 
 
 
@@ -1164,6 +1165,8 @@ we should hook up eulersharp at some point though, apparently that's what we're 
 				}
 			}
 	);
+#include "printnow.cpp"
+
 }
 
 
