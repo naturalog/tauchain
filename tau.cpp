@@ -62,7 +62,6 @@ std::map<string,bool*> _flags = {
 typedef std::pair<int*, string> IOP;
 std::map<string,IOP> int_flags = {
 		  {"level",IOP(&level,"debug level")}
-		 ,{"limit",IOP(&result_limit,"max results")}
 };
 
 std::vector<string> extensions = {"jsonld", "natural3", "natq", "n3", "nq"};
@@ -131,13 +130,6 @@ public:
 class ArgsInput : public Input
 {
 public:
-/*
-	bool interactive = false;
-	bool do_reparse = true;
-	std::string name;
-	Mode mode = COMMANDS;
-	int limit = 123;
-*/
 	int argc;
 	char **argv;
 	int counter = 1;
@@ -598,28 +590,18 @@ bool read_option(string s){
 		}
 
 
-		if(_option == "level"){
-			level = std::stoi(token);
-			dout << "debug level:" << level << std::endl;
-			return true;
-		}
-
-		if(_option == "limit"){
-			INPUT->limit = std::stoi(token);
-			dout << "result limit:" << result_limit << std::endl;
-			return true;
-		}
-
-#define input_bool_option(x, y) \
+#define input_option(x, y, z) \
 		\
 		if(_option == x){ \
 			INPUT->y = std::stoi(token); \
-			return true; \
+			dout << z << ":" << INPUT->y << std::endl; \
+			return true; \	
 		} 
 
-		input_bool_option("cppout", do_cppout);
-		input_bool_option("lambdas", do_query);
-		input_bool_option("test", do_test);
+		input_option("cppout", do_cppout, "cppout");
+		input_option("lambdas", do_query, "lambdas");
+		input_option("test", do_test, "test");
+		input_option("limit", limit, "results limit");
 
 		INPUT->take_back();
 	}
