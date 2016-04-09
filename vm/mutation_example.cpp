@@ -1,5 +1,9 @@
+#include <vector>
+#include <set>
+using namespace std;
+
 template<typename T>
-struct parr<T> { // persistent array
+struct parr { // persistent array
 	const T& get(unsigned);
 	parr<T>* set(unsigned, const T&);
 	void reroot();
@@ -10,36 +14,38 @@ struct puf : private pair<parr<int>, parr<unsigned>> {
 	puf* unio(int, int); // returns 0 for const1=const2
 };
 
+bool ISVAR(int x) { return x > 0; }
+
 struct match {
 	unsigned rl;
 	puf *conds;
-	forward_list<int> vars;
-	static match* mutate(match &m, puf& c) {{
+	set<int> vars;
+	static match* mutate(match &m, puf& c) {
 		int r;
 		match &res = *new match;
 		res.rl = m.rl;
 		res.conds = m.conds;
 		for (int v : m.vars)
-			if (!res.conds->unio(v, r = c.find(v)) {
+			if (!res.conds->unio(v, r = c.find(v))) {
 				delete &res;
 				return 0;
 			} else if (ISVAR(r))
-				res.vars.push_front(v);
+				res.vars.insert(v);
 		return &res;
 	}
 };
 
-struct premise : public list<match*> {
+struct premise : public vector<match*> {
 	premise(){}
 	premise(premise &p, puf &c) {
 		match *t;
 		for (match *m : p)
-			if ((t = mutate(*m, c)))
+			if ((t = match::mutate(*m, c)))
 				push_back(t);
 	}
 };
 
-struct rule : public parr<premise*> {
+struct rule : public vector<premise*> {
 	rule(){}
 	rule(rule &r, puf &c) {
 		for (premise *p : r)
@@ -47,4 +53,4 @@ struct rule : public parr<premise*> {
 	}
 };
 
-struct kb_t : public vector<rule*> { } *kn;
+struct kb_t : public vector<rule*> { } *kb;
