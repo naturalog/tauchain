@@ -20,16 +20,20 @@ struct match {
 	unsigned rl;
 	puf *conds;
 	set<int> vars;
+	match* mutate(puf& c);
 };
 
-typedef vector<vector<match*>*> rule;
+struct rule : private vector<vector<match*>*> {
+	rule* mutate(puf &c);
+	vector<rule*> mutations;
+};
 
-match* mutate(match &m, puf& c) {
+match* match::mutate(puf& c) {
 	int r;
 	match &res = *new match;
-	res.rl = m.rl;
-	res.conds = m.conds;
-	for (int v : m.vars)
+	res.rl = rl;
+	res.conds = conds;
+	for (int v : vars)
 		if (!res.conds->unio(v, r = c.find(v))) {
 			delete &res;
 			return 0;
@@ -38,13 +42,13 @@ match* mutate(match &m, puf& c) {
 	return &res;
 }
 
-rule* mutate(rule &r, puf &c) {
+rule* rule::mutate(puf &c) {
 	rule &res = *new rule;
 	match *t;
-	for (vector<match*> *p : r) {
+	for (vector<match*> *p : *this) {
 		auto &v = *new vector<match*>;
 		for (match *m : *p)
-			if ((t = mutate(*m, c)))
+			if ((t = m->mutate(c)))
 				v.push_back(t);
 		if (v.empty()) {
 			delete &res;
@@ -53,6 +57,7 @@ rule* mutate(rule &r, puf &c) {
 		}
 		res.push_back(&v);
 	}
+	mutations.push_back(&res);
 	return &res;
 }
 
