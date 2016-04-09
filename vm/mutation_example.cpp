@@ -14,51 +14,46 @@ struct puf : private pair<parr<int>, parr<unsigned>> {
 	puf* unio(int, int); // returns 0 for const1=const2
 };
 
-bool ISVAR(int x) { return x > 0; }
-
 struct match {
 	unsigned rl;
 	puf *conds;
 	set<int> vars;
-	match* mutate(puf& c);
 };
 
 struct rule : private vector<vector<match*>*> {
 	rule* mutate(puf &c);
 	vector<rule*> mutations;
+	rule *prev; // in the mutation tree
+	pair<rule*, unsigned> up; // up the proof tree, rule and body item id
 };
-
-match* match::mutate(puf& c) {
-	int r;
-	match &res = *new match;
-	res.rl = rl;
-	res.conds = conds;
-	for (int v : vars)
-		if (!res.conds->unio(v, r = c.find(v))) {
-			delete &res;
-			return 0;
-		} else if (ISVAR(r))
-			res.vars.insert(v);
-	return &res;
-}
 
 rule* rule::mutate(puf &c) {
 	rule &res = *new rule;
 	match *t;
-	for (vector<match*> *p : *this) {
+	for (vector<match*> *p : *this) { // per body item
 		auto &v = *new vector<match*>;
-		for (match *m : *p)
-			if ((t = m->mutate(c)))
-				v.push_back(t);
-		if (v.empty()) {
+		for (match *mt : *p) { // per matching head
+			int r;
+			match &m = *new match;
+			m.rl = mt->rl;
+			m.conds = mt->conds;
+			for (int x : mt->vars)
+				if (!m.conds->unio(x, r = c.find(x))) {
+					delete &m;
+					goto stop;
+				} else if (r > 0) // rep is var
+					m.vars.insert(x);
+			v.push_back(&m);
+		stop:
+		}
+		if (v.empty()) { // body item can't ever be satisfied
 			delete &res;
 			delete &v;
 			return 0;
 		}
 		res.push_back(&v);
 	}
-	mutations.push_back(&res);
-	return &res;
+	return mutations.push_back(&res), res.prev = this, &res;
 }
 
 struct kb_t : public vector<rule*> { } *kb;
