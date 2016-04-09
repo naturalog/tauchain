@@ -4,29 +4,47 @@ struct parr<T> { // persistent array
 	parr<T>* set(unsigned, const T&);
 	void reroot();
 };
-
-struct puf : private parr<int> { // persistent dsds of ints
+// persistent dsds of ints
+struct puf : private pair<parr<int>, parr<unsigned>> {
 	int find(int);
-	puf* unio(int, int);
+	puf* unio(int, int); // returns 0 for const1=const2
 };
-struct premise;
-struct rule : public parr<premise*> { };
-struct kb_t : public parr<rule*> { };
-kb_t kb;
 
-bool merge(puf &dst, const puf& src);
-
-struct premise {
-	unsigned rl; // rule number of the matching head
-	// doubly linked list:
-	premise *next, *prev; // since we may have many matching heads
-	puf *conds; // conditions for matching this head
-	rule* operator()() { // the reasoning core
-		rule &r = kb.get(rl); // the rule to match to this premise
-		for (premise* p : r)
-			if (!merge(*p->conds, *conds))
-				p->prev = p->next; // TODO: GC
-				// TODO: handle edge cases
-			// we're done! target rule's premise is mutated
+struct match {
+	unsigned rl;
+	puf *conds;
+	forward_list<int> vars;
+	static match* mutate(match &m, puf& c) {{
+		int r;
+		match &res = *new match;
+		res.rl = m.rl;
+		res.conds = m.conds;
+		for (int v : m.vars)
+			if (!res.conds->unio(v, r = c.find(v)) {
+				delete &res;
+				return 0;
+			} else if (ISVAR(r))
+				res.vars.push_front(v);
+		return &res;
 	}
 };
+
+struct premise : public list<match*> {
+	premise(){}
+	premise(premise &p, puf &c) {
+		match *t;
+		for (match *m : p)
+			if ((t = mutate(*m, c)))
+				push_back(t);
+	}
+};
+
+struct rule : public parr<premise*> {
+	rule(){}
+	rule(rule &r, puf &c) {
+		for (premise *p : r)
+			push_back(new premise(*p, c));
+	}
+};
+
+struct kb_t : public vector<rule*> { } *kn;
