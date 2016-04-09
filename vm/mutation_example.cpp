@@ -20,37 +20,40 @@ struct match {
 	unsigned rl;
 	puf *conds;
 	set<int> vars;
-	static match* mutate(match &m, puf& c) {
-		int r;
-		match &res = *new match;
-		res.rl = m.rl;
-		res.conds = m.conds;
-		for (int v : m.vars)
-			if (!res.conds->unio(v, r = c.find(v))) {
-				delete &res;
-				return 0;
-			} else if (ISVAR(r))
-				res.vars.insert(v);
-		return &res;
-	}
 };
 
-struct premise : public vector<match*> {
-	premise(){}
-	premise(premise &p, puf &c) {
-		match *t;
-		for (match *m : p)
-			if ((t = match::mutate(*m, c)))
-				push_back(t);
-	}
-};
+typedef vector<vector<match*>*> rule;
 
-struct rule : public vector<premise*> {
-	rule(){}
-	rule(rule &r, puf &c) {
-		for (premise *p : r)
-			push_back(new premise(*p, c));
+match* mutate(match &m, puf& c) {
+	int r;
+	match &res = *new match;
+	res.rl = m.rl;
+	res.conds = m.conds;
+	for (int v : m.vars)
+		if (!res.conds->unio(v, r = c.find(v))) {
+			delete &res;
+			return 0;
+		} else if (ISVAR(r))
+			res.vars.insert(v);
+	return &res;
+}
+
+rule* mutate(rule &r, puf &c) {
+	rule &res = *new rule;
+	match *t;
+	for (vector<match*> *p : r) {
+		auto &v = *new vector<match*>;
+		for (match *m : *p)
+			if ((t = mutate(*m, c)))
+				v.push_back(t);
+		if (v.empty()) {
+			delete &res;
+			delete &v;
+			return 0;
+		}
+		res.push_back(&v);
 	}
-};
+	return &res;
+}
 
 struct kb_t : public vector<rule*> { } *kb;
