@@ -59,6 +59,11 @@ std::map<string,bool*> _flags = {
 		,{"base",&fnamebase}
 		,{"builtins",&have_builtins}
 };
+typedef std::pair<int*, string> IOP;
+std::map<string,IOP> int_flags = {
+		  {"level",IOP(&level,"debug level")}
+		 ,{"limit",IOP(&result_limit,"max results")}
+};
 
 std::vector<string> extensions = {"jsonld", "natural3", "natq", "n3", "nq"};
 std::vector<string> _formats = {
@@ -552,14 +557,6 @@ bool read_option(string s){
 
 	string _option = s;
 
-	for( std::pair<string,bool*> x : _flags){
-		CLI_TRACE(dout << _option << _option.size() << x.first << x.first.size() << std::endl;)
-		if(x.first == _option){
-			*x.second = !(*x.second);
-			if(x.first == "nocolor") switch_color();
-			return true;
-		}
-	}
 	
 	for(string x : _formats){
 		if(x == _option){
@@ -580,7 +577,26 @@ bool read_option(string s){
 			dout << endl;)
 			return true;
 		}
-	
+
+
+		for( auto x : _flags){
+			CLI_TRACE(dout << _option << _option.size() << x.first << x.first.size() << std::endl;)
+			if(x.first == _option){
+				*x.second = std::stoi(token);
+				if(x.first == "nocolor") switch_color();
+				return true;
+			}
+		}
+
+
+		for( auto x : int_flags){
+			if(x.first == _option){
+				*x.second.first = std::stoi(token);
+				dout << x.second.second << ":" << *x.second.first << std::endl;
+				return true;
+			}
+		}
+
 
 		if(_option == "level"){
 			level = std::stoi(token);
@@ -593,21 +609,17 @@ bool read_option(string s){
 			dout << "result limit:" << result_limit << std::endl;
 			return true;
 		}
-		
-		if(_option == "cppout"){
-			INPUT->do_cppout = std::stoi(token);
-			return true;
-		}
 
-		if(_option == "lambdas"){
-			INPUT->do_query = std::stoi(token);
-			return true;
-		}
+#define input_bool_option(x, y) \
+		\
+		if(_option == x){ \
+			INPUT->y = std::stoi(token); \
+			return true; \
+		} 
 
-		if(_option == "test"){
-			INPUT->do_test = std::stoi(token);
-			return true;
-		}
+		input_bool_option("cppout", do_cppout);
+		input_bool_option("lambdas", do_query);
+		input_bool_option("test", do_test);
 
 		INPUT->take_back();
 	}
