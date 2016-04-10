@@ -15,6 +15,33 @@ string strhash(string x)
 
 
 
+/**
+ * Print va_list to std::ostream (used for logging).
+ */
+void
+printDhtLog(std::ostream& s, char const* m, va_list args) {
+    static constexpr int BUF_SZ = 8192;
+    char buffer[BUF_SZ];
+    int ret = vsnprintf(buffer, sizeof(buffer), m, args);
+    if (ret < 0)
+        return;
+    s.write(buffer, std::min(ret, BUF_SZ));
+    if (ret >= BUF_SZ)
+        s << "[[TRUNCATED]]";
+    s.put('\n');
+}
+
+void
+enableDhtLogging(dht::DhtRunner& dht)
+{
+    dht.setLoggers(
+        [](char const* m, va_list args){ dout << "ERR"; printDhtLog(dout, m, args);  },
+        [](char const* m, va_list args){ dout << "WARN"; printDhtLog(dout, m, args); },
+        [](char const* m, va_list args){ printDhtLog(dout, m, args); }
+    );
+}
+
+
 
 #endif
 
@@ -31,14 +58,15 @@ void build_in_dht()
 	if (!running)
 	{
 		running = true;
-		dout << "firing up DHT..." << endl;
+		int port = 4443;
+		dout << "firing up DHT on port " << port << endl;
 		// Launch a dht node on a new thread, using a
 		// generated RSA key pair, and listen on port 4222.
-		ht.run(4222, dht::crypto::generateIdentity(), true);
+		ht.run(port, dht::crypto::generateIdentity(), true);
 
 		// Join the network through any running node,
 		// here using a known bootstrap node.
-		ht.bootstrap("23.102.163.145", "4223");
+		ht.bootstrap("127.0.0.1", "4444");
 
 		// put some data on the dht
 		std::vector<uint8_t> some_data(5, 10);
@@ -105,6 +133,40 @@ void build_in_dht()
 			else
 				dout << "nope." << endl;
 			
+						
+			END;
+		}
+	});
+	
+	
+	
+	bu = "http://idni.org/dht#dbg";
+		     http://idni.org/dht#dbg
+	bui = dict.set(mkiri(pstr(bu)));
+
+	builtins[bui].push_back(
+		[bu, entry, ht_](Thing *dummy, Thing *x) mutable {
+		setproc(bu);
+		TRACE_ENTRY;
+		
+		switch(entry){
+		case 0:
+			x = getValue(x);
+					
+			if(is_node(*x))
+			{
+				node n = dict[get_node(*x)];
+				string v = *n.value;
+				if (v == "on")
+				{
+					MSG("dht dbg on");
+					enableDhtLogging(*ht_);
+				}
+				else{
+					MSG("dht dbg off");
+					ht_->setLoggers(dht::NOLOG, dht::NOLOG, dht::NOLOG);
+				}
+			}
 						
 			END;
 		}

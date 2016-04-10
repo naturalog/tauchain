@@ -539,6 +539,10 @@ void get_int(int &i, const string &tok)
 }
 */
 
+
+
+
+
 bool read_option(string s){
 	if(s.length() < 2 || s.at(0) != '-' || s == "--")
 		return false;
@@ -613,6 +617,8 @@ bool read_option(string s){
 
 void do_run(string fn)
 {
+	
+
 	std::ifstream &is = *new std::ifstream(fn);
 	if (!is.is_open()) {//weird behavior with directories somewhere around here
 		dout << "[cli]failed to open \"" << fn << "\"." << std::endl;
@@ -916,7 +922,11 @@ int main ( int argc, char** argv)
 			}
 		}
 		else if (INPUT->mode == RUN) {
-			do_run(INPUT->pop_long());
+			string fn = INPUT->pop_long();
+			if (fn == "-")
+				emplace_stdin();
+			else
+				do_run(fn);
 		}
 		else {
 			assert(INPUT->mode == OLD);
