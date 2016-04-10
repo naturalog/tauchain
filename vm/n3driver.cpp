@@ -1,10 +1,13 @@
 #include "n3driver.h"
 
+wostream &dout = std::wcout;
+
+namespace n3driver {
+
 vector<atom*> atoms;
 vector<rule> rules;
 map<const atom *, int> dict;
 din_t din;
-wostream &dout = std::wcout;
 
 #define THROW(x, y)                                                            \
   {                                                                            \
@@ -196,4 +199,5 @@ wostream &operator<<(wostream &os, const atom &r) {
 	const int *a = r.args;
 	while (*a) os << atoms[*a++] << L' ';
 	return os << L')';
+}
 }
