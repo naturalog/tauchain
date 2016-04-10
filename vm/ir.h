@@ -3,6 +3,8 @@
 #include <set>
 #include "containers.h"
 
+namespace ir {
+
 struct match {
 	unsigned rl;
 	struct uf *conds;
@@ -10,17 +12,27 @@ struct match {
 	match(unsigned rl, struct uf *conds) : rl(rl), conds(conds) {}
 };
 
-namespace ir {
+struct mutation {
+	struct rule *r;
+	match *m;
+};
+
 struct rule : private vector<vector<match*>*> {
-	rule* mutate(struct uf &c);
+	mutation mutate(match&);
 	vector<rule*> mutations;
-	rule *prev; // in the mutation tree
+	rule *prev; // wrt mutation tree
 	~rule();
 };
 
+struct frame {
+	mutation *m;
+	unsigned b;
+	frame *prev, *next;
+	static frame* last;
+};
+
+
 struct kb_t : public vector<rule*> { };
-
 extern kb_t *kb;
-
 }
 #endif

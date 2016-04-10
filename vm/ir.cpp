@@ -2,9 +2,11 @@
 
 using namespace ir;
 
-kb_t *kb;
+kb_t *kb = 0;
+frame* frame::last = 0;
 
-rule* rule::mutate(puf &c) {
+mutation rule::mutate(match &_m) {
+	uf &c = *_m.conds;
 	rule &res = *new rule;
 	match *t;
 	int rep;
@@ -23,10 +25,10 @@ rule* rule::mutate(puf &c) {
 		stop:	;
 		}
 		// body item can't ever be satisfied
-		if (v.empty()) return delete &res, (rule*)0;
+		if (v.empty()) return delete &res, (mutation){(rule*)0,&_m};
 		res.push_back(&v);
 	}
-	return mutations.push_back(&res), res.prev = this, &res;
+	return mutations.push_back(&res), res.prev = this, (mutation){ &res, &_m };
 }
 
 rule::~rule() {
