@@ -11,14 +11,18 @@ struct match {
 	std::set<int> vars;
 	match(unsigned rl, struct uf *conds) : rl(rl), conds(conds) {}
 };
+typedef vector<match*> premise;
 
 struct mutation {
 	struct rule *r;
 	match *m;
+	unsigned b;
 };
 
-struct rule : private vector<vector<match*>*> {
-	mutation mutate(match&);
+struct rule : private vector<premise*> {
+	match *mutator;
+	rule(match *mutator = 0) : mutator(mutator) {}
+	mutation mutate(unsigned);
 	vector<rule*> mutations;
 	rule *prev; // wrt mutation tree
 	~rule();
@@ -26,11 +30,12 @@ struct rule : private vector<vector<match*>*> {
 
 struct frame {
 	mutation *m;
-	unsigned b;
 	frame *prev, *next;
 	static frame* last;
-};
+	void run() {
 
+	}
+};
 
 struct kb_t : public vector<rule*> { };
 extern kb_t *kb;
