@@ -1618,7 +1618,7 @@ void collect_lists() {
 }
 
 
-
+qdb*mykb;
 
 void compile_kb(qdb &kb)
 {
@@ -1636,6 +1636,8 @@ void compile_kb(qdb &kb)
 	collect_lists();
 
 	kbdbgp("kb");
+
+	mykb = &kb;
 
 	if (have_builtins)
 		for(auto x: builtins)

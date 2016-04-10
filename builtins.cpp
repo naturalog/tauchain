@@ -2,98 +2,127 @@
 
 #include <thread>         // std::thread
 #include <mutex>          // std::mutex, std::lock
+#include <opendht.h>
+
+string strhash(string x)
+{
+	std::hash<std::string> fn;
+	size_t h = fn(x);
+	stringstream sss;
+	sss << /*std::showbase << std::uppercase << std::hex <<*/ h;// "0xbab5";//h;
+	return sss.str();
+}
 
 
+
+
+#endif
 
 
 void build_in_dht()
 {
+#ifdef DHT
+
 	static bool running = false;
 	static mutex mut;
-	static dht::DhtRunner node;
+	static dht::DhtRunner ht;
 	
 	
 	if (!running)
 	{
 		running = true;
-		
+		dout << "firing up DHT..." << endl;
 		// Launch a dht node on a new thread, using a
 		// generated RSA key pair, and listen on port 4222.
-		node.run(4222, dht::crypto::generateIdentity(), true);
+		ht.run(4222, dht::crypto::generateIdentity(), true);
 
 		// Join the network through any running node,
 		// here using a known bootstrap node.
-		node.bootstrap("23.102.163.145", "4223");
+		ht.bootstrap("23.102.163.145", "4223");
 
 		// put some data on the dht
 		std::vector<uint8_t> some_data(5, 10);
-		node.put("unique_key", some_data);
+		ht.put("unique_key", some_data);
 
 		// put some data on the dht, signed with our generated private key
-		node.putSigned("unique_key_42", some_data);
+		ht.putSigned("unique_key_42", some_data);
+
 	}
 
-
+	auto ht_ = &ht;
 
 	EEE;	
 	
 	string bu = "http://idni.org/dht#put";
 	auto bui = dict.set(mkiri(pstr(bu)));
 
-
 	builtins[bui].push_back(
-		[entry](Thing *dummy, Thing *graph) mutable {
+		[bu, entry, ht_](Thing *dummy, Thing *x) mutable {
 		setproc(bu);
 		TRACE_ENTRY;
+		dout <<"sssss" << endl;
 		switch(entry){
 		case 0:
-			graph = getValue(graph);
-			if(is_node(graph))
-			stringstream ss << kb.first[grap
+			x = getValue(x);
 			
-			
-			while (domain_pred(&pred, cls))
+			if(is_node(*x))
 			{
-				{
-					ASSERT(is_bound(pred));
-					Thing *pred_val = get_thing(pred);
-					//how do we know it's not another bound var good q.......... i guess it wouldnt if a rule returned it
-					//at least i put the assert there:) we can test it
-					//yeah hm in the long run we should get the floobits session and tmux on one machine i guess
-					//so isnt that a bug
-					/*i dunno if we're supposed to allow rules to imply this*/
-					//if it's  a semantic restriction it should probably be handled more fully
-					//but in the typesystem, not here..at least thats my guess 
-					/*anyway good catch
-					 * tests/rdf/domainImpliesType-tricky
-					*/
-					ASSERT(is_node(*pred_val));
-					nodeid pred_nodeid = get_node(*pred_val);
+				node n = dict[get_node(*x)];
+				string v = *n.value;
+				string key,val;
 
-					//(So if the pred is not there, )a subproperty of it might still satisfy,
-					//but we don't have a pred to run, so make a wildcard rule
-					if (!has(preds, pred_nodeid))
-						preds[pred_nodeid] = make_wildcard_rule(pred_nodeid);
-					//If the pred is there, use that. This will need the wildcard rule to be added to the pred during compile_kb
-					pred_coro = ITEM(preds, pred_nodeid);
-				}
-				
-				ASSERT(is_unbound(whatever));
-				while(pred_coro(instance, &whatever))
+				if (n._type == node::IRI)
 				{
-					entry = LAST;
-					return true;
-		case_LAST:;
+					if (has(mykb->first, v))
+					{
+						key = "root_graph_" + v;
+						stringstream ss;
+						ss << mykb->first[v];
+						val = ss.str();
+					}
+					else
+					{
+						string h = strhash(v);
+						key = "root_iri_" + h;
+						val = v;
+					}
 				}
-				ASSERT(is_unbound(whatever));
+				else if (n._type == node::LITERAL)
+				{
+					string h = strhash(v);
+					key = "root_lit_" + h;
+					val = v;
+				}
+				else
+				{
+					dout << "nope." << endl;
+					DONE;
+				}
+				dout << "putting " << key << "=" << val << endl;
+				ht_->put(key, val);
+				
 			}
-			return false;
+			else
+				dout << "nope." << endl;
+			
+						
 			END;
 		}
 	});
-	}
 
+
+    // get data from the dht
+    ht_->get("other_unique_key", [](const std::vector<std::shared_ptr<dht::Value>>& values) {
+        // Callback called when values are found
+        for (const auto& value : values)
+            dout << "Found value: " << *value << std::endl;
+        return true; // return false to stop the search
+    });
 #endif
+
+}
+
+
 
 
 
@@ -426,7 +455,7 @@ rule_t make_wildcard_rule(nodeid pr)
 //under construction
 void build_in_rules()
 {
-
+	build_in_dht();
 
 
 	/*some commonly used vars*/

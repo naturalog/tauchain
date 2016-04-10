@@ -794,7 +794,7 @@ public:
 		std::hash<std::string> fn;
 		size_t h = fn(ss.str());
 		stringstream sss;
-		sss << std::showbase << std::uppercase << std::hex << h;
+		sss << /*std::showbase << std::uppercase << std::hex <<*/ h;
 		
 		auto graph = mkbnode(pstr(sss.str()));
 		add_statements(x, *graph->value);

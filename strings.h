@@ -230,7 +230,10 @@ inline pstring gen_bnode_id ( string id = "" ) {
 
 //Colors
 extern string KNRM, KRED, KGRN, KYEL, KBLU, KMAG, KCYN, KWHT;
+
 extern int level;
+
+
 
 
 #endif

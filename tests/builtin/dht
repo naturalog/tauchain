@@ -1,0 +1,7 @@
+kb
+fin.
+
+query
+:dummy <http://idni.org/dht#put> "banana".
+fin.
+
