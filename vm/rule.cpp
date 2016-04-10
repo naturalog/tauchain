@@ -1,5 +1,5 @@
 #include "ir.h"
-#include "api.h"
+//#include "api.h"
 
 using namespace ir;
 
@@ -13,7 +13,8 @@ rule* rule::mutate(puf &c) {
 		auto &v = *new vector<match*>;
 		for (match *mt : *p) { // per matching head
 			match &m = *new match(mt->rl, mt->conds);
-			for (int x : mt->vars)
+			for (int x : mt->vars) // iterate registered vars only
+				// uf into every match
 				if (!m.conds->unio(x, rep = c.find(x))) {
 					delete &m;
 					goto stop;
