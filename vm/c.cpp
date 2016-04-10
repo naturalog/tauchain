@@ -1,4 +1,5 @@
 #include "n3driver.h"
+#include "ir.h"
 
 using n3driver::din;
 using n3driver::atom;

@@ -6,23 +6,22 @@
 #include <functional>
 #include <tuple>
 #include <exception>
-#include <sstream>
+//#include <sstream>
 #include <cassert>
 #include <cstdlib>
-//#include <stdbool.h>
 
 typedef int word;
-typedef struct parrint parrint;
 struct arr  { int s; word *a; };
-struct diff { int i; word v; parrint* t;};
+struct diff { int i; word v; struct parrint* t;};
 
 struct parrint {
 	bool isdiff;
 	union {
-		struct arr a;
-		struct diff d;
+		arr a;
+		diff d;
 	};
 };
+typedef parrint parr;
 
 parrint mkarr(int *a, word s);
 parrint* alloc_arr(int *a, word s);
@@ -30,6 +29,20 @@ parrint mkdiff(int i, word v, parrint* t);
 void reroot(parrint *t);
 word get(parrint *t, int i);
 parrint* set(parrint *t, int i, int v);
+
+struct uf {
+	parr *rank, *rep;
+	uf*   create(int);
+	int   find(int);
+	uf*   unio(int, int);
+};
+
+uf*   create(int);
+int   find(uf*, int);
+uf*   unio(uf*, int, int);
+void  uftest();
+
+typedef uf puf;
 
 template <typename T> struct sp { // smart pointer
 	T *p = 0;

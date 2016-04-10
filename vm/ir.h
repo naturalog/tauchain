@@ -1,25 +1,26 @@
 #ifndef __IR_H__
 #define __IR_H__
-#include <vector>
 #include <set>
-using namespace std;
+#include "containers.h"
 
-namespace ir {
-#include "data.h"
 struct match {
 	unsigned rl;
-	puf *conds;
-	set<int> vars;
-	match(unsigned rl, puf *conds) : rl(rl), conds(conds) {}
+	struct uf *conds;
+	std::set<int> vars;
+	match(unsigned rl, struct uf *conds) : rl(rl), conds(conds) {}
 };
 
+namespace ir {
 struct rule : private vector<vector<match*>*> {
-	rule* mutate(puf &c);
+	rule* mutate(struct uf &c);
 	vector<rule*> mutations;
 	rule *prev; // in the mutation tree
 	~rule();
 };
 
 struct kb_t : public vector<rule*> { };
+
+extern kb_t *kb;
+
 }
 #endif
