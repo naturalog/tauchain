@@ -6,26 +6,29 @@ typedef pair<term*, term*> ppterm;
 template<typename T>
 struct plist { // persistent list
 	struct element {
-		element(const T& t = T(), element *next = 0)
+		element(const T& t = T(), const element *next = 0)
 			: t(t), next(next) {}
-		T t;
-		element *next;
-	} head;
-	unsigned len;
+		element(const element& e, const element *next = 0)
+			: element(e.t, next) {}
+		const T t;
+		const element *next;
+	};
+	const element head;
+	const unsigned len;
 	plist() : len(0) {}
-	plist* push_front(const T& tt) {
+	const plist* push_front(const T& tt) const {
 		return new plist(element(tt), &head, len);
 	}
 private:	
-	plist(element h, element *next = 0, unsigned len = 0)
-		: len(len + 1), head(h) { if (next) head.next = next; }
+	plist(element h, const element *next = 0, unsigned len = 0)
+		: len(len + 1), head(h, next) { }
 };
 map<ppterm, plist<ppterm*>> ir;
 
 void testplist() {
-	auto *l = new plist<int>;
-	auto p = [](plist<int>& l) {
-		auto pp = [](plist<int>::element* e) {
+	const auto *l = new plist<int>;
+	auto p = [](const plist<int>& l) {
+		auto pp = [](const plist<int>::element* e) {
 			cout << e->t << ' ';
 		};
 		auto e = &l.head;
