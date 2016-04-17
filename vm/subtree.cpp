@@ -37,9 +37,11 @@ void testplist() {
 	};
 	p(*l); l = l->push_front(1);
 	p(*l); l = l->push_front(2);
+	auto q = l;
 	p(*l); l = l->push_front(3);
 	p(*l); l = l->push_front(4);
 	p(*l); l = l->push_front(5);
+	p(*q);
 
 };
 
