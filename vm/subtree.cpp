@@ -30,6 +30,7 @@ struct plist { // persistent list
 	plist* push_front(const T& tt) {
 		plist *res = new plist(element(tt));
 		res->head.n = &head;
+		return res;
 	};
 };
 map<ppterm, plist<ppterm*>> ir;
