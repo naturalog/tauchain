@@ -5,18 +5,20 @@ struct term { int p, sz; term* args; };
 typedef pair<term*, term*> ppterm;
 template<typename T>
 struct plist { // persistent list
-	plist() {}
 	struct element {
-		element(const T& t = T(), element *next = 0) : t(t), next(next) {}
+		element(const T& t = T(), element *next = 0)
+			: t(t), next(next) {}
 		T t;
 		element *next;
 	} head;
-	plist(element h) : head(h) {}
+	unsigned len;
+	plist() : len(0) {}
 	plist* push_front(const T& tt) {
-		plist *res = new plist(element(tt));
-		res->head.next = &head;
-		return res;
-	};
+		return new plist(element(tt), &head, len);
+	}
+private:	
+	plist(element h, element *next = 0, unsigned len = 0)
+		: len(len + 1), head(h) { if (next) head.next = next; }
 };
 map<ppterm, plist<ppterm*>> ir;
 
