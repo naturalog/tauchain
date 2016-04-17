@@ -1,6 +1,9 @@
 #include <iostream>
 #include <map>
+#include <functional>
+
 using namespace std;
+
 struct term { int p, sz; term* args; };
 typedef pair<term*, term*> ppterm;
 template<typename T>
@@ -16,8 +19,17 @@ struct plist { // persistent list
 	const element head;
 	const unsigned len;
 	plist() : len(0) {}
+	plist(const plist&) { throw "dont copy ctor me pls"; }
 	const plist* push_front(const T& tt) const {
 		return new plist(element(tt), &head, len);
+	}
+	// call given func with only new data wrt given plist
+	// caller's responsibility that this plist is indeed
+	// a previous version
+	void process_until(function<void(const T&)> f, const plist* ver) const {
+		auto h = &ver->head;
+		for (auto i = &head; i && i != h; i = i->next)
+			f(i->t);
 	}
 private:	
 	plist(element h, const element *next = 0, unsigned len = 0)
@@ -42,7 +54,7 @@ void testplist() {
 	p(*l); l = l->push_front(4);
 	p(*l); l = l->push_front(5);
 	p(*q);
-
+	l->process_until([](const int& x) { cout << x << ' '; }, q);
 };
 
 int main() {
