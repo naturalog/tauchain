@@ -1,0 +1,88 @@
+0. Background and Terminology
+
+	A. Backtracking
+
+	Given a set of rules and a goal, we define additional goals to be the
+	premises of the rules that has consequences that match (unify with)
+	the current goal, all under the possible substitutions. These goals are
+	then queued until ground is reached.
+
+	B. Unification
+
+	C. KB Expansion
+
+	Taking advantage of some speed vs size tradeoff, we define a process
+	of kb expansion that lists the possible matches per premise. This is
+	done by *trimming* terms. Every pair of body and head, in case they
+	can match without substitutions, is represented by a modified pair of
+	terms, namely, trimmed terms.
+
+	D. Trimming
+
+	The trimming process takes two terms and returns two terms. The output
+	terms are equal to the original terms, except that matching equal
+	subterms are omitted. For example, trimming "?x a y" and "?z a y" will
+	return the two terms "?x" and "?y".
+
+	E. Backtracking Over Expanded KB
+
+	To check a match between a body and a head, a unification of the
+	trimmed terms has to take place. Then the resulted substitutions from
+	this unification has to propagate to the target rule's body.
+	Since there are no specific bodies anymore, but trimmed terms
+	relatively to the trimmed heads they can match to, we have to propagate
+	the substitutions to the trimmed bodies and then re-trim wrt their
+	matching trimmed head.
+
+1. Flat vs Deep Term Representation
+
+	A. Deep
+
+	Typically a term is equivalently represented as:
+		struct term {
+			atom a;
+			vector<term*> args;
+		};
+	or in a more detailed grammar:
+		Atom := int
+		List := ([Atom|List]*)
+		Term := Atom | List
+		Trip := Term Term Term
+		Rule := Trip Trip*
+		Sub  := Atom == Term
+		Env  := Sub*
+	which is a deep (tree) structure. Such implies unification method that
+	assigns variables one tree node that represent a subterm.
+
+	The downside with the typical deep representation is that it requires
+	indirection.
+
+	B. Flat
+
+	Terms can also be represented in a flat way similar to how it is
+	written in its original syntax, namely equivalent to:
+		struct term {
+			vector<atom> a;
+		};
+	where some atoms represent open and close brackets and by that simulate
+	deep structure.
+	On this case unification of a variable with a list assigns the variable
+	a location of an opening bracket and a closing bracket, suggesting to 
+	modify the above grammar with:
+		Sub  := Atom == Atom | Term,int,int
+
+2. Pre-unification process
+
+	A. Motivation
+
+3. Persistent Terms
+
+	A. Why We Need Persistent Terms
+
+	Persistency arise while trying to optimize the process of trimming
+	and re-trimming terms.
+
+	B. Persistency of Deep Terms
+	C. Persistency of Flat Terms
+
+4. Equivalence Classes
