@@ -51,6 +51,7 @@
 		Rule := Trip Trip*
 		Sub  := Atom == Term
 		Env  := Sub*
+		Kb   := Rule* // traditional, untrimmed
 	which is a deep (tree) structure. Such implies unification method that
 	assigns variables one tree node that represent a subterm.
 
@@ -69,11 +70,24 @@
 	On this case unification of a variable with a list assigns the variable
 	a location of an opening bracket and a closing bracket, suggesting to 
 	modify the above grammar with:
+		Atom := int | ( | )
+		Term := Atom* // with matching brackets
+		Trip := Term Term Term
+		Rule := Trip Trip*
 		Sub  := Atom == Atom | Term,int,int
+		Env  := Sub*
+		Kb   := Rule* // traditional, untrimmed
 
-2. Pre-unification process
-
-	A. Motivation
+2. IR
+	The expanded kb could be described as:
+		Atom := int | ( | )
+		Term := Atom* // with matching brackets
+		Trip := Term Term Term
+		Prem := [int Trip Trip]* // trimmed terms and head number
+		Rule := Prem*
+		Sub  := Atom == Term
+		Env  := Sub*
+		Kb   := Rule*
 
 3. Persistent Terms
 
@@ -86,3 +100,9 @@
 	C. Persistency of Flat Terms
 
 4. Equivalence Classes
+	Subtitutions form equivalence classes. Solving them might require
+	additional equivalence classes (e.g. for lists). This has to be
+	optimally reflected in the data structures and the flow, e.g. by using
+	modified Tarjan's union-find or modified C&F persistent union-find.
+
+5. Subtree Reuse
