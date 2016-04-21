@@ -79,16 +79,25 @@
 		Kb   := Rule* // traditional, untrimmed
 
 2. IR
-	The expanded kb can be described as:
+	The expanded kb with flat trimmed terms can be described as:
 		Atom := int | ( | )
 		Term := Atom* // with matching brackets
-		Trip := Term Term Term
+		Trim := Term
+		Trip := Trim Trim Trim
 		Prem := [int Trip Trip]* // trimmed terms and head number
 		Rule := Prem*
-		Sub  := Atom == Atom | Term,int,int
+		Sub  := Atom == Atom | Trim,int,int
 		Env  := Sub*
 		Kb   := Rule*
-	
+	where Trim is a trimmed term, to be filled with some persistent
+	definition (see below). Trimming a flat term means either removing
+	an single atom, or atoms inside matching brackets. Suggesting:
+		Trim := [Term | Trim] int int
+	which is almost like Sub. Can therefore look at Trim as a substituted
+	term
+		Trim := Term Sub
+	where we allow to delete terms by subtituting "nothing" instead of
+	them.
 
 3. Persistent Terms
 
@@ -98,7 +107,13 @@
 	and re-trimming terms.
 
 	B. Persistency of Deep Terms
+
+		persistent trees
+
 	C. Persistency of Flat Terms
+
+		Diff := int Sub // position and modi
+		Trim := Term | Diff
 
 4. Equivalence Classes
 	Subtitutions form equivalence classes. Solving them might require
