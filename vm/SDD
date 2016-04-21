@@ -79,15 +79,16 @@
 		Kb   := Rule* // traditional, untrimmed
 
 2. IR
-	The expanded kb could be described as:
+	The expanded kb can be described as:
 		Atom := int | ( | )
 		Term := Atom* // with matching brackets
 		Trip := Term Term Term
 		Prem := [int Trip Trip]* // trimmed terms and head number
 		Rule := Prem*
-		Sub  := Atom == Term
+		Sub  := Atom == Atom | Term,int,int
 		Env  := Sub*
 		Kb   := Rule*
+	
 
 3. Persistent Terms
 
