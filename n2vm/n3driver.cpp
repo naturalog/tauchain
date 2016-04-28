@@ -185,7 +185,7 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 // output
 wostream &operator<<(wostream &os, const rule &r) {
 	os << L'{';
-	for (auto t : r.body) os << t << ' ';
+	for (auto x : r.body) os << *x << ' ';
 	return os << L"} => { ", (r.head ? os << *r.head : os << L""), os << " }.";
 }
 wostream &operator<<(wostream &os, const triple &t) {
