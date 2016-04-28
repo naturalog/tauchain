@@ -16,7 +16,8 @@ term::operator string() const {
 	if (p) ss << p;
 	else {
 		ss << '(';
-		for (auto y : args) ss << (string)(*y) << ' ';
+		auto a = args;
+		while (a && *a) ss << (string)(**a++) << ' ';
 		ss << ')';
 	}
 	return ss.str();
@@ -71,10 +72,10 @@ bool n2vm::add_constraint(iprem &p, hrule h, int x, const term& y) {
 
 bool n2vm::add_lists(iprem &p, hrule h, const term &x, const term &y) {
 	TRACE(printf("add_lists(%d,%s,%s)\n", h, tocstr(&x), tocstr(&y)));
-	auto sz = x.args.size();
-	if (y.args.size() != sz) return false;
-	auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
-	for (; ix != ex;  ++ix, ++iy)
+	auto sz = x.sz;
+	if (y.sz != sz) return false;
+	auto ix = x.args, iy = y.args;
+	for (; *ix;  ++ix, ++iy)
 		if (!add_constraint(p, h, **ix, **iy))
 			return false;
 	return true;
@@ -106,7 +107,7 @@ hrule n2vm::mutate(hrule r, const sub &env) {
 	return kb.size();
 }
 
-term* n2vm::add_term(int p, const vector<const term*>& args) {
+term* n2vm::add_term(int p, const std::vector<term*>& args) {
 	struct term_cmp {
 		int operator()(const term *_x, const term *_y) const {
 			static term_cmp tc;
@@ -115,22 +116,22 @@ term* n2vm::add_term(int p, const vector<const term*>& args) {
 			if (x.p > y.p) return 1;
 			if (x.p < y.p) return -1;
 			int r;
-			auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
-			for (; ix != ex;  ++ix, ++iy)
+			auto ix = x.args, iy = y.args;
+			for (; *ix;  ++ix, ++iy)
 				if ((r = tc(*ix, *iy)))
 					return r;
 			return 0;
 		}
 	};
 	static set<term*, term_cmp> terms;
-	term *t = new term(p, args);
+	term *t = args.empty() ? new term(p) : new term(args);
 	terms.emplace(t);
 	return t;
 }
 
 void n2vm::getvarmap(const term& t, varmap& v) {
 	if (isvar(t)) v.push_front(t.p);
-	for (auto x : t.args) getvarmap(*x, v);
+	for (auto x = t.args; *x; ++x) getvarmap(**x, v);
 }
 
 void n2vm::add_rules(rule *rs, unsigned sz) {
