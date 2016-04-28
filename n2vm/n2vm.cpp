@@ -28,17 +28,15 @@ term::~term() {
 term* n2vm::add_term(const wchar_t* p, const vector<term*>& args) {
 	struct term_cmp {
 		int operator()(const term *_x, const term *_y) const {
-			static term_cmp tc;
 			if (_x == _y) return 0;
 			const term &x = *_x, &y = *_y;
-			if (x.p > y.p) return 1;
-			if (x.p < y.p) return -1;
-			int r;
-			auto ix = x.args, iy = y.args;
-			for (; *ix;  ++ix, ++iy)
-				if ((r = tc(*ix, *iy)))
-					return r;
-			return 0;
+			if (!x.p) return y.p ? 1 : 0;
+			if (!y.p) return -1;
+			if (x.p == y.p) {
+				if (x.sz != y.sz) return x.sz > y.sz ? 1 : -1;
+				return memcmp(x.args, y.args, sizeof(term*) * x.sz);
+			}
+			return wcscmp(x.p, y.p);
 		}
 	};
 	static std::set<term*, term_cmp> terms;
@@ -93,7 +91,7 @@ bool n2vm::add_constraint(iprem &p, hrule h, const term &tx, const term &ty) {
 	return add_constraint(p, h, tx.p, ty);
 }
 
-bool n2vm::add_constraint(iprem &p, hrule h, int x, const term& y) {
+bool n2vm::add_constraint(iprem &p, hrule h, const wchar_t *x, const term& y) {
 	sub &s = p[h];
 	sub::const_iterator it = s.find(x);
 	if (it != s.end()) {
@@ -144,7 +142,7 @@ hrule n2vm::mutate(hrule r, const sub &env) {
 
 void n2vm::getvarmap(const term& t, varmap& v) {
 	if (isvar(t)) v.push_front(t.p);
-	for (auto x = t.args; *x; ++x) getvarmap(**x, v);
+	for (unsigned n = 0; n < t.sz; ++n) getvarmap(*t.args[n], v);
 }
 
 void n2vm::add_rules(rule *rs, unsigned sz) {

@@ -13,4 +13,6 @@ int main() {
 	print();
 	din.readdoc(true, vm);
 	print();
+	vm.add_rules(&rules[0], rules.size());
+	return 0;
 }

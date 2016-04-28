@@ -37,7 +37,7 @@ struct n2vm {
 	bool tick();
 
 private:
-	typedef std::map<int, const term*> sub;
+	typedef std::map<const wchar_t*, const term*> sub;
 	typedef std::map<hrule, sub> iprem;
 	typedef std::vector<iprem*> irule;
 	typedef std::vector<irule*> kb_t;
@@ -59,7 +59,7 @@ private:
 	hrule mutate(hrule r, const sub&);
 	bool add_constraint(hrule, hprem, hrule, const term*, const term*);
 	bool add_constraint(iprem&, hrule, const term&, const term&);
-	bool add_constraint(iprem&, hrule, int, const term&);
+	bool add_constraint(iprem&, hrule, const wchar_t*, const term&);
 	bool mutate(iprem &dn, const sub &e, auto m, const sub &env);
 	void getvarmap(const term& t, varmap& v);
 	void printkb();
