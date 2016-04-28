@@ -69,35 +69,35 @@ wstring din_t::till() {
 	return pos ? buf : wstring();
 }
 
-term* din_t::readlist() {
+term* din_t::readlist(n2vm& vm) {
 	get();
 	vector<term*> items;
 	while (skip(), (good() && peek() != L')'))
-		items.push_back(readany()), skip();
-	return get(), skip(), new term(items);
+		items.push_back(readany(vm)), skip();
+	return get(), skip(), vm.add_term(0, items);
 }
 
-term* din_t::readany() {
+term* din_t::readany(n2vm& vm) {
 	if (skip(), !good()) return 0;
-	if (peek() == L'(') return readlist();
+	if (peek() == L'(') return readlist(vm);
 	wstring s = till();
 	if (s == L"fin" && peek() == L'.') return get(), done = true, (term*)0;
-	return s.size() ? new term(s.c_str()) : 0;
+	return s.size() ? vm.add_term(s.c_str()) : 0;
 }
 
-term* din_t::readtriple() {
+term* din_t::readtriple(n2vm& vm) {
 	term *s, *p, *o;
-	if (skip(), !(s = readany()) || !(p = readany()) || !(o = readany()))
+	if (skip(), !(s = readany(vm)) || !(p = readany(vm)) || !(o = readany(vm)))
 		return 0;
 	vector<term*> v;
 	v.push_back(s);
 	v.push_back(p);
 	v.push_back(o);
 	if (skip(), peek() == L'.') get(), skip();
-	return new term(v);
+	return vm.add_term(0, v);
 }
 
-void din_t::readdoc(bool query) { // TODO: support prefixes
+void din_t::readdoc(bool query, n2vm& vm) { // TODO: support prefixes
 	term *t;
 	done = false;
 	while (good() && !done) {
@@ -107,13 +107,13 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 			if (query) THROW("can't handle {} in query", "");
 			get();
 			while (good() && peek() != L'}')
-				body.push_back(readtriple());
+				body.push_back(readtriple(vm));
 			get(), skip(), get(L'='), get(L'>'), skip(), get(L'{'), skip();
 			if (peek() == L'}')
 				rules.push_back(mkrule(0, body)), skip();
 			else
 				while (good() && peek() != L'}')
-					rules.push_back(mkrule(readtriple(), body));
+					rules.push_back(mkrule(readtriple(vm), body));
 			get();
 			break;
 		case L'#':
@@ -121,7 +121,7 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 			getline();
 			break;
 		default:
-			if ((t = readtriple()))
+			if ((t = readtriple(vm)))
 				rules.push_back(query ? mkrule(0, t) : mkrule(t));
 			else if (!done)
 				THROW("parse error: triple expected", "");

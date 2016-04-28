@@ -8,8 +8,9 @@ void print() {
 
 int main() {
 	terms.push_back(new term(L"GND"));
-	din.readdoc(false);
+	n2vm vm;
+	din.readdoc(false, vm);
 	print();
-	din.readdoc(true);
+	din.readdoc(true, vm);
 	print();
 }
