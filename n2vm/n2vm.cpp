@@ -115,19 +115,14 @@ void n2vm::add_rules(rule *rs, unsigned sz) {
 	}
 }
 
-void n2vm::resolve(frame *f) {
-	hrule r;
-	for (auto m : kb[f->r][f->p]) {
-		if (-1 != (r = mutate(m.first, m.second))) continue;
-		last = (last->next = new frame(r, 0, f));
-	}
-}
-
 bool n2vm::tick() {
-	if (!last)
-		last = curr = new frame(query, 0, 0);
+	if (!last) last = curr = new frame(query, 0, 0);
 	if (!curr) return false;
-	resolve(curr);
+	hrule r;
+	for (auto m : kb[curr->r][curr->p]) {
+		if (-1 != (r = mutate(m.first, m.second))) continue;
+		last = (last->next = new frame(r, 0, curr));
+	}
 	curr = curr->next;
 	return true;
 }
