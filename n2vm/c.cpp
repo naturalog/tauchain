@@ -7,12 +7,14 @@ void print() {
 }
 
 int main() {
-	terms.push_back(new term(L"GND"));
+	din_t din(wcin);
 	n2vm vm;
 	din.readdoc(false, vm);
 	print();
 	din.readdoc(true, vm);
 	print();
 	vm.add_rules(&rules[0], rules.size());
+	int s = 0;
+	while (vm.tick()) dout << "iter: " << s++ << endl;
 	return 0;
 }

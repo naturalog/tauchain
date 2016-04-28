@@ -5,8 +5,6 @@ wostream &dout = std::wcout;
 
 vector<term*> terms;
 vector<rule> rules;
-//map<int, wstring> dict;
-din_t din;
 
 #define THROW(x, y)                                                            \
   {                                                                            \
@@ -30,21 +28,21 @@ rule mkrule(term *h, term *t) {
 	return mkrule(h, v);
 }
 
-wchar_t din_t::peek() { return f ? ch : ((f = true), (wcin >> ch), ch); }
-wchar_t din_t::get() { return f ? ((f = false), ch) : ((wcin >> ch), ch); }
+wchar_t din_t::peek() { return f ? ch : ((f = true), (is >> ch), ch); }
+wchar_t din_t::get() { return f ? ((f = false), ch) : ((is >> ch), ch); }
 wchar_t din_t::get(wchar_t c) {
 	wchar_t r = get();
 	if (c != r) THROW(L"expected: ", c);
 	return r;
 }
-bool din_t::good() { return wcin.good(); }
+bool din_t::good() { return is.good(); }
 void din_t::skip() { while (good() && iswspace(peek())) get(); }
 wstring din_t::getline() {
 	wstring s;
-	f = false, std::getline(wcin, s);
+	f = false, std::getline(is, s);
 	return s;
 }
-din_t::din_t() { wcin >> std::noskipws; } 
+din_t::din_t(wistream &is) : is(is) { is >> std::noskipws; } 
 wstring &din_t::trim(wstring &s) {
 	static wstring::iterator i = s.begin();
 	while (iswspace(*i)) s.erase(i), i = s.begin();

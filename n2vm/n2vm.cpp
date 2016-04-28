@@ -10,7 +10,7 @@
 #endif
 
 term::term(const wchar_t* p) : isvar(*p == '?'), p(wcsdup(p)), args(0), sz(0) {
-	TRACE(dout << "new term: " << p << endl);
+//	TRACE(dout << "new term: " << p << endl);
 }
 
 term::term(const vector<term*> &_args) 

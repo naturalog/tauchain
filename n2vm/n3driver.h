@@ -1,6 +1,7 @@
 #include "containers.h"
 #include <map>
 using std::function;
+using std::wistream;
 using std::wostream;
 using std::wstring;
 using std::stringstream;
@@ -19,7 +20,8 @@ wostream& operator<<(wostream&, const rule&);
 rule mkrule(term *h, const vector<term*> &b = vector<term*>());
 
 struct din_t {
-        din_t();
+        din_t(wistream&);
+	wistream &is;
         void readdoc(bool query, n2vm&); // TODO: support prefixes
 private:
         wchar_t ch;
@@ -38,7 +40,4 @@ private:
         term* readtriple(n2vm&);
 };
 
-extern vector<term*> terms;
 extern vector<rule> rules;
-extern map<const term*, int> dict;
-extern din_t din;
