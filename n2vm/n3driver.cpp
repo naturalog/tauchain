@@ -63,7 +63,7 @@ wstring din_t::till() {
 	while (good() && edelims.find(peek()) == wstring::npos && !iswspace(peek()))
 		buf[pos++] = get();
 	buf[pos] = 0;
-	return wcslen(buf) ? buf : 0;
+	return pos ? buf : wstring();
 }
 
 term* din_t::readlist() {
@@ -114,6 +114,7 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 			get();
 			break;
 		case L'#':
+		case L'@':
 			getline();
 			break;
 		default:
