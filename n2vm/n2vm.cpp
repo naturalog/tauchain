@@ -20,20 +20,20 @@ bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
 			return add_lists(p, h, tx, ty);
 		}
 	}
-	return add_var_constraint(p, h, tx, ty);
+	return add_constraint(p, h, tx.p, ty);
 }
 
-bool n2vm::add_var_constraint(auto &p, hrule h, const term &x, const term& y) {
+bool n2vm::add_constraint(auto &p, hrule h, int x, const term& y) {
 	auto &s = p[h];
-	auto it = s.find(&x);
+	auto it = s.find(x);
 	if (it != s.end()) {
 		if (!isvar(it->second))
 			return add_constraint(p, h, *it->second, y);
 		auto z = it->second;
-		s[&x] = &y;
+		s[x] = &y;
 		return add_constraint(p, h, *z, y);
 	}
-	return s[&x] = &y, true;
+	return s[x] = &y, true;
 }
 
 bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
@@ -58,7 +58,7 @@ hrule n2vm::mutate(hrule r, auto env) {
 				if (!add_constraint(
 					dn,
 					m.first,
-					*c.first,
+					c.first,
 					*c.second)) {
 						fail = true;
 						break;
@@ -67,7 +67,7 @@ hrule n2vm::mutate(hrule r, auto env) {
 				if (!add_constraint(
 					dn,
 					m.first,
-					*c.first,
+					c.first,
 					*c.second)) {
 						fail = true;
 						break;
