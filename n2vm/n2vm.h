@@ -5,6 +5,7 @@
 #include <cstring>
 #include <string>
 #include <sstream>
+#include <forward_list>
 
 using namespace std;
 
@@ -35,6 +36,7 @@ private:
 	typedef map<hrule, sub> iprem;
 	typedef vector<iprem*> irule;
 	typedef vector<irule*> kb_t;
+	typedef forward_list<int> varmap;
 	rule *orig;
 	unsigned origsz;
 	struct frame {
@@ -46,11 +48,13 @@ private:
 	} *last = 0, *curr = 0;
 
 	kb_t &kb;
+	map<unsigned, varmap> vars;
 	unsigned query;
 	bool add_lists(iprem&, hrule, const term&, const term&);
 	hrule mutate(hrule r, const sub&);
 	bool add_constraint(hrule, hprem, hrule, const term*, const term*);
 	bool add_constraint(iprem&, hrule, const term&, const term&);
 	bool add_constraint(iprem&, hrule, int, const term&);
+	void getvarmap(const term& t, varmap& v);
 	void printkb();
 };

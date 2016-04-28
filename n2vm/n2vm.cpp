@@ -32,9 +32,9 @@ rule::operator string() const {
 #define tocstr(x) ( x ? ((string)(*(x))).c_str() : "(null)" )
 
 bool n2vm::add_constraint(hrule r, hprem p, hrule h, const term *x, const term *y) {
-	TRACE(printf("add_constraint(%d,%d,%d,%s,%s)\n", r, p, h, tocstr(x), tocstr(y)));
 	if (x == y) return true;
 	if (!x || !y) return false;
+	TRACE(printf("add_constraint(%d,%d,%d,%s,%s)\n", r, p, h, tocstr(x), tocstr(y)));
 	return add_constraint(*(*kb[r])[p], h, *x, *y);
 }
 
@@ -117,6 +117,7 @@ hrule n2vm::mutate(hrule r, const sub &env) {
 		}
 	}
 	kb.push_back(&d);
+	// TODO: remove matched constraints from varmap
 	return kbs;
 }
 
@@ -142,6 +143,11 @@ term* n2vm::add_term(int p, const vector<const term*>& args) {
 	return t;
 }
 
+void n2vm::getvarmap(const term& t, varmap& v) {
+	if (isvar(t)) v.push_front(t.p);
+	for (auto x : t.args) getvarmap(*x, v);
+}
+
 void n2vm::add_rules(rule *rs, unsigned sz) {
 	orig = rs;
 	origsz = sz;
@@ -154,6 +160,7 @@ void n2vm::add_rules(rule *rs, unsigned sz) {
 			for (unsigned h = 0; h < sz; ++h)
 				add_constraint(r, p, h, rs[r].b[p], rs[h].h);
 		}
+		if (rs[r].h) getvarmap(*rs[r].h, vars[r]);
 	}
 }
 
