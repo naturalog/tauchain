@@ -10,8 +10,6 @@
 #include <forward_list>
 #include "containers.h"
 
-namespace n2vm {
-
 typedef int hrule;
 typedef int hprem;
 
@@ -26,7 +24,7 @@ struct term {
 	operator std::wstring() const;
 };
 
-struct rule { const term *h, **b; unsigned sz; operator std::wstring() const; };
+struct rule { term *h, **b; unsigned sz; operator std::wstring() const; };
 
 inline bool isvar(const term &t) { return t.isvar; }
 inline bool isvar(const term *t) { return t->isvar; }
@@ -66,5 +64,4 @@ private:
 	void getvarmap(const term& t, varmap& v);
 	void printkb();
 };
-}
 #endif

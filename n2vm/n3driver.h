@@ -12,23 +12,11 @@ using std::runtime_error;
 extern wostream &dout;
 
 #include "n2vm.h"
-using n2vm::term;
 
-namespace n3driver {
-/*
-struct rule {
-        const term *head;
-        vector<const term*> body;
-        rule(const term *h, const vector<const term*> &b = vector<const term*>());
-        rule(const term *h, const term *b);
-        rule(const rule &r);
-};
-*/
-struct rule {term *h, **b; unsigned sz; operator std::wstring() const; };
+wostream& operator<<(wostream&, const term&);
+wostream& operator<<(wostream&, const rule&);
+
 rule mkrule(term *h, const vector<term*> &b = vector<term*>());
-
-wostream &operator<<(wostream &, const term &);
-wostream &operator<<(wostream &, const rule &);
 
 struct din_t {
         din_t();
@@ -54,4 +42,3 @@ extern vector<term*> terms;
 extern vector<rule> rules;
 extern map<const term*, int> dict;
 extern din_t din;
-}

@@ -3,8 +3,6 @@
 
 wostream &dout = std::wcout;
 
-namespace n3driver {
-
 vector<term*> terms;
 vector<rule> rules;
 //map<int, wstring> dict;
@@ -133,7 +131,6 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 	}
 }
 
-// output
 wostream &operator<<(wostream &os, const rule &r) {
 	os << L'{';
 	for (unsigned n = 0; n < r.sz; ++n) os << *r.b[n] << ' ';
@@ -142,5 +139,4 @@ wostream &operator<<(wostream &os, const rule &r) {
 wostream &operator<<(wostream &os, const term &r) {
 	os << (std::wstring)r;
 	return os;
-}
 }
