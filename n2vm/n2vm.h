@@ -8,9 +8,6 @@ using namespace std;
 
 typedef int hrule;
 typedef int hprem;
-typedef int hvar;
-typedef int hlist;
-typedef int henv;
 
 struct term {
 	int p;

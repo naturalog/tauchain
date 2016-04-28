@@ -46,6 +46,7 @@ bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
 hrule n2vm::mutate(hrule r, auto env) {
 	auto &d = kb[kb.size()], &s = kb[r];
 	auto sz = s.size();
+	bool fail = false;
 	d.resize(sz);
 	for (auto n = 0; n < sz; ++n) {
 		auto &dn = d[n];
@@ -56,15 +57,23 @@ hrule n2vm::mutate(hrule r, auto env) {
 					dn,
 					m.first,
 					c.first,
-					c.second))
-					return -1;
-			for (auto c : env)
+					c.second)) {
+						fail = true;
+						break;
+					}
+			if (!fail) for (auto c : env)
 				if (!add_constraint(
 					dn,
 					m.first,
 					c.first,
-					c.second))
-					return -1;
+					c.second)) {
+						fail = true;
+						break;
+					}
+			if (fail) {
+				fail = false;
+				continue;
+			}
 		}
 	}
 	return sz;
