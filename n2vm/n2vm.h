@@ -12,12 +12,14 @@ typedef int hrule;
 typedef int hprem;
 
 struct term {
-	const int p;
+	bool isvar;
+	const char* p;
 	term** args;
 	const unsigned sz;
-	term(int p) : p(p), args(0), sz(0) {}
+	term(const char* p) : isvar(*p == '?'), p(p), args(0), sz(0) {}
 	term(const std::vector<term*> &_args) 
-		: p(0), args(new term*[_args.size() + 1]), sz(_args.size()) {
+		: isvar(false), p(0), args(new term*[_args.size() + 1])
+		, sz(_args.size()) {
 		int n = 0;
 		for (auto x : _args) args[n++] = x;
 		args[n] = 0;
@@ -27,13 +29,13 @@ struct term {
 
 struct rule { const term *h, **b; unsigned sz; operator std::string() const; };
 
-inline bool isvar(const term &t) { return t.p < 0; }
-inline bool isvar(const term *t) { return t->p < 0; }
+inline bool isvar(const term &t) { return t.isvar; }
+inline bool isvar(const term *t) { return t->isvar; }
 inline bool islist(const term &t) { return !t.p; }
 
 struct n2vm {
 	n2vm() : kb(*new kb_t) {}
-	term* add_term(int p, const std::vector<term*>& args = std::vector<term*>());
+	term* add_term(const char* p, const std::vector<term*>& args = std::vector<term*>());
 	void add_rules(rule *rs, unsigned sz);
 	bool tick();
 
@@ -42,7 +44,7 @@ private:
 	typedef std::map<hrule, sub> iprem;
 	typedef std::vector<iprem*> irule;
 	typedef std::vector<irule*> kb_t;
-	typedef std::forward_list<int> varmap;
+	typedef std::forward_list<const char*> varmap;
 	rule *orig;
 	unsigned origsz;
 	struct frame {

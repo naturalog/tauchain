@@ -107,7 +107,7 @@ hrule n2vm::mutate(hrule r, const sub &env) {
 	return kb.size();
 }
 
-term* n2vm::add_term(int p, const std::vector<term*>& args) {
+term* n2vm::add_term(const char* p, const std::vector<term*>& args) {
 	struct term_cmp {
 		int operator()(const term *_x, const term *_y) const {
 			static term_cmp tc;
