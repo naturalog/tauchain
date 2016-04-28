@@ -3,6 +3,8 @@
 #include <vector>
 #include <cassert>
 #include <cstring>
+#include <string>
+#include <sstream>
 
 using namespace std;
 
@@ -13,9 +15,10 @@ struct term {
 	const int p;
 	const vector<const term*> args;
 	term(int p, const vector<const term*> &args) : p(p), args(args) { }
+	operator string() const;
 };
 
-struct rule { const term *h, **b; unsigned sz; };
+struct rule { const term *h, **b; unsigned sz; operator string() const; };
 
 inline bool isvar(const term &t) { return t.p > 0; }
 inline bool isvar(const term *t) { return t->p > 0; }
@@ -29,6 +32,7 @@ struct n2vm {
 
 private:
 	typedef vector<vector<map<hrule, map<int, const term*>>>> kb_t;
+	rule *orig;
 	struct frame {
 		hrule r;
 		hprem p;
@@ -44,4 +48,5 @@ private:
 	bool add_constraint(hrule, hprem, hrule, const term*, const term*);
 	bool add_constraint(auto&, hrule, const term&, const term&);
 	bool add_constraint(auto&, hrule, int, const term&);
+	void printkb();
 };

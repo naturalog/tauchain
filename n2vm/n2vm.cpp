@@ -1,7 +1,5 @@
 #include <iostream>
 #include "n2vm.h"
-#include <string>
-#include <sstream>
 
 #ifdef DEBUG
 #define TRACE(x) x
@@ -9,27 +7,39 @@
 #define TRACE(x)
 #endif
 
-string tostr(const term *x) {
+term::operator string() const {
 	stringstream ss;
-	ss << x->p;
-	if (x->args.size()) {
+	if (p) ss << p;
+	else {
 		ss << '(';
-		for (auto y : x->args)
-			ss << tostr(y);
+		for (auto y : args) ss << (string)(*y) << ' ';
 		ss << ')';
 	}
 	return ss.str();
 }
 
+rule::operator string() const {
+	stringstream ss;
+	ss << "{ ";
+	if (h) ss << (string)(*h);
+	ss << "} <= {";
+	for (unsigned n = 0; n < sz; ++n)
+		ss << (string)*b[n] << ' ';
+	ss << "}.";
+	return ss.str();
+}
+
+#define tocstr(x) ( x ? ((string)(*(x))).c_str() : "(null)" )
+
 bool n2vm::add_constraint(hrule r, hprem p, hrule h, const term *x, const term *y) {
-	TRACE(printf("add_constraint(%d,%d,%d,%s,%s)\n", r, p, h, tostr(x).c_str(), tostr(y).c_str()));
+	TRACE(printf("add_constraint(%d,%d,%d,%s,%s)\n", r, p, h, tocstr(x), tocstr(y)));
 	if (x == y) return true;
 	if (!x || !y) return false;
 	return add_constraint(kb[r][p], h, *x, *y);
 }
 
 bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
-	TRACE(printf("add_constraint(%d,%s,%s)\n", h, tostr(&tx).c_str(), tostr(&ty).c_str()));
+	TRACE(printf("add_constraint(%d,%s,%s)\n", h, tocstr(&tx), tocstr(&ty)));
 	if (!isvar(tx)) {
 		if (isvar(ty)) return add_constraint(p, h, ty, tx);
 		if (islist(tx)) {
@@ -42,7 +52,7 @@ bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
 }
 
 bool n2vm::add_constraint(auto &p, hrule h, int x, const term& y) {
-	TRACE(printf("add_constraint(%d,%d,%s)\n", h, x, tostr(&y).c_str()));
+	TRACE(printf("add_constraint(%d,%d,%s)\n", h, x, tocstr(&y)));
 	auto &s = p[h];
 	auto it = s.find(x);
 	if (it != s.end()) {
@@ -56,7 +66,7 @@ bool n2vm::add_constraint(auto &p, hrule h, int x, const term& y) {
 }
 
 bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
-	TRACE(printf("add_lists(%d,%s,%s)\n", h, tostr(&x).c_str(), tostr(&y).c_str()));
+	TRACE(printf("add_lists(%d,%s,%s)\n", h, tocstr(&x), tocstr(&y)));
 	auto sz = x.args.size();
 	if (y.args.size() != sz) return false;
 	auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
@@ -133,6 +143,7 @@ term* n2vm::add_term(int p, const vector<const term*>& args) {
 }
 
 void n2vm::add_rules(rule *rs, unsigned sz) {
+	orig = rs;
 	kb.resize(sz);
 	for (unsigned r = 0; r < sz; ++r) {
 		kb[r].resize(rs[r].sz);
@@ -144,15 +155,32 @@ void n2vm::add_rules(rule *rs, unsigned sz) {
 }
 
 bool n2vm::tick() {
+	TRACE(cout<<"tick"<<endl);
 	if (!last) last = curr = new frame(query, 0, 0);
 	if (!curr) return false;
 	hrule r;
 	for (auto m : kb[curr->r][curr->p]) {
+		TRACE(printkb());
 		if (-1 != (r = mutate(m.first, m.second))) continue;
 		last = (last->next = new frame(r, 0, curr));
 	}
 	curr = curr->next;
 	return true;
+}
+	
+void n2vm::printkb() {
+	for (unsigned n = 0; n < kb.size(); ++n) {
+		cout << "Rule " << n << ':' << (string)orig[n] << endl;
+		const auto &r = kb[n];
+		for (unsigned k = 0; k < r.size(); ++k) {
+			cout << "\tPrem " << k << ':' << endl;
+			for (auto &m : r[k]) {
+				cout << "\t\tHead " << m.first << ':' << endl;
+				for (auto &x : m.second)
+					cout << "\t\t\t" << x.first << ' ' << (string)*x.second << endl;
+			}
+		}
+	}
 }
 
 int main() {
