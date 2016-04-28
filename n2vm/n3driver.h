@@ -1,3 +1,6 @@
+#ifndef __n3driver_h__
+#define __n3driver_h__
+
 #include "containers.h"
 #include <map>
 using std::function;
@@ -22,7 +25,7 @@ rule mkrule(term *h, const vector<term*> &b = vector<term*>());
 struct din_t {
         din_t(wistream&);
 	wistream &is;
-        vector<rule> readdoc(bool query, n2vm&); // TODO: support prefixes
+	void readdoc(bool query, struct n2vm&, vector<rule> &rules); // TODO: support prefixes
 	void print(); //print kb
 private:
         wchar_t ch;
@@ -40,3 +43,5 @@ private:
         term* readany(n2vm&);
         term* readtriple(n2vm&);
 };
+
+#endif

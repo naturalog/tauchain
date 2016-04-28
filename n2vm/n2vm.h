@@ -32,7 +32,8 @@ inline bool isvar(const term *t) { return t->isvar; }
 inline bool islist(const term &t) { return !t.p; }
 
 struct n2vm {
-	n2vm() : kb(*new kb_t) {}
+//	n2vm() : kb(*new kb_t) {}
+	n2vm(std::wistream& is, bool fin = true);
 	term* add_term(const wchar_t* p, const vector<term*>& args = vector<term*>());
 	void add_rules(rule *rs, unsigned sz);
 	bool tick();

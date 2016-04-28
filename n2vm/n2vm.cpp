@@ -9,6 +9,14 @@
 #define TRACE(x)
 #endif
 
+n2vm::n2vm(wistream& is, bool fin) : kb(*new kb_t) {
+	din_t d(is);
+	vector<rule> *r = new vector<rule>;
+	d.readdoc(false, *this, *r);
+	if (fin) d.readdoc(true, *this, *r);
+	add_rules(&(*r)[0], r->size());
+}
+
 term::term(const wchar_t* p) : isvar(*p == '?'), p(wcsdup(p)), args(0), sz(0) {
 //	TRACE(dout << "new term: " << p << endl);
 }
@@ -204,28 +212,20 @@ void n2vm::printkb() {
 // 4. lists
 
 void test1() {
-	n2vm vm;
 	std::wstringstream in;
-	din_t din(in);
 	in << "aa bb cc.";
 	in << "{ ?a bb cc } => { x y z}.";
-	auto r = din.readdoc(false, vm);
-	vm.add_rules(&r[0], r.size());
-	assert(r.size() == 2);
+	in << "fin.";
+	in << "a b c.";
+	in << "fin.";
+	n2vm vm(in);
 	vm.printkb();
 }
 
 int main() {
 	test1();
-	return 0;
-	din_t din(wcin);
-	n2vm vm;
-	vector<rule> k = din.readdoc(false, vm);
-	k.append(din.readdoc(true, vm));
-	dout << "rules: " << k.size() << endl;
-
-	for (auto r : k) dout << r << endl;
-	vm.add_rules(&k[0], k.size());
+//	return 0;
+	n2vm vm(wcin);
 	int s = 0;
 	while (vm.tick()) dout << "iter: " << s++ << endl;
 	return 0;

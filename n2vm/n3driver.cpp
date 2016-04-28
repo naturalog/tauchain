@@ -92,8 +92,7 @@ term* din_t::readtriple(n2vm& vm) {
 	return vm.add_term(0, v);
 }
 
-vector<rule> din_t::readdoc(bool query, n2vm& vm) { // TODO: support prefixes
-	vector<rule> rules;
+void din_t::readdoc(bool query, n2vm& vm, vector<rule> &rules) { // TODO: support prefixes
 	term *t;
 	done = false;
 	while (good() && !done) {
@@ -122,10 +121,9 @@ vector<rule> din_t::readdoc(bool query, n2vm& vm) { // TODO: support prefixes
 			else if (!done)
 				THROW("parse error: triple expected", "");
 		}
-		if (done) return rules;
+		if (done) return;
 		if (skip(), peek() == L'.') get(), skip();
 	}
-	return rules;
 }
 
 wostream &operator<<(wostream &os, const rule &r) {
