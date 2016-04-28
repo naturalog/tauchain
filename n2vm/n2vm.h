@@ -11,9 +11,8 @@ typedef int hprem;
 
 struct term {
 	int hash;
-	int p;
-	vector<const term*> args;
-//	term() : hash(0), p(0) { }
+	const int p;
+	const vector<const term*> args;
 	term(int p, const vector<const term*> &args) : p(p), args(args) {
 		hash = p;
 		for (auto t : args)
