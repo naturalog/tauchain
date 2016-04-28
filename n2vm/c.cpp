@@ -2,7 +2,7 @@
 #include "n3driver.h"
 
 using n3driver::din;
-using n3driver::term;
+//using n3driver::term;
 using n3driver::terms;
 using n3driver::rules;
 

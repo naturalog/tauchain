@@ -1,7 +1,7 @@
 #include <iostream>
 #include "n2vm.h"
 #include <set>
-using namespace std;
+#include "n3driver.h"
 
 #ifdef DEBUG
 #define TRACE(x) x
@@ -11,40 +11,79 @@ using namespace std;
 
 namespace n2vm {
 
-term::operator string() const {
-	stringstream ss;
+term::term(const wchar_t* p) : isvar(*p == '?'), p(wcsdup(p)), args(0), sz(0) {
+	TRACE(dout << "new term: " << p << endl);
+}
+
+term::term(const vector<term*> &_args) 
+	: isvar(false), p(0), args(new term*[_args.size() + 1])
+	, sz(_args.size()) {
+	int n = 0;
+	for (auto x : _args) args[n++] = x;
+	args[n] = 0;
+}
+
+term::~term() {
+	if (p) free(p);
+}
+
+term* n2vm::add_term(const wchar_t* p, const vector<term*>& args) {
+	struct term_cmp {
+		int operator()(const term *_x, const term *_y) const {
+			static term_cmp tc;
+			if (_x == _y) return 0;
+			const term &x = *_x, &y = *_y;
+			if (x.p > y.p) return 1;
+			if (x.p < y.p) return -1;
+			int r;
+			auto ix = x.args, iy = y.args;
+			for (; *ix;  ++ix, ++iy)
+				if ((r = tc(*ix, *iy)))
+					return r;
+			return 0;
+		}
+	};
+	static std::set<term*, term_cmp> terms;
+	term *t = args.empty() ? new term(p) : new term(args);
+	terms.emplace(t);
+	return t;
+}
+
+
+using namespace std;
+
+term::operator wstring() const {
+	wstringstream ss;
 	if (p) ss << p;
 	else {
 		ss << '(';
 		auto a = args;
-		while (a && *a) ss << (string)(**a++) << ' ';
+		while (a && *a) ss << (wstring)(**a++) << ' ';
 		ss << ')';
 	}
 	return ss.str();
 }
 
-rule::operator string() const {
-	stringstream ss;
+rule::operator wstring() const {
+	wstringstream ss;
 	ss << "{ ";
-	if (h) ss << (string)(*h);
+	if (h) ss << (wstring)(*h);
 	ss << "} <= {";
 	for (unsigned n = 0; n < sz; ++n)
-		ss << (string)*b[n] << ' ';
+		ss << (wstring)*b[n] << ' ';
 	ss << "}.";
 	return ss.str();
 }
 
-#define tocstr(x) ( x ? ((string)(*(x))).c_str() : "(null)" )
+#define tocstr(x) ( x ? ((wstring)(*(x))).c_str() : L"(null)" )
 
 bool n2vm::add_constraint(hrule r, hprem p, hrule h, const term *x, const term *y) {
 	if (x == y) return true;
 	if (!x || !y) return false;
-	TRACE(printf("add_constraint(%d,%d,%d,%s,%s)\n", r, p, h, tocstr(x), tocstr(y)));
 	return add_constraint(*(*kb[r])[p], h, *x, *y);
 }
 
 bool n2vm::add_constraint(iprem &p, hrule h, const term &tx, const term &ty) {
-	TRACE(printf("add_constraint(%d,%s,%s)\n", h, tocstr(&tx), tocstr(&ty)));
 	if (!isvar(tx)) {
 		if (isvar(ty)) return add_constraint(p, h, ty, tx);
 		if (islist(tx)) {
@@ -57,7 +96,6 @@ bool n2vm::add_constraint(iprem &p, hrule h, const term &tx, const term &ty) {
 }
 
 bool n2vm::add_constraint(iprem &p, hrule h, int x, const term& y) {
-	TRACE(printf("add_constraint(%d,%d,%s)\n", h, x, tocstr(&y)));
 	sub &s = p[h];
 	sub::const_iterator it = s.find(x);
 	if (it != s.end()) {
@@ -71,7 +109,6 @@ bool n2vm::add_constraint(iprem &p, hrule h, int x, const term& y) {
 }
 
 bool n2vm::add_lists(iprem &p, hrule h, const term &x, const term &y) {
-	TRACE(printf("add_lists(%d,%s,%s)\n", h, tocstr(&x), tocstr(&y)));
 	auto sz = x.sz;
 	if (y.sz != sz) return false;
 	auto ix = x.args, iy = y.args;
@@ -107,28 +144,6 @@ hrule n2vm::mutate(hrule r, const sub &env) {
 	return kb.size();
 }
 
-term* n2vm::add_term(const char* p, const std::vector<term*>& args) {
-	struct term_cmp {
-		int operator()(const term *_x, const term *_y) const {
-			static term_cmp tc;
-			if (_x == _y) return 0;
-			const term &x = *_x, &y = *_y;
-			if (x.p > y.p) return 1;
-			if (x.p < y.p) return -1;
-			int r;
-			auto ix = x.args, iy = y.args;
-			for (; *ix;  ++ix, ++iy)
-				if ((r = tc(*ix, *iy)))
-					return r;
-			return 0;
-		}
-	};
-	static set<term*, term_cmp> terms;
-	term *t = args.empty() ? new term(p) : new term(args);
-	terms.emplace(t);
-	return t;
-}
-
 void n2vm::getvarmap(const term& t, varmap& v) {
 	if (isvar(t)) v.push_front(t.p);
 	for (auto x = t.args; *x; ++x) getvarmap(**x, v);
@@ -151,7 +166,7 @@ void n2vm::add_rules(rule *rs, unsigned sz) {
 }
 
 bool n2vm::tick() {
-	TRACE(cout<<"tick"<<endl);
+	TRACE(dout<<"tick"<<endl);
 	if (!last) last = curr = new frame(query, 0, 0);
 	if (!curr) return false;
 	hrule r;
@@ -166,16 +181,17 @@ bool n2vm::tick() {
 	
 void n2vm::printkb() {
 	for (unsigned n = 0; n < kb.size(); ++n) {
-		cout << "Rule " << n << ':' << (n < origsz ? (string)orig[n] : string("")) << endl;
+		dout << "Rule " << n << ':' << (n < origsz ? (wstring)orig[n] : wstring()) << endl;
 		const auto &r = *kb[n];
 		for (unsigned k = 0; k < r.size(); ++k) {
-			cout << "\tPrem " << k << ':' << endl;
+			dout << "\tPrem " << k << ':' << endl;
 			for (auto &m : *r[k]) {
-				cout << "\t\tHead " << m.first << ':' << endl;
+				dout << "\t\tHead " << m.first << ':' << endl;
 				for (auto &x : m.second)
-					cout << "\t\t\t" << x.first << ' ' << (string)*x.second << endl;
+					dout << "\t\t\t" << x.first << ' ' << (wstring)*x.second << endl;
 			}
 		}
 	}
 }
 }
+

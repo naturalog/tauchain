@@ -1,3 +1,6 @@
+#ifndef __n2vm_h__
+#define __n2vm_h__
+
 #include <map>
 #include <vector>
 #include <cassert>
@@ -5,6 +8,7 @@
 #include <string>
 #include <sstream>
 #include <forward_list>
+#include "containers.h"
 
 namespace n2vm {
 
@@ -13,21 +17,16 @@ typedef int hprem;
 
 struct term {
 	bool isvar;
-	const char* p;
+	wchar_t* p;
 	term** args;
 	const unsigned sz;
-	term(const char* p) : isvar(*p == '?'), p(p), args(0), sz(0) {}
-	term(const std::vector<term*> &_args) 
-		: isvar(false), p(0), args(new term*[_args.size() + 1])
-		, sz(_args.size()) {
-		int n = 0;
-		for (auto x : _args) args[n++] = x;
-		args[n] = 0;
-	}
-	operator std::string() const;
+	term(const wchar_t* p);
+	term(const vector<term*> &_args);
+	~term();
+	operator std::wstring() const;
 };
 
-struct rule { const term *h, **b; unsigned sz; operator std::string() const; };
+struct rule { const term *h, **b; unsigned sz; operator std::wstring() const; };
 
 inline bool isvar(const term &t) { return t.isvar; }
 inline bool isvar(const term *t) { return t->isvar; }
@@ -35,7 +34,7 @@ inline bool islist(const term &t) { return !t.p; }
 
 struct n2vm {
 	n2vm() : kb(*new kb_t) {}
-	term* add_term(const char* p, const std::vector<term*>& args = std::vector<term*>());
+	term* add_term(const wchar_t* p, const vector<term*>& args = vector<term*>());
 	void add_rules(rule *rs, unsigned sz);
 	bool tick();
 
@@ -44,7 +43,7 @@ private:
 	typedef std::map<hrule, sub> iprem;
 	typedef std::vector<iprem*> irule;
 	typedef std::vector<irule*> kb_t;
-	typedef std::forward_list<const char*> varmap;
+	typedef std::forward_list<const wchar_t*> varmap;
 	rule *orig;
 	unsigned origsz;
 	struct frame {
@@ -68,3 +67,4 @@ private:
 	void printkb();
 };
 }
+#endif

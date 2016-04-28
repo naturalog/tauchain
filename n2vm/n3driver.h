@@ -11,42 +11,23 @@ using std::make_tuple;
 using std::runtime_error;
 extern wostream &dout;
 
+#include "n2vm.h"
+using n2vm::term;
+
 namespace n3driver {
 
-struct term {   // iri, var, or list
-        wchar_t type; // the only member used in runtime
-        union {
-                int *args; // list items, last item must be null.
-                const wchar_t *val;
-        };
-        term(const wchar_t *v);
-        term(vector<int> _args);
-        ~term();
-};
-
-struct triple {
-        int r[3]; // spo
-        triple(int s, int p, int o);
-        triple(const triple &t);
-};
-
-typedef vector<const triple*> body_t;
+typedef vector<const term*> body_t;
 
 struct rule {
-        const triple *head;
+        const term *head;
         body_t body;
-        rule(const triple *h, const body_t &b = body_t());
-        rule(const triple *h, const triple *b);
+        rule(const term *h, const body_t &b = body_t());
+        rule(const term *h, const term *b);
         rule(const rule &r);
 };
 
 wostream &operator<<(wostream &, const term &);
-wostream &operator<<(wostream &, const triple &t);
 wostream &operator<<(wostream &, const rule &);
-//wostream &operator<<(wostream &, const premise &);
-int mkterm(const wstring &v);
-int mkterm(const vector<int> &v);
-const triple *mktriple(int s, int p, int o);
 
 struct din_t {
         din_t();
@@ -63,9 +44,9 @@ private:
         wstring &trim(wstring &s);
         static wstring edelims;
         wstring till();
-        int readlist();
-        int readany();
-        const triple *readtriple();
+        term* readlist();
+        term* readany();
+        term* readtriple();
 };
 
 extern vector<term*> terms;
