@@ -1,7 +1,7 @@
 #include "n2vm.h"
 
-bool n2vm::add_constraint(hrule r, hprem p, hrule h, hterm x, hterm y) {
-	return add_constraint(kb[r][p], h, terms[x], terms[y]);
+bool n2vm::add_constraint(hrule r, hprem p, hrule h, term &x, term &y) {
+	return add_constraint(kb[r][p], h, x, y);
 }
 
 bool n2vm::tick() {
@@ -39,7 +39,7 @@ bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
 	auto sz = x.args.size();
 	if (y.args.size() != sz) return false;
 	for (auto n = 0; n < sz; ++n)
-		if (!add_constraint(p, h, terms[x.args[n]], terms[y.args[n]]))
+		if (!add_constraint(p, h, *x.args[n], *y.args[n]))
 			return false;
 }
 
@@ -78,6 +78,3 @@ bool n2vm::resolve(frame *f) {
 	}
 }
 
-hterm n2vm::add_term(int p, vector<hterm> args) {
-	// TODO: check for existing
-}

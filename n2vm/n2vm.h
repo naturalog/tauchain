@@ -1,4 +1,5 @@
 #include <map>
+#include <set>
 #include <vector>
 #include <cassert>
 #include <cstring>
@@ -10,25 +11,22 @@ typedef int hprem;
 typedef int hvar;
 typedef int hlist;
 typedef int henv;
-typedef int hterm;
 
 struct term {
 	int p;
-	vector<hterm> args;
+	vector<term*> args;
+	term(){}
+	term(int p, vector<term*> args) : p(p), args(args) {}
 };
 
 struct n2vm {
 	bool isvar(const term &t) const { return t.p > 0; }
 	bool islist(const term &t) const { return !t.p; }
-//	hlist list(hterm) const;
-//	hterm next(hlist&) {}
 
-	hterm add_term(int p, vector<hterm> args);
-	bool add_constraint(hrule, hprem, hrule, hterm, hterm);
+	void add_term(int p, vector<term*> args) { terms.emplace(p, args); }
+	bool add_constraint(hrule, hprem, hrule, term&, term&);
 	bool tick();
 private:
-	vector<term> terms;
-	vector<vector<hterm>> lists;
 	struct term_cmp {
 		int operator()(const term& x, const term& y) const {
 			return memcmp(&x, &y, sizeof(term));
@@ -36,6 +34,7 @@ private:
 	};
 
 	vector<vector<map<hrule, map<term, term, term_cmp>>>> kb;
+	set<term, term_cmp> terms;
 	struct frame {
 		hrule r;
 		hprem p;
