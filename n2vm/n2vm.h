@@ -20,8 +20,8 @@ struct term {
 
 struct rule { const term *h, **b; unsigned sz; operator string() const; };
 
-inline bool isvar(const term &t) { return t.p > 0; }
-inline bool isvar(const term *t) { return t->p > 0; }
+inline bool isvar(const term &t) { return t.p < 0; }
+inline bool isvar(const term *t) { return t->p < 0; }
 inline bool islist(const term &t) { return !t.p; }
 
 struct n2vm {
