@@ -31,7 +31,9 @@ struct n2vm {
 	bool tick();
 
 private:
-	typedef vector<vector<map<hrule, map<int, const term*>>>> kb_t;
+	typedef map<hrule, map<int, const term*>> iprem;
+	typedef vector<iprem*> irule;
+	typedef vector<irule*> kb_t;
 	rule *orig;
 	struct frame {
 		hrule r;
@@ -46,7 +48,7 @@ private:
 	bool add_lists(auto&, hrule, const term&, const term&);
 	hrule mutate(hrule r, auto env);
 	bool add_constraint(hrule, hprem, hrule, const term*, const term*);
-	bool add_constraint(auto&, hrule, const term&, const term&);
-	bool add_constraint(auto&, hrule, int, const term&);
+	bool add_constraint(iprem&, hrule, const term&, const term&);
+	bool add_constraint(iprem&, hrule, int, const term&);
 	void printkb();
 };

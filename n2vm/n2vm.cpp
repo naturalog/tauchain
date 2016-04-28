@@ -35,10 +35,10 @@ bool n2vm::add_constraint(hrule r, hprem p, hrule h, const term *x, const term *
 	TRACE(printf("add_constraint(%d,%d,%d,%s,%s)\n", r, p, h, tocstr(x), tocstr(y)));
 	if (x == y) return true;
 	if (!x || !y) return false;
-	return add_constraint(kb[r][p], h, *x, *y);
+	return add_constraint(*(*kb[r])[p], h, *x, *y);
 }
 
-bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
+bool n2vm::add_constraint(iprem &p, hrule h, const term &tx, const term &ty) {
 	TRACE(printf("add_constraint(%d,%s,%s)\n", h, tocstr(&tx), tocstr(&ty)));
 	if (!isvar(tx)) {
 		if (isvar(ty)) return add_constraint(p, h, ty, tx);
@@ -51,12 +51,12 @@ bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
 	return add_constraint(p, h, tx.p, ty);
 }
 
-bool n2vm::add_constraint(auto &p, hrule h, int x, const term& y) {
+bool n2vm::add_constraint(iprem &p, hrule h, int x, const term& y) {
 	TRACE(printf("add_constraint(%d,%d,%s)\n", h, x, tocstr(&y)));
 	auto &s = p[h];
 	auto it = s.find(x);
 	if (it != s.end()) {
-		if (!isvar(it->second))
+		if (!isvar(*it->second))
 			return add_constraint(p, h, *it->second, y);
 		auto z = it->second;
 		s[x] = &y;
@@ -79,13 +79,13 @@ bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
 hrule n2vm::mutate(hrule r, auto env) {
 	auto kbs = kb.size();
 	kb.resize(kbs + 1);
-	auto &d = kb[kbs], &s = kb[r];
+	auto &d = *(kb[kbs] = new irule), &s = *kb[r];
 	auto sz = s.size();
 	bool fail = false;
 	d.resize(sz);
 	for (unsigned n = 0; n < sz; ++n) {
-		auto &dn = d[n];
-		for (const auto &m : s[n]) {
+		auto &dn = *d[n];
+		for (const auto &m : *s[n]) {
 			const auto &e = m.second;
 			for (auto c : e)
 				if (!add_constraint(
@@ -116,7 +116,7 @@ hrule n2vm::mutate(hrule r, auto env) {
 			return -1;
 		}
 	}
-	kb.push_back(d);
+	kb.push_back(&d);
 	return kbs;
 }
 
@@ -146,11 +146,13 @@ void n2vm::add_rules(rule *rs, unsigned sz) {
 	orig = rs;
 	kb.resize(sz);
 	for (unsigned r = 0; r < sz; ++r) {
-		kb[r].resize(rs[r].sz);
+		(kb[r] = new irule)->resize(rs[r].sz);
 		if (!rs[r].h) query = r;
-		for (unsigned p = 0; p < rs[r].sz; ++p)
+		for (unsigned p = 0; p < rs[r].sz; ++p) {
+			(*kb[r])[p] = new iprem;
 			for (unsigned h = 0; h < sz; ++h)
 				add_constraint(r, p, h, rs[r].b[p], rs[h].h);
+		}
 	}
 }
 
@@ -159,7 +161,7 @@ bool n2vm::tick() {
 	if (!last) last = curr = new frame(query, 0, 0);
 	if (!curr) return false;
 	hrule r;
-	for (auto m : kb[curr->r][curr->p]) {
+	for (auto m : *(*kb[curr->r])[curr->p]) {
 		TRACE(printkb());
 		if (-1 != (r = mutate(m.first, m.second))) continue;
 		last = (last->next = new frame(r, 0, curr));
@@ -171,10 +173,10 @@ bool n2vm::tick() {
 void n2vm::printkb() {
 	for (unsigned n = 0; n < kb.size(); ++n) {
 		cout << "Rule " << n << ':' << (string)orig[n] << endl;
-		const auto &r = kb[n];
+		const auto &r = *kb[n];
 		for (unsigned k = 0; k < r.size(); ++k) {
 			cout << "\tPrem " << k << ':' << endl;
-			for (auto &m : r[k]) {
+			for (auto &m : *r[k]) {
 				cout << "\t\tHead " << m.first << ':' << endl;
 				for (auto &x : m.second)
 					cout << "\t\t\t" << x.first << ' ' << (string)*x.second << endl;
