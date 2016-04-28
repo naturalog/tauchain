@@ -9,6 +9,8 @@ using namespace std;
 #define TRACE(x)
 #endif
 
+namespace n2vm {
+
 term::operator string() const {
 	stringstream ss;
 	if (p) ss << p;
@@ -174,4 +176,5 @@ void n2vm::printkb() {
 			}
 		}
 	}
+}
 }

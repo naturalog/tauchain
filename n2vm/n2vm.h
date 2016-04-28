@@ -6,6 +6,8 @@
 #include <sstream>
 #include <forward_list>
 
+namespace n2vm {
+
 typedef int hrule;
 typedef int hprem;
 
@@ -56,3 +58,4 @@ private:
 	void getvarmap(const term& t, varmap& v);
 	void printkb();
 };
+}

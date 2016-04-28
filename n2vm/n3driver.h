@@ -13,15 +13,15 @@ extern wostream &dout;
 
 namespace n3driver {
 
-struct atom {   // iri, var, or list
+struct term {   // iri, var, or list
         wchar_t type; // the only member used in runtime
         union {
                 int *args; // list items, last item must be null.
                 const wchar_t *val;
         };
-        atom(const wchar_t *v);
-        atom(vector<int> _args);
-        ~atom();
+        term(const wchar_t *v);
+        term(vector<int> _args);
+        ~term();
 };
 
 struct triple {
@@ -44,12 +44,12 @@ struct rule {
         rule(const rule &r);
 };
 
-wostream &operator<<(wostream &, const atom &);
+wostream &operator<<(wostream &, const term &);
 wostream &operator<<(wostream &, const triple &t);
 wostream &operator<<(wostream &, const rule &);
 wostream &operator<<(wostream &, const premise &);
-int mkatom(const wstring &v);
-int mkatom(const vector<int> &v);
+int mkterm(const wstring &v);
+int mkterm(const vector<int> &v);
 const triple *mktriple(int s, int p, int o);
 
 struct din_t {
@@ -72,8 +72,8 @@ private:
         const triple *readtriple();
 };
 
-extern vector<atom*> atoms;
+extern vector<term*> terms;
 extern vector<rule> rules;
-extern map<const atom*, int> dict;
+extern map<const term*, int> dict;
 extern din_t din;
 }

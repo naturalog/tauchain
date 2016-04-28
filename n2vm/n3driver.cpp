@@ -5,9 +5,9 @@ wostream &dout = std::wcout;
 
 namespace n3driver {
 
-vector<atom*> atoms;
+vector<term*> terms;
 vector<rule> rules;
-map<const atom *, int> dict;
+map<const term *, int> dict;
 din_t din;
 
 #define THROW(x, y)                                                            \
@@ -17,17 +17,17 @@ din_t din;
     throw runtime_error(s.str());                                              \
   }
 
-atom::atom(const wchar_t *v) : type(*v), val(wcsdup(v)) {
+term::term(const wchar_t *v) : type(*v), val(wcsdup(v)) {
 	dout << val << endl;
 }
 
-atom::atom(vector<int> _args) : type(L'.'), args(new int[_args.size() + 1]) {
+term::term(vector<int> _args) : type(L'.'), args(new int[_args.size() + 1]) {
 	int n = 0;
 	for (auto x : _args) args[n++] = x;
 	args[n] = 0;
 }
 
-atom::~atom() {
+term::~term() {
 	if (args && type == L'.') delete[] args;
 	if (val) free((wchar_t *)val);
 }
@@ -50,19 +50,19 @@ rule::rule(const triple *h, const triple *b) : head(h) {
 
 rule::rule(const rule &r) : head(r.head), body(r.body) {}
 
-int mkatom(const wstring &v) {
+int mkterm(const wstring &v) {
 	static std::map<wstring, int> r;
 	auto i = r.find(v);
 	if (i != r.end()) return i->second;
-	int id = atoms.size();
-	atoms.push_back(new atom(v.c_str()));
-	dict.set(atoms[id - 1], id);
-	if (v[0] != L'?') id = -id;
+	int id = terms.size();
+	terms.push_back(new term(v.c_str()));
+	dict.set(terms[id - 1], id);
+	if (v[0] == L'?') id = -id;
 	r.emplace(v, id);
 	return id;
 }
 
-int mkatom(const vector<int> &v) {
+int mkterm(const vector<int> &v) {
 	struct cmp {
 		bool operator()(const vector<int> &x, const vector<int> &y) const {
 			int s1 = x.size(), s2 = y.size();
@@ -73,10 +73,10 @@ int mkatom(const vector<int> &v) {
 	static std::map<vector<int>, int, cmp> r;
 	auto i = r.find(v);
 	if (i != r.end()) return i->second;
-	int id = atoms.size();
-	atoms.push_back(new atom(v));
-	r.emplace(v, -id);
-	dict.set(atoms[id - 1], -id);
+	int id = terms.size();
+	terms.push_back(new term(v));
+	r.emplace(v, id);
+	dict.set(terms[id - 1], id);
 	return -id;
 }
 
@@ -131,7 +131,7 @@ int din_t::readlist() {
 	vector<int> items;
 	while (skip(), (good() && peek() != L')'))
 		items.push_back(readany()), skip();
-	return get(), skip(), mkatom(items);
+	return get(), skip(), mkterm(items);
 }
 
 int din_t::readany() {
@@ -139,7 +139,7 @@ int din_t::readany() {
 	if (peek() == L'(') return readlist();
 	wstring s = till();
 	if (s == L"fin" && peek() == L'.') return get(), done = true, 0;
-	return s.size() ? mkatom(s) : 0;
+	return s.size() ? mkterm(s) : 0;
 }
 
 const triple *din_t::readtriple() {
@@ -192,14 +192,14 @@ wostream &operator<<(wostream &os, const rule &r) {
 	return os << L"} => { ", (r.head ? os << *r.head : os << L""), os << " }.";
 }
 wostream &operator<<(wostream &os, const triple &t) {
-	return os << *atoms[abs(t.r[0])] << ' ' << *atoms[abs(t.r[1])] << ' '
-	       << *atoms[abs(t.r[2])] << L'.';
+	return os << *terms[abs(t.r[0])] << ' ' << *terms[abs(t.r[1])] << ' '
+	       << *terms[abs(t.r[2])] << L'.';
 }
-wostream &operator<<(wostream &os, const atom &r) {
+wostream &operator<<(wostream &os, const term &r) {
 	if (r.type != L'.') return r.val ? os << r.val : os;
 	os << L'(';
 	const int *a = r.args;
-	while (*a) os << atoms[*a++] << L' ';
+	while (*a) os << terms[*a++] << L' ';
 	return os << L')';
 }
 }

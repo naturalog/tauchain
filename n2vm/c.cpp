@@ -2,8 +2,8 @@
 #include "n3driver.h"
 
 using n3driver::din;
-using n3driver::atom;
-using n3driver::atoms;
+using n3driver::term;
+using n3driver::terms;
 using n3driver::rules;
 
 void print() {
@@ -12,7 +12,7 @@ void print() {
 }
 
 int main() {
-	atoms.push_back(new atom(L"GND"));
+	terms.push_back(new term(L"GND"));
 	din.readdoc(false);
 	print();
 	din.readdoc(true);
