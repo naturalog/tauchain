@@ -3,7 +3,7 @@
 
 #include <map>
 #include <list>
-#include <vector>
+//#include <vector>
 #include <cassert>
 #include <cstring>
 #include <string>
@@ -38,10 +38,10 @@ struct n2vm {
 	bool tick();
 	typedef std::map<const wchar_t*, const term*> sub;
 	typedef std::map<hrule, sub> iprem;
-	typedef std::list<iprem> irule;
+	typedef std::list<iprem*> irule;
 
 private:
-	typedef std::vector<irule*> kb_t;
+	typedef vector<irule*> kb_t;
 	typedef std::forward_list<const wchar_t*> varmap;
 	rule *orig;
 	unsigned origsz;
