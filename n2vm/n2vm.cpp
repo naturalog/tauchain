@@ -1,15 +1,10 @@
+#include <iostream>
 #include "n2vm.h"
 
-bool n2vm::add_constraint(hrule r, hprem p, hrule h, term *x, term *y) {
+bool n2vm::add_constraint(hrule r, hprem p, hrule h, const term *x, const term *y) {
 	if (x == y) return true;
+	if (!x || !y) return false;
 	return add_constraint(kb[r][p], h, *x, *y);
-}
-
-bool n2vm::tick() {
-	if (!curr) return false;
-	resolve(curr);
-	curr = curr->next;
-	return true;
 }
 
 bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
@@ -19,6 +14,7 @@ bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
 			if (!islist(ty)) return false;
 			return add_lists(p, h, tx, ty);
 		}
+		return tx.p == ty.p;
 	}
 	return add_constraint(p, h, tx.p, ty);
 }
@@ -43,14 +39,17 @@ bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
 	for (; ix != ex;  ++ix, ++iy)
 		if (!add_constraint(p, h, **ix, **iy))
 			return false;
+	return true;
 }
 
 hrule n2vm::mutate(hrule r, auto env) {
-	auto &d = kb[kb.size()], &s = kb[r];
+	auto kbs = kb.size();
+	kb.resize(kbs + 1);
+	auto &d = kb[kbs], &s = kb[r];
 	auto sz = s.size();
 	bool fail = false;
 	d.resize(sz);
-	for (auto n = 0; n < sz; ++n) {
+	for (unsigned n = 0; n < sz; ++n) {
 		auto &dn = d[n];
 		for (const auto &m : s[n]) {
 			const auto &e = m.second;
@@ -74,14 +73,49 @@ hrule n2vm::mutate(hrule r, auto env) {
 					}
 			if (fail) {
 				fail = false;
+				dn.erase(m.first);
 				continue;
 			}
 		}
 	}
-	return sz;
+	kb.push_back(d);
+	return kbs;
 }
 
-bool n2vm::resolve(frame *f) {
+term* n2vm::add_term(int p, const vector<const term*>& args) {
+	struct term_cmp {
+		int operator()(const term *_x, const term *_y) const {
+			static term_cmp tc;
+			if (_x == _y) return 0;
+			const term &x = *_x, &y = *_y;
+			if (x.p > y.p) return 1;
+			if (x.p < y.p) return -1;
+			int r;
+			auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
+			for (; ix != ex;  ++ix, ++iy)
+				if ((r = tc(*ix, *iy)))
+					return r;
+			return 0;
+		}
+	};
+	static set<term*, term_cmp> terms;
+	term *t = new term(p, args);
+	terms.emplace(t);
+	return t;
+}
+
+void n2vm::add_rules(rule *rs, unsigned sz) {
+	kb.resize(sz);
+	for (unsigned r = 0; r < sz; ++r) {
+		kb[r].resize(rs[r].sz);
+		if (!rs[r].h) query = r;
+		for (unsigned p = 0; p < rs[r].sz; ++p)
+			for (unsigned h = 0; h < sz; ++h)
+				add_constraint(r, p, h, rs[r].b[p], rs[h].h);
+	}
+}
+
+void n2vm::resolve(frame *f) {
 	hrule r;
 	for (auto m : kb[f->r][f->p]) {
 		if (-1 != (r = mutate(m.first, m.second))) continue;
@@ -89,22 +123,48 @@ bool n2vm::resolve(frame *f) {
 	}
 }
 
-term* n2vm::add_term(int p, const auto& args) {
-	term *t = new term(p, args);
-	terms.emplace(t);
-	return t;
+bool n2vm::tick() {
+	if (!last)
+		last = curr = new frame(query, 0, 0);
+	if (!curr) return false;
+	resolve(curr);
+	curr = curr->next;
+	return true;
 }
 
-int n2vm::term_cmp::operator()(const term *_x, const term *_y) const {
-	static n2vm::term_cmp tc;
-	if (_x == _y) return 0;
-	const term &x = *_x, &y = *_y;
-	if (x.p > y.p) return 1;
-	if (x.p < y.p) return -1;
-	int r;
-	auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
-	for (; ix != ex;  ++ix, ++iy)
-		if ((r = tc(*ix, *iy)))
-			return r;
+int main() {
+	n2vm v;
+	int r = 1;
+	
+	typedef const term cterm;
+
+	cterm *s = v.add_term(r++);
+	cterm *a = v.add_term(r++);
+	cterm *m = v.add_term(r++);
+	cterm *x = v.add_term(-r++);
+	cterm *y = v.add_term(-r++);
+	cterm *l = v.add_term(r++);
+
+	cterm *sam = v.add_term(0, { s, a, m });
+	cterm *xam = v.add_term(0, { x, a, m });
+	cterm *yam = v.add_term(0, { y, a, m });
+	cterm *xal = v.add_term(0, { x, a, l });
+
+	rule *rs = new rule[3];
+	rs[0].sz = 0;
+	rs[0].h = sam;
+
+	rs[1].sz = 1;
+	rs[1].h = xal;
+	rs[1].b = &xam;
+
+	rs[2].sz = 1;
+	rs[2].h = 0;
+	rs[2].b = &yam;
+
+	v.add_rules(rs, 3);
+
+	while (v.tick()) cout << "t" << endl;
+
 	return 0;
 }

@@ -1,2 +1,2 @@
 all:
-	g++ n2vm.cpp -std=c++1y
+	g++ n2vm.cpp -std=c++1y -g -W -Wall
