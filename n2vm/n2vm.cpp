@@ -77,6 +77,10 @@ hrule n2vm::mutate(hrule r, auto env) {
 				continue;
 			}
 		}
+		if (dn.empty()) {
+			kb.resize(kbs);
+			return -1;
+		}
 	}
 	kb.push_back(d);
 	return kbs;
@@ -131,19 +135,17 @@ int main() {
 	n2vm v;
 	int r = 1;
 	
-	typedef const term cterm;
+	const term *s = v.add_term(r++);
+	const term *a = v.add_term(r++);
+	const term *m = v.add_term(r++);
+	const term *x = v.add_term(-r++);
+	const term *y = v.add_term(-r++);
+	const term *l = v.add_term(r++);
 
-	cterm *s = v.add_term(r++);
-	cterm *a = v.add_term(r++);
-	cterm *m = v.add_term(r++);
-	cterm *x = v.add_term(-r++);
-	cterm *y = v.add_term(-r++);
-	cterm *l = v.add_term(r++);
-
-	cterm *sam = v.add_term(0, { s, a, m });
-	cterm *xam = v.add_term(0, { x, a, m });
-	cterm *yam = v.add_term(0, { y, a, m });
-	cterm *xal = v.add_term(0, { x, a, l });
+	const term *sam = v.add_term(0, { s, a, m });
+	const term *xam = v.add_term(0, { x, a, m });
+	const term *yam = v.add_term(0, { y, a, m });
+	const term *xal = v.add_term(0, { x, a, l });
 
 	rule *rs = new rule[3];
 	rs[0].sz = 0;
