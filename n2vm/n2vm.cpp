@@ -89,4 +89,22 @@ bool n2vm::resolve(frame *f) {
 	}
 }
 
-const n2vm::term_cmp n2vm::term_cmp::tc;
+term* n2vm::add_term(int p, const auto& args) {
+	term *t = new term(p, args);
+	terms.emplace(t);
+	return t;
+}
+
+int n2vm::term_cmp::operator()(const term *_x, const term *_y) const {
+	static n2vm::term_cmp tc;
+	if (_x == _y) return 0;
+	const term &x = *_x, &y = *_y;
+	if (x.p > y.p) return 1;
+	if (x.p < y.p) return -1;
+	int r;
+	auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
+	for (; ix != ex;  ++ix, ++iy)
+		if ((r = tc(*ix, *iy)))
+			return r;
+	return 0;
+}
