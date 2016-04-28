@@ -36,6 +36,7 @@ struct n2vm {
 	term* add_term(const wchar_t* p, const vector<term*>& args = vector<term*>());
 	void add_rules(rule *rs, unsigned sz);
 	bool tick();
+	void printkb();
 	typedef std::map<const wchar_t*, const term*> sub;
 	typedef std::map<hrule, sub> iprem;
 	typedef std::list<iprem*> irule;
@@ -63,6 +64,5 @@ private:
 	bool add_constraint(iprem&, hrule, const wchar_t*, const term&);
 	bool mutate(iprem &dn, const sub &e, auto m, const sub &env);
 	void getvarmap(const term& t, varmap& v);
-	void printkb();
 };
 #endif

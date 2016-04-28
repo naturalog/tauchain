@@ -190,3 +190,43 @@ void n2vm::printkb() {
 		}
 	}
 }
+
+// test cases
+// 1. one fact, one body:
+// 	1.1 one var, verify one cond
+// 	1.2 one var, verify fail
+//	1.3 one var twice, verify one cond
+// 	1.4 one var twice, verify fail
+// 	1.5 two vars, verify two conds
+// 	1.6 two vars, verify two fail
+// 2. two facts, two rules, one body each
+// 3. two facts, two rules, two bodies each
+// 4. lists
+
+void test1() {
+	n2vm vm;
+	std::wstringstream in;
+	din_t din(in);
+	in << "aa bb cc.";
+	in << "{ ?a bb cc } => { x y z}.";
+	auto r = din.readdoc(false, vm);
+	vm.add_rules(&r[0], r.size());
+	assert(r.size() == 2);
+	vm.printkb();
+}
+
+int main() {
+	test1();
+	return 0;
+	din_t din(wcin);
+	n2vm vm;
+	vector<rule> k = din.readdoc(false, vm);
+	k.append(din.readdoc(true, vm));
+	dout << "rules: " << k.size() << endl;
+
+	for (auto r : k) dout << r << endl;
+	vm.add_rules(&k[0], k.size());
+	int s = 0;
+	while (vm.tick()) dout << "iter: " << s++ << endl;
+	return 0;
+}
