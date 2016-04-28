@@ -1,13 +1,35 @@
 #include <iostream>
 #include "n2vm.h"
+#include <string>
+#include <sstream>
+
+#ifdef DEBUG
+#define TRACE(x) x
+#else
+#define TRACE(x)
+#endif
+
+string tostr(const term *x) {
+	stringstream ss;
+	ss << x->p;
+	if (x->args.size()) {
+		ss << '(';
+		for (auto y : x->args)
+			ss << tostr(y);
+		ss << ')';
+	}
+	return ss.str();
+}
 
 bool n2vm::add_constraint(hrule r, hprem p, hrule h, const term *x, const term *y) {
+	TRACE(printf("add_constraint(%d,%d,%d,%s,%s)\n", r, p, h, tostr(x).c_str(), tostr(y).c_str()));
 	if (x == y) return true;
 	if (!x || !y) return false;
 	return add_constraint(kb[r][p], h, *x, *y);
 }
 
 bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
+	TRACE(printf("add_constraint(%d,%s,%s)\n", h, tostr(&tx).c_str(), tostr(&ty).c_str()));
 	if (!isvar(tx)) {
 		if (isvar(ty)) return add_constraint(p, h, ty, tx);
 		if (islist(tx)) {
@@ -20,6 +42,7 @@ bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
 }
 
 bool n2vm::add_constraint(auto &p, hrule h, int x, const term& y) {
+	TRACE(printf("add_constraint(%d,%d,%s)\n", h, x, tostr(&y).c_str()));
 	auto &s = p[h];
 	auto it = s.find(x);
 	if (it != s.end()) {
@@ -33,6 +56,7 @@ bool n2vm::add_constraint(auto &p, hrule h, int x, const term& y) {
 }
 
 bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
+	TRACE(printf("add_lists(%d,%s,%s)\n", h, tostr(&x).c_str(), tostr(&y).c_str()));
 	auto sz = x.args.size();
 	if (y.args.size() != sz) return false;
 	auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
