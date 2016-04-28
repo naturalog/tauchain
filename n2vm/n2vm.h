@@ -31,16 +31,18 @@ struct n2vm {
 	bool tick();
 
 private:
-	typedef map<hrule, map<int, const term*>> iprem;
+	typedef map<int, const term*> sub;
+	typedef map<hrule, sub> iprem;
 	typedef vector<iprem*> irule;
 	typedef vector<irule*> kb_t;
 	rule *orig;
+	unsigned origsz;
 	struct frame {
 		hrule r;
 		hprem p;
 		frame *next, *up;
 		frame(hrule r, hprem p, frame *up) :
-			r(r), p(p), up(up) {}
+			r(r), p(p), next(0), up(up) {}
 	} *last = 0, *curr = 0;
 
 	kb_t &kb;

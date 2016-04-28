@@ -84,9 +84,9 @@ hrule n2vm::mutate(hrule r, auto env) {
 	bool fail = false;
 	d.resize(sz);
 	for (unsigned n = 0; n < sz; ++n) {
-		auto &dn = *d[n];
+		iprem &dn = *(d[n] = new iprem);
 		for (const auto &m : *s[n]) {
-			const auto &e = m.second;
+			const sub &e = m.second;
 			for (auto c : e)
 				if (!add_constraint(
 					dn,
@@ -144,6 +144,7 @@ term* n2vm::add_term(int p, const vector<const term*>& args) {
 
 void n2vm::add_rules(rule *rs, unsigned sz) {
 	orig = rs;
+	origsz = sz;
 	kb.resize(sz);
 	for (unsigned r = 0; r < sz; ++r) {
 		(kb[r] = new irule)->resize(rs[r].sz);
@@ -172,7 +173,7 @@ bool n2vm::tick() {
 	
 void n2vm::printkb() {
 	for (unsigned n = 0; n < kb.size(); ++n) {
-		cout << "Rule " << n << ':' << (string)orig[n] << endl;
+		cout << "Rule " << n << ':' << (n < origsz ? (string)orig[n] : string("")) << endl;
 		const auto &r = *kb[n];
 		for (unsigned k = 0; k < r.size(); ++k) {
 			cout << "\tPrem " << k << ':' << endl;
