@@ -1,5 +1,7 @@
 #include <iostream>
 #include "n2vm.h"
+#include <set>
+using namespace std;
 
 #ifdef DEBUG
 #define TRACE(x) x
@@ -172,39 +174,4 @@ void n2vm::printkb() {
 			}
 		}
 	}
-}
-
-int main() {
-	n2vm v;
-	int r = 1;
-	
-	const term *s = v.add_term(r++);
-	const term *a = v.add_term(r++);
-	const term *m = v.add_term(r++);
-	const term *x = v.add_term(-r++);
-	const term *y = v.add_term(-r++);
-	const term *l = v.add_term(r++);
-
-	const term *sam = v.add_term(0, { s, a, m });
-	const term *xam = v.add_term(0, { x, a, m });
-	const term *yam = v.add_term(0, { y, a, m });
-	const term *xal = v.add_term(0, { x, a, l });
-
-	rule *rs = new rule[3];
-	rs[0].sz = 0;
-	rs[0].h = sam;
-
-	rs[1].sz = 1;
-	rs[1].h = xal;
-	rs[1].b = &xam;
-
-	rs[2].sz = 1;
-	rs[2].h = 0;
-	rs[2].b = &yam;
-
-	v.add_rules(rs, 3);
-
-	while (v.tick()) cout << "t" << endl;
-
-	return 0;
 }

@@ -1,5 +1,4 @@
 #include <map>
-#include <set>
 #include <vector>
 #include <cassert>
 #include <cstring>
@@ -7,19 +6,17 @@
 #include <sstream>
 #include <forward_list>
 
-using namespace std;
-
 typedef int hrule;
 typedef int hprem;
 
 struct term {
 	const int p;
-	const vector<const term*> args;
-	term(int p, const vector<const term*> &args) : p(p), args(args) { }
-	operator string() const;
+	const std::vector<const term*> args;
+	term(int p, const std::vector<const term*> &args) : p(p), args(args) { }
+	operator std::string() const;
 };
 
-struct rule { const term *h, **b; unsigned sz; operator string() const; };
+struct rule { const term *h, **b; unsigned sz; operator std::string() const; };
 
 inline bool isvar(const term &t) { return t.p < 0; }
 inline bool isvar(const term *t) { return t->p < 0; }
@@ -27,16 +24,16 @@ inline bool islist(const term &t) { return !t.p; }
 
 struct n2vm {
 	n2vm() : kb(*new kb_t) {}
-	term* add_term(int p, const vector<const term*>& args = vector<const term*>());
+	term* add_term(int p, const std::vector<const term*>& args = std::vector<const term*>());
 	void add_rules(rule *rs, unsigned sz);
 	bool tick();
 
 private:
-	typedef map<int, const term*> sub;
-	typedef map<hrule, sub> iprem;
-	typedef vector<iprem*> irule;
-	typedef vector<irule*> kb_t;
-	typedef forward_list<int> varmap;
+	typedef std::map<int, const term*> sub;
+	typedef std::map<hrule, sub> iprem;
+	typedef std::vector<iprem*> irule;
+	typedef std::vector<irule*> kb_t;
+	typedef std::forward_list<int> varmap;
 	rule *orig;
 	unsigned origsz;
 	struct frame {
@@ -48,7 +45,7 @@ private:
 	} *last = 0, *curr = 0;
 
 	kb_t &kb;
-	map<unsigned, varmap> vars;
+	std::map<unsigned, varmap> vars;
 	unsigned query;
 	bool add_lists(iprem&, hrule, const term&, const term&);
 	hrule mutate(hrule r, const sub&);
