@@ -76,41 +76,27 @@ bool n2vm::add_lists(iprem &p, hrule h, const term &x, const term &y) {
 	return true;
 }
 
+bool n2vm::mutate(iprem &dn, const sub &e, auto m, const sub &env) {
+	for (auto c : e)
+		if (!add_constraint( dn, m.first, c.first, *c.second))
+			return false;
+	for (auto c : env)
+		if (!add_constraint( dn, m.first, c.first, *c.second))
+			return false;
+	return true;
+}
+
 hrule n2vm::mutate(hrule r, const sub &env) {
 	auto kbs = kb.size();
 	kb.resize(kbs + 1);
 	irule &d = *(kb[kbs] = new irule), &s = *kb[r];
 	auto sz = s.size();
-	bool fail = false;
 	d.resize(sz);
 	for (unsigned n = 0; n < sz; ++n) {
 		iprem &dn = *(d[n] = new iprem);
-		for (const auto &m : *s[n]) {
-			const sub &e = m.second;
-			for (auto c : e)
-				if (!add_constraint(
-					dn,
-					m.first,
-					c.first,
-					*c.second)) {
-						fail = true;
-						break;
-					}
-			if (!fail) for (auto c : env)
-				if (!add_constraint(
-					dn,
-					m.first,
-					c.first,
-					*c.second)) {
-						fail = true;
-						break;
-					}
-			if (fail) {
-				fail = false;
+		for (const auto &m : *s[n])
+			if (!mutate(dn, m.second, m, env))
 				dn.erase(m.first);
-				continue;
-			}
-		}
 		if (dn.empty()) {
 			kb.resize(kbs);
 			return -1;

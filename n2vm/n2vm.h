@@ -55,6 +55,7 @@ private:
 	bool add_constraint(hrule, hprem, hrule, const term*, const term*);
 	bool add_constraint(iprem&, hrule, const term&, const term&);
 	bool add_constraint(iprem&, hrule, int, const term&);
+	bool mutate(iprem &dn, const sub &e, auto m, const sub &env);
 	void getvarmap(const term& t, varmap& v);
 	void printkb();
 };
