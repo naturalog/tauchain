@@ -22,7 +22,8 @@ rule mkrule(term *h, const vector<term*> &b = vector<term*>());
 struct din_t {
         din_t(wistream&);
 	wistream &is;
-        void readdoc(bool query, n2vm&); // TODO: support prefixes
+        vector<rule> readdoc(bool query, n2vm&); // TODO: support prefixes
+	void print(); //print kb
 private:
         wchar_t ch;
         bool f = false, done, in_query = false;
@@ -39,5 +40,3 @@ private:
         term* readany(n2vm&);
         term* readtriple(n2vm&);
 };
-
-extern vector<rule> rules;

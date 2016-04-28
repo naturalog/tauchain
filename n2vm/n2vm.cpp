@@ -73,10 +73,10 @@ rule::operator wstring() const {
 
 #define tocstr(x) ( x ? ((wstring)(*(x))).c_str() : L"(null)" )
 
-bool n2vm::add_constraint(hrule r, hprem p, hrule h, const term *x, const term *y) {
+bool n2vm::add_constraint(iprem &p, hrule h, const term *x, const term *y) {
 	if (x == y) return true;
 	if (!x || !y) return false;
-	return add_constraint(*(*kb[r])[p], h, *x, *y);
+	return add_constraint(p, h, *x, *y);
 }
 
 bool n2vm::add_constraint(iprem &p, hrule h, const term &tx, const term &ty) {
@@ -126,14 +126,15 @@ bool n2vm::mutate(iprem &dn, const sub &e, auto m, const sub &env) {
 
 hrule n2vm::mutate(hrule r, const sub &env) {
 	irule &d = *new irule, &s = *kb[r];
-	auto sz = s.size();
-	d.resize(sz);
-	for (unsigned n = 0; n < sz; ++n) {
-		iprem &dn = *(d[n] = new iprem);
-		for (const auto &m : *s[n])
+//	auto sz = s.size();
+//	for (unsigned n = 0; n < sz; ++n) {
+	for (auto sn : s) {
+		iprem dn;
+		for (const auto &m : sn)
 			if (!mutate(dn, m.second, m, env))
 				dn.erase(m.first);
 		if (dn.empty()) return -1;
+		d.push_back(dn);
 	}
 	kb.push_back(&d);
 	// TODO: remove matched constraints from varmap
@@ -153,9 +154,10 @@ void n2vm::add_rules(rule *rs, unsigned sz) {
 		(kb[r] = new irule)->resize(rs[r].sz);
 		if (!rs[r].h) query = r;
 		for (unsigned p = 0; p < rs[r].sz; ++p) {
-			(*kb[r])[p] = new iprem;
+			iprem prem;
 			for (unsigned h = 0; h < sz; ++h)
-				add_constraint(r, p, h, rs[r].b[p], rs[h].h);
+				add_constraint(prem, h, rs[r].b[p], rs[h].h);
+			kb[r]->push_back(prem);
 		}
 		if (rs[r].h) getvarmap(*rs[r].h, vars[r]);
 	}
@@ -163,13 +165,13 @@ void n2vm::add_rules(rule *rs, unsigned sz) {
 
 bool n2vm::tick() {
 	TRACE(dout<<"tick"<<endl);
-	if (!last) last = curr = new frame(query, 0, 0);
+	if (!last) last = curr = new frame(query, kb[query]->begin());
 	if (!curr) return false;
 	hrule r;
-	for (auto m : *(*kb[curr->r])[curr->p]) {
+	for (auto m : *curr->p) {
 		TRACE(printkb());
 		if (-1 != (r = mutate(m.first, m.second))) continue;
-		last = (last->next = new frame(r, 0, curr));
+		last = (last->next = new frame(r, kb[r]->begin(), curr));
 	}
 	curr = curr->next;
 	return true;
@@ -179,9 +181,10 @@ void n2vm::printkb() {
 	for (unsigned n = 0; n < kb.size(); ++n) {
 		dout << "Rule " << n << ':' << (n < origsz ? (wstring)orig[n] : wstring()) << endl;
 		const auto &r = *kb[n];
-		for (unsigned k = 0; k < r.size(); ++k) {
-			dout << "\tPrem " << k << ':' << endl;
-			for (auto &m : *r[k]) {
+		int k = 0;
+		for (auto prem : r) {
+			dout << "\tPrem " << k++ << ':' << endl;
+			for (auto &m : prem) {
 				dout << "\t\tHead " << m.first << ':' << endl;
 				for (auto &x : m.second)
 					dout << "\t\t\t" << x.first << ' ' << (wstring)*x.second << endl;

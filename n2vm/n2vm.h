@@ -2,6 +2,7 @@
 #define __n2vm_h__
 
 #include <map>
+#include <list>
 #include <vector>
 #include <cassert>
 #include <cstring>
@@ -35,20 +36,20 @@ struct n2vm {
 	term* add_term(const wchar_t* p, const vector<term*>& args = vector<term*>());
 	void add_rules(rule *rs, unsigned sz);
 	bool tick();
-
-private:
 	typedef std::map<const wchar_t*, const term*> sub;
 	typedef std::map<hrule, sub> iprem;
-	typedef std::vector<iprem*> irule;
+	typedef std::list<iprem> irule;
+
+private:
 	typedef std::vector<irule*> kb_t;
 	typedef std::forward_list<const wchar_t*> varmap;
 	rule *orig;
 	unsigned origsz;
 	struct frame {
 		hrule r;
-		hprem p;
+		irule::iterator p;
 		frame *next, *up;
-		frame(hrule r, hprem p, frame *up) :
+		frame(hrule r, irule::iterator p, frame *up = 0) :
 			r(r), p(p), next(0), up(up) {}
 	} *last = 0, *curr = 0;
 
@@ -57,7 +58,7 @@ private:
 	unsigned query;
 	bool add_lists(iprem&, hrule, const term&, const term&);
 	hrule mutate(hrule r, const sub&);
-	bool add_constraint(hrule, hprem, hrule, const term*, const term*);
+	bool add_constraint(iprem&, hrule, const term*, const term*);
 	bool add_constraint(iprem&, hrule, const term&, const term&);
 	bool add_constraint(iprem&, hrule, const wchar_t*, const term&);
 	bool mutate(iprem &dn, const sub &e, auto m, const sub &env);

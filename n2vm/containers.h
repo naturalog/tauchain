@@ -97,7 +97,11 @@ public:
 		if (ispod) a[n] = t;
 		else new (&a[n])(T)(t);
 		return a[n++];
-	} 
+	}
+	void append(auto v) {
+		unsigned n = 0, e = v.size();
+		while (n < e) push_back(v[n++]);
+	}
 protected:
 	void copyfrom(const vector<T> &t) {
 		clear();
