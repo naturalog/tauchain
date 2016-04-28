@@ -47,8 +47,8 @@ private:
 
 	kb_t &kb;
 	unsigned query;
-	bool add_lists(auto&, hrule, const term&, const term&);
-	hrule mutate(hrule r, auto env);
+	bool add_lists(iprem&, hrule, const term&, const term&);
+	hrule mutate(hrule r, const sub&);
 	bool add_constraint(hrule, hprem, hrule, const term*, const term*);
 	bool add_constraint(iprem&, hrule, const term&, const term&);
 	bool add_constraint(iprem&, hrule, int, const term&);

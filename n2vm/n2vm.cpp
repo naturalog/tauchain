@@ -53,19 +53,19 @@ bool n2vm::add_constraint(iprem &p, hrule h, const term &tx, const term &ty) {
 
 bool n2vm::add_constraint(iprem &p, hrule h, int x, const term& y) {
 	TRACE(printf("add_constraint(%d,%d,%s)\n", h, x, tocstr(&y)));
-	auto &s = p[h];
-	auto it = s.find(x);
+	sub &s = p[h];
+	sub::const_iterator it = s.find(x);
 	if (it != s.end()) {
 		if (!isvar(*it->second))
 			return add_constraint(p, h, *it->second, y);
-		auto z = it->second;
+		const term* z = it->second;
 		s[x] = &y;
 		return add_constraint(p, h, *z, y);
 	}
 	return s[x] = &y, true;
 }
 
-bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
+bool n2vm::add_lists(iprem &p, hrule h, const term &x, const term &y) {
 	TRACE(printf("add_lists(%d,%s,%s)\n", h, tocstr(&x), tocstr(&y)));
 	auto sz = x.args.size();
 	if (y.args.size() != sz) return false;
@@ -76,10 +76,10 @@ bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
 	return true;
 }
 
-hrule n2vm::mutate(hrule r, auto env) {
+hrule n2vm::mutate(hrule r, const sub &env) {
 	auto kbs = kb.size();
 	kb.resize(kbs + 1);
-	auto &d = *(kb[kbs] = new irule), &s = *kb[r];
+	irule &d = *(kb[kbs] = new irule), &s = *kb[r];
 	auto sz = s.size();
 	bool fail = false;
 	d.resize(sz);
