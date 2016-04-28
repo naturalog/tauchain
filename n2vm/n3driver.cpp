@@ -38,14 +38,12 @@ triple::triple(int s, int p, int o) {
 
 triple::triple(const triple &t) : triple(t.r[0], t.r[1], t.r[2]) {}
 
-premise::premise(const triple *t) : t(t) {}
-
 rule::rule(const triple *h, const body_t &b) :
 	head(h), body(b) { assert(h); }
 
 rule::rule(const triple *h, const triple *b) : head(h) {
 	assert(!h);
-	body.push_back(premise(b));
+	body.push_back(b);
 }
 
 rule::rule(const rule &r) : head(r.head), body(r.body) {}
@@ -161,7 +159,7 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 			if (query) THROW("can't handle {} in query", "");
 			get();
 			while (good() && peek() != L'}')
-				body.push_back(premise(readtriple()));
+				body.push_back(readtriple());
 			get(), skip(), get(L'='), get(L'>'), skip(), get(L'{'), skip();
 			if (peek() == L'}')
 				rules.push_back(rule(0, body)), skip();
@@ -185,7 +183,6 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 }
 
 // output
-wostream &operator<<(wostream &os, const premise &p) { return os << *p.t; }
 wostream &operator<<(wostream &os, const rule &r) {
 	os << L'{';
 	for (auto t : r.body) os << t << ' ';

@@ -30,11 +30,7 @@ struct triple {
         triple(const triple &t);
 };
 
-struct premise {
-        const triple *t;
-        premise(const triple *t);
-};
-typedef vector<premise> body_t;
+typedef vector<const triple*> body_t;
 
 struct rule {
         const triple *head;
@@ -47,7 +43,7 @@ struct rule {
 wostream &operator<<(wostream &, const term &);
 wostream &operator<<(wostream &, const triple &t);
 wostream &operator<<(wostream &, const rule &);
-wostream &operator<<(wostream &, const premise &);
+//wostream &operator<<(wostream &, const premise &);
 int mkterm(const wstring &v);
 int mkterm(const vector<int> &v);
 const triple *mktriple(int s, int p, int o);
