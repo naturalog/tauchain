@@ -17,15 +17,20 @@ din_t din;
     throw runtime_error(s.str());                                              \
   }
 
-rule::rule(const term *h, const body_t &b) :
-	head(h), body(b) { assert(h); }
-
-rule::rule(const term *h, const term *b) : head(h) {
-	assert(!h);
-	body.push_back(b);
+rule mkrule(term *h, const vector<term*> &b) {
+	rule r;
+	r.h = h;
+	if (!(r.sz = b.size())) return r;
+	r.b = new term*[r.sz];
+	for (unsigned n = 0; n < r.sz; ++n) r.b[n] = b[n];
+	return r;
 }
 
-rule::rule(const rule &r) : head(r.head), body(r.body) {}
+rule mkrule(term *h, term *t) {
+	vector<term*> v;
+	v.push_back(t);
+	return mkrule(h, v);
+}
 
 wchar_t din_t::peek() { return f ? ch : ((f = true), (wcin >> ch), ch); }
 wchar_t din_t::get() { return f ? ((f = false), ch) : ((wcin >> ch), ch); }
@@ -95,10 +100,10 @@ term* din_t::readtriple() {
 }
 
 void din_t::readdoc(bool query) { // TODO: support prefixes
-	const term *t;
+	term *t;
 	done = false;
 	while (good() && !done) {
-		body_t body;
+		vector<term*> body;
 		switch (skip(), peek()) {
 		case L'{':
 			if (query) THROW("can't handle {} in query", "");
@@ -107,10 +112,10 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 				body.push_back(readtriple());
 			get(), skip(), get(L'='), get(L'>'), skip(), get(L'{'), skip();
 			if (peek() == L'}')
-				rules.push_back(rule(0, body)), skip();
+				rules.push_back(mkrule(0, body)), skip();
 			else
 				while (good() && peek() != L'}')
-					rules.push_back(rule(readtriple(), body));
+					rules.push_back(mkrule(readtriple(), body));
 			get();
 			break;
 		case L'#':
@@ -119,7 +124,7 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 			break;
 		default:
 			if ((t = readtriple()))
-				rules.push_back(query ? rule(0, t) : rule(t));
+				rules.push_back(query ? mkrule(0, t) : mkrule(t));
 			else if (!done)
 				THROW("parse error: triple expected", "");
 		}
@@ -131,8 +136,8 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 // output
 wostream &operator<<(wostream &os, const rule &r) {
 	os << L'{';
-	for (auto x : r.body) os << *x << ' ';
-	return os << L"} => { ", (r.head ? os << *r.head : os << L""), os << " }.";
+	for (unsigned n = 0; n < r.sz; ++n) os << *r.b[n] << ' ';
+	return os << L"} => { ", (r.h ? os << *r.h : os << L""), os << " }.";
 }
 wostream &operator<<(wostream &os, const term &r) {
 	os << (std::wstring)r;

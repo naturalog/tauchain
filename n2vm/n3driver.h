@@ -15,16 +15,17 @@ extern wostream &dout;
 using n2vm::term;
 
 namespace n3driver {
-
-typedef vector<const term*> body_t;
-
+/*
 struct rule {
         const term *head;
-        body_t body;
-        rule(const term *h, const body_t &b = body_t());
+        vector<const term*> body;
+        rule(const term *h, const vector<const term*> &b = vector<const term*>());
         rule(const term *h, const term *b);
         rule(const rule &r);
 };
+*/
+struct rule {term *h, **b; unsigned sz; operator std::wstring() const; };
+rule mkrule(term *h, const vector<term*> &b = vector<term*>());
 
 wostream &operator<<(wostream &, const term &);
 wostream &operator<<(wostream &, const rule &);
