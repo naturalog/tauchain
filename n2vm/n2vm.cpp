@@ -1,7 +1,7 @@
 #include "n2vm.h"
 
 bool n2vm::add_constraint(hrule r, hprem p, hrule h, hterm x, hterm y) {
-	return add_constraint(kb[r][p], h, x, y);
+	return add_constraint(kb[r][p], h, terms[x], terms[y]);
 }
 
 bool n2vm::tick() {
@@ -11,29 +11,35 @@ bool n2vm::tick() {
 	return true;
 }
 
-bool n2vm::add_constraint(auto &p, hrule h, hterm x, hterm y) {
-	if (!isvar(x)) {
-		if (isvar(y)) return add_constraint(p, h, y, x);
-		if (islist(x)) {
-			if (!islist(y)) return false;
-			return add_lists(p, h, list(x), list(y));
+bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
+	if (!isvar(tx)) {
+		if (isvar(ty)) return add_constraint(p, h, ty, tx);
+		if (islist(tx)) {
+			if (!islist(ty)) return false;
+			return add_lists(p, h, tx, ty);
 		}
 	}
-	return add_var_constraint(p, h, x, y);
+	return add_var_constraint(p, h, tx, ty);
 }
 
-bool n2vm::add_var_constraint(auto &p, hrule h, hterm x, hterm y) {
+bool n2vm::add_var_constraint(auto &p, hrule h, const term &x, const term& y) {
 	auto &s = p[h];
 	auto it = s.find(x);
-	if (it != s.end())
-		return add_constraint(p, h, it->second, y);
+	if (it != s.end()) {
+		if (!isvar(it->second))
+			return add_constraint(p, h, it->second, y);
+		auto z = it->second;
+		s[x] = y;
+		return add_constraint(p, h, z, y);
+	}
 	return s[x] = y, true;
 }
 
-bool n2vm::add_lists(auto &p, hrule h, hlist x, hlist y) {
-	hterm a, b;
-	while ((a = next(x)) && (b = next(y)))
-		if (!add_constraint(p, h, a, b))
+bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
+	auto sz = x.args.size();
+	if (y.args.size() != sz) return false;
+	for (auto n = 0; n < sz; ++n)
+		if (!add_constraint(p, h, terms[x.args[n]], terms[y.args[n]]))
 			return false;
 }
 
@@ -70,4 +76,8 @@ bool n2vm::resolve(frame *f) {
 		if (-1 != (r = mutate(m.first, m.second))) continue;
 		last = (last->next = new frame(r, 0, f));
 	}
+}
+
+hterm n2vm::add_term(int p, vector<hterm> args) {
+	// TODO: check for existing
 }
