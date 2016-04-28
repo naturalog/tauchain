@@ -87,9 +87,7 @@ bool n2vm::mutate(iprem &dn, const sub &e, auto m, const sub &env) {
 }
 
 hrule n2vm::mutate(hrule r, const sub &env) {
-	auto kbs = kb.size();
-	kb.resize(kbs + 1);
-	irule &d = *(kb[kbs] = new irule), &s = *kb[r];
+	irule &d = *new irule, &s = *kb[r];
 	auto sz = s.size();
 	d.resize(sz);
 	for (unsigned n = 0; n < sz; ++n) {
@@ -97,14 +95,11 @@ hrule n2vm::mutate(hrule r, const sub &env) {
 		for (const auto &m : *s[n])
 			if (!mutate(dn, m.second, m, env))
 				dn.erase(m.first);
-		if (dn.empty()) {
-			kb.resize(kbs);
-			return -1;
-		}
+		if (dn.empty()) return -1;
 	}
 	kb.push_back(&d);
 	// TODO: remove matched constraints from varmap
-	return kbs;
+	return kb.size();
 }
 
 term* n2vm::add_term(int p, const vector<const term*>& args) {
