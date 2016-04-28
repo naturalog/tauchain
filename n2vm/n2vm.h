@@ -10,28 +10,48 @@ typedef int hrule;
 typedef int hprem;
 
 struct term {
+	int hash;
 	int p;
-	vector<term*> args;
-	term(){}
-	term(int p, vector<term*> args) : p(p), args(args) {}
+	vector<const term*> args;
+//	term() : hash(0), p(0) { }
+	term(int p, const vector<const term*> &args) : p(p), args(args) {
+		hash = p;
+		for (auto t : args)
+			hash ^= t->hash;
+	}
 };
 
 struct n2vm {
 	bool isvar(const term &t) const { return t.p > 0; }
+	bool isvar(const term *t) const { return t->p > 0; }
 	bool islist(const term &t) const { return !t.p; }
 
-	void add_term(int p, vector<term*> args) { terms.emplace(p, args); }
-	bool add_constraint(hrule, hprem, hrule, term&, term&);
+	void add_term(int p, const vector<const term*> &args) {
+		terms.emplace(new term(p, args));
+	}
+	bool add_constraint(hrule, hprem, hrule, term*, term*);
 	bool tick();
-private:
 	struct term_cmp {
+		static const term_cmp tc;
 		int operator()(const term& x, const term& y) const {
-			return memcmp(&x, &y, sizeof(term));
+			if (x.hash > y.hash) return 1;
+			if (x.hash < y.hash) return -1;
+			int r;
+			auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
+			for (; ix != ex;  ++ix, ++iy)
+				if ((r = tc(**ix, **iy)))
+					return r;
+			return 0;
+		}
+		int operator()(const term *x, const term *y) const {
+			if (x == y) return 0;
+			return tc(*x, *y);
 		}
 	};
+private:
 
-	vector<vector<map<hrule, map<term, term, term_cmp>>>> kb;
-	set<term, term_cmp> terms;
+	vector<vector<map<hrule, map<const term*, const term*, term_cmp>>>> kb;
+	set<term*, term_cmp> terms;
 	struct frame {
 		hrule r;
 		hprem p;

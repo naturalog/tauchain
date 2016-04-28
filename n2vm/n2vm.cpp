@@ -1,7 +1,8 @@
 #include "n2vm.h"
 
-bool n2vm::add_constraint(hrule r, hprem p, hrule h, term &x, term &y) {
-	return add_constraint(kb[r][p], h, x, y);
+bool n2vm::add_constraint(hrule r, hprem p, hrule h, term *x, term *y) {
+	if (x == y) return true;
+	return add_constraint(kb[r][p], h, *x, *y);
 }
 
 bool n2vm::tick() {
@@ -24,22 +25,23 @@ bool n2vm::add_constraint(auto &p, hrule h, const term &tx, const term &ty) {
 
 bool n2vm::add_var_constraint(auto &p, hrule h, const term &x, const term& y) {
 	auto &s = p[h];
-	auto it = s.find(x);
+	auto it = s.find(&x);
 	if (it != s.end()) {
 		if (!isvar(it->second))
-			return add_constraint(p, h, it->second, y);
+			return add_constraint(p, h, *it->second, y);
 		auto z = it->second;
-		s[x] = y;
-		return add_constraint(p, h, z, y);
+		s[&x] = &y;
+		return add_constraint(p, h, *z, y);
 	}
-	return s[x] = y, true;
+	return s[&x] = &y, true;
 }
 
 bool n2vm::add_lists(auto &p, hrule h, const term &x, const term &y) {
 	auto sz = x.args.size();
 	if (y.args.size() != sz) return false;
-	for (auto n = 0; n < sz; ++n)
-		if (!add_constraint(p, h, *x.args[n], *y.args[n]))
+	auto ix = x.args.begin(), ex = x.args.end(), iy = y.args.begin();
+	for (; ix != ex;  ++ix, ++iy)
+		if (!add_constraint(p, h, **ix, **iy))
 			return false;
 }
 
@@ -56,8 +58,8 @@ hrule n2vm::mutate(hrule r, auto env) {
 				if (!add_constraint(
 					dn,
 					m.first,
-					c.first,
-					c.second)) {
+					*c.first,
+					*c.second)) {
 						fail = true;
 						break;
 					}
@@ -65,8 +67,8 @@ hrule n2vm::mutate(hrule r, auto env) {
 				if (!add_constraint(
 					dn,
 					m.first,
-					c.first,
-					c.second)) {
+					*c.first,
+					*c.second)) {
 						fail = true;
 						break;
 					}
@@ -87,3 +89,4 @@ bool n2vm::resolve(frame *f) {
 	}
 }
 
+const n2vm::term_cmp n2vm::term_cmp::tc;
