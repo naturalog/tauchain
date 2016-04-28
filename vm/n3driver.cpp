@@ -1,4 +1,5 @@
 #include "n3driver.h"
+#include <sstream>
 
 wostream &dout = std::wcout;
 
