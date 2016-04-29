@@ -38,7 +38,7 @@ struct n2vm {
 	void add_rules(rule *rs, unsigned sz);
 	bool tick();
 	void printkb();
-	typedef std::map<const wchar_t*, const term*> sub;
+	typedef std::map<const term*, const term*> sub;
 	typedef std::map<hrule, sub> iprem;
 	typedef std::list<iprem*> irule;
 

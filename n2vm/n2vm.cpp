@@ -14,6 +14,7 @@ n2vm::n2vm(wistream& is, bool fin) : kb(*new kb_t) {
 	vector<rule> *r = new vector<rule>;
 	d.readdoc(false, *this, *r);
 	if (fin) d.readdoc(true, *this, *r);
+//	TRACE(d.print());
 	add_rules(&(*r)[0], r->size());
 }
 
@@ -53,7 +54,6 @@ term* n2vm::add_term(const wchar_t* p, const vector<term*>& args) {
 	return t;
 }
 
-
 using namespace std;
 
 term::operator wstring() const {
@@ -70,13 +70,10 @@ term::operator wstring() const {
 
 rule::operator wstring() const {
 	wstringstream ss;
-	ss << "{ ";
 	if (h) ss << (wstring)(*h);
-	ss << "} <= {";
-	for (unsigned n = 0; n < sz; ++n)
-		ss << (wstring)*b[n] << ' ';
-	ss << "}.";
-	return ss.str();
+	if (sz) ss << L" <= ";
+	for (unsigned n = 0; n < sz; ++n) ss << (wstring)*b[n] << L' ';
+	return ss << L'.', ss.str();
 }
 
 #define tocstr(x) ( x ? ((wstring)(*(x))).c_str() : L"(null)" )
@@ -87,29 +84,25 @@ bool n2vm::add_constraint(iprem &p, hrule h, const term *x, const term *y) {
 	return add_constraint(p, h, *x, *y);
 }
 
-bool n2vm::add_constraint(iprem &p, hrule h, const term &tx, const term &ty) {
-	if (!isvar(tx)) {
-		if (isvar(ty)) return add_constraint(p, h, ty, tx);
-		if (islist(tx)) {
-			if (!islist(ty)) return false;
-			return add_lists(p, h, tx, ty);
+bool n2vm::add_constraint(iprem &p, hrule h, const term &x, const term &y) {
+	if (!isvar(x)) {
+		if (isvar(y)) return add_constraint(p, h, y, x);
+		if (islist(x)) {
+			if (!islist(y)) return false;
+			return add_lists(p, h, x, y);
 		}
-		return tx.p == ty.p;
+		return x.p == y.p;
 	}
-	return add_constraint(p, h, tx.p, ty);
-}
-
-bool n2vm::add_constraint(iprem &p, hrule h, const wchar_t *x, const term& y) {
 	sub &s = p[h];
-	sub::const_iterator it = s.find(x);
+	sub::const_iterator it = s.find(&x);
 	if (it != s.end()) {
 		if (!isvar(*it->second))
 			return add_constraint(p, h, *it->second, y);
 		const term* z = it->second;
-		s[x] = &y;
+		s[&x] = &y;
 		return add_constraint(p, h, *z, y);
 	}
-	return s[x] = &y, true;
+	return s[&x] = &y, true;
 }
 
 bool n2vm::add_lists(iprem &p, hrule h, const term &x, const term &y) {
@@ -124,10 +117,10 @@ bool n2vm::add_lists(iprem &p, hrule h, const term &x, const term &y) {
 
 bool n2vm::mutate(iprem &dn, const sub &e, auto m, const sub &env) {
 	for (auto c : e)
-		if (!add_constraint( dn, m.first, c.first, *c.second))
+		if (!add_constraint(dn, m.first, c.first, c.second))
 			return false;
 	for (auto c : env)
-		if (!add_constraint( dn, m.first, c.first, *c.second))
+		if (!add_constraint(dn, m.first, c.first, c.second))
 			return false;
 	return true;
 }
@@ -185,7 +178,8 @@ bool n2vm::tick() {
 	
 void n2vm::printkb() {
 	for (unsigned n = 0; n < kb.size(); ++n) {
-		dout << "Rule " << n << ':' << (n < origsz ? (wstring)orig[n] : wstring()) << endl;
+		dout << "Rule " << n << ':';
+		dout << (n < origsz ? (wstring)orig[n] : wstring()) << endl;
 		const auto &r = kb[n];
 		int k = 0;
 		for (auto prem : *r) {
@@ -193,7 +187,7 @@ void n2vm::printkb() {
 			for (auto &m : *prem) {
 				dout << "\t\tHead " << m.first << ':' << endl;
 				for (auto &x : m.second)
-					dout << "\t\t\t" << x.first << ' ' << (wstring)*x.second << endl;
+					dout << "\t\t\t" << *x.first << ' ' << (wstring)*x.second << endl;
 			}
 		}
 	}
@@ -213,18 +207,16 @@ void n2vm::printkb() {
 
 void test1() {
 	std::wstringstream in;
-	in << "aa bb cc.";
-	in << "{ ?a bb cc } => { x y z}.";
-	in << "fin.";
-	in << "a b c.";
-	in << "fin.";
-	n2vm vm(in);
+	in << "a b c.			# rule 0" << endl;
+	in << "{ ?x b c } => { a b ?x}. # rule 1" << endl;
+	in << "{ ?t ?p ?t } => { }.	# rule 2" << endl;
+	n2vm vm(in, false);
 	vm.printkb();
 }
 
 int main() {
 	test1();
-//	return 0;
+	return 0;
 	n2vm vm(wcin);
 	int s = 0;
 	while (vm.tick()) dout << "iter: " << s++ << endl;

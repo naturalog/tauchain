@@ -126,12 +126,11 @@ void din_t::readdoc(bool query, n2vm& vm, vector<rule> &rules) { // TODO: suppor
 	}
 }
 
-wostream &operator<<(wostream &os, const rule &r) {
-	os << L'{';
-	for (unsigned n = 0; n < r.sz; ++n) os << *r.b[n] << ' ';
-	return os << L"} => { ", (r.h ? os << *r.h : os << L""), os << " }.";
-}
 wostream &operator<<(wostream &os, const term &r) {
 	os << (std::wstring)r;
 	return os;
 }
+
+//void din_t::print() {
+//
+//}
