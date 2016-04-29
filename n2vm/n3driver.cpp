@@ -3,27 +3,10 @@
 
 wostream &dout = std::wcout;
 
-#define THROW(x, y)                                                            \
-  {                                                                            \
+#define THROW(x, y) {                                                          \
     stringstream s;                                                            \
     s << x << ' ' << y;                                                        \
-    throw runtime_error(s.str());                                              \
-  }
-
-rule mkrule(term *h, const vector<term*> &b) {
-	rule r;
-	r.h = h;
-	if (!(r.sz = b.size())) return r;
-	r.b = new term*[r.sz];
-	for (unsigned n = 0; n < r.sz; ++n) r.b[n] = b[n];
-	return r;
-}
-
-rule mkrule(term *h, term *t) {
-	vector<term*> v;
-	v.push_back(t);
-	return mkrule(h, v);
-}
+    throw runtime_error(s.str()); }
 
 wchar_t din_t::peek() { return f ? ch : ((f = true), (is >> ch), ch); }
 wchar_t din_t::get() { return f ? ((f = false), ch) : ((is >> ch), ch); }
@@ -64,15 +47,15 @@ wstring din_t::till() {
 	return pos ? buf : wstring();
 }
 
-term* din_t::readlist(n2vm& vm) {
+const term* din_t::readlist(n2vm& vm) {
 	get();
-	vector<term*> items;
+	vector<const term*> items;
 	while (skip(), (good() && peek() != L')'))
 		items.push_back(readany(vm)), skip();
-	return get(), skip(), vm.add_term(0, items);
+	return get(), skip(), vm.add_term(term(items));
 }
 
-term* din_t::readany(n2vm& vm) {
+const term* din_t::readany(n2vm& vm) {
 	if (skip(), !good()) return 0;
 	if (peek() == L'(') return readlist(vm);
 	wstring s = till();
@@ -80,23 +63,23 @@ term* din_t::readany(n2vm& vm) {
 	return s.size() ? vm.add_term(s.c_str()) : 0;
 }
 
-term* din_t::readtriple(n2vm& vm) {
-	term *s, *p, *o;
+const term* din_t::readtriple(n2vm& vm) {
+	const term *s, *p, *o;
 	if (skip(), !(s = readany(vm)) || !(p = readany(vm)) || !(o = readany(vm)))
 		return 0;
-	vector<term*> v;
+	vector<const term*> v;
 	v.push_back(s);
 	v.push_back(p);
 	v.push_back(o);
 	if (skip(), peek() == L'.') get(), skip();
-	return vm.add_term(0, v);
+	return vm.add_term(term(v));
 }
-
-void din_t::readdoc(bool query, n2vm& vm, vector<rule> &rules) { // TODO: support prefixes
-	term *t;
+// TODO: support prefixes
+void din_t::readdoc(bool query, n2vm& vm, vector<rule> &rules) { 
+	const term *t;
 	done = false;
 	while (good() && !done) {
-		vector<term*> body;
+		vector<const term*> body;
 		switch (skip(), peek()) {
 		case L'{':
 			if (query) THROW("can't handle {} in query", "");
@@ -105,10 +88,10 @@ void din_t::readdoc(bool query, n2vm& vm, vector<rule> &rules) { // TODO: suppor
 				body.push_back(readtriple(vm));
 			get(), skip(), get(L'='), get(L'>'), skip(), get(L'{'), skip();
 			if (peek() == L'}')
-				rules.push_back(mkrule(0, body)), skip();
+				rules.push_back(rule(0, body)), skip();
 			else
 				while (good() && peek() != L'}')
-					rules.push_back(mkrule(readtriple(vm), body));
+					rules.push_back(rule(readtriple(vm), body));
 			get();
 			break;
 		case L'#':
@@ -117,7 +100,7 @@ void din_t::readdoc(bool query, n2vm& vm, vector<rule> &rules) { // TODO: suppor
 			break;
 		default:
 			if ((t = readtriple(vm)))
-				rules.push_back(query ? mkrule(0, t) : mkrule(t));
+				rules.push_back(query ? rule(0, t) : rule(t));
 			else if (!done)
 				THROW("parse error: triple expected", "");
 		}

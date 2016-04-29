@@ -22,36 +22,36 @@ term::term(const wchar_t* p) : isvar(*p == '?'), p(wcsdup(p)), args(0), sz(0) {
 //	TRACE(dout << "new term: " << p << endl);
 }
 
-term::term(const vector<term*> &_args) 
-	: isvar(false), p(0), args(new term*[_args.size() + 1])
-	, sz(_args.size()) {
-	int n = 0;
-	for (auto x : _args) args[n++] = x;
-	args[n] = 0;
+term::term(const vector<const term*> &_args) 
+	: isvar(false), p(0), args(vec_to_nt_arr(_args)) , sz(_args.size()) {
 }
 
 term::~term() {
-	if (p) free(p);
+	if (p && *p) { *p = 0; free(p); p = 0; }
 }
 
-term* n2vm::add_term(const wchar_t* p, const vector<term*>& args) {
+rule::rule(const term *h, const vector<const term*> &b)
+	: h(h), b(vec_to_nt_arr(b)), sz(b.size()) {
+}
+
+rule::rule(const term *h, const term *t) : h(h), b(vec_to_nt_arr(singleton_vector(t))), sz(1) {}
+//	vector<term*> v;
+//	v.push_back(t);
+//	return mkrule(h, v);
+//}
+
+const term* n2vm::add_term(const term& t) {
 	struct term_cmp {
-		int operator()(const term *_x, const term *_y) const {
-			if (_x == _y) return 0;
-			const term &x = *_x, &y = *_y;
-			if (!x.p) return y.p ? 1 : 0;
-			if (!y.p) return -1;
-			if (x.p == y.p) {
-				if (x.sz != y.sz) return x.sz > y.sz ? 1 : -1;
-				return memcmp(x.args, y.args, sizeof(term*) * x.sz);
-			}
-			return wcscmp(x.p, y.p);
+		int operator()(const term* x, const term* y) const {
+			return x->cmp(*y);
 		}
 	};
-	static std::set<term*, term_cmp> terms;
-	term *t = args.empty() ? new term(p) : new term(args);
-	terms.emplace(t);
-	return t;
+	static std::set<const term*, term_cmp> terms;
+	auto it = terms.find(&t);
+	term *tt;
+	if (it != terms.end()) return *it;
+	terms.insert(tt = new term(t));
+	return tt;
 }
 
 using namespace std;

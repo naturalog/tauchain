@@ -39,9 +39,9 @@ private:
         wstring &trim(wstring &s);
         static wstring edelims;
         wstring till();
-        term* readlist(n2vm&);
-        term* readany(n2vm&);
-        term* readtriple(n2vm&);
+        const term* readlist(n2vm&);
+        const term* readany(n2vm&);
+        const term* readtriple(n2vm&);
 };
 
 #endif
