@@ -5,6 +5,7 @@ typedef struct term term;
 typedef struct var var;
 typedef struct uri uri;
 typedef struct list list;
+typedef struct undo undo;
 typedef unsigned uint;
 typedef uint termid;
 
@@ -23,7 +24,7 @@ struct term {
 	union {
 		termid r, l;
 		struct {
-			bool var;
+			bool isvar;
 			union {
 				var v;
 				uri u;
@@ -39,9 +40,9 @@ struct undo {
 };
 
 void	push_change(uint, uint, bool);
-termid	update(termid, termid, bool);
-void	revert(undo *u = 0);
-void	commit(undo *u = 0);
+termid	update(termid, termid);
+void	revert(undo *u);
+void	commit(undo *u);
 termid	rep(termid);
 void	inc_rank(termid);
 bool	merge(termid, termid, void*);
