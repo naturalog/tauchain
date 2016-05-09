@@ -46,3 +46,5 @@ void	commit(undo *u);
 termid	rep(termid);
 void	inc_rank(termid);
 bool	merge(termid, termid, void*);
+bool	merge_vars(termid, termid, void*);
+bool	merge_cons(termid, termid, void*);
