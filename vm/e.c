@@ -32,6 +32,7 @@ void save(uint x, uint y, bool rank) {
 }
 
 #define update(x, y) save(x, y, true), reps[x] = y
+#define commit() list_clear(&undo);
 
 void revert() {
 	undo_record *u = list_pop(&undo);
@@ -40,9 +41,12 @@ void revert() {
 	revert(), free(u);
 }
 
-void commit() {
-	list_clear(&undo);
-}
+
+void* set_create(void *key);
+unsigned term_create(int, int **l = 0); // var is pos, nonvar is neg, list is zero
+bool set_require(void* set, int r, int l); // term=term
+bool set_merge(void*, void*, void**);
+unsigned set_compact(void*);
 
 termid rep(termid t) {
 	return	reps[t] == t ? t : update(t,rep(reps[t]));
