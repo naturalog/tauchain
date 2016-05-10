@@ -2,37 +2,46 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include "list.h"
 
-var *vars;
-uri *uris;
-term *terms;
-uint nterms, nvars, nuirs, *reps, *ranks;
-undo *un = 0;
+typedef struct list list;
+typedef struct undo_record undo_record;
+typedef struct list list;
+typedef unsigned uint;
+typedef uint termid;
+typedef pch char*;
+typedef pcch const char*;
+
+pcch *vars, *lits;
+uint *ranks, *reps, *terms; // terms: lists are always odd, rest are even
+int *reps;
+uint nvars, nlits, nconds, nlists;
+
+struct undo_record {
+	bool rank;
+	uint x, y;
+};
+
+list *undo = list_init(undo);
 
 void save(uint x, uint y, bool rank) {
-	undo *u = un;
-	un = malloc(sizeof(undo)),
-	un->rank = rank, un->x = x, 
-	un->y = y, un->n = u;
+	undo_record *u = malloc(sizeof(undo_record)),
+	u->rank = rank, u->x = x, 
+	u->y = y, u->n = u;
+	list_add(&undo, u);
 }
 
 #define update(x, y) save(x, y, true), reps[x] = y
 
-void revert(undo *u) {
-	if (!u) {
-		if (!un) return;
-		u = un, un = 0;
-	}
+void revert() {
+	undo_record *u = list_pop(&undo);
+	if (!u) return;
 	(u->rank ? ranks : reps)[u->x] = u->y;
-	revert(u->n), free(u);
+	revert(), free(u);
 }
 
-void commit(undo *u) {
-	if (!u) {
-		if (!un) return;
-		u = un, un = 0;
-	}
-	commit(u->n), free(u);
+void commit() {
+	list_clear(&undo);
 }
 
 termid rep(termid t) {
@@ -52,7 +61,6 @@ bool merge(termid _x, termid _y, void *scop) {
 		!x.leaf && !y.leaf	?
 		merge(x.r, y.r, scop)	&& merge(x.l, y.l, scop):
 		x.isvar			?  update(rx, ry)	:
-		!y.isvar		?  false		:
-		update(ry, rx), true	;
+		y.isvar			&& update(ry, rx), true	;
 }
 
