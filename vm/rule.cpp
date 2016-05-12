@@ -41,20 +41,22 @@ inline term* rep(term* x, env& e) {
 
 const rule* compile(term *_s, term *_d, const rule *t, const rule *f) {
 	return &(*new rule = [_s, _d, t, f](env e) {
-		if (!_s != !_d) { (*f)(e); return; }
-		if (!_s) { (*t)(e); return; }
 		auto s = rep(_s, e), d = rep(_d, e);
+		if (!_s != !_d) goto fail;
+		if (!_s)	goto pass;
 		if (s->list && d->list) {
 			uint sz = s->sz;
-			if (sz != d->sz) { (*f)(e); return; }
+			if (sz != d->sz) goto fail;
 			const rule *r = t;
 			while (sz--) r = compile(rep(s->args[sz], e), rep(d->args[sz], e), r, f);
 			(*r)(e);
+			return;
 		}
-		else if (s->var)		(*t)(e);
-		else if (d->var)		e[d->p] = s, (*t)(e);
-		else if (s->p && d->p && !strcmp(s->p, d->p)) (*t)(e);
-		else (*f)(e);
+		if (s->var) goto pass;
+		if (d->var) { e[d->p] = s; goto pass; }
+		if (s->p && d->p && !strcmp(s->p, d->p)) goto pass;
+	fail:	(*f)(e); return;
+	pass:	(*t)(e); return;
 	});
 }
 
