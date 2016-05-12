@@ -39,8 +39,9 @@ inline term* rep(term* x, env& e) {
 	if (it == e.end()) return x;
 	return rep(it->second, e);
 }
+	return &(*new rule = [s, d, t, f](env e) {
 
-const rule* compile(term *s, term *d, const rule *t, const rule *f) {
+void F(term *s, term *d, const rule *t, const rule *f, env e) {
 	return &(*new rule = [s, d, t, f](env e) {
 		if (!s != !d) { (*f)(e); return; }
 		if (!s) { (*t)(e); return; }
@@ -60,6 +61,11 @@ const rule* compile(term *s, term *d, const rule *t, const rule *f) {
 			(*t)(e);
 		else (*f)(e);
 	});
+}
+
+const rule* compile(term *s, term *d, const rule *t, const rule *f) {
+	F(s, d, t, f, env());
+	return 0;
 }
 
 ostream& operator<<(ostream& os, const term& t) {
