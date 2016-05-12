@@ -2,39 +2,50 @@
 #include <functional>
 #include <cstring>
 #include <iostream>
+#include <vector>
 using namespace std;
 
 typedef const char* pcch;
-typedef map<pcch, const struct term*> env;
-
-#define isvar(x) ((x) && (*(x)->p == '?'))
-#define islist(x) ((x) && (!(x)->p))
+typedef map<pcch, struct term*> env;
 
 struct term {
 	pcch p;
 	term **args;
 	uint sz;
-	term(pcch p) : p(strdup(p)), sz(0), args(0) {}
-	term(pcch s, pcch _p, pcch o) : p(0), sz(3) {
+	const bool var, list;
+	term(pcch p) : p(strdup(p)), sz(0), args(0), var(p && *p == '?'), list(false) {}
+	term(pcch s, pcch _p, pcch o) : p(0), sz(3), var(false), list(true) {
 		args = new term*[3];
 		args[0] = new term(s);
 		args[1] = new term(_p);
 		args[2] = new term(o);
 	}
+	term(const vector<term*>& v) : p(0), args(new term*[v.size()]), sz(v.size()), var(false), list(true) {
+		uint n = 0;
+		for (auto x : v) args[n++] = x;
+	}
+	term(const vector<pcch>& v) : p(0), args(new term*[v.size()]), sz(v.size()), var(false), list(true) {
+		uint n = 0;
+		for (auto x : v) args[n++] = new term(x);
+	}
+	term(term *t) : p(p), args(new term*[1]), sz(1), var(false), list(true) { *args = t; }
 };
 
 typedef function<void(env e)> rule;
 
-inline const term* rep(const term* x, const env& e) {
-	if (!isvar(x)) return x;
-	env::const_iterator it = e.find(x->p);
+inline term* rep(term* x, env& e) {
+	if (!x || !x->var) return x;
+	env::iterator it = e.find(x->p);
 	if (it == e.end()) return x;
 	return rep(it->second, e);
 }
+#include <deque>
+deque<const rule*> q;
 
-const rule* rule_create(const term *s, const term *d, const rule *t, const rule *f) {
+const rule* rule_create(term *s, term *d, const rule *t, const rule *f) {
 	if (!s != !d) return f;
-	if (islist(s) && islist(d)) {
+	if (!s) return t;
+	if (s->list && d->list) {
 		uint sz = s->sz;
 		if (sz != d->sz) return f;
 
@@ -43,12 +54,13 @@ const rule* rule_create(const term *s, const term *d, const rule *t, const rule 
 			r = rule_create(s->args[n], d->args[n], r, f);
 		return r;
 	}
-	return &(*new rule = [s, d, t, f](env e) { // two nonlists
+	return &(*new rule = [s, d, t, f](env e) {
 		auto _s = rep(s, e), _d = rep(d, e);
 		if (!_s != !_d) (*f)(e);
 		else if (!_s) (*t)(e);
-		else if (isvar(_s)) (*t)(e);
-		else if (isvar(_d)) e[_d->p] = _s, (*t)(e);
+		else if (_s->list && _d->list) (*rule_create(_s, _d, t, f))(e);
+		else if (_s->var) (*t)(e);
+		else if (_d->var) e[_d->p] = _s, (*t)(e);
 		else (!_s->p == !_d->p && _s->p && !strcmp(_s->p, _d->p) ? *t : *f)(e);
 	});
 }
@@ -65,12 +77,15 @@ ostream& operator<<(ostream& os, const env& e) {
 }
 
 int main() {
-	term *x = new term("x", "p", "o");
-	term *y = new term("x", "?y", "?ro");
+	//term *x = new term("?x", "?p", "?o");
+	term *x = new term( vector<pcch>{ "?x" });
+	term *y = new term( { new term("x"), new term("?y"), new term("?ro") } );
+	term *z = new term( { y } );
+//	term *y = new term(x);
 	rule *t = new rule, *f = new rule;
 	*t = [](env e) { cout << "true " << e << endl; };
 	*f = [](env e) { cout << "false " << e << endl; };
-	(*rule_create(x, y, t, f))(env());
+	(*rule_create(x, z, t, f))(env());
 
 	return 0;
 }
