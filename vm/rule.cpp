@@ -82,7 +82,7 @@ int main() {
 	rule *t = new rule, *f = new rule;
 	*t = [](env e) { cout << "true " << e << endl; };
 	*f = [](env e) { cout << "false " << e << endl; };
-	(*compile(x, z, t, f))(env());
+	(*compile(z, x, t, f))(env());
 
 	return 0;
 }
