@@ -31,7 +31,7 @@ struct term {
 	term(term *t) : p(p), args(new term*[1]), sz(1), var(false), list(true) { *args = t; }
 };
 
-typedef function<void(env e)> result;
+typedef function<void(env e)> rule;
 
 inline term* rep(term* x, env& e) {
 	if (!x || !x->var) return x;
@@ -40,23 +40,26 @@ inline term* rep(term* x, env& e) {
 	return rep(it->second, e);
 }
 
-void run(term *s, term *d, const result *t, const result *f, env e = env()) {
-	if (!s != !d) { (*f)(e); return; }
-	if (!s) { (*t)(e); return; }
-	auto _s = rep(s, e), _d = rep(d, e);
-	if (s->list && d->list) {
-		uint sz = s->sz;
-		if (sz != d->sz) { (*f)(e); return; }
-		const result *r = t;
-		while (sz--) run(rep(s->args[sz], e), rep(d->args[sz], e), r, f);
-	}
-	else if	(!_s != !_d) 		(*f)(e);
-	else if (!_s) 			(*t)(e);
-	else if (_s->var)		(*t)(e);
-	else if (_d->var)		e[_d->p] = _s, (*t)(e);
-	else if (!_s->p == !_d->p && _s->p && !strcmp(_s->p, _d->p))
-		(*t)(e);
-	else (*f)(e);
+const rule* compile(term *s, term *d, const rule *t, const rule *f) {
+	return &(*new rule = [s, d, t, f](env e) {
+		if (!s != !d) { (*f)(e); return; }
+		if (!s) { (*t)(e); return; }
+		auto _s = rep(s, e), _d = rep(d, e);
+		if (s->list && d->list) {
+			uint sz = s->sz;
+			if (sz != d->sz) { (*f)(e); return; }
+			const rule *r = t;
+			while (sz--) r = compile(rep(s->args[sz], e), rep(d->args[sz], e), r, f);
+			(*r)(e);
+		}
+		else if	(!_s != !_d) 		(*f)(e);
+		else if (!_s) 			(*t)(e);
+		else if (_s->var)		(*t)(e);
+		else if (_d->var)		e[_d->p] = _s, (*t)(e);
+		else if (!_s->p == !_d->p && _s->p && !strcmp(_s->p, _d->p))
+			(*t)(e);
+		else (*f)(e);
+	});
 }
 
 ostream& operator<<(ostream& os, const term& t) {
@@ -76,10 +79,10 @@ int main() {
 	term *y = new term( { new term("x"), new term("?y"), new term("?ro") } );
 	term *z = new term( { y } );
 //	term *y = new term(x);
-	result *t = new result, *f = new result;
+	rule *t = new rule, *f = new rule;
 	*t = [](env e) { cout << "true " << e << endl; };
 	*f = [](env e) { cout << "false " << e << endl; };
-	run(z, x, t, f);
+	(*compile(z, x, t, f))(env());
 
 	return 0;
 }
