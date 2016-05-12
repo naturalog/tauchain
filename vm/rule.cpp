@@ -39,53 +39,51 @@ inline term* rep(term* x, env& e) {
 	if (it == e.end()) return x;
 	return rep(it->second, e);
 }
-#include <deque>
-deque<const rule*> q;
 
-const rule* rule_create(term *s, term *d, const rule *t, const rule *f) {
+const rule* compile(term *s, term *d, const rule *t, const rule *f) {
 	if (!s != !d) return f;
 	if (!s) return t;
 	if (s->list && d->list) {
 		uint sz = s->sz;
 		if (sz != d->sz) return f;
-
 		const rule *r = t;
-		for (uint n = sz; n--;)
-			r = rule_create(s->args[n], d->args[n], r, f);
+		for (uint n = sz; n--;) r = compile(s->args[n], d->args[n], r, f);
 		return r;
 	}
 	return &(*new rule = [s, d, t, f](env e) {
 		auto _s = rep(s, e), _d = rep(d, e);
-		if (!_s != !_d) (*f)(e);
-		else if (!_s) (*t)(e);
-		else if (_s->list && _d->list) (*rule_create(_s, _d, t, f))(e);
-		else if (_s->var) (*t)(e);
-		else if (_d->var) e[_d->p] = _s, (*t)(e);
-		else (!_s->p == !_d->p && _s->p && !strcmp(_s->p, _d->p) ? *t : *f)(e);
+		if 	(!_s != !_d) 		(*f)(e);
+		else if (!_s) 			(*t)(e);
+		else if (_s->list && _d->list) 	(*compile(_s, _d, t, f))(e);
+		else if (_s->var)		(*t)(e);
+		else if (_d->var)		e[_d->p] = _s, (*t)(e);
+		else if (!_s->p == !_d->p && _s->p && !strcmp(_s->p, _d->p))
+			(*t)(e);
+		else (*f)(e);
 	});
 }
 
 ostream& operator<<(ostream& os, const term& t) {
-	os << t.p;
-	if (!t.sz) return os;
+	if (!t.sz) return os << t.p;
 	os << '(';
 	for (uint n = 0; n < t.sz; ++n) os << *t.args[n] << ' ';
 	return os << ')';
 }
+
 ostream& operator<<(ostream& os, const env& e) {
 	for (auto x : e) os << x.first << '=' << (x.second ? *x.second : "(null)") << ';'; return os;
 }
 
 int main() {
-	//term *x = new term("?x", "?p", "?o");
-	term *x = new term( vector<pcch>{ "?x" });
+	term *x = new term("x", "p", "o");
+//	term *x = new term( vector<pcch>{ "?x" });
 	term *y = new term( { new term("x"), new term("?y"), new term("?ro") } );
-	term *z = new term( { y } );
+//	term *z = new term( { y } );
 //	term *y = new term(x);
 	rule *t = new rule, *f = new rule;
 	*t = [](env e) { cout << "true " << e << endl; };
 	*f = [](env e) { cout << "false " << e << endl; };
-	(*rule_create(x, z, t, f))(env());
+	(*compile(x, y, t, f))(env());
 
 	return 0;
 }
