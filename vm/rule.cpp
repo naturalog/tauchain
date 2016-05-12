@@ -40,11 +40,11 @@ inline term* rep(term* x, env& e) {
 	return rep(it->second, e);
 }
 
-const rule* compile(term *s, term *d, const rule *t, const rule *f) {
-	return &(*new rule = [s, d, t, f](env e) {
-		if (!s != !d) { (*f)(e); return; }
-		if (!s) { (*t)(e); return; }
-		auto _s = rep(s, e), _d = rep(d, e);
+const rule* compile(term *_s, term *_d, const rule *t, const rule *f) {
+	return &(*new rule = [_s, _d, t, f](env e) {
+		if (!_s != !_d) { (*f)(e); return; }
+		if (!_s) { (*t)(e); return; }
+		auto s = rep(_s, e), d = rep(_d, e);
 		if (s->list && d->list) {
 			uint sz = s->sz;
 			if (sz != d->sz) { (*f)(e); return; }
@@ -52,11 +52,10 @@ const rule* compile(term *s, term *d, const rule *t, const rule *f) {
 			while (sz--) r = compile(rep(s->args[sz], e), rep(d->args[sz], e), r, f);
 			(*r)(e);
 		}
-		else if	(!_s != !_d) 		(*f)(e);
-		else if (!_s) 			(*t)(e);
-		else if (_s->var)		(*t)(e);
-		else if (_d->var)		e[_d->p] = _s, (*t)(e);
-		else if (!_s->p == !_d->p && _s->p && !strcmp(_s->p, _d->p))
+		else if	(!s != !d) 		(*f)(e);
+		else if (!s || s->var)		(*t)(e);
+		else if (d->var)		e[d->p] = s, (*t)(e);
+		else if (!s->p == !d->p && s->p && !strcmp(s->p, d->p))
 			(*t)(e);
 		else (*f)(e);
 	});
