@@ -42,15 +42,15 @@ inline term* rep(term* x, env& e) {
 
 const rule* compile(term *s, term *d, const rule *t, const rule *f) {
 	return &(*new rule = [s, d, t, f](env e) {
-		if (!s != !d) { (*f)(e); return f; }
+		if (!s != !d) { (*f)(e); return; }
 		if (!s) { (*t)(e); return; }
 		auto _s = rep(s, e), _d = rep(d, e);
 		if (s->list && d->list) {
 			uint sz = s->sz;
-			if (sz != d->sz) { (*f)(e); return f; }
+			if (sz != d->sz) { (*f)(e); return; }
 			const rule *r = t;
 			for (uint n = sz; n--;)
-				r = compile(rep(s->args[n]), rep(d->args[n]), r, f);
+				r = compile(rep(s->args[n], e), rep(d->args[n], e), r, f);
 			(*r)(e);
 		}
 		else if	(!_s != !_d) 		(*f)(e);
