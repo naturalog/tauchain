@@ -49,13 +49,11 @@ const rule* compile(term *s, term *d, const rule *t, const rule *f) {
 			uint sz = s->sz;
 			if (sz != d->sz) { (*f)(e); return; }
 			const rule *r = t;
-			for (uint n = sz; n--;)
-				r = compile(rep(s->args[n], e), rep(d->args[n], e), r, f);
+			while (sz--) r = compile(rep(s->args[sz], e), rep(d->args[sz], e), r, f);
 			(*r)(e);
 		}
 		else if	(!_s != !_d) 		(*f)(e);
 		else if (!_s) 			(*t)(e);
-		else if (_s->list && _d->list) 	(*compile(_s, _d, t, f))(e);
 		else if (_s->var)		(*t)(e);
 		else if (_d->var)		e[_d->p] = _s, (*t)(e);
 		else if (!_s->p == !_d->p && _s->p && !strcmp(_s->p, _d->p))
@@ -76,15 +74,15 @@ ostream& operator<<(ostream& os, const env& e) {
 }
 
 int main() {
-	term *x = new term("x", "p", "o");
-//	term *x = new term( vector<pcch>{ "?x" });
+//	term *x = new term("x", "p", "o");
+	term *x = new term( vector<pcch>{ "?x" });
 	term *y = new term( { new term("x"), new term("?y"), new term("?ro") } );
-//	term *z = new term( { y } );
+	term *z = new term( { y } );
 //	term *y = new term(x);
 	rule *t = new rule, *f = new rule;
 	*t = [](env e) { cout << "true " << e << endl; };
 	*f = [](env e) { cout << "false " << e << endl; };
-	(*compile(x, y, t, f))(env());
+	(*compile(x, z, t, f))(env());
 
 	return 0;
 }
