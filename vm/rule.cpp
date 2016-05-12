@@ -37,7 +37,7 @@ inline term* rep(term* x, env& e) {
 	if (!x || !x->var) return x;
 	env::iterator it = e.find(x->p);
 	if (it == e.end()) return x;
-	return rep(it->second, e);
+	return e[x->p] = rep(it->second, e);
 }
 
 const rule* compile(term *_s, term *_d, const rule *t, const rule *f) {
@@ -55,8 +55,7 @@ const rule* compile(term *_s, term *_d, const rule *t, const rule *f) {
 		else if	(!s != !d) 		(*f)(e);
 		else if (!s || s->var)		(*t)(e);
 		else if (d->var)		e[d->p] = s, (*t)(e);
-		else if (!s->p == !d->p && s->p && !strcmp(s->p, d->p))
-			(*t)(e);
+		else if (s->p && d->p && !strcmp(s->p, d->p)) (*t)(e);
 		else (*f)(e);
 	});
 }
