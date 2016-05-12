@@ -36,8 +36,7 @@ typedef function<void(env e)> rule;
 inline term* rep(term* x, env& e) {
 	if (!x || !x->var) return x;
 	env::iterator it = e.find(x->p);
-	if (it == e.end()) return x;
-	return e[x->p] = rep(it->second, e);
+	return it == e.end() ? x : (e[x->p] = rep(it->second, e));
 }
 
 const rule* compile(term *_s, term *_d, const rule *t, const rule *f) {
@@ -52,8 +51,7 @@ const rule* compile(term *_s, term *_d, const rule *t, const rule *f) {
 			while (sz--) r = compile(rep(s->args[sz], e), rep(d->args[sz], e), r, f);
 			(*r)(e);
 		}
-		else if	(!s != !d) 		(*f)(e);
-		else if (!s || s->var)		(*t)(e);
+		else if (s->var)		(*t)(e);
 		else if (d->var)		e[d->p] = s, (*t)(e);
 		else if (s->p && d->p && !strcmp(s->p, d->p)) (*t)(e);
 		else (*f)(e);
