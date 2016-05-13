@@ -8,42 +8,7 @@
 //using namespace std;
 
 typedef map<pcch, struct term*> env;
-/*
-typedef const char* pcch;
-typedef const struct term* pcterm;
 
-struct term {
-	pcch p;
-	term **args;
-	uint sz; // if var, then sz should be its debruijn
-	const bool var, list;
-	term(pcch p) 
-		: p(strdup(p)), args(0)
-		, sz(0), var(p && *p == '?'), list(false) {}
-	term(pcch s, pcch _p, pcch o)
-		: p(0), args(new term*[3])
-		, sz(3), var(false), list(true) {
-		args[0] = new term(s);
-		args[1] = new term(_p);
-		args[2] = new term(o);
-	}
-	term(const vector<term*>& v)
-		: p(0), args(new term*[v.size()])
-		, sz(v.size()), var(false), list(true) {
-		uint n = 0;
-		for (auto x : v) args[n++] = x;
-	}
-	term(const vector<pcch>& v) 
-		: p(0), args(new term*[v.size()])
-		, sz(v.size()), var(false), list(true) {
-		uint n = 0;
-		for (auto x : v) args[n++] = new term(x);
-	}
-	term(term *t)
-		: p(0), args(new term*[1])
-		, sz(1), var(false), list(true) { *args = t; }
-};
-*/
 struct match {
 	std::unordered_map<pcterm, pcterm> w;
 	pcterm rep(pcterm t) {
@@ -89,8 +54,8 @@ public:
 
 bool match::rep(pcterm a, pcterm b, _rule *r) {
 	pcterm s = rep(a), d = rep(b);
-	if (s->lst && d->lst)
-		return s->sz == d->sz && r->add(s->args, d->args, s->sz);
+//	if (s->lst && d->lst)
+//		return s->sz == d->sz && r->add(s->args, d->args, s->sz);
 	if (s->var) {
 //		if (!d->var)
 	}
@@ -102,7 +67,8 @@ bool _rule::add(term **x, term **y, uint sz) {
 	while (--sz) for (auto p : b) {
 		for (auto m : p)
 			if (!m.second.rep(get(x[sz]), get(y[sz]), this))
-				p.erase(m.first);
+				;
+//				p.erase(m.first);
 		if (p.empty()) return false;
 		}
 	return true;

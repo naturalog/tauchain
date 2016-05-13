@@ -1,15 +1,15 @@
 #include "n3driver.h"
 //#include "ir.h"
 
-using n3driver::din;
-using n3driver::term;
-using n3driver::rule;
-using n3driver::terms;
-using n3driver::rules;
+//using n3driver::din;
+//using n3driver::term;
+//using n3driver::rule;
+//using n3driver::terms;
+//using n3driver::rules;
 
 void print() {
 	dout << "rules: " << rules.size() << endl;
-	for (auto r : rules) dout << r << endl;
+	for (auto r : rules) *r >> dout << endl;
 }
 
 int main() {

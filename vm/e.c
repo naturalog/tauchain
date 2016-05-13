@@ -4,6 +4,9 @@
 #include <string.h>
 #include "list.h"
 
+// defined in strings.c
+pcch ustr(pcch s);
+
 typedef struct list list;
 typedef struct undo_record undo_record;
 typedef struct list list;
@@ -12,10 +15,23 @@ typedef uint termid;
 typedef pch char*;
 typedef pcch const char*;
 
-pcch *vars, *lits;
 uint *ranks, *reps, *terms; // terms: lists are always odd, rest are even
 int *reps;
-uint nvars, nlits, nconds, nlists;
+uint nconds, nlists;
+
+set set_create()	{ return malloc(1); }
+
+bool set_require	(set, pcch, pcch, scope) {
+
+}
+bool set_merge		(set s, set d, set *res, scope);
+uint set_compact	(set); // returns set's size
+
+pcch init() { return ustr(""); }
+pcch str_base = init();
+
+uint term_create_lit(pcch s) { return ustr(s) - str_base; }
+uint (pcch s) { return ustr(s) - str_base; }
 
 struct undo_record {
 	bool rank;
@@ -41,30 +57,4 @@ void revert() {
 	revert(), free(u);
 }
 
-
-void* set_create(void *key);
-unsigned term_create(int, int **l = 0); // var is pos, nonvar is neg, list is zero
-bool set_require(void* set, int r, int l); // term=term
-bool set_merge(void*, void*, void**);
-unsigned set_compact(void*);
-
-termid rep(termid t) {
-	return	reps[t] == t ? t : update(t,rep(reps[t]));
-}
-
-bool merge(termid _x, termid _y, void *scop) {
-	termid rx = rep(_x), ry = rep(_y);
-	if (rx == ry) return true;
-	term x = terms[rx], y = terms[ry];
-	assert(memcmp(&x, &y, sizeof(term)));
-
-	return	x.isvar && y.isvar	?  
-		ranks[rx] > ranks[ry]	? update(ry, rx)	:
-		ranks[rx] < ranks[ry]	? update(rx, ry)	:
-		update(ry, rx)		, save(rx,ranks[rx]++,1):
-		!x.leaf && !y.leaf	?
-		merge(x.r, y.r, scop)	&& merge(x.l, y.l, scop):
-		x.isvar			?  update(rx, ry)	:
-		y.isvar			&& update(ry, rx), true	;
-}
 

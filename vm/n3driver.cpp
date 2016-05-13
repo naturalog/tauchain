@@ -3,10 +3,10 @@
 #include <cstdio>
 ostream &dout = std::cout;
 
-namespace n3driver {
+//namespace n3driver {
 
 vector<term*> terms;
-vector<rule> rules;
+vector<rule*> rules;
 map<const term *, int> dict;
 din_t din;
 
@@ -17,12 +17,14 @@ din_t din;
     throw runtime_error(s.str());                                              \
   }
 
-term::term(pcch v) : p(ustr(v)), var(v && *v == '?'), lst(!v), sz(0) {
+#define res_type(x) !(x) ? lst : *(x) == '?' ? var : lit
+
+term::term(pcch v) : p(ustr(v)), t(res_type(v)), sz(0) {
 }
 
 term::term(term** _args, uint sz)
 	: p(0), args(new term*[sz + 1])
-	, var(false), lst(true), sz(sz) {
+	, t(lst), sz(sz) {
 	for (uint n = 0; n < sz; ++n) args[n] = _args[n];
 	args[sz] = 0;
 }
@@ -36,9 +38,11 @@ premise::premise(const term *t) : t(t) {}
 rule::rule(const term *h, const body_t &b) :
 	head(h), body(b) { assert(h); }
 
-rule::rule(const term *h, const term *b) : head(h) {
+template<typename T>
+inline vector<T> singleton(T x) { vector<T> r; r.push_back(x); return x; }
+
+rule::rule(const term *h, const term *b) : head(h), body(singleton(new premise(b))) {
 	assert(!h);
-	body.push_back(premise(b));
 }
 
 rule::rule(const rule &r) : head(r.head), body(r.body) {}
@@ -118,10 +122,10 @@ const term *din_t::readterm() {
 	term *s, *p, *o;
 	if (skip(), !(s = readany()) || !(p = readany()) || !(o = readany()))
 		return 0;
-	std::cout<<*s<<*p<<*o<<std::endl;
+//	std::cout<<*s<<*p<<*o<<std::endl;
 	const term *r = mktriple(s, p, o);
 	if (skip(), peek() == '.') get(), skip();
-	std::cout << *r << endl;
+//	std::cout << *r << endl;
 	return r;
 }
 
@@ -135,13 +139,13 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 			if (query) THROW("can't handle {} in query", "");
 			get();
 			while (good() && peek() != '}')
-				body.push_back(premise(readterm()));
+				body.push_back(new premise(readterm()));
 			get(), skip(), get('='), get('>'), skip(), get('{'), skip();
 			if (peek() == '}')
-				rules.push_back(rule(0, body)), skip();
+				rules.push_back(new rule(0, body)), skip();
 			else
 				while (good() && peek() != '}')
-					rules.push_back(rule(readterm(), body));
+					rules.push_back(new rule(readterm(), body));
 			get();
 			break;
 		case '#':
@@ -149,7 +153,7 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 			break;
 		default:
 			if ((t = readterm()))
-				rules.push_back(query ? rule(0, t) : rule(t));
+				rules.push_back(query ? new rule(0, t) : new rule(t));
 			else if (!done)
 				THROW("parse error: term expected", "");
 		}
@@ -159,22 +163,22 @@ void din_t::readdoc(bool query) { // TODO: support prefixes
 }
 
 // output
-ostream &operator<<(ostream &os, const premise &p) { return os << *p.t; }
-ostream &operator<<(ostream &os, const rule &r) {
+ostream &premise::operator>>(ostream &os) const { return (*t) >> os; }
+ostream &rule::operator>>(ostream &os) const {
 	os << '{';
-	for (auto t : r.body) os << t << ' ';
-	return os << "} => { ", (r.head ? os << *r.head : os << ""), os << " }.";
+	for (auto t : body) *t >> os << ' ';
+	return os << "} => { ", (head ? *head >> os : os << ""), os << " }.";
 }
 //ostream &operator<<(ostream &os, const term &t) {
 //	return os << *terms[abs(t.r[0])] << ' ' << *terms[abs(t.r[1])] << ' '
 //	       << *terms[abs(t.r[2])] << '.';
 //}
-ostream &operator<<(ostream &os, const term &r) {
-	if (!r.lst)
-		return r.p ? os << r.p : os;
+ostream &term::operator>>(ostream &os) const {
+	if (t != lst)
+		return p ? os << p : os;
 	os << '(';
-	auto a = r.args;
-	while (*a) os << **a++ << ' ';
+	auto a = args;
+	while (*a) **a++ >> os << ' ';
 	return os << ')';
 }
 
@@ -182,4 +186,4 @@ term* mktriple(term* s, term* p, term* o) {
 	term *t[] = {s, p, o};
 	return new term(t, 3);
 }
-}
+//}

@@ -76,6 +76,7 @@ public:
 	typedef T *iterator;
 	vector() : a(0), n(0), c(0) {}
 	vector(const vector<T> &t) : a(0), n(0), c(0) { copyfrom(t); }
+	vector(const T& t) : vector() { push_back(t); }
 	vector<T> &operator=(const vector<T> &t) { copyfrom(t); return *this; }
 	bool operator==(const vector<T> &t) const {
 		return n == t.n && !memcmp(a, t.a, n * sizeof(T));

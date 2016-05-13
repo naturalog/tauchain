@@ -20,8 +20,6 @@ extern wostream &dout;
 wostream& operator<<(wostream&, const term&);
 wostream& operator<<(wostream&, const rule&);
 
-rule mkrule(term *h, const vector<term*> &b = vector<term*>());
-
 struct din_t {
         din_t(wistream&);
 	wistream &is;

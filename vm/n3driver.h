@@ -17,36 +17,50 @@ extern ostream &dout;
 typedef const char cch;
 typedef cch* pcch;
 
-namespace n3driver {
+//namespace n3driver {
 
-struct term {   // iri, var, or list
+// TODO:
+// 1. debruijn
+// 2. no var twice - rule (not term!) should be equipped with sub
+// 3. take two terms and return two terms. take two envs and return two envs.
+class term {   // iri, var, or list
         pcch p;
 	term **args;
-	const bool var, lst;
-	const uint sz; // used also to freshen vars
+public:
+	enum ttype { var, lst, lit, etc };
         term(pcch v);
         term(term** _args, uint sz);
 	term(const vector<term*>& a) : term(a.begin(), a.size()) {}
         ~term();
+	const ttype t;
+	const uint sz; // used also to freshen vars
+	ostream& operator>>(ostream &os) const;
 };
 term* mktriple(term* s, term* p, term* o);
+typedef term* pterm;
+typedef const term* pcterm;
+
+//bool unify(term *s, term *d, term **rs, term **rd) {
+//}
 
 struct premise {
         const term *t;
         premise(const term *t);
+	ostream &operator>>(ostream &os) const;
 };
-typedef vector<premise> body_t;
+typedef vector<premise*> body_t;
 
 struct rule {
         const term *head;
-        body_t body;
+	const body_t body;
         rule(const term *h, const body_t &b = body_t());
         rule(const term *h, const term *b);
         rule(const rule &r);
+	ostream &operator>>(ostream &os) const;
 };
 
-ostream &operator<<(ostream &, const term &);
-ostream &operator<<(ostream &, const term &t);
+//ostream &operator<<(ostream &, const term &);
+//ostream &operator<<(ostream &, const term &t);
 ostream &operator<<(ostream &, const rule &);
 ostream &operator<<(ostream &, const premise &);
 
@@ -72,7 +86,7 @@ private:
 };
 
 extern vector<term*> terms;
-extern vector<rule> rules;
+extern vector<rule*> rules;
 extern map<const term*, int> dict;
 extern din_t din;
-}
+//}

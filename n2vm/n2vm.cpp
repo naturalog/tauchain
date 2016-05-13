@@ -9,6 +9,16 @@
 #define TRACE(x)
 #endif
 
+term::term(const term& t) 
+	: isvar(t.isvar), p(t.p ? wcsdup(t.p) : 0)
+	, args(t.args), sz(t.sz) { }
+
+term::term(term&& t) 
+	: isvar(t.isvar), p(t.p)
+	, args(t.args), sz(t.sz) {
+	t.p = 0;
+}
+
 n2vm::n2vm(wistream& is, bool fin) : kb(*new kb_t) {
 	din_t d(is);
 	vector<rule> *r = new vector<rule>;
@@ -35,17 +45,22 @@ rule::rule(const term *h, const vector<const term*> &b)
 }
 
 rule::rule(const term *h, const term *t) : h(h), b(vec_to_nt_arr(singleton_vector(t))), sz(1) {}
-//	vector<term*> v;
-//	v.push_back(t);
-//	return mkrule(h, v);
-//}
+
+int term::cmp(const term& t) const {
+	if (isvar != t.isvar) return isvar ? 1 : -1;
+	if (sz != t.sz) return sz > t.sz ? 1 : -1;
+	if (!sz) return (p && t.p) ? wcscmp(p, t.p) : p ? 1 : -1;
+	int r;
+	for (unsigned n = 0; n < sz; ++n)
+		if ((r = args[n]->cmp(*t.args[n])))
+			return r;
+	return 0;
+}
 
 const term* n2vm::add_term(const term& t) {
 	struct term_cmp {
-		int operator()(const term* x, const term* y) const {
-			return x->cmp(*y);
-		}
-	};
+		int operator()(const term* x, const term* y) const
+			{ return x->cmp(*y); } };
 	static std::set<const term*, term_cmp> terms;
 	auto it = terms.find(&t);
 	term *tt;
@@ -141,7 +156,7 @@ hrule n2vm::mutate(hrule r, const sub &env) {
 }
 
 void n2vm::getvarmap(const term& t, varmap& v) {
-	if (isvar(t)) v.push_front(t.p);
+//	if (isvar(t)) v.emplace(t.p);
 	for (unsigned n = 0; n < t.sz; ++n) getvarmap(*t.args[n], v);
 }
 
@@ -212,6 +227,7 @@ void test1() {
 	in << "{ ?t ?p ?t } => { }.	# rule 2" << endl;
 	n2vm vm(in, false);
 	vm.printkb();
+	while (vm.tick());
 }
 
 int main() {

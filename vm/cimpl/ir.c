@@ -4,7 +4,7 @@ term *terms = 0;
 rule *rules = 0; 
 int nts = 0, nrs = 0;
 const size_t chunk = 64;
-
+/*
 int mkterm(const wchar_t* s, char type) {
 	if (s && !type) {
 		if (*s == L'?') type = '?';
@@ -19,7 +19,7 @@ int mktriple(int s, int p, int o) {
 	terms[t].args = a = malloc(sizeof(int) * 3), a[0] = p, a[1] = s, a[2] = o;
 	return t;
 }
-
+*/
 int mkrule(premise *p, int np, int *c) {
 	if (!(nrs % chunk)) rules = realloc(rules, chunk * (nrs / chunk + 1) * sizeof(rule));
 	return rules[nrs].c = c, rules[nrs].p = p, rules[nrs].np = np, nrs++;
