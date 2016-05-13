@@ -1,19 +1,21 @@
-#include <map>
+//#include <map>
 #include <unordered_map>
 #include <functional>
 #include <cstring>
 #include <iostream>
-#include <vector>
-using namespace std;
+//#include <vector>
+#include "n3driver.h"
+//using namespace std;
 
-typedef const char* pcch;
 typedef map<pcch, struct term*> env;
+/*
+typedef const char* pcch;
 typedef const struct term* pcterm;
 
 struct term {
 	pcch p;
 	term **args;
-	uint sz;
+	uint sz; // if var, then sz should be its debruijn
 	const bool var, list;
 	term(pcch p) 
 		: p(strdup(p)), args(0)
@@ -41,24 +43,19 @@ struct term {
 		: p(0), args(new term*[1])
 		, sz(1), var(false), list(true) { *args = t; }
 };
-
-template<typename T>
-struct dsds {
-	unordered_map<T, T> w;
-	T rep(T t) {
+*/
+struct match {
+	std::unordered_map<pcterm, pcterm> w;
+	pcterm rep(pcterm t) {
 		auto it = w.find(t);
 		return it == w.end() ? t : (w[t] = rep(it->second));
 	}
-	bool rep(T a, T b, function<bool(T, T)> p) {
-		T ra = rep(a), rb = rep(b);
-		return p(a, b) && (w[a] = w[ra] = rb, true);
-	}
+	bool rep(pcterm a, pcterm b, struct _rule *r);
 };
 
-class rule {
+class _rule {
 	term *h;
-	typedef dsds<pcterm> match;
-	typedef map<rule*, match> premise;
+	typedef map<_rule*, match> premise;
 	vector<premise> b;
 	map<term*, term*> vars;
 	term* get(term *x) {
@@ -67,27 +64,49 @@ class rule {
 		if (it != vars.end()) return it->second;
 		return vars[x];// = fresh(x);
 	}
-	bool put(match& m, term *s, term *d) {
-		return m.rep(s, d, [this] (pcterm s, pcterm d) {
-			return	(s->list && d->list)
-				? (s->sz == d->sz
-				&& add(s->args, d->args, s->sz))
-				: (s->var || d->var);
-		});
-	}
+	const uint nvars;
+	term* var(uint n);
+	uint var(term* t);
 public:
-	rule(){}
-	bool add(term **x, term **y, uint sz) {
-		while (--sz)
-			for (auto p : b) {
-				for (auto m : p)
-					if (!put(m.second, get(x[sz]), get(y[sz])))
-						p.erase(m.first);
-				if (p.empty()) return false;
-			}
-		return true;
+	_rule(uint nvars) : nvars(nvars) {}
+	bool add(term **x, term **y, uint sz);
+	bool add(match& m) {
+//		for (uint n = 0; n < nvars; ++n)
+//			add(&var(n), &m.rep(var(n)), 1);
 	}
-} *rules;
+	_rule* fork(uint p) {
+//		_rule *q = new _rule();
+//		*q = *this;
+//		if (q->add(b[p].front())) return b[p].erase(b[p].front()), q;
+//		delete q;
+//		return 0;
+	}
+	bool prove() {
+//		_rule *q = fork(
+//		_rule q = *this;
+	}
+} *_rules;
+
+bool match::rep(pcterm a, pcterm b, _rule *r) {
+	pcterm s = rep(a), d = rep(b);
+	if (s->lst && d->lst)
+		return s->sz == d->sz && r->add(s->args, d->args, s->sz);
+	if (s->var) {
+//		if (!d->var)
+	}
+//		: (s->var || d->var))
+//		&& (w[a] = w[s] = d, true);
+}
+
+bool _rule::add(term **x, term **y, uint sz) {
+	while (--sz) for (auto p : b) {
+		for (auto m : p)
+			if (!m.second.rep(get(x[sz]), get(y[sz]), this))
+				p.erase(m.first);
+		if (p.empty()) return false;
+		}
+	return true;
+}
 
 #ifdef PREV
 #define ifnot(x) if (!(x))

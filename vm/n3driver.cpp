@@ -1,13 +1,13 @@
 #include "n3driver.h"
 #include <sstream>
-
-wostream &dout = std::wcout;
+#include <cstdio>
+ostream &dout = std::cout;
 
 namespace n3driver {
 
-vector<atom*> atoms;
+vector<term*> terms;
 vector<rule> rules;
-map<const atom *, int> dict;
+map<const term *, int> dict;
 din_t din;
 
 #define THROW(x, y)                                                            \
@@ -17,188 +17,169 @@ din_t din;
     throw runtime_error(s.str());                                              \
   }
 
-atom::atom(const wchar_t *v) : type(*v), val(wcsdup(v)) {
-	dout << val << endl;
+term::term(pcch v) : p(ustr(v)), var(v && *v == '?'), lst(!v), sz(0) {
 }
 
-atom::atom(vector<int> _args) : type(L'.'), args(new int[_args.size() + 1]) {
-	int n = 0;
-	for (auto x : _args) args[n++] = x;
-	args[n] = 0;
+term::term(term** _args, uint sz)
+	: p(0), args(new term*[sz + 1])
+	, var(false), lst(true), sz(sz) {
+	for (uint n = 0; n < sz; ++n) args[n] = _args[n];
+	args[sz] = 0;
 }
 
-atom::~atom() {
-	if (args && type == L'.') delete[] args;
-	if (val) free((wchar_t *)val);
+term::~term() {
+	if (lst) delete[] args;
 }
 
-triple::triple(int s, int p, int o) {
-	r[0] = s, r[1] = p, r[2] = o;
-}
+premise::premise(const term *t) : t(t) {}
 
-triple::triple(const triple &t) : triple(t.r[0], t.r[1], t.r[2]) {}
-
-premise::premise(const triple *t) : t(t) {}
-
-rule::rule(const triple *h, const body_t &b) :
+rule::rule(const term *h, const body_t &b) :
 	head(h), body(b) { assert(h); }
 
-rule::rule(const triple *h, const triple *b) : head(h) {
+rule::rule(const term *h, const term *b) : head(h) {
 	assert(!h);
 	body.push_back(premise(b));
 }
 
 rule::rule(const rule &r) : head(r.head), body(r.body) {}
 
-int mkatom(const wstring &v) {
-	static std::map<wstring, int> r;
-	auto i = r.find(v);
-	if (i != r.end()) return i->second;
-	int id = atoms.size();
-	atoms.push_back(new atom(v.c_str()));
-	dict.set(atoms[id - 1], id);
-	if (v[0] != L'?') id = -id;
-	r.emplace(v, id);
-	return id;
-}
+#define mkterm(x) new term(x)
 
-int mkatom(const vector<int> &v) {
-	struct cmp {
-		bool operator()(const vector<int> &x, const vector<int> &y) const {
-			int s1 = x.size(), s2 = y.size();
-			if (s1 != s2) return s1 < s2;
-			return memcmp(&x[0], &y[0], sizeof(int) * s1) < 0;
-		}
-	};
-	static std::map<vector<int>, int, cmp> r;
-	auto i = r.find(v);
-	if (i != r.end()) return i->second;
-	int id = atoms.size();
-	atoms.push_back(new atom(v));
-	r.emplace(v, -id);
-	dict.set(atoms[id - 1], -id);
-	return -id;
+char din_t::peek() {
+	char r = f ? ch : ((f = true), ch = getchar());
+	eof = r == EOF;
+	return r;
 }
-
-const triple *mktriple(int s, int p, int o) {
-	static map<tuple<int, int, int>, const triple *> spo;
-	auto t = make_tuple(s, p, o);
-	auto i = spo.find(t);
-	return i ? i->second : spo.set(t, new triple(s, p, o));
+char din_t::get() {
+	char r = f ? ((f = false), ch) : /*((wcin >> ch), ch)*/(ch = getchar());
+	eof = r == EOF;
+	return r;
 }
-
-wchar_t din_t::peek() { return f ? ch : ((f = true), (wcin >> ch), ch); }
-wchar_t din_t::get() { return f ? ((f = false), ch) : ((wcin >> ch), ch); }
-wchar_t din_t::get(wchar_t c) {
-	wchar_t r = get();
-	if (c != r) THROW(L"expected: ", c);
+char din_t::get(char c) {
+	char r = get();
+	if (c != r) THROW("expected: ", c);
+	return r;
 }
-bool din_t::good() { return wcin.good(); }
-void din_t::skip() { while (good() && iswspace(peek())) get(); }
-wstring din_t::getline() {
-	wstring s;
-	f = false, std::getline(wcin, s);
-	return s;
+bool din_t::good() { return !feof(stdin) && ch != EOF && !eof; }
+void din_t::skip() { while (good() && isspace(peek())) get(); }
+void din_t::getline() {
+	size_t sz = 0;
+	char *s = 0;
+	f = false;
+	::getline(&s, &sz, stdin);
+	free(s);
+	ch = ' ';
 }
-din_t::din_t() { wcin >> std::noskipws; } 
-wstring &din_t::trim(wstring &s) {
-	static wstring::iterator i = s.begin();
-	while (iswspace(*i)) s.erase(i), i = s.begin();
+din_t::din_t() : eof(false) {/* wcin >> std::noskips;*/ } 
+string &din_t::trim(string &s) {
+	static string::iterator i = s.begin();
+	while (isspace(*i)) s.erase(i), i = s.begin();
 	size_t n = s.size();
 	if (n) {
-		while (iswspace(s[--n])) ;
+		while (isspace(s[--n])) ;
 		s = s.substr(0, ++n);
 	}
 	return s;
 }
 
-wstring din_t::edelims = L")}.";
+string din_t::edelims = ")}.";
 
-wstring din_t::till() {
+string din_t::till() {
 	skip();
-	static wchar_t buf[4096];
+	static char buf[4096];
 	static size_t pos;
 	pos = 0;
-	while (good() && edelims.find(peek()) == wstring::npos && !iswspace(peek()))
+	while (good() && edelims.find(peek()) == string::npos && !isspace(peek()) && pos < 4096)
 		buf[pos++] = get();
+	if (pos == 4096) perror("Max buffer limit reached (din_t::till())");
 	buf[pos] = 0;
-	return wcslen(buf) ? buf : 0;
+	string s;
+	if (buf && strlen(buf)) s = buf;
+	return s;
 }
 
-int din_t::readlist() {
+term* din_t::readlist() {
 	get();
-	vector<int> items;
-	while (skip(), (good() && peek() != L')'))
+	vector<term*> items;
+	while (skip(), (good() && peek() != ')'))
 		items.push_back(readany()), skip();
-	return get(), skip(), mkatom(items);
+	return get(), skip(), mkterm(items);
 }
 
-int din_t::readany() {
+term* din_t::readany() {
 	if (skip(), !good()) return 0;
-	if (peek() == L'(') return readlist();
-	wstring s = till();
-	if (s == L"fin" && peek() == L'.') return get(), done = true, 0;
-	return s.size() ? mkatom(s) : 0;
+	if (peek() == '(') return readlist();
+	string s = till();
+	if (s == "fin" && peek() == '.') return get(), done = true, (term*)0;
+	return s.size() ? mkterm(s.c_str()) : 0;
 }
 
-const triple *din_t::readtriple() {
-	int s, p, o;
+const term *din_t::readterm() {
+	term *s, *p, *o;
 	if (skip(), !(s = readany()) || !(p = readany()) || !(o = readany()))
 		return 0;
-	const triple *r = mktriple(s, p, o);
-	if (skip(), peek() == L'.') get(), skip();
+	std::cout<<*s<<*p<<*o<<std::endl;
+	const term *r = mktriple(s, p, o);
+	if (skip(), peek() == '.') get(), skip();
+	std::cout << *r << endl;
 	return r;
 }
 
 void din_t::readdoc(bool query) { // TODO: support prefixes
-	const triple *t;
+	const term *t;
 	done = false;
 	while (good() && !done) {
 		body_t body;
 		switch (skip(), peek()) {
-		case L'{':
+		case '{':
 			if (query) THROW("can't handle {} in query", "");
 			get();
-			while (good() && peek() != L'}')
-				body.push_back(premise(readtriple()));
-			get(), skip(), get(L'='), get(L'>'), skip(), get(L'{'), skip();
-			if (peek() == L'}')
+			while (good() && peek() != '}')
+				body.push_back(premise(readterm()));
+			get(), skip(), get('='), get('>'), skip(), get('{'), skip();
+			if (peek() == '}')
 				rules.push_back(rule(0, body)), skip();
 			else
-				while (good() && peek() != L'}')
-					rules.push_back(rule(readtriple(), body));
+				while (good() && peek() != '}')
+					rules.push_back(rule(readterm(), body));
 			get();
 			break;
-		case L'#':
+		case '#':
 			getline();
 			break;
 		default:
-			if ((t = readtriple()))
+			if ((t = readterm()))
 				rules.push_back(query ? rule(0, t) : rule(t));
 			else if (!done)
-				THROW("parse error: triple expected", "");
+				THROW("parse error: term expected", "");
 		}
 		if (done) return;
-		if (skip(), peek() == L'.') get(), skip();
+		if (skip(), peek() == '.') get(), skip();
 	}
 }
 
 // output
-wostream &operator<<(wostream &os, const premise &p) { return os << *p.t; }
-wostream &operator<<(wostream &os, const rule &r) {
-	os << L'{';
+ostream &operator<<(ostream &os, const premise &p) { return os << *p.t; }
+ostream &operator<<(ostream &os, const rule &r) {
+	os << '{';
 	for (auto t : r.body) os << t << ' ';
-	return os << L"} => { ", (r.head ? os << *r.head : os << L""), os << " }.";
+	return os << "} => { ", (r.head ? os << *r.head : os << ""), os << " }.";
 }
-wostream &operator<<(wostream &os, const triple &t) {
-	return os << *atoms[abs(t.r[0])] << ' ' << *atoms[abs(t.r[1])] << ' '
-	       << *atoms[abs(t.r[2])] << L'.';
+//ostream &operator<<(ostream &os, const term &t) {
+//	return os << *terms[abs(t.r[0])] << ' ' << *terms[abs(t.r[1])] << ' '
+//	       << *terms[abs(t.r[2])] << '.';
+//}
+ostream &operator<<(ostream &os, const term &r) {
+	if (!r.lst)
+		return r.p ? os << r.p : os;
+	os << '(';
+	auto a = r.args;
+	while (*a) os << **a++ << ' ';
+	return os << ')';
 }
-wostream &operator<<(wostream &os, const atom &r) {
-	if (r.type != L'.') return r.val ? os << r.val : os;
-	os << L'(';
-	const int *a = r.args;
-	while (*a) os << atoms[*a++] << L' ';
-	return os << L')';
+
+term* mktriple(term* s, term* p, term* o) {
+	term *t[] = {s, p, o};
+	return new term(t, 3);
 }
 }

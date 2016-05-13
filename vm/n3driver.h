@@ -1,79 +1,78 @@
+extern "C" {
+#include "strings.h"
+}
 #include "containers.h"
 #include <map>
 using std::function;
-using std::wostream;
-using std::wstring;
+using std::ostream;
+using std::string;
 using std::stringstream;
 using std::endl;
-using std::wcin;
+using std::cin;
 using std::tuple;
 using std::make_tuple;
 using std::runtime_error;
-extern wostream &dout;
+extern ostream &dout;
+
+typedef const char cch;
+typedef cch* pcch;
 
 namespace n3driver {
 
-struct atom {   // iri, var, or list
-        wchar_t type; // the only member used in runtime
-        union {
-                int *args; // list items, last item must be null.
-                const wchar_t *val;
-        };
-        atom(const wchar_t *v);
-        atom(vector<int> _args);
-        ~atom();
+struct term {   // iri, var, or list
+        pcch p;
+	term **args;
+	const bool var, lst;
+	const uint sz; // used also to freshen vars
+        term(pcch v);
+        term(term** _args, uint sz);
+	term(const vector<term*>& a) : term(a.begin(), a.size()) {}
+        ~term();
 };
-
-struct triple {
-        int r[3]; // spo
-        triple(int s, int p, int o);
-        triple(const triple &t);
-};
+term* mktriple(term* s, term* p, term* o);
 
 struct premise {
-        const triple *t;
-        premise(const triple *t);
+        const term *t;
+        premise(const term *t);
 };
 typedef vector<premise> body_t;
 
 struct rule {
-        const triple *head;
+        const term *head;
         body_t body;
-        rule(const triple *h, const body_t &b = body_t());
-        rule(const triple *h, const triple *b);
+        rule(const term *h, const body_t &b = body_t());
+        rule(const term *h, const term *b);
         rule(const rule &r);
 };
 
-wostream &operator<<(wostream &, const atom &);
-wostream &operator<<(wostream &, const triple &t);
-wostream &operator<<(wostream &, const rule &);
-wostream &operator<<(wostream &, const premise &);
-int mkatom(const wstring &v);
-int mkatom(const vector<int> &v);
-const triple *mktriple(int s, int p, int o);
+ostream &operator<<(ostream &, const term &);
+ostream &operator<<(ostream &, const term &t);
+ostream &operator<<(ostream &, const rule &);
+ostream &operator<<(ostream &, const premise &);
 
 struct din_t {
         din_t();
         void readdoc(bool query); // TODO: support prefixes
 private:
-        wchar_t ch;
+        char ch;
         bool f = false, done, in_query = false;
-        wchar_t peek();
-        wchar_t get();
-        wchar_t get(wchar_t c);
+        char peek();
+        char get();
+        char get(char c);
         bool good();
         void skip();
-        wstring getline();
-        wstring &trim(wstring &s);
-        static wstring edelims;
-        wstring till();
-        int readlist();
-        int readany();
-        const triple *readtriple();
+        void getline();
+        string &trim(string &s);
+        static string edelims;
+        string till();
+        term* readlist();
+        term* readany();
+        const term *readterm();
+	bool eof;
 };
 
-extern vector<atom*> atoms;
+extern vector<term*> terms;
 extern vector<rule> rules;
-extern map<const atom*, int> dict;
+extern map<const term*, int> dict;
 extern din_t din;
 }

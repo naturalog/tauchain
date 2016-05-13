@@ -1,3 +1,2 @@
-typedef const char cch;
-typedef cch* pcch;
-pcch ustr(pcch s);
+const char* ustr(const char* s);
+void strings_test();
