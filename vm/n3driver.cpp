@@ -17,38 +17,6 @@ din_t din;
     throw runtime_error(s.str());                                              \
   }
 
-#define res_type(x) !(x) ? lst : *(x) == '?' ? var : lit
-
-term::term(pcch v) : p(ustr(v)), t(res_type(v)), sz(0) {
-}
-
-term::term(term** _args, uint sz)
-	: p(0), args(new term*[sz + 1])
-	, t(lst), sz(sz) {
-	for (uint n = 0; n < sz; ++n) args[n] = _args[n];
-	args[sz] = 0;
-}
-
-term::~term() {
-	if (lst) delete[] args;
-}
-
-premise::premise(const term *t) : t(t) {}
-
-rule::rule(const term *h, const body_t &b) :
-	head(h), body(b) { assert(h); }
-
-template<typename T>
-inline vector<T> singleton(T x) { vector<T> r; r.push_back(x); return x; }
-
-rule::rule(const term *h, const term *b) : head(h), body(singleton(new premise(b))) {
-	assert(!h);
-}
-
-rule::rule(const rule &r) : head(r.head), body(r.body) {}
-
-#define mkterm(x) new term(x)
-
 char din_t::peek() {
 	char r = f ? ch : ((f = true), ch = getchar());
 	eof = r == EOF;
@@ -173,17 +141,4 @@ ostream &rule::operator>>(ostream &os) const {
 //	return os << *terms[abs(t.r[0])] << ' ' << *terms[abs(t.r[1])] << ' '
 //	       << *terms[abs(t.r[2])] << '.';
 //}
-ostream &term::operator>>(ostream &os) const {
-	if (t != lst)
-		return p ? os << p : os;
-	os << '(';
-	auto a = args;
-	while (*a) **a++ >> os << ' ';
-	return os << ')';
-}
-
-term* mktriple(term* s, term* p, term* o) {
-	term *t[] = {s, p, o};
-	return new term(t, 3);
-}
 //}
