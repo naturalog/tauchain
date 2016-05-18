@@ -10,19 +10,17 @@
 void print() {
 	dout << "rules: " << rules.size() << endl;
 	uint n = 0;
-	for (auto r : rules) {
-		word l, v;
-		r->crds(l, v, ++n);
-		dout << "l:" <<endl<< l << "v:" << endl << v << endl;
-	}
+	word l, v;
+	for (auto r : rules) r->crds(l, v, ++n);
+	dout << "l:" <<endl<< l << "v:" << endl << v << endl;
 	for (auto r : rules) *r >> dout << endl;
 }
 
 int main() {
-	strings_test();
+//	strings_test();
 	terms.push_back(new term("GND"));
 	din.readdoc(false);
-	print();
+	//print();
 	din.readdoc(true);
 	print();
 }
