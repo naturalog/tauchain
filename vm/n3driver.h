@@ -33,12 +33,23 @@ public:
 	term(const vector<term*>& a) : term(a.begin(), a.size()) {}
         ~term();
 	const ttype t;
-	const uint sz; // used also to freshen vars
+	const uint sz;
 	ostream& operator>>(ostream &os) const;
 };
 term* mktriple(term* s, term* p, term* o);
 typedef term* pterm;
 typedef const term* pcterm;
+
+struct env : public map<pcch, term*> {
+	env *also;
+
+	lambda beta(const lambda) const;
+
+	term* rep(pcch);
+	bool rep(pcch, term*);
+
+	function<void(env*)> fail;
+};
 
 //bool unify(term *s, term *d, term **rs, term **rd) {
 //}
