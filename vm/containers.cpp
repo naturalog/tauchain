@@ -1,6 +1,6 @@
 #include <assert.h>
 #include "containers.h"
-
+/*
 parrint mkarr(int *a, word s) {
 	assert(a && s);
 	parrint r;
@@ -128,3 +128,4 @@ int uf::find(int x) { return ::find(this, x); }
 uf* uf::unio(int x, int y) { return ::unio(this, x, y); }
 
 //}
+*/

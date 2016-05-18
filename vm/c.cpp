@@ -9,7 +9,12 @@
 
 void print() {
 	dout << "rules: " << rules.size() << endl;
-	for (auto r : rules) *r >> dout << endl;
+//	for (auto r : rules) *r >> dout << endl;
+	for (auto r : rules) {
+		word l, v;
+		r->crds(l, v);
+		dout << l << v << endl;
+	}
 }
 
 int main() {

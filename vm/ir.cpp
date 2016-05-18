@@ -4,7 +4,7 @@ using namespace ir;
 
 kb_t *kb = 0;
 frame* frame::last = 0;
-
+/*
 mutation rule::mutate(unsigned b) {
 	uf &c = *mutator->conds;
 	rule &res = *new rule;
@@ -36,4 +36,4 @@ rule::~rule() {
 		for (auto y : *x) delete y;
 		delete x;
 	}
-}
+}*/

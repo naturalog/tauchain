@@ -9,7 +9,7 @@
 //#include <sstream>
 #include <cassert>
 #include <cstdlib>
-
+/*
 typedef int word;
 struct arr  { int s; word *a; };
 struct diff { int i; word v; struct parrint* t;};
@@ -43,7 +43,7 @@ uf*   unio(uf*, int, int);
 void  uftest();
 
 typedef uf puf;
-
+*/
 template <typename T> struct sp { // smart pointer
 	T *p = 0;
 	int *r = 0;
