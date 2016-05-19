@@ -30,21 +30,63 @@ word rule::crds(int rl) {
 }
 
 struct refutation {}; 
-struct literal_clash : public refutation {};
+struct literal_clash : public refutation{};
+struct prefix_clash : public refutation {};
+struct occur_fail : public prefix_clash {};
 
-struct pfds { // prefix free data structure. also throws on literal merge trial
+template<typename T>
+struct lary { // array given in parts as linked list
+	T *a;
+	const uint sz;
+	lary<T> *n;
+	bool del;
+	lary(T *a, uint sz, lary<T> *n = 0) : a(a), sz(sz), n(n), del(false) {}
+	lary(uint sz, lary<T> *n = 0) : a(new T[sz]), sz(sz), n(n), del(true) {}
+	~lary() { if (del) delete[] a; }
+
+	template<typename V>
+	struct iter {
+		V *b;
+		int p;
+		inline iter(V *b = 0, int p = 0) : b(b), p(p) {}
+		inline T& operator*() const { return b->a[p]; }
+		inline T* operator->() const { return &b->a[p]; }
+		inline iter operator++() {
+			return n<b->sz ? ++n,*this : b->n?b->n->begin():iter();}
+		operator bool() { return b; }
+	}; 
+	inline iter<lary<T>> begin() { return iter<lary<T>>(this, 0); }
+	inline iter<lary<T>> end() { return iter<lary<T>>(); }
+	inline iter<const lary<T>> begin() const { return iter<const lary<T>>(this, 0); }
+	inline iter<const lary<T>> end() const { return iter<const lary<T>>(); }
+
+	inline bool cmp(const lary<T>& x) throw(prefix_clash) {
+		auto i1 = begin(), i2 = x.begin();
+		while (i1 && i2)
+			if (*i1 != *i2) return false;
+		if (!i1 == !i2) return true;
+		throw prefix_clash();
+	}
+};
+
+struct pfds { // prefix free disjoint sets. represents all kb and throws all refutations
 	struct item {
+		lary<int> *c; // coords
+		pcch str;
 		bool lit;
-		pcch c, str; // c is coord
 		item *rep = 0;
 		uint rank = 0;
-		item(pcch c, pcch str) : c(c), str(str), lit(*str != '?') {}
+		item(lary<int> *c, pcch str, pcch rst = 0) : c(c), str(str), lit(*str != '?') {}
 	};
-	umap<pcch, item*> g;
-	item* makeset(pcch c, pcch str) {
+	std::map<lary<int>*, item*> g;
+	item* makeset(lary<int> *c, pcch str) throw(prefix_clash) {
 		//check pf
-		auto it = g.find(c);
-		if (it != g.end()) return it->second;
+		auto u = g.upper_bound(c);
+		auto l = g.lower_bound(c);
+		if (u != l) {
+			if (c->cmp(*u->second->c)) return u->second;
+			++u;
+		}
 		return g.emplace(c, new item(c, str)).first->second;
 
 	}
