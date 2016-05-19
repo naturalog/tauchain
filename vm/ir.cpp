@@ -5,8 +5,8 @@ struct onret { T f; onret(T f):f(f){} ~onret(){f();} };
 
 wrd::wrd(const word& w) {
 	sz = w.size();
-	c = new int*[sz+1];
-	str = new pcch[sz+1];
+	c = new int*[sz];
+	str = new pcch[sz];
 	uint i = 0, j;
 	for (const crd& r : w) {
 		c[i]=new int[r.c.size()+1];str[i]=r.str;c[i][r.c.size()]=0;j=0;
@@ -25,5 +25,5 @@ ostream& operator<<(ostream& os, const wrd& w) {
 	return os;
 }
 
-void refute(word &kb, int q) {
+void refute(wrd &kb, int q) {
 }
