@@ -21,30 +21,15 @@ extern ostream &dout;
 
 typedef const char cch;
 typedef cch* pcch;
+struct crd;
+struct ccmp { int operator()(const crd& x, const crd& y); };
+typedef set<crd, ccmp> word;
 
 struct crd {
 	std::list<int> c;
 	pcch str;
 	crd(pcch str) : str(str) {}
 };
-typedef set<crd, struct ccmp> word;
-
-struct ccmp { int operator()(const crd& x, const crd& y); };
-
-template<typename T, typename V>
-T push_front(const T& t, const V& i) {
-	T r;
-	for (auto x : t) {
-		x.c.push_front(i);
-		r.insert(x);
-	}
-	return r;
-}
-ostream& operator<<(ostream& os, const crd& c);
-ostream& operator<<(ostream& os, const word& w);
-
-#define mkterm(x) new term(x)
-
 
 struct ast {
 	class term {
@@ -79,3 +64,5 @@ struct ast {
 };
 typedef vector<ast::rule::premise*> body_t;
 void readdoc(bool query, ast *st);
+ostream& operator<<(ostream& os, const crd& c);
+ostream& operator<<(ostream& os, const word& w);

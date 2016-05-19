@@ -4,6 +4,8 @@
 typedef ast::rule rule;
 typedef ast::term term;
 
+#define mkterm(x) new term(x)
+
 int ccmp::operator()(const crd& x, const crd& y) {
 	auto ix = x.c.begin(), ex = x.c.end();
 	auto iy = y.c.begin(), ey = y.c.end();
@@ -21,6 +23,15 @@ ostream& operator<<(ostream& os, const crd& c) {
 
 ostream& operator<<(ostream& os, const word& w) {
 	for (auto c : w) os << c; return os << endl;
+}
+
+word push_front(const word& t, int i) {
+	word r;
+	for (auto x : t) {
+		x.c.push_front(i);
+		r.insert(x);
+	}
+	return r;
 }
 
 void ast::term::crds(word &kb, crd c, int k) const {
