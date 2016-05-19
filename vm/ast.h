@@ -20,12 +20,21 @@ typedef cch* pcch;
 struct crd;
 struct ccmp { int operator()(const crd& x, const crd& y); };
 typedef set<crd, ccmp> word;
+typedef const crd ccrd;
+typedef const word cword;
 
 struct crd {
 	std::list<int> c;
 	pcch str;
 	crd(pcch str) : str(str) {}
 };
+struct wrd {
+	int **c;
+	pcch *str;
+	uint sz;
+	wrd(const word& w);
+};
+ostream& operator<<(ostream& os, const wrd& w);
 //
 
 struct ast {
@@ -60,6 +69,8 @@ struct ast {
 	vector<term*> terms;
 };
 typedef vector<ast::rule::premise*> body_t;
+typedef const ast::term cterm;
 void readdoc(bool query, ast *st);
 ostream& operator<<(ostream& os, const crd& c);
 ostream& operator<<(ostream& os, const word& w);
+word push_front(const word& t, int i);
