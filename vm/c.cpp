@@ -23,7 +23,7 @@ void print() {
 int main() {
 //	strings_test();
 	terms.push_back(new term("GND"));
-	din.readdoc(false);
+	readdoc(false);
 	//print();
 //	din.readdoc(true);
 	print();

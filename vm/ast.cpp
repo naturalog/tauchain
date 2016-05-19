@@ -7,11 +7,11 @@ int ccmp::operator()(const crd& x, const crd& y) {
 	while (ix != ex && iy != ey)
 		if (*ix != *iy) return *ix < *iy ? 1 : -1;
 		else ++ix, ++iy;
-	if (ix != ex) return -1;
-	if (iy != ey) return 1;
-	if (x.str && y.str && *x.str != '?' && *y.str != '?' && x.str != y.str)
-		return strcmp(x.str, y.str);
-	if (!x.str != !y.str) return x.str ? -1 : 1;
+	//if (ix != ex) return -1;
+	//if (iy != ey) return 1;
+	//if (x.str && y.str && *x.str != '?' && *y.str != '?' && x.str != y.str)
+	//	return strcmp(x.str, y.str);
+	//if (!x.str != !y.str) return x.str ? -1 : 1;
 	return 0;
 }
 

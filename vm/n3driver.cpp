@@ -8,33 +8,33 @@ ostream &dout = std::cout;
 vector<term*> terms;
 vector<rule*> rules;
 map<const term *, int> dict;
-din_t din;
+//din_t din;
+char ch;
+bool f = false, done, in_query = false, eof = false;
 
-#define THROW(x, y)                                                            \
-  {                                                                            \
-    stringstream s;                                                            \
-    s << x << ' ' << y;                                                        \
-    throw runtime_error(s.str());                                              \
-  }
+#define THROW(x, y) { \
+    stringstream s;  \
+    s << x << ' ' << y; \
+    throw runtime_error(s.str()); }
 
-char din_t::peek() {
+char peek() {
 	char r = f ? ch : ((f = true), ch = getchar());
 	eof = r == EOF;
 	return r;
 }
-char din_t::get() {
-	char r = f ? ((f = false), ch) : /*((wcin >> ch), ch)*/(ch = getchar());
+char get() {
+	char r = f ? ((f = false), ch) : (ch = getchar());
 	eof = r == EOF;
 	return r;
 }
-char din_t::get(char c) {
+char get(char c) {
 	char r = get();
 	if (c != r) THROW("expected: ", c);
 	return r;
 }
-bool din_t::good() { return !feof(stdin) && ch != EOF && !eof; }
-void din_t::skip() { while (good() && isspace(peek())) get(); }
-void din_t::getline() {
+bool good() { return !feof(stdin) && ch != EOF && !eof; }
+void skip() { while (good() && isspace(peek())) get(); }
+void getline() {
 	size_t sz = 0;
 	char *s = 0;
 	f = false;
@@ -42,8 +42,8 @@ void din_t::getline() {
 	free(s);
 	ch = ' ';
 }
-din_t::din_t() : eof(false) {/* wcin >> std::noskips;*/ } 
-string &din_t::trim(string &s) {
+//din_t() : eof(false) {/* wcin >> std::noskips;*/ } 
+string &trim(string &s) {
 	static string::iterator i = s.begin();
 	while (isspace(*i)) s.erase(i), i = s.begin();
 	size_t n = s.size();
@@ -54,23 +54,24 @@ string &din_t::trim(string &s) {
 	return s;
 }
 
-string din_t::edelims = ")}.";
+string edelims = ")}.";
+term* readany();
 
-string din_t::till() {
+string till() {
 	skip();
 	static char buf[4096];
 	static size_t pos;
 	pos = 0;
 	while (good() && edelims.find(peek()) == string::npos && !isspace(peek()) && pos < 4096)
 		buf[pos++] = get();
-	if (pos == 4096) perror("Max buffer limit reached (din_t::till())");
+	if (pos == 4096) perror("Max buffer limit reached (till())");
 	buf[pos] = 0;
 	string s;
 	if (buf && strlen(buf)) s = buf;
 	return s;
 }
 
-term* din_t::readlist() {
+term* readlist() {
 	get();
 	vector<term*> items;
 	while (skip(), (good() && peek() != ')'))
@@ -78,7 +79,7 @@ term* din_t::readlist() {
 	return get(), skip(), mkterm(items);
 }
 
-term* din_t::readany() {
+term* readany() {
 	if (skip(), !good()) return 0;
 	if (peek() == '(') return readlist();
 	string s = till();
@@ -86,18 +87,16 @@ term* din_t::readany() {
 	return s.size() ? mkterm(s.c_str()) : 0;
 }
 
-const term *din_t::readterm() {
+const term *readterm() {
 	term *s, *p, *o;
 	if (skip(), !(s = readany()) || !(p = readany()) || !(o = readany()))
 		return 0;
-//	std::cout<<*s<<*p<<*o<<std::endl;
 	const term *r = mktriple(s, p, o);
 	if (skip(), peek() == '.') get(), skip();
-//	std::cout << *r << endl;
 	return r;
 }
 
-void din_t::readdoc(bool query) { // TODO: support prefixes
+void readdoc(bool query) { // TODO: support prefixes
 	const term *t;
 	done = false;
 	while (good() && !done) {
@@ -137,8 +136,3 @@ ostream &rule::operator>>(ostream &os) const {
 	for (auto t : body) *t >> os << ' ';
 	return os << "} => { ", (head ? *head >> os : os << ""), os << " }.";
 }
-//ostream &operator<<(ostream &os, const term &t) {
-//	return os << *terms[abs(t.r[0])] << ' ' << *terms[abs(t.r[1])] << ' '
-//	       << *terms[abs(t.r[2])] << '.';
-//}
-//}
