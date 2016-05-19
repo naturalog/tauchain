@@ -4,6 +4,7 @@ extern "C" {
 #include "containers.h"
 #include <map>
 #include <forward_list>
+#include <list>
 #include <set>
 using std::function;
 using std::ostream;
@@ -22,10 +23,11 @@ typedef const char cch;
 typedef cch* pcch;
 
 //namespace n3driver {
-struct crd : public forward_list<int> {
+struct crd {
+	std::list<int> c;
 	pcch str;
-	bool var;
-	crd(pcch str) : str(str), var(str && *str == '?') {}
+//	bool var;
+	crd(pcch str) : str(str) {} //, var(str && *str == '?') {}
 };
 typedef set<crd, struct ccmp> word;
 
@@ -35,7 +37,7 @@ template<typename T, typename V>
 T push_front(const T& t, const V& i) {
 	T r;
 	for (auto x : t) {
-		x.push_front(i);
+		x.c.push_front(i);
 		r.insert(x);
 	}
 	return r;
@@ -54,10 +56,10 @@ public:
         term(term** _args, uint sz);
 	term(const vector<term*>& a) : term(a.begin(), a.size()) {}
         ~term();
-	const ttype t;
+//	const ttype t;
 	const uint sz;
 	ostream& operator>>(ostream &os) const;
-	void crds(word &l, word &v, crd c = crd(0), int k = -1) const;
+	void crds(word&, crd c = crd(0), int k = -1) const;
 };
 
 struct premise {
@@ -74,6 +76,6 @@ struct rule {
         rule(const term *h, const term *b);
         rule(const rule &r);
 	ostream &operator>>(ostream &os) const;
-	void crds(word &l, word &v, int rl);
+	word crds(int rl);
 };
 

@@ -1,16 +1,22 @@
 #include "ast.h"
-
+#include <iostream>
 int ccmp::operator()(const crd& x, const crd& y) {
-	auto ix = x.begin(), ex = x.end();
-	auto iy = y.begin(), ey = y.end();
+	auto ix = x.c.begin(), ex = x.c.end();
+	auto iy = y.c.begin(), ey = y.c.end();
+//	if (x.size() != y.size()) return x.size() > y.size() ? -1 : 1;
 	while (ix != ex && iy != ey)
 		if (*ix != *iy) return *ix < *iy ? 1 : -1;
 		else ++ix, ++iy;
+	if (ix != ex) return -1;
+	if (iy != ey) return 1;
+	if (x.str && y.str && *x.str != '?' && *y.str != '?' && x.str != y.str)
+		return strcmp(x.str, y.str);
+	if (!x.str != !y.str) return x.str ? -1 : 1;
 	return 0;
 }
 
 ostream& operator<<(ostream& os, const crd& c) {
-	for (int i : c) os << i << ':';
+	for (int i : c.c) os << i << ':';
 	if (c.str) os << '(' << c.str << ')';
 	return os << endl;
 }
@@ -19,33 +25,31 @@ ostream& operator<<(ostream& os, const word& w) {
 	for (auto c : w) os << c; return os << endl;
 }
 
-void term::crds(word &l, word &v, crd c, int k) const {
-	if (k != -1) c.push_front(k);
-	if (t == lit) { c.var = false; c.str = p; l.emplace(c); return; }
-	if (t == var) { c.var = true; c.str = p; v.emplace(c); return; }
-	for (uint n = 0; n < sz; ++n) args[n]->crds(l, v, c, n);
+void term::crds(word &kb, crd c, int k) const {
+	if (k != -1) c.c.push_back(k);
+	if (!p) for (uint n = 0; n < sz; ++n) args[n]->crds(kb, c, n);
+	else { c.str = p; kb.emplace(c);/* std::cout << p << std::endl << c;*/ }
 }
 
-void rule::crds(word &ll, word &vv, int rl) {
-	word l, v;
-	if (head) head->crds(l, v), l = push_front(l, -1), v = push_front(v, -1);
+word rule::crds(int rl) {
+	word r;
+	if (head) head->crds(r), r = push_front(r, -1);
 	for (uint n = 0; n < body.size(); ++n) {
-		word _l, _v;
-		body[n]->t->crds(_l, _v, crd(0), n+1);
-		l.insert(_l.begin(), _l.end()), v.insert(_v.begin(), _v.end());
+		word k;
+		body[n]->t->crds(k, crd(0), n+1);
+		r.insert(k.begin(), k.end());
 	}
-	l = push_front(l, rl), v = push_front(v, rl);
-	ll.insert(l.begin(), l.end()), vv.insert(v.begin(), v.end());
+	return push_front(r, rl);
 }
 
-#define res_type(x) !(x) ? lst : *(x) == '?' ? var : lit
+//#define res_type(x) !(x) ? lst : *(x) == '?' ? var : lit
 
-term::term(pcch v) : p(ustr(v)), t(res_type(v)), sz(0) {
+term::term(pcch v) : p(ustr(v)), /*t(res_type(v)), */sz(0) {
 }
 
 term::term(term** _args, uint sz)
 	: p(0), args(new term*[sz + 1])
-	, t(lst), sz(sz) {
+	, /*t(lst), */sz(sz) {
 	for (uint n = 0; n < sz; ++n) args[n] = _args[n];
 	args[sz] = 0;
 }
@@ -69,8 +73,7 @@ rule::rule(const term *h, const term *b) : head(h), body(singleton(new premise(b
 rule::rule(const rule &r) : head(r.head), body(r.body) {}
 
 ostream &term::operator>>(ostream &os) const {
-	if (t != lst)
-		return p ? os << p : os;
+	if (p) return os << p;
 	os << '(';
 	auto a = args;
 	while (*a) **a++ >> os << ' ';

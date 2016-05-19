@@ -10,9 +10,13 @@
 void print() {
 	dout << "rules: " << rules.size() << endl;
 	uint n = 0;
-	word l, v;
-	for (auto r : rules) r->crds(l, v, ++n);
-	dout << "l:" <<endl<< l << "v:" << endl << v << endl;
+	word kb;
+	for (auto r : rules) {
+		word k = r->crds(++n);
+		for (auto x : k) kb.insert(x);
+//		kb.insert(k.begin(), k.end());
+	}
+	dout << kb << endl;
 	for (auto r : rules) *r >> dout << endl;
 }
 
@@ -21,6 +25,6 @@ int main() {
 	terms.push_back(new term("GND"));
 	din.readdoc(false);
 	//print();
-	din.readdoc(true);
+//	din.readdoc(true);
 	print();
 }
