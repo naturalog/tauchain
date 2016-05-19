@@ -27,10 +27,7 @@ ostream& operator<<(ostream& os, const word& w) {
 
 word push_front(const word& t, int i) {
 	word r;
-	for (auto x : t) {
-		x.c.push_front(i);
-		r.insert(x);
-	}
+	for (auto x : t) { x.c.push_front(i); r.insert(x); }
 	return r;
 }
 

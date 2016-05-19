@@ -1,4 +1,4 @@
-#include "ast.h"
+#include "ir.h"
 
 void print(const ast& st) {
 	dout << "rules: " << st.rules.size() << endl;
@@ -10,6 +10,7 @@ void print(const ast& st) {
 	}
 	dout << kb << endl;
 	for (auto r : st.rules) *r >> dout << endl;
+	dout << wrd(kb) << endl;
 }
 
 int main() {

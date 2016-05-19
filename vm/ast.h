@@ -6,21 +6,17 @@ extern "C" {
 #include <forward_list>
 #include <list>
 #include <set>
-using std::function;
 using std::ostream;
 using std::string;
-using std::stringstream;
 using std::endl;
-using std::cin;
-using std::tuple;
-using std::make_tuple;
 using std::runtime_error;
-using std::forward_list;
 using std::set;
 extern ostream &dout;
 
 typedef const char cch;
 typedef cch* pcch;
+
+// IR
 struct crd;
 struct ccmp { int operator()(const crd& x, const crd& y); };
 typedef set<crd, ccmp> word;
@@ -30,6 +26,7 @@ struct crd {
 	pcch str;
 	crd(pcch str) : str(str) {}
 };
+//
 
 struct ast {
 	class term {
