@@ -1,4 +1,4 @@
-#include "n3driver.h"
+#include "ast.h"
 #include <sstream>
 #include <cstdio>
 ostream &dout = std::cout;
@@ -6,7 +6,7 @@ ostream &dout = std::cout;
 typedef ast::term term;
 typedef ast::rule rule;
 
-ast st;
+ast *st;
 char ch;
 bool f, done, eof;
 
@@ -50,6 +50,11 @@ string &trim(string &s) {
 string edelims = ")}.";
 term* readany();
 
+term* mktriple(term* s, term* p, term* o) {
+	term *t[] = {s, p, o};
+	return new term(t, 3);
+}
+
 string till() {
 	skip();
 	static char buf[4096];
@@ -89,9 +94,10 @@ const term *readterm() {
 	return r;
 }
 
-void readdoc(bool query) { // TODO: support prefixes
+void readdoc(bool query, ast *_st) { // TODO: support prefixes
 	const term *t;
 	f = eof = done = false;
+	st = _st;
 	while (good() && !done) {
 		body_t body;
 		switch (skip(), peek()) {
@@ -102,14 +108,14 @@ void readdoc(bool query) { // TODO: support prefixes
 				body.push_back(new rule::premise(readterm()));
 			get(), skip(), get('='), get('>'), skip(), get('{'), skip();
 			if (peek() == '}')
-				st.rules.push_back(new rule(0, body)), skip();
+				st->rules.push_back(new rule(0, body)), skip();
 			else while (good() && peek() != '}')
-				st.rules.push_back(new rule(readterm(), body));
+				st->rules.push_back(new rule(readterm(), body));
 			get(); break;
 		case '#': getline(); break;
 		default:
 			if ((t = readterm()))
-				st.rules.push_back(query ? new rule(0, t) : new rule(t));
+				st->rules.push_back(query ? new rule(0, t) : new rule(t));
 			else if (!done)
 				THROW("parse error: term expected", "");
 		}

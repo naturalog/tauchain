@@ -76,7 +76,3 @@ ostream &ast::term::operator>>(ostream &os) const {
 	return os << ')';
 }
 
-term* mktriple(term* s, term* p, term* o) {
-	term *t[] = {s, p, o};
-	return new term(t, 3);
-}

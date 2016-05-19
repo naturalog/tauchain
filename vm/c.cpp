@@ -1,6 +1,6 @@
-#include "n3driver.h"
+#include "ast.h"
 
-void print() {
+void print(const ast& st) {
 	dout << "rules: " << st.rules.size() << endl;
 	uint n = 0;
 	word kb;
@@ -14,9 +14,10 @@ void print() {
 
 int main() {
 //	strings_test();
+	ast st;
 	st.terms.push_back(new ast::term("GND"));
-	readdoc(false);
+	readdoc(false, &st);
 	//print();
 //	din.readdoc(true);
-	print();
+	print(st);
 }

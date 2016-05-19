@@ -78,3 +78,4 @@ struct ast {
 	vector<term*> terms;
 };
 typedef vector<ast::rule::premise*> body_t;
+void readdoc(bool query, ast *st);
