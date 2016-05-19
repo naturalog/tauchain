@@ -3,14 +3,12 @@
 #include <cstdio>
 ostream &dout = std::cout;
 
-//namespace n3driver {
+typedef ast::term term;
+typedef ast::rule rule;
 
-vector<term*> terms;
-vector<rule*> rules;
-map<const term *, int> dict;
-//din_t din;
+ast st;
 char ch;
-bool f = false, done, in_query = false, eof = false;
+bool f, done, eof;
 
 #define THROW(x, y) { \
     stringstream s;  \
@@ -19,13 +17,11 @@ bool f = false, done, in_query = false, eof = false;
 
 char peek() {
 	char r = f ? ch : ((f = true), ch = getchar());
-	eof = r == EOF;
-	return r;
+	return eof = r == EOF, r;
 }
 char get() {
 	char r = f ? ((f = false), ch) : (ch = getchar());
-	eof = r == EOF;
-	return r;
+	return eof = r == EOF, r;
 }
 char get(char c) {
 	char r = get();
@@ -38,11 +34,8 @@ void getline() {
 	size_t sz = 0;
 	char *s = 0;
 	f = false;
-	::getline(&s, &sz, stdin);
-	free(s);
-	ch = ' ';
+	::getline(&s, &sz, stdin), free(s), ch = ' ';
 }
-//din_t() : eof(false) {/* wcin >> std::noskips;*/ } 
 string &trim(string &s) {
 	static string::iterator i = s.begin();
 	while (isspace(*i)) s.erase(i), i = s.begin();
@@ -72,8 +65,8 @@ string till() {
 }
 
 term* readlist() {
-	get();
 	vector<term*> items;
+	get();
 	while (skip(), (good() && peek() != ')'))
 		items.push_back(readany()), skip();
 	return get(), skip(), mkterm(items);
@@ -98,7 +91,7 @@ const term *readterm() {
 
 void readdoc(bool query) { // TODO: support prefixes
 	const term *t;
-	done = false;
+	f = eof = done = false;
 	while (good() && !done) {
 		body_t body;
 		switch (skip(), peek()) {
@@ -106,21 +99,17 @@ void readdoc(bool query) { // TODO: support prefixes
 			if (query) THROW("can't handle {} in query", "");
 			get();
 			while (good() && peek() != '}')
-				body.push_back(new premise(readterm()));
+				body.push_back(new rule::premise(readterm()));
 			get(), skip(), get('='), get('>'), skip(), get('{'), skip();
 			if (peek() == '}')
-				rules.push_back(new rule(0, body)), skip();
-			else
-				while (good() && peek() != '}')
-					rules.push_back(new rule(readterm(), body));
-			get();
-			break;
-		case '#':
-			getline();
-			break;
+				st.rules.push_back(new rule(0, body)), skip();
+			else while (good() && peek() != '}')
+				st.rules.push_back(new rule(readterm(), body));
+			get(); break;
+		case '#': getline(); break;
 		default:
 			if ((t = readterm()))
-				rules.push_back(query ? new rule(0, t) : new rule(t));
+				st.rules.push_back(query ? new rule(0, t) : new rule(t));
 			else if (!done)
 				THROW("parse error: term expected", "");
 		}
@@ -129,8 +118,7 @@ void readdoc(bool query) { // TODO: support prefixes
 	}
 }
 
-// output
-ostream &premise::operator>>(ostream &os) const { return (*t) >> os; }
+ostream &rule::premise::operator>>(ostream &os) const { return (*t) >> os; }
 ostream &rule::operator>>(ostream &os) const {
 	os << '{';
 	for (auto t : body) *t >> os << ' ';
