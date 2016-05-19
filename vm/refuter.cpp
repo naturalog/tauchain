@@ -1,5 +1,9 @@
 #include "ast.h"
 #include <iostream>
+#include <algorithm>
+#include <map>
+#include <unordered_map>
+#define umap std::unordered_map
 typedef ast::rule rule;
 typedef ast::term term;
 #define mkterm(x) new term(x)
@@ -25,20 +29,57 @@ word rule::crds(int rl) {
 	return push_front(r, rl);
 }
 
-wrd::wrd(const word& w) {
-	sz = w.size();
-	c = new int*[sz];
-	str = new pcch[sz];
-	uint i = 0, j;
-	for (const crd& r : w) {
-		c[i]=new int[r.c.size()+1];str[i]=r.str;c[i][r.c.size()]=0;j=0;
-		for (int x : r.c) c[i][j++] = x;
-		++i;
+struct refutation {}; 
+struct literal_clash : public refutation {};
+
+struct pfds { // prefix free data structure. also throws on literal merge trial
+	struct item {
+		bool lit;
+		pcch c, str;
+		item *rep = 0;
+		uint rank = 0;
+	};
+	umap<pcch, item*> g;
+	item* addvar(pcch) { }
+	item* addlit(pcch) { }
+	item* merge(item *x, item *y) throw(refutation) {
+//		check_pf();
+		while (x->rep) (x = x->rep)->rep = x->rep->rep;
+		while (y->rep) (y = y->rep)->rep = y->rep->rep;
+		if (x->lit) {
+			if (y->lit) {
+				if (x->str != y->str) throw literal_clash();
+				return x;
+			} else y->rep = x, ++x->rank;
+		} else if (y->lit || x->rank < y->rank) x->rep = y, ++y->rank;
+		else y->rep = x, ++x->rank;
 	}
-}
+};
 
+struct wrd {
+	int **c;
+	pcch *str;
+	uint sz;
+	wrd(const word& w) {
+		sz = w.size();
+		c = new int*[sz];
+		str = new pcch[sz];
+		uint i = 0, j;
+		for (ccrd& r:w) {
+			c[i] = new int[r.c.size()+1], j = 0;
+			str[i] = r.str, c[i][r.c.size()] = 0;
+			for (int x : r.c) c[i][j++] = x; ++i;
+		}
+	}
+	void refute();
+};
 
-void refute(wrd &kb, int q) {
+template<typename T> void range(T **a, uint sz, uint off, T i, uint &f, uint &l) {
+	uint c = sz / 2;
+	for (f = 0, l = sz; f != l; c = (f+l)/2) {
+		if (*(a[c]+off) < i) l = c;
+		else if (*(a[c]+off) > i) f = c;
+	}
 }
 
 int ccmp::operator()(ccrd& x, ccrd& y) {

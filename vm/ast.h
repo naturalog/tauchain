@@ -29,13 +29,7 @@ struct crd {
 	pcch str;
 	crd(pcch str) : str(str) {}
 };
-struct wrd {
-	int **c;
-	pcch *str;
-	uint sz;
-	wrd(const word& w);
-};
-ostream& operator<<(ostream& os, const wrd& w);
+ostream& operator<<(ostream& os, const struct wrd& w);
 //
 
 struct ast {
