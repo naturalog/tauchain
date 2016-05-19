@@ -35,15 +35,20 @@ struct literal_clash : public refutation {};
 struct pfds { // prefix free data structure. also throws on literal merge trial
 	struct item {
 		bool lit;
-		pcch c, str;
+		pcch c, str; // c is coord
 		item *rep = 0;
 		uint rank = 0;
+		item(pcch c, pcch str) : c(c), str(str), lit(*str != '?') {}
 	};
 	umap<pcch, item*> g;
-	item* addvar(pcch) { }
-	item* addlit(pcch) { }
+	item* makeset(pcch c, pcch str) {
+		//check pf
+		auto it = g.find(c);
+		if (it != g.end()) return it->second;
+		return g.emplace(c, new item(c, str)).first->second;
+
+	}
 	item* merge(item *x, item *y) throw(refutation) {
-//		check_pf();
 		while (x->rep) (x = x->rep)->rep = x->rep->rep;
 		while (y->rep) (y = y->rep)->rep = y->rep->rep;
 		if (x->lit) {
