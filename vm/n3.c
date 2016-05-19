@@ -1,7 +1,9 @@
+/*
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
 #include "strings.h"
 char *input;
 char in_query = 0; // 1 after first "fin."
@@ -134,3 +136,4 @@ void parse() {
 	int r;
 	while ((r = getrule()));// printr(&rls[r]), putwchar('\n');
 }
+*/
