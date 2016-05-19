@@ -11,6 +11,7 @@ using std::string;
 using std::endl;
 using std::runtime_error;
 using std::set;
+using ostm = std::ostream;
 extern ostream &dout;
 
 typedef const char cch;
