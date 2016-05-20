@@ -20,16 +20,19 @@ typedef cch* pcch;
 // IR
 struct crd;
 struct ccmp { int operator()(const crd& x, const crd& y); };
-typedef set<crd, ccmp> word;
+typedef std::list<crd> word;
 typedef const crd ccrd;
 typedef const word cword;
 
 struct crd {
-	std::list<int> c;
+	lary<int> c;
 	pcch str;
-	crd(pcch str) : str(str) {}
+	crd(pcch str = 0, uint len = 0) : c(len), str(str) {}
+	crd(const crd& t) : c(t.c), str(t.str) {}
+	crd(crd&& t) : c(t.c), str(t.str) {}
+	crd& operator=(const crd& t) { return c = t.c, str = t.str, *this; }
 };
-ostream& operator<<(ostream& os, const struct wrd& w);
+//ostream& operator<<(ostream& os, const struct wrd& w);
 //
 
 struct ast {
@@ -43,7 +46,7 @@ struct ast {
 		~term();
 		const uint sz;
 		ostream& operator>>(ostream &os) const;
-		void crds(word&, crd c = crd(0), int k = -1) const;
+		void crds(word&, crd c = crd(), int k = -1) const;
 	};
 	struct rule {
 		struct premise {
@@ -66,6 +69,6 @@ struct ast {
 typedef vector<ast::rule::premise*> body_t;
 typedef const ast::term cterm;
 void readdoc(bool query, ast *st);
-ostream& operator<<(ostream& os, const crd& c);
-ostream& operator<<(ostream& os, const word& w);
-word push_front(const word& t, int i);
+//ostream& operator<<(ostream& os, const crd& c);
+//ostream& operator<<(ostream& os, const word& w);
+void push_front(word& t, int i);

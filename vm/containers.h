@@ -9,6 +9,63 @@
 //#include <sstream>
 #include <cassert>
 #include <cstdlib>
+
+struct refutation {}; 
+struct literal_clash : public refutation{};
+struct prefix_clash : public refutation {};
+struct occur_fail : public prefix_clash {};
+
+template<typename T, typename V>
+struct iter {
+	V *b;
+	int p;
+	iter(V *b = 0, int p = 0) : b(b), p(p) {}
+	T& operator*()  { return b->a[p]; }
+	T* operator->() { return &b->a[p];}
+	iter operator++(){
+		return 	p < b->sz	?
+			(iter)(++p,*this)	:
+			b->n		?
+			b->n->begin()	:
+			(iter)(b=0,*this);
+	}
+	operator bool()  {return b; }
+}; 
+template<typename T>
+struct lary { // array given in parts as linked list
+	T *a;
+	uint sz;
+	lary<T> *n;
+	bool del;
+	lary(T *a, uint sz = 0, lary<T> *n = 0) : a(a), sz(sz), n(n), del(false) {}
+	lary(uint sz = 0, lary<T> *n = 0) : a(new T[sz]), sz(sz), n(n), del(true){}
+	lary(const lary<T>& t) : a(t.a), sz(t.sz), n(t.n), del(false) {}
+	lary(lary<T>&& t) : a(t.a), sz(t.sz), n(t.n), del(t.del) {}
+	~lary() { if (del) delete[] a; }
+	lary<T>& operator=(const lary<T>& t) { return a=t.a,sz=t.sz,n=t.n,del=false, *this; }
+
+	iter<T,lary<T>> begin(){ return iter<T,lary<T>>(this, 0); }
+	iter<T,lary<T>> end()  { return iter<T,lary<T>>(); }
+//	iter<T,const lary<T>> begin()const{return iter<T,const lary<T>>(this,0);}
+//	iter<T,const lary<T>> end()  const{return iter<T,const lary<T>>();}
+	const T& operator[](uint k) { return k < sz ? a[k] : (*n)[k-sz]; }
+	void push_back(const T& t) {
+		if (n) n->push_back(t);
+		else *(n = new lary<T>(1))->a = t;
+	}
+	void push_back(const lary<T>& t) { if (n) n->push_back(t); else n = &t; }
+	lary<T>* push_front(T& t) {
+		lary<T> *r = new lary(1, this);
+		return *r->a = t, r;
+	}
+
+	bool cmp(const lary<T>& x) throw(prefix_clash) {
+		auto i1 = begin(), i2 = x.begin();
+		while(i1&&i2)if(*i1!=*i2)return false;
+		if(!i1==!i2)return true;
+		throw prefix_clash();
+	}
+};
 /*
 typedef int word;
 struct arr  { int s; word *a; };
