@@ -48,11 +48,10 @@ struct lary { // array given in parts as linked list
 	struct iter {
 		V *b;
 		int p;
-		inline iter(V *b = 0, int p = 0) : b(b), p(p) {}
-		inline T& operator*() const { return b->a[p]; }
-		inline T* operator->() const { return &b->a[p]; }
-		inline iter operator++() {
-			return n<b->sz ? ++n,*this : b->n?b->n->begin():iter();}
+		iter(V *b = 0, int p = 0) : b(b), p(p) {}
+		T& operator*() const { return b->a[p]; }
+		T* operator->() const { return &b->a[p]; }
+		iter operator++(){return n<b->sz?++n,*this:b->n?b->n->begin():iter();}
 		operator bool() { return b; }
 	}; 
 	iter<lary<T>> begin() { return iter<lary<T>>(this, 0); }
@@ -63,9 +62,8 @@ struct lary { // array given in parts as linked list
 
 	bool cmp(const lary<T>& x) throw(prefix_clash) {
 		auto i1 = begin(), i2 = x.begin();
-		while (i1 && i2)
-			if (*i1 != *i2) return false;
-		if (!i1 == !i2) return true;
+		while(i1&&i2)if(*i1!=*i2)return false;
+		if(!i1==!i2)return true;
 		throw prefix_clash();
 	}
 };
@@ -79,24 +77,24 @@ struct pfds { // prefix free disjoint sets. represents all kb and throws all ref
 		item *rep = 0;
 		uint rank = 0;
 		item(lary<T> *c, pcch str, pcch rst = 0) : c(c), str(str), lit(*str != '?') {}
-		const T& operator[](uint n) { return (*c)[n]; }
+		T& operator[](uint n) { return (*c)[n]; }
+		const T& operator[](uint n) const { return (*c)[n]; }
 	};
 	std::map<lary<T>*, item*> g;
-	item* makeset(lary<T> *c, pcch str) throw(prefix_clash) {
-		for (auto it=g.upper_bound(c); (*it->second)[0]==(*c)[0]; ++it)
-			if (c->cmp(*it->second->c)) return it->second;
+	item* makeset(lary<T> *c, pcch str) throw(prefix_clash, literal_clash) {
+		item *i;
+		for (auto it=g.upper_bound(c); (*(i = it->second))[0]==(*c)[0]; ++it)
+			if (!c->cmp(*i->c)) return i;
+			else if (i->str!=c->str && !i->var && !c->var)
+				throw literal_clash();
 		return g.emplace(c, new item(c, str)).first->second;
 
 	}
-	item* merge(item *x, item *y) throw(refutation) {
+	void merge(item *x, item *y) throw(refutation) {
 		while (x->rep) (x = x->rep)->rep = x->rep->rep;
 		while (y->rep) (y = y->rep)->rep = y->rep->rep;
-		if (x->lit) {
-			if (y->lit) {
-				if (x->str != y->str) throw literal_clash();
-				return x;
-			} else y->rep = x, ++x->rank;
-		} else if (y->lit || x->rank < y->rank) x->rep = y, ++y->rank;
+		if (x->lit && y->lit) {if (x->str!=y->str) throw literal_clash();}
+		else if (y->lit || x->rank < y->rank) x->rep = y, ++y->rank;
 		else y->rep = x, ++x->rank;
 	}
 };
@@ -106,17 +104,14 @@ struct wrd {
 	pcch *str;
 	uint sz;
 	wrd(const word& w) {
-		sz = w.size();
-		c = new int*[sz];
-		str = new pcch[sz];
+		sz = w.size(), c = new int*[sz], str = new pcch[sz];
 		uint i = 0, j;
 		for (ccrd& r:w) {
-			c[i] = new int[r.c.size()+1], j = 0;
-			str[i] = r.str, c[i][r.c.size()] = 0;
-			for (int x : r.c) c[i][j++] = x; ++i;
+			c[i]=new int[r.c.size()+1], j = 0;
+			str[i]=r.str,c[i][r.c.size()] = 0;
+			for (int x:r.c)c[i][j++] = x; ++i;
 		}
 	}
-	void refute();
 };
 
 template<typename T> void range(T **a, uint sz, uint off, T i, uint &f, uint &l) {
