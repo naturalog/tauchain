@@ -55,12 +55,13 @@ struct lary { // array given in parts as linked list
 			return n<b->sz ? ++n,*this : b->n?b->n->begin():iter();}
 		operator bool() { return b; }
 	}; 
-	inline iter<lary<T>> begin() { return iter<lary<T>>(this, 0); }
-	inline iter<lary<T>> end() { return iter<lary<T>>(); }
-	inline iter<const lary<T>> begin() const { return iter<const lary<T>>(this, 0); }
-	inline iter<const lary<T>> end() const { return iter<const lary<T>>(); }
+	iter<lary<T>> begin() { return iter<lary<T>>(this, 0); }
+	iter<lary<T>> end() { return iter<lary<T>>(); }
+	iter<const lary<T>> begin()const{return iter<const lary<T>>(this,0);}
+	iter<const lary<T>> end()  const{return iter<const lary<T>>();}
+	const T& operator[](uint k) { return k < sz ? a[k] : (*n)[k-sz]; }
 
-	inline bool cmp(const lary<T>& x) throw(prefix_clash) {
+	bool cmp(const lary<T>& x) throw(prefix_clash) {
 		auto i1 = begin(), i2 = x.begin();
 		while (i1 && i2)
 			if (*i1 != *i2) return false;
@@ -69,24 +70,21 @@ struct lary { // array given in parts as linked list
 	}
 };
 
+template<typename T>
 struct pfds { // prefix free disjoint sets. represents all kb and throws all refutations
 	struct item {
-		lary<int> *c; // coords
+		lary<T> *c; // coords
 		pcch str;
 		bool lit;
 		item *rep = 0;
 		uint rank = 0;
-		item(lary<int> *c, pcch str, pcch rst = 0) : c(c), str(str), lit(*str != '?') {}
+		item(lary<T> *c, pcch str, pcch rst = 0) : c(c), str(str), lit(*str != '?') {}
+		const T& operator[](uint n) { return (*c)[n]; }
 	};
-	std::map<lary<int>*, item*> g;
-	item* makeset(lary<int> *c, pcch str) throw(prefix_clash) {
-		//check pf
-		auto u = g.upper_bound(c);
-		auto l = g.lower_bound(c);
-		if (u != l) {
-			if (c->cmp(*u->second->c)) return u->second;
-			++u;
-		}
+	std::map<lary<T>*, item*> g;
+	item* makeset(lary<T> *c, pcch str) throw(prefix_clash) {
+		for (auto it=g.upper_bound(c); (*it->second)[0]==(*c)[0]; ++it)
+			if (c->cmp(*it->second->c)) return it->second;
 		return g.emplace(c, new item(c, str)).first->second;
 
 	}
