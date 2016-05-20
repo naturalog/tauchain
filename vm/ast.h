@@ -31,6 +31,7 @@ struct crd {
 	crd(const crd& t) : c(t.c), str(t.str) {}
 	crd(crd&& t) : c(t.c), str(t.str) {}
 	crd& operator=(const crd& t) { return c = t.c, str = t.str, *this; }
+	ostm& operator>>(ostm& os) const { c >> os << '(' << (str ? str : "null") << ' '; }
 };
 //ostream& operator<<(ostream& os, const struct wrd& w);
 //

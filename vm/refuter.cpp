@@ -60,11 +60,11 @@ struct pfds { // prefix free disjoint sets. represents all kb and throws all ref
 		else y->rep = x, ++x->rank;
 	}
 };
-#define os_each(x, y) for(auto x:y)os<<x
+
+#define os_each(x, y) for(auto x:y)((x)>>os)
 void push_front(word& t, int i){word r;for(auto x:t)x.c.push_front(i),r.push_back(x);t=r;}
-//ostm& operator<<(ostm& os,cword& w){os_each(c,w);return os<<endl;}
-//ostm& operator<<(ostm& os,ccrd& c) {os_each(i,c.c)<<':';
-//if(c.str)os<<'('<<c.str<<')';return os<<endl; }
+ostm& operator<<(ostm& os,word& w){os_each(c,w);return os<<endl;}
+ostm& operator<<(ostm& os,crd& c) { return c >> os; }
 ostm &term::operator>>(ostm &os)const{if(p)return os<<p;os<<'(';
 auto a=args;while(*a)**a++>>os<<' ';return os<<')';}
 term::term(term** _args,uint sz):p(0),args(new term*[sz+1]),sz(sz){
@@ -75,7 +75,6 @@ rule::rule(cterm *h,const body_t &b):head(h),body(b){}
 template<typename T> inline vector<T> singleton(T x){ vector<T>r;r.push_back(x);return x;} 
 rule::rule(cterm *h,cterm *b):head(h),body(singleton(new premise(b))){}
 rule::rule(const rule &r) : head(r.head), body(r.body) {}
-//ostm& operator<<(ostm& os,const wrd& w){ FORZ(n,w.sz){int *i=w.c[n];while(*i)os<<*i++<<':'; if(w.str[n])os<<w.str[n];os<<endl;}return os;}
 
 void print(const ast& st) {
 	dout << "rules: " << st.rules.size() << endl;
@@ -85,7 +84,7 @@ void print(const ast& st) {
 		word k = r->crds(++n);
 		for (auto x : k) kb.push_back(x);
 	}
-//	dout << kb << endl;
+	dout << kb << endl;
 	for (auto r : st.rules) *r >> dout << endl;
 //	dout << wrd(kb) << endl;
 }

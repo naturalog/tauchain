@@ -24,12 +24,11 @@ struct iter {
 	T* operator->() { return &b->a[p];}
 	iter operator++(){
 		return 	p < b->sz	?
-			(iter)(++p,*this)	:
+			(iter)(++p,*this):
 			b->n		?
 			b->n->begin()	:
-			(iter)(b=0,*this);
-	}
-	operator bool()  {return b; }
+			(iter)(b=0,*this);}
+	operator bool() { return b; }
 }; 
 template<typename T>
 struct lary { // array given in parts as linked list
@@ -46,8 +45,8 @@ struct lary { // array given in parts as linked list
 
 	iter<T,lary<T>> begin(){ return iter<T,lary<T>>(this, 0); }
 	iter<T,lary<T>> end()  { return iter<T,lary<T>>(); }
-//	iter<T,const lary<T>> begin()const{return iter<T,const lary<T>>(this,0);}
-//	iter<T,const lary<T>> end()  const{return iter<T,const lary<T>>();}
+	iter<T,const lary<T>> begin()const{return iter<const T,const lary<T>>(this,0);}
+	iter<T,const lary<T>> end()  const{return iter<const T,const lary<T>>();}
 	const T& operator[](uint k) { return k < sz ? a[k] : (*n)[k-sz]; }
 	void push_back(const T& t) {
 		if (n) n->push_back(t);
@@ -64,6 +63,11 @@ struct lary { // array given in parts as linked list
 		while(i1&&i2)if(*i1!=*i2)return false;
 		if(!i1==!i2)return true;
 		throw prefix_clash();
+	}
+	std::ostream& operator>>(std::ostream& os) const {
+		auto y = *this;
+		for (auto x : y) os << x << ' ';
+		return os;
 	}
 };
 /*
