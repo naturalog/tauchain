@@ -21,7 +21,10 @@ from the ast. The rest are needed to be checked with every merge.
 Below x,y are coords, *x and *y denote their representative (or its color only).
 x~y means they're in the same equivalence class.
 
-10 rules:
+Given two terms X,Y represented as sets of coordinates and x,y are coordinates
+chosen from them respectively, we have 10 unification rules. Note that the
+following rules affect the dsds that are stored at the kb level rather at the
+term level.
 									 
 	 *x atom			*x var		*x atom		 *x list
 	 *y atom	*x atom		*y var		*y list		 *y list
@@ -39,7 +42,17 @@ x~y means they're in the same equivalence class.
 	 x < y 		 x < y           x = y		  x < y
 	=========       =========      	=========        ==========		========
 	 *x list	 *x list       	  nop   	   add y         	  x ~ y
-                                               	
+
+
+which can apparently be simplified into 6 rules:
+
+{ *x atom.	*y atom. 	x~y. 	x!=y 	} => throw.
+{ *x atom.	*y list. 	x~y		} => throw.
+{ *x atom.	x<y 				} => throw.
+{ *x var.	*y var. 	x~y. 	x<y	} => throw.
+{ *x var.	x=y				} => x~y.
+{ *x var.	*y var.		*x<*xx	*y<*yy	x~y. x<a x<b 	} => a~b, *x list, *y list.
+
 Caching
 =======
 
