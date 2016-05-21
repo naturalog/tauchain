@@ -18,41 +18,32 @@ All coords assume be written wrt the whole kb.
 1.1 and 1.3 are achieved automatically by properly calculating the coordinates
 from the ast. The rest are needed to be checked with every merge.
 
-Below x,y are coords, *x and *y denote their representative (or its color only). x~y means they're in the same equivalence class.
+Below x,y are coords, *x and *y denote their representative (or its color only).
+x~y means they're in the same equivalence class.
 
-5 throw rules (the last three should be checked with every merge below):
+5 throw rules:
+									 *x list
+	 *x atom			*x var				 *y list
+	 *y atom	       		*y var		*x atom		  x ~ y
+	  x = y        	x atom       	x < y		*y list		 exists z > x
+	  x!=y        	x < y		x ~ y		 x ~ y	        	z!< y
+	---------	-------		-------		-------		-------------
+	 throw		 throw		 throw		 throw		   throw 
 
-	*x atom					*x var		
-	*y atom			*x atom		*y var		*x atom
-	(x=y & *x=*y) or	*y var|list	x < y		*y list
-	x<y or x>y		x < y		x ~ y		 x ~ y	
-	----------------	-------		-------		-------
-	     throw		 throw		 throw		 throw
+one merge rule:
 
+	*x = *y
+	-------
+	 x ~ y
 
-	*x list		
-	*y list		
-	 x ~ y	
-	 ex z > x	
-	    z!< y
-	----------
-	 throw
-
-5 possible merges:
-
-	 *x var    *x list  *x var   *x var          
-	 *y atom   *y var   *y var   *y list  *x list 
-	 x = y     x = y    x = y    x < y    *y list 
-	--------  -------  -------  -------- ---------
-	 merge     merge    merge    merge    merge  
-
+means that coordinates that point to the same value are always equivalent.
 
 2 list intro:
 
 		      			 *x var  
 	 *x var				 *y var  
 	 *y var or atom or list		 x < y  
-	 x < y 				 *x!= *y  
+	 x < y 				 x!~ y  
 	------------------------	--------
 	 *x list			 *x list 
 
