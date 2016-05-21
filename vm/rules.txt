@@ -51,7 +51,8 @@ which can apparently be simplified into 6 rules:
 { *x atom.	x<y 				} => throw.
 { *x var.	*y var. 	x~y. 	x<y	} => throw.
 { *x var.	x=y				} => x~y.
-{ *x var.	*y var.		*x<*xx	*y<*yy	x~y. x<a x<b 	} => a~b, *x list, *y list.
+{ *x var.	*y var.		x~y.	x<a.	x<b.	} => a~b, *x list, *y list.
+(where a,b are quantified universally)
 
 Caching
 =======
