@@ -1,0 +1,18 @@
+{ ?x :color :var.	?y :color :var.       	?yy :color :var.        ?y :prefixof ?yy.       ?y :notequiv ?yy.	?x :equals ?y			} => {?x :equiv ?y}.
+{ ?x :color :var.	?y :color :var.		?y :prefixof :yy.	?x :equals ?y									} => {?x :equiv ?y}.
+{ ?x :color :var.	?y :color :atom.	?x :equals ?y												} => {?x :equiv ?y}.
+{ ?x :equiv ?y.		?x :equiv ?z.															} => {?y :equiv ?z}.
+{ ?x :equiv ?y.		?x :notequiv ?z.														} => {?y :notequiv ?z}.
+
+
+{ ?x :color :atom.	?y :color :var.       	?yy :color :var.        ?y :prefixof ?yy.       ?y :notequiv ?yy. 	?x :equiv ?y			} => false.
+{ ?x :color :var.       ?xx :color :var.      	?x :prefixof ?xx.       ?x :notequiv ?xx.	?y :color :var.    	?yy :color :var.
+  ?y :prefixof ?yy. 	?y :notequiv ?yy.	?x :equiv ?y.		?x :prefixof ?z.	?y :notprefixof ?z					} => false.
+{ ?x :color :atom.	?y :color :var.		?y :prefixof :yy. 	?x :equiv ?y									} => false.
+{ ?x :color :var.	?x :prefixof ?xx.	?y :color :var.		?y :prefixof ?yy.	?x :equiv ?y.		?x :prefixof ?z. ?y :notprefixof ?z } => false.
+{ ?x :color :atom.	?y :color :atom. 	?x :equiv ?y. 		?x :notequals ?y								} => false.
+{ ?x :color :atom.	?x :prefixof ?y 														} => false.
+{ ?x :color :var.	?y :color :var. 	?x :equiv ?y. 		?x :prefixof ?y									} => false.
+{ ?x :equiv ?y. 	?x :notequiv ?y 														} => false.
+{ ?x :equals ?y. 	?x :notequals ?y 														} => false.
+{ ?x :prefixof ?y. 	?x :notprefixof ?y 														} => false.

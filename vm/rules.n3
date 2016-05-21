@@ -1,0 +1,15 @@
+@prefix : <#>.
+
+{ ?x :color :var.	?y :color :atom.	?x :equals ?y			} => {?x :equiv ?y}.
+{ ?x :color :var.	?y :color :list.	?x :equals ?y			} => {?x :equiv ?y}.
+{ ?x :equiv ?y.		?x :equiv ?z.						} => {?y :equiv ?z}.
+{ ?x :color :var.	?x :prefixof ?y. 					} => {?x :color :list}.
+{ ?x :color :atom.	?y :color :atom. 	?x :equiv ?y. 	?x :notequals ?y} => false.
+{ ?x :color :atom.	?x :prefixof ?y 					} => false.
+{ ?x :color :var.	?y :color :var. 	?x :equiv ?y. 	?x :prefixof ?y	} => false.
+{ ?x :color :atom.	?y :color :list. 	?x :equiv ?y			} => false.
+{ ?x :equiv ?y. 	?x :notequiv ?y 					} => false.
+{ ?x :equals ?y. 	?x :notequals ?y 					} => false.
+{ ?x :prefixof ?y. 	?x :notprefixof ?y 					} => false.
+{ ?x :color :list.	?y :color :list.	?x :equiv ?y. ?x :prefixof ?z. ?y :notprefixof ?z } => false.
+{ ?x :color :var.	?y :color :var. 	?x :prefixof ?y.	?x :notequiv ?y	} => {?x :color :list}.
