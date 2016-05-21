@@ -21,45 +21,27 @@ from the ast. The rest are needed to be checked with every merge.
 Below x,y are coords, *x and *y denote their representative (or its color only).
 x~y means they're in the same equivalence class.
 
-5 throw rules:
-									 *x list
-	 *x atom			*x var				 *y list
-	 *y atom	       		*y var		*x atom		  x ~ y
-	  x = y        	x atom       	x < y		*y list		 exists z > x
-	  x!=y        	x < y		x ~ y		 x ~ y	        	z!< y
-	---------	-------		-------		-------		-------------
-	 throw		 throw		 throw		 throw		   throw 
-
-one merge rule:
-
-	*x = *y
-	-------
-	 x ~ y
-
-means that coordinates that point to the same value are always equivalent.
-
-2 list intro:
-
-		      			 *x var  
-	 *x var				 *y var  
-	 *y var or atom or list		 x < y  
-	 x < y 				 x!~ y  
-	------------------------	--------
-	 *x list			 *x list 
-
-2 nop cases:
-
-	        			  *x list 
-	 *x atom			  *y list 
-	 *y atom			  or atom 
-	 x = y and *x = *y		  x < y  
-	------------------		 -------- 
-	  nop   			   nop    
+10 rules:
+									 
+	 *x atom			*x var		*x atom		 *x list
+	 *y atom	*x atom		*y var		*y list		 *y list
+	---------       -------        --------        ---------        ---------    
+	  x ~ y        	              	x ~ y		 x ~ y		  x ~ y
+	  x!=y        	 x < y		x < y		      	          x < z, y !< z
+	=========	=======		=======		=======		================
+	 throw		 throw		 throw		 throw		  throw 
 
 
+		     	 *x var  	 *x atom	  *x list		 *x var
+	 *x var		 *y var        	 *y atom	  *y atom or list	 *y atom or list
+	--------        ---------      	---------   	------------------	--------
+	 		 x!~ y         	 x ~ y              	         	  x = y		
+	 x < y 		 x < y           x = y		  x < y
+	=========       =========      	=========        ==========		========
+	 *x list	 *x list       	  nop   	   add y         	  x ~ y
+                                               	
 Caching
 =======
 
 All coordinates has to be maintained uniquely, and to keep a pointer to their
 longest prefix coordinate. 
-
