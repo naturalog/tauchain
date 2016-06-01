@@ -9,7 +9,10 @@ string strhash(string x)
 	std::hash<std::string> fn;
 	size_t h = fn(x);
 	stringstream sss;
-	sss << /*std::showbase << std::uppercase << std::hex <<*/ h;// "0xbab5";//h;
+	sss << 
+	/*std::showbase << std::uppercase << std::hex <<*/ 
+	h;
+	// "0xbab5";//h;
 	return sss.str();
 }
 
@@ -53,7 +56,7 @@ void build_in_dht()
 	static bool running = false;
 	static mutex mut;
 	static dht::DhtRunner ht;
-	
+	static int port = 4443;
 	
 	if (!running)
 	{
@@ -141,7 +144,37 @@ void build_in_dht()
 	
 	
 	bu = "http://idni.org/dht#dbg";
-		     http://idni.org/dht#dbg
+	bui = dict.set(mkiri(pstr(bu)));
+
+	builtins[bui].push_back(
+		[bu, entry, ht_](Thing *dummy, Thing *x) mutable {
+		setproc(bu);
+		TRACE_ENTRY;
+		
+		switch(entry){
+		case 0:
+			x = getValue(x);
+					
+			if(is_node(*x))
+			{
+				node n = dict[get_node(*x)];
+				string v = *n.value;
+				if (v == "on")
+				{
+					MSG("dht dbg on");
+					enableDhtLogging(*ht_);
+				}
+				else{
+					MSG("dht dbg off");
+					ht_->setLoggers(dht::NOLOG, dht::NOLOG, dht::NOLOG);
+				}
+			}
+						
+			END;
+		}
+	});
+
+	bu = "http://idni.org/dht#setPort";
 	bui = dict.set(mkiri(pstr(bu)));
 
 	builtins[bui].push_back(
