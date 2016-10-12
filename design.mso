@@ -1,17 +1,29 @@
 some design questions to be answered:
 
 1. the object language. can be either stlc+y (finitary PCF), or equivalently HORS, or, using the transfer theorem, have it MSOL just like the type language.
-2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to speak about cardinalities of sets (https://arxiv.org/abs/1505.06622). need to see how it can fit.
-3. need to decide whether MSOL will be used as type language directly, or, an automaton-based typesystem (that may increase expressiveness).
-4. need a compositional typesystem (e.g. www.kb.is.s.u-tokyo.ac.jp/~tsukada/papers/effect-arena-long.pdf)
+2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to speak about cardinalities of sets ([2]). need to see how it can fit.
+3. need to decide whether MSOL will be used as type language directly, or, an automaton-based typesystem.
+4. need a compositional typesystem (e.g. [3], there exists another one but for wMSO, i'm not yet aware of another MSOL one)
 5. how can tau support multiple logics?
 	- a nomic game may take into a consideration additional rules (that may be changed) that speak about "what is truth" and "what amounts as a proof".
 	- seems like even prolog compiler can be written in MSOL, but need to think how truths/proofs from another logic may be "imported".
+	- can such tau have only a fragment of full MSOL, and recover even more generalized logics via "trusted compilers"?
+6. how good is the idea of using the transfer theorem and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
 
 first implementation tasks:
 1. stlc+y
 2. HORS
-3. parity automatons
-4. krivine machine
-5. transfer theorem
-6. parity games
+3. parity automata, collapsible pushdown automata(, ordered tree pushdown)
+4. bohm trees
+5. krivine machine
+6. transfer theorem
+7. parity games
+8. logical reflection? ([4])
+9. economical stlc+y <=> HORS ([1])
+10. stlc+y => CPDA ([1])
+
+references:
+[1] "Simply typed fixpoint calculus and collapsible pushdown automata" Salvati&Walukiewicz
+[2] https://arxiv.org/abs/1505.06622
+[3] www.kb.is.s.u-tokyo.ac.jp/~tsukada/papers/effect-arena-long.pdf
+[4] "Recursion Schemes and Logical Reflection" Broadbent, Carayol, Ong, Serre
