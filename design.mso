@@ -1,9 +1,9 @@
 some design questions to be answered:
 
-1. the object language. can be either stlc+y (finitary PCF), or equivalently HORS, or, using the transfer theorem, have it MSOL like the type language.
-2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to speak about cardinalities of sets. need to see how it can fit.
+1. the object language. can be either stlc+y (finitary PCF), or equivalently HORS, or, using the transfer theorem, have it MSOL just like the type language.
+2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to speak about cardinalities of sets (https://arxiv.org/abs/1505.06622). need to see how it can fit.
 3. need to decide whether MSOL will be used as type language directly, or, an automaton-based typesystem (that may increase expressiveness).
-4. need a compositional typesystem (e.g. Ong&Tsukada)
+4. need a compositional typesystem (e.g. www.kb.is.s.u-tokyo.ac.jp/~tsukada/papers/effect-arena-long.pdf)
 5. how can tau support multiple logics?
 	- a nomic game may take into a consideration additional rules (that may be changed) that speak about "what is truth" and "what amounts as a proof".
 	- seems like even prolog compiler can be written in MSOL, but need to think how truths/proofs from another logic may be "imported".
