@@ -1,4 +1,4 @@
-some design questions to be answered:
+* some design questions to be answered:
 
 1. the object language. can be either stlc+y (finitary PCF), or equivalently HORS, or, using the transfer theorem, have it MSOL just like the type language.
 2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to speak about cardinalities of sets ([2]). need to see how it can fit.
@@ -9,8 +9,9 @@ some design questions to be answered:
 	- seems like even prolog compiler can be written in MSOL, but need to think how truths/proofs from another logic may be "imported".
 	- can such tau have only a fragment of full MSOL, and recover even more generalized logics via "trusted compilers"?
 6. how good is the idea of using the transfer theorem and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
+7. backtracking? ([5])
 
-first implementation tasks:
+* first implementation tasks:
 1. stlc+y
 2. HORS
 3. parity automata, collapsible pushdown automata(, ordered tree pushdown)
@@ -22,8 +23,12 @@ first implementation tasks:
 9. economical stlc+y <=> HORS ([1])
 10. stlc+y => CPDA ([1])
 
-references:
+* food for thought:
+1. labels -> equivalences -> prefix orders -> trees
+
+* references:
 [1] "Simply typed fixpoint calculus and collapsible pushdown automata" Salvati&Walukiewicz
 [2] https://arxiv.org/abs/1505.06622
 [3] www.kb.is.s.u-tokyo.ac.jp/~tsukada/papers/effect-arena-long.pdf
 [4] "Recursion Schemes and Logical Reflection" Broadbent, Carayol, Ong, Serre
+[5] http://www.anupamdas.com/items/CompAxMSOTrees/CompAxMSOTrees.pdf
