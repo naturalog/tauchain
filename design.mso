@@ -25,10 +25,14 @@
 9. economical stlc+y <=> HORS ([1])
 10. stlc+y => CPDA ([1])
 
+remarks:
+1. [very] fast algorithms can be found at [8]
+
 * food for thought:
 1. labels -> equivalences -> prefix orders -> trees
 2. every infinite path gives rise to peano arithmetic (might be useful for short and fast proofs)
-3. one of the big questions: which logics can msol prove to be consistent?
+3. one of the big questions: which logics can msol prove to be consistent? can it prove [in]consistency of any herbrand model? cf [8] p. 149
+4. how exactly abstract interpretations and higher order model checking are related? can they benefit from each other? what is the preferred underlying representation, should Galois connections be considered as such?
 
 * references:
 [1] "Simply typed fixpoint calculus and collapsible pushdown automata" Salvati&Walukiewicz
@@ -38,3 +42,4 @@
 [5] http://www.anupamdas.com/items/CompAxMSOTrees/CompAxMSOTrees.pdf
 [6] https://hal.archives-ouvertes.fr/hal-00865682v2/document
 [7] https://swt.informatik.uni-freiburg.de/berit/papers/lisa_a_specification_language_based_on_ws_s.pdf
+[8] http://www.di.ens.fr/~mauborgn/publi/t.pdf
