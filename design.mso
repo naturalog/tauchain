@@ -1,15 +1,17 @@
 * some design questions to be answered:
 
 1. the object language. can be either stlc+y (finitary PCF), or equivalently HORS, or, using the transfer theorem, have it MSOL just like the type language.
-2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to speak about cardinalities of sets ([2]). need to see how it can fit.
+2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to compare (and add) cardinalities of sets ([2]). need to see how it can fit.
 3. need to decide whether MSOL will be used as type language directly, or, an automaton-based typesystem.
 4. need a compositional typesystem (e.g. [3], there exists another one but for wMSO, i'm not yet aware of another MSOL one)
 5. how can tau support multiple logics?
 	- a nomic game may take into a consideration additional rules (that may be changed) that speak about "what is truth" and "what amounts as a proof".
 	- seems like even prolog compiler can be written in MSOL, but need to think how truths/proofs from another logic may be "imported".
 	- can such tau have only a fragment of full MSOL, and recover even more generalized logics via "trusted compilers"?
+	- can truth be only something derived from judgements, or we can encode eg "trees of truth"? i think that msol is capable of doing arbitrary Herbrand model reasoning.
 6. how good is the idea of using the transfer theorem and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
 7. backtracking? ([5])
+8. LISA language (1st order!) [7]
 
 * first implementation tasks:
 1. stlc+y
@@ -19,12 +21,14 @@
 5. krivine machine
 6. transfer theorem
 7. parity games
-8. logical reflection? ([4])
+8. logical reflection and effective selection ([6])
 9. economical stlc+y <=> HORS ([1])
 10. stlc+y => CPDA ([1])
 
 * food for thought:
 1. labels -> equivalences -> prefix orders -> trees
+2. every infinite path gives rise to peano arithmetic (might be useful for short and fast proofs)
+3. one of the big questions: which logics can msol prove to be consistent?
 
 * references:
 [1] "Simply typed fixpoint calculus and collapsible pushdown automata" Salvati&Walukiewicz
@@ -32,3 +36,5 @@
 [3] www.kb.is.s.u-tokyo.ac.jp/~tsukada/papers/effect-arena-long.pdf
 [4] "Recursion Schemes and Logical Reflection" Broadbent, Carayol, Ong, Serre
 [5] http://www.anupamdas.com/items/CompAxMSOTrees/CompAxMSOTrees.pdf
+[6] https://hal.archives-ouvertes.fr/hal-00865682v2/document
+[7] https://swt.informatik.uni-freiburg.de/berit/papers/lisa_a_specification_language_based_on_ws_s.pdf
