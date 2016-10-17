@@ -3,7 +3,7 @@
 1. the object language. can be either stlc+y (finitary PCF), or equivalently HORS, or, using the transfer theorem, have it MSOL just like the type language.
 2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to compare (and add) cardinalities of sets ([2]). need to see how it can fit.
 3. need to decide whether MSOL will be used as type language directly, or, an automaton-based typesystem.
-4. need a compositional typesystem (e.g. [3], there exists another one but for wMSO, i'm not yet aware of another MSOL one)
+4. need a compositional typesystem (e.g. [3], [9])
 5. how can tau support multiple logics?
 	- a nomic game may take into a consideration additional rules (that may be changed) that speak about "what is truth" and "what amounts as a proof".
 	- seems like even prolog compiler can be written in MSOL, but need to think how truths/proofs from another logic may be "imported".
@@ -26,13 +26,17 @@
 10. stlc+y => CPDA ([1])
 
 remarks:
-1. [very] fast algorithms can be found at [8]
+1. very fast algorithms can be found at [8]
 
 * food for thought:
 1. labels -> equivalences -> prefix orders -> trees
 2. every infinite path gives rise to peano arithmetic (might be useful for short and fast proofs)
-3. one of the big questions: which logics can msol prove to be consistent? can it prove [in]consistency of any herbrand model? cf [8] p. 149
+3. one of the big questions: which logics can msol prove to be consistent? can it prove [in]consistency of any herbrand model? cf [8] p. 149 also can do it in translation to constraints fashion (which is preferrable from runtime complexity point of view) similarly to Wand 1987. also self-verifying systems are very appealing http://www.cs.albany.edu/~dew/m/jsl1.pdf
 4. how exactly abstract interpretations and higher order model checking are related? can they benefit from each other? what is the preferred underlying representation, should Galois connections be considered as such?
+
+some conclusions:
+1. from the above mentioned options, looks like the model theoretic approach is the best available way. it subsums model checking, transfer theorem, and many more. it was first pioneered in [9], also presented in the very good document [10]. a different model was given in [11, 12 chapter 10]. another different one for wmso in [13], and another fragment (omega-blind) in [14].
+2. since we prefer the proof search method for various reasons, the order theoretic models can be seen as a subsystem of [5] (which itself a subsystem of second order peano). 
 
 * references:
 [1] "Simply typed fixpoint calculus and collapsible pushdown automata" Salvati&Walukiewicz
@@ -43,3 +47,9 @@ remarks:
 [6] https://hal.archives-ouvertes.fr/hal-00865682v2/document
 [7] https://swt.informatik.uni-freiburg.de/berit/papers/lisa_a_specification_language_based_on_ws_s.pdf
 [8] http://www.di.ens.fr/~mauborgn/publi/t.pdf
+[9] https://hal.archives-ouvertes.fr/hal-01145494/document
+[10] https://hal.archives-ouvertes.fr/tel-01253426/document
+[11] https://arxiv.org/pdf/1502.05147.pdf
+[12] https://hal.archives-ouvertes.fr/tel-01311150/document
+[13] http://drops.dagstuhl.de/opus/volltexte/2016/6551/pdf/LIPIcs-CSL-2016-11.pdf
+[14] https://hal.archives-ouvertes.fr/hal-01169352/file/hal-version.pdf
