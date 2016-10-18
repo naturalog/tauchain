@@ -12,6 +12,7 @@
 6. how good is the idea of using the transfer theorem and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
 7. backtracking? ([5])
 8. LISA language (1st order!) [7]
+9. multiparameter tree transducers [16], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
 
 * first implementation tasks:
 1. stlc+y
@@ -27,12 +28,14 @@
 
 remarks:
 1. very fast algorithms can be found at [8]
+2. linear dependent types for pcf [15]
 
 * food for thought:
 1. labels -> equivalences -> prefix orders -> trees
 2. every infinite path gives rise to peano arithmetic (might be useful for short and fast proofs)
 3. one of the big questions: which logics can msol prove to be consistent? can it prove [in]consistency of any herbrand model? cf [8] p. 149 also can do it in translation to constraints fashion (which is preferrable from runtime complexity point of view) similarly to Wand 1987. also self-verifying systems are very appealing http://www.cs.albany.edu/~dew/m/jsl1.pdf
 4. how exactly abstract interpretations and higher order model checking are related? can they benefit from each other? what is the preferred underlying representation, should Galois connections be considered as such?
+5. higher order tree functions with (generalized) fixpoint (relaxing the complete lattice structure)?
 
 some conclusions:
 1. from the above mentioned options, looks like the model theoretic approach is the best available way. it subsums model checking, transfer theorem, and many more. it was first pioneered in [9], also presented in the very good document [10]. a different model was given in [11, 12 chapter 10]. another different one for wmso in [13], and another fragment (omega-blind) in [14].
@@ -53,3 +56,5 @@ some conclusions:
 [12] https://hal.archives-ouvertes.fr/tel-01311150/document
 [13] http://drops.dagstuhl.de/opus/volltexte/2016/6551/pdf/LIPIcs-CSL-2016-11.pdf
 [14] https://hal.archives-ouvertes.fr/hal-01169352/file/hal-version.pdf
+[15] https://arxiv.org/pdf/1104.0193.pdf
+[16] https://pdfs.semanticscholar.org/2853/c0152f9c9abb90d4deefe83e968807e48940.pdf
