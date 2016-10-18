@@ -3,17 +3,20 @@
 1. the object language. can be either stlc+y (finitary PCF), or equivalently HORS, or, using the transfer theorem, have it MSOL just like the type language.
 2. MSOL can be augmented with a fragment of counting FOL and remain decidable, while giving the possibility to compare (and add) cardinalities of sets ([2]). need to see how it can fit.
 3. need to decide whether MSOL will be used as type language directly, or, an automaton-based typesystem.
-4. need a compositional typesystem (e.g. [3], [9])
+//4. need a compositional typesystem (e.g. [3], [9])
 5. how can tau support multiple logics?
 	- a nomic game may take into a consideration additional rules (that may be changed) that speak about "what is truth" and "what amounts as a proof".
 	- seems like even prolog compiler can be written in MSOL, but need to think how truths/proofs from another logic may be "imported".
 	- can such tau have only a fragment of full MSOL, and recover even more generalized logics via "trusted compilers"?
 	- can truth be only something derived from judgements, or we can encode eg "trees of truth"? i think that msol is capable of doing arbitrary Herbrand model reasoning.
 6. how good is the idea of using the transfer theorem and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
-7. backtracking? ([5])
-8. LISA language (1st order!) [7]
-9. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
-10. algebraic data structures [18,19,20]
+//7. backtracking? ([5])
+//8. LISA language (1st order!) [7]
+
+* relevant information:
+1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
+2. algebraic data structures [18,19,20]
+3. verification tool [22]
 
 * first implementation tasks:
 1. stlc+y
@@ -64,3 +67,5 @@ some conclusions:
 [18] http://www.cs.tsukuba.ac.jp/~uhiro/papers/aplas2010cf.pdf
 [19] http://www.brics.dk/mona/mona14.pdf
 [20] https://www.cs.ox.ac.uk/files/3721/main.pdf
+[21] https://www.react.uni-saarland.de/teaching/automata-games-verification-08/lecture-notes.html good explanations about parity automata
+[22] http://spinroot.com/spin/whatispin.html
