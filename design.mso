@@ -12,19 +12,21 @@
 6. how good is the idea of using the transfer theorem and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
 7. backtracking? ([5])
 8. LISA language (1st order!) [7]
-9. multiparameter tree transducers [16], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
+9. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
+10. algebraic data structures [18,19,20]
 
 * first implementation tasks:
 1. stlc+y
-2. HORS
-3. parity automata, collapsible pushdown automata(, ordered tree pushdown)
-4. bohm trees
-5. krivine machine
-6. transfer theorem
-7. parity games
-8. logical reflection and effective selection ([6])
-9. economical stlc+y <=> HORS ([1])
-10. stlc+y => CPDA ([1])
+//2. HORS
+2. parity automata //, collapsible pushdown automata(, ordered tree pushdown)
+3. bohm trees
+4. krivine machine
+//6. transfer theorem
+//7. parity games
+//8. logical reflection and effective selection ([6])
+//9. economical stlc+y <=> HORS ([1])
+//10. stlc+y => CPDA ([1])
+5. lattice theoretic model of stlc+y under parity automata (conclusion 1 below)
 
 remarks:
 1. very fast algorithms can be found at [8]
@@ -58,3 +60,7 @@ some conclusions:
 [14] https://hal.archives-ouvertes.fr/hal-01169352/file/hal-version.pdf
 [15] https://arxiv.org/pdf/1104.0193.pdf
 [16] https://pdfs.semanticscholar.org/2853/c0152f9c9abb90d4deefe83e968807e48940.pdf
+[17] "High Level Tree Transducers and Iterated Pushdown Tree Transducers" Engelfriet&Vogler
+[18] http://www.cs.tsukuba.ac.jp/~uhiro/papers/aplas2010cf.pdf
+[19] http://www.brics.dk/mona/mona14.pdf
+[20] https://www.cs.ox.ac.uk/files/3721/main.pdf
