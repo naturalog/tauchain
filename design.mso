@@ -9,7 +9,7 @@
 	- seems like even prolog compiler can be written in MSOL, but need to think how truths/proofs from another logic may be "imported".
 	- can such tau have only a fragment of full MSOL, and recover even more generalized logics via "trusted compilers"?
 	- can truth be only something derived from judgements, or we can encode eg "trees of truth"? i think that msol is capable of doing arbitrary Herbrand model reasoning.
-6. how good is the idea of using the transfer theorem and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
+6. how good is the idea of using the transfer theorem [23] and be able to use directly only MSOL over [algebraic] graphs? as the terms are regular graphs.
 //7. backtracking? ([5])
 //8. LISA language (1st order!) [7]
 
@@ -69,6 +69,7 @@ some conclusions:
 [20] https://www.cs.ox.ac.uk/files/3721/main.pdf
 [21] https://www.react.uni-saarland.de/teaching/automata-games-verification-08/lecture-notes.html good explanations about parity automata
 [22] http://spinroot.com/spin/whatispin.html
+[23] http://drops.dagstuhl.de/opus/volltexte/2013/4365/pdf/6.pdf
 
 RDF setting:
 
@@ -77,5 +78,5 @@ we want to be able to assert MSOL properties on this tree. in addition, we'd lik
 we would therefore be interested in incorporating a typesystem into rdf (via the predicate rdf:type or just "a" in short) that speaks about those trees and express MSOL formulas about them. basically we have two kinds of trees to model-check: those who consist of rdf resources (uris), and those who consist of triples (graphs), where obviously the formers are subtrees of the latters.
 since on this setting all rdf resources are tree nodes, the typesystem can quantify over sets of such.
 a rule is ground if it's given without any premise nor free variables, or if all its premises are ground under certain equivalence (which are actually substitutions but significantly simplified). specifically, the rules themselves determine the allowed substitution together with few more metarules. 
-the semantics of an rdf graph is very similar to lambdas' Bohm tree. for a convenient typesystem we'll have to see whether rdf graph entailment is msol expressible.
-a proof is a tree with root being the query. a node may have k successors where k is the number of rules, giving rise to WSkS such that the k successors are distinguished from each other. indeed, each rule encapsulate different unification predicates. they consist of expressing whether certain equivalences can be declared without breaking the metarules (of tree structure, equivalence relations and unification). 
+the semantics of an rdf graph is very similar to lambdas' Bohm tree. for a convenient typesystem we'll have to see whether rdf graph entailment is msol expressible. it seems easy on first order setting, but can it be done with higher order recursion scheme? it seems like it's possible with having n+1 order scheme. it's better to do it with msol but ofc stlc+y is as good.
+a proof is a tree with root being the query. a node may have k successors where k is the number of rules, giving rise to (W)SkS such that the k successors are distinguished from each other. indeed, each rule encapsulate a different unification predicate. if match occurs, this rules have successors which represent its premises to be grounded, giving another set of successors. so the total number of successors is bounded by the number of heads plus the number of premises. the match predicates consist of expressing whether certain equivalences can be declared without breaking the metarules (of tree structure, equivalence relations and unification). so the proof tree is msol expressible with WSkS and k rules (aside the metarules). iterating over all possible equivalences (substitutions) is exactly where monadic second order comes in. if we use SkS rather WSkS, we can even speak about infinitely many variables. this reminds the transfer theorem from [23] which allows infinitely many Y variables but not lambda variables. 
