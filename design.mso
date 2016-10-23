@@ -14,7 +14,10 @@
 //8. LISA language (1st order!) [7]
 6. in [24] there's *exact* abstract interpretation approach to Ramsay's typesystem. what are the main differences between it and Salvati&Walukiewicz extended scott model? there's at least one similarity, [24] says "To rectify the situation we describe an additional requirement, which is that the abstract property space at ground kind contains “no junk”, and this leads to exact characterisations at higher-kinds." vs [9]'s "Instead our construction introduces ranks only in higher types." (indeed they extend scott model by adding ranks to higher kinds only)
 7. extensions of mso (e.g. [27,29])
-8. need to think how logic programming can be decribed as a transition system, especially with constraints-based implementation. [32] presents machine proof for wand(1987) algorithm. it can be a candidate for a level over msol. we could generalize by instead of {spo}=>{spo} have {msol formula} <tranduces to> {msol formula}, where the transduction has to be msol compatible (beyond simply "msol definable"). as subtitutions (courcelle 1998) and evaluation (S&W 2013) are msol compatible, but still need the metalevel flow (e.g. sld resolution). another point to think about here is whether it's possible to allow full second order peano and restrict it when needed to the msol decidable fragment. in any case PA2 can be used on any infinite path, internally, to allow shorter proofs (and contribution of valuable knowledge).
+8. need to think how logic programming can be decribed as a transition system, especially with constraints-based implementation. [32] presents machine proof for wand(1987) algorithm [35]. [33] is also a very good source for [modern] constraints based [type] inference. it can be a candidate for a level over msol. we could generalize by instead of {spo}=>{spo} have {msol formula} <tranduces to> {msol formula}, where the transduction has to be msol compatible (beyond simply "msol definable"). as subtitutions (courcelle 1998) and evaluation (S&W 2013) are msol compatible, but still need the metalevel flow (e.g. sld resolution). another point to think about here is whether it's possible to allow full second order peano and restrict it when needed to the msol decidable fragment. in any case PA2 can be used on any infinite path, internally, to allow shorter proofs (and contribution of valuable knowledge).
+	- constraints are sets of equalities and inequalities, namely, a union-find datastructure. how can we express an msol transduction of merging two ufs?
+	- do introducing fresh variables in the reasoning process is an msol transduction, or only an msol-compatible transduction?
+9. can borrow ideas from GP (graph programs) [34]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
@@ -86,6 +89,9 @@ some conclusions:
 [30] http://www.dbai.tuwien.ac.at/research/project/tractability/toclGottlobPW10.pdf
 [31] https://www.cs.ox.ac.uk/files/1246/bry-rdflog-full.pdf
 [32] http://www.cs.uwyo.edu/~jlc/papers/WMM09.pdf
+[33] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.710.5020&rep=rep1&type=pdf
+[34] https://arxiv.org/pdf/1609.03643.pdf
+[35] http://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf
 
 RDF setting:
 
