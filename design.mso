@@ -18,6 +18,7 @@
 	- constraints are sets of equalities and inequalities, namely, a union-find datastructure. how can we express an msol transduction of merging two ufs?
 	- do introducing fresh variables in the reasoning process is an msol transduction, or only an msol-compatible transduction?
 9. can borrow ideas from GP (graph programs) [34]
+10. higher order prolog, interesting discussion at [36]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
@@ -92,6 +93,7 @@ some conclusions:
 [33] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.710.5020&rep=rep1&type=pdf
 [34] https://arxiv.org/pdf/1609.03643.pdf
 [35] http://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf
+[36] http://aitopics.org/sites/default/files/classic/Machine_Intelligence_10/MI10-Ch22-Warren.pdf
 
 RDF setting:
 
@@ -108,3 +110,5 @@ as in [23], stlc+y representing a bohm tree can itself be a regular tree, and ev
 a set of rdf quads is nothing but a way to define labelled graphs. an rdf kb+query is a tree grammar as it represents the sets of all valid proof trees. the proof tree is very closely related to bohm trees, and indeed logic programming is about inference being beta reduction. if P(x)=>Q(x) is a logic program clause, where P,Q are some predicates and (boldface) x is a tuple of variables, then we can write it as a recursion scheme Q(x)=P(x) (we flip the sides since under backtracking semantics of logic programs, Q calls P). it is a 1st order recursion scheme if we name all rules (or taking the predicate as the name in case we disallow predvars), and call all of them in every predicate. this (hors) seem to be a more suitable representation than stlc+y (yet they're equivalent as proved recently [26]) for logic programs. 
 
 the monadic datalog parallel [30] might give plenty of ideas for rdf, also [31] shows that this solves some puzzles with blank nodes.
+
+every (finite) AST can uniquely be described by an MSOL formula, with two successors and two eqrels (for rdf).
