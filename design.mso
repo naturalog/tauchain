@@ -18,7 +18,8 @@
 	- constraints are sets of equalities and inequalities, namely, a union-find datastructure. how can we express an msol transduction of merging two ufs?
 	- do introducing fresh variables in the reasoning process is an msol transduction, or only an msol-compatible transduction?
 9. can borrow ideas from GP (graph programs) [34]
-10. higher order prolog, interesting discussion at [36]
+10. higher order prolog, interesting discussion at [36] and interesting ideas in [37]
+11. monadic second order unification as rdf enhancement [38]? or even higher order [39]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
@@ -94,6 +95,9 @@ some conclusions:
 [34] https://arxiv.org/pdf/1609.03643.pdf
 [35] http://web.cs.ucla.edu/~palsberg/course/cs239/reading/wand87.pdf
 [36] http://aitopics.org/sites/default/files/classic/Machine_Intelligence_10/MI10-Ch22-Warren.pdf
+[37] https://www.csee.umbc.edu/courses/771/papers/mu_96_02.pdf
+[38] http://www.iiia.csic.es/~levy/papers/1190.pdf
+[39] https://www4.in.tum.de/publ/papers/Prehofer-CADE1994.pdf
 
 RDF setting:
 
