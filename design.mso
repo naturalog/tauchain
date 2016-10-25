@@ -20,7 +20,7 @@
 9. can borrow ideas from GP (graph programs) [34]
 10. higher order prolog, interesting discussion at [36] and interesting ideas in [37]
 11. monadic second order unification as rdf enhancement [38]? or even higher order [39], also cf [40], [41], [42], [43], [45]
-12. is stlc(+y?) equiv to higher order set theory over finite universe? [44]. indeed higher order finite set theory is very appealing. cf [46]
+12. is stlc(+y?) equiv to higher order set theory over finite universe? [44]. indeed higher order finite set theory is very appealing. cf [46], [47] which has to do with the full msol axiomatization paper [5], also the introduction of bapa is interesting [48],
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
@@ -106,6 +106,8 @@ some conclusions:
 [44] www.lsv.ens-cachan.fr/Publis/RAPPORTS_LSV/PS/rr-lsv-2001-9.rr.ps
 [45] http://gpd.sip.ucm.es/uploads/pdf/LiptonNieva-tlca07_LiptonNievaTLCA07.pdf
 [46] https://www.dimi.uniud.it/~dovier/PAPERS/jlpsetlog.ps.gz
+[47] http://www.cs.yale.edu/homes/piskac/publications/WiesPiskacKuncak09CombiningTheories.pdf
+[48] https://arxiv.org/pdf/cs/0407045.pdf
 
 RDF setting:
 
