@@ -20,7 +20,8 @@
 9. can borrow ideas from GP (graph programs) [34]
 10. higher order prolog, interesting discussion at [36] and interesting ideas in [37]
 11. monadic second order unification as rdf enhancement [38]? or even higher order [39], also cf [40], [41], [42], [43], [45]
-12. is stlc(+y?) equiv to higher order set theory over finite universe? [44]. indeed higher order finite set theory is very appealing. cf [46], [47] which has to do with the full msol axiomatization paper [5], also the introduction of bapa is interesting [48],
+12. is stlc(+y?) equiv to higher order set theory over finite universe? [44]. indeed higher order finite set theory is very appealing. cf [46], [47] which has to do with the full msol axiomatization paper [5], also the introduction of bapa is interesting [48] as it shows that BA+MSOL is decidable! (bapa can help understand the limits of decidability of set theories, also recall that ws1s subsumes first order presburger as in eg [19]), new decision procedure for bapa [49].
+13. decidablity of quantitative mso [50]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
@@ -44,6 +45,7 @@
 remarks:
 1. very fast algorithms can be found at [8]
 2. linear dependent types for pcf [15]
+3. uncountable quantifier in msol as conservative extention [50]
 
 * food for thought:
 1. labels -> equivalences -> prefix orders -> trees
@@ -108,6 +110,9 @@ some conclusions:
 [46] https://www.dimi.uniud.it/~dovier/PAPERS/jlpsetlog.ps.gz
 [47] http://www.cs.yale.edu/homes/piskac/publications/WiesPiskacKuncak09CombiningTheories.pdf
 [48] https://arxiv.org/pdf/cs/0407045.pdf
+[49] http://homepage.divms.uiowa.edu/~ajreynol/ijcar16b.pdf
+[50] http://www.cs.ox.ac.uk/people/vince.barany/msoc_trees_FI.pdf
+[51] https://www.cs.ox.ac.uk/people/cristian.riveros/papers/lics13.pdf
 
 RDF setting:
 
