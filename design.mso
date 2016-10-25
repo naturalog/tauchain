@@ -13,13 +13,14 @@
 //7. backtracking? ([5])
 //8. LISA language (1st order!) [7]
 6. in [24] there's *exact* abstract interpretation approach to Ramsay's typesystem. what are the main differences between it and Salvati&Walukiewicz extended scott model? there's at least one similarity, [24] says "To rectify the situation we describe an additional requirement, which is that the abstract property space at ground kind contains “no junk”, and this leads to exact characterisations at higher-kinds." vs [9]'s "Instead our construction introduces ranks only in higher types." (indeed they extend scott model by adding ranks to higher kinds only)
-7. extensions of mso (e.g. [27,29])
+[43], 7. extensions of mso (e.g. [27,29])
 8. need to think how logic programming can be decribed as a transition system, especially with constraints-based implementation. [32] presents machine proof for wand(1987) algorithm [35]. [33] is also a very good source for [modern] constraints based [type] inference. it can be a candidate for a level over msol. we could generalize by instead of {spo}=>{spo} have {msol formula} <tranduces to> {msol formula}, where the transduction has to be msol compatible (beyond simply "msol definable"). as subtitutions (courcelle 1998) and evaluation (S&W 2013) are msol compatible, but still need the metalevel flow (e.g. sld resolution). another point to think about here is whether it's possible to allow full second order peano and restrict it when needed to the msol decidable fragment. in any case PA2 can be used on any infinite path, internally, to allow shorter proofs (and contribution of valuable knowledge).
 	- constraints are sets of equalities and inequalities, namely, a union-find datastructure. how can we express an msol transduction of merging two ufs?
 	- do introducing fresh variables in the reasoning process is an msol transduction, or only an msol-compatible transduction?
 9. can borrow ideas from GP (graph programs) [34]
 10. higher order prolog, interesting discussion at [36] and interesting ideas in [37]
-11. monadic second order unification as rdf enhancement [38]? or even higher order [39]
+11. monadic second order unification as rdf enhancement [38]? or even higher order [39], also cf [40], [41], [42], [43], [45]
+12. is stlc(+y?) equiv to higher order set theory over finite universe? [44]. indeed higher order finite set theory is very appealing. cf [46]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
@@ -98,6 +99,13 @@ some conclusions:
 [37] https://www.csee.umbc.edu/courses/771/papers/mu_96_02.pdf
 [38] http://www.iiia.csic.es/~levy/papers/1190.pdf
 [39] https://www4.in.tum.de/publ/papers/Prehofer-CADE1994.pdf
+[40] https://www.lix.polytechnique.fr/~dale/papers/Handbook_Logic_AI_LP.pdf
+[41] http://www.lix.polytechnique.fr/~dale/papers/iclp88.pdf
+[42] http://gpd.sip.ucm.es/uploads/pdf/LiptonNieva-tlca07_LiptonNievaTLCA07.pdf
+[43] http://ac.els-cdn.com/S0890540197926948/1-s2.0-S0890540197926948-main.pdf?_tid=ce7ebc58-9a43-11e6-86e1-00000aab0f01&acdnat=1477352857_e73f208c83d79454595c840dedecd7d5
+[44] www.lsv.ens-cachan.fr/Publis/RAPPORTS_LSV/PS/rr-lsv-2001-9.rr.ps
+[45] http://gpd.sip.ucm.es/uploads/pdf/LiptonNieva-tlca07_LiptonNievaTLCA07.pdf
+[46] https://www.dimi.uniud.it/~dovier/PAPERS/jlpsetlog.ps.gz
 
 RDF setting:
 
