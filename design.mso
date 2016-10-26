@@ -30,6 +30,7 @@
 2. algebraic data structures [18,19,20]
 3. verification tool [22]
 4. combining different logics: Nelson-Oppen is commonly cited for such. i think that BAMSOL is the choice [48]. enhancements can be found on [53], [58]. -- very good sources! i appreciate kuncak's derivation very much! for his interesting thesis see [60]. cf also [59],[64]. see [61] for another approach. see [62] for another approach by kuncak. [63] for a new thesis regarding theory combination.
+5. [65] interesting transfer theorems and about presburger&skolem arithmetics. caucal's hierarchy might be a good basis for logic language design.
 
 * first implementation tasks:
 1. stlc+y
@@ -129,6 +130,7 @@ some conclusions:
 [62] https://infoscience.epfl.ch/record/133549/files/main.pdf
 [63] http://pubs.doc.ic.ac.uk/cooperative-program-verifiers/cooperative-program-verifiers.pdf
 [64] https://userpages.uni-koblenz.de/~mbender/sum_full.pdf
+[65] http://bc12.labri.fr/slides/igw.pdf
 
 RDF setting:
 
