@@ -22,13 +22,14 @@
 11. monadic second order unification as rdf enhancement [38]? or even higher order [39], also cf [40], [41], [42], [43], [45]
 12. is stlc(+y?) equiv to higher order set theory over finite universe? [44]. indeed higher order finite set theory is very appealing. cf [46], [47] which has to do with the full msol axiomatization paper [5], also the introduction of bapa is interesting [48] as it shows that BA+MSOL is decidable! (bapa can help understand the limits of decidability of set theories, also recall that ws1s subsumes first order presburger as in eg [19]), new decision procedure for bapa [49].
 13. decidablity of quantitative mso [50]
-14. [52] for arithmetic in MONA. i think that BAMSOL is the choice [48]. enhancements can be found on [53]
+15. yet another mso model [54]
+16. decidable mso with cardinality quantifiers [55]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
 2. algebraic data structures [18,19,20]
 3. verification tool [22]
-4. combining different logics: Nelson-Oppen is commonly cited for such
+4. combining different logics: Nelson-Oppen is commonly cited for such. i think that BAMSOL is the choice [48]. enhancements can be found on [53], [58]. -- very good sources! i appreciate kuncak's derivation very much! for his interesting thesis see [60]. cf also [59]. see [61] for another approach. see [62] for another approach by kuncak. [63] for a new thesis regarding theory combination.
 
 * first implementation tasks:
 1. stlc+y
@@ -61,6 +62,7 @@ remarks:
 some conclusions:
 1. from the above mentioned options, looks like the model theoretic approach is the best available way. it subsums model checking, transfer theorem, and many more. it was first pioneered in [9], also presented in the very good document [10]. a different model was given in [11, 12 chapter 10]. another different one for wmso in [13], and another fragment (omega-blind) in [14].
 2. since we prefer the proof search method for various reasons, the order theoretic models can be seen as a subsystem of [5] (which itself a subsystem of second order peano). 
+3. querying databanks with msol [56]
 
 * references:
 [1] "Simply typed fixpoint calculus and collapsible pushdown automata" Salvati&Walukiewicz
@@ -116,6 +118,16 @@ some conclusions:
 [51] https://www.cs.ox.ac.uk/people/cristian.riveros/papers/lics13.pdf
 [52] http://www.brics.dk/mona/papers/mona-decidable-arithmetic/draft.pdf
 [53] http://arw.csc.liv.ac.uk/year/2014/ARW2014proceedings.pdf#page=8
+[54] https://arxiv.org/pdf/1503.08936v2.pdf
+[55] https://logic.rwth-aachen.de/~kaiser/msoc_chains.pdf
+[56] http://www.tcl-sfs.uni-tuebingen.de/MonaSearch/monasearch-submission.pdf
+[57] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.83.261&rep=rep1&type=pdf
+[58] http://lara.epfl.ch/~kuncak/papers/KuncakETAL05AlgorithmDecidingBAPA.pdf
+[59] https://arxiv.org/pdf/0801.2498.pdf
+[60] http://icwww.epfl.ch/~kuncak/papers/Kuncak07DecisionProceduresModularDataStructureVerification.pdf
+[61] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.76.6150&rep=rep1&type=pdf
+[62] https://infoscience.epfl.ch/record/133549/files/main.pdf
+[63] http://pubs.doc.ic.ac.uk/cooperative-program-verifiers/cooperative-program-verifiers.pdf
 
 RDF setting:
 
