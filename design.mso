@@ -22,6 +22,7 @@
 11. monadic second order unification as rdf enhancement [38]? or even higher order [39], also cf [40], [41], [42], [43], [45]
 12. is stlc(+y?) equiv to higher order set theory over finite universe? [44]. indeed higher order finite set theory is very appealing. cf [46], [47] which has to do with the full msol axiomatization paper [5], also the introduction of bapa is interesting [48] as it shows that BA+MSOL is decidable! (bapa can help understand the limits of decidability of set theories, also recall that ws1s subsumes first order presburger as in eg [19]), new decision procedure for bapa [49].
 13. decidablity of quantitative mso [50]
+14. [52] for arithmetic in MONA. i think that BAMSOL is the choice [48]. enhancements can be found on [53]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
@@ -113,7 +114,8 @@ some conclusions:
 [49] http://homepage.divms.uiowa.edu/~ajreynol/ijcar16b.pdf
 [50] http://www.cs.ox.ac.uk/people/vince.barany/msoc_trees_FI.pdf
 [51] https://www.cs.ox.ac.uk/people/cristian.riveros/papers/lics13.pdf
-[52] http://cs.stackexchange.com/questions/65127/can-mso-count-after-all
+[52] http://www.brics.dk/mona/papers/mona-decidable-arithmetic/draft.pdf
+[53] http://arw.csc.liv.ac.uk/year/2014/ARW2014proceedings.pdf#page=8
 
 RDF setting:
 
