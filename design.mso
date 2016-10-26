@@ -147,3 +147,6 @@ a set of rdf quads is nothing but a way to define labelled graphs. an rdf kb+que
 the monadic datalog parallel [30] might give plenty of ideas for rdf, also [31] shows that this solves some puzzles with blank nodes.
 
 every (finite) AST can uniquely be described by an MSOL formula, with two successors and two eqrels (for rdf).
+
+some plan:
+have bamsol with max/min enhancements. programs will be represented by stlc+y trees (as in "evaluation is msol compatible" paper) with keeping the transfer theorem in mind (i.e. nonregular trees and the transfer itself). it seems like there is a way to reduce bamsol to [exponentially large] presburger. this in turn can be solved more efficiently with second order peano.
