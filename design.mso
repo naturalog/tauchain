@@ -24,13 +24,24 @@
 13. decidablity of quantitative mso [50]
 15. yet another mso model [54]
 16. decidable mso with cardinality quantifiers [55]
+17. very interesting, mso and distributed systems [68]
+18. very recent positive result of mso generalization [69] 
+19. very recent paper by courcelle [70]
+20. n3logic (hyperedges replaced by graphs) [71]
+21. WSRT, weak second order logic with recursive *datatypes* [75], an extension by MONA:
+	"This logic corresponds to the core of the FIDO language [16] and is also remi-
+	niscent of the LISA language [1]. It can be reduced to WS2S and thus provides
+	no more expressive power, but we will show that a significantly more efficient
+	decision procedure exists if we bypass WS2S."
+22. very important paper about synthesis by kuncak [76]
 
 * relevant information:
 1. multiparameter tree transducers [16,17], need to see where completeness is lost there. it also presents a limitation of HORS and tries to overcome it
 2. algebraic data structures [18,19,20]
 3. verification tool [22]
-4. combining different logics: Nelson-Oppen is commonly cited for such. i think that BAMSOL is the choice [48]. enhancements can be found on [53], [58]. -- very good sources! i appreciate kuncak's derivation very much! for his interesting thesis see [60]. cf also [59],[64]. see [61] for another approach. see [62] for another approach by kuncak. [63] for a new thesis regarding theory combination.
-5. [65] interesting transfer theorems and about presburger&skolem arithmetics. caucal's hierarchy might be a good basis for logic language design.
+4. combining different logics: Nelson-Oppen is commonly cited for such. i think that BAMSOL is the choice [48]. enhancements can be found on [53], [58]. -- very good sources! i appreciate kuncak's derivation very much! for his interesting thesis see [60]. cf also [59],[64]. see [61] for another approach. see [62] for another approach by kuncak. [63] for a new thesis regarding theory combination. cf also [67]
+5. [65] interesting transfer theorems and about presburger&skolem arithmetics. caucal's hierarchy might be a good basis for logic language design. but cf slide 55 there. see [66] for transfer theorem for generalizations of mso
+6. logic programming language for finite sets [72], [73], [74]
 
 * first implementation tasks:
 1. stlc+y
@@ -131,6 +142,17 @@ some conclusions:
 [63] http://pubs.doc.ic.ac.uk/cooperative-program-verifiers/cooperative-program-verifiers.pdf
 [64] https://userpages.uni-koblenz.de/~mbender/sum_full.pdf
 [65] http://bc12.labri.fr/slides/igw.pdf
+[66] http://www.cs.ox.ac.uk/stephan.kreutzer/Publications/05-jlc.pdf
+[67] http://www.fi.muni.cz/~blumens/Publications/Operations.pdf
+[68] http://www.lsv.ens-cachan.fr/~bollig/MPRI/non-sequential.pdf
+[69] https://pdfs.semanticscholar.org/e78c/2a0ee2c418211c45f88f2f9520d8a81f6d4b.pdf
+[70] https://hal.archives-ouvertes.fr/hal-01299077/document
+[71] https://www.uni-oldenburg.de/fileadmin/user_upload/informatik/radthe16_21.06.16.pdf
+[72] www.sciencedirect.com/science/article/pii/0743106695001476
+[73] https://users.dimi.uniud.it/~agostino.dovier/PAPERS/tesi_1mar96.pdf
+[74] https://arxiv.org/pdf/cs/0309045.pdf
+[75] http://www.brics.dk/mona/papers/c-trees/paper.pdf
+[76] http://www.cs.yale.edu/homes/piskac/publications/KuncakETAL10CompleteFunctionalSynthesis.pdf
 
 RDF setting:
 
