@@ -174,3 +174,7 @@ every (finite) AST can uniquely be described by an MSOL formula, with two succes
 
 some plan:
 have bamsol with max/min enhancements. programs will be represented by stlc+y trees (as in "evaluation is msol compatible" paper) with keeping the transfer theorem in mind (i.e. nonregular trees and the transfer itself). it seems like there is a way to reduce bamsol to [exponentially large] presburger. this in turn can be solved more efficiently with second order peano.
+
+tau is really a so-called "filtration", namely, a process over time where the past partly determines the future. On every tick we have an amendment A which takes every rule R and transforms it into new rule R(n) = A(n, R(n-1)).
+rules form a tree (hors) or graph, and an msol definable or compatible transduction is the transition between blocks, or, amendments. the code of the client is then synthesized from the graph, making use of the corresponding transfer theorems. so a block contains an msol compatible transduction, beginning with the "empty" tree. constraining the next block can be done with additional pair of tranductions to compose before and after. so every block contains a triple of transductions. a question that arise is how to use the "transfer" operator.
+
