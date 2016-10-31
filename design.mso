@@ -162,6 +162,7 @@ some conclusions:
 [83] https://en.wikipedia.org/wiki/Tree_kernel cf also
 [84] http://jmlr.csail.mit.edu/papers/volume11/vishwanathan10a/vishwanathan10a.pdf
 [85] http://disi.unitn.it/moschitti/Tree-Kernel.htm (svmlight)
+[86] http://www.jaist.ac.jp/~mizuhito/papers/conference/CADE05.pdf a paper by satoshi about verifying merkle tree algorithm with msol over trees (MONA)
 
 RDF setting:
 
