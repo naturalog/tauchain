@@ -173,6 +173,13 @@ some conclusions:
 [93] http://www.cs.rhul.ac.uk/home/hague/files/papers/lics08b-long.pdf
 [94] http://william.famille-blum.org/research/thesis-submitted.pdf
 [95] http://www.cs.ox.ac.uk/andrew.ker/docs/ADK02C.pdf what about trees genrated by untyped lambda calculus? see here
+[96] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.46.2257&rep=rep1&type=pdf nice paper about nomic. another one is:
+[97] http://www.egov.ufsc.br/portal/sites/default/files/anexos/2901-2895-1-PB.pdf
+[98] http://www.estrellaproject.org/
+[99] http://www.aclweb.org/anthology/W13-1811 a deep connection between rdf and msol
+[100] http://informatique.umons.ac.be/tcs/Francqui/slides/mons2b.pdf yet another first class review by Wolfgang Thomas. includes a predicate for being a power of two.
+[101] https://arxiv.org/pdf/1608.00653v1.pdf interesting generalized decidability result for synthesis. as usual, quoting interesting theorems.
+[102] http://www-sop.inria.fr/members/Joelle.Despeyroux/papers/types98.ps interesting conservative extention to stlc
 
 RDF setting:
 
