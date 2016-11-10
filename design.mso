@@ -180,6 +180,7 @@ some conclusions:
 [100] http://informatique.umons.ac.be/tcs/Francqui/slides/mons2b.pdf yet another first class review by Wolfgang Thomas. includes a predicate for being a power of two.
 [101] https://arxiv.org/pdf/1608.00653v1.pdf interesting generalized decidability result for synthesis. as usual, quoting interesting theorems.
 [102] http://www-sop.inria.fr/members/Joelle.Despeyroux/papers/types98.ps interesting conservative extention to stlc
+[103] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.57.568&rep=rep1&type=pdf very nice source about self-modifying protocols
 
 RDF setting:
 
