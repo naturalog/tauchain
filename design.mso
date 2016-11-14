@@ -181,6 +181,8 @@ some conclusions:
 [101] https://arxiv.org/pdf/1608.00653v1.pdf interesting generalized decidability result for synthesis. as usual, quoting interesting theorems.
 [102] http://www-sop.inria.fr/members/Joelle.Despeyroux/papers/types98.ps interesting conservative extention to stlc
 [103] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.57.568&rep=rep1&type=pdf very nice source about self-modifying protocols
+[104] http://www.cs.bham.ac.uk/~ohf162/icfp14.pdf distributed [rpc] krivine machine
+[105] http://math.andrej.com/2009/03/21/how-to-simulate-booleans-in-simply-typed-lambda-calculus/
 
 RDF setting:
 

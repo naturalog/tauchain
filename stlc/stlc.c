@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <err.h>
 typedef struct term term;
 typedef struct type type;
 typedef struct tree tree;
@@ -92,33 +93,55 @@ struct tree {
 	const char* t;
 	tree *r, *l;
 };
-tree* readtree() {
-	char c = getchar(), *w;
-	int p = 0;
+void printtree(tree* t);
+
+tree* readtree(unsigned short d) {
+	char *w = malloc(4096), *r, *ww = w, c;
+	unsigned short p = 0;
 	tree *t = malloc(sizeof(tree));
-	w = malloc(4096);
-	while (isspace(c)) c = getchar();
-	do {
-		w[p++] = c;
-		c = getchar();
-	} while (c != '(' && c != ')' && !isspace(c) && c != ',');
-	w[p] = 0;
-	t->t = strdup(w);
-	if (c == '(') t->r = readtree(), t->l = readtree();
-	else t->r = t->l = 0;
-	free(w);
+	t->r = t->l = 0;
+	bool f = true;
+
+	while (f)
+		switch (c = getchar()) {
+		case ')': ungetc(')', stdin); --d; f = false; break;
+		case '(':
+			/*printtree*/(t->l = readtree(d + 1));// puts("");
+			do { c = getchar(); } while (isspace(c));
+			if (c != ',') err(1, "comma expected");
+			/*printtree*/(t->r = readtree(d + 1));// puts("");
+			do { c = getchar(); } while (isspace(c));
+			if (c != ')') err(1, "closing parenthesis expected");
+			f = false; break;
+		case ',': ungetc(',', stdin); f = false; break;
+		case EOF: f = false; break;// err(1, "unexpected EOF");
+		default : if (!isspace(c)) w[p++] = c;
+		}
+	if (p) {
+		while (isspace(*w) && p) ++w, --p;
+		if (!p) return 0;
+		w[p] = 0;
+		while (isspace(w[--p])) w[p] = 0;
+		t->t = strdup(w);
+	} else {
+		free(t);
+		t = 0;
+	}
+
+	free(ww);
 	return t;
 }
 void printtree(tree* t) {
 	if (!t) return;
 	printf("%s", t->t);
 	if (!t->r) return;
-	printf("(");
-	printtree(t->r), printtree(t->l);
-	printf(")");
+	putchar('('), printtree(t->l), putchar(','), printtree(t->r), putchar(')');
+	fflush(stdin);
 }
 
-void main() {
-	tree *t = readtree();
-	printtree(t);
+int main() {
+	tree *t;
+//	while (!feof(stdin))
+		 printtree(readtree(0)), puts("");
+	return 0;
 }
