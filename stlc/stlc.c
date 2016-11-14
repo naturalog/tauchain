@@ -95,7 +95,7 @@ struct tree {
 };
 void printtree(tree* t);
 
-tree* readtree(unsigned short d) {
+tree* readtree(short d) {
 	char *w = malloc(4096), *r, *ww = w, c;
 	unsigned short p = 0;
 	tree *t = malloc(sizeof(tree));
@@ -104,17 +104,20 @@ tree* readtree(unsigned short d) {
 
 	while (f)
 		switch (c = getchar()) {
-		case ')': ungetc(')', stdin); --d; f = false; break;
-		case '(':
-			/*printtree*/(t->l = readtree(d + 1));// puts("");
-			do { c = getchar(); } while (isspace(c));
-			if (c != ',') err(1, "comma expected");
-			/*printtree*/(t->r = readtree(d + 1));// puts("");
-			do { c = getchar(); } while (isspace(c));
-			if (c != ')') err(1, "closing parenthesis expected");
+		case ')':
+			ungetc(')', stdin);
+			if (--d < 0) err(1, "unbalanced parenthesis");
 			f = false; break;
-		case ',': ungetc(',', stdin); f = false; break;
-		case EOF: f = false; break;// err(1, "unexpected EOF");
+		case ',':
+			ungetc(',', stdin);
+			f = false; break;
+		case EOF: f = false; break;
+		case '(':
+			t->l = readtree(d + 1);
+			if (getchar() != ',') err(1, "comma expected");
+			t->r = readtree(d + 1);
+			if (getchar() != ')') err(1, "closing parenthesis expected");
+			f = false; break;
 		default : if (!isspace(c)) w[p++] = c;
 		}
 	if (p) {
@@ -127,7 +130,6 @@ tree* readtree(unsigned short d) {
 		free(t);
 		t = 0;
 	}
-
 	free(ww);
 	return t;
 }
