@@ -39,7 +39,7 @@ void equiv(tree *x, tree *y) {
 void compute(tree *t) {
 	if (!t) return;
 	if (*t->t == '\\') equiv(t->r, t->l);
-	else if (*t->t == '@') uf_union(t->l->l, t->r), 
+	else if (*t->t == '@') uf_union(t->l->l, t->r);
 	compute(t->l);
 	compute(t->r);
 }
