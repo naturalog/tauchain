@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <err.h>
+
 typedef struct term term;
 typedef struct type type;
 typedef struct tree tree;
@@ -12,6 +13,7 @@ typedef struct sym sym;
 typedef struct app app;
 typedef struct abst abst;
 typedef struct rec rec;
+
 struct type {
 	bool isfunc;
 	union {
@@ -91,9 +93,38 @@ const type* type_infer(const term* t) {
 }
 struct tree {
 	const char* t;
-	tree *r, *l;
+	tree *r, *l, *rep;
 };
 void printtree(tree* t);
+
+tree* uf_find(tree *t) {
+	tree *r = t->rep;
+	return t->rep = r ? uf_find(r) : t;
+}
+
+void uf_setrep(tree *r, tree *t) {
+	if (!t->rep) t->rep = r;
+	else uf_setrep(r, t->rep);
+}
+
+void uf_union(tree *x, tree *y) {
+	if (!islower(*x->t)) uf_setrep(x, y);
+	else uf_setrep(y, x);
+}
+
+void equiv(tree *x, tree *y) {
+	if (!x) return;
+	if (!strcmp(x->t, y->t)) uf_union(x, y);
+	equiv(x->r, y);
+	equiv(x->l, y);
+}
+
+void compute(tree *t) {
+	if (*t->t == '\\') equiv(t->r, t->l);
+	else if (*t->t == '@') uf_union(t->l->l, t->r), 
+	compute(t->l);
+	compute(t->r);
+}
 
 tree* readtree(short d) {
 	char *w = malloc(4096), *r, *ww = w, c;
@@ -136,8 +167,7 @@ tree* readtree(short d) {
 void printtree(tree* t) {
 	if (!t) return;
 	printf("%s", t->t);
-	if (!t->r) return;
-	putchar('('), printtree(t->l), putchar(','), printtree(t->r), putchar(')');
+	if (t->r) putchar('('), printtree(t->l), putchar(','), printtree(t->r), putchar(')');
 	fflush(stdin);
 }
 
