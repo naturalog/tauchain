@@ -183,6 +183,9 @@ some conclusions:
 [103] http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.57.568&rep=rep1&type=pdf very nice source about self-modifying protocols
 [104] http://www.cs.bham.ac.uk/~ohf162/icfp14.pdf distributed [rpc] krivine machine
 [105] http://math.andrej.com/2009/03/21/how-to-simulate-booleans-in-simply-typed-lambda-calculus/
+[106] https://proglang.informatik.uni-freiburg.de/teaching/konzepte/2015/20150601-note.pdf proof that pcf can interpret system t
+[107] https://arxiv.org/pdf/1511.02629.pdf finally computing normal form without substitutions trouble. there's another good source for this subject which i dont recall now
+
 
 RDF setting:
 

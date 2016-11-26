@@ -7,48 +7,45 @@
 
 typedef struct tree tree;
 struct tree {
-	const char* t;
-	tree *r, *l, *rep;
+	union {
+		const char* t;
+		tree *rep;
+	};
+	tree *r, *l;
+	bool isrep;
+	unsigned level;
 };
 void printtree(tree* t);
 
-tree* uf_find(tree *t) {
-	tree *r = t->rep;
-	if (r) return t->rep = uf_find(r);
+tree* find(tree* t) {
+	if (t->isrep) return t;
+	if (t->rep) return find(t->rep);
 	return t;
 }
 
-void uf_setrep(tree *r, tree *t) {
-	if (!t->rep) t->rep = r;
-	else uf_setrep(r, t->rep);
+bool rep(tree *x, tree *y) {
+	x = find(x), y = find(y);
+	if (x->isrep) {
+		if (y->isrep) return !strcmp(x->t, y->t);
+		y->rep = x;
+		return true;
+	}
+	if (y->isrep) {
+		if (x->isrep) return !strcmp(x->t, y->t);
+		x->rep = y;
+		return true;
+	}
+	if (x->level < y->level) x->rep = y;
+	else y->rep = x;
+	return true;
 }
 
-void uf_union(tree *x, tree *y) {
-	x = uf_find(x), y = uf_find(y);
-	if (!islower(*x->t)) uf_setrep(x, y);
-	else uf_setrep(y, x);
-}
-
-void equiv(tree *x, tree *y) {
-	if (!x) return;
-	if (!strcmp(x->t, y->t)) uf_union(x, y);
-	equiv(x->r, y);
-	equiv(x->l, y);
-}
-
-void compute(tree *t) {
-	if (!t) return;
-	if (*t->t == '\\') equiv(t->r, t->l);
-	else if (*t->t == '@') uf_union(t->l->l, t->r);
-	compute(t->l);
-	compute(t->r);
-}
-
+// binary tree only
 tree* readtree(short d) {
 	char *w = malloc(4096), *r, *ww = w, c;
 	unsigned short p = 0;
 	tree *t = malloc(sizeof(tree));
-	t->r = t->l = t->rep = 0;
+	t->r = t->l = t->rep = 0, t->level = d, t->isrep = false;
 	bool f = true;
 
 	while (f)
@@ -63,6 +60,7 @@ tree* readtree(short d) {
 		case EOF: f = false; break;
 		case '(':
 			t->l = readtree(d + 1);
+			if (*w == '\\') t->l->isrep = true;
 			if (getchar() != ',') err(1, "comma expected");
 			t->r = readtree(d + 1);
 			if (getchar() != ')') err(1, "closing parenthesis expected");
@@ -73,8 +71,9 @@ tree* readtree(short d) {
 		while (isspace(*w) && p) ++w, --p;
 		if (!p) return 0;
 		w[p] = 0;
-		while (isspace(w[--p])) w[p] = 0;
+		while (isspace(w[--p])) w[p] = -2;
 		t->t = strdup(w);
+//		if (var && !strcmp(t->t, var->t)) t->rep = var;
 	} else {
 		free(t);
 		t = 0;
@@ -96,7 +95,7 @@ void print_computed(tree* t) {
 	case '@': print_computed(t->l); return;
 	default: ;
 	}
-	t = uf_find(t);
+	t = find(t);
 	printf("%s", t->t);
 	if (t->r) putchar('('), printtree(t->l), putchar(','), printtree(t->r), putchar(')');
 	fflush(stdin);
@@ -105,7 +104,7 @@ void print_computed(tree* t) {
 int main() {
 	tree *t = readtree(0);
 	printtree(t), puts("");
-	compute(t);
+//	compute(t);
 	print_computed(t), puts("");
 	return 0;
 }
