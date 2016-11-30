@@ -185,7 +185,9 @@ some conclusions:
 [105] http://math.andrej.com/2009/03/21/how-to-simulate-booleans-in-simply-typed-lambda-calculus/
 [106] https://proglang.informatik.uni-freiburg.de/teaching/konzepte/2015/20150601-note.pdf proof that pcf can interpret system t
 [107] https://arxiv.org/pdf/1511.02629.pdf finally computing normal form without substitutions trouble. there's another good source for this subject which i dont recall now
-
+[108] https://www.itu.dk/~sestoft/pebook/jonesgomardsestoft-letter.pdf how to write specializers
+[109] http://www-kb.is.s.u-tokyo.ac.jp/~koba/papers/hosc-fpcd.pdf very close to my conjecture from taylor series / cumulants of bool funcs, that higher order funcs (specifically, equality) can give optimal compression
+[109] http://meta2016.pereslavl.ru/papers/2016_Berezun_Jones__Working_Notes__Compiling_ULC_to_Lower-level_Co_de_by_Game_Semantics_and_Partial_Evaluation.pdf contiuation of the work in [107]
 
 RDF setting:
 
