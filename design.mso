@@ -190,6 +190,7 @@ some conclusions:
 [110] http://www-kb.is.s.u-tokyo.ac.jp/~koba/papers/hosc-fpcd.pdf very close to my conjecture from taylor series / cumulants of bool funcs, that higher order funcs (specifically, equality) can give optimal compression. also gives rise to optimal storage for reasoner. everything is a tree after all (cf esp the pattern matching part in the paper). interestingly the paper uses intersection types. indeed the typesys presented there is very interesting.
 [111] Theorem 3. A λ-term M is typable in CDV iff M is strongly normalizable.  http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.378.6306&rep=rep1&type=pdf
 [112] http://www-kb.is.s.u-tokyo.ac.jp/~koba/papers/popl2017-long.pdf new paper from today: reduction from a kind of higher order logic to mso-equiv (modal mu) and vice versa. impliying corresponding decidability results. in p11 demonstrate how to count with hors. indeed all very similar to ackerman coding. is it as optimal?
+[113] http://www2016.net/proceedings/proceedings/p263.pdf json in mso
 
 RDF setting:
 
